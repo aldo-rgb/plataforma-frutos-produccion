@@ -1,0 +1,301 @@
+'use client'; // Necesario para la interactividad del menú móvil
+
+import React, { useState, useEffect } from 'react';
+import { 
+  LayoutDashboard, Target, UploadCloud, Trophy, ShoppingBag,
+  LogOut, Menu, Atom, X, Users, BrainCircuit, AlertTriangle, ShieldCheck, TrendingUp, Heart, UserPlus, DollarSign, Package, CreditCard
+} from 'lucide-react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const router = useRouter();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [userRole, setUserRole] = useState<string>('PARTICIPANTE');
+  const pathname = usePathname(); // Para saber en qué página estamos y resaltarla
+  
+  // Obtener rol del usuario desde localStorage
+  useEffect(() => {
+    const rol = localStorage.getItem('userRol');
+    if (rol) {
+      setUserRole(rol);
+    }
+  }, []);  // Función para cerrar el menú al hacer clic en un enlace (UX móvil)
+  const closeMenu = () => setIsMobileMenuOpen(false);
+
+  // Verificar si el usuario tiene acceso a gestión de staff
+  const hasStaffAccess = ['ADMINISTRADOR', 'COORDINADOR', 'MENTOR', 'GAMECHANGER'].includes(userRole.toUpperCase());
+  
+  // Verificar si el usuario puede crear usuarios (solo Admin y Coordinador)
+  const canCreateUsers = ['ADMINISTRADOR', 'COORDINADOR'].includes(userRole.toUpperCase());
+
+  return (
+    <div className="flex min-h-screen bg-slate-950 text-white font-sans selection:bg-cyan-500 selection:text-white">
+      
+      {/* 1. OVERLAY OSCURO (Solo móvil, cuando el menú está abierto) */}
+      {isMobileMenuOpen && (
+        <div 
+          onClick={closeMenu}
+          className="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm lg:hidden"
+        />
+      )}
+
+      {/* 2. BARRA LATERAL (SIDEBAR) */}
+      {/* Clases explicadas: 
+          - fixed inset-y-0: Fijo a la izquierda.
+          - lg:translate-x-0: En PC siempre visible.
+          - -translate-x-full: En móvil oculto por defecto (a la izquierda).
+          - translate-x-0: En móvil visible si isMobileMenuOpen es true.
+      */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-64 border-r border-white/10 bg-slate-900/90 backdrop-blur-xl 
+        transition-transform duration-300 ease-in-out
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:translate-x-0 lg:static lg:block
+      `}>
+        
+        {/* Cabecera del Sidebar */}
+        <div className="flex h-20 items-center justify-between px-6 border-b border-white/5 bg-gradient-to-r from-slate-900 to-slate-800">
+           <div className="flex items-center gap-2">
+             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-500/20 text-cyan-400">
+               <Atom size={20} className="animate-spin-slow" />
+             </div>
+             <span className="text-lg font-bold tracking-tight text-white">
+               IMPACTO <span className="text-cyan-400">VIA</span>
+             </span>
+           </div>
+           {/* Botón cerrar (Solo móvil) */}
+           <button onClick={closeMenu} className="lg:hidden text-slate-400 hover:text-white">
+             <X size={24} />
+           </button>
+        </div>
+
+        {/* Menú de Navegación */}
+        <nav className="space-y-1 p-4 mt-4 overflow-y-auto h-[calc(100vh-5rem)]">
+          <NavItem 
+            href="/dashboard" 
+            icon={<React.Fragment><LayoutDashboard size={20} /></React.Fragment>}
+            label="Dashboard" 
+            isActive={pathname === '/dashboard'} 
+            onClick={closeMenu}
+          />
+          
+          <NavItem 
+            href="/dashboard/ranking" 
+            icon={<React.Fragment><Trophy size={20} /></React.Fragment>}
+            label="Ranking Global" 
+            isActive={pathname === '/dashboard/ranking'} 
+            onClick={closeMenu}
+          />          <div className="pt-4 pb-2 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            Mi Transformación
+          </div>
+
+          <NavItem 
+            href="/dashboard/bienvenida" 
+            icon={<React.Fragment><Heart size={20} /></React.Fragment>} 
+            label="Guía de Inicio" 
+            isActive={pathname === '/dashboard/bienvenida'} 
+            onClick={closeMenu}
+          />
+          <NavItem href="/dashboard/carta" icon={<Target size={20} />} label="Carta F.R.U.T.O.S." isActive={pathname === '/dashboard/carta'} onClick={closeMenu} />
+           {/* NUEVO ENLACE: Progreso */}
+           <NavItem 
+             href="/dashboard/progreso" 
+             icon={<React.Fragment><TrendingUp size={20} /></React.Fragment>} 
+             label="Análisis de Progreso" 
+             isActive={pathname === '/dashboard/progreso'} 
+             onClick={closeMenu}
+           />
+           {/* Botón para ir al Chatbot desde el menú */}
+           <NavItem 
+             href="/dashboard/chat-ia" 
+             icon={<React.Fragment><BrainCircuit size={20} /></React.Fragment>} 
+             label="Definir Metas con IA" 
+             isActive={pathname === '/dashboard/definir-metas'}
+             onClick={closeMenu}
+           />
+
+          <div className="pt-4 pb-2 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            Crecimiento
+          </div>
+          
+          {/* NUEVO ENLACE: MENTORÍAS */}
+          <NavItem 
+            href="/dashboard/mentorias" 
+            icon={<React.Fragment><Users size={20} /></React.Fragment>} 
+            label="Solicitar Mentoría" 
+            isActive={pathname === '/dashboard/mentorias'} 
+            onClick={closeMenu} 
+          />
+
+          {/* ... Comunidad ... */}
+          <div className="pt-4 pb-2 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            Comunidad
+          </div>
+
+          <NavItem href="/dashboard/ranking" icon={<Trophy size={20} />} label="Ranking" isActive={pathname === '/dashboard/ranking'} onClick={closeMenu} />
+          <NavItem href="/dashboard/canjear" icon={<ShoppingBag size={20} />} label="Canjear Puntos" isActive={pathname === '/dashboard/canjear'} onClick={closeMenu} />
+          <NavItem href="/dashboard/suscripcion" icon={<CreditCard size={20} />} label="Membresía" isActive={pathname === '/dashboard/suscripcion'} onClick={closeMenu} />
+          
+          {/* Sección de Staff/Mentor - Solo visible para roles específicos */}
+          {hasStaffAccess && (
+            <div className="pt-4 border-t border-slate-700 mt-4">
+              <h3 className="text-xs font-bold text-slate-500 uppercase px-3 mb-2">GESTIÓN DE STAFF</h3>
+              {canCreateUsers && (
+                <NavItem 
+                  href="/dashboard/staff/alta-usuarios" 
+                  icon={<React.Fragment><UserPlus size={20} /></React.Fragment>}
+                  label="Alta de Usuarios" 
+                  isActive={pathname === '/dashboard/staff/alta-usuarios'}
+                  onClick={closeMenu}
+                />
+              )}
+              <NavItem 
+                href="/dashboard/revision-evidencias" 
+                icon={<React.Fragment><AlertTriangle size={20} /></React.Fragment>}
+                label="Bandeja de Evidencias" 
+                isActive={pathname === '/dashboard/revision-evidencias'}
+                onClick={closeMenu}
+              />
+              <NavItem 
+                href="/dashboard/staff" 
+                icon={<React.Fragment><ShieldCheck size={20} /></React.Fragment>}
+                label="Autorizar Cartas" 
+                isActive={pathname === '/dashboard/staff'}
+                onClick={closeMenu}
+              />
+              {canCreateUsers && (
+                <NavItem 
+                  href="/dashboard/metas-extraordinarias" 
+                  icon={<React.Fragment><Target size={20} /></React.Fragment>}
+                  label="Metas Extraordinarias" 
+                  isActive={pathname === '/dashboard/metas-extraordinarias'}
+                  onClick={closeMenu}
+                />
+              )}
+              
+              {/* --- NUEVO: GESTIÓN FINANCIERA (SOLO ADMIN) --- */}
+              {userRole === 'ADMINISTRADOR' && (
+                <NavItem 
+                  href="/dashboard/admin/pagos" 
+                  icon={<React.Fragment><DollarSign size={20} /></React.Fragment>}
+                  label="Finanzas & Pagos" 
+                  isActive={pathname === '/dashboard/admin/pagos'}
+                  onClick={closeMenu}
+                />
+              )}
+              
+              {/* --- GESTIÓN DE PRODUCTOS (TIENDA) --- */}
+              {userRole === 'ADMINISTRADOR' && (
+                <NavItem 
+                  href="/dashboard/admin/productos" 
+                  icon={<React.Fragment><Package size={20} /></React.Fragment>}
+                  label="Inv. Recompensas" 
+                  isActive={pathname === '/dashboard/admin/productos'}
+                  onClick={closeMenu}
+                />
+              )}
+              
+              {/* --- GESTIÓN DE USUARIOS Y ACCESOS --- */}
+              {userRole === 'ADMINISTRADOR' && (
+                <NavItem 
+                  href="/dashboard/admin/usuarios" 
+                  icon={<React.Fragment><ShieldCheck size={20} /></React.Fragment>}
+                  label="Gestión Usuarios" 
+                  isActive={pathname === '/dashboard/admin/usuarios'}
+                  onClick={closeMenu}
+                />
+              )}
+            </div>
+          )}          {/* Botón Salir */}
+          <div className="mt-8 border-t border-white/5 pt-4">
+            <button 
+              onClick={() => router.push('/')}
+              className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-slate-400 transition-colors hover:bg-red-500/10 hover:text-red-400"
+            >
+              <LogOut size={20} />
+              Cerrar Sesión
+            </button>
+          </div>
+        </nav>
+      </aside>
+
+      {/* 3. CONTENIDO PRINCIPAL */}
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        
+        {/* BARRA SUPERIOR (TOPBAR) */}
+        <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-white/10 bg-slate-950/80 px-4 sm:px-8 backdrop-blur-md">
+          
+          <div className="flex items-center gap-4">
+            {/* BOTÓN HAMBURGUESA (Solo Móvil) */}
+            <button 
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="lg:hidden rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white"
+            >
+              <Menu size={24} />
+            </button>
+
+            <div>
+              <h2 className="text-lg sm:text-xl font-bold text-white">
+                {userRole === 'ADMINISTRADOR' ? 'Hola, Administrador' : 
+                 userRole === 'COORDINADOR' ? 'Hola, Coordinador' : 
+                 userRole === 'MENTOR' ? 'Hola, Mentor' :
+                 userRole === 'GAMECHANGER' ? 'Hola, Game Changer' : 'Hola, Participante'}
+              </h2>
+              <p className="hidden sm:block text-xs text-slate-400">
+                {userRole === 'ADMINISTRADOR' ? 'Panel de Control Maestro.' : 
+                 userRole === 'COORDINADOR' ? 'Tu equipo te está esperando.' : 'Tu visión te está esperando.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Marcador de Puntos (HUD) */}
+          <div className="flex items-center gap-3 sm:gap-6">
+            <div className="flex items-center gap-2 sm:gap-3 rounded-full border border-cyan-500/30 bg-cyan-950/30 px-3 py-1.5 sm:px-4 sm:py-2 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+              <div className="flex h-6 w-6 sm:h-8 sm:w-8 items-center justify-center rounded-full bg-cyan-500 text-slate-950 font-black text-[10px] sm:text-xs">
+                PC
+              </div>
+              <div className="flex flex-col">
+                <p className="hidden sm:block text-[10px] text-cyan-300 font-bold uppercase">Disponibles</p>
+                <p className="text-sm sm:text-xl font-black leading-none text-white tabular-nums">1,250</p>
+              </div>
+            </div>
+
+            {/* Avatar */}
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 p-[2px]">
+              <div className="h-full w-full rounded-full bg-slate-900" />
+            </div>
+          </div>
+        </header>
+
+        {/* ÁREA DE CONTENIDO SCROLLABLE */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8">
+          {children}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// Componente NavItem mejorado (detecta activo)
+function NavItem({ icon, label, href, isActive, onClick }: any) {
+  return (
+    <Link 
+      href={href} 
+      onClick={onClick}
+      className={`
+        flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all 
+        ${isActive 
+          ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 shadow-[0_0_10px_rgba(6,182,212,0.1)]' 
+          : 'text-slate-400 hover:bg-white/5 hover:text-white hover:pl-6'}
+      `}
+    >
+      {icon}
+      {label}
+    </Link>
+  );
+}

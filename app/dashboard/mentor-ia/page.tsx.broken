@@ -1,0 +1,347 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { useChat } from 'ai/react';
+import { Send, Bot, User, Sparkles, Loader2 } from 'lucide-react';
+
+export default function MentorIAPage() {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Usar el hook useChat de Vercel AI SDK
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+    api: '/api/chat',
+    onFinish: async (message) => {
+      console.log('✅ Mensaje completado:', message.content.substring(0, 100));
+      
+      // Detectar si hay JSON en la respuesta
+      const tieneJSON = message.content.includes('```json') && 
+                       message.content.includes('carta_de_frutos');
+      
+      if (tieneJSON) {
+        console.log('✅ JSON detectado, procesando...');
+        
+        try {
+          const procesarResponse = await fetch('/api/chat/procesar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ respuestaCompleta: message.content }),
+          });
+          
+          if (procesarResponse.ok) {
+            const resultado = await procesarResponse.json();
+            console.log('✅ Guardado exitoso:', resultado);
+            
+            // Redirección
+            setTimeout(() => {
+              window.location.href = '/dashboard/carta';
+            }, 3000);
+          }
+        } catch (error) {
+          console.error('❌ Error al procesar:', error);
+        }
+      }
+    }
+  });
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // 1. CARGAR HISTORIAL AL INICIAR
+  useEffect(() => {
+    const cargarMemoria = async () => {
+      try {
+        const resultado = await obtenerHistorialChat();
+        if (resultado.success && resultado.mensajes) {
+          // Mapeamos de la estructura de BD a la estructura de UI
+          const historialFormateado = resultado.mensajes.map((m: any) => ({
+            role: m.role as 'user' | 'assistant',
+            content: m.contenido
+          }));
+          setMensajes(historialFormateado);
+        }
+      } catch (error) {
+        console.error("Fallo en la sinapsis:", error);
+      } finally {
+        setCargandoHistorial(false);
+      }
+    };
+
+    cargarMemoria();
+  }, []);
+
+  // Efecto para scroll cada vez que cambian los mensajes
+  useEffect(() => {
+    console.log('🔄 Mensajes actualizados. Total:', mensajes.length);
+    scrollToBottom();
+  }, [mensajes]);
+
+  // 2. MANEJAR EL ENVÍO CON IA REAL
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || procesando) return;
+
+    const mensajeUsuario = input.trim();
+    setInput('');
+    setProcesando(true);
+
+    // 1. Mostrar mensaje usuario (Optimistic UI)
+    const nuevosMensajes = [...mensajes, { role: 'user' as const, content: mensajeUsuario }];
+    setMensajes(nuevosMensajes);
+
+    try {
+      // 2. Guardar mensaje Usuario en BD
+      await guardarMensajeChat('user', mensajeUsuario);
+
+      // 3. Preparar mensaje placeholder para la IA
+      setMensajes(prev => [...prev, { role: 'assistant' as const, content: '' }]);
+
+      // 4. Llamar a la API Real
+      const historialParaAPI = nuevosMensajes.map(m => ({
+        role: m.role,
+        content: m.content
+      }));
+
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: historialParaAPI }),
+      });
+
+      if (!response.ok) throw new Error('Error en la API de IA');
+      if (!response.body) throw new Error('Sin respuesta');
+
+      // 5. Procesar el Stream (Magia visual)
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let respuestaCompleta = '';
+      let chunkCount = 0;
+
+      console.log('🚀 Iniciando lectura del stream...');
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          console.log('✅ Stream terminado. Total de chunks:', chunkCount);
+          break;
+        }
+        
+        chunkCount++;
+        const textoChunk = decoder.decode(value);
+        console.log(`📦 Chunk ${chunkCount}:`, textoChunk.substring(0, 100));
+        
+        // PARSEO SIMPLE DEL PROTOCOLO DE VERCEL (Data Stream Protocol)
+        const lineas = textoChunk.split('\n');
+        for (const linea of lineas) {
+            if (linea.startsWith('0:')) {
+                try {
+                    const textoLimpio = JSON.parse(linea.substring(2));
+                    respuestaCompleta += textoLimpio;
+                    
+                    console.log('💬 Actualizando streamingContent. Longitud:', respuestaCompleta.length);
+                    
+                    // Actualizar estado temporal para streaming en vivo
+                    setStreamingContent(respuestaCompleta);
+                } catch (e) { 
+                    console.warn('⚠️ Error parseando línea:', e);
+                }
+            }
+        }
+      }
+      
+      console.log('✅ Stream completado. Respuesta total:', respuestaCompleta.length, 'caracteres');
+      
+      // Cuando termina el stream, actualizar el array de mensajes y limpiar el temporal
+      setMensajes(prev => {
+        const copia = [...prev];
+        if (copia.length > 0 && copia[copia.length - 1].role === 'assistant') {
+          copia[copia.length - 1] = {
+            role: 'assistant',
+            content: respuestaCompleta
+          };
+        }
+        return copia;
+      });
+      setStreamingContent(''); // Limpiar el estado temporal
+
+      // 6. DETECCIÓN Y AUTO-GUARDADO DE JSON (Frontend)
+      console.log('🔍 Verificando si hay JSON de carta_de_frutos...');
+      console.log('📝 Longitud de respuesta:', respuestaCompleta.length, 'caracteres');
+      console.log('📄 Primeros 500 caracteres:', respuestaCompleta.substring(0, 500));
+      
+      // Buscar patrón de JSON en la respuesta
+      const tieneJSON = respuestaCompleta.includes('```json') && 
+                       respuestaCompleta.includes('carta_de_frutos');
+      
+      console.log('🔍 ¿Tiene ```json?', respuestaCompleta.includes('```json'));
+      console.log('🔍 ¿Tiene carta_de_frutos?', respuestaCompleta.includes('carta_de_frutos'));
+      console.log('🔍 Resultado detección:', tieneJSON);
+      
+      if (tieneJSON) {
+        console.log('✅ JSON detectado en la respuesta');
+        console.log('💾 Enviando al backend para procesar y guardar...');
+        
+        // Llamar al backend para procesar el JSON
+        try {
+          const procesarResponse = await fetch('/api/chat/procesar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ respuestaCompleta }),
+          });
+          
+          if (procesarResponse.ok) {
+            const resultado = await procesarResponse.json();
+            console.log('✅ Respuesta del backend:', resultado);
+            
+            // Agregar mensaje visual de confirmación
+            setMensajes(prev => [...prev, {
+              role: 'assistant' as const,
+              content: '\n\n---\n\n✅ **¡Carta de Frutos guardada exitosamente!**\n\nTus metas y acciones ya están en la base de datos. Redirigiendo al dashboard en 3 segundos...'
+            }]);
+            
+            // Redirección automática después de 3 segundos
+            setTimeout(() => {
+              window.location.href = '/dashboard/carta';
+            }, 3000);
+          } else {
+            const errorText = await procesarResponse.text();
+            console.error('❌ Error al procesar JSON:', errorText);
+            alert('Error al guardar la carta: ' + errorText);
+          }
+        } catch (error) {
+          console.error('❌ Error al llamar a /api/chat/procesar:', error);
+          alert('Error de conexión al guardar: ' + (error as Error).message);
+        }
+      } else {
+        console.log('ℹ️ No se detectó JSON de carta_de_frutos (conversación normal)');
+      }
+
+    } catch (error) {
+      console.error("❌ Error en la comunicación:", error);
+      
+      // Actualizar UI con mensaje de error
+      setMensajes(prev => {
+        const copia = [...prev];
+        if (copia.length > 0 && copia[copia.length - 1].role === 'assistant' && !copia[copia.length - 1].content) {
+          // Si el último mensaje está vacío, reemplazarlo con error
+          copia[copia.length - 1] = {
+            role: 'assistant',
+            content: '❌ Lo siento, ocurrió un error al procesar tu mensaje. Por favor, inténtalo de nuevo.'
+          };
+        }
+        return copia;
+      });
+    } finally {
+      setProcesando(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-6rem)] bg-slate-900 rounded-xl overflow-hidden border border-slate-800 shadow-2xl">
+      
+      {/* HEADER DEL CHAT */}
+      <div className="bg-slate-950 p-4 border-b border-slate-800 flex items-center gap-3">
+        <div className="p-2 bg-purple-600/20 rounded-lg border border-purple-500/30">
+          <Bot className="w-6 h-6 text-purple-400" />
+        </div>
+        <div>
+          <h2 className="text-white font-bold flex items-center gap-2">
+            Coach Ontológico IA
+            <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">
+              Online
+            </span>
+          </h2>
+          <p className="text-slate-400 text-xs">Memoria Persistente Activada</p>
+        </div>
+      </div>
+
+      {/* ÁREA DE MENSAJES */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-slate-900/50">
+        
+        {cargandoHistorial ? (
+          <div className="flex justify-center items-center h-full">
+            <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+          </div>
+        ) : mensajes.length === 0 ? (
+          <div className="text-center text-slate-500 mt-10">
+            <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-20" />
+            <p>Tu futuro imposible ya inicio. Escribe algo para iniciar..</p>
+          </div>
+        ) : (
+          mensajes.map((m, idx) => (
+            <div
+              key={`mensaje-${idx}-${m.content.length}`}
+              className={`flex gap-4 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}
+            >
+              {/* Avatar */}
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 
+                ${m.role === 'user' ? 'bg-blue-600' : 'bg-purple-600'}`}>
+                {m.role === 'user' ? <User size={16} /> : <Bot size={16} />}
+              </div>
+
+              {/* Burbuja de Texto */}
+              <div className={`max-w-[80%] rounded-2xl p-4 text-sm leading-relaxed shadow-md
+                ${m.role === 'user' 
+                  ? 'bg-blue-600 text-white rounded-tr-none' 
+                  : 'bg-slate-800 text-slate-200 border border-slate-700 rounded-tl-none'
+                }`}>
+                {/* Si es el último mensaje del asistente y hay streaming, mostrar streamingContent */}
+                {m.role === 'assistant' && idx === mensajes.length - 1 && streamingContent ? (
+                  streamingContent.split('\n').map((line, i) => (
+                    <p key={i} className="mb-1 last:mb-0">{line}</p>
+                  ))
+                ) : (
+                  m.content.split('\n').map((line, i) => (
+                    <p key={i} className="mb-1 last:mb-0">{line}</p>
+                  ))
+                )}
+              </div>
+            </div>
+          ))
+        )}
+        
+        {procesando && (
+          <div className="flex gap-4">
+            <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center">
+              <Bot size={16} />
+            </div>
+            <div className="bg-slate-800 rounded-2xl p-4 rounded-tl-none border border-slate-700 flex items-center gap-2">
+              <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" />
+              <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce delay-75" />
+              <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce delay-150" />
+            </div>
+          </div>
+        )}
+        
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* INPUT AREA */}
+      <div className="p-4 bg-slate-950 border-t border-slate-800">
+        <form onSubmit={handleSend} className="relative flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Pregunta algo sobre tu liderazgo..."
+            className="flex-1 bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3 
+            focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent
+            placeholder:text-slate-500"
+            disabled={procesando}
+          />
+          <button
+            type="submit"
+            disabled={!input.trim() || procesando}
+            className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed 
+            text-white p-3 rounded-xl transition-all duration-200 flex items-center justify-center"
+          >
+            {procesando ? <Loader2 className="animate-spin w-5 h-5" /> : <Send className="w-5 h-5" />}
+          </button>
+        </form>
+        <div className="text-center mt-2">
+           <p className="text-[10px] text-slate-500">Impacto AI puede cometer errores. Verifica la información importante.</p>
+        </div>
+      </div>
+    </div>
+  );
+}

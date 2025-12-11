@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// 1. USUARIOS (Líder, Mentor, Staff)
+model Usuario {
+  id               Int      @id @default(autoincrement())
+  nombre           String
+  email            String   @unique
+  password         String?
+  rol              String   @default("LIDER") 
+  puntosCuanticos  Int      @default(0)
+  isActive         Boolean  @default(false)
+  
+  // --- NUEVOS CAMPOS DE JERARQUÍA ---
+  mentorId         Int?     // ID del Mentor asignado
+  coordinadorId    Int?     // ID del Coordinador asignado
+  
+  // Datos Extras
+  vision           String?
+  sede             String?
+  llamadasPerdidas Int      @default(0)
+  
+  // Relaciones
+  cartas           CartaFrutos[] @relation("CartaFrutosUsuario")
+  evidencias       Evidencia[]
+  createdAt        DateTime @default(now())
+}
+
+// 2. CARTA F.R.U.T.O.S.
+model CartaFrutos {
+  id                  Int     @id @default(autoincrement())
+  usuario             Usuario @relation(fields: [usuarioId], references: [id], name: "CartaFrutosUsuario")
+  usuarioId           Int
+
+  finanzasMeta        String?
+  finanzasAvance      Int     @default(0)
+  finanzasScheduledDays String? // JSON array de días programados
+  relacionesMeta      String?
+  relacionesAvance    Int     @default(0)
+  relacionesScheduledDays String?
+  talentosMeta        String?
+  talentosAvance      Int     @default(0)
+  talentosScheduledDays String?
+  pazMentalMeta       String?
+  pazMentalAvance     Int     @default(0)
+  pazMentalScheduledDays String?
+  ocioMeta            String?
+  ocioAvance          Int     @default(0)
+  ocioScheduledDays   String?
+  saludMeta           String?
+  saludAvance         Int     @default(0)
+  saludScheduledDays  String?
+  servicioTransMeta   String?
+  servicioTransAvance Int     @default(0)
+  servicioTransScheduledDays String?
+  servicioComunMeta   String?
+  servicioComunAvance Int     @default(0)
+  servicioComunScheduledDays String?
+
+  enrolamientoMeta    String?  @default("Invitar a 4 personas")
+  enrolamientoAvance  Int      @default(0)
+  invitadosInscritos  Int      @default(0)
+
+  // RELACIÓN NUEVA: Una carta tiene muchas tareas
+  tareas              Tarea[]
+
+  // --- ESTADO DE AUTORIZACIÓN ---
+  estado              String   @default("BORRADOR") // BORRADOR, REVISION, AUTORIZADA
+  autorizadoMentor    Boolean  @default(false)      // ¿El Mentor ya dio el OK?
+  autorizadoCoord     Boolean  @default(false)      // ¿El Coordinador ya dio el OK?
+  
+  fechaActualizacion DateTime @updatedAt
+}
+
+// 3. TAREAS DIARIAS (Desglose de la Carta)
+model Tarea {
+  id            Int      @id @default(autoincrement())
+  cartaId       Int
+  carta         CartaFrutos @relation(fields: [cartaId], references: [id], onDelete: Cascade)
+  categoria     String   // "finanzas", "salud", etc.
+  descripcion   String   // "Salir a correr (Sesión 1/5)"
+  completada    Boolean  @default(false)
+  requiereFoto  Boolean  @default(true) // Por defecto, todo requiere foto en tu sistema
+  
+  // Opcional: Si quieres vincular la evidencia exacta
+  evidenciaId   Int?     @unique
+  createdAt     DateTime @default(now())
+}
+
+// 4. EVIDENCIAS
+model Evidencia {
+  id          Int      @id @default(autoincrement())
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  usuarioId   Int
+  categoria   String
+  urlFoto     String
+  fechaSubida DateTime @default(now())
+}
+
+// 5. METAS EXTRAORDINARIAS (Asignadas por Coordinador)
+model MetaExtraordinaria {
+  id              Int      @id @default(autoincrement())
+  titulo          String   // Ej: "Reto Navideño: 10,000 pasos diarios"
+  descripcion     String   // Detalles de la meta
+  puntosReward    Int      @default(100) // Puntos al completar
+  
+  // Alcance de la meta
+  tipoAsignacion  String   // "VISION" o "INDIVIDUAL"
+  visionObjetivo  String?  // Si es para toda una visión
+  usuarioId       Int?     // Si es para un jugador específico
+  
+  // Control temporal
+  fechaInicio     DateTime
+  fechaFin        DateTime
+  activa          Boolean  @default(true)
+  
+  // Metadatos
+  creadoPor       Int      // ID del coordinador que la creó
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}

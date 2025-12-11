@@ -1,0 +1,236 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// =====================================================
+// ENUMS PARA ESTANDARIZAR VALORES
+// =====================================================
+
+enum Rol {
+  LIDER
+  PARTICIPANTE
+  MENTOR
+  COORDINADOR
+  ADMINISTRADOR
+  GAMECHANGER
+}
+
+enum EstadoSuscripcion {
+  ACTIVO
+  INACTIVO
+  PRUEBA
+}
+
+enum TipoPago {
+  STRIPE
+  PAYPAL
+  PUNTOS
+  TRANSFERENCIA
+}
+
+enum EstadoCarta {
+  BORRADOR
+  REVISION
+  AUTORIZADA
+  RECHAZADA
+}
+
+// =====================================================
+// 1. MODELO PRINCIPAL DE USUARIO
+// =====================================================
+
+model Usuario {
+  id               Int      @id @default(autoincrement())
+  nombre           String
+  email            String   @unique
+  password         String?
+  imagen           String?  // Avatar del usuario
+  rol              Rol      @default(LIDER)
+  puntosCuanticos  Int      @default(0)
+  isActive         Boolean  @default(false)
+  
+  // Suscripción
+  suscripcion            EstadoSuscripcion @default(INACTIVO)
+  planActual             String?           // "Standard", "Salto Cuantico"
+  fechaFinSuscripcion    DateTime?
+
+  // Jerarquía (Auto-relación)
+  mentorId         Int?     
+  mentor           Usuario?  @relation("MentorLider", fields: [mentorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  liderados        Usuario[] @relation("MentorLider")
+
+  coordinadorId    Int?
+  coordinador      Usuario?  @relation("CoordMentor", fields: [coordinadorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  mentoreados      Usuario[] @relation("CoordMentor")
+
+  // Datos Extras
+  vision           String?
+  sede             String?
+  llamadasPerdidas Int      @default(0)
+  
+  // Relaciones Funcionales
+  cartas           CartaFrutos[]
+  evidencias       Evidencia[]
+  compras          Transaccion[]     @relation("ComprasUsuario")
+  historialChat    MensajeChat[]
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @default(now()) @updatedAt
+}
+
+// =====================================================
+// 2. CARTA F.R.U.T.O.S.
+// =====================================================
+
+model CartaFrutos {
+  id                  Int     @id @default(autoincrement())
+  usuario             Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  usuarioId           Int
+
+  // 8 Áreas F.R.U.T.O.S.
+  finanzasMeta        String?
+  finanzasAvance      Int     @default(0)
+  finanzasScheduledDays String? // JSON array de días programados
+  
+  relacionesMeta      String?
+  relacionesAvance    Int     @default(0)
+  relacionesScheduledDays String?
+  
+  talentosMeta        String?
+  talentosAvance      Int     @default(0)
+  talentosScheduledDays String?
+  
+  pazMentalMeta       String?
+  pazMentalAvance     Int     @default(0)
+  pazMentalScheduledDays String?
+  
+  ocioMeta            String?
+  ocioAvance          Int     @default(0)
+  ocioScheduledDays   String?
+  
+  saludMeta           String?
+  saludAvance         Int     @default(0)
+  saludScheduledDays  String?
+  
+  servicioTransMeta   String?
+  servicioTransAvance Int     @default(0)
+  servicioTransScheduledDays String?
+  
+  servicioComunMeta   String?
+  servicioComunAvance Int     @default(0)
+  servicioComunScheduledDays String?
+
+  enrolamientoMeta    String?  @default("Invitar a 4 personas")
+  enrolamientoAvance  Int      @default(0)
+  invitadosInscritos  Int      @default(0)
+
+  // Tareas asociadas
+  tareas              Tarea[]
+
+  // Estado de autorización
+  estado              EstadoCarta   @default(BORRADOR)
+  autorizadoMentor    Boolean       @default(false)
+  autorizadoCoord     Boolean       @default(false)
+  autorizadoPorId     Int?
+  
+  fechaActualizacion  DateTime @updatedAt
+  fechaCreacion       DateTime @default(now())
+}
+
+// =====================================================
+// 3. TAREAS DIARIAS (Desglose de la Carta)
+// =====================================================
+
+model Tarea {
+  id            Int      @id @default(autoincrement())
+  cartaId       Int
+  carta         CartaFrutos @relation(fields: [cartaId], references: [id], onDelete: Cascade)
+  categoria     String   // "finanzas", "salud", etc.
+  descripcion   String   // "Salir a correr (Sesión 1/5)"
+  completada    Boolean  @default(false)
+  requiereFoto  Boolean  @default(true)
+  
+  evidenciaId   Int?     @unique
+  createdAt     DateTime @default(now())
+}
+
+// =====================================================
+// 4. EVIDENCIAS (Fotos de cumplimiento)
+// =====================================================
+
+model Evidencia {
+  id          Int      @id @default(autoincrement())
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  usuarioId   Int
+  
+  titulo      String
+  descripcion String?
+  urlArchivo  String?  // URL de la imagen/video
+  semana      Int
+  completado  Boolean  @default(false)
+  validada    Boolean  @default(false) // Aprobada por staff
+  
+  createdAt   DateTime @default(now())
+}
+
+// =====================================================
+// 5. TIENDA DE RECOMPENSAS
+// =====================================================
+
+model Producto {
+  id            Int     @id @default(autoincrement())
+  nombre        String
+  descripcion   String  @db.Text
+  precioPuntos  Int?
+  precioDinero  Float?
+  imagenUrl     String
+  stock         Int     @default(100)
+  tipo          String  // FISICO, DIGITAL, SESION, CUPON
+  activo        Boolean @default(true)
+  
+  transacciones Transaccion[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// =====================================================
+// 6. HISTORIAL DE COMPRAS/TRANSACCIONES
+// =====================================================
+
+model Transaccion {
+  id          Int      @id @default(autoincrement())
+  montoPuntos Int?
+  montoDinero Float?
+  metodo      TipoPago
+  estado      String   @default("COMPLETADO") // PENDIENTE, COMPLETADO, RECHAZADO
+  
+  usuarioId   Int
+  usuario     Usuario  @relation("ComprasUsuario", fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  productoId  Int?
+  producto    Producto? @relation(fields: [productoId], references: [id], onDelete: SetNull)
+  
+  fecha       DateTime @default(now())
+}
+
+// =====================================================
+// 7. PERSISTENCIA MENTOR IA (Chat)
+// =====================================================
+
+model MensajeChat {
+  id        Int      @id @default(autoincrement())
+  role      String   // "user" o "assistant"
+  contenido String   @db.Text
+  
+  usuarioId Int
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  fecha     DateTime @default(now())
+}
