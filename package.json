@@ -19,12 +19,12 @@
     "ai": "^5.0.110",
     "bcryptjs": "^3.0.3",
     "lucide-react": "^0.556.0",
-    "next": "16.0.8",
+    "next": "15.0.3",
     "next-auth": "^4.24.13",
     "openai": "^6.10.0",
     "prisma": "^5.22.0",
-    "react": "19.2.1",
-    "react-dom": "19.2.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "zod": "^4.1.13"
   },
   "devDependencies": {
