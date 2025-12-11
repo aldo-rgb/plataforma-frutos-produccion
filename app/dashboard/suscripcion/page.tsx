@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { procesarPagoSimulado } from '@/app/actions/pagos';
+import { procesarPagoSimulado } from '../../actions/pagos';
 import { CreditCard, Building2, User, Check, Calculator, ShieldCheck, X, Globe, Smartphone, CheckCircle2, Loader2, ArrowRight, Zap, Star, Users } from 'lucide-react';
 import Link from 'next/link';
 

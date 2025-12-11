@@ -5,7 +5,7 @@ import {
   CheckSquare, Square, Clock, AlertTriangle, Calendar, 
   TrendingUp, Sparkles, ChevronRight
 } from 'lucide-react';
-import { filterThingsLikeTasks } from '@/utils/task-filter';
+import { filterThingsLikeTasks } from '../../../utils/task-filter';
 import Link from 'next/link';
 
 // Importar las categorías desde carta

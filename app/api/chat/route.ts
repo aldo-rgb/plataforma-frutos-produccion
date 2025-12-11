@@ -1,9 +1,9 @@
 import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { extraerJSONDeRespuestaIA } from "@/utils/extraer-json";
+import { authOptions } from "../../../lib/auth";
+import { prisma } from "../../../lib/prisma";
+import { extraerJSONDeRespuestaIA } from "../../../utils/extraer-json";
 
 // Configuración de tiempo máximo de ejecución (opcional, útil para modelos lentos)
 export const maxDuration = 30;

@@ -1,10 +1,10 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import Sidebar from "@/components/dashboard/Sidebar";
-import Topbar from "@/components/dashboard/Topbar";
-import SecurityGate from "@/components/dashboard/SecurityGate";
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from "../../lib/auth";
+import { redirect } from 'next/navigation';
+import { prisma } from "../../lib/prisma";
+import Sidebar from "../../components/dashboard/Sidebar";
+import Topbar from "../../components/dashboard/Topbar";
+import SecurityGate from "../../components/dashboard/SecurityGate";
 
 export default async function DashboardLayout({
   children,

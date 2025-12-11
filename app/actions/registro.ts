@@ -1,6 +1,6 @@
-'use server';
+"use server";
 
-import { prisma } from "@/lib/prisma";
+import { prisma } from "../../lib/prisma";
 import bcrypt from "bcryptjs";
 
 export async function registrarUsuario(formData: FormData) {

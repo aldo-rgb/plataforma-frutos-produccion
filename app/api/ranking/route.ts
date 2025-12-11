@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '../../../lib/prisma';
 
 export const dynamic = 'force-dynamic'; // Importante para que no se guarde en caché y sea tiempo real
 

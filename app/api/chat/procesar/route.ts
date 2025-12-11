@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { extraerJSONDeRespuestaIA } from '@/utils/extraer-json';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '../../../../lib/auth';
+import { prisma } from '../../../../lib/prisma';
+import { extraerJSONDeRespuestaIA } from '../../../../utils/extraer-json';
 
 /**
  * POST /api/chat/procesar

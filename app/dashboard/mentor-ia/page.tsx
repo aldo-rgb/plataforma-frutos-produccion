@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Send, Bot, User, Sparkles, Loader2 } from 'lucide-react';
-import { obtenerHistorialChat, guardarMensajeChat } from '@/app/actions/chat-ia';
+import { obtenerHistorialChat, guardarMensajeChat } from '../../actions/chat-ia';
 
 interface Mensaje {
   role: 'user' | 'assistant';

@@ -3,7 +3,7 @@
 import React from 'react';
 import { Bot, ShieldCheck, Zap, Trophy, Heart, Pencil } from 'lucide-react';
 import Link from 'next/link';
-import MetasExtraordinariasWidget from '@/components/MetasExtraordinariasWidget';
+import MetasExtraordinariasWidget from '../../../components/MetasExtraordinariasWidget';
 
 export default function BienvenidaPage() {
   return (
