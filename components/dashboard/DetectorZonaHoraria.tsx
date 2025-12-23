@@ -8,6 +8,26 @@ interface DetectorZonaHorariaProps {
   onUpdateConfirm: (newTimezone: string) => void;
 }
 
+// Zonas horarias equivalentes (mismo offset UTC)
+const EQUIVALENT_TIMEZONES: { [key: string]: string[] } = {
+  'America/Mexico_City': ['America/Monterrey', 'America/Merida', 'America/Chihuahua', 'America/Matamoros'],
+  'America/Monterrey': ['America/Mexico_City', 'America/Merida', 'America/Chihuahua', 'America/Matamoros'],
+  'America/Merida': ['America/Mexico_City', 'America/Monterrey', 'America/Chihuahua', 'America/Matamoros'],
+  'America/Tijuana': ['America/Los_Angeles', 'America/Vancouver'],
+  'America/Mazatlan': ['America/Hermosillo', 'America/Phoenix'],
+};
+
+function areTimezonesEquivalent(tz1: string, tz2: string): boolean {
+  if (tz1 === tz2) return true;
+  
+  const equivalents = EQUIVALENT_TIMEZONES[tz1];
+  if (equivalents && equivalents.includes(tz2)) {
+    return true;
+  }
+  
+  return false;
+}
+
 export default function DetectorZonaHoraria({ userTimezone, onUpdateConfirm }: DetectorZonaHorariaProps) {
   const [showBanner, setShowBanner] = useState(false);
   const [detectedZone, setDetectedZone] = useState('');
@@ -20,7 +40,8 @@ export default function DetectorZonaHoraria({ userTimezone, onUpdateConfirm }: D
     const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     
     // 2. Comparar con la zona guardada en la Base de Datos
-    if (userTimezone && browserZone !== userTimezone) {
+    // Solo mostrar banner si las zonas NO son equivalentes
+    if (userTimezone && browserZone !== userTimezone && !areTimezonesEquivalent(userTimezone, browserZone)) {
       setDetectedZone(browserZone);
       setShowBanner(true);
     }

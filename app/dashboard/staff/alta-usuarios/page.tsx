@@ -28,29 +28,14 @@ export default function AltaUsuariosPage() {
 
   // --- LÓGICA DE NEGOCIO: FILTRADO DE ROLES ---
   const getRolesDisponibles = () => {
-    const rolesBasicos = [
-      { value: 'PARTICIPANTE', label: 'Participante' },
+    // Roles disponibles para crear usuarios
+    return [
+      { value: 'ADMINISTRADOR', label: 'Administrador (Acceso Total)' },
+      { value: 'COORDINADOR', label: 'Admin' },
       { value: 'GAMECHANGER', label: 'Game Changer' },
-      { value: 'LIDER', label: 'Líder' },
       { value: 'MENTOR', label: 'Mentor' },
+      { value: 'PARTICIPANTE', label: 'Participante' },
     ];
-
-    if (currentUserRole === 'ADMINISTRADOR') {
-      // El Admin puede crear todo, incluyendo Staff y otros Admins
-      return [
-        { value: 'ADMINISTRADOR', label: 'Administrador (Acceso Total)' },
-        { value: 'STAFF', label: 'Staff' },
-        ...rolesBasicos
-      ];
-    } else if (currentUserRole === 'STAFF') {
-      // El Staff solo ve básicos + puede crear Staff
-      return [
-        { value: 'STAFF', label: 'Staff' },
-        ...rolesBasicos
-      ];
-    }
-    
-    return rolesBasicos; // Por defecto, mostrar roles básicos
   };
 
   const rolesDisponibles = getRolesDisponibles();

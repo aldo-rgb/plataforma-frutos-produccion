@@ -7,6 +7,8 @@ import SocketWrapper from "../../components/SocketWrapper";
 import DashboardProviders from "../../components/DashboardProviders";
 import TimezoneWrapper from "../../components/dashboard/TimezoneWrapper";
 import { ToastProvider } from "../../components/ui/ToastProvider";
+import { PhoenixProvider } from "../../contexts/PhoenixContext";
+import { PhoenixWrapper } from "../../components/phoenix/PhoenixWrapper";
 
 export default async function DashboardLayout({
   children,
@@ -61,32 +63,36 @@ export default async function DashboardLayout({
   return (
     <DashboardProviders session={session}>
       <ToastProvider>
-        <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden">
-          
-          {/* Detector de zona horaria */}
-          <TimezoneWrapper initialTimezone={usuarioSerializado.timezone || 'America/Mexico_City'} />
-          
-          {/* PASO CRUCIAL:
-            Pasamos el "usuarioSerializado" como prop al Sidebar.
-            Esto elimina la necesidad de los Mocks dentro del componente.
-          */}
-          <Sidebar usuario={usuarioSerializado} />
+        <PhoenixProvider>
+          <PhoenixWrapper>
+            <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden">
+              
+              {/* Detector de zona horaria */}
+              <TimezoneWrapper initialTimezone={usuarioSerializado.timezone || 'America/Mexico_City'} />
+              
+              {/* PASO CRUCIAL:
+                Pasamos el "usuarioSerializado" como prop al Sidebar.
+                Esto elimina la necesidad de los Mocks dentro del componente.
+              */}
+              <Sidebar usuario={usuarioSerializado} />
 
-          <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
-            {/* También pasamos datos al Topbar (Nombre, Avatar, Puntos) */}
-            <Topbar usuario={usuarioSerializado} />
+              <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
+                {/* También pasamos datos al Topbar (Nombre, Avatar, Puntos) */}
+                <Topbar usuario={usuarioSerializado} />
 
-            <main className="w-full flex-grow p-6">
-              {/* Envolvemos el contenido con el Guardián */}
-              <SecurityGate rol={usuarioSerializado.rol} suscripcion={usuarioSerializado.suscripcion}>
-                {children}
-              </SecurityGate>
-            </main>
-          </div>
+                <main className="w-full flex-grow p-6">
+                  {/* Envolvemos el contenido con el Guardián */}
+                  <SecurityGate rol={usuarioSerializado.rol} suscripcion={usuarioSerializado.suscripcion}>
+                    {children}
+                  </SecurityGate>
+                </main>
+              </div>
 
-          {/* Componentes de Socket.IO */}
-          <SocketWrapper />
-        </div>
+              {/* Componentes de Socket.IO */}
+              <SocketWrapper />
+            </div>
+          </PhoenixWrapper>
+        </PhoenixProvider>
       </ToastProvider>
     </DashboardProviders>
   );

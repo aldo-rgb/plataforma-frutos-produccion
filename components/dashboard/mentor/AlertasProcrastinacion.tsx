@@ -102,6 +102,10 @@ export default function AlertasProcrastinacion() {
 
   const alertsToShow = showAll ? alerts : alerts.slice(0, 3);
 
+  // Contar usuarios únicos
+  const uniqueUsers = new Set(alerts.map(alert => alert.Usuario.id));
+  const uniqueUserCount = uniqueUsers.size;
+
   return (
     <div className="bg-gradient-to-br from-red-950/40 to-orange-950/40 border-2 border-red-600/60 rounded-xl p-5 shadow-2xl shadow-red-900/30">
       <div className="flex items-start justify-between mb-4">
@@ -114,7 +118,7 @@ export default function AlertasProcrastinacion() {
               ⚠️ Alertas de Procrastinación
             </h3>
             <p className="text-red-300/80 text-sm">
-              {alerts.length} estudiante{alerts.length !== 1 ? 's' : ''} con 3+ reagendamientos
+              {uniqueUserCount} estudiante{uniqueUserCount !== 1 ? 's' : ''} con 3+ reagendamientos ({alerts.length} alerta{alerts.length !== 1 ? 's' : ''})
             </p>
           </div>
         </div>

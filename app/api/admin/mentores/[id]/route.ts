@@ -127,6 +127,7 @@ export async function PUT(
       comisionPlataforma,
       disponible,
       destacado,
+      isActive, // Nuevo campo para activar/desactivar usuario
     } = body;
 
     // Verificar que el mentor existe
@@ -147,44 +148,65 @@ export async function PUT(
     // Preparar datos a actualizar
     const dataToUpdate: any = {};
     let actualizarUsuario = false;
+    let nuevoEstadoUsuario: boolean | undefined;
+
+    // Si se está actualizando el estado de activación del usuario
+    if (typeof isActive === 'boolean') {
+      actualizarUsuario = true;
+      nuevoEstadoUsuario = isActive;
+    }
 
     if (typeof disponible === 'boolean') {
       dataToUpdate.disponible = disponible;
-      
-      // Si se está activando el mentor, también activar el usuario
-      if (disponible === true) {
-        actualizarUsuario = true;
-      }
     }
 
     if (typeof destacado === 'boolean') {
       dataToUpdate.destacado = destacado;
     }
 
-    // Actualizar mentor
-    const mentorActualizado = await prisma.perfilMentor.update({
-      where: { id: mentorId },
-      data: dataToUpdate,
-      include: {
-        Usuario: {
-          select: {
-            id: true,
-            nombre: true,
-            email: true,
-            imagen: true,
-            isActive: true,
+    // Actualizar mentor si hay cambios en PerfilMentor
+    let mentorActualizado;
+    if (Object.keys(dataToUpdate).length > 0) {
+      mentorActualizado = await prisma.perfilMentor.update({
+        where: { id: mentorId },
+        data: dataToUpdate,
+        include: {
+          Usuario: {
+            select: {
+              id: true,
+              nombre: true,
+              email: true,
+              imagen: true,
+              isActive: true,
+            },
           },
         },
-      },
-    });
-
-    // Si se activó el mentor, activar también el usuario
-    if (actualizarUsuario) {
-      await prisma.usuario.update({
-        where: { id: mentorActualizado.usuarioId },
-        data: { isActive: true }
       });
-      console.log(`✅ [ADMIN] Usuario ${mentorActualizado.usuarioId} activado junto con el mentor`);
+    } else {
+      // Si no hay cambios en PerfilMentor, solo obtener los datos
+      mentorActualizado = await prisma.perfilMentor.findUnique({
+        where: { id: mentorId },
+        include: {
+          Usuario: {
+            select: {
+              id: true,
+              nombre: true,
+              email: true,
+              imagen: true,
+              isActive: true,
+            },
+          },
+        },
+      });
+    }
+
+    // Actualizar estado del usuario si es necesario
+    if (actualizarUsuario && nuevoEstadoUsuario !== undefined) {
+      await prisma.usuario.update({
+        where: { id: mentorActualizado!.usuarioId },
+        data: { isActive: nuevoEstadoUsuario }
+      });
+      console.log(`✅ [ADMIN] Usuario ${mentorActualizado!.usuarioId} ${nuevoEstadoUsuario ? 'activado' : 'desactivado'} por ${session.user.nombre}`);
     }
 
     console.log(

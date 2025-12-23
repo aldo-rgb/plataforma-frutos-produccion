@@ -179,13 +179,43 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Actualizar tarea a completada
+    // 🧬 QUANTUM PATTERNS - Capturar metadatos
+    const now = new Date();
+    const hour = now.getHours();
+    const dayOfWeek = now.getDay();
+    
+    // Determinar TimeSlot
+    let timeSlot: string | null = null;
+    if (hour >= 5 && hour < 9) timeSlot = 'EARLY_MORNING';
+    else if (hour >= 9 && hour < 12) timeSlot = 'MORNING';
+    else if (hour >= 12 && hour < 15) timeSlot = 'MIDDAY';
+    else if (hour >= 15 && hour < 18) timeSlot = 'AFTERNOON';
+    else if (hour >= 18 && hour < 21) timeSlot = 'EVENING';
+    else if (hour >= 21 && hour < 24) timeSlot = 'NIGHT';
+    else timeSlot = 'LATE_NIGHT';
+
+    // Calcular velocidad de completación (minutos early/late)
+    const scheduledTime = task.dueDate;
+    const completionSpeed = Math.round((now.getTime() - scheduledTime.getTime()) / (1000 * 60));
+
+    // Obtener racha actual del usuario
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: session.user.id },
+      select: { completionStreak: true }
+    });
+
+    // Actualizar tarea a completada con metadatos
     const updatedTask = await prisma.taskInstance.update({
       where: { id: taskId },
       data: {
         status: 'COMPLETED',
-        completedAt: new Date(),
-        updatedAt: new Date()
+        completedAt: now,
+        updatedAt: now,
+        // Quantum metadata
+        dayOfWeek,
+        timeSlot,
+        streakContext: usuario?.completionStreak || 0,
+        completionSpeed,
       }
     });
 

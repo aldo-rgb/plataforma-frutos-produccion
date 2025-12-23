@@ -890,6 +890,17 @@ Responde SOLO con la acción, sin numeración ni explicaciones adicionales.`
         setTimeout(() => {
           window.location.href = '/dashboard/carta/resumen';
         }, 2000);
+      } else if (submitRes.status === 403 && submitData.requiresSubscription) {
+        // Redirección a suscripción si es necesario
+        setErrorModal({
+          show: true,
+          title: '🔒 Suscripción Requerida',
+          message: submitData.message || 'Necesitas una suscripción activa para enviar tu carta a revisión.'
+        });
+        
+        setTimeout(() => {
+          window.location.href = '/dashboard/suscripcion';
+        }, 2500);
       } else {
         // eslint-disable-next-line no-console
         console.error('❌ Error del servidor:', submitData);

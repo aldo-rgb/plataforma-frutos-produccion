@@ -93,14 +93,14 @@ export default function VerPerfilMentorPage() {
       const res = await fetch(`/api/admin/mentores/${mentorId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ disponible: !mentor.disponible }),
+        body: JSON.stringify({ isActive: !mentor.usuario.isActive }),
       });
 
       const data = await res.json();
 
       if (data.success) {
         await cargarMentor();
-        setMensajeExito(`Mentor ${mentor.disponible ? 'desactivado' : 'activado'} correctamente`);
+        setMensajeExito(`Mentor ${mentor.usuario.isActive ? 'desactivado' : 'activado'} correctamente`);
         setTimeout(() => setMensajeExito(''), 3000);
       } else {
         setMensajeError(data.error || 'Error al actualizar estado');
@@ -224,13 +224,13 @@ export default function VerPerfilMentorPage() {
               onClick={() => setMostrarModalActivar(true)}
               disabled={actualizando}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${
-                mentor.disponible
+                mentor.usuario.isActive
                   ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'
                   : 'bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30'
               } disabled:opacity-50`}
             >
-              {mentor.disponible ? <EyeOff size={18} /> : <Eye size={18} />}
-              {mentor.disponible ? 'Desactivar' : 'Activar'}
+              {mentor.usuario.isActive ? <EyeOff size={18} /> : <Eye size={18} />}
+              {mentor.usuario.isActive ? 'Desactivar' : 'Activar'}
             </button>
 
             <Link
@@ -246,10 +246,10 @@ export default function VerPerfilMentorPage() {
         {/* Tarjeta principal del perfil */}
         <div className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
           {/* Banner de estado */}
-          <div className={`p-4 ${mentor.disponible ? 'bg-green-500/10 border-b border-green-500/30' : 'bg-red-500/10 border-b border-red-500/30'}`}>
+          <div className={`p-4 ${mentor.usuario.isActive ? 'bg-green-500/10 border-b border-green-500/30' : 'bg-red-500/10 border-b border-red-500/30'}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {mentor.disponible ? (
+                {mentor.usuario.isActive ? (
                   <>
                     <Eye className="text-green-400" size={24} />
                     <span className="text-green-400 font-semibold">Mentor Activo</span>
@@ -257,7 +257,7 @@ export default function VerPerfilMentorPage() {
                 ) : (
                   <>
                     <EyeOff className="text-red-400" size={24} />
-                    <span className="text-red-400 font-semibold">Mentor Inactivo - Pendiente de Revisión</span>
+                    <span className="text-red-400 font-semibold">Mentor Inactivo - Pendiente de Autorización</span>
                   </>
                 )}
               </div>
@@ -490,7 +490,7 @@ export default function VerPerfilMentorPage() {
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
           <div className="bg-gradient-to-br from-slate-800 to-slate-900 border-2 border-slate-700 rounded-2xl p-8 max-w-md w-full shadow-2xl animate-slideUp">
             <div className="text-center mb-6">
-              {mentor.disponible ? (
+              {mentor.usuario.isActive ? (
                 <div className="mb-4">
                   <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                     <EyeOff className="text-red-400" size={32} />
@@ -543,7 +543,7 @@ export default function VerPerfilMentorPage() {
                 onClick={toggleDisponibilidad}
                 disabled={actualizando}
                 className={`flex-1 py-3 rounded-xl font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2 ${
-                  mentor.disponible
+                  mentor.usuario.isActive
                     ? 'bg-red-600 hover:bg-red-700 text-white'
                     : 'bg-green-600 hover:bg-green-700 text-white'
                 }`}

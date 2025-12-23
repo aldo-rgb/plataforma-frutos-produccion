@@ -39,6 +39,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Carta no encontrada' }, { status: 404 });
     }
 
+    // ========== VALIDACIÓN DE SUSCRIPCIÓN PARA PARTICIPANTES ==========
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: userId },
+      select: { 
+        rol: true, 
+        suscripcion: true,
+        mentorId: true, 
+        assignedMentorId: true 
+      }
+    });
+
+    // Solo validar suscripción si es PARTICIPANTE
+    if (usuario?.rol === 'PARTICIPANTE') {
+      const tieneAcceso = usuario.suscripcion === 'ACTIVO' || usuario.suscripcion === 'PRUEBA';
+      
+      if (!tieneAcceso) {
+        return NextResponse.json({ 
+          error: 'Suscripción requerida',
+          message: 'Necesitas una suscripción activa para enviar tu carta a revisión',
+          requiresSubscription: true
+        }, { status: 403 });
+      }
+    }
+    // ==================================================================
+
     console.log('📋 Carta encontrada ID:', carta.id);
     console.log('📊 Total de metas encontradas:', carta.Meta?.length || 0);
     if (carta.Meta && carta.Meta.length > 0) {
@@ -61,12 +86,6 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
     // ==========================================================
-
-    // Obtener información del usuario para determinar el flujo
-    const usuario = await prisma.usuario.findUnique({
-      where: { id: userId },
-      select: { mentorId: true, assignedMentorId: true }
-    });
 
     const mentorId = usuario?.assignedMentorId || usuario?.mentorId;
 

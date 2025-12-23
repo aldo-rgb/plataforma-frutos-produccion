@@ -345,3 +345,168 @@ export async function createInAppNotification(payload: NotificationPayload) {
     console.error('❌ Error creating in-app notification:', error);
   }
 }
+
+// ============================================
+// PHOENIX PROTOCOL SOS (Usuario → Mentor, Coordinador, Game Changer)
+// ============================================
+
+interface PhoenixSOSPayload {
+  userId: number;
+  userName: string;
+  mentorId: number | null;
+  coordinadorId: number | null;
+  gameChangerId: number | null;
+  triggerReason: string;
+  stats: {
+    tasksRescheduled: number;
+    tasksSkipped: number;
+  };
+}
+
+export async function sendPhoenixSOSNotifications(payload: PhoenixSOSPayload) {
+  try {
+    const { 
+      userId, 
+      userName, 
+      mentorId, 
+      coordinadorId, 
+      gameChangerId,
+      triggerReason,
+      stats 
+    } = payload;
+
+    console.log(`🆘 [PHOENIX SOS] ${userName} activó el Protocolo Fénix`);
+
+    // Template común de email
+    const emailTemplate = (recipientName: string, recipientRole: string) => `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #ff6b00 0%, #ff0000 100%); padding: 20px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">🆘 Alerta SOS - Protocolo Fénix</h1>
+        </div>
+        
+        <div style="padding: 30px; background: #f9fafb;">
+          <h2 style="color: #1f2937; margin-top: 0;">¡Hola ${recipientName}!</h2>
+          
+          <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 4px;">
+            <strong style="color: #92400e;">⚠️ ${userName} necesita apoyo</strong>
+            <p style="margin: 10px 0 0 0; color: #78350f;">
+              Ha activado el Protocolo Fénix (sistema de crisis management)
+            </p>
+          </div>
+
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #374151;">Razón del SOS:</h3>
+            <p style="font-style: italic; color: #6b7280; margin: 0;">
+              "${triggerReason}"
+            </p>
+          </div>
+
+          <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #374151;">Acciones Tomadas por el Sistema:</h3>
+            <ul style="color: #6b7280; line-height: 1.8;">
+              <li>📅 <strong>${stats.tasksRescheduled} tareas</strong> reagendadas para mañana</li>
+              <li>✨ <strong>${stats.tasksSkipped} tareas atrasadas</strong> perdonadas (sin penalización)</li>
+              <li>🎯 Usuario completará una micro-tarea para recuperar momentum</li>
+            </ul>
+          </div>
+
+          <div style="background: #dbeafe; padding: 16px; border-radius: 8px; margin: 20px 0;">
+            <strong style="color: #1e40af;">💡 Como ${recipientRole}, considera:</strong>
+            <ul style="color: #1e3a8a; margin: 10px 0;">
+              <li>Enviar mensaje de apoyo en las próximas horas</li>
+              <li>Revisar su carga de trabajo actual</li>
+              <li>Agendar check-in si es recurrente</li>
+            </ul>
+          </div>
+
+          <a href="${process.env.NEXT_PUBLIC_URL}/dashboard/admin/usuarios/${userId}" 
+             style="display: inline-block; padding: 14px 28px; background: #ff6b00; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0;">
+            Ver Perfil de ${userName}
+          </a>
+
+          <p style="color: #9ca3af; font-size: 14px; margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+            <strong>Nota:</strong> El Protocolo Fénix es un sistema de retención diseñado para convertir momentos de crisis en momentos de recuperación. El usuario está recibiendo apoyo inmediato del sistema.
+          </p>
+        </div>
+      </div>
+    `;
+
+    // 1. Notificar al MENTOR
+    if (mentorId) {
+      const mentor = await prisma.usuario.findUnique({
+        where: { id: mentorId },
+        select: { nombre: true, email: true }
+      });
+
+      if (mentor) {
+        await sendEmail(
+          mentor.email,
+          `🆘 SOS: ${userName} activó Protocolo Fénix`,
+          emailTemplate(mentor.nombre, 'Mentor')
+        );
+
+        await sendPushNotification(
+          mentorId,
+          `🆘 SOS de ${userName}`,
+          `Activó el Protocolo Fénix - ${triggerReason}`
+        );
+
+        console.log(`✅ Notificación enviada al mentor ${mentor.nombre}`);
+      }
+    }
+
+    // 2. Notificar al COORDINADOR
+    if (coordinadorId) {
+      const coordinador = await prisma.usuario.findUnique({
+        where: { id: coordinadorId },
+        select: { nombre: true, email: true }
+      });
+
+      if (coordinador) {
+        await sendEmail(
+          coordinador.email,
+          `🆘 SOS: ${userName} activó Protocolo Fénix`,
+          emailTemplate(coordinador.nombre, 'Coordinador')
+        );
+
+        await sendPushNotification(
+          coordinadorId,
+          `🆘 SOS de ${userName}`,
+          `Activó el Protocolo Fénix - ${triggerReason}`
+        );
+
+        console.log(`✅ Notificación enviada al coordinador ${coordinador.nombre}`);
+      }
+    }
+
+    // 3. Notificar al GAME CHANGER
+    if (gameChangerId) {
+      const gameChanger = await prisma.usuario.findUnique({
+        where: { id: gameChangerId },
+        select: { nombre: true, email: true }
+      });
+
+      if (gameChanger) {
+        await sendEmail(
+          gameChanger.email,
+          `🆘 SOS: ${userName} activó Protocolo Fénix`,
+          emailTemplate(gameChanger.nombre, 'Game Changer')
+        );
+
+        await sendPushNotification(
+          gameChangerId,
+          `🆘 SOS de ${userName}`,
+          `Activó el Protocolo Fénix - ${triggerReason}`
+        );
+
+        console.log(`✅ Notificación enviada al game changer ${gameChanger.nombre}`);
+      }
+    }
+
+    console.log(`✅ Notificaciones SOS enviadas exitosamente para ${userName}`);
+
+  } catch (error) {
+    console.error('❌ Error sending Phoenix SOS notifications:', error);
+    throw error; // Re-throw para que el endpoint maneje el error
+  }
+}

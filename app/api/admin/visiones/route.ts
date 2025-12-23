@@ -18,31 +18,59 @@ export async function GET() {
       select: { rol: true }
     });
 
-    if (usuario?.rol !== 'ADMIN' && usuario?.rol !== 'STAFF') {
+    if (usuario?.rol !== 'COORDINADOR' && usuario?.rol !== 'ADMINISTRADOR') {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
-    // Como las tablas Vision y visionId no existen aún, retornamos vacío por ahora
-    // Cuando se ejecute la migración, se descomentará este código:
-    
-    /*
+    // Sistema de Visiones con jerarquía implementado
     const visiones = await prisma.vision.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
+        Coordinador: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true
+          }
+        },
+        GameChangers: {
+          include: {
+            GameChanger: {
+              select: {
+                id: true,
+                nombre: true,
+                email: true
+              }
+            }
+          }
+        },
+        Participantes: {
+          include: {
+            Participante: {
+              select: {
+                id: true,
+                nombre: true,
+                email: true
+              }
+            },
+            GameChanger: {
+              select: {
+                id: true,
+                nombre: true
+              }
+            }
+          }
+        },
         _count: {
-          select: { usuarios: true }
+          select: { 
+            GameChangers: true,
+            Participantes: true
+          }
         }
       }
     });
 
     return NextResponse.json({ visiones });
-    */
-
-    // Por ahora, retornar array vacío
-    return NextResponse.json({ 
-      visiones: [],
-      message: 'Sistema de visiones pendiente de migración. Ejecuta la migración 20251218_ciclos_hibridos primero.'
-    });
 
   } catch (error) {
     console.error('Error loading visiones:', error);
@@ -63,55 +91,31 @@ export async function POST(request: Request) {
       select: { id: true, rol: true }
     });
 
-    if (usuario?.rol !== 'ADMIN' && usuario?.rol !== 'STAFF') {
+    if (usuario?.rol !== 'COORDINADOR' && usuario?.rol !== 'ADMINISTRADOR') {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
     const body = await request.json();
     const { name, description, startDate, endDate } = body;
 
-    if (!name || !startDate || !endDate) {
-      return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 });
+    if (!name) {
+      return NextResponse.json({ error: 'El nombre es requerido' }, { status: 400 });
     }
 
-    // Validar que endDate sea después de startDate
-    if (new Date(endDate) <= new Date(startDate)) {
-      return NextResponse.json({ error: 'La fecha fin debe ser posterior a la fecha inicio' }, { status: 400 });
-    }
-
-    /*
+    // Crear visión con el coordinador que la crea
     const nuevaVision = await prisma.vision.create({
       data: {
-        name,
-        description: description || null,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        status: 'ACTIVE',
-        coordinatorId: usuario.id
+        nombre: name,
+        descripcion: description || null,
+        coordinadorId: usuario.id,
+        isActive: true
       }
     });
-
-    // Log de acción admin
-    await prisma.adminActionLog.create({
-      data: {
-        adminId: usuario.id,
-        targetVisionId: nuevaVision.id,
-        actionType: 'CREATE_VISION',
-        details: {
-          name,
-          startDate,
-          endDate
-        }
-      }
-    });
-
-    return NextResponse.json({ success: true, vision: nuevaVision });
-    */
 
     return NextResponse.json({ 
-      error: 'Sistema de visiones pendiente de migración. Ejecuta la migración 20251218_ciclos_hibridos primero.',
-      migracionRequerida: true
-    }, { status: 503 });
+      success: true, 
+      vision: nuevaVision 
+    });
 
   } catch (error) {
     console.error('Error creating vision:', error);

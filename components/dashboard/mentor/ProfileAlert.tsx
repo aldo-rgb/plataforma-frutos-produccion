@@ -11,8 +11,11 @@ interface ProfileAlertProps {
     isActive: boolean;
     profileImage: string | null;
     jobTitle: string | null;
-    bioShort: string | null;
     skills: string[];
+    PerfilMentor?: {
+      biografiaCorta: string | null;
+      especialidad: string | null;
+    } | null;
   };
 }
 
@@ -22,7 +25,8 @@ export default function ProfileAlert({ user }: ProfileAlertProps) {
   
   if (!user.profileImage) camposFaltantes.push('Foto de perfil');
   if (!user.jobTitle) camposFaltantes.push('Puesto de trabajo');
-  if (!user.bioShort) camposFaltantes.push('Biografía corta');
+  if (!user.PerfilMentor?.biografiaCorta) camposFaltantes.push('Biografía corta');
+  if (!user.PerfilMentor?.especialidad) camposFaltantes.push('Especialidad');
   if (!user.skills || user.skills.length === 0) camposFaltantes.push('Habilidades');
 
   // CASO 1: Perfil completo Y activo = NO MOSTRAR NADA ✅

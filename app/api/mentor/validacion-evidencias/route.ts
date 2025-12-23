@@ -33,7 +33,10 @@ export async function GET(request: NextRequest) {
       estado: 'PENDIENTE' as const,
       ...(esSupervisor ? {} : {
         Usuario: {
-          mentorId: mentor.id // FILTRO: Solo usuarios donde mentor_id = ID del mentor actual
+          OR: [
+            { mentorId: mentor.id },
+            { assignedMentorId: mentor.id }
+          ]
         }
       })
     };
@@ -75,7 +78,10 @@ export async function GET(request: NextRequest) {
       },
       ...(esSupervisor ? {} : {
         Usuario: {
-          mentorId: mentor.id
+          OR: [
+            { mentorId: mentor.id },
+            { assignedMentorId: mentor.id }
+          ]
         }
       })
     };

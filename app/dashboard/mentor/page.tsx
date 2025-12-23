@@ -27,6 +27,14 @@ export default async function MentorDashboard() {
   const user = await prisma.usuario.findUnique({
     where: { 
       id: session.user.id
+    },
+    include: {
+      PerfilMentor: {
+        select: {
+          biografiaCorta: true,
+          especialidad: true
+        }
+      }
     }
   });
 

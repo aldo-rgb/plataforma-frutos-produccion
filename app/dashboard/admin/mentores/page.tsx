@@ -11,6 +11,8 @@ interface Mentor {
     nombre: string;
     email: string;
     imagen: string | null;
+    profileImage: string | null;
+    isActive: boolean;
   };
   nivel: 'JUNIOR' | 'SENIOR' | 'MASTER';
   titulo: string | null;
@@ -197,9 +199,9 @@ export default function AdminMentoresPage() {
         <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-slate-400 text-sm">Disponibles</p>
+              <p className="text-slate-400 text-sm">Activos</p>
               <p className="text-3xl font-bold text-green-400">
-                {mentores.filter((m) => m.disponible).length}
+                {mentores.filter((m) => m.usuario.isActive).length}
               </p>
             </div>
             <Eye className="text-green-400" size={32} />
@@ -285,7 +287,7 @@ export default function AdminMentoresPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
                           <img
-                            src={mentor.usuario.imagen || '/default-avatar.png'}
+                            src={mentor.usuario.profileImage || mentor.usuario.imagen || '/default-avatar.png'}
                             alt={mentor.usuario.nombre}
                             className="w-12 h-12 rounded-full object-cover border-2 border-slate-600"
                           />
@@ -366,12 +368,12 @@ export default function AdminMentoresPage() {
                         <div className="flex flex-col gap-2">
                           <span
                             className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold w-fit ${
-                              mentor.disponible
+                              mentor.usuario.isActive
                                 ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                                 : 'bg-red-500/20 text-red-400 border border-red-500/30'
                             }`}
                           >
-                            {mentor.disponible ? (
+                            {mentor.usuario.isActive ? (
                               <>
                                 <Eye size={12} /> Activo
                               </>

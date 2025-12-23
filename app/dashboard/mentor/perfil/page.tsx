@@ -1,13 +1,54 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { User, Briefcase, FileText, Link as LinkIcon, Save, Loader2, CheckCircle2, XCircle, MapPin, DollarSign } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const QuantumBioWriter = dynamic(() => import('@/components/mentor/QuantumBioWriter'), { ssr: false });
 
 export default function MentorProfileEditorPage() {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
+  const [showQuantumBio, setShowQuantumBio] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   
+  // Validación de campos obligatorios
+  const isFormValid = () => {
+    return (
+      // Sección 1: Identidad Visual
+      formData.profileImage.trim() !== '' &&
+      formData.nombre.trim() !== '' &&
+      
+      // Sección 2: Títulos Profesionales
+      formData.jobTitle.trim() !== '' &&
+      formData.titulo.trim() !== '' &&
+      
+      // Sección 3: Biografía
+      formData.biografiaCorta.trim() !== '' &&
+      formData.biografia.trim() !== '' &&
+      formData.biografiaCompleta.trim() !== '' &&
+      formData.vision.trim() !== '' &&
+      
+      // Sección 4: Ubicación
+      formData.sede.trim() !== '' &&
+      
+      // Sección 5: Expertise
+      formData.especialidad.trim() !== '' &&
+      formData.especialidadesSecundariasInput.trim() !== '' &&
+      formData.skillsInput.trim() !== '' &&
+      formData.logrosInput.trim() !== '' &&
+      
+      // Sección 6: Experiencia
+      formData.experienciaAnios > 0 &&
+      
+      // Sección 7: Nivel y Pricing
+      formData.precioBase > 0 &&
+      
+      // Sección 8: Enlaces
+      formData.enlaceVideoLlamada.trim() !== ''
+    );
+  };
   // Función para calcular comisiones según nivel
   const calcularComisiones = (nivel: 'JUNIOR' | 'SENIOR' | 'MASTER') => {
     switch (nivel) {
@@ -29,8 +70,6 @@ export default function MentorProfileEditorPage() {
     jobTitle: '',
     profileImage: '',
     experienceYears: 0,
-    bioShort: '',
-    bioFull: '',
     skillsInput: '', // Campo temporal para escribir skills separadas por coma
     vision: '',
     sede: '',
@@ -66,8 +105,6 @@ export default function MentorProfileEditorPage() {
             jobTitle: data.jobTitle || '',
             profileImage: data.profileImage || '',
             experienceYears: data.experienceYears || 0,
-            bioShort: data.bioShort || '',
-            bioFull: data.bioFull || '',
             skillsInput: data.skills ? data.skills.join(', ') : '',
             vision: data.vision || '',
             sede: data.sede || '',
@@ -115,6 +152,53 @@ export default function MentorProfileEditorPage() {
     }
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de archivo
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor selecciona un archivo de imagen válido');
+      return;
+    }
+
+    // Validar tamaño (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('La imagen no puede superar los 5MB');
+      return;
+    }
+
+    setUploadingImage(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/upload/profile-image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al subir la imagen');
+      }
+
+      const data = await response.json();
+      
+      // Actualizar la URL de la imagen en el formulario
+      setFormData(prev => ({
+        ...prev,
+        profileImage: data.url
+      }));
+
+    } catch (error) {
+      console.error('Error subiendo imagen:', error);
+      alert('Error al subir la imagen. Intenta nuevamente.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleSave = async () => {
     setLoading(true);
     setShowSuccess(false);
@@ -126,8 +210,6 @@ export default function MentorProfileEditorPage() {
         jobTitle: formData.jobTitle,
         profileImage: formData.profileImage,
         experienceYears: Number(formData.experienceYears),
-        bioShort: formData.bioShort,
-        bioFull: formData.bioFull,
         skills: formData.skillsInput.split(',').map(s => s.trim()).filter(s => s),
         vision: formData.vision,
         sede: formData.sede
@@ -223,7 +305,7 @@ export default function MentorProfileEditorPage() {
         </div>
         <button
           onClick={handleSave}
-          disabled={loading}
+          disabled={loading || !isFormValid()}
           className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? (
@@ -241,6 +323,23 @@ export default function MentorProfileEditorPage() {
       </div>
 
       <div className="space-y-8">
+        {/* QUANTUM BIO-WRITER - BANNER SUPERIOR */}
+        <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-4 rounded-xl border border-indigo-500/30 flex items-center justify-between shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="text-3xl">🎙️</div>
+            <div>
+              <h3 className="text-lg font-bold text-white">Tu perfil es lo mas importante</h3>
+              <p className="text-sm text-gray-400">Permite que QUANTUM te guie y genera tu perfil completo en 2 minutos</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setShowQuantumBio(true)}
+            className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg shadow-lg hover:shadow-indigo-500/50 transition-all transform hover:scale-105 flex items-center gap-2 whitespace-nowrap"
+          >
+            <span>✨</span> Iniciar Entrevista con Quantum
+          </button>
+        </div>
+
         {/* SECCIÓN 1: IDENTIDAD VISUAL */}
         <section className="bg-slate-800 p-6 rounded-2xl border border-slate-700">
           <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-6">
@@ -307,17 +406,51 @@ export default function MentorProfileEditorPage() {
               </div>
               <div>
                 <label className="block text-slate-300 font-medium mb-2 text-sm flex items-center gap-2">
-                  <LinkIcon className="w-4 h-4" /> URL de Foto de Perfil
+                  <LinkIcon className="w-4 h-4" /> Foto de Perfil
                 </label>
-                <input 
-                  type="text" 
-                  name="profileImage" 
-                  value={formData.profileImage} 
-                  onChange={handleChange} 
-                  className="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all" 
-                  placeholder="https://..." 
-                />
-                <p className="text-xs text-slate-500 mt-1">Pega un link directo a una imagen.</p>
+                
+                {/* Botón de subida de archivo */}
+                <div className="flex items-start gap-4">
+                  <div>
+                    <input
+                      type="file"
+                      id="imageUpload"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="imageUpload"
+                      className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all ${
+                        uploadingImage
+                          ? 'bg-slate-700 cursor-not-allowed'
+                          : 'bg-purple-600 hover:bg-purple-700'
+                      } text-white font-medium`}
+                    >
+                      {uploadingImage ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Subiendo...
+                        </>
+                      ) : (
+                        <>
+                          <User className="w-4 h-4" />
+                          Subir Imagen
+                        </>
+                      )}
+                    </label>
+                    <p className="text-xs text-slate-400 mt-2">JPG, PNG o GIF (máx. 5MB)</p>
+                  </div>
+                  
+                  {/* Sugerencia de foto profesional */}
+                  <div className="flex-1 bg-indigo-900/20 border border-indigo-500/30 rounded-lg p-3">
+                    <p className="text-xs font-medium text-indigo-300 mb-1">💡 Consejo Profesional</p>
+                    <p className="text-xs text-slate-300">
+                      Usa una foto profesional con buena iluminación, fondo neutral y vestimenta formal. 
+                      Una imagen de calidad genera hasta 70% más confianza.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -475,39 +608,6 @@ export default function MentorProfileEditorPage() {
           <div className="space-y-4">
             <div>
               <label className="block text-slate-300 font-medium mb-2 text-sm">
-                Biografía Corta (Para tarjeta de usuario)
-              </label>
-              <p className="text-xs text-slate-400 mb-2">
-                Máximo 120 caracteres. Sé impactante.
-              </p>
-              <textarea 
-                name="bioShort" 
-                rows={2} 
-                maxLength={120} 
-                value={formData.bioShort} 
-                onChange={handleChange} 
-                className="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all resize-none"
-                placeholder="Una frase que defina tu propuesta de valor..."
-              ></textarea>
-              <p className="text-xs text-slate-500 mt-1 text-right">
-                {formData.bioShort.length}/120 caracteres
-              </p>
-            </div>
-            <div>
-              <label className="block text-slate-300 font-medium mb-2 text-sm">
-                Biografía Completa (Para perfil de usuario)
-              </label>
-              <textarea 
-                name="bioFull" 
-                rows={4} 
-                value={formData.bioFull} 
-                onChange={handleChange} 
-                className="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all"
-                placeholder="Describe tu trayectoria profesional completa..."
-              ></textarea>
-            </div>
-            <div>
-              <label className="block text-slate-300 font-medium mb-2 text-sm">
                 Presentación Corta de Mentor (Para listado)
               </label>
               <textarea 
@@ -548,13 +648,29 @@ export default function MentorProfileEditorPage() {
                 placeholder="Describe en detalle tu experiencia, logros clave, metodología de trabajo, certificaciones y qué hace única tu mentoría..."
               ></textarea>
             </div>
+            <div>
+              <label className="block text-slate-300 font-medium mb-2 text-sm">
+                Visión Personal
+              </label>
+              <p className="text-xs text-slate-400 mb-2">
+                Tu visión personal y profesional a largo plazo
+              </p>
+              <textarea 
+                name="vision" 
+                rows={4} 
+                value={formData.vision} 
+                onChange={handleChange} 
+                className="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all"
+                placeholder="Describe tu visión personal y profesional..."
+              ></textarea>
+            </div>
           </div>
         </section>
 
-        {/* SECCIÓN 4: UBICACIÓN Y VISIÓN */}
+        {/* SECCIÓN 4: UBICACIÓN Y CONFIGURACIÓN */}
         <section className="bg-slate-800 p-6 rounded-2xl border border-slate-700">
           <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-6">
-            <MapPin className="text-purple-400" /> Ubicación y Visión Personal
+            <MapPin className="text-purple-400" /> Ubicación y Configuración
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -618,20 +734,6 @@ export default function MentorProfileEditorPage() {
                 Asegúrate de usar tu sala personal o un enlace que no expire.
               </p>
             </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-slate-300 font-medium mb-2 text-sm">
-                Visión Personal
-              </label>
-              <textarea 
-                name="vision" 
-                rows={3} 
-                value={formData.vision} 
-                onChange={handleChange} 
-                className="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all"
-                placeholder="Tu visión personal y profesional..."
-              ></textarea>
-            </div>
           </div>
         </section>
 
@@ -687,6 +789,89 @@ export default function MentorProfileEditorPage() {
           </div>
         </section>
       </div>
+
+      {/* Quantum Bio-Writer Modal */}
+      <QuantumBioWriter
+        isOpen={showQuantumBio}
+        onClose={() => setShowQuantumBio(false)}
+        onComplete={async (result) => {
+          // Actualizar el formulario con los datos generados
+          const updatedFormData = {
+            ...formData,
+            // Biografías
+            biografiaCompleta: result.heroJourneyBio,
+            biografia: result.promiseStatement,
+            biografiaCorta: result.tagline,
+            vision: result.vision,
+            // Títulos
+            jobTitle: result.jobTitle,
+            titulo: result.mentorTitle,
+            // Especialidades
+            especialidad: result.mainSpecialty,
+            especialidadesSecundariasInput: result.secondarySpecialties.join(', '),
+            // Habilidades y logros
+            skillsInput: result.keySkills.join(', '),
+            logrosInput: result.achievements.join(', '),
+          };
+          
+          setFormData(updatedFormData);
+          setShowQuantumBio(false);
+          
+          // Auto-guardar inmediatamente para no perder los datos
+          setLoading(true);
+          setShowSuccess(false);
+          setShowError(false);
+          
+          try {
+            const dataToSend = {
+              usuario: {
+                jobTitle: updatedFormData.jobTitle,
+                profileImage: updatedFormData.profileImage,
+                experienceYears: Number(updatedFormData.experienceYears),
+                skills: updatedFormData.skillsInput.split(',').map(s => s.trim()).filter(s => s),
+                vision: updatedFormData.vision,
+                sede: updatedFormData.sede
+              },
+              perfilMentor: {
+                titulo: updatedFormData.titulo,
+                especialidad: updatedFormData.especialidad,
+                especialidadesSecundarias: updatedFormData.especialidadesSecundariasInput.split(',').map(s => s.trim()).filter(s => s),
+                biografia: updatedFormData.biografia,
+                biografiaCorta: updatedFormData.biografiaCorta,
+                biografiaCompleta: updatedFormData.biografiaCompleta,
+                logros: updatedFormData.logrosInput.split(',').map(s => s.trim()).filter(s => s),
+                experienciaAnios: Number(updatedFormData.experienciaAnios),
+                precioBase: Number(updatedFormData.precioBase),
+                disponible: updatedFormData.disponible,
+                enlaceVideoLlamada: updatedFormData.enlaceVideoLlamada,
+                tipoVideoLlamada: updatedFormData.tipoVideoLlamada
+              }
+            };
+
+            console.log('🤖 Auto-guardando datos de Quantum:', dataToSend);
+
+            const res = await fetch('/api/mentor/profile-editor', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(dataToSend)
+            });
+
+            if (res.ok) {
+              setShowSuccess(true);
+              setTimeout(() => setShowSuccess(false), 5000);
+            } else {
+              setShowError(true);
+              setTimeout(() => setShowError(false), 5000);
+            }
+          } catch (error) {
+            console.error('Error en auto-guardado:', error);
+            setShowError(true);
+            setTimeout(() => setShowError(false), 5000);
+          } finally {
+            setLoading(false);
+          }
+        }}
+      />
     </div>
   );
 }

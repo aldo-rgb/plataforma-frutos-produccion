@@ -249,13 +249,15 @@ model EvidenciaAccion {
   highQuality      Boolean         @default(false) // ⭐ Evaluado por QUANTUM AI
   qualityScore     Int?            // 0-100 score de calidad de la foto
   rarityBonus      Boolean         @default(false) // Si recibió bonus de rareza
+  sharedCount      Int             @default(0) // Contador de veces compartido
   createdAt        DateTime        @default(now())
   updatedAt        DateTime
 
-  Accion       Accion         @relation(fields: [accionId], references: [id], onDelete: Cascade)
-  Meta         Meta?          @relation(fields: [metaId], references: [id])
-  Usuario      Usuario        @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  TaskInstance TaskInstance[] // Relación inversa
+  Accion          Accion           @relation(fields: [accionId], references: [id], onDelete: Cascade)
+  Meta            Meta?            @relation(fields: [metaId], references: [id])
+  Usuario         Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  TaskInstance    TaskInstance[]   // Relación inversa
+  SocialReactions SocialReaction[]
 }
 
 model MensajeChat {
@@ -314,6 +316,18 @@ model PerfilMentor {
   horarioInicio             String?                   @default("09:00")
   horarioFin                String?                   @default("18:00")
   diasDisponibles           Int[]                     @default([1, 2, 3, 4, 5]) // 0=Domingo, 1=Lunes, 2=Martes, etc.
+  
+  // Quantum Bio-Writer Fields
+  tagline                   String?                   // Frase de impacto
+  expertiseTags             String[]                  @default([]) // [Finanzas, Liderazgo, Salud]
+  methodologyStyle          MentorStyle?              // HARDCORE, EMPATHIC, BALANCED
+  idealClientDescription    String?                   // Descripción del cliente ideal
+  heroJourneyBio            String?                   // Bio estilo "Viaje del Héroe"
+  promiseStatement          String?                   // "Mi Promesa": Lo que logrará el usuario
+  videoIntroUrl             String?                   // Video de presentación 30-60s
+  aiGeneratedBio            Boolean                   @default(false) // Indica si fue generada por IA
+  lastAiInterviewAt         DateTime?                 // Última vez que usó Quantum Bio-Writer
+  
   Usuario                   Usuario                   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   ResenasMentoria           ResenasMentoria[]
   ServicioMentoria          ServicioMentoria[]
@@ -472,7 +486,9 @@ model Usuario {
   skills                                                           String[]                 @default([])
   badges                                                           String[]                 @default([])
   timezone                                                         String                   @default("America/Mexico_City")
+  socialVisibility                                                 SocialVisibility         @default(COMMUNITY)
   CallAvailability                                                 CallAvailability[]
+  SocialReactions                                                  SocialReaction[]
   CallBooking_CallBooking_mentorIdToUsuario                        CallBooking[]            @relation("CallBooking_mentorIdToUsuario")
   CallBooking_CallBooking_studentIdToUsuario                       CallBooking[]            @relation("CallBooking_studentIdToUsuario")
   CallLog_CallLog_mentorIdToUsuario                                CallLog[]                @relation("CallLog_mentorIdToUsuario")
@@ -510,6 +526,32 @@ model Usuario {
   TaskReviews                                                      TaskSubmission[]         @relation("TaskReviews")
   UserCollectionProgress                                           UserCollectionProgress[]
   RewardHistory                                                    RewardHistory[]
+  CheckIns                                                         CheckIn[]
+  ServiceContributions                                             UserServiceContribution[]
+  ServiceReviews                                                   UserServiceContribution[] @relation("ServiceReviews")
+  ServiceLadderProgress                                            ServiceLadderProgress?
+  PhoenixSessions                                                  PhoenixSession[]
+  
+  // Sistema de Visiones
+  VisionesCoordinadas                                              Vision[]                 @relation("VisionCoordinador")
+  GameChangerEnVisiones                                            VisionGameChanger[]      @relation("GameChangerEnVision")
+  GameChangersAsignados                                            VisionGameChanger[]      @relation("AsignadorGameChanger")
+  ParticipanteEnVisiones                                           VisionParticipante[]     @relation("ParticipanteEnVision")
+  ParticipantesResponsables                                        VisionParticipante[]     @relation("GameChangerResponsable")
+  ParticipantesAsignados                                           VisionParticipante[]     @relation("AsignadorParticipante")
+  
+  // Quantum Patterns
+  QuantumPatterns                                                  QuantumPattern[]         @relation("QuantumPatterns")
+  QuantumInsights                                                  QuantumInsight[]         @relation("QuantumInsights")
+  
+  // Quantum Arena
+  DuelsAsPlayer1                                                   ArenaDuel[]              @relation("DuelPlayer1")
+  DuelsAsPlayer2                                                   ArenaDuel[]              @relation("DuelPlayer2")
+  DuelsWon                                                         ArenaDuel[]              @relation("DuelWinner")
+  ArenaQueue                                                       ArenaQueue?              @relation("ArenaQueue")
+  ArenaStats                                                       ArenaStats?              @relation("ArenaStats")
+  TauntsSent                                                       ArenaTaunt[]             @relation("TauntSender")
+  TauntsReceived                                                   ArenaTaunt[]             @relation("TauntReceiver")
 }
 
 enum CallType {
@@ -702,6 +744,14 @@ model TaskInstance {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
+  // 🧬 QUANTUM PATTERNS - Metadatos de Analítica Predictiva
+  dayOfWeek       Int? // 0=Domingo, 1=Lunes, ... 6=Sábado
+  timeSlot        TimeSlot? // Franja horaria de completación
+  streakContext   Int? // Racha activa al momento de completar
+  completionSpeed Int? // Minutos de diferencia (early/late)
+  moodTag         String? // Estado de ánimo reportado (opcional)
+  energyLevel     Int? // 1-5 nivel de energía reportado
+
   Accion          Accion           @relation(fields: [accionId], references: [id], onDelete: Cascade)
   Usuario         Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   MentorAlert     MentorAlert[]
@@ -711,6 +761,8 @@ model TaskInstance {
   @@index([status])
   @@index([accionId])
   @@index([evidenceStatus])
+  @@index([dayOfWeek])
+  @@index([timeSlot])
 }
 
 model MentorAlert {
@@ -735,6 +787,7 @@ enum TaskStatus {
   PENDING
   COMPLETED
   SKIPPED
+  SKIPPED_GRACEFULLY // Perdonada por Protocolo Fénix
 }
 
 enum EvidenceStatus {
@@ -748,6 +801,16 @@ enum AlertType {
   RISK_ALERT
   MILESTONE
   ENCOURAGEMENT
+}
+
+enum TimeSlot {
+  EARLY_MORNING // 5:00 - 9:00 (Club 5AM)
+  MORNING       // 9:00 - 12:00
+  MIDDAY        // 12:00 - 15:00
+  AFTERNOON     // 15:00 - 18:00
+  EVENING       // 18:00 - 21:00
+  NIGHT         // 21:00 - 23:59
+  LATE_NIGHT    // 00:00 - 4:59
 }
 
 // Configuración personalizada de áreas F.R.U.T.O.S. por usuario
@@ -921,3 +984,498 @@ model RewardHistory {
 }
 
 // Capa 3: Ya existe - SolicitudMentoria (Reservas reales)
+
+// 📍 QUANTUM LOCATIONS & SERVICE LADDER
+model Location {
+  id              Int       @id @default(autoincrement())
+  name            String // "Sede Central", "Sede Norte"
+  description     String?   @db.Text
+  latitude        Float // 25.6866
+  longitude       Float // -100.3161
+  radiusMeter     Int       @default(50) // Radio de tolerancia en metros
+  nfcTagId        String?   @unique // Identificador único del chip NFC
+  qrCodeHash      String    @unique // String único rotativo para el QR
+  qrRotationDate  DateTime  @default(now()) // Última vez que se rotó el QR
+  isActive        Boolean   @default(true)
+  address         String?
+  city            String?
+  country         String    @default("México")
+  imageUrl        String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  CheckIns                 CheckIn[]
+  UserServiceContributions UserServiceContribution[]
+
+  @@index([isActive])
+  @@index([qrCodeHash])
+  @@index([nfcTagId])
+}
+
+// Check-ins físicos (Tap = XP)
+model CheckIn {
+  id            Int      @id @default(autoincrement())
+  usuarioId     Int
+  locationId    Int
+  checkInMethod String // 'NFC' o 'QR'
+  latitude      Float // Ubicación real del usuario al momento del tap
+  longitude     Float
+  distance      Float // Distancia calculada en metros
+  xpGranted     Int      @default(50) // XP por presencia física
+  createdAt     DateTime @default(now())
+
+  Usuario  Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  Location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, locationId, createdAt]) // Solo un check-in por usuario por ubicación por día
+  @@index([usuarioId])
+  @@index([locationId])
+  @@index([createdAt])
+}
+
+// Contribuciones de Servicio (Hacer = PC)
+model UserServiceContribution {
+  id              Int                   @id @default(autoincrement())
+  usuarioId       Int
+  locationId      Int
+  serviceLevel    ServiceLevel // El rol desempeñado
+  evidenciaUrl    String // Foto obligatoria
+  description     String?               @db.Text
+  status          ServiceApprovalStatus @default(PENDING)
+  pcGranted       Int                   @default(0) // Se calcula al aprobar
+  submittedAt     DateTime              @default(now())
+  reviewedAt      DateTime?
+  reviewedBy      Int?
+  feedbackMentor  String?               @db.Text
+
+  Usuario  Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  Location Location  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  Reviewer Usuario?  @relation("ServiceReviews", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@index([usuarioId])
+  @@index([locationId])
+  @@index([status])
+  @@index([serviceLevel])
+}
+
+// Progreso en la Service Ladder
+model ServiceLadderProgress {
+  id                     Int      @id @default(autoincrement())
+  usuarioId              Int      @unique
+  nivel1Count            Int      @default(0) // Contribución Nivel 1
+  nivel2Count            Int      @default(0) // Contribución Nivel 2
+  finDeSemanaCount       Int      @default(0) // Servicio Fin de Semana
+  staffNivel1Count       Int      @default(0)
+  staffNivel2Count       Int      @default(0)
+  staffNivel3Count       Int      @default(0) // Game Changer
+  superNovaUnlocked      Boolean  @default(false) // Status Legendario
+  superNovaUnlockedAt    DateTime?
+  totalServiceContributions Int   @default(0)
+  visitedLocations       Int[]    @default([]) // IDs de locations visitadas
+  explorerBadgeUnlocked  Boolean  @default(false)
+  ambassadorBadgeUnlocked Boolean @default(false)
+  xpMultiplier           Float    @default(1.0) // Multiplicador permanente
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  Usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@index([superNovaUnlocked])
+}
+
+enum ServiceLevel {
+  CONTRIBUCION_NIVEL_1 // Actividades básicas - 200 PC
+  CONTRIBUCION_NIVEL_2 // Liderazgo medio - 500 PC
+  SERVICIO_FIN_SEMANA // Inmersión total - 800 PC
+  STAFF_NIVEL_1 // 1000 PC
+  STAFF_NIVEL_2 // 1500 PC
+  STAFF_NIVEL_3 // 2500 PC (Game Changer)
+}
+
+enum ServiceApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ========== QUANTUM SOCIAL & VIRAL LOOP ==========
+
+model SocialReaction {
+  id         Int      @id @default(autoincrement())
+  usuarioId  Int
+  evidenceId Int
+  type       ReactionType
+  createdAt  DateTime @default(now())
+
+  Usuario          Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  EvidenciaAccion  EvidenciaAccion @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, evidenceId]) // Un usuario solo puede reaccionar una vez por evidencia
+  @@index([evidenceId])
+  @@index([type])
+}
+
+enum SocialVisibility {
+  PRIVATE   // Solo yo y mi mentor
+  COMMUNITY // Visible en el Muro de la App (usuarios registrados)
+  PUBLIC    // Visible para compartir externamente
+}
+
+enum ReactionType {
+  FIRE      // 🔥 Fuego/Energía
+  STRONG    // 💪 Respeto/Fuerza
+  GENIUS    // 🧠 Genio/Idea
+  APPLAUSE  // 👏 Aplauso
+}
+
+// ============================================================
+// PROTOCOLO FÉNIX - Crisis Management System
+// ============================================================
+
+model PhoenixSession {
+  id                  Int              @id @default(autoincrement())
+  usuarioId           Int
+  triggerReason       String?          // Razón por la que activó el protocolo
+  snapshotTasks       Json             // Snapshot de tareas pendientes antes del reset
+  microTaskId         Int?             // ID de la micro-tarea creada
+  microTaskType       MicroTaskType
+  microTaskCompleted  Boolean          @default(false)
+  completedAt         DateTime?
+  tasksRescheduled    Int              @default(0) // Cantidad de tareas reagendadas
+  tasksGracefullySkipped Int           @default(0) // Cantidad de tareas perdonadas
+  badgeAwarded        Boolean          @default(false)
+  createdAt           DateTime         @default(now())
+  exitedAt            DateTime?
+  
+  Usuario             Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  @@index([usuarioId])
+  @@index([createdAt])
+}
+
+enum MicroTaskType {
+  DRINK_WATER        // Beber un vaso de agua
+  READ_ONE_PAGE      // Leer 1 página
+  BREATHE_TWO_MIN    // Respirar 2 minutos
+  MAKE_BED           // Tender la cama
+  WALK_5_MIN         // Caminar 5 minutos
+  STRETCH            // Estirar el cuerpo
+  CUSTOM             // Personalizada
+}
+
+// ============================================
+// SISTEMA DE VISIONES Y JERARQUÍA
+// ============================================
+
+model Vision {
+  id                Int                @id @default(autoincrement())
+  nombre            String
+  descripcion       String?
+  coordinadorId     Int
+  isActive          Boolean            @default(true)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  // Relaciones
+  Coordinador       Usuario            @relation("VisionCoordinador", fields: [coordinadorId], references: [id], onDelete: Cascade)
+  GameChangers      VisionGameChanger[]
+  Participantes     VisionParticipante[]
+  
+  @@index([coordinadorId])
+  @@index([isActive])
+}
+
+model VisionGameChanger {
+  id            Int      @id @default(autoincrement())
+  visionId      Int
+  gameChangerId Int
+  asignadoPorId Int      // ID del coordinador que lo asignó
+  createdAt     DateTime @default(now())
+  
+  // Relaciones
+  Vision        Vision   @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  GameChanger   Usuario  @relation("GameChangerEnVision", fields: [gameChangerId], references: [id], onDelete: Cascade)
+  AsignadoPor   Usuario  @relation("AsignadorGameChanger", fields: [asignadoPorId], references: [id], onDelete: Cascade)
+  
+  @@unique([visionId, gameChangerId])
+  @@index([visionId])
+  @@index([gameChangerId])
+}
+
+model VisionParticipante {
+  id              Int      @id @default(autoincrement())
+  visionId        Int
+  participanteId  Int
+  gameChangerId   Int      // Game Changer responsable
+  asignadoPorId   Int      // ID del coordinador o game changer que lo asignó
+  createdAt       DateTime @default(now())
+  
+  // Relaciones
+  Vision          Vision   @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  Participante    Usuario  @relation("ParticipanteEnVision", fields: [participanteId], references: [id], onDelete: Cascade)
+  GameChanger     Usuario  @relation("GameChangerResponsable", fields: [gameChangerId], references: [id], onDelete: Cascade)
+  AsignadoPor     Usuario  @relation("AsignadorParticipante", fields: [asignadoPorId], references: [id], onDelete: Cascade)
+  
+  @@unique([visionId, participanteId])
+  @@index([visionId])
+  @@index([participanteId])
+  @@index([gameChangerId])
+}
+
+// 🧬 QUANTUM PATTERNS - Sistema de Analítica Predictiva
+model QuantumPattern {
+  id             Int          @id @default(autoincrement())
+  usuarioId      Int
+  patternType    PatternType
+  confidence     Float        // 0.0 - 1.0 (75%+ para mostrar)
+  
+  // Golden Hour Pattern
+  goldenTimeSlot TimeSlot?
+  goldenDayOfWeek Int?        // 0-6
+  successRate    Float?       // % de éxito en esa franja
+  
+  // Keystone Habit (Efecto Dominó)
+  keystoneTaskId Int?         // ID de la acción clave
+  affectedTaskId Int?         // ID de la acción afectada
+  correlationDiff Float?      // % de diferencia (ej: +40%)
+  
+  // Cursed Day Pattern
+  cursedDay      Int?         // Día con más fallos (0-6)
+  failureRate    Float?       // % de fallo en ese día
+  
+  // Metadata
+  sampleSize     Int          @default(0) // # de datos analizados
+  lastCalculated DateTime     @default(now())
+  isActive       Boolean      @default(true)
+  viewedByUser   Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  
+  Usuario        Usuario      @relation("QuantumPatterns", fields: [usuarioId], references: [id], onDelete: Cascade)
+  Insights       QuantumInsight[]
+  
+  @@index([usuarioId])
+  @@index([patternType])
+  @@index([confidence])
+  @@index([isActive])
+}
+
+model QuantumInsight {
+  id           Int      @id @default(autoincrement())
+  patternId    Int
+  usuarioId    Int
+  
+  // Contenido del Insight
+  title        String   // "Patrón de Éxito Detectado"
+  message      String   @db.Text // Texto generado por QUANTUM AI
+  actionButton String?  // Texto del botón (ej: "Ajustar Agenda Inteligente")
+  actionUrl    String?  // URL de la acción sugerida
+  
+  // Visualización
+  iconEmoji    String   @default("🧬")
+  chartData    Json?    // Datos para gráfico mini
+  
+  // Estado
+  viewed       Boolean  @default(false)
+  dismissed    Boolean  @default(false)
+  actionTaken  Boolean  @default(false)
+  viewedAt     DateTime?
+  dismissedAt  DateTime?
+  createdAt    DateTime @default(now())
+  
+  Pattern      QuantumPattern @relation(fields: [patternId], references: [id], onDelete: Cascade)
+  Usuario      Usuario        @relation("QuantumInsights", fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  @@index([usuarioId, viewed])
+  @@index([createdAt])
+}
+
+enum PatternType {
+  GOLDEN_HOUR      // Franja horaria óptima
+  KEYSTONE_HABIT   // Hábito dominó
+  CURSED_DAY       // Día con más fallos
+  STREAK_BOOSTER   // Combinación que aumenta rachas
+  ENERGY_PATTERN   // Patrón de energía/mood
+}
+
+// ⚔️ QUANTUM ARENA - Sistema de Duelos 1v1
+model ArenaDuel {
+  id              Int          @id @default(autoincrement())
+  
+  // Participantes
+  player1Id       Int
+  player2Id       Int
+  
+  // Estado del Duelo
+  status          DuelStatus   @default(MATCHING)
+  
+  // Apuesta (Escrow)
+  betAmount       Int          @default(500) // PC apostados por cada jugador
+  escrowTotal     Int          @default(1000) // Total en el pozo
+  
+  // Periodo del Duelo (Semanal)
+  startDate       DateTime     @db.Date // Lunes 00:00
+  endDate         DateTime     @db.Date // Domingo 23:59
+  
+  // Health Points (HP)
+  player1HP       Int          @default(100)
+  player2HP       Int          @default(100)
+  
+  // Métricas de Rendimiento
+  player1Completion Float      @default(0) // % cumplimiento semanal
+  player2Completion Float      @default(0)
+  
+  // Resultado
+  winnerId        Int?
+  prize           Int?         // PC ganados por el ganador
+  resolvedAt      DateTime?
+  resolutionType  ResolutionType? // WIN, TIE, DOUBLE_KO
+  
+  // Metadata
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  // Relaciones
+  Player1         Usuario      @relation("DuelPlayer1", fields: [player1Id], references: [id], onDelete: Cascade)
+  Player2         Usuario      @relation("DuelPlayer2", fields: [player2Id], references: [id], onDelete: Cascade)
+  Winner          Usuario?     @relation("DuelWinner", fields: [winnerId], references: [id], onDelete: SetNull)
+  DailyUpdates    ArenaDailyUpdate[]
+  Taunts          ArenaTaunt[]
+  
+  @@index([status])
+  @@index([startDate, endDate])
+  @@index([player1Id])
+  @@index([player2Id])
+}
+
+// 📊 Actualizaciones Diarias del Duelo
+model ArenaDailyUpdate {
+  id              Int      @id @default(autoincrement())
+  duelId          Int
+  date            DateTime @db.Date
+  
+  // HP del día
+  player1HP       Int
+  player2HP       Int
+  
+  // Daño recibido ese día
+  player1Damage   Int      @default(0) // 0 o -15
+  player2Damage   Int      @default(0)
+  
+  // Razón del daño
+  player1Failed   Boolean  @default(false)
+  player2Failed   Boolean  @default(false)
+  
+  // Narración generada por QUANTUM
+  narration       String?  @db.Text
+  
+  createdAt       DateTime @default(now())
+  
+  Duel            ArenaDuel @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  
+  @@unique([duelId, date])
+  @@index([duelId])
+}
+
+// 💬 Sistema de Provocaciones (Taunts)
+model ArenaTaunt {
+  id              Int          @id @default(autoincrement())
+  duelId          Int
+  senderId        Int
+  receiverId      Int
+  tauntType       TauntType
+  customMessage   String?      // Para futuros "taunts" personalizados
+  read            Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  
+  Duel            ArenaDuel    @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  Sender          Usuario      @relation("TauntSender", fields: [senderId], references: [id], onDelete: Cascade)
+  Receiver        Usuario      @relation("TauntReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  
+  @@index([duelId])
+  @@index([receiverId, read])
+}
+
+// 🔍 Cola de Búsqueda de Rival
+model ArenaQueue {
+  id              Int          @id @default(autoincrement())
+  usuarioId       Int          @unique
+  userLevel       String       // Nivel del recolector (NOVATO_RASTREADOR, etc.)
+  timezone        String       @default("America/Mexico_City")
+  pcBalance       Int          // PC disponibles al momento de entrar a la cola
+  status          QueueStatus  @default(SEARCHING)
+  enteredAt       DateTime     @default(now())
+  expiresAt       DateTime     // Expira después de 24h si no encuentra rival
+  
+  Usuario         Usuario      @relation("ArenaQueue", fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  @@index([status, userLevel])
+  @@index([expiresAt])
+}
+
+// 📈 Historial de Duelos del Usuario
+model ArenaStats {
+  id              Int      @id @default(autoincrement())
+  usuarioId       Int      @unique
+  
+  // Record
+  totalDuels      Int      @default(0)
+  wins            Int      @default(0)
+  losses          Int      @default(0)
+  ties            Int      @default(0)
+  
+  // Economía
+  totalWagered    Int      @default(0) // PC apostados históricamente
+  totalWon        Int      @default(0) // PC ganados
+  totalLost       Int      @default(0) // PC perdidos
+  netProfit       Int      @default(0) // Ganancia neta
+  
+  // Rachas
+  currentStreak   Int      @default(0) // Victorias consecutivas
+  bestStreak      Int      @default(0)
+  
+  // Badges especiales
+  badges          String[] @default([]) // "UNDEFEATED_WEEK", "TITAN_SLAYER", etc.
+  
+  lastDuelAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  Usuario         Usuario  @relation("ArenaStats", fields: [usuarioId], references: [id], onDelete: Cascade)
+  
+  @@index([usuarioId])
+}
+
+enum DuelStatus {
+  MATCHING      // Buscando rival
+  ACTIVE        // Duelo en curso
+  COMPLETED     // Finalizado
+  CANCELLED     // Cancelado (usuario abandonó antes de empezar)
+}
+
+enum ResolutionType {
+  WIN           // Ganador claro
+  TIE           // Empate de titanes (refund + bonus)
+  DOUBLE_KO     // Ambos perdieron (burn)
+}
+
+enum QueueStatus {
+  SEARCHING     // Buscando rival
+  MATCHED       // Rival encontrado
+  EXPIRED       // Tiempo expirado
+  CANCELLED     // Usuario canceló
+}
+
+enum TauntType {
+  NO_FALLO      // "¡Hoy no fallaré!" 🛡️
+  ES_TODO       // "¿Eso es todo lo que tienes?" ⚔️
+  BUEN_TRABAJO  // "¡Buen trabajo!" 🤝
+  PRESION       // "Siente la presión" 🔥
+  VENGANZA      // "Esto es personal" 💀
+}
+
+enum MentorStyle {
+  HARDCORE      // Coach estricto, sin excusas, orientado a resultados
+  EMPATHIC      // Guía paciente, enfoque en proceso y sanación
+  BALANCED      // Balance entre exigencia y comprensión
+}

@@ -24,9 +24,16 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Credenciales incompletas")
         }
 
-        // 1. Buscar usuario en la BD
+        // 1. Buscar usuario en la BD con su perfil de mentor
         const user = await prisma.usuario.findUnique({
-          where: { email: credentials.email }
+          where: { email: credentials.email },
+          include: {
+            PerfilMentor: {
+              select: {
+                id: true,
+              },
+            },
+          },
         })
 
         // 2. Verificar si existe y tiene password (podría ser usuario de Google en el futuro)
@@ -34,14 +41,20 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Usuario no encontrado")
         }
 
-        // 3. Comparar contraseña hasheada
+        // 3. Verificar si está activo (excepto mentores que necesitan completar perfil)
+        const isMentor = user.rol === 'MENTOR';
+        if (!user.isActive && !isMentor) {
+          throw new Error("Usuario desactivado. Contacta al coordinador.")
+        }
+
+        // 4. Comparar contraseña hasheada
         const isValid = await bcrypt.compare(credentials.password, user.password)
 
         if (!isValid) {
           throw new Error("Contraseña incorrecta")
         }
 
-        // 4. Retornar objeto usuario (excluyendo password)
+        // 5. Retornar objeto usuario (excluyendo password)
         return {
           id: user.id,
           email: user.email,

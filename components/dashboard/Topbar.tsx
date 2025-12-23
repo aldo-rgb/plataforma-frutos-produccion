@@ -1,6 +1,7 @@
 'use client';
 
 import { Zap, Globe } from 'lucide-react';
+import { PhoenixButton } from '../phoenix/PhoenixButton';
 
 interface TopbarProps {
   usuario: {
@@ -20,6 +21,9 @@ export function Topbar({ usuario }: TopbarProps) {
       <div className="flex-1" />
       
       <div className="flex items-center gap-6">
+        {/* Phoenix SOS Button */}
+        <PhoenixButton />
+        
         {/* Zona Horaria */}
         <div className="hidden md:block text-right">
           <p className="text-xs text-slate-500 uppercase font-bold">Tu Zona Horaria</p>

@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { 
   LayoutDashboard, Trophy, Target, BarChart3, User, LogOut, 
   UserPlus, DollarSign, Package, Shield, 
-  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera
+  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { MENU_ITEMS } from '@/config/menuPermissions';
@@ -255,6 +255,23 @@ export function Sidebar({ usuario }: SidebarProps) {
           <Trophy size={20} />
           <span>Ranking Global</span>
           {(esUsuarioInactivo || !canAccess('ranking')) && <Lock className="w-3 h-3 ml-auto text-slate-500" />}
+        </Link>
+
+        {/* Muro de la Excelencia - Social Feed */}
+        <Link 
+          href="/dashboard/muro" 
+          className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group ${
+            pathname === '/dashboard/muro' 
+              ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white' 
+              : esUsuarioInactivo
+                ? 'text-slate-600 opacity-50 cursor-not-allowed' 
+                : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-900/50 hover:to-pink-900/50 hover:text-white'
+          }`}
+          onClick={(e) => esUsuarioInactivo && e.preventDefault()}
+        >
+          <Sparkles size={20} className="text-pink-400 group-hover:text-pink-300" />
+          <span className="font-semibold">Muro de la Excelencia</span>
+          {esUsuarioInactivo && <Lock className="w-3 h-3 ml-auto text-slate-500" />}
         </Link>
 
         <Link 
@@ -538,7 +555,21 @@ export function Sidebar({ usuario }: SidebarProps) {
       </nav>
 
       {/* Logout Button */}
-      <div className="p-4 border-t border-slate-800">
+      <div className="p-4 border-t border-slate-800 space-y-2">
+        {/* Configuración */}
+        <Link
+          href="/dashboard/configuracion"
+          className={`flex items-center gap-3 px-4 py-3 w-full rounded-lg transition-colors ${
+            pathname === '/dashboard/configuracion'
+              ? 'bg-slate-800 text-white'
+              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+          }`}
+        >
+          <Settings size={20} />
+          <span>Configuración</span>
+        </Link>
+
+        {/* Cerrar Sesión */}
         <button 
           onClick={handleLogout}
           className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-red-400 hover:bg-red-900/20 transition-colors"

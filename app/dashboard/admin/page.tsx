@@ -106,7 +106,7 @@ export default function AdminPerformancePage() {
           trend="+12 esta semana" 
           color="cyan"
         />
-        <Link href="/dashboard/admin/usuarios" className="block">
+        <Link href="/dashboard/admin/mentores" className="block">
           <KpiCard 
             icon={<AlertTriangle className="text-orange-400" />} 
             label="Mentores Pendientes" 

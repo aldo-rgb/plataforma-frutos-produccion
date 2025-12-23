@@ -26,6 +26,11 @@ export async function POST(request: NextRequest) {
         password: true,
         rol: true,
         isActive: true,
+        PerfilMentor: {
+          select: {
+            id: true,
+          },
+        },
       },
     });
 
@@ -38,7 +43,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar si el usuario está activo
-    if (!usuario.isActive) {
+    // EXCEPCIÓN: Si tiene rol MENTOR, permitir acceso aunque esté desactivado
+    // para que pueda completar su perfil
+    const isMentor = usuario.rol === 'MENTOR';
+    if (!usuario.isActive && !isMentor) {
       return NextResponse.json(
         { error: 'Usuario desactivado. Contacta al coordinador.' },
         { status: 403 }
