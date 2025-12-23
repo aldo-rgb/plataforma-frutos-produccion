@@ -251,6 +251,7 @@ Instrucción Técnica:
                 servicioComunAvance: 0,
                 enrolamientoMeta: "Compromiso de enrolar 4 invitados",
                 enrolamientoAvance: 0,
+                fechaActualizacion: new Date(),
               }
             });
             cartaId = nuevaCarta.id;

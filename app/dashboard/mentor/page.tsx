@@ -1,204 +1,206 @@
-'use client';
+import React from 'react';
+import Link from 'next/link';
+import { Calendar, CheckCircle, Clock, AlertTriangle, FileText, Phone } from 'lucide-react';
+import ProfileAlert from '@/components/dashboard/mentor/ProfileAlert';
+import AgendaDelDia from '@/components/dashboard/mentor/AgendaDelDia';
+import NotificacionSesionesPendientes from '@/components/dashboard/mentor/NotificacionSesionesPendientes';
+import WidgetDisciplina from '@/components/dashboard/mentor/WidgetDisciplina';
+import CartaReviewPanel from '@/components/dashboard/mentor/CartaReviewPanel';
+import RevisionEvidenciasWidget from '@/components/dashboard/RevisionEvidenciasWidget';
+import AlertasProcrastinacion from '@/components/dashboard/mentor/AlertasProcrastinacion';
+import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
-import React, { useState } from 'react';
-import { 
-  Users, CheckCircle, XCircle, Phone, AlertTriangle, 
-  Search, Filter, Eye, MessageSquare 
-} from 'lucide-react';
+export const dynamic = 'force-dynamic';
 
-// DATOS MOCK: LÍDERES ASIGNADOS A ESTE MENTOR
-const MIS_LIDERES = [
-  { id: 1, nombre: 'Ana García', avance: 45, llamadas: [true, false], riesgo: 'bajo', avatar: 'bg-yellow-500' },
-  { id: 2, nombre: 'Carlos Ruiz', avance: 80, llamadas: [true, true], riesgo: 'bajo', avatar: 'bg-blue-500' },
-  { id: 3, nombre: 'Pedro K.', avance: 15, llamadas: [false, false], riesgo: 'alto', avatar: 'bg-red-500' }, // Riesgo alto
-];
+export default async function MentorDashboard() {
 
-// DATOS MOCK: EVIDENCIAS PENDIENTES DE REVISIÓN
-const EVIDENCIAS_PENDIENTES = [
-  { id: 101, lider: 'Ana García', categoria: 'Salud', img: 'Gym', fecha: 'Hace 2h', estado: 'pendiente' },
-  { id: 102, lider: 'Pedro K.', categoria: 'Finanzas', img: 'Ventas', fecha: 'Hace 5h', estado: 'pendiente' },
-];
+  // 1. OBTENER LA SESIÓN DEL USUARIO LOGUEADO
+  const session = await getServerSession(authOptions);
+  
+  if (!session?.user?.id) {
+    return <div className="p-8 text-white">No se encontró la sesión del usuario.</div>;
+  }
 
-export default function MentorDashboard() {
-  const [activeTab, setActiveTab] = useState('revision'); // revision | seguimiento
+  // 2. OBTENER LOS DATOS DEL USUARIO LOGUEADO
+  const user = await prisma.usuario.findUnique({
+    where: { 
+      id: session.user.id
+    }
+  });
+
+  // Si no hay usuario, mostramos error
+  if (!user) return <div className="p-8 text-white">No se encontró el usuario mentor.</div>;
+
+  // 3. CALCULAR PENDIENTES TOTALES DEL MENTOR
+  const mentorId = user.id;
+  
+  // Contar cartas pendientes de revisión
+  const cartasPendientes = await prisma.cartaFrutos.count({
+    where: {
+      estado: 'EN_REVISION',
+      Usuario: {
+        OR: [
+          { mentorId: mentorId },
+          { assignedMentorId: mentorId }
+        ]
+      }
+    }
+  });
+
+  // Contar evidencias pendientes de autorizar
+  const evidenciasPendientes = await prisma.evidenciaAccion.count({
+    where: {
+      estado: 'PENDIENTE',
+      Usuario: {
+        OR: [
+          { mentorId: mentorId },
+          { assignedMentorId: mentorId }
+        ]
+      }
+    }
+  });
+
+  // Contar submissions de tareas extraordinarias pendientes
+  const submissionsPendientes = await prisma.taskSubmission.count({
+    where: {
+      status: 'SUBMITTED',
+      Usuario: {
+        OR: [
+          { mentorId: mentorId },
+          { assignedMentorId: mentorId }
+        ]
+      }
+    }
+  });
+
+  // Contar llamadas de disciplina pendientes (hoy)
+  const hoy = new Date();
+  const inicioDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+  const finDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + 1);
+
+  const llamadasDisciplinaPendientes = await prisma.callBooking.count({
+    where: {
+      mentorId: mentorId,
+      type: 'DISCIPLINE',
+      scheduledAt: {
+        gte: inicioDia,
+        lt: finDia
+      },
+      status: {
+        in: ['PENDING', 'CONFIRMED']
+      }
+    }
+  });
+
+  // Contar llamadas de mentoría pendientes
+  const llamadasMentoriaPendientes = await prisma.callBooking.count({
+    where: {
+      mentorId: mentorId,
+      type: 'MENTORSHIP',
+      scheduledAt: {
+        gte: hoy
+      },
+      status: {
+        in: ['PENDING', 'CONFIRMED']
+      }
+    }
+  });
+
+  const totalPendientes = 
+    cartasPendientes + 
+    evidenciasPendientes + 
+    submissionsPendientes +
+    llamadasDisciplinaPendientes + 
+    llamadasMentoriaPendientes;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-20">
+    <div className="p-8 space-y-6 min-h-screen bg-slate-950">
       
-      {/* HEADER DEL MENTOR */}
-      <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-white/10 pb-6">
+      {/* NOTIFICACIÓN DE SESIONES PENDIENTES */}
+      <NotificacionSesionesPendientes />
+      
+      {/* ALERTAS DE PROCRASTINACIÓN */}
+      <AlertasProcrastinacion />
+      
+      {/* 2. PASAMOS EL USUARIO REAL A LA ALERTA */}
+      <div className="animate-fadeIn">
+        <ProfileAlert user={user} />
+      </div>
+
+      {/* --- ENC: TÍTULO Y ESTADÍSTICAS --- */}
+      <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-4 border-b border-slate-800 pb-6">
         <div>
-          <h1 className="text-3xl font-black italic text-white tracking-tight uppercase">
-            Centro de <span className="text-cyan-400">Mentoría</span>
+          <h1 className="text-3xl font-black text-white italic tracking-wide">
+            CENTRO DE <span className="text-cyan-400">MENTORÍA</span>
           </h1>
-          <p className="text-slate-400 mt-2">Gestiona el progreso y valida la integridad de tu equipo.</p>
+          <p className="text-slate-400 mt-1">
+            Hola, <span className="text-white font-bold">{user.nombre}</span>. Gestiona tu progreso.
+          </p>
         </div>
         
-        {/* Estadísticas Rápidas */}
-        <div className="flex gap-4">
-          <div className="bg-slate-900 border border-white/10 px-4 py-2 rounded-xl text-center">
-            <p className="text-[10px] uppercase text-slate-500 font-bold">Líderes</p>
-            <p className="text-xl font-black text-white">{MIS_LIDERES.length}</p>
+        {/* Chips de estado */}
+        <div className="flex gap-3">
+          <div className="bg-slate-900 border border-slate-700 px-4 py-2 rounded-lg text-center">
+            <span className="text-xs text-slate-500 uppercase font-bold block">Nivel</span>
+            <span className="text-xl font-bold text-white">JUNIOR</span>
           </div>
-          <div className="bg-slate-900 border border-yellow-500/30 px-4 py-2 rounded-xl text-center">
-            <p className="text-[10px] uppercase text-yellow-500 font-bold">Pendientes</p>
-            <p className="text-xl font-black text-white">{EVIDENCIAS_PENDIENTES.length}</p>
+          <div className="bg-slate-900 border border-slate-700 px-4 py-2 rounded-lg text-center">
+            <span className="text-xs text-amber-500 uppercase font-bold block">Pendientes</span>
+            <span className="text-xl font-bold text-white">{totalPendientes}</span>
           </div>
         </div>
       </div>
 
-      {/* TABS DE NAVEGACIÓN */}
-      <div className="flex gap-4 border-b border-white/5">
-        <button 
-          onClick={() => setActiveTab('revision')}
-          className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeTab === 'revision' ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-slate-500 hover:text-white'}`}
-        >
-          Revisión de Evidencias
-        </button>
-        <button 
-          onClick={() => setActiveTab('seguimiento')}
-          className={`pb-3 px-4 text-sm font-bold border-b-2 transition-colors ${activeTab === 'seguimiento' ? 'border-cyan-400 text-cyan-400' : 'border-transparent text-slate-500 hover:text-white'}`}
-        >
-          Seguimiento y Llamadas
-        </button>
+      {/* --- NAVEGACIÓN DE PESTAÑAS --- */}
+      <div className="flex gap-6 border-b border-slate-800 text-sm font-bold text-slate-500 overflow-x-auto">
+        <Link href="/dashboard/mentor" className="pb-3 border-b-2 border-orange-500 text-orange-500 flex items-center gap-2 whitespace-nowrap">
+          <Clock className="w-4 h-4" /> Club 5 AM
+        </Link>
+        <Link href="/dashboard/mentor/validacion" className="pb-3 hover:text-slate-300 transition-colors flex items-center gap-2 whitespace-nowrap">
+          <CheckCircle className="w-4 h-4" /> Revisión de Evidencias
+        </Link>
+        <Link href="/dashboard/mentor/cartas" className="pb-3 hover:text-slate-300 transition-colors flex items-center gap-2 whitespace-nowrap">
+          <FileText className="w-4 h-4" /> Cartas F.R.U.T.O.S.
+        </Link>
       </div>
 
-      {/* VISTA 1: REVISIÓN DE EVIDENCIAS (Inbox) */}
-      {activeTab === 'revision' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {EVIDENCIAS_PENDIENTES.length === 0 ? (
-            <div className="col-span-full py-12 text-center text-slate-500">
-              <CheckCircle size={48} className="mx-auto mb-4 text-slate-700" />
-              <p>¡Todo al día! No hay evidencias pendientes.</p>
-            </div>
-          ) : (
-            EVIDENCIAS_PENDIENTES.map((evidencia) => (
-              <div key={evidencia.id} className="bg-slate-900 border border-white/10 rounded-2xl overflow-hidden flex flex-col hover:border-cyan-500/30 transition-all">
-                
-                {/* Header de la Tarjeta */}
-                <div className="p-4 flex items-center gap-3 border-b border-white/5">
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-500 flex items-center justify-center text-xs font-bold text-white">
-                    {evidencia.lider.charAt(0)}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white text-sm">{evidencia.lider}</h3>
-                    <p className="text-xs text-slate-500">{evidencia.fecha} • {evidencia.categoria}</p>
-                  </div>
-                </div>
-
-                {/* Imagen (Placeholder) */}
-                <div className="h-48 bg-slate-950 relative group cursor-pointer">
-                  {/* Aquí iría la <img src={...} /> real */}
-                  <div className="absolute inset-0 flex items-center justify-center text-slate-700">
-                    [FOTO EVIDENCIA]
-                  </div>
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Eye className="text-white" />
-                  </div>
-                </div>
-
-                {/* Acciones */}
-                <div className="p-4 grid grid-cols-2 gap-3 mt-auto">
-                  <button className="flex items-center justify-center gap-2 py-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-colors text-sm font-bold">
-                    <XCircle size={16} /> Rechazar
-                  </button>
-                  <button className="flex items-center justify-center gap-2 py-2 rounded-lg bg-green-500/10 text-green-400 hover:bg-green-500 hover:text-white transition-colors text-sm font-bold">
-                    <CheckCircle size={16} /> Aprobar
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
+      {/* --- GRID PRINCIPAL --- */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* COLUMNA IZQUIERDA (2/3) */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* WIDGET DE DISCIPLINA - LLAMADAS 5AM */}
+          <WidgetDisciplina />
+          
+          {/* NUEVO: WIDGET DE REVISIÓN DE EVIDENCIAS DE TAREAS/EVENTOS */}
+          <RevisionEvidenciasWidget />
+          
+          <AgendaDelDia />
+          
+          {/* CARTA F.R.U.T.O.S. REVIEWS PANEL */}
+          <CartaReviewPanel />
         </div>
-      )}
 
-      {/* VISTA 2: SEGUIMIENTO Y LLAMADAS */}
-      {activeTab === 'seguimiento' && (
-        <div className="bg-slate-900 border border-white/10 rounded-3xl overflow-hidden">
-          {/* Barra de Filtros */}
-          <div className="p-4 border-b border-white/5 flex gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
-              <input 
-                type="text" 
-                placeholder="Buscar líder..." 
-                className="w-full bg-slate-950 border border-white/10 rounded-xl py-2 pl-9 pr-4 text-sm text-white focus:outline-none focus:border-cyan-500"
-              />
+        {/* COLUMNA DERECHA (1/3) */}
+        <div className="space-y-6">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-2xl border border-slate-700">
+            <div className="flex items-center gap-2 mb-4">
+               <span className="p-2 bg-orange-900/30 text-orange-500 rounded-lg">
+                 <FileText className="w-4 h-4" />
+               </span>
+               <div>
+                 <h4 className="text-white font-bold text-sm">Consejo Matutino</h4>
+                 <p className="text-xs text-slate-500">Inspiración diaria</p>
+               </div>
             </div>
-            <button className="p-2 bg-slate-800 rounded-xl text-slate-400 hover:text-white"><Filter size={18} /></button>
-          </div>
-
-          {/* Tabla de Líderes */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-slate-950/50 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                <tr>
-                  <th className="px-6 py-4">Líder</th>
-                  <th className="px-6 py-4">Avance Global</th>
-                  <th className="px-6 py-4">Llamadas Semana</th>
-                  <th className="px-6 py-4">Estado</th>
-                  <th className="px-6 py-4 text-right">Acción</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {MIS_LIDERES.map((lider) => (
-                  <tr key={lider.id} className="hover:bg-white/5 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`h-8 w-8 rounded-full ${lider.avatar} flex items-center justify-center text-white font-bold text-xs`}>
-                          {lider.nombre.charAt(0)}
-                        </div>
-                        <span className="font-bold text-white text-sm">{lider.nombre}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="h-1.5 w-24 bg-slate-800 rounded-full overflow-hidden">
-                          <div className={`h-full ${lider.avance < 30 ? 'bg-red-500' : 'bg-cyan-500'}`} style={{ width: `${lider.avance}%` }}></div>
-                        </div>
-                        <span className="text-xs text-slate-400">{lider.avance}%</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        {[0, 1].map((i) => (
-                          <button 
-                            key={i} 
-                            className={`h-8 w-8 rounded-lg border flex items-center justify-center transition-all
-                              ${lider.llamadas[i] 
-                                ? 'bg-green-500/20 border-green-500/50 text-green-400' 
-                                : 'bg-slate-800 border-slate-700 text-slate-600 hover:border-white/30'}
-                            `}
-                          >
-                            <Phone size={14} fill={lider.llamadas[i] ? "currentColor" : "none"} />
-                          </button>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {lider.riesgo === 'alto' ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-red-500/10 text-red-400 text-xs font-bold uppercase">
-                          <AlertTriangle size={12} /> Riesgo
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-400 text-xs font-bold uppercase">
-                          <CheckCircle size={12} /> Activo
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button className="text-slate-400 hover:text-cyan-400 transition-colors">
-                        <MessageSquare size={18} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <p className="text-slate-300 text-sm italic leading-relaxed">
+              "La disciplina es hacer lo que tienes que hacer, cuando lo tienes que hacer, tengas ganas o no."
+            </p>
           </div>
         </div>
-      )}
-
+      </div>
     </div>
   );
 }

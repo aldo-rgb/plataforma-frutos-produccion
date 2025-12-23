@@ -1,52 +1,56 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { UserPlus, Shield, Mail, User, Save, AlertCircle } from 'lucide-react';
 
 export default function AltaUsuariosPage() {
-  const [currentUserRole, setCurrentUserRole] = useState<string>('LIDER');
+  const { data: session } = useSession();
+  const router = useRouter();
+  const [currentUserRole, setCurrentUserRole] = useState<string>('');
   const [formData, setFormData] = useState({
     nombre: '',
     email: '',
     password: '',
-    rol: 'LIDER', // Default
+    rol: 'PARTICIPANTE', // Default
   });
 
   const [isLoading, setIsLoading] = useState(false);
   const [mensaje, setMensaje] = useState<{ tipo: 'exito' | 'error', texto: string } | null>(null);
 
-  // Obtener el rol del usuario actual desde localStorage
+  // Obtener el rol del usuario actual desde la sesión
   useEffect(() => {
-    const rol = localStorage.getItem('userRol');
-    if (rol) {
-      setCurrentUserRole(rol);
+    if (session?.user?.rol) {
+      setCurrentUserRole(session.user.rol);
     }
-  }, []);
+  }, [session]);
 
   // --- LÓGICA DE NEGOCIO: FILTRADO DE ROLES ---
   const getRolesDisponibles = () => {
     const rolesBasicos = [
       { value: 'PARTICIPANTE', label: 'Participante' },
       { value: 'GAMECHANGER', label: 'Game Changer' },
+      { value: 'LIDER', label: 'Líder' },
       { value: 'MENTOR', label: 'Mentor' },
     ];
 
     if (currentUserRole === 'ADMINISTRADOR') {
-      // El Admin puede crear todo, incluyendo Coordinadores y otros Admins
+      // El Admin puede crear todo, incluyendo Staff y otros Admins
       return [
         { value: 'ADMINISTRADOR', label: 'Administrador (Acceso Total)' },
-        { value: 'COORDINADOR', label: 'Coordinador' },
+        { value: 'STAFF', label: 'Staff' },
         ...rolesBasicos
       ];
-    } else if (currentUserRole === 'COORDINADOR') {
-      // El Coordinador solo ve básicos + puede crear Coordinadores
+    } else if (currentUserRole === 'STAFF') {
+      // El Staff solo ve básicos + puede crear Staff
       return [
-        { value: 'COORDINADOR', label: 'Coordinador' },
+        { value: 'STAFF', label: 'Staff' },
         ...rolesBasicos
       ];
     }
     
-    return []; // Por seguridad
+    return rolesBasicos; // Por defecto, mostrar roles básicos
   };
 
   const rolesDisponibles = getRolesDisponibles();
@@ -76,6 +80,15 @@ export default function AltaUsuariosPage() {
         texto: `Usuario ${formData.nombre} creado como ${formData.rol} correctamente.` 
       });
       setFormData({ nombre: '', email: '', password: '', rol: 'PARTICIPANTE' }); // Reset form
+      
+      // Redirigir después de 2 segundos
+      setTimeout(() => {
+        if (currentUserRole === 'ADMINISTRADOR') {
+          router.push('/dashboard/admin/usuarios');
+        } else {
+          router.push('/dashboard/staff/usuarios');
+        }
+      }, 2000);
     } catch (error) {
       setMensaje({ tipo: 'error', texto: 'Error de conexión al crear usuario' });
     } finally {
@@ -91,11 +104,16 @@ export default function AltaUsuariosPage() {
           Alta de Usuarios
         </h1>
         <p className="text-slate-400 mt-2">
-          Panel de registro. Actuando como: <span className="text-blue-400 font-bold">{currentUserRole}</span>
+          Panel de registro. Actuando como: <span className="text-blue-400 font-bold">{currentUserRole || 'Cargando...'}</span>
         </p>
       </div>
 
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+      {!currentUserRole ? (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+          <p className="text-slate-400 text-center">Cargando información del usuario...</p>
+        </div>
+      ) : (
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">{/* form content */}
         <form onSubmit={handleSubmit} className="space-y-6">
           
           {/* Nombre */}
@@ -190,6 +208,7 @@ export default function AltaUsuariosPage() {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

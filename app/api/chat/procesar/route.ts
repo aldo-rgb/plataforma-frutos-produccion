@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
       // 6. Crear o actualizar CartaFrutos
       const cartaExistente = await prisma.cartaFrutos.findFirst({
         where: { usuarioId: usuario.id },
-        include: { tareas: true }
+        include: { Tarea: true }
       });
 
       let cartaFrutos;

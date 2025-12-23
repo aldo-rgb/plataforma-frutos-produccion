@@ -32,7 +32,7 @@ export async function registrarUsuario(formData: FormData) {
         nombre,
         email,
         password: hashedPassword,
-        rol: "LIDER",          // Rol por defecto
+        rol: "PARTICIPANTE",   // Rol por defecto
         suscripcion: "INACTIVO", // Importante: Nace inactivo para forzar el pago
         puntosCuanticos: 0,
       },

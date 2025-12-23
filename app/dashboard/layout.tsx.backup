@@ -65,7 +65,7 @@ export default function DashboardLayout({
                <Atom size={20} className="animate-spin-slow" />
              </div>
              <span className="text-lg font-bold tracking-tight text-white">
-               IMPACTO <span className="text-cyan-400">VIA</span>
+               QUANTUM <span className="text-cyan-400">VIA</span>
              </span>
            </div>
            {/* Botón cerrar (Solo móvil) */}

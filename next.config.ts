@@ -1,13 +1,26 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    forceSwcTransforms: true,
+  },
   eslint: {
-    // Permitir build en producción incluso con errores de ESLint
     ignoreDuringBuilds: true,
   },
   typescript: {
-    // Permitir build en producción incluso con errores de TypeScript
     ignoreBuildErrors: true,
+  },
+  webpack: (config, { isServer }) => {
+    // Ayudar a resolver módulos de forma más explícita
+    config.resolve.extensions = ['.tsx', '.ts', '.jsx', '.js', '.json'];
+    
+    // Asegurar resolución case-sensitive
+    config.resolve.alias = {
+      ...config.resolve.alias,
+    };
+    
+    return config;
   },
 };
 

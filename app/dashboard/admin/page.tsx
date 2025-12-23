@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   BarChart3, Users, PhoneOff, Zap, AlertTriangle, 
   Clock, TrendingUp, ShieldCheck, UserPlus, Gamepad2 
 } from 'lucide-react';
+import Link from 'next/link';
 
 // DATOS MOCK: RENDIMIENTO DE MENTORES
 const PERFORMANCE_MENTORES = [
@@ -59,6 +60,30 @@ const PERFORMANCE_GAMECHANGERS = [
 ];
 
 export default function AdminPerformancePage() {
+  const [mentoresInactivos, setMentoresInactivos] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    cargarMentoresInactivos();
+  }, []);
+
+  const cargarMentoresInactivos = async () => {
+    try {
+      const res = await fetch('/api/usuarios');
+      const data = await res.json();
+      if (data.usuarios) {
+        const inactivos = data.usuarios.filter((u: any) => 
+          u.rol === 'MENTOR' && !u.isActive && !u.firstActivatedAt
+        ).length;
+        setMentoresInactivos(inactivos);
+      }
+    } catch (error) {
+      console.error('Error al cargar mentores inactivos:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-20">
       
@@ -73,7 +98,7 @@ export default function AdminPerformancePage() {
       </div>
 
       {/* KPI CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <KpiCard 
           icon={<Users className="text-cyan-400" />} 
           label="Líderes Activos" 
@@ -81,6 +106,16 @@ export default function AdminPerformancePage() {
           trend="+12 esta semana" 
           color="cyan"
         />
+        <Link href="/dashboard/admin/usuarios" className="block">
+          <KpiCard 
+            icon={<AlertTriangle className="text-orange-400" />} 
+            label="Mentores Pendientes" 
+            value={loading ? '...' : mentoresInactivos.toString()} 
+            trend={mentoresInactivos > 0 ? '⚠️ Requiere Autorización' : '✅ Todo al día'} 
+            color="orange"
+            isClickable={true}
+          />
+        </Link>
         <KpiCard 
           icon={<PhoneOff className="text-red-400" />} 
           label="Tasa de Faltas (Global)" 
@@ -236,16 +271,17 @@ export default function AdminPerformancePage() {
   );
 }
 
-function KpiCard({ icon, label, value, trend, color }: any) {
+function KpiCard({ icon, label, value, trend, color, isClickable }: any) {
   const colors: any = {
     cyan: "border-cyan-500/20 bg-cyan-500/5",
     red: "border-red-500/20 bg-red-500/5",
     yellow: "border-yellow-500/20 bg-yellow-500/5",
     green: "border-green-500/20 bg-green-500/5",
+    orange: "border-orange-500/20 bg-orange-500/5",
   };
 
   return (
-    <div className={`p-6 rounded-2xl border ${colors[color]} backdrop-blur-sm`}>
+    <div className={`p-6 rounded-2xl border ${colors[color]} backdrop-blur-sm ${isClickable ? 'cursor-pointer hover:scale-105 transition-transform' : ''}`}>
       <div className="flex items-center justify-between mb-4">
         <div className="p-2 bg-slate-900 rounded-lg">{icon}</div>
         <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">KPI</span>

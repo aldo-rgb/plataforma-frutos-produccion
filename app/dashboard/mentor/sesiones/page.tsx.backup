@@ -1,0 +1,561 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Calendar, Clock, User, CheckCircle, XCircle, Eye, Loader2, DollarSign, MessageSquare, Video, ExternalLink } from 'lucide-react';
+
+interface Solicitud {
+  id: number;
+  clienteNombre: string;
+  clienteImagen: string | null;
+  clienteEmail: string;
+  servicioNombre: string;
+  fecha: string;
+  hora: string;
+  estado: 'PENDIENTE' | 'CONFIRMADA' | 'COMPLETADA' | 'CANCELADA';
+  monto: number;
+  notas: string | null;
+  createdAt: string;
+  enlaceVideoLlamada: string | null;
+  tipoVideoLlamada: string;
+}
+
+export default function MentorSesionesPage() {
+  const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filtro, setFiltro] = useState<'TODAS' | 'PENDIENTE' | 'CONFIRMADA' | 'COMPLETADA'>('PENDIENTE');
+  const [procesando, setProcesando] = useState<number | null>(null);
+  const [modalNotas, setModalNotas] = useState<{ show: boolean; notas: string; cliente: string } | null>(null);
+  const [modalConfirmar, setModalConfirmar] = useState<{ show: boolean; solicitudId: number; tipo: 'confirmar' | 'completar'; cliente: string } | null>(null);
+  const [modalRechazar, setModalRechazar] = useState<{ show: boolean; solicitudId: number; cliente: string } | null>(null);
+  const [motivoRechazo, setMotivoRechazo] = useState('');
+  const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+  const [mensajeError, setMensajeError] = useState<string | null>(null);
+
+  useEffect(() => {
+    cargarSolicitudes();
+  }, []);
+
+  const cargarSolicitudes = async () => {
+    try {
+      const res = await fetch('/api/mentor/solicitudes');
+      const data = await res.json();
+      
+      if (data.success && data.solicitudes) {
+        setSolicitudes(data.solicitudes);
+      }
+    } catch (error) {
+      console.error('Error al cargar solicitudes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const confirmarSolicitud = async (id: number) => {
+    setProcesando(id);
+    try {
+      const res = await fetch('/api/mentor/solicitudes/confirmar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ solicitudId: id })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setMensajeExito('✅ Sesión confirmada exitosamente');
+        setModalConfirmar(null);
+        cargarSolicitudes();
+        setTimeout(() => setMensajeExito(null), 3000);
+      } else {
+        setMensajeError(`❌ ${data.error || 'No se pudo confirmar'}`);
+        setTimeout(() => setMensajeError(null), 3000);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setMensajeError('❌ Error de conexión');
+      setTimeout(() => setMensajeError(null), 3000);
+    } finally {
+      setProcesando(null);
+    }
+  };
+
+  const rechazarSolicitud = async (id: number) => {
+    setProcesando(id);
+    try {
+      const res = await fetch('/api/mentor/solicitudes/rechazar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ solicitudId: id, motivo: motivoRechazo })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setMensajeExito('✅ Sesión rechazada');
+        setModalRechazar(null);
+        setMotivoRechazo('');
+        cargarSolicitudes();
+        setTimeout(() => setMensajeExito(null), 3000);
+      } else {
+        setMensajeError(`❌ ${data.error || 'No se pudo rechazar'}`);
+        setTimeout(() => setMensajeError(null), 3000);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setMensajeError('❌ Error de conexión');
+      setTimeout(() => setMensajeError(null), 3000);
+    } finally {
+      setProcesando(null);
+    }
+  };
+
+  const completarSesion = async (id: number) => {
+    setProcesando(id);
+    try {
+      const res = await fetch('/api/mentor/solicitudes/completar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ solicitudId: id })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setMensajeExito('✅ Sesión completada exitosamente');
+        setModalConfirmar(null);
+        cargarSolicitudes();
+        setTimeout(() => setMensajeExito(null), 3000);
+      } else {
+        setMensajeError(`❌ ${data.error || 'No se pudo completar'}`);
+        setTimeout(() => setMensajeError(null), 3000);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setMensajeError('❌ Error de conexión');
+      setTimeout(() => setMensajeError(null), 3000);
+    } finally {
+      setProcesando(null);
+    }
+  };
+
+  const solicitudesFiltradas = solicitudes.filter(s => {
+    if (filtro === 'TODAS') return true;
+    return s.estado === filtro;
+  });
+
+  const getEstadoConfig = (estado: string) => {
+    switch (estado) {
+      case 'PENDIENTE':
+        return { color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30', IconComponent: Clock, text: 'Pendiente' };
+      case 'CONFIRMADA':
+        return { color: 'bg-blue-500/10 text-blue-400 border-blue-500/30', IconComponent: CheckCircle, text: 'Confirmada' };
+      case 'COMPLETADA':
+        return { color: 'bg-green-500/10 text-green-400 border-green-500/30', IconComponent: CheckCircle, text: 'Completada' };
+      case 'CANCELADA':
+        return { color: 'bg-red-500/10 text-red-400 border-red-500/30', IconComponent: XCircle, text: 'Cancelada' };
+      default:
+        return { color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30', IconComponent: Clock, text: 'Pendiente' };
+    }
+  };
+
+  const pendientesCount = solicitudes.filter(s => s.estado === 'PENDIENTE').length;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-purple-500 animate-spin mx-auto mb-4" />
+          <p className="text-slate-400">Cargando solicitudes...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
+      <div className="max-w-7xl mx-auto">
+        
+        {mensajeExito && (
+          <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slideDown">
+            <CheckCircle className="w-5 h-5" />
+            {mensajeExito}
+          </div>
+        )}
+
+        {mensajeError && (
+          <div className="fixed top-4 right-4 z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slideDown">
+            <XCircle className="w-5 h-5" />
+            {mensajeError}
+          </div>
+        )}
+        
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2">Mis Sesiones de Mentoría</h1>
+          <p className="text-slate-400">Gestiona tus solicitudes y sesiones confirmadas</p>
+        </div>
+
+        {pendientesCount > 0 && (
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6 flex items-center gap-3">
+            <Clock className="w-6 h-6 text-yellow-400" />
+            <div className="flex-1">
+              <p className="text-white font-medium">
+                Tienes {pendientesCount} solicitud{pendientesCount > 1 ? 'es' : ''} pendiente{pendientesCount > 1 ? 's' : ''} de confirmar
+              </p>
+              <p className="text-slate-400 text-sm">
+                Revisa y confirma las sesiones lo antes posible
+              </p>
+            </div>
+            <button
+              onClick={() => setFiltro('PENDIENTE')}
+              className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              Ver solicitudes
+            </button>
+          </div>
+        )}
+
+        <div className="flex gap-3 mb-6 overflow-x-auto pb-2">
+          {(['PENDIENTE', 'CONFIRMADA', 'COMPLETADA', 'TODAS'] as const).map((tipoFiltro) => (
+            <button
+              key={tipoFiltro}
+              onClick={() => setFiltro(tipoFiltro)}
+              className={`px-4 py-2 rounded-lg font-medium transition-all whitespace-nowrap ${
+                filtro === tipoFiltro
+                  ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
+                  : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
+              }`}
+            >
+              {tipoFiltro === 'TODAS' ? 'Todas' : tipoFiltro.charAt(0) + tipoFiltro.slice(1).toLowerCase()}s ({
+                tipoFiltro === 'TODAS' 
+                  ? solicitudes.length 
+                  : solicitudes.filter(s => s.estado === tipoFiltro).length
+              })
+            </button>
+          ))}
+        </div>
+
+        {solicitudesFiltradas.length === 0 ? (
+          <div className="bg-slate-800 border border-slate-700 rounded-xl p-12 text-center">
+            <Calendar className="w-16 h-16 text-slate-600 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-slate-400 mb-2">
+              No hay solicitudes {filtro !== 'TODAS' && filtro.toLowerCase()}
+            </h3>
+            <p className="text-slate-500">
+              {filtro === 'PENDIENTE' 
+                ? 'Cuando recibas nuevas solicitudes aparecerán aquí'
+                : 'No tienes sesiones en este estado'}
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {solicitudesFiltradas.map((solicitud) => {
+              const estadoConfig = getEstadoConfig(solicitud.estado);
+              const IconComponent = estadoConfig.IconComponent;
+              const estaProcesando = procesando === solicitud.id;
+              
+              return (
+                <div
+                  key={solicitud.id}
+                  className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-xl p-6 hover:border-purple-500/50 transition-all"
+                >
+                  <div className="flex items-start gap-4">
+                    
+                    <div className="flex-shrink-0">
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xl font-bold">
+                        {solicitud.clienteImagen ? (
+                          <img 
+                            src={solicitud.clienteImagen} 
+                            alt={solicitud.clienteNombre}
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                        ) : (
+                          solicitud.clienteNombre.charAt(0).toUpperCase()
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h3 className="text-lg font-bold text-white truncate">
+                          {solicitud.clienteNombre}
+                        </h3>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center gap-1.5 ${estadoConfig.color}`}>
+                          <IconComponent className="w-4 h-4" />
+                          {estadoConfig.text}
+                        </span>
+                      </div>
+                      
+                      <p className="text-slate-400 text-sm mb-1">{solicitud.servicioNombre}</p>
+                      <p className="text-slate-500 text-xs mb-3">{solicitud.clienteEmail}</p>
+                      
+                      <div className="flex items-center gap-4 text-sm text-slate-400 flex-wrap mb-4">
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-4 h-4" />
+                          {solicitud.fecha}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-4 h-4" />
+                          {solicitud.hora}
+                        </div>
+                        {solicitud.notas && (
+                          <button
+                            onClick={() => setModalNotas({ show: true, notas: solicitud.notas || '', cliente: solicitud.clienteNombre })}
+                            className="flex items-center gap-1.5 text-purple-400 hover:text-purple-300 transition-colors"
+                          >
+                            <Eye className="w-4 h-4" />
+                            Ver notas
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Botón de videollamada para sesiones confirmadas */}
+                      {(solicitud.estado === 'CONFIRMADA' || solicitud.estado === 'COMPLETADA') && solicitud.enlaceVideoLlamada ? (
+                        <div className="mb-4">
+                          <a
+                            href={solicitud.enlaceVideoLlamada}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-4 py-2.5 rounded-lg font-medium transition-all shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:scale-105"
+                          >
+                            <Video className="w-4 h-4" />
+                            <span>Iniciar sesión ({solicitud.tipoVideoLlamada})</span>
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        </div>
+                      ) : (solicitud.estado === 'CONFIRMADA' || solicitud.estado === 'COMPLETADA') && !solicitud.enlaceVideoLlamada ? (
+                        <div className="mb-4 bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-2 text-sm text-slate-400 flex items-center gap-2">
+                          <Video className="w-4 h-4" />
+                          <span>Sin enlace de videollamada configurado</span>
+                        </div>
+                      ) : null}
+                      </div>
+
+                      <div className="flex gap-2 flex-wrap">
+                        {solicitud.estado === 'PENDIENTE' && (
+                          <>
+                            <button
+                              onClick={() => setModalConfirmar({ show: true, solicitudId: solicitud.id, tipo: 'confirmar', cliente: solicitud.clienteNombre })}
+                              disabled={estaProcesando}
+                              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              Confirmar
+                            </button>
+                            <button
+                              onClick={() => setModalRechazar({ show: true, solicitudId: solicitud.id, cliente: solicitud.clienteNombre })}
+                              disabled={estaProcesando}
+                              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <XCircle className="w-4 h-4" />
+                              Rechazar
+                            </button>
+                          </>
+                        )}
+                        
+                        {solicitud.estado === 'CONFIRMADA' && (
+                          <button
+                            onClick={() => setModalConfirmar({ show: true, solicitudId: solicitud.id, tipo: 'completar', cliente: solicitud.clienteNombre })}
+                            disabled={estaProcesando}
+                            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            Completar Sesión
+                          </button>
+                        )}
+
+                        {solicitud.estado === 'COMPLETADA' && (
+                          <div className="text-green-400 font-medium flex items-center gap-2 px-4 py-2">
+                            <CheckCircle className="w-5 h-5" />
+                            Sesión finalizada
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {modalNotas?.show && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200"
+          onClick={() => setModalNotas(null)}
+        >
+          <div 
+            className="bg-slate-800 p-6 rounded-2xl max-w-md w-full border border-slate-700 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-white">Notas del Estudiante</h3>
+                <p className="text-slate-400 text-sm">{modalNotas.cliente}</p>
+              </div>
+              <button 
+                onClick={() => setModalNotas(null)}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="bg-slate-900 p-4 rounded-lg border border-slate-700">
+              <p className="text-slate-300 text-sm whitespace-pre-wrap">
+                {modalNotas.notas}
+              </p>
+            </div>
+
+            <button
+              onClick={() => setModalNotas(null)}
+              className="mt-4 w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-medium transition-colors"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {modalConfirmar?.show && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200"
+          onClick={() => !procesando && setModalConfirmar(null)}
+        >
+          <div 
+            className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl max-w-md w-full border border-slate-700 shadow-2xl animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-center mb-4">
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                modalConfirmar.tipo === 'confirmar' ? 'bg-green-500/20' : 'bg-purple-500/20'
+              }`}>
+                <CheckCircle className={`w-10 h-10 ${
+                  modalConfirmar.tipo === 'confirmar' ? 'text-green-400' : 'text-purple-400'
+                }`} />
+              </div>
+            </div>
+
+            <h3 className="text-xl font-bold text-white text-center mb-2">
+              {modalConfirmar.tipo === 'confirmar' ? '¿Confirmar esta sesión de mentoría?' : '¿Completar sesión?'}
+            </h3>
+
+            <p className="text-slate-400 text-sm text-center mb-6">
+              {modalConfirmar.tipo === 'confirmar' 
+                ? `Confirmarás la sesión con ${modalConfirmar.cliente}. El estudiante será notificado.`
+                : `Marcarás la sesión con ${modalConfirmar.cliente} como completada. El estudiante podrá dejarte una reseña.`
+              }
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setModalConfirmar(null)}
+                disabled={procesando === modalConfirmar.solicitudId}
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => modalConfirmar.tipo === 'confirmar' 
+                  ? confirmarSolicitud(modalConfirmar.solicitudId)
+                  : completarSesion(modalConfirmar.solicitudId)
+                }
+                disabled={procesando === modalConfirmar.solicitudId}
+                className={`flex-1 font-bold py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+                  modalConfirmar.tipo === 'confirmar'
+                    ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-500/20'
+                    : 'bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-500/20'
+                }`}
+              >
+                {procesando === modalConfirmar.solicitudId ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Procesando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-5 h-5" />
+                    {modalConfirmar.tipo === 'confirmar' ? 'Confirmar' : 'Completar'}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalRechazar?.show && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200"
+          onClick={() => !procesando && setModalRechazar(null)}
+        >
+          <div 
+            className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 rounded-2xl max-w-md w-full border border-slate-700 shadow-2xl animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center">
+                <XCircle className="w-10 h-10 text-red-400" />
+              </div>
+            </div>
+
+            <h3 className="text-xl font-bold text-white text-center mb-2">
+              ¿Rechazar esta solicitud?
+            </h3>
+
+            <p className="text-slate-400 text-sm text-center mb-6">
+              Rechazarás la sesión con {modalRechazar.cliente}. Puedes agregar un motivo (opcional).
+            </p>
+
+            <div className="mb-6">
+              <label className="text-sm font-medium text-slate-300 mb-2 block">
+                Motivo del rechazo (opcional)
+              </label>
+              <textarea
+                value={motivoRechazo}
+                onChange={(e) => setMotivoRechazo(e.target.value)}
+                placeholder="Ej: No tengo disponibilidad en ese horario..."
+                className="w-full bg-slate-900 text-white p-3 rounded-lg border border-slate-600 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 transition-all resize-none"
+                rows={3}
+                maxLength={200}
+              />
+              <p className="text-xs text-slate-500 mt-1 text-right">
+                {motivoRechazo.length}/200 caracteres
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setModalRechazar(null);
+                  setMotivoRechazo('');
+                }}
+                disabled={procesando === modalRechazar.solicitudId}
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => rechazarSolicitud(modalRechazar.solicitudId)}
+                disabled={procesando === modalRechazar.solicitudId}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-red-500/20"
+              >
+                {procesando === modalRechazar.solicitudId ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Rechazando...
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="w-5 h-5" />
+                    Rechazar
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -219,10 +219,10 @@ Según el prompt actual:
 
 1. **FINANZAS** - Prosperidad económica, ingresos
 2. **RELACIONES** - Pareja, familia, amigos
-3. **TALENTOS** - Habilidades, creatividad
-4. **PAZ MENTAL** - Espiritualidad, manejo de estrés
-5. **DIVERSIÓN** - Ocio, recreación, hobbies
-6. **SALUD** - Vitalidad, ejercicio, alimentación
+3. **SALUD** - Vitalidad, ejercicio, alimentación
+4. **OCIO** (Tiempo) - Diversión, recreación, hobbies
+5. **TALENTOS** (Ocupación) - Habilidades, creatividad, trabajo
+6. **PAZ MENTAL** (Espiritualidad) - Espiritualidad, manejo de estrés
 7. **COMUNIDAD** - Servicio, impacto social
 
 **Formato JSON Esperado:**
