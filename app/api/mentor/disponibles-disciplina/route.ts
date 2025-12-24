@@ -10,18 +10,50 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    // Obtener mentores activos con disponibilidad de llamadas de disciplina
-    const mentores = await prisma.usuario.findMany({
-      where: {
-        rol: 'MENTOR',
-        isActive: true,
-        CallAvailability: {
-          some: {
-            type: 'DISCIPLINE',
-            isActive: true
+    // Obtener el usuario con su visión
+    const usuario = await prisma.usuario.findUnique({
+      where: { email: session.user.email },
+      include: {
+        ParticipanteEnVisiones: {
+          select: {
+            visionId: true
           }
         }
-      },
+      }
+    });
+
+    if (!usuario) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
+    // Si el usuario es participante y está en una visión, filtrar solo mentores asignados
+    let whereClause: any = {
+      rol: 'MENTOR',
+      isActive: true,
+      visibleInMentorshipMarketplace: true,
+      mentorMarketplaceApproved: true,
+      CallAvailability: {
+        some: {
+          type: 'DISCIPLINE',
+          isActive: true
+        }
+      }
+    };
+
+    // FILTRO CRÍTICO: Solo mentores asignados a la visión del participante
+    if (usuario.ParticipanteEnVisiones.length > 0) {
+      const visionId = usuario.ParticipanteEnVisiones[0].visionId;
+      
+      whereClause.MentorEnVisiones = {
+        some: {
+          visionId: visionId
+        }
+      };
+    }
+
+    // Obtener mentores disponibles (filtrados por visión si aplica)
+    const mentores = await prisma.usuario.findMany({
+      where: whereClause,
       include: {
         PerfilMentor: {
           select: {

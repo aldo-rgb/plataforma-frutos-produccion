@@ -15,31 +15,42 @@ export async function POST(
     if (!session?.user || session.user.rol !== 'SCHOOL_ADMIN') {
       return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
     }
+
     const { id } = await params;
     const visionId = parseInt(id);
     const { emails } = await request.json();
+
     if (!emails || !visionId) {
       return NextResponse.json({ success: false, error: 'Datos inválidos' }, { status: 400 });
     }
-    // Parse emails (comma, newline, or space separated)
+
+    // Parse emails
     const emailList = emails
       .split(/[\s,;\n]+/)
       .map((e: string) => e.trim().toLowerCase())
       .filter((e: string) => e && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e));
+
     if (emailList.length === 0) {
       return NextResponse.json({ success: false, error: 'No se detectaron correos válidos' }, { status: 400 });
     }
+
     // Verificar visión y organización
     const vision = await prisma.vision.findUnique({ where: { id: visionId } });
     if (!vision) return NextResponse.json({ success: false, error: 'Visión no encontrada' }, { status: 404 });
-    const director = await prisma.usuario.findUnique({ where: { id: session.user.id }, select: { organizationId: true } });
+
+    const director = await prisma.usuario.findUnique({ 
+      where: { id: session.user.id }, 
+      select: { organizationId: true } 
+    });
+
     if (!director?.organizationId || vision.organizationId !== director.organizationId) {
       return NextResponse.json({ success: false, error: 'No tienes acceso a esta visión' }, { status: 403 });
     }
-    // Buscar usuarios existentes EN CUALQUIER ORGANIZACIÓN
+
+    // Buscar usuarios existentes
     const allExistingUsers = await prisma.usuario.findMany({
       where: { email: { in: emailList } },
-      select: { id: true, email: true, organizationId: true }
+      select: { id: true, email: true, organizationId: true, rol: true }
     });
 
     // Separar por organización
@@ -47,9 +58,9 @@ export async function POST(
     const usersInDifferentOrg = allExistingUsers.filter(u => u.organizationId && u.organizationId !== director.organizationId);
     const usersWithoutOrg = allExistingUsers.filter(u => !u.organizationId);
 
-    const existingEmailsInSameOrg = usersInSameOrg.map(u => u.email);
     const newEmails = emailList.filter((e: string) => !allExistingUsers.find(u => u.email === e));
-    // Crear usuarios nuevos
+
+    // Crear usuarios nuevos como GAMECHANGER
     const created: any[] = [];
     for (const email of newEmails) {
       const hashed = await bcrypt.hash(DEFAULT_PASSWORD, 10);
@@ -58,7 +69,7 @@ export async function POST(
           email,
           nombre: email.split('@')[0],
           password: hashed,
-          rol: 'PARTICIPANTE',
+          rol: 'GAMECHANGER',
           isActive: true,
           organizationId: director.organizationId
         },
@@ -66,6 +77,7 @@ export async function POST(
       });
       created.push(user);
     }
+
     // Marcar usuarios de OTRA organización como cambio pendiente
     const pendingChanges: any[] = [];
     for (const user of usersInDifferentOrg) {
@@ -83,36 +95,41 @@ export async function POST(
     for (const user of usersWithoutOrg) {
       await prisma.usuario.update({
         where: { id: user.id },
-        data: { organizationId: director.organizationId }
+        data: { 
+          organizationId: director.organizationId,
+          rol: 'GAMECHANGER' // Asegurar que sea GAMECHANGER
+        }
       });
     }
 
-    // Agregar usuarios de MISMA organización o SIN organización
+    // Agregar Game Changers de MISMA organización o SIN organización
     const usersToAdd = [...usersInSameOrg, ...usersWithoutOrg];
     const results = [];
     const wizardsReset: string[] = [];
 
     for (const user of [...usersToAdd, ...created]) {
       // Verificar si ya está en la visión
-      const already = await prisma.visionParticipante.findFirst({ 
-        where: { visionId, participanteId: user.id } 
+      const already = await prisma.visionGameChanger.findFirst({ 
+        where: { visionId, gameChangerId: user.id } 
       });
       
       if (!already) {
-        await prisma.visionParticipante.create({ 
-          data: { visionId, participanteId: user.id } 
+        await prisma.visionGameChanger.create({ 
+          data: { 
+            visionId, 
+            gameChangerId: user.id,
+            asignadoPorId: session.user.id
+          } 
         });
         results.push(user.email);
 
-        // Si el usuario ya existía (no es nuevo), reiniciar su wizard
+        // Si el usuario ya existía, reiniciar su wizard
         if (!created.find(c => c.id === user.id)) {
-          // Buscar su carta
           const carta = await prisma.cartaFrutos.findFirst({
             where: { usuarioId: user.id }
           });
 
           if (carta) {
-            // Reiniciar declaraciones
             await prisma.cartaFrutos.update({
               where: { id: carta.id },
               data: {
@@ -126,7 +143,6 @@ export async function POST(
               }
             });
 
-            // Actualizar enrollment si existe
             const enrollment = await prisma.programEnrollment.findFirst({
               where: {
                 userId: user.id,
@@ -157,7 +173,7 @@ export async function POST(
       total: results.length
     });
   } catch (error) {
-    console.error('Error alta masiva participantes:', error);
-    return NextResponse.json({ success: false, error: 'Error al agregar participantes' }, { status: 500 });
+    console.error('Error alta masiva game changers:', error);
+    return NextResponse.json({ success: false, error: 'Error al agregar game changers' }, { status: 500 });
   }
 }

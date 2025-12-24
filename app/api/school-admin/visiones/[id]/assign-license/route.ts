@@ -67,7 +67,7 @@ export async function POST(
       );
     }
 
-    // Verificar que el participante está en la visión
+    // Verificar que el usuario está en la visión (puede ser participante o game changer)
     const visionParticipante = await prisma.visionParticipante.findFirst({
       where: {
         visionId,
@@ -75,9 +75,16 @@ export async function POST(
       },
     });
 
-    if (!visionParticipante) {
+    const visionGameChanger = await prisma.visionGameChanger.findFirst({
+      where: {
+        visionId,
+        gameChangerId: participanteId,
+      },
+    });
+
+    if (!visionParticipante && !visionGameChanger) {
       return NextResponse.json(
-        { success: false, error: 'El participante no está en esta visión' },
+        { success: false, error: 'El usuario no está en esta visión' },
         { status: 400 }
       );
     }
@@ -153,7 +160,6 @@ export async function POST(
         data: {
           licenseCode,
           tier: 'PREMIUM',
-          licenseValidUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 año
         },
       });
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/ToastProvider';
+import ResetDeclarationsButton from '@/components/ResetDeclarationsButton';
 import { 
   CheckCircle2, 
   Edit, 
@@ -724,6 +725,7 @@ export default function CartaResumenPage() {
             </div>
             <div className="flex items-center gap-3">
               {getEstadoBadge()}
+              <ResetDeclarationsButton />
             </div>
           </div>
 

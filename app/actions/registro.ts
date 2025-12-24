@@ -7,6 +7,10 @@ export async function registrarUsuario(formData: FormData) {
   const nombre = formData.get("nombre") as string;
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
+  const communityOrganizationIdStr = formData.get("communityOrganizationId") as string;
+  
+  // Convertir communityOrganizationId a número si existe
+  const communityOrganizationId = communityOrganizationIdStr ? parseInt(communityOrganizationIdStr, 10) : null;
 
   // 1. Validaciones básicas
   if (!nombre || !email || !password) {
@@ -35,6 +39,7 @@ export async function registrarUsuario(formData: FormData) {
         rol: "PARTICIPANTE",   // Rol por defecto
         suscripcion: "INACTIVO", // Importante: Nace inactivo para forzar el pago
         puntosCuanticos: 0,
+        communityOrganizationId, // Guardar asociación opcional con organización
       },
     });
 

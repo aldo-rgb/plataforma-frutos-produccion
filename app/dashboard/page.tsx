@@ -9,6 +9,7 @@ import CartaWizardWidget from "@/components/dashboard/CartaWizardWidget";
 import ZonaEjecucionDiaria from "@/components/dashboard/ZonaEjecucionDiaria";
 import GlobalProgressHero from "@/components/dashboard/GlobalProgressHero";
 import IntensiveProgramCard from "@/components/dashboard/IntensiveProgramCard";
+import OrganizationChangeModal from "@/components/OrganizationChangeModal";
 
 export default async function DashboardPage() {
   // 1. Obtener sesión y datos frescos
@@ -192,6 +193,11 @@ export default async function DashboardPage() {
       {/* PROGRAMA INTENSIVO BANNER (Solo Onboarding)  */}
       {/* ============================================ */}
       {!isAuthorized && <ProgramStatusWidget />}
+
+      {/* ============================================ */}
+      {/* MODAL DE CAMBIO DE ORGANIZACIÓN             */}
+      {/* ============================================ */}
+      <OrganizationChangeModal />
 
       {/* Aquí abajo irían tus Widgets de "Avance General" y "Evidencias" */}
       {/* ... */}

@@ -109,9 +109,9 @@ export async function GET(req: Request) {
       return acc;
     }, {} as Record<string, number>);
 
-    // 5. Top 5 estudiantes por XP
+    // 5. Top 5 estudiantes por XP (incluyendo GAMECHANGER)
     const topStudents = organization.Users
-      .filter((u: any) => u.rol === 'PARTICIPANTE')
+      .filter((u: any) => u.rol === 'PARTICIPANTE' || u.rol === 'GAMECHANGER')
       .sort((a: any, b: any) => (b.experienciaXP || 0) - (a.experienciaXP || 0))
       .slice(0, 5)
       .map((u: any) => ({
@@ -122,9 +122,19 @@ export async function GET(req: Request) {
       }));
 
     // 6. Estadísticas generales
-    const totalStudents = organization.Users.filter((u: any) => u.rol === 'PARTICIPANTE').length;
+    const totalStudents = totalAllocated; // Número de licencias asignadas
     const totalMentors = organization.Users.filter((u: any) => u.rol === 'MENTOR').length;
     const totalUsers = organization.Users.length;
+    
+    // 6.1 Contador de COMUNIDAD: Todos los usuarios que han mencionado esta organización (incluyendo individuales)
+    const totalCommunityMembers = await prisma.usuario.count({
+      where: {
+        OR: [
+          { organizationId: fullUser.organizationId }, // Usuarios oficiales con licencia
+          { communityOrganizationId: fullUser.organizationId } // Usuarios individuales que mencionaron la org
+        ]
+      }
+    });
 
     // 7. Verificar si hay pagos pendientes
     const pendingPayment = pendingOrders.length > 0;
@@ -161,6 +171,7 @@ export async function GET(req: Request) {
         totalStudents,
         totalMentors,
         totalUsers,
+        totalCommunityMembers, // NUEVO: Contador de comunidad total
         availableCredits,
         totalPurchased,
         totalAllocated,

@@ -86,6 +86,7 @@ model Organization {
   LicenseOrders     LicenseOrder[]
   LicenseAssignments LicenseAssignment[] // Auditoría de asignaciones
   Visiones          Vision[]             // Visiones/Grupos creados por la organización
+  CommunityMembers  Usuario[]            @relation("CommunityMembers") // Usuarios individuales que mencionaron esta org
   
   @@index([slug])
   @@index([status])
@@ -760,6 +761,22 @@ model Usuario {
   badges                                                           String[]                 @default([])
   timezone                                                         String                   @default("America/Mexico_City")
   socialVisibility                                                 SocialVisibility         @default(COMMUNITY)
+  
+  // 🎯 SISTEMA DE MENTORES INDEPENDIENTES
+  visibleInMentorshipMarketplace                                   Boolean                  @default(true)        // Control de visibilidad en "Solicitar Mentoría"
+  mentorMarketplaceApproved                                        Boolean                  @default(false)       // Aprobación del admin para aparecer en marketplace
+  
+  // 🔄 SISTEMA DE CAMBIO DE ORGANIZACIÓN/VISIÓN
+  pendingOrganizationChange                                        Boolean                  @default(false)       // Cambio de organización pendiente de aprobación
+  newOrganizationId                                                Int?                                           // Nueva organización propuesta
+  newVisionId                                                      Int?                                           // Nueva visión propuesta
+  previousOrganizationId                                           Int?                                           // Organización anterior (para notificar)
+  changeRequestedAt                                                DateTime?                                      // Cuándo se solicitó el cambio
+  changeRequestedBy                                                Int?                                           // ID del director que solicitó
+  
+  // 🏘️ TRACKING DE COMUNIDAD (para usuarios individuales que mencionan una organización)
+  communityOrganizationId                                          Int?                                           // Organización mencionada al registrarse (no afecta licencias)
+  
   CallAvailability                                                 CallAvailability[]
   SocialReactions                                                  SocialReaction[]
   CallBooking_CallBooking_mentorIdToUsuario                        CallBooking[]            @relation("CallBooking_mentorIdToUsuario")
@@ -819,6 +836,8 @@ model Usuario {
   ParticipanteEnVisiones                                           VisionParticipante[]     @relation("ParticipanteEnVision")
   ParticipantesResponsables                                        VisionParticipante[]     @relation("GameChangerResponsable")
   ParticipantesAsignados                                           VisionParticipante[]     @relation("AsignadorParticipante")
+  MentorEnVisiones                                                 VisionMentor[]           @relation("MentorEnVision")
+  MentoresAsignados                                                VisionMentor[]           @relation("AsignadorMentor")
   
   // Quantum Patterns
   QuantumPatterns                                                  QuantumPattern[]         @relation("QuantumPatterns")
@@ -832,6 +851,14 @@ model Usuario {
   ArenaStats                                                       ArenaStats?              @relation("ArenaStats")
   TauntsSent                                                       ArenaTaunt[]             @relation("TauntSender")
   TauntsReceived                                                   ArenaTaunt[]             @relation("TauntReceiver")
+  
+  // Notificaciones
+  Notifications                                                    Notification[]
+  
+  // Relación con organización de comunidad (tracking no oficial)
+  CommunityOrganization                                            Organization?            @relation("CommunityMembers", fields: [communityOrganizationId], references: [id])
+  
+  @@index([communityOrganizationId])
 }
 
 enum CallType {
@@ -1467,6 +1494,7 @@ model Vision {
   Organization      Organization?      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   GameChangers      VisionGameChanger[]
   Participantes     VisionParticipante[]
+  Mentores          VisionMentor[]     @relation("VisionMentores") // Mentores asignados para llamadas de disciplina
   LicenseAssignments LicenseAssignment[] // Licencias asignadas a participantes
   
   @@index([coordinadorId])
@@ -1506,9 +1534,24 @@ model VisionParticipante {
   AsignadoPor     Usuario? @relation("AsignadorParticipante", fields: [asignadoPorId], references: [id], onDelete: Cascade)
   
   @@unique([visionId, participanteId])
+}
+
+// 🎯 MENTORES ASIGNADOS A VISIONES (Solo para Llamadas de Disciplina)
+model VisionMentor {
+  id            Int      @id @default(autoincrement())
+  visionId      Int
+  mentorId      Int
+  asignadoPorId Int      // ID del director que lo asignó
+  createdAt     DateTime @default(now())
+  
+  // Relaciones
+  Vision        Vision   @relation("VisionMentores", fields: [visionId], references: [id], onDelete: Cascade)
+  Mentor        Usuario  @relation("MentorEnVision", fields: [mentorId], references: [id], onDelete: Cascade)
+  AsignadoPor   Usuario  @relation("AsignadorMentor", fields: [asignadoPorId], references: [id], onDelete: Cascade)
+  
+  @@unique([visionId, mentorId])
   @@index([visionId])
-  @@index([participanteId])
-  @@index([gameChangerId])
+  @@index([mentorId])
 }
 
 // 🧬 QUANTUM PATTERNS - Sistema de Analítica Predictiva
@@ -1812,4 +1855,29 @@ enum LicenseOrderStatus {
   FAILED        // Pago fallido
   CANCELLED     // Orden cancelada
   REFUNDED      // Orden reembolsada
+}
+
+// 🔔 MODELO DE NOTIFICACIONES
+model Notification {
+  id          Int      @id @default(autoincrement())
+  userId      Int      // Usuario que recibe la notificación
+  type        NotificationType
+  title       String   // Título de la notificación
+  message     String   // Mensaje detallado
+  relatedId   Int?     // ID relacionado (ej: userId del participante transferido)
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  
+  usuario     Usuario  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
+
+enum NotificationType {
+  ORGANIZATION_TRANSFER  // Transferencia de participante entre organizaciones
+  TASK_SUBMISSION        // Entrega de tarea
+  MENTOR_ASSIGNMENT      // Asignación de mentor
+  SYSTEM_ALERT           // Alertas del sistema
+  OTHER                  // Otros tipos
 }

@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,7 +17,8 @@ export async function GET(
       );
     }
 
-    const visionId = parseInt(params.id);
+    const { id } = await params;
+    const visionId = parseInt(id);
 
     if (isNaN(visionId)) {
       return NextResponse.json(
@@ -26,13 +27,21 @@ export async function GET(
       );
     }
 
-    // Obtener la visión con participantes
+    // Obtener la visión con participantes y coordinador
     const vision = await prisma.vision.findUnique({
       where: { id: visionId },
       include: {
+        Coordinador: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+          },
+        },
         _count: {
           select: {
             Participantes: true,
+            GameChangers: true,
           },
         },
       },
@@ -69,6 +78,43 @@ export async function GET(
             email: true,
             tier: true,
             licenseCode: true,
+            assignedMentorId: true,
+            Usuario_Usuario_assignedMentorIdToUsuario: {
+              select: {
+                id: true,
+                nombre: true,
+                email: true,
+                imagen: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    // Obtener game changers de la visión
+    const gameChangers = await prisma.visionGameChanger.findMany({
+      where: { visionId },
+      include: {
+        GameChanger: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+            tier: true,
+            licenseCode: true,
+            assignedMentorId: true,
+            Usuario_Usuario_assignedMentorIdToUsuario: {
+              select: {
+                id: true,
+                nombre: true,
+                email: true,
+                imagen: true,
+              },
+            },
           },
         },
       },
@@ -81,6 +127,7 @@ export async function GET(
       success: true,
       vision,
       participantes,
+      gameChangers,
     });
   } catch (error) {
     console.error('Error fetching vision details:', error);

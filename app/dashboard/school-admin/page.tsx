@@ -17,6 +17,7 @@ interface DashboardData {
     activeStudents: number;
     completionRate: number;
     approvedLetters: number;
+    totalCommunityMembers?: number; // NUEVO
   };
   tierDistribution: {
     tier: string;
@@ -118,6 +119,7 @@ export default function SchoolAdminDashboard() {
             activeStudents: result.users.filter((u: any) => u.isActive && u.rol === 'PARTICIPANTE').length,
             completionRate: 0, // TODO: calcular desde cartas
             approvedLetters: 0, // TODO: calcular desde cartas
+            totalCommunityMembers: result.stats.totalCommunityMembers || 0, // NUEVO
           },
           tierDistribution: Object.entries(result.tierDistribution).map(([tier, count]) => ({
             tier,
@@ -133,7 +135,7 @@ export default function SchoolAdminDashboard() {
             tier: s.tier,
           })),
           students: result.users
-            .filter((u: any) => u.rol === 'PARTICIPANTE')
+            .filter((u: any) => u.rol === 'PARTICIPANTE' || u.rol === 'GAMECHANGER')
             .map((u: any) => ({
               id: u.id,
               nombre: u.nombre,
@@ -245,14 +247,6 @@ export default function SchoolAdminDashboard() {
               <p className="text-sm text-slate-500">{session?.user?.email}</p>
             </div>
           </div>
-
-          <button
-            onClick={() => alert('Función de descarga en desarrollo')}
-            className="flex items-center gap-2 px-6 py-3 bg-slate-800 text-white rounded-xl hover:bg-slate-700 transition-colors border border-slate-700"
-          >
-            <Download size={20} />
-            <span>Descargar Reporte</span>
-          </button>
         </div>
 
         {/* Banner de Alerta - Órdenes Pendientes */}
@@ -392,10 +386,17 @@ export default function SchoolAdminDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <KpiCard
             icon={<Users className="text-cyan-400" />}
-            label="Estudiantes Totales"
+            label="Usuarios Totales"
             value={data.overview.totalStudents.toString()}
-            trend={`${data.overview.activeStudents} activos`}
+            trend="✅ Activos"
             color="cyan"
+          />
+          <KpiCard
+            icon={<Building2 className="text-blue-400" />}
+            label="Comunidad"
+            value={(data.overview.totalCommunityMembers || 0).toString()}
+            trend="Todos los usuarios que pertenecen la comunidad"
+            color="blue"
           />
           <KpiCard
             icon={<Target className="text-purple-400" />}
@@ -403,13 +404,6 @@ export default function SchoolAdminDashboard() {
             value={`${data.overview.completionRate}%`}
             trend="Cartas y evidencias"
             color="purple"
-          />
-          <KpiCard
-            icon={<CheckCircle className="text-green-400" />}
-            label="Cartas Aprobadas"
-            value={data.overview.approvedLetters.toString()}
-            trend="Total del mes"
-            color="green"
           />
           <KpiCard
             icon={<Ticket className="text-yellow-400" />}
@@ -601,21 +595,26 @@ export default function SchoolAdminDashboard() {
               </div>
             </Link>
 
-            <div className="bg-gradient-to-br from-cyan-900/50 to-slate-900 border border-cyan-500/30 rounded-2xl p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-cyan-500/20 rounded-xl">
-                  <UserCheck size={24} className="text-cyan-300" />
+            <Link href="/dashboard/school-admin/users" className="block mt-6">
+              <div className="bg-gradient-to-br from-cyan-900/50 to-slate-900 border-2 border-cyan-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-cyan-500/20 group-hover:bg-cyan-500/30 rounded-xl transition-colors">
+                    <GraduationCap size={24} className="text-cyan-300" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm uppercase">
+                      Ver Mis Participantes
+                    </h3>
+                    <p className="text-xs text-cyan-300">
+                      Detalle y avances
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-white text-sm uppercase">Participantes Activos</h3>
-                  <p className="text-xs text-cyan-300">Monitoreo en tiempo real</p>
-                </div>
+                <p className="text-xs text-slate-400">
+                  Lista completa: Participantes, Game Changers, Coordinadores y Mentores
+                </p>
               </div>
-              <div className="text-center py-4">
-                <p className="text-4xl font-black text-white">{data.overview.activeStudents}</p>
-                <p className="text-xs text-slate-400 mt-1">de {data.overview.totalStudents} totales</p>
-              </div>
-            </div>
+            </Link>
 
             <div className="bg-gradient-to-br from-green-900/50 to-slate-900 border border-green-500/30 rounded-2xl p-6">
               <div className="flex items-center gap-3 mb-4">
