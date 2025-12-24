@@ -7,7 +7,7 @@ import { Calendar, Clock, Video, User, ExternalLink, Settings, AlertCircle, Chec
 interface Sesion {
   id: string;
   idNumerico: number;
-  tipo: 'DISCIPLINA' | 'MENTORIA';
+  tipo: 'LLAMADA' | 'MENTORIA';
   alumno: string;
   alumnoEmail: string;
   alumnoImagen: string | null;
@@ -35,6 +35,7 @@ interface AgendaResponse {
     total: number;
     disciplina: number;
     mentorias: number;
+    llamadas: number;
     confirmadas: number;
     pendientes: number;
     primeraHora: string | null;
@@ -183,9 +184,9 @@ export default function AgendaDelDia() {
               <span className="text-xs px-2 py-1 rounded-full bg-purple-900/30 text-purple-300 border border-purple-800/50">
                 {stats.total} {stats.total === 1 ? 'sesión' : 'sesiones'}
               </span>
-              {stats.disciplina > 0 && (
-                <span className="text-xs px-2 py-1 rounded-full bg-orange-900/30 text-orange-300 border border-orange-800/50">
-                  {stats.disciplina} disciplina
+              {stats.llamadas > 0 && (
+                <span className="text-xs px-2 py-1 rounded-full bg-purple-900/30 text-purple-300 border border-purple-800/50">
+                  {stats.llamadas} {stats.llamadas === 1 ? 'llamada' : 'llamadas'}
                 </span>
               )}
               {stats.mentorias > 0 && (
@@ -202,7 +203,7 @@ export default function AgendaDelDia() {
             <div 
               key={sesion.id} 
               className={`bg-slate-800/50 p-4 rounded-lg border-l-4 hover:bg-slate-800 transition-all duration-200 ${
-                sesion.tipo === 'DISCIPLINA' ? 'border-orange-500' : 'border-blue-500'
+                sesion.tipo === 'LLAMADA' ? 'border-purple-500' : 'border-blue-500'
               }`}
             >
               <div className="flex justify-between items-start gap-3">

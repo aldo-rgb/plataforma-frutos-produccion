@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,6 +53,8 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    console.log(`🔍 [Disciplina] Mentor ${mentor.id} tiene ${participantes.length} participantes activos`);
+
     // Enriquecer con información de llamadas
     const participantesEnriquecidos = await Promise.all(
       participantes.map(async (participante) => {
@@ -62,7 +64,7 @@ export async function GET(request: NextRequest) {
           return null; // Saltar participantes sin enrollment activo
         }
 
-        // Buscar llamada HOY (tipo DISCIPLINE, estado PENDING o CONFIRMED)
+        // Buscar llamada HOY (tipo DISCIPLINE, estado PENDING, que no esté marcada como ABSENT)
         const hoy = new Date();
         hoy.setHours(0, 0, 0, 0);
         const manana = new Date(hoy);
@@ -75,18 +77,20 @@ export async function GET(request: NextRequest) {
             scheduledAt: {
               gte: hoy,
               lt: manana
-            }
+            },
+            attendanceStatus: { in: ['PENDING', 'PRESENT'] } // Excluir las marcadas como ABSENT
           },
           orderBy: { scheduledAt: 'asc' }
         });
 
-        // Buscar próxima llamada futura (si no tiene hoy)
+        // Buscar próxima llamada futura (si no tiene hoy o la de hoy ya fue procesada)
         const proximaLlamada = !llamadaHoy ? await prisma.callBooking.findFirst({
           where: {
             programEnrollmentId: enrollment.id,
             type: 'DISCIPLINE',
             scheduledAt: { gt: new Date() },
-            status: { in: ['PENDING', 'CONFIRMED'] }
+            status: { in: ['PENDING', 'CONFIRMED'] },
+            attendanceStatus: 'PENDING' // Solo llamadas sin procesar
           },
           orderBy: { scheduledAt: 'asc' }
         }) : null;
@@ -122,6 +126,13 @@ export async function GET(request: NextRequest) {
 
     // Filtrar nulls (participantes sin enrollment activo)
     const participantesValidos = participantesEnriquecidos.filter(Boolean);
+
+    console.log(`✅ [Disciplina] Retornando ${participantesValidos.length} participantes válidos`);
+    console.log(`📊 [Disciplina] Detalles:`, participantesValidos.map(p => ({
+      nombre: p?.nombre,
+      tieneHoy: !!p?.llamadaHoy,
+      tieneProxima: !!p?.proximaLlamada
+    })));
 
     return NextResponse.json({
       success: true,

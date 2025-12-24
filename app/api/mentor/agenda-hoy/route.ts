@@ -45,7 +45,8 @@ export async function GET() {
       hasta: mañana.toISOString()
     });
 
-    // 1. OBTENER LLAMADAS DE DISCIPLINA (CallBooking)
+    // 1. OBTENER LLAMADAS QUE NO SON DE DISCIPLINA (CallBooking)
+    // Excluimos las de tipo DISCIPLINE porque tienen su propio widget
     // SQL equivalente:
     // SELECT cb.*, u.nombre as alumno_nombre, u.email as alumno_email
     // FROM "CallBooking" cb
@@ -54,6 +55,7 @@ export async function GET() {
     //   AND cb."scheduledAt" >= $2
     //   AND cb."scheduledAt" < $3
     //   AND cb.status IN ('CONFIRMED', 'PENDING')
+    //   AND cb.type != 'DISCIPLINE'
     // ORDER BY cb."scheduledAt" ASC
     
     const callBookings = await prisma.callBooking.findMany({
@@ -65,6 +67,9 @@ export async function GET() {
         },
         status: {
           in: ['CONFIRMED', 'PENDING']
+        },
+        type: {
+          not: 'DISCIPLINE' // Excluir llamadas de disciplina
         }
       },
       select: {
@@ -150,7 +155,7 @@ export async function GET() {
 
     // 3. FORMATEAR Y COMBINAR LAS SESIONES
     const sesiones = [
-      // Formatear CallBookings (Llamadas de Disciplina)
+      // Formatear CallBookings (Llamadas NO de Disciplina)
       ...callBookings.map(booking => {
         const hora = new Date(booking.scheduledAt);
         const horaFin = new Date(hora.getTime() + booking.duration * 60000);
@@ -158,12 +163,12 @@ export async function GET() {
         return {
           id: `call-${booking.id}`,
           idNumerico: booking.id,
-          tipo: 'DISCIPLINA',
+          tipo: 'LLAMADA',
           alumno: booking.Usuario_CallBooking_studentIdToUsuario.nombre,
           alumnoEmail: booking.Usuario_CallBooking_studentIdToUsuario.email,
           alumnoImagen: booking.Usuario_CallBooking_studentIdToUsuario.imagen,
-          servicio: booking.type === 'DISCIPLINE' ? '⏰ Club 5 AM - Disciplina' : '📞 Llamada Mentor',
-          servicioIcono: booking.type === 'DISCIPLINE' ? '⏰' : '📞',
+          servicio: '📞 Llamada Mentor',
+          servicioIcono: '📞',
           hora: `${hora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })} - ${horaFin.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`,
           horaInicio: hora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
           horaFin: horaFin.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }),
@@ -226,8 +231,9 @@ export async function GET() {
     // 5. ESTADÍSTICAS
     const stats = {
       total: sesiones.length,
-      disciplina: sesiones.filter(s => s.tipo === 'DISCIPLINA').length,
+      disciplina: 0, // Ya no mostramos disciplina aquí
       mentorias: sesiones.filter(s => s.tipo === 'MENTORIA').length,
+      llamadas: sesiones.filter(s => s.tipo === 'LLAMADA').length,
       confirmadas: sesiones.filter(s => s.status === 'CONFIRMED' || s.status === 'CONFIRMADA').length,
       pendientes: sesiones.filter(s => s.status === 'PENDING').length,
       primeraHora: sesiones.length > 0 ? sesiones[0].horaInicio : null,

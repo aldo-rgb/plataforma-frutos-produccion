@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Clock, CheckCircle, XCircle, AlertTriangle, User, RefreshCw, Heart, Flame, Timer } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, AlertTriangle, User, RefreshCw, Heart, Flame, Timer, Shield, X } from 'lucide-react';
 
 interface Participante {
   id: number;
@@ -37,11 +37,19 @@ interface CountdownTime {
   isPast: boolean;
 }
 
+interface StrikeAlert {
+  show: boolean;
+  type: 'success' | 'suspended';
+  totalStrikes: number;
+  maxStrikes: number;
+}
+
 export default function WidgetDisciplinaV2() {
   const [participantes, setParticipantes] = useState<Participante[]>([]);
   const [loading, setLoading] = useState(true);
   const [procesando, setProcesando] = useState<number | null>(null);
   const [now, setNow] = useState(new Date());
+  const [strikeAlert, setStrikeAlert] = useState<StrikeAlert>({ show: false, type: 'success', totalStrikes: 0, maxStrikes: 3 });
 
   useEffect(() => {
     cargarParticipantes();
@@ -55,11 +63,16 @@ export default function WidgetDisciplinaV2() {
       const res = await fetch('/api/mentor/disciplina/participantes');
       const data = await res.json();
       
+      console.log('📦 [Widget] Respuesta de API:', data);
+      
       if (data.success) {
-        setParticipantes(data.participantes);
+        console.log('✅ [Widget] Participantes recibidos:', data.participantes?.length || 0);
+        setParticipantes(data.participantes || []);
+      } else {
+        console.log('❌ [Widget] Error en respuesta:', data.error);
       }
     } catch (error) {
-      console.error('Error cargando participantes:', error);
+      console.log('❌ [Widget] Error cargando participantes:', error);
     } finally {
       setLoading(false);
     }
@@ -82,17 +95,18 @@ export default function WidgetDisciplinaV2() {
       const data = await res.json();
 
       if (data.success) {
-        if (data.suspended) {
-          alert(`⚠️ ESTUDIANTE SUSPENDIDO\n\nEl estudiante ha alcanzado ${data.totalStrikes}/${data.maxStrikes} faltas.\nTodas sus sesiones futuras han sido canceladas.`);
-        } else {
-          alert(`Strike registrado. Total: ${data.totalStrikes}/${data.maxStrikes}`);
-        }
+        setStrikeAlert({
+          show: true,
+          type: data.suspended ? 'suspended' : 'success',
+          totalStrikes: data.totalStrikes,
+          maxStrikes: data.maxStrikes
+        });
         await cargarParticipantes();
       } else {
         alert(data.error || 'Error al registrar strike');
       }
     } catch (error) {
-      console.error('Error registrando strike:', error);
+      console.log('Error registrando strike:', error);
       alert('Error al registrar strike. Intenta nuevamente.');
     } finally {
       setProcesando(null);
@@ -117,7 +131,7 @@ export default function WidgetDisciplinaV2() {
         alert(data.error || 'Error al marcar asistencia');
       }
     } catch (error) {
-      console.error('Error marcando asistencia:', error);
+      console.log('Error marcando asistencia:', error);
       alert('Error al marcar asistencia. Intenta nuevamente.');
     } finally {
       setProcesando(null);
@@ -351,6 +365,134 @@ export default function WidgetDisciplinaV2() {
           })
         )}
       </div>
+
+      {/* MODAL DE ALERTA DE STRIKE */}
+      {strikeAlert.show && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className={`bg-gradient-to-br ${
+            strikeAlert.type === 'suspended' 
+              ? 'from-red-900/95 to-red-950/95' 
+              : 'from-orange-900/95 to-orange-950/95'
+          } border-2 ${
+            strikeAlert.type === 'suspended' 
+              ? 'border-red-500/50' 
+              : 'border-orange-500/50'
+          } rounded-2xl max-w-md w-full shadow-2xl transform animate-in zoom-in-95 duration-200`}>
+            
+            {/* Header */}
+            <div className="p-6 border-b border-white/10">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-full ${
+                    strikeAlert.type === 'suspended' 
+                      ? 'bg-red-500/20 border-2 border-red-500' 
+                      : 'bg-orange-500/20 border-2 border-orange-500'
+                  } flex items-center justify-center`}>
+                    {strikeAlert.type === 'suspended' ? (
+                      <Shield className="w-6 h-6 text-red-400" />
+                    ) : (
+                      <AlertTriangle className="w-6 h-6 text-orange-400" />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">
+                      {strikeAlert.type === 'suspended' ? '⚠️ Estudiante Suspendido' : 'Strike Registrado'}
+                    </h3>
+                    <p className="text-sm text-gray-300 mt-1">
+                      {strikeAlert.type === 'suspended' 
+                        ? 'Límite de faltas alcanzado' 
+                        : 'Falta registrada correctamente'
+                      }
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setStrikeAlert({ ...strikeAlert, show: false })}
+                  className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+            </div>
+
+            {/* Contenido */}
+            <div className="p-6 space-y-4">
+              {/* Contador de Strikes */}
+              <div className={`p-4 rounded-xl ${
+                strikeAlert.type === 'suspended' 
+                  ? 'bg-red-950/50 border border-red-500/30' 
+                  : 'bg-orange-950/50 border border-orange-500/30'
+              }`}>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm text-gray-300 font-medium">Estado de Faltas</span>
+                  <div className="flex gap-1">
+                    {[...Array(strikeAlert.maxStrikes)].map((_, i) => (
+                      <XCircle 
+                        key={i}
+                        size={20}
+                        className={i < strikeAlert.totalStrikes 
+                          ? strikeAlert.type === 'suspended' ? 'text-red-500 fill-red-500' : 'text-orange-500 fill-orange-500'
+                          : 'text-gray-600'
+                        } 
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <p className="text-4xl font-black text-white mb-1">
+                    {strikeAlert.totalStrikes}/{strikeAlert.maxStrikes}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {strikeAlert.type === 'suspended' 
+                      ? 'Faltas máximas alcanzadas' 
+                      : `${strikeAlert.maxStrikes - strikeAlert.totalStrikes} ${strikeAlert.maxStrikes - strikeAlert.totalStrikes === 1 ? 'falta restante' : 'faltas restantes'}`
+                    }
+                  </p>
+                </div>
+              </div>
+
+              {/* Mensaje */}
+              <div className={`p-4 rounded-xl ${
+                strikeAlert.type === 'suspended' 
+                  ? 'bg-red-500/10 border border-red-500/30' 
+                  : 'bg-orange-500/10 border border-orange-500/30'
+              }`}>
+                {strikeAlert.type === 'suspended' ? (
+                  <div className="space-y-2">
+                    <p className="text-white font-bold flex items-center gap-2">
+                      <AlertTriangle size={16} className="text-red-400" />
+                      Consecuencias de la Suspensión:
+                    </p>
+                    <ul className="text-sm text-gray-300 space-y-1 ml-6">
+                      <li>• Todas las sesiones futuras han sido canceladas</li>
+                      <li>• El estudiante está suspendido del programa</li>
+                      <li>• Se requiere intervención administrativa</li>
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-300">
+                    El strike ha sido registrado en el historial del estudiante. El estudiante ha sido notificado automáticamente.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-white/10">
+              <button
+                onClick={() => setStrikeAlert({ ...strikeAlert, show: false })}
+                className={`w-full py-3 rounded-xl font-bold text-white transition-all ${
+                  strikeAlert.type === 'suspended'
+                    ? 'bg-red-600 hover:bg-red-500'
+                    : 'bg-orange-600 hover:bg-orange-500'
+                }`}
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
