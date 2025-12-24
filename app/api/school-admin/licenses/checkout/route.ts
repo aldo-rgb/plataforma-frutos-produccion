@@ -126,64 +126,211 @@ export async function POST(req: NextRequest) {
         },
       });
     } else if (paymentMethod === 'stripe') {
-      // Integración con Stripe
-      const paymentUrl = `https://checkout.stripe.com/pay/${orderId}`;
-
-      await prisma.licenseOrder.update({
+      console.log('💳 Procesando pago con Stripe (simulación)...');
+      
+      // Para Stripe simulado, marcamos como COMPLETED y generamos créditos
+      const updatedOrder = await prisma.licenseOrder.update({
         where: { id: orderId },
         data: {
-          paymentUrl,
+          status: 'COMPLETED',
+          paymentMethod: 'stripe',
+          paidAt: new Date(),
           paymentData: {
             method: 'stripe',
-            status: 'initiated',
+            status: 'completed',
+            paidAt: new Date().toISOString(),
+            transactionId: `STRIPE-${orderId.slice(0, 8)}-${Date.now()}`,
           },
         },
       });
 
+      console.log('✅ Orden marcada como COMPLETED con Stripe');
+
+      // Actualizar o crear los créditos de licencia
+      console.log(`🎫 Agregando ${order.quantity} créditos para organización ${order.organizationId}...`);
+      
+      // Buscar crédito existente o crear uno nuevo
+      const existingCredit = await prisma.schoolCredit.findFirst({
+        where: {
+          organizationId: order.organizationId,
+          isActive: true,
+        },
+      });
+
+      let creditRecord;
+      if (existingCredit) {
+        // Actualizar crédito existente
+        creditRecord = await prisma.schoolCredit.update({
+          where: { id: existingCredit.id },
+          data: {
+            totalPurchased: existingCredit.totalPurchased + order.quantity,
+            totalPaid: existingCredit.totalPaid + order.amount,
+            expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Extender 1 año
+          },
+        });
+      } else {
+        // Crear nuevo registro de crédito
+        creditRecord = await prisma.schoolCredit.create({
+          data: {
+            organizationId: order.organizationId,
+            planType: order.tier as any,
+            totalPurchased: order.quantity,
+            totalAllocated: 0,
+            unitPrice: order.amount / order.quantity,
+            totalPaid: order.amount,
+            expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 año
+            isActive: true,
+            notes: `Pago con Stripe - Orden ${orderId}`,
+          },
+        });
+      }
+
+      console.log(`✅ Créditos actualizados: ${creditRecord.totalPurchased} total`);
+
       return NextResponse.json({
         success: true,
-        paymentUrl,
-        order,
+        order: updatedOrder,
+        creditsGenerated: order.quantity,
+        totalCredits: creditRecord.totalPurchased,
+        message: 'Pago procesado exitosamente con Stripe',
       });
     } else if (paymentMethod === 'paypal') {
-      // Integración con PayPal
-      const paymentUrl = `https://www.paypal.com/checkoutnow?token=${orderId}`;
-
-      await prisma.licenseOrder.update({
+      console.log('💳 Procesando pago con PayPal (simulación)...');
+      
+      // Para PayPal simulado, marcamos como COMPLETED y generamos créditos
+      const updatedOrder = await prisma.licenseOrder.update({
         where: { id: orderId },
         data: {
-          paymentUrl,
+          status: 'COMPLETED',
+          paymentMethod: 'paypal',
+          paidAt: new Date(),
           paymentData: {
             method: 'paypal',
-            status: 'initiated',
+            status: 'completed',
+            paidAt: new Date().toISOString(),
+            transactionId: `PAYPAL-${orderId.slice(0, 8)}-${Date.now()}`,
           },
         },
       });
 
+      console.log('✅ Orden marcada como COMPLETED con PayPal');
+
+      // Actualizar o crear los créditos de licencia
+      console.log(`🎫 Agregando ${order.quantity} créditos para organización ${order.organizationId}...`);
+      
+      // Buscar crédito existente o crear uno nuevo
+      const existingCredit = await prisma.schoolCredit.findFirst({
+        where: {
+          organizationId: order.organizationId,
+          isActive: true,
+        },
+      });
+
+      let creditRecord;
+      if (existingCredit) {
+        // Actualizar crédito existente
+        creditRecord = await prisma.schoolCredit.update({
+          where: { id: existingCredit.id },
+          data: {
+            totalPurchased: existingCredit.totalPurchased + order.quantity,
+            totalPaid: existingCredit.totalPaid + order.amount,
+            expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Extender 1 año
+          },
+        });
+      } else {
+        // Crear nuevo registro de crédito
+        creditRecord = await prisma.schoolCredit.create({
+          data: {
+            organizationId: order.organizationId,
+            planType: order.tier as any,
+            totalPurchased: order.quantity,
+            totalAllocated: 0,
+            unitPrice: order.amount / order.quantity,
+            totalPaid: order.amount,
+            expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 año
+            isActive: true,
+            notes: `Pago con PayPal - Orden ${orderId}`,
+          },
+        });
+      }
+
+      console.log(`✅ Créditos actualizados: ${creditRecord.totalPurchased} total`);
+
       return NextResponse.json({
         success: true,
-        paymentUrl,
-        order,
+        order: updatedOrder,
+        creditsGenerated: order.quantity,
+        totalCredits: creditRecord.totalPurchased,
+        message: 'Pago procesado exitosamente con PayPal',
       });
     } else if (paymentMethod === 'mercadopago') {
-      // Integración con Mercado Pago
-      const paymentUrl = `https://www.mercadopago.com.mx/checkout/v1/payment/${orderId}`;
-
-      await prisma.licenseOrder.update({
+      console.log('💳 Procesando pago con Mercado Pago (simulación)...');
+      
+      // Para Mercado Pago simulado, marcamos como COMPLETED y generamos créditos
+      const updatedOrder = await prisma.licenseOrder.update({
         where: { id: orderId },
         data: {
-          paymentUrl,
+          status: 'COMPLETED',
+          paymentMethod: 'mercadopago',
+          paidAt: new Date(),
           paymentData: {
             method: 'mercadopago',
-            status: 'initiated',
+            status: 'completed',
+            paidAt: new Date().toISOString(),
+            transactionId: `MP-${orderId.slice(0, 8)}-${Date.now()}`,
           },
         },
       });
 
+      console.log('✅ Orden marcada como COMPLETED con Mercado Pago');
+
+      // Actualizar o crear los créditos de licencia
+      console.log(`🎫 Agregando ${order.quantity} créditos para organización ${order.organizationId}...`);
+      
+      // Buscar crédito existente o crear uno nuevo
+      const existingCredit = await prisma.schoolCredit.findFirst({
+        where: {
+          organizationId: order.organizationId,
+          isActive: true,
+        },
+      });
+
+      let creditRecord;
+      if (existingCredit) {
+        // Actualizar crédito existente
+        creditRecord = await prisma.schoolCredit.update({
+          where: { id: existingCredit.id },
+          data: {
+            totalPurchased: existingCredit.totalPurchased + order.quantity,
+            totalPaid: existingCredit.totalPaid + order.amount,
+            expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Extender 1 año
+          },
+        });
+      } else {
+        // Crear nuevo registro de crédito
+        creditRecord = await prisma.schoolCredit.create({
+          data: {
+            organizationId: order.organizationId,
+            planType: order.tier as any,
+            totalPurchased: order.quantity,
+            totalAllocated: 0,
+            unitPrice: order.amount / order.quantity,
+            totalPaid: order.amount,
+            expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 año
+            isActive: true,
+            notes: `Pago con Mercado Pago - Orden ${orderId}`,
+          },
+        });
+      }
+
+      console.log(`✅ Créditos actualizados: ${creditRecord.totalPurchased} total`);
+
       return NextResponse.json({
         success: true,
-        paymentUrl,
-        order,
+        order: updatedOrder,
+        creditsGenerated: order.quantity,
+        totalCredits: creditRecord.totalPurchased,
+        message: 'Pago procesado exitosamente con Mercado Pago',
       });
     } else {
       return NextResponse.json(

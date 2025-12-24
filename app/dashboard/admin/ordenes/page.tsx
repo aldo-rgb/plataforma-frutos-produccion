@@ -59,6 +59,11 @@ export default function AdminOrdenesPage() {
   const [selectedOrder, setSelectedOrder] = useState<LicenseOrder | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showProofModal, setShowProofModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [showErrorToast, setShowErrorToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -103,13 +108,60 @@ export default function AdminOrdenesPage() {
         setShowConfirmModal(false);
         setSelectedOrder(null);
         
-        alert('✅ Orden marcada como PAGADA. Los créditos han sido generados.');
+        // Mostrar toast de éxito
+        setToastMessage('✅ Orden marcada como PAGADA. Los créditos han sido generados.');
+        setShowSuccessToast(true);
+        setTimeout(() => setShowSuccessToast(false), 5000);
       } else {
-        alert(`❌ Error: ${data.error}`);
+        // Mostrar toast de error
+        setToastMessage(data.error || 'Error al procesar el pago');
+        setShowErrorToast(true);
+        setTimeout(() => setShowErrorToast(false), 5000);
       }
     } catch (error) {
       console.error('Error marking as paid:', error);
-      alert('Error al procesar la solicitud');
+      setToastMessage('Error al procesar la solicitud');
+      setShowErrorToast(true);
+      setTimeout(() => setShowErrorToast(false), 5000);
+    } finally {
+      setProcessingOrderId(null);
+    }
+  };
+
+  const handleRejectOrder = async (orderId: string) => {
+    setProcessingOrderId(orderId);
+    
+    try {
+      const res = await fetch(`/api/admin/license-orders/${orderId}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: rejectReason }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        // Recargar las órdenes
+        await fetchOrders();
+        setShowRejectModal(false);
+        setSelectedOrder(null);
+        setRejectReason('');
+        
+        // Mostrar toast de éxito
+        setToastMessage('Orden rechazada exitosamente');
+        setShowSuccessToast(true);
+        setTimeout(() => setShowSuccessToast(false), 5000);
+      } else {
+        // Mostrar toast de error
+        setToastMessage(data.error || 'Error al rechazar la orden');
+        setShowErrorToast(true);
+        setTimeout(() => setShowErrorToast(false), 5000);
+      }
+    } catch (error) {
+      console.error('Error rejecting order:', error);
+      setToastMessage('Error al procesar la solicitud');
+      setShowErrorToast(true);
+      setTimeout(() => setShowErrorToast(false), 5000);
     } finally {
       setProcessingOrderId(null);
     }
@@ -321,9 +373,6 @@ export default function AdminOrdenesPage() {
                     Método
                   </th>
                   <th className="px-6 py-4 text-center text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    Comprobante
-                  </th>
-                  <th className="px-6 py-4 text-center text-xs font-semibold text-slate-400 uppercase tracking-wider">
                     Estado
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -337,7 +386,7 @@ export default function AdminOrdenesPage() {
               <tbody className="divide-y divide-slate-700">
                 {filteredOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-6 py-12 text-center">
+                    <td colSpan={8} className="px-6 py-12 text-center">
                       <Package className="w-12 h-12 text-slate-600 mx-auto mb-3" />
                       <p className="text-slate-400">No se encontraron órdenes</p>
                     </td>
@@ -376,24 +425,6 @@ export default function AdminOrdenesPage() {
                         {getPaymentMethodBadge(order.paymentMethod)}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {order.paymentMethod?.toUpperCase() === 'TRANSFER' && order.paymentData?.proofUrl ? (
-                          <button
-                            onClick={() => {
-                              setSelectedOrder(order);
-                              setShowProofModal(true);
-                            }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/50 text-blue-300 rounded-lg transition-colors text-sm"
-                          >
-                            <Eye size={14} />
-                            Ver
-                          </button>
-                        ) : order.paymentMethod?.toUpperCase() === 'TRANSFER' ? (
-                          <span className="text-slate-500 text-sm">Sin comprobante</span>
-                        ) : (
-                          <span className="text-slate-500 text-sm">N/A</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-center">
                         {getStatusBadge(order.status)}
                       </td>
                       <td className="px-6 py-4">
@@ -419,30 +450,49 @@ export default function AdminOrdenesPage() {
                       </td>
                       <td className="px-6 py-4 text-center">
                         {(order.status === 'PENDING' || order.status === 'PROCESSING') && (
-                          <button
-                            onClick={() => {
-                              setSelectedOrder(order);
-                              setShowConfirmModal(true);
-                            }}
-                            disabled={processingOrderId === order.id}
-                            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white text-sm font-semibold rounded-lg transition-colors"
-                          >
-                            {processingOrderId === order.id ? (
-                              <>
-                                <Loader2 size={16} className="animate-spin" />
-                                Procesando...
-                              </>
-                            ) : (
-                              <>
-                                <Check size={16} />
-                                Marcar Pagada
-                              </>
-                            )}
-                          </button>
+                          <div className="flex items-center gap-2 justify-center">
+                            <button
+                              onClick={() => {
+                                setSelectedOrder(order);
+                                setShowConfirmModal(true);
+                              }}
+                              disabled={processingOrderId === order.id}
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white text-sm font-semibold rounded-lg transition-colors"
+                            >
+                              {processingOrderId === order.id ? (
+                                <>
+                                  <Loader2 size={16} className="animate-spin" />
+                                  Procesando...
+                                </>
+                              ) : (
+                                <>
+                                  <Check size={16} />
+                                  Pagada
+                                </>
+                              )}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedOrder(order);
+                                setRejectReason('');
+                                setShowRejectModal(true);
+                              }}
+                              disabled={processingOrderId === order.id}
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white text-sm font-semibold rounded-lg transition-colors"
+                            >
+                              <XCircle size={16} />
+                              Rechazar
+                            </button>
+                          </div>
                         )}
                         {order.status === 'COMPLETED' && (
                           <span className="text-green-400 text-sm font-medium">
                             ✓ Completada
+                          </span>
+                        )}
+                        {order.status === 'CANCELLED' && (
+                          <span className="text-red-400 text-sm font-medium">
+                            ✗ Rechazada
                           </span>
                         )}
                       </td>
@@ -462,95 +512,131 @@ export default function AdminOrdenesPage() {
 
       {/* Confirmation Modal */}
       {showConfirmModal && selectedOrder && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 border border-purple-500/30 rounded-2xl p-6 max-w-md w-full">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-green-600/20 rounded-full flex items-center justify-center">
-                <CheckCircle className="text-green-400" size={24} />
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 border-2 border-green-500/20 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl shadow-green-500/10">
+            {/* Header con gradiente */}
+            <div className="relative p-6 border-b border-slate-700/50 bg-gradient-to-r from-green-900/20 to-emerald-900/20">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl"></div>
+                  <div className="relative w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-green-500/30">
+                    <CheckCircle className="text-white" size={32} />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-white mb-1">Confirmar Pago Recibido</h3>
+                  <p className="text-slate-400 text-sm">Genera créditos de licencia automáticamente</p>
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-white">Confirmar Pago Recibido</h3>
             </div>
 
-            <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 mb-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Escuela:</span>
-                <span className="text-white font-semibold">{selectedOrder.Organization.name}</span>
+            <div className="p-6 space-y-4">
+              {/* Información de la orden en cards */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-4 hover:border-slate-600/50 transition-colors">
+                  <p className="text-slate-400 text-xs font-medium mb-1">Organización</p>
+                  <p className="text-white font-bold text-lg">{selectedOrder.Organization.name}</p>
+                </div>
+                <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-4 hover:border-slate-600/50 transition-colors">
+                  <p className="text-slate-400 text-xs font-medium mb-1">Licencias</p>
+                  <p className="text-white font-bold text-lg">{selectedOrder.quantity} <span className="text-purple-400 text-sm">({selectedOrder.tier})</span></p>
+                </div>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Licencias:</span>
-                <span className="text-white font-semibold">{selectedOrder.quantity} ({selectedOrder.tier})</span>
+
+              {/* Monto destacado */}
+              <div className="bg-gradient-to-br from-emerald-900/30 to-green-900/20 border-2 border-emerald-500/30 rounded-xl p-6 text-center">
+                <p className="text-emerald-300 text-sm font-medium mb-2">Monto Total</p>
+                <p className="text-4xl font-bold bg-gradient-to-r from-emerald-400 to-green-400 bg-clip-text text-transparent">
+                  ${selectedOrder.amount.toLocaleString()}
+                </p>
+                <p className="text-emerald-400/60 text-sm mt-1">MXN</p>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Monto:</span>
-                <span className="text-emerald-400 font-bold text-lg">${selectedOrder.amount.toLocaleString()} MXN</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-400">Método:</span>
+
+              {/* Método de pago */}
+              <div className="flex items-center justify-between bg-slate-800/30 border border-slate-700/50 rounded-xl p-4">
+                <span className="text-slate-400 text-sm font-medium">Método de Pago</span>
                 {getPaymentMethodBadge(selectedOrder.paymentMethod)}
               </div>
-            </div>
 
-            {/* Mostrar comprobante si existe */}
-            {selectedOrder.paymentMethod === 'transfer' && selectedOrder.paymentData?.proofUrl && (
-              <div className="bg-slate-800/50 border border-blue-500/30 rounded-lg p-4 mb-4">
-                <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
-                  <Eye size={18} className="text-blue-400" />
-                  Comprobante de Pago
-                </h4>
-                <div className="relative bg-slate-900 rounded-lg overflow-hidden border border-slate-700">
-                  <img
-                    src={selectedOrder.paymentData.proofUrl}
-                    alt="Comprobante de pago"
-                    className="w-full h-auto max-h-96 object-contain"
-                  />
-                  <a
-                    href={selectedOrder.paymentData.proofUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="absolute top-2 right-2 p-2 bg-slate-800/90 hover:bg-slate-700 rounded-lg transition-colors"
-                  >
-                    <Download size={18} className="text-white" />
-                  </a>
+              {/* Comprobante miniatura */}
+              {selectedOrder.paymentMethod === 'transfer' && selectedOrder.paymentData?.proofUrl && (
+                <div className="bg-slate-800/30 border-2 border-blue-500/20 rounded-xl p-4 hover:border-blue-500/40 transition-colors">
+                  <h4 className="text-white font-semibold mb-3 flex items-center gap-2">
+                    <Eye size={18} className="text-blue-400" />
+                    Comprobante de Pago Adjunto
+                  </h4>
+                  <div className="relative bg-slate-950/50 rounded-lg overflow-hidden border border-slate-700/50 group">
+                    <img
+                      src={selectedOrder.paymentData.proofUrl}
+                      alt="Comprobante de pago"
+                      className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-end p-2">
+                      <a
+                        href={selectedOrder.paymentData.proofUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-sm font-medium flex items-center gap-1"
+                      >
+                        <Eye size={14} />
+                        Ver completo
+                      </a>
+                    </div>
+                  </div>
+                  <p className="text-slate-500 text-xs mt-2 flex items-center gap-1">
+                    <Calendar size={12} />
+                    Subido: {new Date(selectedOrder.paymentData.uploadedAt).toLocaleString('es-MX')}
+                  </p>
                 </div>
-                <p className="text-slate-400 text-xs mt-2">
-                  Subido el: {new Date(selectedOrder.paymentData.uploadedAt).toLocaleString('es-MX')}
-                </p>
+              )}
+
+              {/* Advertencia importante con mejor diseño */}
+              <div className="relative bg-gradient-to-r from-yellow-900/20 via-orange-900/20 to-yellow-900/20 border-l-4 border-yellow-500 rounded-xl p-4 overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full -mr-16 -mt-16"></div>
+                <div className="relative flex gap-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-10 h-10 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                      <AlertCircle className="text-yellow-400" size={20} />
+                    </div>
+                  </div>
+                  <div>
+                    <h5 className="text-yellow-200 font-bold mb-1">Importante: Esta acción es irreversible</h5>
+                    <p className="text-yellow-100/90 text-sm leading-relaxed">
+                      Al confirmar se generarán automáticamente <strong className="text-yellow-200">{selectedOrder.quantity} créditos</strong> de licencia {selectedOrder.tier} para <strong className="text-yellow-200">{selectedOrder.Organization.name}</strong>. El estado cambiará a <span className="text-green-400 font-semibold">COMPLETADA</span>.
+                    </p>
+                  </div>
+                </div>
               </div>
-            )}
 
-            <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-3 mb-4">
-              <p className="text-yellow-200 text-sm">
-                <strong>⚠️ Importante:</strong> Al confirmar, se generarán automáticamente {selectedOrder.quantity} créditos de licencia para la organización y el estado cambiará a COMPLETADA.
-              </p>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowConfirmModal(false);
-                  setSelectedOrder(null);
-                }}
-                className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => handleMarkAsPaid(selectedOrder.id)}
-                disabled={processingOrderId === selectedOrder.id}
-                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                {processingOrderId === selectedOrder.id ? (
-                  <>
-                    <Loader2 size={18} className="animate-spin" />
-                    Procesando...
-                  </>
-                ) : (
-                  <>
-                    <Check size={18} />
-                    Confirmar Pago
-                  </>
-                )}
-              </button>
+              {/* Botones de acción con mejor diseño */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    setShowConfirmModal(false);
+                    setSelectedOrder(null);
+                  }}
+                  className="flex-1 px-6 py-3.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-medium rounded-xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => handleMarkAsPaid(selectedOrder.id)}
+                  disabled={processingOrderId === selectedOrder.id}
+                  className="flex-1 px-6 py-3.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 disabled:from-gray-700 disabled:to-gray-600 text-white font-bold rounded-xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-green-500/20 hover:shadow-green-500/40 flex items-center justify-center gap-2 disabled:shadow-none"
+                >
+                  {processingOrderId === selectedOrder.id ? (
+                    <>
+                      <Loader2 size={20} className="animate-spin" />
+                      Procesando...
+                    </>
+                  ) : (
+                    <>
+                      <Check size={20} />
+                      Confirmar Pago
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -629,6 +715,173 @@ export default function AdminOrdenesPage() {
                   Marcar como Pagada
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Order Modal */}
+      {showRejectModal && selectedOrder && (
+        <div 
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200"
+          onClick={() => {
+            setShowRejectModal(false);
+            setRejectReason('');
+            setSelectedOrder(null);
+          }}
+        >
+          <div 
+            className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 border-2 border-red-500/20 rounded-2xl max-w-2xl w-full shadow-2xl shadow-red-500/10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="relative p-6 border-b border-slate-700/50 bg-gradient-to-r from-red-900/20 to-rose-900/20">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-red-500/20 rounded-full blur-xl"></div>
+                  <div className="relative w-16 h-16 bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-500/30">
+                    <XCircle className="text-white" size={32} />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-white mb-1">Rechazar Orden de Compra</h3>
+                  <p className="text-slate-400 text-sm">Esta acción no se puede deshacer</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Información de la orden */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-4">
+                  <p className="text-slate-400 text-xs font-medium mb-1">Organización</p>
+                  <p className="text-white font-bold text-lg">{selectedOrder.Organization.name}</p>
+                </div>
+                <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-4">
+                  <p className="text-slate-400 text-xs font-medium mb-1">Licencias</p>
+                  <p className="text-white font-bold text-lg">{selectedOrder.quantity} <span className="text-purple-400 text-sm">({selectedOrder.tier})</span></p>
+                </div>
+              </div>
+
+              {/* Monto */}
+              <div className="bg-gradient-to-br from-red-900/30 to-rose-900/20 border-2 border-red-500/30 rounded-xl p-6 text-center">
+                <p className="text-red-300 text-sm font-medium mb-2">Monto a rechazar</p>
+                <p className="text-4xl font-bold text-red-400">
+                  ${selectedOrder.amount.toLocaleString()} <span className="text-lg">MXN</span>
+                </p>
+              </div>
+
+              {/* Razón del rechazo */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-slate-300">
+                  Razón del rechazo (opcional)
+                </label>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Ej: Comprobante ilegible, monto incorrecto, datos bancarios no coinciden..."
+                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all resize-none"
+                  rows={4}
+                />
+              </div>
+
+              {/* Advertencia */}
+              <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-xl p-4">
+                <div className="flex gap-3">
+                  <AlertCircle className="text-yellow-400 flex-shrink-0 mt-0.5" size={20} />
+                  <div className="text-sm text-yellow-200">
+                    <p className="font-semibold mb-1">Importante:</p>
+                    <ul className="space-y-1 text-xs">
+                      <li>• La orden será marcada como CANCELADA</li>
+                      <li>• No se generarán créditos de licencia</li>
+                      <li>• El director de la escuela será notificado</li>
+                      <li>• Esta acción no se puede revertir</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer con botones */}
+            <div className="bg-slate-900 p-6 border-t border-slate-700 flex gap-3">
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectReason('');
+                  setSelectedOrder(null);
+                }}
+                disabled={processingOrderId === selectedOrder.id}
+                className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 text-white font-semibold rounded-xl transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleRejectOrder(selectedOrder.id)}
+                disabled={processingOrderId === selectedOrder.id}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 disabled:from-slate-600 disabled:to-slate-700 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-500/20"
+              >
+                {processingOrderId === selectedOrder.id ? (
+                  <>
+                    <Loader2 className="animate-spin" size={20} />
+                    Rechazando...
+                  </>
+                ) : (
+                  <>
+                    <XCircle size={20} />
+                    Confirmar Rechazo
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Toast */}
+      {showSuccessToast && (
+        <div className="fixed top-6 right-6 z-[60] animate-in slide-in-from-right duration-300">
+          <div className="bg-gradient-to-r from-green-900 to-emerald-900 border-2 border-green-500/50 rounded-xl shadow-2xl shadow-green-500/20 p-4 min-w-[320px] max-w-md">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <CheckCircle className="text-green-400" size={24} />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h4 className="text-white font-bold text-sm mb-1">¡Éxito!</h4>
+                <p className="text-green-200 text-sm">{toastMessage}</p>
+              </div>
+              <button
+                onClick={() => setShowSuccessToast(false)}
+                className="flex-shrink-0 text-green-300 hover:text-white transition-colors"
+              >
+                <XCircle size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error Toast */}
+      {showErrorToast && (
+        <div className="fixed top-6 right-6 z-[60] animate-in slide-in-from-right duration-300">
+          <div className="bg-gradient-to-r from-red-900 to-rose-900 border-2 border-red-500/50 rounded-xl shadow-2xl shadow-red-500/20 p-4 min-w-[320px] max-w-md">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
+                  <XCircle className="text-red-400" size={24} />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h4 className="text-white font-bold text-sm mb-1">Error</h4>
+                <p className="text-red-200 text-sm">{toastMessage}</p>
+              </div>
+              <button
+                onClick={() => setShowErrorToast(false)}
+                className="flex-shrink-0 text-red-300 hover:text-white transition-colors"
+              >
+                <XCircle size={18} />
+              </button>
             </div>
           </div>
         </div>

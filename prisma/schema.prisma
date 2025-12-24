@@ -84,6 +84,8 @@ model Organization {
   SchoolAdmin       Usuario?             @relation("SchoolAdmins", fields: [schoolAdminId], references: [id])
   SchoolCredits     SchoolCredit[]
   LicenseOrders     LicenseOrder[]
+  LicenseAssignments LicenseAssignment[] // Auditoría de asignaciones
+  Visiones          Vision[]             // Visiones/Grupos creados por la organización
   
   @@index([slug])
   @@index([status])
@@ -109,6 +111,28 @@ model SchoolCredit {
   @@index([organizationId])
   @@index([planType])
   @@index([expirationDate])
+}
+
+model LicenseAssignment {
+  id              Int          @id @default(autoincrement())
+  userId          Int
+  organizationId  Int
+  visionId        Int?
+  licenseCode     String
+  assignedBy      Int          // ID del director que asignó
+  assignedAt      DateTime     @default(now())
+  isActive        Boolean      @default(true)
+  notes           String?
+  
+  User            Usuario      @relation("LicenseAssignmentUser", fields: [userId], references: [id], onDelete: Cascade)
+  AssignedBy      Usuario      @relation("LicenseAssignmentAssignedBy", fields: [assignedBy], references: [id])
+  Organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Vision          Vision?      @relation(fields: [visionId], references: [id], onDelete: SetNull)
+  
+  @@index([userId])
+  @@index([organizationId])
+  @@index([visionId])
+  @@index([licenseCode])
 }
 
 model License {
@@ -784,6 +808,8 @@ model Usuario {
   Organization                                                     Organization?            @relation("OrganizationUsers", fields: [organizationId], references: [id])
   ManagedOrganization                                              Organization?            @relation("SchoolAdmins")
   LicenseOrdersRequested                                           LicenseOrder[]
+  LicenseAssignments                                               LicenseAssignment[]      @relation("LicenseAssignmentUser")
+  LicenseAssignmentsGiven                                          LicenseAssignment[]      @relation("LicenseAssignmentAssignedBy")
   
   // Sistema de Visiones
   VisionesCoordinadas                                              Vision[]                 @relation("VisionCoordinador")
@@ -1428,16 +1454,22 @@ model Vision {
   nombre            String
   descripcion       String?
   coordinadorId     Int
+  organizationId    Int?               // Nueva: Organización a la que pertenece
+  maxParticipantes  Int?               // Nueva: Límite de participantes
+  licensesAllocated Int                @default(0) // Nueva: Licencias asignadas
   isActive          Boolean            @default(true)
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   
   // Relaciones
   Coordinador       Usuario            @relation("VisionCoordinador", fields: [coordinadorId], references: [id], onDelete: Cascade)
+  Organization      Organization?      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   GameChangers      VisionGameChanger[]
   Participantes     VisionParticipante[]
+  LicenseAssignments LicenseAssignment[] // Licencias asignadas a participantes
   
   @@index([coordinadorId])
+  @@index([organizationId])
   @@index([isActive])
 }
 
@@ -1462,15 +1494,15 @@ model VisionParticipante {
   id              Int      @id @default(autoincrement())
   visionId        Int
   participanteId  Int
-  gameChangerId   Int      // Game Changer responsable
-  asignadoPorId   Int      // ID del coordinador o game changer que lo asignó
+  gameChangerId   Int?     // Game Changer responsable (opcional por ahora)
+  asignadoPorId   Int?     // ID del coordinador o game changer que lo asignó (opcional)
   createdAt       DateTime @default(now())
   
   // Relaciones
   Vision          Vision   @relation(fields: [visionId], references: [id], onDelete: Cascade)
   Participante    Usuario  @relation("ParticipanteEnVision", fields: [participanteId], references: [id], onDelete: Cascade)
-  GameChanger     Usuario  @relation("GameChangerResponsable", fields: [gameChangerId], references: [id], onDelete: Cascade)
-  AsignadoPor     Usuario  @relation("AsignadorParticipante", fields: [asignadoPorId], references: [id], onDelete: Cascade)
+  GameChanger     Usuario? @relation("GameChangerResponsable", fields: [gameChangerId], references: [id], onDelete: Cascade)
+  AsignadoPor     Usuario? @relation("AsignadorParticipante", fields: [asignadoPorId], references: [id], onDelete: Cascade)
   
   @@unique([visionId, participanteId])
   @@index([visionId])

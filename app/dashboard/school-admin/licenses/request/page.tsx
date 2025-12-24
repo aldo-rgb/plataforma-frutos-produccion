@@ -40,8 +40,10 @@ function calculateDynamicPrice(quantity: number, basePriceAt100: number) {
   let zone: 'premium' | 'base' | 'discount' = 'base';
 
   if (quantity < 100) {
-    // ZONA PREMIUM: Markup del 10%
-    unitPrice = basePriceAt100 * 1.10;
+    // ZONA PREMIUM: 20 licencias = +15%, luego se reduce hasta 100
+    // Interpolación: de 15% en cantidad=20 hasta 0% en cantidad=100
+    const premiumRate = 0.15 - ((quantity - MIN_LICENSES) / (100 - MIN_LICENSES)) * 0.15;
+    unitPrice = basePriceAt100 * (1 + premiumRate);
     zone = 'premium';
   } else if (quantity === 100) {
     // ZONA BASE (PIVOTE)
@@ -76,7 +78,6 @@ export default function RequestLicensesPage() {
   const [organization, setOrganization] = useState<any>(null);
   const [basePriceAt100, setBasePriceAt100] = useState<number>(150); // Precio base dinámico
   const [quantity, setQuantity] = useState(100);
-  const [paymentMethod, setPaymentMethod] = useState<'transfer' | 'stripe'>('transfer');
   const [processing, setProcessing] = useState(false);
 
   // Calcular precio dinámico
@@ -121,9 +122,21 @@ export default function RequestLicensesPage() {
       return;
     }
 
+    if (!organization?.id) {
+      alert('Error: No se pudo obtener la información de la organización');
+      return;
+    }
+
     setProcessing(true);
 
     try {
+      console.log('📤 Enviando orden:', {
+        quantity,
+        unitPrice: pricing.unitPrice,
+        totalAmount: pricing.totalPrice,
+        organizationId: organization.id,
+      });
+
       const res = await fetch('/api/school-admin/licenses/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -136,6 +149,7 @@ export default function RequestLicensesPage() {
       });
 
       const result = await res.json();
+      console.log('📥 Respuesta:', result);
 
       if (result.success) {
         // Redirigir a la página de pago
@@ -274,7 +288,7 @@ export default function RequestLicensesPage() {
                       
                       {presetPricing.zone === 'premium' && (
                         <div className="mt-2 text-xs text-yellow-400">
-                          +10% premium
+                          +{Math.round(((presetPricing.unitPrice / basePriceAt100) - 1) * 100 * 10) / 10}% premium
                         </div>
                       )}
                     </button>
@@ -406,7 +420,7 @@ export default function RequestLicensesPage() {
                   <div className="flex items-center justify-center gap-2 px-3 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                     <AlertCircle className="text-yellow-400" size={16} />
                     <span className="text-yellow-400 font-bold text-sm">
-                      Precio Premium (+10%)
+                      Precio Premium (+15%)
                     </span>
                   </div>
                 )}
@@ -461,36 +475,6 @@ export default function RequestLicensesPage() {
                       ${pricing.totalPrice.toLocaleString()}
                     </div>
                     <div className="text-slate-400 text-sm">MXN</div>
-                  </div>
-                </div>
-
-                {/* Método de Pago */}
-                <div className="pt-4 border-t border-slate-700">
-                  <label className="block text-white font-semibold mb-3 text-sm">
-                    <CreditCard className="inline mr-2" size={16} />
-                    Método de Pago
-                  </label>
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => setPaymentMethod('transfer')}
-                      className={`w-full p-3 rounded-xl border-2 transition-all text-sm ${
-                        paymentMethod === 'transfer'
-                          ? 'border-purple-500 bg-purple-500/20 text-white'
-                          : 'border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600'
-                      }`}
-                    >
-                      Transferencia Bancaria
-                    </button>
-                    <button
-                      onClick={() => setPaymentMethod('stripe')}
-                      className={`w-full p-3 rounded-xl border-2 transition-all text-sm ${
-                        paymentMethod === 'stripe'
-                          ? 'border-purple-500 bg-purple-500/20 text-white'
-                          : 'border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600'
-                      }`}
-                    >
-                      Tarjeta (Stripe)
-                    </button>
                   </div>
                 </div>
 

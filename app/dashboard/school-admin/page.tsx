@@ -580,6 +580,27 @@ export default function SchoolAdminDashboard() {
               </div>
             </Link>
 
+            <Link href="/dashboard/school-admin/visiones" className="block mt-6">
+              <div className="bg-gradient-to-br from-emerald-900/50 to-slate-900 border-2 border-emerald-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-emerald-500/20 group-hover:bg-emerald-500/30 rounded-xl transition-colors">
+                    <Users size={24} className="text-emerald-300" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm uppercase">
+                      Gestionar Visiones
+                    </h3>
+                    <p className="text-xs text-emerald-300">
+                      Crea y asigna licencias
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Crea visiones/grupos y gestiona las licencias de tus participantes
+                </p>
+              </div>
+            </Link>
+
             <div className="bg-gradient-to-br from-cyan-900/50 to-slate-900 border border-cyan-500/30 rounded-2xl p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-3 bg-cyan-500/20 rounded-xl">

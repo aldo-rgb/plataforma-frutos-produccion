@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
+
+    console.log('🔍 Session data:', { 
+      exists: !!session, 
+      userId: session?.user?.id, 
+      email: session?.user?.email,
+      rol: session?.user?.rol 
+    });
 
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -19,8 +24,10 @@ export async function POST(req: NextRequest) {
     // Verificar que el usuario es director
     const user = await prisma.usuario.findUnique({
       where: { id: session.user.id },
-      include: {
-        Organization_Organization_directorIdToUsuario: true,
+      select: {
+        id: true,
+        rol: true,
+        organizationId: true,
       },
     });
 
@@ -41,19 +48,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verificar que la organización pertenece al director
-    const organization = await prisma.organization.findUnique({
-      where: { id: organizationId },
-    });
-
-    if (!organization || organization.directorId !== user.id) {
+    // Verificar que la organización es la del usuario
+    if (user.organizationId !== organizationId) {
       return NextResponse.json(
-        { success: false, error: 'Organización no encontrada o no autorizada' },
+        { success: false, error: 'Organización no autorizada' },
         { status: 403 }
       );
     }
 
-    // Crear la orden de licencias
+    // Verificar que la organización existe
+    const organization = await prisma.organization.findUnique({
+      where: { id: organizationId },
+    });
+
+    if (!organization) {
+      return NextResponse.json(
+        { success: false, error: 'Organización no encontrada' },
+        { status: 404 }
+      );
+    }
+
+    // Crear la orden de licencias (sin método de pago aún)
     const order = await prisma.licenseOrder.create({
       data: {
         organizationId,
@@ -62,6 +77,7 @@ export async function POST(req: NextRequest) {
         tier: 'STANDARD',
         amount: totalAmount,
         status: 'PENDING',
+        paymentMethod: 'transfer', // Valor temporal, se actualizará al seleccionar método
         paymentData: {
           unitPrice,
           createdAt: new Date().toISOString(),
@@ -96,7 +112,5 @@ export async function POST(req: NextRequest) {
       },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
