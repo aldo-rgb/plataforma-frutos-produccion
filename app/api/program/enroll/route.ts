@@ -9,6 +9,199 @@ export const dynamic = 'force-dynamic';
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
 /**
+ * GET /api/program/enroll
+ * Obtiene información del enrollment activo y la visión del usuario
+ */
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    // Obtener enrollment activo
+    const enrollment = await prisma.programEnrollment.findFirst({
+      where: {
+        userId: session.user.id,
+        status: 'ACTIVE'
+      },
+      include: {
+        Usuario_ProgramEnrollment_mentorIdToUsuario: {
+          select: {
+            id: true,
+            nombre: true,
+            profileImage: true,
+            imagen: true
+          }
+        },
+        _count: {
+          select: {
+            CallBookings: true
+          }
+        }
+      }
+    });
+
+    if (!enrollment) {
+      return NextResponse.json({ 
+        hasEnrollment: false,
+        message: 'No tienes un programa activo'
+      });
+    }
+
+    // Verificar si el enrollment tiene sesiones ACTIVAS agendadas
+    // Solo contar sesiones que no estén canceladas
+    const totalActiveSessions = await prisma.callBooking.count({
+      where: {
+        programEnrollmentId: enrollment.id,
+        status: {
+          in: ['PENDING', 'CONFIRMED']
+        }
+      }
+    });
+
+    // Calcular cuántas sesiones debería tener
+    const now = new Date();
+    const endDate = enrollment.cycleEndDate ? new Date(enrollment.cycleEndDate) : null;
+    const startDate = enrollment.cycleStartDate ? new Date(enrollment.cycleStartDate) : null;
+
+    let totalWeeks = enrollment.totalWeeks || 17;
+    let remainingWeeks = 0;
+
+    if (endDate && startDate) {
+      const totalMs = endDate.getTime() - startDate.getTime();
+      totalWeeks = Math.ceil(totalMs / (7 * 24 * 60 * 60 * 1000));
+
+      if (endDate > now) {
+        const remainingMs = endDate.getTime() - now.getTime();
+        remainingWeeks = Math.ceil(remainingMs / (7 * 24 * 60 * 60 * 1000));
+      }
+    }
+
+    const expectedTotalSessions = totalWeeks * 2; // 2 sesiones por semana
+
+    // Si el enrollment está ACTIVE pero tiene MENOS sesiones activas de las esperadas,
+    // significa que el mentor fue cambiado y necesita reagendar las sesiones faltantes
+    if (totalActiveSessions < expectedTotalSessions) {
+      // Obtener información del mentor para mostrar en frontend
+      const mentor = enrollment.Usuario_ProgramEnrollment_mentorIdToUsuario;
+
+      // Buscar visión del usuario
+      const visionParticipante = await prisma.visionParticipante.findFirst({
+        where: {
+          participanteId: session.user.id
+        },
+        include: {
+          Vision: {
+            select: {
+              id: true,
+              nombre: true,
+              startDate: true,
+              endDate: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+      
+      return NextResponse.json({
+        hasEnrollment: false,
+        needsReschedule: true,
+        message: totalActiveSessions === 0 
+          ? 'Tu mentor fue actualizado. Por favor agenda tus sesiones.'
+          : `Tienes ${totalActiveSessions} de ${expectedTotalSessions} sesiones agendadas. Completa tu agenda.`,
+        enrollmentId: enrollment.id,
+        vision: visionParticipante?.Vision || null,
+        mentor: mentor ? {
+          id: mentor.id,
+          nombre: mentor.nombre,
+          profileImage: mentor.profileImage || mentor.imagen || '/default-avatar.svg'
+        } : null,
+        stats: {
+          totalWeeks,
+          remainingWeeks,
+          totalSessions: expectedTotalSessions,
+          activeSessions: totalActiveSessions,
+          missingSessions: expectedTotalSessions - totalActiveSessions,
+          completedSessions: 0,
+          remainingSessions: expectedTotalSessions,
+          missedCalls: 0,
+          maxMissedAllowed: enrollment.maxMissedAllowed || 3
+        }
+      });
+    }
+
+    // Contar sesiones completadas
+    const completedSessions = await prisma.callBooking.count({
+      where: {
+        programEnrollmentId: enrollment.id,
+        status: 'COMPLETED'
+      }
+    });
+
+    const remainingSessions = totalActiveSessions - completedSessions;
+
+    // Buscar visión del usuario a través de VisionParticipante
+    const visionParticipante = await prisma.visionParticipante.findFirst({
+      where: {
+        participanteId: session.user.id
+      },
+      include: {
+        Vision: {
+          select: {
+            id: true,
+            nombre: true,
+            startDate: true,
+            endDate: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    // Obtener información del mentor
+    const mentor = enrollment.Usuario_ProgramEnrollment_mentorIdToUsuario;
+
+    return NextResponse.json({
+      hasEnrollment: true,
+      enrollment: {
+        id: enrollment.id,
+        cycleType: enrollment.cycleType,
+        startDate: enrollment.cycleStartDate,
+        endDate: enrollment.cycleEndDate,
+        status: enrollment.status
+      },
+      vision: visionParticipante?.Vision || null,
+      mentor: mentor ? {
+        id: mentor.id,
+        nombre: mentor.nombre,
+        profileImage: mentor.profileImage || mentor.imagen || '/default-avatar.svg'
+      } : null,
+      stats: {
+        totalWeeks,
+        remainingWeeks,
+        totalSessions,
+        completedSessions,
+        remainingSessions,
+        missedCalls: enrollment.missedCallsCount || 0,
+        maxMissedAllowed: enrollment.maxMissedAllowed || 3
+      }
+    });
+
+  } catch (error) {
+    console.error('Error en GET /api/program/enroll:', error);
+    return NextResponse.json({ 
+      error: 'Error al obtener información del programa' 
+    }, { status: 500 });
+  }
+}
+
+/**
  * POST /api/program/enroll
  * Inscribe al usuario en el programa intensivo de 17 semanas
  * Genera automáticamente 34 sesiones (2 por semana)
@@ -51,11 +244,33 @@ export async function POST(request: Request) {
       }
     });
 
+    // Si tiene enrollment, verificar cuántas sesiones ACTIVAS tiene
     if (existingEnrollment) {
-      return NextResponse.json({ 
-        error: 'Ya tienes un programa activo. Complétalo antes de inscribirte a otro.' 
-      }, { status: 409 });
+      const activeSessionsCount = await prisma.callBooking.count({
+        where: {
+          programEnrollmentId: existingEnrollment.id,
+          status: {
+            in: ['PENDING', 'CONFIRMED']
+          }
+        }
+      });
+
+      // Calcular cuántas sesiones debería tener
+      let expectedSessions = (existingEnrollment.totalWeeks || 17) * 2;
+      
+      // Si tiene todas las sesiones activas agendadas, no puede crear más
+      if (activeSessionsCount >= expectedSessions) {
+        return NextResponse.json({ 
+          error: 'Ya tienes un programa activo con sesiones agendadas. Complétalo antes de inscribirte a otro.' 
+        }, { status: 409 });
+      }
+      
+      // Si tiene menos sesiones de las esperadas, puede completarlas
+      console.log(`✅ Usuario tiene ${activeSessionsCount} de ${expectedSessions} sesiones. Puede completar.`);
     }
+
+    // Si tiene enrollment sin sesiones (mentor fue cambiado), reutilizarlo
+    const enrollmentToUse = existingEnrollment;
 
     // Función auxiliar para obtener la próxima fecha de un día de la semana
     const getNextDayOfWeek = (startDate: Date, targetDayOfWeek: number, weeksOffset: number): Date => {
@@ -83,19 +298,38 @@ export async function POST(request: Request) {
 
     // Usar transacción para garantizar consistencia
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Crear el enrollment
-      const enrollment = await tx.programEnrollment.create({
-        data: {
-          userId: session.user.id,
-          mentorId: Number(mentorId),
-          startDate,
-          endDate,
-          totalWeeks,
-          missedCallsCount: 0,
-          maxMissedAllowed: 3,
-          status: 'ACTIVE'
-        }
-      });
+      // 1. Crear o reutilizar el enrollment
+      let enrollment;
+      
+      if (enrollmentToUse) {
+        // Reagendando: reutilizar enrollment existente y actualizar mentor si cambió
+        console.log('🔄 Reutilizando enrollment existente para reagendar:', enrollmentToUse.id);
+        enrollment = await tx.programEnrollment.update({
+          where: { id: enrollmentToUse.id },
+          data: {
+            mentorId: Number(mentorId),
+            // Mantener las fechas originales del ciclo
+            startDate: enrollmentToUse.startDate || startDate,
+            endDate: enrollmentToUse.endDate || endDate,
+            totalWeeks: enrollmentToUse.totalWeeks || totalWeeks
+          }
+        });
+      } else {
+        // Nuevo enrollment
+        console.log('✨ Creando nuevo enrollment');
+        enrollment = await tx.programEnrollment.create({
+          data: {
+            userId: session.user.id,
+            mentorId: Number(mentorId),
+            startDate,
+            endDate,
+            totalWeeks,
+            missedCallsCount: 0,
+            maxMissedAllowed: 3,
+            status: 'ACTIVE'
+          }
+        });
+      }
 
       console.log(`✅ Program Enrollment creado: ID=${enrollment.id}`);
 

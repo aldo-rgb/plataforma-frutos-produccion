@@ -1,178 +1,676 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Zap, Trophy, TrendingUp, Sparkles, UserCircle } from 'lucide-react';
+import { 
+  Trophy, TrendingUp, Sparkles, Award, Flame, 
+  ChevronUp, ChevronDown, Diamond, Phone, Zap,
+  Users, Building2, Eye, Brain, Globe, Shield
+} from 'lucide-react';
 
-interface Leader {
-  id: number;
+type RankingType = 'GLOBAL' | 'SCHOOL' | 'VISION' | 'MENTOR' | 'SCHOOL_WAR';
+type Timeframe = 'WEEKLY' | 'MONTHLY' | 'CYCLE' | 'ALL_TIME';
+type AttendanceStatus = 'PERFECT' | 'WARNING' | 'RISK';
+
+interface RankingUser {
+  position: number;
+  userId: number;
   nombre: string;
-  puntos: number;
   avatar: string;
-  vision?: string;
+  tier: string;
+  rangoActual: string;
+  quantumPoints: number;
+  xp: number;
+  nivel: number;
+  hqEvidenceCount: number;
+  attendanceRate: number;
+  attendanceStatus: AttendanceStatus;
+  streak: number;
+  badges: string[];
+  organization?: string;
+  organizationLogo?: string;
+  isOnFire: boolean;
 }
 
-interface RankingByVision {
-  vision: string;
-  lideres: Leader[];
+interface SchoolRanking {
+  position: number;
+  organizationId: number;
+  name: string;
+  logo: string;
+  brandColor?: string;
+  totalStudents: number;
+  avgPointsPerStudent: number;
+  totalPoints: number;
+  totalHQEvidences: number;
+  retentionRate: number;
 }
 
-export default function RankingPage() {
-  const [rankingByVision, setRankingByVision] = useState<RankingByVision[]>([]);
+interface MentorRanking {
+  position: number;
+  mentorId: number;
+  nombre: string;
+  avatar: string;
+  badges: string[];
+  totalMentorados: number;
+  avgPointsPerStudent: number;
+  totalHQEvidences: number;
+  completedCalls: number;
+  completionRate: number;
+  rating: number;
+  totalPoints: number;
+}
+
+export default function QuantumLeaderboardPage() {
+  const [rankingType, setRankingType] = useState<RankingType>('GLOBAL');
+  const [timeframe, setTimeframe] = useState<Timeframe>('ALL_TIME');
+  const [selectedEntity, setSelectedEntity] = useState<number | null>(null);
+  const [ranking, setRanking] = useState<any[]>([]);
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [visiones, setVisiones] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userVision, setUserVision] = useState<string | null>(null);
+  const [expandedUser, setExpandedUser] = useState<number | null>(null);
 
+  // Cargar datos iniciales
   useEffect(() => {
-    // 1. OBTENER VISIÓN DEL USUARIO Y RANKING FILTRADO
-    const fetchData = async () => {
-      try {
-        // Obtener perfil del usuario con su visión
-        const profileRes = await fetch('/api/user/profile');
-        if (profileRes.ok) {
-          const profileData = await profileRes.json();
-          setUserVision(profileData.vision);
-          
-          // Obtener ranking filtrado por la visión del usuario
-          const visionParam = profileData.vision ? `?vision=${encodeURIComponent(profileData.vision)}` : '';
-          const rankingRes = await fetch(`/api/ranking/global${visionParam}`);
-          
-          if (!rankingRes.ok) throw new Error('Error al cargar el ranking');
-          const rankingData = await rankingRes.json();
-          setRankingByVision(rankingData);
-        }
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+    loadOrganizations();
+    loadVisiones();
   }, []);
 
-  // Función para asignar el estilo de medalla
-  const getMedalStyle = (index: number) => {
-    switch (index) {
-      case 0: return 'text-amber-400 bg-amber-400/10 border-amber-400/30'; // Oro
-      case 1: return 'text-slate-300 bg-slate-300/10 border-slate-300/30'; // Plata
-      case 2: return 'text-yellow-700 bg-yellow-700/10 border-yellow-700/30'; // Bronce
-      default: return 'text-slate-500 bg-slate-800 border-slate-700'; // Normal
+  // Cargar ranking cuando cambian los filtros
+  useEffect(() => {
+    loadRanking();
+  }, [rankingType, timeframe, selectedEntity]);
+
+  const loadOrganizations = async () => {
+    try {
+      const res = await fetch('/api/usuarios');
+      if (res.ok) {
+        const data = await res.json();
+        // Extraer organizaciones únicas
+        const orgs = data.usuarios
+          .filter((u: any) => u.Organization)
+          .reduce((acc: any[], user: any) => {
+            if (!acc.find(o => o.id === user.Organization.id)) {
+              acc.push(user.Organization);
+            }
+            return acc;
+          }, []);
+        setOrganizations(orgs);
+      }
+    } catch (error) {
+      console.error('Error loading organizations:', error);
     }
   };
 
-  const getMedalIcon = (index: number) => {
-    switch (index) {
-      case 0: return <Trophy size={20} className="text-amber-400 fill-amber-400/50" />;
-      case 1: return <Trophy size={20} className="text-slate-300 fill-slate-300/50" />;
-      case 2: return <Trophy size={20} className="text-yellow-700 fill-yellow-700/50" />;
-      default: return <UserCircle size={20} />;
+  const loadVisiones = async () => {
+    try {
+      // TODO: Crear endpoint /api/visiones para listar todas las visiones
+      setVisiones([]);
+    } catch (error) {
+      console.error('Error loading visiones:', error);
     }
   };
 
-  if (loading) {
-    return <div className="text-white text-center py-20">Cargando Ranking...</div>;
-  }
+  const loadRanking = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({
+        type: rankingType,
+        timeframe,
+        ...(selectedEntity && { entityId: selectedEntity.toString() })
+      });
+
+      const res = await fetch(`/api/rankings/advanced?${params}`);
+      if (!res.ok) throw new Error('Error al cargar ranking');
+      
+      const data = await res.json();
+      setRanking(data.ranking || []);
+    } catch (error) {
+      console.error('Error loading ranking:', error);
+      setRanking([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getTierColor = (tier: string) => {
+    switch (tier) {
+      case 'NEON': return 'from-cyan-500 via-purple-500 to-pink-500';
+      case 'GOLD': return 'from-yellow-400 via-yellow-500 to-orange-500';
+      case 'BLUE': return 'from-blue-400 via-blue-500 to-indigo-500';
+      default: return 'from-slate-400 via-slate-500 to-slate-600';
+    }
+  };
+
+  const getMedalIcon = (position: number) => {
+    if (position === 1) return <Trophy className="text-yellow-400" size={24} />;
+    if (position === 2) return <Trophy className="text-slate-300" size={22} />;
+    if (position === 3) return <Trophy className="text-orange-400" size={20} />;
+    return <span className="text-slate-400 font-bold text-lg">#{position}</span>;
+  };
+
+  const getAttendanceIcon = (status: AttendanceStatus) => {
+    switch (status) {
+      case 'PERFECT': return <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />;
+      case 'WARNING': return <div className="w-3 h-3 rounded-full bg-yellow-500" />;
+      case 'RISK': return <div className="w-3 h-3 rounded-full bg-red-500" />;
+    }
+  };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-20">
-      
-      {/* HEADER */}
-      <div className="flex justify-between items-end border-b border-white/10 pb-6">
-        <div>
-          <h1 className="text-4xl font-black text-white italic tracking-tighter">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-cyan-500">Quantum</span> Leaderboard
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-900 p-6">
+      <div className="max-w-7xl mx-auto">
+        
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 mb-2 flex items-center gap-3">
+            <Sparkles className="text-yellow-400" size={36} />
+            Quantum Leaderboard 360°
           </h1>
-          <p className="text-slate-400 mt-2 flex items-center gap-2">
-            <TrendingUp size={18} className='text-green-400' />
-            {userVision ? (
-              <>Top Líderes de tu Visión: <span className="text-cyan-400 font-bold">{userVision}</span></>
-            ) : (
-              'Top Líderes con más Puntos Cuánticos.'
-            )}
+          <p className="text-slate-400 text-lg">
+            Visualiza el rendimiento desde todas las dimensiones del ecosistema
           </p>
         </div>
-      </div>
 
-      {/* RANKINGS POR VISIÓN */}
-      {rankingByVision.map((visionRanking, visionIndex) => (
-        <div key={visionIndex} className="space-y-6">
-          {/* Título de la Visión */}
-          <div className="flex items-center gap-3 pt-4">
-            <Sparkles className="text-cyan-400" size={24} />
-            <h2 className="text-2xl font-black text-white">
-              Visión: <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">{visionRanking.vision}</span>
-            </h2>
-          </div>
-
-          {/* TARJETA DEL TOP 3 POR VISIÓN */}
-          <div className="flex justify-center items-end gap-4">
-            {visionRanking.lideres.slice(0, 3).map((leader, index) => (
-              <div 
-                key={leader.id} 
-                className={`flex flex-col items-center p-4 rounded-xl shadow-2xl transition-all duration-300 
-                  ${index === 0 ? 'scale-110 bg-slate-900 border-4 border-amber-400/50 -translate-y-4' : 
-                   index === 1 ? 'bg-slate-900 border-2 border-slate-300/50' : 
-                   'bg-slate-900 border-2 border-yellow-700/50'
-                }`}
+        {/* Control Center */}
+        <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 mb-8">
+          
+          {/* Tabs de Dimensión */}
+          <div className="mb-6">
+            <p className="text-slate-400 text-sm mb-3 font-semibold">Dimensión Principal</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  setRankingType('GLOBAL');
+                  setSelectedEntity(null);
+                }}
+                className={`
+                  px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2
+                  ${rankingType === 'GLOBAL'
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }
+                `}
               >
-                <div className={`p-3 rounded-full mb-3 border ${getMedalStyle(index)}`}>
-                  {getMedalIcon(index)}
-                </div>
-                <p className="text-xs font-bold uppercase text-slate-400">#{index + 1}</p>
-                <h3 className={`font-black text-center mt-1 ${index === 0 ? 'text-xl text-white' : 'text-lg text-slate-200'}`}>
-                  {leader.nombre.split(' ')[0]}
-                </h3>
-                <div className="flex items-center gap-1 text-yellow-400 font-bold mt-2">
-                  <Zap size={16} fill="currentColor" />
-                  <span className="text-lg">{leader.puntos.toLocaleString()}</span>
-                </div>
-              </div>
-            ))}
+                <Globe size={18} />
+                Global
+              </button>
+
+              <button
+                onClick={() => setRankingType('SCHOOL')}
+                className={`
+                  px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2
+                  ${rankingType === 'SCHOOL'
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }
+                `}
+              >
+                <Building2 size={18} />
+                Por Escuela
+              </button>
+
+              <button
+                onClick={() => setRankingType('SCHOOL_WAR')}
+                className={`
+                  px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2
+                  ${rankingType === 'SCHOOL_WAR'
+                    ? 'bg-gradient-to-r from-red-600 to-orange-600 text-white shadow-lg'
+                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }
+                `}
+              >
+                <Shield size={18} />
+                Guerra de Escuelas
+              </button>
+
+              <button
+                onClick={() => setRankingType('VISION')}
+                className={`
+                  px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2
+                  ${rankingType === 'VISION'
+                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }
+                `}
+              >
+                <Eye size={18} />
+                Por Visión
+              </button>
+
+              <button
+                onClick={() => {
+                  setRankingType('MENTOR');
+                  setSelectedEntity(null);
+                }}
+                className={`
+                  px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2
+                  ${rankingType === 'MENTOR'
+                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
+                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }
+                `}
+              >
+                <Brain size={18} />
+                Top Mentores
+              </button>
+            </div>
           </div>
 
-          {/* TABLA COMPLETA DEL RANKING POR VISIÓN */}
-          <div className="bg-slate-900 border border-white/10 rounded-2xl overflow-hidden">
-            <table className="min-w-full divide-y divide-white/10">
-              <thead className="bg-slate-800/50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">#</th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Líder</th>
-                  <th className="px-6 py-3 text-right text-xs font-bold text-slate-400 uppercase tracking-wider">Puntos Cuánticos</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {visionRanking.lideres.map((leader, index) => (
-                  <tr 
-                    key={leader.id} 
-                    className={`transition-colors hover:bg-slate-800 
-                        ${index < 3 ? 'bg-slate-800/70' : ''}`}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-500">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold ${getMedalStyle(index)}`}>
-                        {index + 1}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="text-2xl mr-3">{leader.avatar}</div>
-                        <div className="text-sm font-medium text-white">
-                          {leader.nombre}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-yellow-400">
-                      <div className="flex justify-end items-center gap-1">
-                        <Zap size={14} fill="currentColor" />
-                        {leader.puntos.toLocaleString()}
-                      </div>
-                    </td>
-                  </tr>
+          {/* Selector de Entidad (si aplica) */}
+          {(rankingType === 'SCHOOL' || rankingType === 'VISION') && (
+            <div className="mb-6">
+              <p className="text-slate-400 text-sm mb-3 font-semibold">
+                {rankingType === 'SCHOOL' ? 'Seleccionar Escuela' : 'Seleccionar Visión'}
+              </p>
+              <select
+                value={selectedEntity || ''}
+                onChange={(e) => setSelectedEntity(e.target.value ? parseInt(e.target.value) : null)}
+                className="w-full md:w-auto px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+              >
+                <option value="">Seleccionar...</option>
+                {rankingType === 'SCHOOL' && organizations.map(org => (
+                  <option key={org.id} value={org.id}>{org.name}</option>
                 ))}
-              </tbody>
-            </table>
+                {rankingType === 'VISION' && visiones.map(vision => (
+                  <option key={vision.id} value={vision.id}>{vision.nombre}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Selector de Periodo */}
+          <div>
+            <p className="text-slate-400 text-sm mb-3 font-semibold">Periodo de Tiempo</p>
+            <div className="flex flex-wrap gap-2">
+              {['WEEKLY', 'MONTHLY', 'CYCLE', 'ALL_TIME'].map((tf) => (
+                <button
+                  key={tf}
+                  onClick={() => setTimeframe(tf as Timeframe)}
+                  className={`
+                    px-4 py-2 rounded-lg font-semibold transition-all
+                    ${timeframe === tf
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                    }
+                  `}
+                >
+                  {tf === 'WEEKLY' && 'Semanal'}
+                  {tf === 'MONTHLY' && 'Mensual'}
+                  {tf === 'CYCLE' && 'Ciclo Completo'}
+                  {tf === 'ALL_TIME' && 'Histórico'}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      ))}
 
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-20">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500 mx-auto mb-4"></div>
+            <p className="text-slate-400">Cargando ranking...</p>
+          </div>
+        )}
+
+        {/* Podio Top 3 */}
+        {!loading && ranking.length >= 3 && rankingType !== 'SCHOOL_WAR' && rankingType !== 'MENTOR' && (
+          <div className="grid grid-cols-3 gap-4 mb-8">
+            {/* 2nd Place */}
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 border-2 border-slate-600 rounded-xl p-4 flex flex-col items-center transform translate-y-4">
+              <Trophy className="text-slate-300 mb-2" size={32} />
+              <img
+                src={ranking[1]?.avatar}
+                alt={ranking[1]?.nombre}
+                className={`
+                  w-20 h-20 rounded-full object-cover mb-2 border-4 
+                  bg-gradient-to-br ${getTierColor(ranking[1]?.tier)}
+                  p-1
+                `}
+              />
+              <p className="text-white font-bold text-center">{ranking[1]?.nombre}</p>
+              <p className="text-slate-400 text-sm">{ranking[1]?.rangoActual}</p>
+              <p className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-300 to-slate-500 mt-2">
+                {ranking[1]?.quantumPoints} PC
+              </p>
+            </div>
+
+            {/* 1st Place */}
+            <div className="bg-gradient-to-br from-yellow-900/30 to-orange-900/30 border-2 border-yellow-400 rounded-xl p-4 flex flex-col items-center shadow-2xl shadow-yellow-500/20">
+              <Trophy className="text-yellow-400 mb-2 animate-pulse" size={40} />
+              <img
+                src={ranking[0]?.avatar}
+                alt={ranking[0]?.nombre}
+                className={`
+                  w-24 h-24 rounded-full object-cover mb-2 border-4 
+                  bg-gradient-to-br ${getTierColor(ranking[0]?.tier)}
+                  p-1
+                `}
+              />
+              <p className="text-white font-bold text-lg text-center">{ranking[0]?.nombre}</p>
+              <p className="text-yellow-400 text-sm">{ranking[0]?.rangoActual}</p>
+              <p className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-orange-400 mt-2">
+                {ranking[0]?.quantumPoints} PC
+              </p>
+            </div>
+
+            {/* 3rd Place */}
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 border-2 border-orange-600 rounded-xl p-4 flex flex-col items-center transform translate-y-4">
+              <Trophy className="text-orange-400 mb-2" size={28} />
+              <img
+                src={ranking[2]?.avatar}
+                alt={ranking[2]?.nombre}
+                className={`
+                  w-20 h-20 rounded-full object-cover mb-2 border-4 
+                  bg-gradient-to-br ${getTierColor(ranking[2]?.tier)}
+                  p-1
+                `}
+              />
+              <p className="text-white font-bold text-center">{ranking[2]?.nombre}</p>
+              <p className="text-slate-400 text-sm">{ranking[2]?.rangoActual}</p>
+              <p className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 mt-2">
+                {ranking[2]?.quantumPoints} PC
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Tabla de Ranking */}
+        {!loading && ranking.length > 0 && (
+          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl overflow-hidden">
+            
+            {/* Ranking de Usuarios */}
+            {(rankingType === 'GLOBAL' || rankingType === 'SCHOOL' || rankingType === 'VISION') && (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-800/50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-slate-400 text-sm font-semibold">#</th>
+                      <th className="px-4 py-3 text-left text-slate-400 text-sm font-semibold">Usuario</th>
+                      <th className="px-4 py-3 text-center text-slate-400 text-sm font-semibold">
+                        <Diamond size={16} className="inline mr-1" />
+                        HQ
+                      </th>
+                      <th className="px-4 py-3 text-center text-slate-400 text-sm font-semibold">
+                        <Phone size={16} className="inline mr-1" />
+                        Asistencia
+                      </th>
+                      <th className="px-4 py-3 text-center text-slate-400 text-sm font-semibold">
+                        <Zap size={16} className="inline mr-1" />
+                        XP
+                      </th>
+                      <th className="px-4 py-3 text-right text-slate-400 text-sm font-semibold">
+                        <Sparkles size={16} className="inline mr-1" />
+                        PC
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {ranking.map((user: RankingUser) => (
+                      <React.Fragment key={user.userId}>
+                        <tr 
+                          className="hover:bg-slate-800/30 transition-colors cursor-pointer"
+                          onClick={() => setExpandedUser(expandedUser === user.userId ? null : user.userId)}
+                        >
+                          <td className="px-4 py-4 text-center">
+                            {getMedalIcon(user.position)}
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="relative">
+                                <img
+                                  src={user.avatar}
+                                  alt={user.nombre}
+                                  className={`
+                                    w-12 h-12 rounded-full object-cover border-2
+                                    bg-gradient-to-br ${getTierColor(user.tier)}
+                                    p-0.5
+                                  `}
+                                />
+                                {user.isOnFire && (
+                                  <Flame 
+                                    className="absolute -top-1 -right-1 text-orange-500 animate-pulse" 
+                                    size={16} 
+                                  />
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-white font-bold">{user.nombre}</p>
+                                <p className="text-slate-400 text-xs">{user.rangoActual}</p>
+                                {user.badges && user.badges.length > 0 && (
+                                  <div className="flex gap-1 mt-1">
+                                    {user.badges.slice(0, 3).map((badge, idx) => (
+                                      <span key={idx} className="text-xs bg-purple-600/20 text-purple-300 px-2 py-0.5 rounded">
+                                        {badge}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <Diamond className="text-blue-400" size={16} />
+                              <span className="text-white font-bold">{user.hqEvidenceCount}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              {getAttendanceIcon(user.attendanceStatus)}
+                              <span className={`
+                                font-bold text-sm
+                                ${user.attendanceStatus === 'PERFECT' ? 'text-green-400' : ''}
+                                ${user.attendanceStatus === 'WARNING' ? 'text-yellow-400' : ''}
+                                ${user.attendanceStatus === 'RISK' ? 'text-red-400' : ''}
+                              `}>
+                                {user.attendanceRate}%
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 text-center">
+                            <div className="flex flex-col items-center">
+                              <span className="text-white font-bold">{user.xp.toLocaleString()}</span>
+                              <span className="text-slate-400 text-xs">Nv. {user.nivel}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 text-right">
+                            <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+                              {user.quantumPoints}
+                            </span>
+                          </td>
+                        </tr>
+                        
+                        {/* Player Card Expandida */}
+                        {expandedUser === user.userId && (
+                          <tr>
+                            <td colSpan={6} className="px-4 py-4 bg-slate-800/50">
+                              <div className="grid grid-cols-4 gap-4">
+                                <div className="text-center">
+                                  <p className="text-slate-400 text-xs mb-1">Nivel</p>
+                                  <p className="text-white font-bold text-lg">{user.nivel}</p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-slate-400 text-xs mb-1">Racha</p>
+                                  <p className="text-white font-bold text-lg">{user.streak} días</p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-slate-400 text-xs mb-1">Tier</p>
+                                  <p className={`font-bold text-lg text-transparent bg-clip-text bg-gradient-to-r ${getTierColor(user.tier)}`}>
+                                    {user.tier}
+                                  </p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-slate-400 text-xs mb-1">Organización</p>
+                                  <p className="text-white font-bold text-sm">{user.organization || 'N/A'}</p>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Ranking Guerra de Escuelas */}
+            {rankingType === 'SCHOOL_WAR' && (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-800/50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-slate-400 text-sm font-semibold">#</th>
+                      <th className="px-4 py-3 text-left text-slate-400 text-sm font-semibold">Escuela</th>
+                      <th className="px-4 py-3 text-center text-slate-400 text-sm font-semibold">Estudiantes</th>
+                      <th className="px-4 py-3 text-center text-slate-400 text-sm font-semibold">Promedio PC</th>
+                      <th className="px-4 py-3 text-center text-slate-400 text-sm font-semibold">
+                        <Diamond size={16} className="inline mr-1" />
+                        Evidencias HQ
+                      </th>
+                      <th className="px-4 py-3 text-center text-slate-400 text-sm font-semibold">Retención</th>
+                      <th className="px-4 py-3 text-right text-slate-400 text-sm font-semibold">Total PC</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {ranking.map((school: SchoolRanking) => (
+                      <tr key={school.organizationId} className="hover:bg-slate-800/30 transition-colors">
+                        <td className="px-4 py-4 text-center">
+                          {getMedalIcon(school.position)}
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-3">
+                            {school.logo && (
+                              <img
+                                src={school.logo}
+                                alt={school.name}
+                                className="w-12 h-12 rounded-lg object-cover border-2 border-slate-700"
+                              />
+                            )}
+                            <p className="text-white font-bold">{school.name}</p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-center text-white font-bold">
+                          <Users size={16} className="inline mr-1 text-slate-400" />
+                          {school.totalStudents}
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-400">
+                            {school.avgPointsPerStudent}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-center text-white font-bold">
+                          {school.totalHQEvidences}
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <span className="text-green-400 font-bold">{school.retentionRate}%</span>
+                        </td>
+                        <td className="px-4 py-4 text-right text-slate-300 font-bold text-lg">
+                          {school.totalPoints.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Ranking de Mentores */}
+            {rankingType === 'MENTOR' && (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-800/50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-slate-400 text-sm font-semibold">#</th>
+                      <th className="px-4 py-3 text-left text-slate-400 text-sm font-semibold">Mentor</th>
+                      <th className="px-4 py-3 text-center text-slate-400 text-sm font-semibold">Mentorados</th>
+                      <th className="px-4 py-3 text-center text-slate-400 text-sm font-semibold">Promedio PC</th>
+                      <th className="px-4 py-3 text-center text-slate-400 text-sm font-semibold">
+                        <Diamond size={16} className="inline mr-1" />
+                        HQ
+                      </th>
+                      <th className="px-4 py-3 text-center text-slate-400 text-sm font-semibold">Llamadas</th>
+                      <th className="px-4 py-3 text-center text-slate-400 text-sm font-semibold">% Cumplimiento</th>
+                      <th className="px-4 py-3 text-right text-slate-400 text-sm font-semibold">Rating</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {ranking.map((mentor: MentorRanking) => (
+                      <tr key={mentor.mentorId} className="hover:bg-slate-800/30 transition-colors">
+                        <td className="px-4 py-4 text-center">
+                          {getMedalIcon(mentor.position)}
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={mentor.avatar}
+                              alt={mentor.nombre}
+                              className="w-12 h-12 rounded-full object-cover border-2 border-purple-500"
+                            />
+                            <div>
+                              <p className="text-white font-bold">{mentor.nombre}</p>
+                              {mentor.badges && mentor.badges.length > 0 && (
+                                <div className="flex gap-1 mt-1">
+                                  <Award className="text-yellow-400" size={14} />
+                                  <span className="text-xs text-slate-400">{mentor.badges.length} badges</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-center text-white font-bold">
+                          {mentor.totalMentorados}
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <span className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+                            {mentor.avgPointsPerStudent}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-center text-white font-bold">
+                          {mentor.totalHQEvidences}
+                        </td>
+                        <td className="px-4 py-4 text-center text-white font-bold">
+                          {mentor.completedCalls}
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <span className={`
+                            font-bold text-lg
+                            ${mentor.completionRate >= 90 ? 'text-green-400' : ''}
+                            ${mentor.completionRate >= 70 && mentor.completionRate < 90 ? 'text-yellow-400' : ''}
+                            ${mentor.completionRate < 70 ? 'text-red-400' : ''}
+                          `}>
+                            {mentor.completionRate}%
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <span className="text-yellow-400 text-lg">★</span>
+                            <span className="text-white font-bold">{mentor.rating.toFixed(1)}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!loading && ranking.length === 0 && (
+          <div className="text-center py-20">
+            <Trophy className="text-slate-600 mx-auto mb-4" size={64} />
+            <p className="text-slate-400 text-lg">
+              No hay datos disponibles para esta configuración
+            </p>
+            <p className="text-slate-500 text-sm mt-2">
+              Intenta cambiar los filtros de búsqueda
+            </p>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }

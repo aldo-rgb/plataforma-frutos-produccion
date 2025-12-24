@@ -52,15 +52,18 @@ export async function GET(req: Request) {
       }
     });
 
-    // 2. Obtener mentores que están en ciclos activos con usuarios de esta organización
+    // 2. Obtener mentores que están activos con usuarios de esta organización
+    // Usando la relación ProgramEnrollment_ProgramEnrollment_mentorIdToUsuario
     const activeMentors = await prisma.usuario.findMany({
       where: {
         rol: 'MENTOR',
         isActive: true,
-        MentoredUsers: {
+        ProgramEnrollment_ProgramEnrollment_mentorIdToUsuario: {
           some: {
-            organizationId: fullUser.organizationId,
-            isActive: true
+            Usuario_ProgramEnrollment_userIdToUsuario: {
+              organizationId: fullUser.organizationId,
+              isActive: true
+            }
           }
         }
       },

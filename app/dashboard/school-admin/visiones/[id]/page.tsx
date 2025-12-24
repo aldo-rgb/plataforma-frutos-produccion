@@ -18,7 +18,9 @@ import {
   Edit,
   Key,
   Copy,
-  Download
+  Eye,
+  Download,
+  Calendar
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -26,6 +28,8 @@ interface Vision {
   id: number;
   nombre: string;
   descripcion: string | null;
+  startDate: string | null;
+  endDate: string | null;
   maxParticipantes: number | null;
   licensesAllocated: number;
   organizationId: number;
@@ -122,9 +126,25 @@ export default function VisionDetailPage() {
   const [emailProcessing, setEmailProcessing] = useState(false);
   const [teamEmailProcessing, setTeamEmailProcessing] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [assigningMentorId, setAssigningMentorId] = useState<number | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<Set<number>>(new Set());
   const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
   const [bulkAssigning, setBulkAssigning] = useState(false);
+  const [randomAssigning, setRandomAssigning] = useState(false);
+  const [visibleCodes, setVisibleCodes] = useState<Set<string>>(new Set());
+  const [showRandomAssignModal, setShowRandomAssignModal] = useState(false);
+  const [showMentorChangeModal, setShowMentorChangeModal] = useState(false);
+  const [mentorChangeData, setMentorChangeData] = useState<{
+    userId: number;
+    userType: string;
+    userName: string;
+    action: 'remove' | 'change';
+    scheduledCalls: number;
+    remainingWeeks: number;
+  } | null>(null);
+  const [showExtendDateModal, setShowExtendDateModal] = useState(false);
+  const [newEndDate, setNewEndDate] = useState('');
+  const [extendingDate, setExtendingDate] = useState(false);
   const { showToast, toasts } = useToast();
 
   useEffect(() => {
@@ -138,10 +158,15 @@ export default function VisionDetailPage() {
   const fetchVisionDetails = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/school-admin/visiones/${visionId}`);
+      const res = await fetch(`/api/school-admin/visiones/${visionId}?t=${Date.now()}`, {
+        cache: 'no-store'
+      });
       const data = await res.json();
 
       if (data.success) {
+        console.log('Vision data:', data.vision);
+        console.log('StartDate:', data.vision.startDate);
+        console.log('EndDate:', data.vision.endDate);
         setVision(data.vision);
         setParticipantes(data.participantes);
         setGameChangers(data.gameChangers || []);
@@ -181,7 +206,7 @@ export default function VisionDetailPage() {
 
   const handleAsignarMentor = async (mentorId: number) => {
     try {
-      setProcessing(true);
+      setAssigningMentorId(mentorId);
       const res = await fetch(`/api/school-admin/visiones/${visionId}/mentores`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -214,7 +239,7 @@ export default function VisionDetailPage() {
         type: 'error'
       });
     } finally {
-      setProcessing(false);
+      setAssigningMentorId(null);
     }
   };
 
@@ -333,7 +358,7 @@ export default function VisionDetailPage() {
     }
   };
 
-  const handleOpenAssignMentorModal = (userId: number, userType: string, userName: string, hasLicense: boolean) => {
+  const handleOpenAssignMentorModal = async (userId: number, userType: string, userName: string, hasLicense: boolean, hasMentor: boolean = false) => {
     // Validar que tenga licencia
     if (!hasLicense) {
       showToast({
@@ -343,14 +368,65 @@ export default function VisionDetailPage() {
       });
       return;
     }
+
+    // Si ya tiene mentor, verificar impacto del cambio
+    if (hasMentor) {
+      try {
+        const checkRes = await fetch(`/api/school-admin/visiones/${visionId}/check-mentor-impact?userId=${userId}&userType=${userType}`);
+        const checkData = await checkRes.json();
+
+        if (checkData.hasScheduledCalls) {
+          setMentorChangeData({
+            userId,
+            userType,
+            userName,
+            action: 'change',
+            scheduledCalls: checkData.scheduledCalls,
+            remainingWeeks: checkData.remainingWeeks
+          });
+          setShowMentorChangeModal(true);
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking mentor impact:', error);
+      }
+    }
     
     // Redirigir a la página de asignación de mentor
     router.push(`/dashboard/school-admin/visiones/${visionId}/asignar-mentor/${userId}`);
   };
 
-  const handleRemoverMentorDeUsuario = async (userId: number, userType: string) => {
-    if (!confirm('¿Estás seguro de remover el mentor asignado?')) return;
+  const handleRemoverMentorDeUsuario = async (userId: number, userType: string, userName?: string) => {
+    try {
+      // Verificar si tiene llamadas programadas
+      const checkRes = await fetch(`/api/school-admin/visiones/${visionId}/check-mentor-impact?userId=${userId}&userType=${userType}`);
+      const checkData = await checkRes.json();
 
+      if (checkData.hasScheduledCalls) {
+        // Mostrar modal de confirmación
+        setMentorChangeData({
+          userId,
+          userType,
+          userName: userName || 'Usuario',
+          action: 'remove',
+          scheduledCalls: checkData.scheduledCalls,
+          remainingWeeks: checkData.remainingWeeks
+        });
+        setShowMentorChangeModal(true);
+      } else {
+        // No tiene llamadas, remover directamente
+        await confirmRemoveMentor(userId, userType);
+      }
+    } catch (error) {
+      console.error('Error checking mentor impact:', error);
+      showToast({
+        message: 'Error al verificar el impacto del cambio',
+        type: 'error'
+      });
+    }
+  };
+
+  const confirmRemoveMentor = async (userId: number, userType: string) => {
     try {
       const res = await fetch(`/api/school-admin/visiones/${visionId}/assign-mentor?userId=${userId}&userType=${userType}`, {
         method: 'DELETE',
@@ -360,8 +436,9 @@ export default function VisionDetailPage() {
 
       if (data.success) {
         fetchVisionDetails();
+        setShowMentorChangeModal(false);
         showToast({
-          message: 'Mentor removido del usuario',
+          message: 'Mentor removido. Se notificó al usuario.',
           type: 'success'
         });
       } else {
@@ -376,6 +453,98 @@ export default function VisionDetailPage() {
         message: 'Error al remover mentor',
         type: 'error'
       });
+    }
+  };
+
+  const handleAsignacionAleatoria = async () => {
+    try {
+      setRandomAssigning(true);
+      setShowRandomAssignModal(false);
+      const res = await fetch(`/api/school-admin/visiones/${visionId}/assign-mentors-random`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        fetchVisionDetails();
+        showToast({
+          message: `${data.assigned} mentor(es) asignado(s) exitosamente`,
+          type: 'success',
+          duration: 5000
+        });
+      } else {
+        showToast({
+          message: data.error || 'Error al asignar mentores',
+          type: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Error assigning mentors randomly:', error);
+      showToast({
+        message: 'Error al asignar mentores',
+        type: 'error'
+      });
+    } finally {
+      setRandomAssigning(false);
+    }
+  };
+
+  const handleExtendDate = async () => {
+    if (!newEndDate) {
+      showToast({
+        message: 'Debes seleccionar una fecha',
+        type: 'error'
+      });
+      return;
+    }
+
+    try {
+      setExtendingDate(true);
+      const res = await fetch(`/api/school-admin/visiones/${visionId}/extend-date`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newEndDate }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setShowExtendDateModal(false);
+        setNewEndDate('');
+        fetchVisionDetails();
+        
+        const { results } = data;
+        let message = `Visión extendida exitosamente. ${results.extendedUsers} usuario(s) actualizado(s).`;
+        
+        if (results.scheduledCalls > 0) {
+          message += ` Se agendaron ${results.scheduledCalls} llamada(s) automáticamente.`;
+        }
+        
+        if (results.usersNeedingReschedule.length > 0) {
+          message += ` ${results.usersNeedingReschedule.length} usuario(s) necesitan reagendar manualmente.`;
+        }
+        
+        showToast({
+          message,
+          type: results.usersNeedingReschedule.length > 0 ? 'warning' : 'success',
+          duration: 8000
+        });
+      } else {
+        showToast({
+          message: data.error || 'Error al extender fecha',
+          type: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Error extending date:', error);
+      showToast({
+        message: 'Error al extender fecha',
+        type: 'error'
+      });
+    } finally {
+      setExtendingDate(false);
     }
   };
 
@@ -567,6 +736,16 @@ export default function VisionDetailPage() {
     });
   };
 
+  const toggleCodeVisibility = (code: string) => {
+    const newVisible = new Set(visibleCodes);
+    if (newVisible.has(code)) {
+      newVisible.delete(code);
+    } else {
+      newVisible.add(code);
+    }
+    setVisibleCodes(newVisible);
+  };
+
   const participantesWithLicense = participantes.filter(p => p.Participante.licenseCode);
   const participantesWithoutLicense = participantes.filter(p => !p.Participante.licenseCode);
   const gameChangersWithLicense = gameChangers.filter(gc => gc.GameChanger.licenseCode);
@@ -611,6 +790,40 @@ export default function VisionDetailPage() {
               {vision.descripcion && (
                 <p className="text-slate-400">{vision.descripcion}</p>
               )}
+              {(vision.startDate || vision.endDate) && (
+                <div className="flex items-center gap-8 mt-4">
+                  {vision.startDate && (
+                    <div className="flex items-center gap-3 bg-purple-500/10 border border-purple-500/30 rounded-lg px-4 py-3">
+                      <Calendar className="text-purple-400" size={18} />
+                      <div>
+                        <span className="text-xs text-purple-400 font-medium block mb-1">Inicio</span>
+                        <span className="text-sm text-white font-semibold">
+                          {new Date(vision.startDate).toLocaleDateString('es-MX', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  {vision.endDate && (
+                    <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-4 py-3">
+                      <Calendar className="text-emerald-400" size={18} />
+                      <div>
+                        <span className="text-xs text-emerald-400 font-medium block mb-1">Finalización</span>
+                        <span className="text-sm text-white font-semibold">
+                          {new Date(vision.endDate).toLocaleDateString('es-MX', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               {vision.Coordinador && (
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-sm text-purple-400 font-medium">Coordinador:</span>
@@ -620,19 +833,34 @@ export default function VisionDetailPage() {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowExtendDateModal(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors"
+            >
+              <Calendar size={16} />
+              Extender Fecha
+            </button>
+            <button
+              onClick={() => setShowRandomAssignModal(true)}
+              disabled={randomAssigning || (participantes.length === 0 && gameChangers.length === 0)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-colors"
+            >
+              <Users size={16} />
+              {randomAssigning ? 'Asignando...' : 'Asignación Aleatoria'}
+            </button>
             <button
               onClick={() => setShowAddTeamModal(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-semibold transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-semibold transition-colors"
             >
-              <Users size={20} />
+              <Users size={16} />
               Agregar Team
             </button>
             <button
               onClick={() => setShowAddModal(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-colors"
             >
-              <UserPlus size={20} />
+              <UserPlus size={16} />
               Agregar Participante
             </button>
           </div>
@@ -663,7 +891,9 @@ export default function VisionDetailPage() {
               </span>
             </div>
             <p className="text-slate-400 text-sm">Team (GC)</p>
-          </div>          <div className="bg-slate-900/50 backdrop-blur border border-emerald-500/30 rounded-xl p-6">
+          </div>
+
+          <div className="bg-slate-900/50 backdrop-blur border border-emerald-500/30 rounded-xl p-6">
             <div className="flex items-center justify-between mb-2">
               <CheckCircle className="text-emerald-400" size={24} />
               <span className="text-3xl font-bold text-emerald-400">
@@ -799,17 +1029,26 @@ export default function VisionDetailPage() {
                       </td>
                       <td className="px-6 py-4 text-center">
                         {p.Participante.Usuario_Usuario_assignedMentorIdToUsuario ? (
-                          <div className="flex items-center justify-center gap-2">
-                            <span className="text-sm text-white">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="text-xs text-slate-400">
                               {p.Participante.Usuario_Usuario_assignedMentorIdToUsuario.nombre}
                             </span>
-                            <button
-                              onClick={() => handleRemoverMentorDeUsuario(p.Participante.id, 'PARTICIPANTE')}
-                              className="p-1 hover:bg-red-600/20 text-red-400 rounded transition-colors"
-                              title="Remover mentor"
-                            >
-                              <XCircle size={14} />
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleOpenAssignMentorModal(p.Participante.id, 'PARTICIPANTE', p.Participante.nombre, !!p.Participante.licenseCode, true)}
+                                className="inline-flex items-center gap-1 px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded transition-colors"
+                              >
+                                <Users size={12} />
+                                Cambiar
+                              </button>
+                              <button
+                                onClick={() => handleRemoverMentorDeUsuario(p.Participante.id, 'PARTICIPANTE', p.Participante.nombre)}
+                                className="p-1 hover:bg-red-600/20 text-red-400 rounded transition-colors"
+                                title="Remover mentor"
+                              >
+                                <XCircle size={12} />
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <button
@@ -837,16 +1076,35 @@ export default function VisionDetailPage() {
                       <td className="px-6 py-4 text-center">
                         {p.Participante.licenseCode ? (
                           <div className="flex items-center justify-center gap-2">
-                            <code className="px-2 py-1 bg-slate-800 rounded text-xs text-slate-300 font-mono">
-                              {p.Participante.licenseCode}
-                            </code>
-                            <button
-                              onClick={() => copyToClipboard(p.Participante.licenseCode!)}
-                              className="p-1 hover:bg-slate-700 rounded transition-colors"
-                              title="Copiar código"
-                            >
-                              <Copy size={14} className="text-slate-400" />
-                            </button>
+                            {visibleCodes.has(p.Participante.licenseCode) ? (
+                              <>
+                                <code className="px-2 py-1 bg-slate-800 rounded text-xs text-slate-300 font-mono">
+                                  {p.Participante.licenseCode}
+                                </code>
+                                <button
+                                  onClick={() => toggleCodeVisibility(p.Participante.licenseCode!)}
+                                  className="p-1 hover:bg-slate-700 rounded transition-colors"
+                                  title="Ocultar código"
+                                >
+                                  <Eye size={14} className="text-slate-400" />
+                                </button>
+                                <button
+                                  onClick={() => copyToClipboard(p.Participante.licenseCode!)}
+                                  className="p-1 hover:bg-slate-700 rounded transition-colors"
+                                  title="Copiar código"
+                                >
+                                  <Copy size={14} className="text-slate-400" />
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => toggleCodeVisibility(p.Participante.licenseCode!)}
+                                className="inline-flex items-center gap-1 px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-semibold rounded transition-colors"
+                              >
+                                <Eye size={12} />
+                                Ver Código
+                              </button>
+                            )}
                           </div>
                         ) : (
                           <span className="text-slate-500 text-sm">—</span>
@@ -962,17 +1220,26 @@ export default function VisionDetailPage() {
                       </td>
                       <td className="px-6 py-4 text-center">
                         {gc.GameChanger.Usuario_Usuario_assignedMentorIdToUsuario ? (
-                          <div className="flex items-center justify-center gap-2">
-                            <span className="text-sm text-white">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="text-xs text-slate-400">
                               {gc.GameChanger.Usuario_Usuario_assignedMentorIdToUsuario.nombre}
                             </span>
-                            <button
-                              onClick={() => handleRemoverMentorDeUsuario(gc.GameChanger.id, 'GAMECHANGER')}
-                              className="p-1 hover:bg-red-600/20 text-red-400 rounded transition-colors"
-                              title="Remover mentor"
-                            >
-                              <XCircle size={14} />
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleOpenAssignMentorModal(gc.GameChanger.id, 'GAMECHANGER', gc.GameChanger.nombre, !!gc.GameChanger.licenseCode, true)}
+                                className="inline-flex items-center gap-1 px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded transition-colors"
+                              >
+                                <Users size={12} />
+                                Cambiar
+                              </button>
+                              <button
+                                onClick={() => handleRemoverMentorDeUsuario(gc.GameChanger.id, 'GAMECHANGER', gc.GameChanger.nombre)}
+                                className="p-1 hover:bg-red-600/20 text-red-400 rounded transition-colors"
+                                title="Remover mentor"
+                              >
+                                <XCircle size={12} />
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <button
@@ -1000,16 +1267,35 @@ export default function VisionDetailPage() {
                       <td className="px-6 py-4 text-center">
                         {gc.GameChanger.licenseCode ? (
                           <div className="flex items-center justify-center gap-2">
-                            <code className="px-2 py-1 bg-slate-800 rounded text-xs text-slate-300 font-mono">
-                              {gc.GameChanger.licenseCode}
-                            </code>
-                            <button
-                              onClick={() => copyToClipboard(gc.GameChanger.licenseCode!)}
-                              className="p-1 hover:bg-slate-700 rounded transition-colors"
-                              title="Copiar código"
-                            >
-                              <Copy size={14} className="text-slate-400" />
-                            </button>
+                            {visibleCodes.has(gc.GameChanger.licenseCode) ? (
+                              <>
+                                <code className="px-2 py-1 bg-slate-800 rounded text-xs text-slate-300 font-mono">
+                                  {gc.GameChanger.licenseCode}
+                                </code>
+                                <button
+                                  onClick={() => toggleCodeVisibility(gc.GameChanger.licenseCode!)}
+                                  className="p-1 hover:bg-slate-700 rounded transition-colors"
+                                  title="Ocultar código"
+                                >
+                                  <Eye size={14} className="text-slate-400" />
+                                </button>
+                                <button
+                                  onClick={() => copyToClipboard(gc.GameChanger.licenseCode!)}
+                                  className="p-1 hover:bg-slate-700 rounded transition-colors"
+                                  title="Copiar código"
+                                >
+                                  <Copy size={14} className="text-slate-400" />
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => toggleCodeVisibility(gc.GameChanger.licenseCode!)}
+                                className="inline-flex items-center gap-1 px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-semibold rounded transition-colors"
+                              >
+                                <Eye size={12} />
+                                Ver Código
+                              </button>
+                            )}
                           </div>
                         ) : (
                           <span className="text-slate-500 text-sm">—</span>
@@ -1217,10 +1503,10 @@ export default function VisionDetailPage() {
                     </div>
                     <button
                       onClick={() => handleAsignarMentor(mentor.id)}
-                      disabled={!mentor.tieneHorarios || processing}
+                      disabled={!mentor.tieneHorarios || assigningMentorId === mentor.id}
                       className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-colors text-sm"
                     >
-                      {!mentor.tieneHorarios ? 'No disponible' : processing ? 'Asignando...' : 'Asignar'}
+                      {!mentor.tieneHorarios ? 'No disponible' : assigningMentorId === mentor.id ? 'Asignando...' : 'Asignar'}
                     </button>
                   </div>
                 ))}
@@ -1435,6 +1721,198 @@ export default function VisionDetailPage() {
                   </span>
                 ) : (
                   'Confirmar Asignación'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación de Asignación Aleatoria */}
+      {showRandomAssignModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-indigo-500/30 rounded-2xl p-8 max-w-lg w-full shadow-2xl">
+            <div className="flex items-center justify-center w-16 h-16 bg-indigo-600/20 rounded-full mx-auto mb-6">
+              <Users size={32} className="text-indigo-400" />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-white text-center mb-3">
+              Asignación Aleatoria
+            </h2>
+            
+            <p className="text-slate-300 text-center mb-6 leading-relaxed">
+              ¿Asignar mentores aleatoriamente a todos los participantes y game changers con licencia?
+            </p>
+            
+            <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <AlertCircle size={20} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-slate-300">
+                  <p className="font-semibold text-amber-400 mb-1">Importante:</p>
+                  <ul className="space-y-1 text-slate-400">
+                    <li>• Los usuarios que ya tienen mentor asignado no serán afectados</li>
+                    <li>• Solo se asignarán usuarios con licencia activa</li>
+                    <li>• Los mentores serán distribuidos equitativamente</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowRandomAssignModal(false)}
+                className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAsignacionAleatoria}
+                className="flex-1 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition-colors shadow-lg shadow-indigo-500/20"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación de Cambio de Mentor */}
+      {showMentorChangeModal && mentorChangeData && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-amber-500/30 rounded-2xl p-8 max-w-lg w-full shadow-2xl">
+            <div className="flex items-center justify-center w-16 h-16 bg-amber-600/20 rounded-full mx-auto mb-6">
+              <AlertCircle size={32} className="text-amber-400" />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-white text-center mb-3">
+              {mentorChangeData.action === 'remove' ? 'Remover Mentor' : 'Cambiar Mentor'}
+            </h2>
+            
+            <p className="text-slate-300 text-center mb-6 leading-relaxed">
+              <span className="font-semibold text-white">{mentorChangeData.userName}</span> tiene llamadas de disciplina programadas.
+            </p>
+            
+            <div className="bg-slate-800/50 border border-amber-500/30 rounded-lg p-4 mb-6">
+              <div className="flex items-start gap-3 mb-4">
+                <AlertCircle size={20} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-slate-300">
+                  <p className="font-semibold text-amber-400 mb-2">Impacto en el ciclo:</p>
+                  <ul className="space-y-2 text-slate-300">
+                    <li className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                      <span><strong className="text-white">{mentorChangeData.scheduledCalls}</strong> llamada(s) programada(s) serán canceladas</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-amber-400 rounded-full"></div>
+                      <span><strong className="text-white">{mentorChangeData.remainingWeeks}</strong> semana(s) pendiente(s) del ciclo</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-lg p-3">
+                <p className="text-sm text-indigo-300 flex items-start gap-2">
+                  <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+                  <span>
+                    El usuario será notificado para que reagende sus llamadas con {mentorChangeData.action === 'remove' ? 'su nuevo' : 'el nuevo'} mentor asignado.
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setShowMentorChangeModal(false);
+                  setMentorChangeData(null);
+                }}
+                className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  if (mentorChangeData.action === 'remove') {
+                    confirmRemoveMentor(mentorChangeData.userId, mentorChangeData.userType);
+                  } else {
+                    setShowMentorChangeModal(false);
+                    router.push(`/dashboard/school-admin/visiones/${visionId}/asignar-mentor/${mentorChangeData.userId}`);
+                  }
+                }}
+                className="flex-1 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold transition-colors shadow-lg shadow-amber-500/20"
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Extender Fecha */}
+      {showExtendDateModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-emerald-500/30 rounded-2xl p-8 max-w-md w-full shadow-2xl">
+            <div className="flex items-center justify-center w-16 h-16 bg-emerald-600/20 rounded-full mx-auto mb-6">
+              <Calendar size={32} className="text-emerald-400" />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-white text-center mb-3">
+              Extender Fecha de Visión
+            </h2>
+            
+            <p className="text-slate-300 text-center mb-6 leading-relaxed">
+              Al extender la fecha, el sistema actualizará automáticamente los programas de todos los usuarios e intentará agendar las llamadas adicionales.
+            </p>
+            
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <AlertCircle size={20} className="text-amber-400 mt-0.5 flex-shrink-0" />
+                <div className="text-sm">
+                  <p className="text-amber-200 font-semibold mb-1">Límite de extensión</p>
+                  <p className="text-amber-100/80">
+                    La fecha solo puede extenderse hasta 30 días después de la fecha original de finalización.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-slate-800/50 border border-emerald-500/30 rounded-lg p-4 mb-6">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Nueva Fecha de Finalización
+              </label>
+              <input
+                type="date"
+                value={newEndDate}
+                onChange={(e) => setNewEndDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+                className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all"
+              />
+              <p className="text-xs text-slate-400 mt-2">
+                <AlertCircle size={12} className="inline mr-1" />
+                Los usuarios serán notificados si hay conflictos de horario
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setShowExtendDateModal(false);
+                  setNewEndDate('');
+                }}
+                disabled={extendingDate}
+                className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 text-white rounded-lg font-semibold transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleExtendDate}
+                disabled={extendingDate || !newEndDate}
+                className="flex-1 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-colors shadow-lg shadow-emerald-500/20"
+              >
+                {extendingDate ? (
+                  <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                ) : (
+                  'Extender'
                 )}
               </button>
             </div>

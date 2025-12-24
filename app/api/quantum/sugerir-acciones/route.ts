@@ -40,6 +40,8 @@ El usuario tiene este OBJETIVO:
 Área: ${area || 'General'}
 Moneda preferida: ${currencyName} (usa el símbolo ${currency})
 
+🔥 **RESTRICCIÓN CRÍTICA DE LONGITUD: CADA ACCIÓN DEBE TENER MÁXIMO 13 PALABRAS**
+
 Genera exactamente 3 acciones SMART en formato JSON que cumplan estos criterios:
 
 1. **CRITERIOS SMART ESTRICTOS**:
@@ -54,30 +56,31 @@ Genera exactamente 3 acciones SMART en formato JSON que cumplan estos criterios:
 4. Incluye métricas concretas cuando sea posible
 5. Ordena las acciones en secuencia lógica (primeras cosas primero)
 6. **IMPORTANTE**: Cuando menciones cantidades monetarias, usa ${currencyName} con el formato ${exampleAmount}
+7. **MÁXIMO 13 PALABRAS POR ACCIÓN** - Sé conciso y específico
 
-EJEMPLOS DE ACCIONES SMART CORRECTAS (adaptadas a ${currencyName}):
+EJEMPLOS DE ACCIONES SMART CORRECTAS (adaptadas a ${currencyName}, MÁXIMO 13 PALABRAS):
 Para objetivo "Aumentar mis ahorros en un 30%":
-✅ "Crear un presupuesto detallado identificando al menos 5 gastos innecesarios"
-✅ "Establecer un sistema de ahorro automático transfiriendo el 15% de cada ingreso a una cuenta separada"
-✅ "Reducir gastos fijos negociando 3 servicios de suscripción actuales"
+✅ "Crear presupuesto detallado identificando 5 gastos innecesarios" (7 palabras)
+✅ "Establecer ahorro automático del 15% por cada ingreso" (8 palabras)
+✅ "Reducir gastos negociando 3 servicios de suscripción actuales" (8 palabras)
 
 Para objetivo "Generar ingresos extra":
 ${isMexico 
-  ? '✅ "Ofrecer servicios freelance con meta de ganar $15,000 MXN mensuales"\n✅ "Vender 50 unidades del producto en línea generando $25,000 MXN"\n✅ "Dar 4 consultoría mensuales a $2,500 MXN cada una"'
-  : '✅ "Ofrecer servicios freelance con meta de ganar $1,500 USD mensuales"\n✅ "Vender 50 unidades del producto en línea generando $2,500 USD"\n✅ "Dar 4 consultoría mensuales a $250 USD cada una"'
+  ? '✅ "Ofrecer servicios freelance con meta de $15,000 MXN mensuales" (9 palabras)\n✅ "Vender 50 unidades en línea generando $25,000 MXN" (8 palabras)\n✅ "Dar 4 consultorías mensuales a $2,500 MXN cada una" (9 palabras)'
+  : '✅ "Ofrecer servicios freelance con meta de $1,500 USD mensuales" (9 palabras)\n✅ "Vender 50 unidades en línea generando $2,500 USD" (8 palabras)\n✅ "Dar 4 consultorías mensuales a $250 USD cada una" (9 palabras)'
 }
-✅ "Reducir gastos fijos negociando 3 servicios de suscripción actuales"
 
 Para objetivo "Correr mi primer medio maratón":
-✅ "Establecer una rutina de 3 sesiones semanales de trote aumentando 10% cada semana"
-✅ "Contratar un plan de entrenamiento estructurado de 12 semanas"
-✅ "Registrarme en una carrera de 10k como preparación previa"
+✅ "Establecer rutina de 3 sesiones semanales aumentando 10%" (8 palabras)
+✅ "Contratar plan de entrenamiento estructurado de 12 semanas" (8 palabras)
+✅ "Registrarme en carrera de 10k como preparación" (7 palabras)
 
 FORMATO INCORRECTO (NO uses estos):
 ❌ "Ahorrar más dinero" (muy vago, no medible)
 ❌ "Intentar correr" (palabra débil, sin compromiso)
 ❌ "Ser más disciplinado" (no es acción específica)
 ❌ "Hacer ejercicio a veces" (no medible, no específico)
+❌ "Establecer un sistema completo de ahorro automático que transfiera el 15% de cada ingreso" (14 palabras - EXCEDE EL LÍMITE)
 
 Devuelve SOLO un JSON con esta estructura exacta:
 {

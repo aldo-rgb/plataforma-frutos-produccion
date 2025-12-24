@@ -63,6 +63,8 @@ ${isMexico ? 'País: México (usa pesos mexicanos MXN para ejemplos financieros)
 
 ⏱️ **MARCO TEMPORAL CRÍTICO: Estos objetivos deben ser alcanzables en 3 MESES (90 días)**
 
+🔥 **RESTRICCIÓN CRÍTICA DE LONGITUD: CADA OBJETIVO DEBE TENER MÁXIMO 13 PALABRAS**
+
 Genera exactamente 4 objetivos sugeridos en formato JSON que cumplan estos criterios:
 
 1. **FÓRMULA DE PODER**: Verbo de Acción + Resultado Exacto (Número/Evento/Métrica)
@@ -71,16 +73,17 @@ Genera exactamente 4 objetivos sugeridos en formato JSON que cumplan estos crite
 4. Enfócate en el resultado medible y específico que se pueda lograr en 90 días
 5. Contexto: ${areaContext}
 6. **IMPORTANTE**: Ajusta las expectativas al período de 3 meses - evita objetivos que requieran 6 meses o 1 año
+7. **MÁXIMO 13 PALABRAS POR OBJETIVO** - Sé conciso y directo
 
-EJEMPLOS DE FORMATO CORRECTO (Objetivos alcanzables en 3 meses, sin fechas):
-✅ "Incrementar mis ingresos mensuales en un 15%" (realista en 3 meses)
-✅ "Generar ${isMexico ? '$5,000 MXN' : '$500 USD'} extra en ingresos secundarios" (alcanzable en 90 días)
-✅ "Reducir mi deuda total en ${isMexico ? '$15,000 MXN' : '$1,500 USD'}" (objetivo trimestral)
-✅ "Correr 10 kilómetros sin parar" (progresión realista en 3 meses)
-✅ "Perder 8kg de peso corporal" (2-3kg por mes es saludable)
-✅ "Completar 3 proyectos para mi portafolio profesional" (1 por mes)
-✅ "Establecer una rutina de meditación diaria de 15 minutos" (hábito en 3 meses)
-✅ "Reducir consumo de azúcar procesada en un 80%" (cambio gradual trimestral)
+EJEMPLOS DE FORMATO CORRECTO (Objetivos alcanzables en 3 meses, sin fechas, MÁXIMO 13 PALABRAS):
+✅ "Incrementar mis ingresos mensuales en un 15%" (8 palabras)
+✅ "Generar ${isMexico ? '$5,000 MXN' : '$500 USD'} extra en ingresos secundarios" (6 palabras)
+✅ "Reducir mi deuda total en ${isMexico ? '$15,000 MXN' : '$1,500 USD'}" (6 palabras)
+✅ "Correr 10 kilómetros sin parar" (5 palabras)
+✅ "Perder 8kg de peso corporal" (5 palabras)
+✅ "Completar 3 proyectos para mi portafolio profesional" (7 palabras)
+✅ "Establecer rutina de meditación diaria de 15 minutos" (8 palabras)
+✅ "Reducir consumo de azúcar procesada en 80%" (7 palabras)
 
 FORMATO INCORRECTO (NO uses estos):
 ❌ "Mejorar mis finanzas" (muy vago, sin número)
@@ -89,6 +92,7 @@ FORMATO INCORRECTO (NO uses estos):
 ❌ "Correr un maratón completo (42k)" (requiere más de 3 meses de entrenamiento)
 ❌ "Crear un negocio rentable con 10 clientes" (timeline de 6-12 meses)
 ❌ "Ahorrar antes del 31 de diciembre" (incluye fecha específica)
+❌ "Incrementar significativamente mis ahorros mensuales para poder comprar una casa propia" (15 palabras - EXCEDE EL LÍMITE)
 
 Devuelve SOLO un JSON con esta estructura exacta:
 {

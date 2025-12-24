@@ -124,6 +124,8 @@ export async function POST(request: Request) {
         nombre: name,
         descripcion: description || null,
         coordinadorId: usuario.id,
+        startDate: fechaInicio,
+        endDate: fechaFin,
         isActive: true
       }
     });

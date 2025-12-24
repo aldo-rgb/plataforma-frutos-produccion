@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Check, AlertCircle, BrainCircuit } from 'lucide-react';
+import { Plus, Trash2, Check, AlertCircle, BrainCircuit, Edit2 } from 'lucide-react';
 import { validateMetaSMART } from '@/lib/validaciones-carta';
 
 interface Meta {
@@ -55,6 +55,7 @@ export default function MetaInputDynamic({
   const [currentInput, setCurrentInput] = useState("");
   const [showValidation, setShowValidation] = useState(false);
   const [specificError, setSpecificError] = useState<string | null>(null);
+  const [editingMetaId, setEditingMetaId] = useState<string | null>(null);
 
   // Use controlled metas if provided, otherwise use local state
   const metas = controlledMetas !== undefined ? controlledMetas : localMetas;
@@ -169,9 +170,93 @@ export default function MetaInputDynamic({
     updateMetas?.(updatedMetas);
   };
 
+  const handleEditMeta = (meta: Meta) => {
+    setEditingMetaId(meta.id);
+    setCurrentInput(meta.description);
+    setShowValidation(false);
+    setSpecificError(null);
+  };
+
+  const handleUpdateMeta = () => {
+    if (!currentInput.trim() || !editingMetaId) return;
+
+    let isValid = false;
+    let validationError: string | null = null;
+
+    // Use custom validation if provided
+    if (validateFunction) {
+      isValid = validateFunction(currentInput);
+      
+      // Detect which specific rule failed for custom error messages
+      if (!isValid && customValidationMessages) {
+        const text = currentInput.toLowerCase();
+        
+        // COACH ANTI-EXCUSAS: Detectar palabras débiles específicas con feedback personalizado
+        if (text.includes('tratar') || text.includes('intento') || text.includes('intentar')) {
+          validationError = "🛑 Elimina la palabra 'tratar' o 'intentar'. Eso programa tu mente para fallar. Usa un verbo de acción directa (Ej: 'Vender', 'Correr', 'Ahorrar').";
+        } else if (text.includes('espero') || text.includes('esperar') || text.includes('ojalá')) {
+          validationError = "🛑 La esperanza no es una estrategia. No escribas lo que esperas que pase, escribe lo que tú vas a hacer que pase.";
+        } else if (text.includes('quisiera') || text.includes('gustaría') || text.includes('desearía')) {
+          validationError = "🛑 No estamos pidiendo deseos al universo. Escribe en presente y con certeza: 'Voy a...' o 'Tengo...'.";
+        } else if (text.includes('creo') || text.includes('tal vez') || text.includes('quizás') || text.includes('quizá') || text.includes('posible')) {
+          validationError = "🛑 Veo duda en tu declaración. Elimina la incertidumbre. Comprométete con un resultado exacto.";
+        } else if (text.includes('poco') || text.includes('algo') || text.includes('más o menos')) {
+          validationError = "🛑 Sé específico. 'Algo' o 'un poco' no se puede medir. Define una cantidad exacta.";
+        } else if (currentInput.length < 15) {
+          validationError = customValidationMessages.tooShort || "Tu objetivo es muy corto. Sé más específico sobre qué quieres lograr (mínimo 15 caracteres).";
+        } else if (currentInput.trim().split(/\s+/).length < 3) {
+          validationError = customValidationMessages.tooFewWords || "Tu objetivo necesita más detalle. Incluye al menos 3 palabras que describan qué quieres lograr.";
+        } else {
+          validationError = errorMessage;
+        }
+      } else if (!isValid) {
+        validationError = errorMessage;
+      }
+    } else {
+      // Use default SMART validation
+      const smartValidation = validateMetaSMART(currentInput);
+      isValid = smartValidation.valid;
+      if (!isValid) {
+        validationError = smartValidation.error || errorMessage;
+      }
+    }
+
+    if (!isValid) {
+      setShowValidation(true);
+      setSpecificError(validationError);
+      return;
+    }
+
+    const updatedMetas = metas.map(m => 
+      m.id === editingMetaId 
+        ? { ...m, description: currentInput.trim(), isValid: true }
+        : m
+    );
+    
+    updateMetas?.(updatedMetas);
+    setCurrentInput("");
+    setEditingMetaId(null);
+    setShowValidation(false);
+    setSpecificError(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMetaId(null);
+    setCurrentInput("");
+    setShowValidation(false);
+    setSpecificError(null);
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && e.ctrlKey) {
-      handleAddMeta();
+      if (editingMetaId) {
+        handleUpdateMeta();
+      } else {
+        handleAddMeta();
+      }
+    }
+    if (e.key === 'Escape' && editingMetaId) {
+      handleCancelEdit();
     }
   };
 
@@ -194,35 +279,69 @@ export default function MetaInputDynamic({
           {metas.map((meta, index) => (
             <div 
               key={meta.id}
-              className="bg-gray-900/50 border border-green-500/30 rounded-lg p-3 flex items-start gap-3 animate-in slide-in-from-top-2"
+              className={`border rounded-lg p-3 flex items-start gap-3 animate-in slide-in-from-top-2 transition-all ${
+                editingMetaId === meta.id 
+                  ? 'bg-purple-900/30 border-purple-500/50' 
+                  : 'bg-gray-900/50 border-green-500/30'
+              }`}
             >
-              <div className="bg-green-500/20 text-green-400 w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
+                editingMetaId === meta.id 
+                  ? 'bg-purple-500/20 text-purple-400' 
+                  : 'bg-green-500/20 text-green-400'
+              }`}>
                 <Check size={14} />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-white font-medium mb-1">{label} {index + 1}</p>
                 <p className="text-sm text-gray-300 leading-relaxed">{meta.description}</p>
+                {editingMetaId === meta.id && (
+                  <p className="text-xs text-purple-400 mt-2 flex items-center gap-1">
+                    <Edit2 size={12} />
+                    Editando este {label.toLowerCase()}...
+                  </p>
+                )}
               </div>
               {!disabled && !isReadOnly && (
-                <button
-                  onClick={() => handleRemoveMeta(meta.id)}
-                  className="text-red-400 hover:text-red-300 hover:bg-red-900/20 p-2 rounded-lg transition-all shrink-0"
-                  title={`Eliminar ${label.toLowerCase()}`}
-                >
-                  <Trash2 size={16} />
-                </button>
+                <div className="flex gap-1 shrink-0">
+                  <button
+                    onClick={() => handleEditMeta(meta)}
+                    disabled={editingMetaId !== null && editingMetaId !== meta.id}
+                    className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 p-2 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    title={`Editar ${label.toLowerCase()}`}
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleRemoveMeta(meta.id)}
+                    disabled={editingMetaId !== null}
+                    className="text-red-400 hover:text-red-300 hover:bg-red-900/20 p-2 rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    title={`Eliminar ${label.toLowerCase()}`}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               )}
             </div>
           ))}
         </div>
       )}
 
-      {/* Input para nueva meta */}
-      {!disabled && !isReadOnly && metas.length < maxMetas && (
+      {/* Input para nueva meta o editar */}
+      {!disabled && !isReadOnly && (metas.length < maxMetas || editingMetaId) && (
         <div className="space-y-3">
-          <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-            {metas.length === 0 ? `Define tu primer ${label.toLowerCase()}` : `Agregar otro ${label.toLowerCase()} (opcional)`}
-          </label>
+          {editingMetaId ? (
+            <div className="bg-purple-900/20 border border-purple-500/40 rounded-lg p-3 flex items-center gap-2">
+              <Edit2 className="text-purple-400" size={16} />
+              <label className="text-xs font-bold text-purple-300 uppercase tracking-wider">
+                Editando {label.toLowerCase()}
+              </label>
+            </div>
+          ) : (
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+              {metas.length === 0 ? `Define tu primer ${label.toLowerCase()}` : `Agregar otro ${label.toLowerCase()} (opcional)`}
+            </label>
+          )}
           
           <div className="relative">
             <textarea
@@ -304,19 +423,38 @@ export default function MetaInputDynamic({
             </div>
           )}
 
-          {/* Botón agregar */}
-          <button
-            onClick={handleAddMeta}
-            disabled={!currentInput.trim() || !validation?.valid}
-            className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-          >
-            <Plus size={20} />
-            {currentInput.trim() && validation?.valid 
-              ? `Agregar ${label}` 
-              : metas.length === 0 
+          {/* Botón agregar o actualizar */}
+          {editingMetaId ? (
+            <div className="flex gap-2">
+              <button
+                onClick={handleUpdateMeta}
+                disabled={!currentInput.trim() || !validation?.valid}
+                className="flex-1 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              >
+                <Check size={20} />
+                Actualizar {label}
+              </button>
+              <button
+                onClick={handleCancelEdit}
+                className="px-6 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-xl transition-all"
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleAddMeta}
+              disabled={!currentInput.trim() || !validation?.valid}
+              className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+            >
+              <Plus size={20} />
+              {currentInput.trim() && validation?.valid 
                 ? `Agregar ${label}` 
-                : `Agregar Otro ${label}`}
-          </button>
+                : metas.length === 0 
+                  ? `Agregar ${label}` 
+                  : `Agregar Otro ${label}`}
+            </button>
+          )}
         </div>
       )}
 

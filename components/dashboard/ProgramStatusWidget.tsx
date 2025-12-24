@@ -40,9 +40,11 @@ export default function ProgramStatusWidget() {
   const [status, setStatus] = useState<ProgramStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [countdown, setCountdown] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  const [hasMentorChangeNotification, setHasMentorChangeNotification] = useState(false);
 
   useEffect(() => {
     loadStatus();
+    checkMentorChangeNotification();
   }, []);
 
   // Actualizar countdown cada segundo si hay próxima sesión urgente
@@ -88,6 +90,22 @@ export default function ProgramStatusWidget() {
       setStatus({ hasProgram: false } as any);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkMentorChangeNotification = async () => {
+    try {
+      const res = await fetch('/api/notifications/unread');
+      if (!res.ok) return;
+      
+      const data = await res.json();
+      const hasMentorChange = data.notifications?.some(
+        (notif: any) => notif.type === 'MENTOR_ASSIGNMENT' && !notif.isRead
+      );
+      
+      setHasMentorChangeNotification(hasMentorChange || false);
+    } catch (error) {
+      console.error('Error verificando notificaciones:', error);
     }
   };
 
@@ -306,6 +324,27 @@ export default function ProgramStatusWidget() {
                 </p>
               </div>
             )}
+          </div>
+        ) : hasMentorChangeNotification ? (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <AlertTriangle className="w-8 h-8 text-amber-400" />
+              <div className="flex-1">
+                <p className="text-sm font-bold text-amber-400 mb-1">
+                  Mentor Reasignado
+                </p>
+                <p className="text-xs text-amber-300">
+                  Reagenda tus llamadas de disciplina para continuar tu programa
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => window.location.href = '/dashboard/program/enroll'}
+              className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-4 py-3 rounded-lg font-bold transition-all shadow-lg flex items-center justify-center gap-2"
+            >
+              <Calendar className="w-5 h-5" />
+              Reagendar Llamadas
+            </button>
           </div>
         ) : (
           <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-center">

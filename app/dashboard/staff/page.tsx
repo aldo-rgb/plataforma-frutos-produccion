@@ -99,6 +99,45 @@ export default function StaffDashboardPage() {
         </p>
       </div>
 
+      {/* Enlaces rápidos del coordinador */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <Link 
+          href="/dashboard/staff/alta-usuarios"
+          className="bg-gradient-to-br from-blue-900/30 to-blue-800/20 border border-blue-500/30 p-4 rounded-xl hover:border-blue-500 transition-all group"
+        >
+          <div className="flex items-center gap-3">
+            <User className="text-blue-400 group-hover:scale-110 transition-transform" size={24} />
+            <div>
+              <h3 className="font-bold text-white">Alta de Usuarios</h3>
+              <p className="text-xs text-slate-400">Registrar nuevos participantes</p>
+            </div>
+          </div>
+        </Link>
+
+        <Link 
+          href="/dashboard/staff/strikes"
+          className="bg-gradient-to-br from-purple-900/30 to-purple-800/20 border border-purple-500/30 p-4 rounded-xl hover:border-purple-500 transition-all group"
+        >
+          <div className="flex items-center gap-3">
+            <ShieldAlert className="text-purple-400 group-hover:scale-110 transition-transform" size={24} />
+            <div>
+              <h3 className="font-bold text-white">Gestión de Strikes</h3>
+              <p className="text-xs text-slate-400">Administrar vidas extra</p>
+            </div>
+          </div>
+        </Link>
+
+        <div className="bg-gradient-to-br from-slate-800/30 to-slate-900/20 border border-slate-700/30 p-4 rounded-xl">
+          <div className="flex items-center gap-3">
+            <ScrollText className="text-slate-500" size={24} />
+            <div>
+              <h3 className="font-bold text-white">Cartas Pendientes</h3>
+              <p className="text-xs text-slate-400">{listaVisible.filter(p => p.estadoCarta === 'PENDIENTE').length} por revisar</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Buscador */}
       <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 mb-6 flex items-center gap-3">
         <Search className="text-slate-500" size={20} />

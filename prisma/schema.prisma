@@ -244,6 +244,9 @@ model ProgramEnrollment {
   totalWeeks                                  Int           @default(17)
   missedCallsCount                            Int           @default(0)
   maxMissedAllowed                            Int           @default(3)
+  extraLifeUsed                               Boolean       @default(false) // Si ya usó su única vida extra
+  extraLifeGrantedBy                          String?       // 'ADMIN', 'DIRECTOR', 'COORDINADOR' o 'PURCHASE' - quien otorgó la vida extra
+  extraLifeGrantedAt                          DateTime?     // Cuándo se otorgó la vida extra
   status                                      String        @default("ACTIVE")
   createdAt                                   DateTime      @default(now())
   updatedAt                                   DateTime      @updatedAt
@@ -1485,6 +1488,8 @@ model Vision {
   organizationId    Int?               // Nueva: Organización a la que pertenece
   maxParticipantes  Int?               // Nueva: Límite de participantes
   licensesAllocated Int                @default(0) // Nueva: Licencias asignadas
+  startDate         DateTime?          // Fecha de inicio de la visión
+  endDate           DateTime?          // Fecha de fin de la visión
   isActive          Boolean            @default(true)
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt

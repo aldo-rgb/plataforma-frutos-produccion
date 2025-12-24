@@ -156,9 +156,16 @@ export default function AsignarMentorPage() {
       const data = await res.json();
 
       if (data.success) {
+        let successMessage = `Mentor asignado exitosamente a ${usuario.nombre}`;
+        
+        if (data.hadPreviousMentor && data.cancelledCalls > 0) {
+          successMessage += `. Se cancelaron ${data.cancelledCalls} llamada(s) y se notificó al usuario.`;
+        }
+        
         showToast({
-          message: `Mentor asignado exitosamente a ${usuario.nombre}`,
-          type: 'success'
+          message: successMessage,
+          type: 'success',
+          duration: data.hadPreviousMentor ? 6000 : 3000
         });
         
         // Redirigir de vuelta a la visión

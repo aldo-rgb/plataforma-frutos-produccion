@@ -1,0 +1,138 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import prisma from '@/lib/prisma';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+    }
+
+    // Obtener datos del mentor
+    const mentor = await prisma.usuario.findUnique({
+      where: { id: session.user.id }
+    });
+
+    if (!mentor || mentor.rol !== 'MENTOR') {
+      return NextResponse.json({ error: 'Usuario no es mentor' }, { status: 403 });
+    }
+
+    // Obtener todos los participantes con ProgramEnrollment activo de este mentor
+    const participantes = await prisma.usuario.findMany({
+      where: {
+        AND: [
+          {
+            OR: [
+              { assignedMentorId: mentor.id },
+              {
+                ProgramEnrollment_ProgramEnrollment_userIdToUsuario: {
+                  some: { 
+                    mentorId: mentor.id, 
+                    status: 'ACTIVE' 
+                  }
+                }
+              }
+            ]
+          },
+          { rol: 'PARTICIPANTE' },
+          { isActive: true }
+        ]
+      },
+      include: {
+        ProgramEnrollment_ProgramEnrollment_userIdToUsuario: {
+          where: {
+            mentorId: mentor.id,
+            status: 'ACTIVE'
+          },
+          take: 1
+        }
+      }
+    });
+
+    // Enriquecer con información de llamadas
+    const participantesEnriquecidos = await Promise.all(
+      participantes.map(async (participante) => {
+        const enrollment = participante.ProgramEnrollment_ProgramEnrollment_userIdToUsuario[0];
+
+        if (!enrollment) {
+          return null; // Saltar participantes sin enrollment activo
+        }
+
+        // Buscar llamada HOY (tipo DISCIPLINE, estado PENDING o CONFIRMED)
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        const manana = new Date(hoy);
+        manana.setDate(manana.getDate() + 1);
+
+        const llamadaHoy = await prisma.callBooking.findFirst({
+          where: {
+            programEnrollmentId: enrollment.id,
+            type: 'DISCIPLINE',
+            scheduledAt: {
+              gte: hoy,
+              lt: manana
+            }
+          },
+          orderBy: { scheduledAt: 'asc' }
+        });
+
+        // Buscar próxima llamada futura (si no tiene hoy)
+        const proximaLlamada = !llamadaHoy ? await prisma.callBooking.findFirst({
+          where: {
+            programEnrollmentId: enrollment.id,
+            type: 'DISCIPLINE',
+            scheduledAt: { gt: new Date() },
+            status: { in: ['PENDING', 'CONFIRMED'] }
+          },
+          orderBy: { scheduledAt: 'asc' }
+        }) : null;
+
+        return {
+          id: participante.id,
+          nombre: participante.nombre || 'Sin nombre',
+          email: participante.email,
+          profileImage: participante.profileImage,
+          enrollment: {
+            id: enrollment.id,
+            missedCallsCount: enrollment.missedCallsCount || 0,
+            maxMissedAllowed: enrollment.maxMissedAllowed || 3,
+            totalWeeks: enrollment.totalWeeks || 17
+          },
+          llamadaHoy: llamadaHoy ? {
+            id: llamadaHoy.id,
+            scheduledAt: llamadaHoy.scheduledAt.toISOString(),
+            weekNumber: llamadaHoy.weekNumber || 0,
+            attendanceStatus: llamadaHoy.attendanceStatus || 'PENDING',
+            status: llamadaHoy.status
+          } : null,
+          proximaLlamada: proximaLlamada ? {
+            id: proximaLlamada.id,
+            scheduledAt: proximaLlamada.scheduledAt.toISOString(),
+            weekNumber: proximaLlamada.weekNumber || 0,
+            attendanceStatus: proximaLlamada.attendanceStatus || 'PENDING',
+            status: proximaLlamada.status
+          } : null
+        };
+      })
+    );
+
+    // Filtrar nulls (participantes sin enrollment activo)
+    const participantesValidos = participantesEnriquecidos.filter(Boolean);
+
+    return NextResponse.json({
+      success: true,
+      participantes: participantesValidos
+    });
+
+  } catch (error) {
+    console.error('Error obteniendo participantes:', error);
+    return NextResponse.json({ 
+      success: false,
+      error: 'Error obteniendo participantes' 
+    }, { status: 500 });
+  }
+}

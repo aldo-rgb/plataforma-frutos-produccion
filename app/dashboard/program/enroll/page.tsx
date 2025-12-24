@@ -16,6 +16,32 @@ interface MentorAsignado {
   };
 }
 
+interface EnrollmentInfo {
+  hasEnrollment: boolean;
+  enrollment?: {
+    id: number;
+    cycleType: string;
+    startDate: string;
+    endDate: string;
+    status: string;
+  };
+  vision?: {
+    id: number;
+    nombre: string;
+    startDate: string;
+    endDate: string;
+  } | null;
+  stats?: {
+    totalWeeks: number;
+    remainingWeeks: number;
+    totalSessions: number;
+    completedSessions: number;
+    remainingSessions: number;
+    missedCalls: number;
+    maxMissedAllowed: number;
+  };
+}
+
 interface MentorDisponible {
   id: number;
   nombre: string;
@@ -68,6 +94,7 @@ export default function ProgramEnrollPage() {
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [enrollmentInfo, setEnrollmentInfo] = useState<EnrollmentInfo | null>(null);
 
   // Slots seleccionados
   const [slot1, setSlot1] = useState<Slot>({ dayOfWeek: -1, time: '' });
@@ -85,33 +112,161 @@ export default function ProgramEnrollPage() {
       setMostrarPagoLicencia(false);
     } else {
       // Flujo normal
-      cargarMentorAsignado();
+      cargarEnrollmentInfo();
     }
   }, []);
+
+  const cargarEnrollmentInfo = async () => {
+    try {
+      setIsLoading(true);
+      
+      console.log('🔍 Cargando información de enrollment...');
+      
+      // Primero, verificar si ya tiene un enrollment activo
+      const enrollResponse = await fetch('/api/program/enroll');
+      if (enrollResponse.ok) {
+        const enrollData = await enrollResponse.json();
+        console.log('📊 Enrollment data recibido:', enrollData);
+        setEnrollmentInfo(enrollData);
+        
+        // Caso 1: Tiene enrollment completo con sesiones agendadas
+        if (enrollData.hasEnrollment) {
+          console.log('✅ Usuario tiene enrollment activo con sesiones agendadas');
+          
+          // Si tiene enrollment y mentor, cargar la info del mentor
+          if (enrollData.mentor) {
+            console.log('👨‍🏫 Mentor encontrado en enrollment:', enrollData.mentor);
+            setMentorAsignado(enrollData.mentor);
+          } else {
+            console.log('⚠️ Enrollment activo pero sin mentor asignado');
+          }
+          
+          // Ya tiene programa activo, no necesita inscribirse
+          setIsLoading(false);
+          return;
+        }
+        
+        // Caso 2: Enrollment ACTIVE pero sin sesiones (mentor fue cambiado)
+        if (enrollData.needsReschedule && enrollData.mentor) {
+          console.log('🔄 Enrollment necesita reagendar - mentor fue actualizado');
+          console.log('👨‍🏫 Nuevo mentor asignado:', enrollData.mentor);
+          
+          // Asignar el nuevo mentor
+          setMentorAsignado(enrollData.mentor);
+          
+          // Cargar slots disponibles del nuevo mentor
+          const slotsResponse = await fetch(`/api/mentor/slots-disponibles?mentorId=${enrollData.mentor.id}`);
+          if (slotsResponse.ok) {
+            const slotsData = await slotsResponse.json();
+            setSlotsDisponibles(slotsData.slotsDisponibles || {});
+            
+            // Preseleccionar horarios si hay disponibles
+            const diasDisponibles = Object.keys(slotsData.slotsDisponibles).map(Number).sort();
+            if (diasDisponibles.length >= 2) {
+              const dia1 = diasDisponibles[0];
+              const dia2 = diasDisponibles[1];
+              const horarios1 = slotsData.slotsDisponibles[dia1];
+              const horarios2 = slotsData.slotsDisponibles[dia2];
+              
+              if (horarios1?.length > 0 && horarios2?.length > 0) {
+                setSlot1({ dayOfWeek: dia1, time: horarios1[0] });
+                setSlot2({ dayOfWeek: dia2, time: horarios2[0] });
+              }
+            }
+          }
+          
+          setIsLoading(false);
+          return;
+        }
+      }
+      
+      console.log('📝 No tiene enrollment, continuando con flujo de inscripción...');
+      // No tiene enrollment, continuar con el flujo normal
+      await cargarMentorAsignado();
+    } catch (error) {
+      console.error('❌ Error en cargarEnrollmentInfo:', error);
+      await cargarMentorAsignado();
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const cargarMentorAsignado = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/user/profile');
-      if (!response.ok) throw new Error('Error al cargar perfil');
       
-      const data = await response.json();
+      console.log('🔍 Iniciando cargarMentorAsignado...');
       
-      // Verificar que tenga mentor asignado (el API retorna data.user.assignedMentorId)
-      if (!data.user?.assignedMentorId) {
-        // No tiene mentor asignado, cargar lista de mentores disponibles con horarios de disciplina
+      // Primero intentar obtener el mentor desde el enrollment
+      const enrollmentResponse = await fetch('/api/program/enroll');
+      
+      if (enrollmentResponse.ok) {
+        const enrollmentData = await enrollmentResponse.json();
+        console.log('📊 Datos de enrollment:', {
+          hasEnrollment: enrollmentData.hasEnrollment,
+          hasMentor: !!enrollmentData.mentor,
+          mentorData: enrollmentData.mentor
+        });
+        
+        // Si tiene enrollment y mentor asignado en el enrollment
+        if (enrollmentData.hasEnrollment && enrollmentData.mentor) {
+          console.log('✅ Mentor encontrado en enrollment:', enrollmentData.mentor);
+          setMentorAsignado(enrollmentData.mentor);
+          
+          // Cargar slots disponibles del mentor
+          const slotsResponse = await fetch(`/api/mentor/slots-disponibles?mentorId=${enrollmentData.mentor.id}`);
+          if (slotsResponse.ok) {
+            const slotsData = await slotsResponse.json();
+            setSlotsDisponibles(slotsData.slotsDisponibles || {});
+            
+            // Preseleccionar horarios si hay disponibles
+            const diasDisponibles = Object.keys(slotsData.slotsDisponibles).map(Number).sort();
+            if (diasDisponibles.length >= 2) {
+              const dia1 = diasDisponibles[0];
+              const dia2 = diasDisponibles[1];
+              const horarios1 = slotsData.slotsDisponibles[dia1];
+              const horarios2 = slotsData.slotsDisponibles[dia2];
+              
+              if (horarios1?.length > 0 && horarios2?.length > 0) {
+                setSlot1({ dayOfWeek: dia1, time: horarios1[0] });
+                setSlot2({ dayOfWeek: dia2, time: horarios2[0] });
+              }
+            }
+          }
+          
+          setIsLoading(false);
+          return;
+        }
+      }
+      
+      // Si no tiene enrollment o mentor en enrollment, verificar assignedMentorId
+      console.log('⚠️ No se encontró mentor en enrollment, verificando assignedMentorId...');
+      const profileResponse = await fetch('/api/user/profile');
+      if (!profileResponse.ok) throw new Error('Error al cargar perfil');
+      
+      const profileData = await profileResponse.json();
+      console.log('👤 Datos de perfil:', {
+        hasUser: !!profileData.user,
+        assignedMentorId: profileData.user?.assignedMentorId
+      });
+      
+      // Verificar que tenga mentor asignado
+      if (!profileData.user?.assignedMentorId) {
+        console.log('❌ NO tiene assignedMentorId, mostrando pago de licencia');
+        // No tiene mentor asignado, cargar lista de mentores disponibles
         await cargarMentoresDisponibles();
         setMostrarPagoLicencia(true);
         setIsLoading(false);
         return;
       }
 
+      console.log('🔍 Buscando mentor con ID:', profileData.user.assignedMentorId);
       // Obtener datos del mentor
       const mentorResponse = await fetch(`/api/usuarios`);
       if (!mentorResponse.ok) throw new Error('Error al cargar mentor');
       
       const mentorData = await mentorResponse.json();
-      const mentor = mentorData.usuarios.find((u: any) => u.id === data.user.assignedMentorId);
+      const mentor = mentorData.usuarios.find((u: any) => u.id === profileData.user.assignedMentorId);
       
       if (!mentor) {
         setError('No se pudo cargar la información de tu mentor.');
@@ -122,7 +277,7 @@ export default function ProgramEnrollPage() {
       setMentorAsignado(mentor);
 
       // Cargar slots disponibles (excluye los ya reservados)
-      const slotsResponse = await fetch(`/api/mentor/slots-disponibles?mentorId=${data.user.assignedMentorId}`);
+      const slotsResponse = await fetch(`/api/mentor/slots-disponibles?mentorId=${profileData.user.assignedMentorId}`);
       if (!slotsResponse.ok) throw new Error('Error al cargar slots disponibles');
       
       const slotsData = await slotsResponse.json();
@@ -287,6 +442,9 @@ export default function ProgramEnrollPage() {
   }
 
   if (success) {
+    const totalWeeks = enrollmentInfo?.stats?.totalWeeks || 17;
+    const totalSessions = enrollmentInfo?.stats?.totalSessions || 34;
+    
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
         <div className="bg-slate-900 border-2 border-green-500/30 rounded-2xl p-8 max-w-md text-center animate-in fade-in zoom-in-95 duration-300">
@@ -295,15 +453,15 @@ export default function ProgramEnrollPage() {
           </div>
           <h2 className="text-3xl font-bold text-white mb-3">¡Inscripción Exitosa!</h2>
           <p className="text-slate-300 mb-2">
-            Te has inscrito al Programa Intensivo de 17 Semanas.
+            Te has inscrito al {enrollmentInfo?.vision ? enrollmentInfo.vision.nombre : `Programa Intensivo de ${totalWeeks} Semanas`}.
           </p>
           <p className="text-slate-400 text-sm mb-4">
-            Se han generado 34 sesiones programadas (2 por semana).
+            Se han generado {totalSessions} sesiones programadas (2 por semana).
           </p>
           <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 mb-4">
             <div className="flex items-center justify-center gap-2 text-green-400 font-bold">
               <PhoneOff className="text-green-400" size={20} />
-              <span>3 Oportunidades</span>
+              <span>{enrollmentInfo?.stats?.maxMissedAllowed || 3} Oportunidades</span>
             </div>
             <p className="text-xs text-slate-500 mt-2">
               Sistema de seguimiento activado
@@ -326,11 +484,24 @@ export default function ProgramEnrollPage() {
             <Calendar className="text-purple-400" size={32} />
           </div>
           <h1 className="text-4xl font-bold text-white mb-2">
-            Programa Intensivo 17 Semanas
+            {enrollmentInfo?.vision ? 
+              enrollmentInfo.vision.nombre 
+              : 'Programa Intensivo 17 Semanas'}
           </h1>
           <p className="text-slate-400">
-            Inscríbete al programa de disciplina con llamadas semanales programadas
+            {enrollmentInfo?.vision ? 
+              `Inscríbete al programa de ${enrollmentInfo.stats?.totalWeeks || 17} semanas con llamadas semanales programadas` 
+              : 'Inscríbete al programa de disciplina con llamadas semanales programadas'}
           </p>
+          {enrollmentInfo?.vision && enrollmentInfo.vision.endDate && (
+            <p className="text-purple-400 text-sm mt-2">
+              📅 Finaliza: {new Date(enrollmentInfo.vision.endDate).toLocaleDateString('es-MX', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </p>
+          )}
         </div>
 
         {/* Opciones de Pago - Solo si no tiene mentor asignado */}
@@ -373,7 +544,7 @@ export default function ProgramEnrollPage() {
                   </li>
                   <li className="flex items-start gap-2 text-slate-300 text-sm">
                     <CheckCircle2 className="text-green-400 mt-0.5 flex-shrink-0" size={16} />
-                    34 sesiones programadas
+                    {enrollmentInfo?.stats ? `${enrollmentInfo.stats.totalWeeks * 2} sesiones programadas` : '34 sesiones programadas'}
                   </li>
                   <li className="flex items-start gap-2 text-slate-300 text-sm">
                     <CheckCircle2 className="text-green-400 mt-0.5 flex-shrink-0" size={16} />
@@ -464,7 +635,7 @@ export default function ProgramEnrollPage() {
                 >
                   <div className="flex flex-col items-center text-center">
                     <img
-                      src={mentor.profileImage || '/default-avatar.png'}
+                      src={mentor.profileImage || '/default-avatar.svg'}
                       alt={mentor.nombre}
                       className={`
                         w-20 h-20 rounded-full object-cover mb-3 border-2
@@ -489,10 +660,12 @@ export default function ProgramEnrollPage() {
                       </div>
                     )}
 
-                    <div className="mt-3 flex items-center gap-1 text-purple-400 text-sm">
-                      <Calendar size={14} />
-                      <span>{mentor.diasDisponibles} días disponibles</span>
-                    </div>
+                    {mentor.tieneDisciplina && (
+                      <div className="mt-3 bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                        <Calendar size={14} />
+                        <span>Horarios de disciplina</span>
+                      </div>
+                    )}
 
                     {mentorSeleccionado === mentor.id && (
                       <div className="mt-3 bg-purple-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
@@ -523,16 +696,37 @@ export default function ProgramEnrollPage() {
             <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
               <Calendar className="text-purple-400" size={24} />
             </div>
-            <h3 className="text-white font-bold mb-1">34 Sesiones</h3>
-            <p className="text-slate-500 text-sm">17 semanas · 2 llamadas/semana</p>
+            <h3 className="text-white font-bold mb-1">
+              {enrollmentInfo?.stats ? 
+                `${enrollmentInfo.stats.remainingSessions || enrollmentInfo.stats.totalSessions} Sesiones ${enrollmentInfo.stats.remainingSessions ? 'Restantes' : ''}` 
+                : `${(enrollmentInfo?.stats?.totalWeeks || 17) * 2} Sesiones`}
+            </h3>
+            <p className="text-slate-500 text-sm">
+              {enrollmentInfo?.stats ? 
+                `${enrollmentInfo.stats.remainingWeeks || enrollmentInfo.stats.totalWeeks} de ${enrollmentInfo.stats.totalWeeks} semanas · 2 llamadas/semana` 
+                : `${enrollmentInfo?.stats?.totalWeeks || 17} semanas · 2 llamadas/semana`}
+            </p>
+            {enrollmentInfo?.vision && (
+              <p className="text-purple-400 text-xs mt-2 font-semibold">
+                📍 Visión: {enrollmentInfo.vision.nombre}
+              </p>
+            )}
           </div>
 
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 text-center">
             <div className="w-12 h-12 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
               <PhoneOff className="text-orange-400" size={24} />
             </div>
-            <h3 className="text-white font-bold mb-1">3 Oportunidades</h3>
-            <p className="text-slate-500 text-sm">Llamadas que puedes perder</p>
+            <h3 className="text-white font-bold mb-1">
+              {enrollmentInfo?.stats ? 
+                `${(enrollmentInfo.stats.maxMissedAllowed || 3) - (enrollmentInfo.stats.missedCalls || 0)} Oportunidades` 
+                : '3 Oportunidades'}
+            </h3>
+            <p className="text-slate-500 text-sm">
+              {enrollmentInfo?.stats ? 
+                `${enrollmentInfo.stats.missedCalls || 0} llamadas perdidas` 
+                : 'Llamadas que puedes perder'}
+            </p>
           </div>
 
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 text-center">
@@ -554,7 +748,7 @@ export default function ProgramEnrollPage() {
           {mentorAsignado ? (
             <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 flex items-center gap-4">
               <img
-                src={mentorAsignado.profileImage || mentorAsignado.imagen || '/default-avatar.png'}
+                src={mentorAsignado.profileImage || mentorAsignado.imagen || '/default-avatar.svg'}
                 alt={mentorAsignado.nombre}
                 className="w-16 h-16 rounded-full object-cover border-2 border-purple-500"
               />
@@ -616,7 +810,7 @@ export default function ProgramEnrollPage() {
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-6">
           <h2 className="text-xl font-bold text-white mb-4">Selecciona tus Horarios Semanales</h2>
           <p className="text-slate-400 text-sm mb-6">
-            Elige 2 días diferentes con horarios fijos para tus 34 sesiones programadas
+            Elige 2 días diferentes con horarios fijos para tus {enrollmentInfo?.stats ? `${enrollmentInfo.stats.totalWeeks * 2}` : '34'} sesiones programadas
           </p>
 
           {/* Selector Visual de Horarios */}
@@ -809,12 +1003,28 @@ export default function ProgramEnrollPage() {
             <div className="border-t border-slate-700 pt-3 mt-3">
               <div className="flex justify-between">
                 <span className="text-slate-400">Total de sesiones:</span>
-                <span className="text-white font-bold">34 sesiones</span>
+                <span className="text-white font-bold">
+                  {enrollmentInfo?.stats ? 
+                    `${enrollmentInfo.stats.totalSessions} sesiones` 
+                    : `${(enrollmentInfo?.stats?.totalWeeks || 17) * 2} sesiones`}
+                </span>
               </div>
               <div className="flex justify-between mt-2">
                 <span className="text-slate-400">Duración del programa:</span>
-                <span className="text-white font-bold">17 semanas</span>
+                <span className="text-white font-bold">
+                  {enrollmentInfo?.stats ? 
+                    `${enrollmentInfo.stats.totalWeeks} semanas` 
+                    : `${enrollmentInfo?.stats?.totalWeeks || 17} semanas`}
+                </span>
               </div>
+              {enrollmentInfo?.vision && (
+                <div className="flex justify-between mt-2">
+                  <span className="text-slate-400">Visión:</span>
+                  <span className="text-purple-400 font-bold">
+                    {enrollmentInfo.vision.nombre}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -855,7 +1065,7 @@ export default function ProgramEnrollPage() {
         </button>
 
         <p className="text-center text-slate-500 text-xs mt-4">
-          Al inscribirte, aceptas comprometerte a asistir a las 34 sesiones programadas
+          Al inscribirte, aceptas comprometerte a asistir a las {enrollmentInfo?.stats ? `${enrollmentInfo.stats.totalWeeks * 2}` : '34'} sesiones programadas
         </p>
       </div>
     </div>

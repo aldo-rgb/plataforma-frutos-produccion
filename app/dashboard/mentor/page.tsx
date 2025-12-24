@@ -4,7 +4,7 @@ import { Calendar, CheckCircle, Clock, AlertTriangle, FileText, Phone } from 'lu
 import ProfileAlert from '@/components/dashboard/mentor/ProfileAlert';
 import AgendaDelDia from '@/components/dashboard/mentor/AgendaDelDia';
 import NotificacionSesionesPendientes from '@/components/dashboard/mentor/NotificacionSesionesPendientes';
-import WidgetDisciplina from '@/components/dashboard/mentor/WidgetDisciplina';
+import WidgetDisciplinaV2 from '@/components/dashboard/mentor/WidgetDisciplinaV2';
 import CartaReviewPanel from '@/components/dashboard/mentor/CartaReviewPanel';
 import RevisionEvidenciasWidget from '@/components/dashboard/RevisionEvidenciasWidget';
 import AlertasProcrastinacion from '@/components/dashboard/mentor/AlertasProcrastinacion';
@@ -179,8 +179,8 @@ export default async function MentorDashboard() {
         
         {/* COLUMNA IZQUIERDA (2/3) */}
         <div className="lg:col-span-2 space-y-6">
-          {/* WIDGET DE DISCIPLINA - LLAMADAS 5AM */}
-          <WidgetDisciplina />
+          {/* WIDGET DE DISCIPLINA V2 - LLAMADAS 5AM CON SISTEMA DE VIDAS */}
+          <WidgetDisciplinaV2 />
           
           {/* NUEVO: WIDGET DE REVISIÓN DE EVIDENCIAS DE TAREAS/EVENTOS */}
           <RevisionEvidenciasWidget />

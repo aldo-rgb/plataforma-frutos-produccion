@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { Zap, Trophy, Target, ArrowRight } from "lucide-react";
 import ProgramStatusWidget from "@/components/dashboard/ProgramStatusWidget";
 import AlertaReagendamiento from "@/components/dashboard/AlertaReagendamiento";
+import NotificationBanner from "@/components/dashboard/NotificationBanner";
 import CartaWizardWidget from "@/components/dashboard/CartaWizardWidget";
 import ZonaEjecucionDiaria from "@/components/dashboard/ZonaEjecucionDiaria";
 import GlobalProgressHero from "@/components/dashboard/GlobalProgressHero";
@@ -75,6 +76,9 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* NOTIFICACIONES IMPORTANTES (Cambio de Mentor, etc.) */}
+      <NotificationBanner />
+
       {/* ALERTA DE RE-AGENDAMIENTO */}
       <AlertaReagendamiento />
 

@@ -125,7 +125,11 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      vision,
+      vision: {
+        ...vision,
+        startDate: vision.startDate ? vision.startDate.toISOString() : null,
+        endDate: vision.endDate ? vision.endDate.toISOString() : null,
+      },
       participantes,
       gameChangers,
     });

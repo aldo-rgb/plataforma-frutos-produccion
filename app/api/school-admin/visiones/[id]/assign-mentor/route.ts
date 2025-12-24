@@ -72,7 +72,8 @@ export async function POST(
         id: true,
         nombre: true,
         licenseCode: true,
-        rol: true
+        rol: true,
+        assignedMentorId: true
       }
     });
 
@@ -88,6 +89,64 @@ export async function POST(
         { error: 'El usuario debe tener una licencia asignada antes de poder asignar un mentor' },
         { status: 400 }
       );
+    }
+
+    // Verificar si el usuario ya tenía un mentor asignado (cambio de mentor)
+    const hadPreviousMentor = usuario.assignedMentorId !== null;
+    let cancelledCalls = 0;
+    let remainingWeeks = 0;
+
+    // Si había un mentor anterior, cancelar llamadas programadas y calcular semanas restantes
+    if (hadPreviousMentor) {
+      const now = new Date();
+      
+      // Cancelar llamadas de disciplina programadas
+      const cancelResult = await prisma.callBooking.updateMany({
+        where: {
+          studentId: userId,
+          type: 'DISCIPLINE',
+          status: 'PENDING',
+          scheduledAt: {
+            gte: now
+          }
+        },
+        data: {
+          status: 'CANCELLED'
+        }
+      });
+      cancelledCalls = cancelResult.count;
+
+      // Calcular semanas restantes del ciclo
+      const enrollment = await prisma.programEnrollment.findFirst({
+        where: {
+          userId: userId,
+          status: 'ACTIVE'
+        },
+        select: {
+          cycleEndDate: true,
+          cycleType: true
+        }
+      });
+
+      if (enrollment?.cycleEndDate) {
+        const cycleEnd = new Date(enrollment.cycleEndDate);
+        const diffTime = cycleEnd.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        remainingWeeks = Math.ceil(diffDays / 7);
+      }
+
+      // Crear notificación si hay llamadas canceladas
+      if (cancelledCalls > 0 && remainingWeeks > 0) {
+        await prisma.notification.create({
+          data: {
+            userId: userId,
+            type: 'MENTOR_ASSIGNMENT',
+            title: 'Cambio de Mentor - Reagenda tus Llamadas',
+            message: `Tu mentor ha cambiado. Se han cancelado ${cancelledCalls} llamada(s) de disciplina programada(s). Tienes ${remainingWeeks} semana(s) restante(s) en tu ciclo. Por favor, agenda nuevamente tus llamadas de disciplina con tu nuevo mentor lo antes posible.`,
+            isRead: false
+          }
+        });
+      }
     }
 
     // Actualizar el usuario con el mentor asignado
@@ -123,8 +182,13 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: 'Mentor asignado exitosamente',
-      user: updatedUser
+      message: hadPreviousMentor 
+        ? `Mentor cambiado exitosamente. ${cancelledCalls > 0 ? `Se cancelaron ${cancelledCalls} llamada(s) y se notificó al usuario.` : ''}`
+        : 'Mentor asignado exitosamente',
+      user: updatedUser,
+      cancelledCalls,
+      remainingWeeks,
+      hadPreviousMentor
     });
 
   } catch (error) {
@@ -155,6 +219,71 @@ export async function DELETE(
       );
     }
 
+    // Obtener información del usuario y su programa
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        assignedMentorId: true
+      }
+    });
+
+    if (!usuario) {
+      return NextResponse.json(
+        { error: 'Usuario no encontrado' },
+        { status: 404 }
+      );
+    }
+
+    // Cancelar todas las llamadas de disciplina programadas futuras
+    const now = new Date();
+    const cancelledCalls = await prisma.callBooking.updateMany({
+      where: {
+        studentId: userId,
+        type: 'DISCIPLINE',
+        status: 'PENDING',
+        scheduledAt: {
+          gte: now
+        }
+      },
+      data: {
+        status: 'CANCELLED'
+      }
+    });
+
+    // Calcular semanas restantes del ciclo
+    let remainingWeeks = 0;
+    const enrollment = await prisma.programEnrollment.findFirst({
+      where: {
+        userId: userId,
+        status: 'ACTIVE'
+      },
+      select: {
+        cycleEndDate: true,
+        cycleType: true
+      }
+    });
+    
+    if (enrollment?.cycleEndDate) {
+      const cycleEnd = new Date(enrollment.cycleEndDate);
+      const diffTime = cycleEnd.getTime() - now.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      remainingWeeks = Math.ceil(diffDays / 7);
+    }
+
+    // Crear notificación para el usuario
+    if (cancelledCalls.count > 0 && remainingWeeks > 0) {
+      await prisma.notification.create({
+        data: {
+          userId: userId,
+          type: 'MENTOR_ASSIGNMENT',
+          title: 'Cambio de Mentor - Reagenda tus Llamadas',
+          message: `Tu mentor ha sido removido. Se han cancelado ${cancelledCalls.count} llamada(s) de disciplina programada(s). Tienes ${remainingWeeks} semana(s) restante(s) en tu ciclo. Por favor, agenda nuevamente tus llamadas de disciplina lo antes posible para continuar con tu programa.`,
+          isRead: false
+        }
+      });
+    }
+
     // Remover mentor asignado
     await prisma.usuario.update({
       where: { id: userId },
@@ -178,7 +307,9 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: 'Mentor removido exitosamente'
+      message: 'Mentor removido exitosamente',
+      cancelledCalls: cancelledCalls.count,
+      remainingWeeks
     });
 
   } catch (error) {

@@ -26,12 +26,28 @@ export async function GET() {
       return NextResponse.json({ error: 'No tienes permisos de mentor' }, { status: 403 });
     }
 
-    // Obtener participantes asignados con su información completa
+    // Obtener participantes asignados directamente O a través de ProgramEnrollment
     const participantes = await prisma.usuario.findMany({
       where: {
-        assignedMentorId: mentor.id,
-        rol: 'PARTICIPANTE',
-        isActive: true
+        AND: [
+          {
+            OR: [
+              // Asignación directa
+              { assignedMentorId: mentor.id },
+              // O tiene enrollment activo con este mentor
+              {
+                ProgramEnrollment_ProgramEnrollment_userIdToUsuario: {
+                  some: {
+                    mentorId: mentor.id,
+                    status: 'ACTIVE'
+                  }
+                }
+              }
+            ]
+          },
+          { rol: 'PARTICIPANTE' },
+          { isActive: true }
+        ]
       },
       include: {
         CartaFrutos: {
