@@ -71,6 +71,9 @@ export default function VisionDetailPage() {
   const [selectedParticipante, setSelectedParticipante] = useState<Participante | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [showEmailInput, setShowEmailInput] = useState(false);
+  const [emailInput, setEmailInput] = useState('');
+  const [emailProcessing, setEmailProcessing] = useState(false);
 
   useEffect(() => {
     if (session?.user?.rol === 'SCHOOL_ADMIN') {
@@ -123,7 +126,6 @@ export default function VisionDetailPage() {
 
   const handleAddParticipante = async () => {
     if (!selectedUser) return;
-
     try {
       setProcessing(true);
       const res = await fetch(`/api/school-admin/visiones/${visionId}/add-participante`, {
@@ -131,9 +133,7 @@ export default function VisionDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ participanteId: selectedUser.id }),
       });
-
       const data = await res.json();
-
       if (data.success) {
         setShowAddModal(false);
         setSelectedUser(null);
@@ -147,6 +147,51 @@ export default function VisionDetailPage() {
       alert('Error al agregar participante');
     } finally {
       setProcessing(false);
+    }
+  };
+
+  // Alta masiva por correo
+  const handleAddEmails = async () => {
+    if (!emailInput.trim()) return;
+    setEmailProcessing(true);
+    try {
+      const res = await fetch(`/api/school-admin/visiones/${visionId}/add-emails`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emails: emailInput }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowAddModal(false);
+        setShowEmailInput(false);
+        setEmailInput('');
+        fetchVisionDetails();
+        fetchAvailableUsers();
+        
+        // Mensaje de éxito detallado
+        const createdCount = data.created?.length || 0;
+        const existingCount = data.existing?.length || 0;
+        const addedCount = data.added?.length || 0;
+        
+        let message = '✅ Operación completada\n\n';
+        if (createdCount > 0) {
+          message += `🆕 Cuentas nuevas creadas: ${createdCount}\n`;
+          message += `   (Con contraseña temporal: Frutos2025!)\n`;
+          message += `   Los usuarios deberán cambiarla al primer login\n\n`;
+        }
+        if (existingCount > 0) {
+          message += `👤 Usuarios ya existentes: ${existingCount}\n\n`;
+        }
+        message += `✨ Total agregados a la visión: ${addedCount}`;
+        
+        alert(message);
+      } else {
+        alert(data.error || 'Error al agregar participantes');
+      }
+    } catch (error) {
+      alert('Error al agregar participantes');
+    } finally {
+      setEmailProcessing(false);
     }
   };
 
@@ -453,68 +498,116 @@ export default function VisionDetailPage() {
               Agregar Participante
             </h2>
 
-            <div className="mb-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                  type="text"
-                  placeholder="Buscar por nombre o email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-purple-500"
-                />
-              </div>
+            <div className="mb-4 flex flex-col md:flex-row gap-2">
+              <button
+                className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-colors ${!showEmailInput ? 'bg-purple-700 text-white' : 'bg-slate-800 text-slate-300 border border-slate-700'}`}
+                onClick={() => setShowEmailInput(false)}
+              >
+                Buscar existente
+              </button>
+              <button
+                className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-colors ${showEmailInput ? 'bg-purple-700 text-white' : 'bg-slate-800 text-slate-300 border border-slate-700'}`}
+                onClick={() => setShowEmailInput(true)}
+              >
+                Ingresar correos
+              </button>
             </div>
 
-            <div className="space-y-2 mb-6 max-h-96 overflow-y-auto">
-              {filteredUsers.length === 0 ? (
-                <p className="text-slate-400 text-center py-8">
-                  No hay usuarios disponibles
-                </p>
-              ) : (
-                filteredUsers.map((user) => (
+            {!showEmailInput ? (
+              <>
+                <div className="mb-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+                    <input
+                      type="text"
+                      placeholder="Buscar por nombre o email..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2 mb-6 max-h-96 overflow-y-auto">
+                  {filteredUsers.length === 0 ? (
+                    <p className="text-slate-400 text-center py-8">
+                      No hay usuarios disponibles
+                    </p>
+                  ) : (
+                    filteredUsers.map((user) => (
+                      <button
+                        key={user.id}
+                        onClick={() => setSelectedUser(user)}
+                        className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
+                          selectedUser?.id === user.id
+                            ? 'border-purple-500 bg-purple-500/10'
+                            : 'border-slate-700 bg-slate-800 hover:border-slate-600'
+                        }`}
+                      >
+                        <p className="font-semibold text-white">{user.nombre}</p>
+                        <p className="text-sm text-slate-400">{user.email}</p>
+                        <span className={`inline-block mt-2 px-2 py-1 rounded text-xs ${
+                          user.tier === 'PREMIUM'
+                            ? 'bg-purple-900/20 text-purple-400'
+                            : 'bg-cyan-900/20 text-cyan-400'
+                        }`}>
+                          {user.tier || 'FREE'}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
                   <button
-                    key={user.id}
-                    onClick={() => setSelectedUser(user)}
-                    className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
-                      selectedUser?.id === user.id
-                        ? 'border-purple-500 bg-purple-500/10'
-                        : 'border-slate-700 bg-slate-800 hover:border-slate-600'
-                    }`}
+                    onClick={() => {
+                      setShowAddModal(false);
+                      setSelectedUser(null);
+                      setSearchTerm('');
+                    }}
+                    className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-colors"
                   >
-                    <p className="font-semibold text-white">{user.nombre}</p>
-                    <p className="text-sm text-slate-400">{user.email}</p>
-                    <span className={`inline-block mt-2 px-2 py-1 rounded text-xs ${
-                      user.tier === 'PREMIUM'
-                        ? 'bg-purple-900/20 text-purple-400'
-                        : 'bg-cyan-900/20 text-cyan-400'
-                    }`}>
-                      {user.tier || 'FREE'}
-                    </span>
+                    Cancelar
                   </button>
-                ))
-              )}
-            </div>
-
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  setSelectedUser(null);
-                  setSearchTerm('');
-                }}
-                className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleAddParticipante}
-                disabled={!selectedUser || processing}
-                className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-colors"
-              >
-                {processing ? 'Agregando...' : 'Agregar Participante'}
-              </button>
-            </div>
+                  <button
+                    onClick={handleAddParticipante}
+                    disabled={!selectedUser || processing}
+                    className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-colors"
+                  >
+                    {processing ? 'Agregando...' : 'Agregar Participante'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-4">
+                  <textarea
+                    className="w-full min-h-[120px] bg-slate-800 border border-slate-700 rounded-lg text-white p-3 placeholder-slate-400 focus:outline-none focus:border-purple-500"
+                    placeholder="Ingresa uno o varios correos, separados por coma o salto de línea"
+                    value={emailInput}
+                    onChange={e => setEmailInput(e.target.value)}
+                  />
+                  <p className="text-xs text-slate-400 mt-2">Se crearán cuentas nuevas para los correos que no existan. Contraseña temporal: <span className="font-mono">Frutos2025!</span></p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      setShowAddModal(false);
+                      setShowEmailInput(false);
+                      setEmailInput('');
+                    }}
+                    className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleAddEmails}
+                    disabled={emailProcessing || !emailInput.trim()}
+                    className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-colors"
+                  >
+                    {emailProcessing ? 'Agregando...' : 'Agregar Participantes'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

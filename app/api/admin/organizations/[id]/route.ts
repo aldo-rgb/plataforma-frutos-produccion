@@ -162,7 +162,8 @@ export async function PATCH(
             tier: 'PREMIUM',
             isActive: true,
             subscriptionStatus: 'ACTIVE',
-            organizationId: organizationId
+            organizationId: organizationId,
+            requirePasswordChange: true // Forzar cambio de contraseña en primer login
           }
         });
 

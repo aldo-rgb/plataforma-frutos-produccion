@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, Loader2, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -9,6 +9,7 @@ import Link from 'next/link';
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
   
   // Estados
   const [data, setData] = useState({ email: '', password: '' });
@@ -22,6 +23,13 @@ function LoginForm() {
       setSuccessMessage('¡Cuenta creada con éxito! Por favor, inicia sesión para continuar.');
     }
   }, [searchParams]);
+
+  // EFECTO: Redirigir si requiere cambio de contraseña
+  useEffect(() => {
+    if (session?.user?.requirePasswordChange) {
+      router.push('/cambiar-password');
+    }
+  }, [session, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +48,7 @@ function LoginForm() {
         setError('Credenciales inválidas. Verifica tu correo y contraseña.');
         setLoading(false);
       } else {
-        router.push('/dashboard');
+        // La sesión se actualizará y el efecto arriba manejará la redirección
         router.refresh();
       }
     } catch (error) {

@@ -715,6 +715,7 @@ model Usuario {
   rol                                                              Rol                      @default(PARTICIPANTE)
   puntosCuanticos                                                  Int                      @default(0)
   isActive                                                         Boolean                  @default(false)
+  requirePasswordChange                                            Boolean                  @default(false) // Forzar cambio de contraseña en primer login
   suscripcion                                                      EstadoSuscripcion        @default(INACTIVO)
   planActual                                                       String?
   fechaFinSuscripcion                                              DateTime?

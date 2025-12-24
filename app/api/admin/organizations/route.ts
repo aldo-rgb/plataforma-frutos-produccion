@@ -121,7 +121,8 @@ export async function POST(req: NextRequest) {
           rol: 'COORDINADOR',
           tier: 'PREMIUM',
           isActive: true,
-          subscriptionStatus: 'ACTIVE'
+          subscriptionStatus: 'ACTIVE',
+          requirePasswordChange: true // Forzar cambio de contraseña en primer login
         }
       });
       coordinatorId = newCoordinator.id;
@@ -172,7 +173,8 @@ export async function POST(req: NextRequest) {
           rol: 'SCHOOL_ADMIN',
           tier: 'PREMIUM',
           isActive: true,
-          subscriptionStatus: 'ACTIVE'
+          subscriptionStatus: 'ACTIVE',
+          requirePasswordChange: true // Forzar cambio de contraseña en primer login
         }
       });
       schoolAdminId = newSchoolAdmin.id;
