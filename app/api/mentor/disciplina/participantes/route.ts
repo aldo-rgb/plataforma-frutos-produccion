@@ -65,8 +65,15 @@ export async function GET(request: NextRequest) {
         }
 
         // Buscar llamada HOY (tipo DISCIPLINE, estado PENDING, que no esté marcada como ABSENT)
-        const hoy = new Date();
+        // Ajustar a zona horaria de México (UTC-6)
+        const ahora = new Date();
+        const offsetMexico = -6 * 60; // -6 horas en minutos
+        const offsetActual = ahora.getTimezoneOffset(); // minutos de diferencia con UTC
+        const diffOffset = offsetMexico - offsetActual;
+        
+        const hoy = new Date(ahora.getTime() + diffOffset * 60000);
         hoy.setHours(0, 0, 0, 0);
+        
         const manana = new Date(hoy);
         manana.setDate(manana.getDate() + 1);
 
@@ -83,17 +90,9 @@ export async function GET(request: NextRequest) {
           orderBy: { scheduledAt: 'asc' }
         });
 
-        // Buscar próxima llamada futura (si no tiene hoy o la de hoy ya fue procesada)
-        const proximaLlamada = !llamadaHoy ? await prisma.callBooking.findFirst({
-          where: {
-            programEnrollmentId: enrollment.id,
-            type: 'DISCIPLINE',
-            scheduledAt: { gt: new Date() },
-            status: { in: ['PENDING', 'CONFIRMED'] },
-            attendanceStatus: 'PENDING' // Solo llamadas sin procesar
-          },
-          orderBy: { scheduledAt: 'asc' }
-        }) : null;
+        // NO buscar próximas llamadas - solo mostrar la del día actual
+        // Si ya se procesó la de hoy, el widget no mostrará nada hasta mañana
+        const proximaLlamada = null;
 
         return {
           id: participante.id,

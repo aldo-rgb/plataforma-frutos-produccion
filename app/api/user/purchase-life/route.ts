@@ -41,10 +41,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Enrollment no encontrado o no pertenece al usuario' }, { status: 404 });
     }
 
+    // IMPORTANTE: Solo se puede comprar vida extra si el usuario YA ESTÁ SUSPENDIDO
+    if (enrollment.status !== 'SUSPENDED') {
+      return NextResponse.json({ 
+        error: 'Solo puedes comprar una vida extra cuando tu sistema esté suspendido (3 strikes alcanzados)',
+        currentStrikes: enrollment.missedCallsCount,
+        maxStrikes: enrollment.maxMissedAllowed
+      }, { status: 400 });
+    }
+
     // Verificar si ya usó su vida extra
     if (enrollment.extraLifeUsed) {
       return NextResponse.json({ 
-        error: 'Ya utilizaste tu única vida extra disponible',
+        error: 'Ya utilizaste tu única vida extra disponible. Tu sistema permanecerá suspendido hasta el fin del ciclo.',
         usedBy: enrollment.extraLifeGrantedBy,
         usedAt: enrollment.extraLifeGrantedAt
       }, { status: 400 });
@@ -61,9 +70,6 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Verificar si el usuario está suspendido
-    const estaSuspendido = enrollment.status === 'SUSPENDED';
-
     // Deducir puntos y resetear strikes
     const [usuarioActualizado, enrollmentActualizado] = await prisma.$transaction([
       prisma.usuario.update({
@@ -78,7 +84,7 @@ export async function POST(request: NextRequest) {
         where: { id: enrollmentId },
         data: {
           missedCallsCount: 0,
-          status: estaSuspendido ? 'ACTIVE' : enrollment.status,
+          status: 'ACTIVE', // Reactivar siempre porque solo se puede comprar cuando está suspendido
           extraLifeUsed: true,
           extraLifeGrantedBy: 'PURCHASE',
           extraLifeGrantedAt: new Date()
@@ -86,29 +92,25 @@ export async function POST(request: NextRequest) {
       })
     ]);
 
-    // Si estaba suspendido, reactivar sesiones futuras
-    if (estaSuspendido) {
-      await prisma.callBooking.updateMany({
-        where: {
-          programEnrollmentId: enrollmentId,
-          scheduledAt: { gt: new Date() },
-          status: 'CANCELLED'
-        },
-        data: {
-          status: 'PENDING'
-        }
-      });
-    }
+    // Reactivar todas las sesiones futuras canceladas
+    await prisma.callBooking.updateMany({
+      where: {
+        programEnrollmentId: enrollmentId,
+        scheduledAt: { gt: new Date() },
+        status: 'CANCELLED'
+      },
+      data: {
+        status: 'PENDING'
+      }
+    });
 
     // Registrar la transacción
     console.log(`[COMPRA VIDA] ${usuario.nombre || usuario.email} compró una vida extra con ${COSTO_VIDA_EXTRA} puntos cuánticos (Enrollment ${enrollmentId})`);
 
     return NextResponse.json({
       success: true,
-      message: estaSuspendido 
-        ? '¡Vida extra comprada! Has sido reactivado y tus sesiones futuras han sido restauradas.' 
-        : '¡Vida extra comprada! Tus strikes han sido reseteados a 0.',
-      wasReactivated: estaSuspendido,
+      message: '¡Vida extra comprada! Has sido reactivado y tus sesiones futuras han sido restauradas.',
+      wasReactivated: true,
       previousStrikes: enrollment.missedCallsCount,
       currentStrikes: 0,
       pointsSpent: COSTO_VIDA_EXTRA,

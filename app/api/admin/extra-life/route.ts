@@ -50,69 +50,59 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Enrollment no encontrado' }, { status: 404 });
     }
 
+    // IMPORTANTE: Solo se puede otorgar vida extra si el usuario YA ESTÁ SUSPENDIDO
+    if (enrollment.status !== 'SUSPENDED') {
+      return NextResponse.json({ 
+        error: 'Solo puedes otorgar una vida extra cuando el usuario esté suspendido (3 strikes alcanzados)',
+        currentStrikes: enrollment.missedCallsCount,
+        maxStrikes: enrollment.maxMissedAllowed,
+        currentStatus: enrollment.status
+      }, { status: 400 });
+    }
+
     // Verificar si ya usó su vida extra
     if (enrollment.extraLifeUsed) {
       return NextResponse.json({ 
-        error: 'El usuario ya utilizó su única vida extra disponible',
+        error: 'El usuario ya utilizó su única vida extra disponible. Permanecerá suspendido hasta el fin del ciclo.',
         usedBy: enrollment.extraLifeGrantedBy,
         usedAt: enrollment.extraLifeGrantedAt
       }, { status: 400 });
     }
 
-    // Verificar si el usuario está suspendido
-    const estaSuspendido = enrollment.status === 'SUSPENDED';
-
-    // Resetear missedCallsCount a 0 (otorga vida extra) y marcar como usada
+    // Resetear missedCallsCount a 0 (otorga vida extra) y reactivar
     const enrollmentActualizado = await prisma.programEnrollment.update({
       where: { id: enrollmentId },
       data: {
         missedCallsCount: 0,
-        status: estaSuspendido ? 'ACTIVE' : enrollment.status, // Si estaba suspendido, reactivar
+        status: 'ACTIVE', // Reactivar siempre porque solo se puede otorgar cuando está suspendido
         extraLifeUsed: true,
         extraLifeGrantedBy: grantedByType,
         extraLifeGrantedAt: new Date()
       }
     });
 
-    // Si estaba suspendido, reactivar las sesiones futuras canceladas
-    if (estaSuspendido) {
-      // Obtener todas las sesiones futuras que fueron canceladas
-      const sesionesCanceladas = await prisma.callBooking.findMany({
-        where: {
-          programEnrollmentId: enrollmentId,
-          scheduledAt: { gt: new Date() },
-          status: 'CANCELLED'
-        },
-        orderBy: { scheduledAt: 'asc' }
-      });
-
-      // Reactivar solo las sesiones que corresponden al ciclo actual
-      // (Evitar reactivar sesiones de ciclos anteriores)
-      if (sesionesCanceladas.length > 0) {
-        await prisma.callBooking.updateMany({
-          where: {
-            programEnrollmentId: enrollmentId,
-            scheduledAt: { gt: new Date() },
-            status: 'CANCELLED'
-          },
-          data: {
-            status: 'PENDING'
-          }
-        });
+    // Reactivar todas las sesiones futuras canceladas
+    const sesionesReactivadas = await prisma.callBooking.updateMany({
+      where: {
+        programEnrollmentId: enrollmentId,
+        scheduledAt: { gt: new Date() },
+        status: 'CANCELLED'
+      },
+      data: {
+        status: 'PENDING'
       }
-    }
+    });
 
-    // Registrar en log (opcional - puedes crear una tabla de audit log)
+    // Registrar en log
     console.log(`[VIDA EXTRA] ${usuario.nombre || usuario.email} otorgó vida extra a ${enrollment.Usuario_ProgramEnrollment_userIdToUsuario.nombre} (Enrollment ${enrollmentId}). Razón: ${razon || 'No especificada'}`);
 
     return NextResponse.json({
       success: true,
-      message: estaSuspendido 
-        ? 'Usuario reactivado. Strikes reseteados y sesiones futuras restauradas.' 
-        : 'Vida extra otorgada. Strikes reseteados a 0.',
-      wasReactivated: estaSuspendido,
+      message: 'Usuario reactivado. Strikes reseteados y sesiones futuras restauradas.',
+      wasReactivated: true,
       previousStrikes: enrollment.missedCallsCount,
-      currentStrikes: 0
+      currentStrikes: 0,
+      sesionesReactivadas: sesionesReactivadas.count
     });
 
   } catch (error) {
