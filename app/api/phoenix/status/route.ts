@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const usuarioId = parseInt(session.user.id);
+    const usuarioId = session.user.id as number;
 
     // Buscar sesión activa (no completada)
     const activeSession = await prisma.phoenixSession.findFirst({

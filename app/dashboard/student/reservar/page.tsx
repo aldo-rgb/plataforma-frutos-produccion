@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useRouter } from 'next/navigation';
-import { Lock, AlertCircle, UserCircle, Award, CheckCircle2, XCircle, Calendar } from 'lucide-react';
+import { Lock, AlertCircle, UserCircle, Award, CheckCircle2, XCircle, Calendar, Zap } from 'lucide-react';
 import ResumenReservas from '@/components/dashboard/student/ResumenReservas';
 
 export default function BookingPage() {
@@ -227,19 +227,77 @@ export default function BookingPage() {
   // Mostrar mensaje si no tiene mentor asignado
   if (!checkingAuth && !mentorId) {
     return (
-      <div className="flex items-center justify-center min-h-screen p-8">
-        <div className="max-w-md w-full bg-slate-800 rounded-2xl p-8 border-2 border-yellow-500/30 text-center">
-          <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-white mb-2">Sin Mentor Asignado</h2>
-          <p className="text-slate-300 mb-6">
-            Aún no tienes un mentor asignado. Por favor contacta al coordinador para que te asignen uno.
-          </p>
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-bold transition-colors"
+      <div className="flex items-center justify-center min-h-screen p-8 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <div className="max-w-2xl w-full bg-gradient-to-br from-purple-900/30 via-blue-900/20 to-slate-900/50 rounded-2xl p-8 border-2 border-purple-500/40 shadow-2xl">
+          <div className="text-center mb-6">
+            <AlertCircle className="w-20 h-20 text-yellow-400 mx-auto mb-4" />
+            <h2 className="text-3xl font-black text-white mb-3">Sin Mentor Asignado</h2>
+          </div>
+
+          <div className="bg-slate-800/60 rounded-xl p-6 mb-6">
+            <p className="text-white text-lg mb-4 text-center">
+              🎯 <strong>¡Maximiza tu experiencia con un mentor personal!</strong>
+            </p>
+            <p className="text-slate-300 text-center mb-4">
+              Actualiza a <span className="text-blue-400 font-bold">STANDARD</span> o <span className="text-purple-400 font-bold">PREMIUM</span> y obtén:
+            </p>
+            
+            <div className="grid sm:grid-cols-2 gap-4 mb-4">
+              <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="text-green-400 mt-1 flex-shrink-0" size={20} />
+                  <div>
+                    <p className="text-white font-semibold mb-1">Mentor Dedicado</p>
+                    <p className="text-slate-400 text-sm">Experto que guía tu desarrollo personal</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="text-green-400 mt-1 flex-shrink-0" size={20} />
+                  <div>
+                    <p className="text-white font-semibold mb-1">Sesiones 1 a 1</p>
+                    <p className="text-slate-400 text-sm">Llamadas personalizadas semanales</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="text-green-400 mt-1 flex-shrink-0" size={20} />
+                  <div>
+                    <p className="text-white font-semibold mb-1">Retroalimentación</p>
+                    <p className="text-slate-400 text-sm">Feedback experto en tus tareas</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="text-green-400 mt-1 flex-shrink-0" size={20} />
+                  <div>
+                    <p className="text-white font-semibold mb-1">Seguimiento</p>
+                    <p className="text-slate-400 text-sm">Monitoreo continuo de tu progreso</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/30 rounded-lg p-4 text-center">
+              <p className="text-slate-300 text-sm">
+                💡 <strong>¿Sabías que?</strong> Los estudiantes con mentor tienen un <span className="text-green-400 font-bold">85% más</span> de probabilidad de completar exitosamente su programa
+              </p>
+            </div>
+          </div>
+
+          <a 
+            href="/dashboard/suscripcion" 
+            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2 text-center"
           >
-            Volver al Dashboard
-          </button>
+            <Zap className="w-5 h-5" />
+            <span>Ver Planes y Actualizar</span>
+          </a>
         </div>
       </div>
     );

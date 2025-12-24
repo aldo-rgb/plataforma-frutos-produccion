@@ -7,20 +7,21 @@ import confetti from "canvas-confetti";
 
 interface CheckInResponse {
   success: boolean;
-  checkIn: any;
-  location: {
+  error?: string;
+  checkIn?: any;
+  location?: {
     id: number;
     name: string;
     distance: number;
   };
-  rewards: {
+  rewards?: {
     xpGranted: number;
     newLevel: number | null;
   };
-  badges: {
+  badges?: {
     explorerBadgeUnlocked: boolean;
   };
-  message: string;
+  message?: string;
 }
 
 export default function QuantumCheckIn() {
@@ -134,7 +135,7 @@ export default function QuantumCheckIn() {
 
       if (res.ok && data.success) {
         // 🎉 Check-in exitoso
-        toast.success(data.message);
+        toast.success(data.message || "Check-in exitoso");
         
         // Confetti celebration
         confetti({
@@ -144,9 +145,9 @@ export default function QuantumCheckIn() {
         });
 
         // Si subió de nivel
-        if (data.rewards.newLevel) {
+        if (data.rewards?.newLevel) {
           setTimeout(() => {
-            toast.success(`🎖️ ¡NIVEL ${data.rewards.newLevel}!`, {
+            toast.success(`🎖️ ¡NIVEL ${data.rewards!.newLevel}!`, {
               duration: 5000
             });
             confetti({
@@ -158,7 +159,7 @@ export default function QuantumCheckIn() {
         }
 
         // Si desbloqueó explorador
-        if (data.badges.explorerBadgeUnlocked) {
+        if (data.badges?.explorerBadgeUnlocked) {
           setTimeout(() => {
             toast.success("🏆 ¡EXPLORADOR SUPREMO DESBLOQUEADO! +5000 PC", {
               duration: 6000
@@ -167,8 +168,10 @@ export default function QuantumCheckIn() {
         }
 
         // Guardar location para preguntar por servicio
-        setLastCheckInLocation(data.location.id);
-        setAskingForService(true);
+        if (data.location) {
+          setLastCheckInLocation(data.location.id);
+          setAskingForService(true);
+        }
         
         // Refrescar historial
         fetchCheckInHistory();

@@ -34,7 +34,8 @@ export default function PermissionsPanel() {
           }
         });
         
-        // ADMINISTRADOR siempre tiene todo
+        // SUPER_ADMIN y ADMINISTRADOR siempre tienen todo
+        mappedPerms['SUPER_ADMIN'] = MENU_ITEMS.map(i => i.id);
         mappedPerms['ADMINISTRADOR'] = MENU_ITEMS.map(i => i.id);
         
         setPermissions(mappedPerms);

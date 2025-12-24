@@ -36,8 +36,8 @@ export async function analyzeUserPatterns(usuarioId: number): Promise<PatternDat
       Accion: {
         select: {
           id: true,
-          titulo: true,
-          categoria: true,
+          texto: true,
+          frequency: true,
         },
       },
     },

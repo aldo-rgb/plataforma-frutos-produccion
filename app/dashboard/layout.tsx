@@ -28,6 +28,14 @@ export default async function DashboardLayout({
     where: { email: session.user.email },
     include: {
       PerfilMentor: true, // Traemos datos del mentor si los necesitamos
+      Organization: {
+        select: {
+          id: true,
+          name: true,
+          logoUrl: true,
+          brandColor: true,
+        }
+      }
     }
   });
 
@@ -46,7 +54,8 @@ export default async function DashboardLayout({
       calificacionPromedio: usuarioReal.PerfilMentor.calificacionPromedio?.toString() || null,
       ratingSum: usuarioReal.PerfilMentor.ratingSum?.toString() || null,
       precioBase: usuarioReal.PerfilMentor.precioBase?.toString() || null,
-    } : null
+    } : null,
+    organization: usuarioReal.Organization || null
   };
 
   // 3. Lógica del "Candado de Seguridad" (Simplificada)

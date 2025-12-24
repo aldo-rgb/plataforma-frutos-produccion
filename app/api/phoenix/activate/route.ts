@@ -58,6 +58,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // VERIFICAR SI YA SE COMPLETÓ UNA SESIÓN HOY
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const completedSessionToday = await prisma.phoenixSession.findFirst({
+      where: {
+        usuarioId,
+        microTaskCompleted: true,
+        completedAt: {
+          gte: todayStart,
+          lte: todayEnd
+        }
+      }
+    });
+
+    if (completedSessionToday) {
+      return NextResponse.json({
+        alreadyCompletedToday: true,
+        message: '✅ Ya completaste el Protocolo Fénix hoy. Respira y continúa con tu día.',
+        completedAt: completedSessionToday.completedAt
+      });
+    }
+
     // 1. SNAPSHOT: Obtener todas las tareas pendientes de HOY y anteriores
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -86,8 +111,8 @@ export async function POST(req: NextRequest) {
       dueDate: task.dueDate,
       originalDueDate: task.originalDueDate,
       postponeCount: task.postponeCount,
-      accionNombre: task.Accion.descripcion,
-      metaArea: task.Accion.Meta.area
+      accionNombre: task.Accion.texto,
+      metaCategoria: task.Accion.Meta.categoria
     }));
 
     // 3. REAGENDAR: Mover tareas de HOY a MAÑANA

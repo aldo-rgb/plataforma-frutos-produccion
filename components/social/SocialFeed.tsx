@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Trophy, Fire, Brain, Hand, Sparkles, Share2, Clock, Award } from 'lucide-react';
+import { Trophy, Flame, Brain, Hand, Sparkles, Share2, Clock, Award } from 'lucide-react';
 import Image from 'next/image';
 import { toast } from 'react-hot-toast';
 
@@ -40,7 +40,7 @@ interface FeedItem {
 }
 
 const REACTION_ICONS = {
-  FIRE: { icon: Fire, label: 'Fuego', color: 'text-orange-500' },
+  FIRE: { icon: Flame, label: 'Fuego', color: 'text-orange-500' },
   STRONG: { icon: Trophy, label: 'Fuerza', color: 'text-yellow-500' },
   GENIUS: { icon: Brain, label: 'Genio', color: 'text-purple-500' },
   APPLAUSE: { icon: Hand, label: 'Aplauso', color: 'text-blue-500' }

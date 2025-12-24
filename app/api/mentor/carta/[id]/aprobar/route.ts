@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { addDays } from 'date-fns';
 
 // PUT: Aprobar una carta
 export async function PUT(
@@ -68,6 +69,38 @@ export async function PUT(
     });
 
     console.log(`✅ Carta ${cartaId} APROBADA por ${mentor.nombre} para ${carta.Usuario.nombre}`);
+
+    // Verificar si el usuario ya tiene un ciclo activo
+    const cicloExistente = await prisma.programEnrollment.findFirst({
+      where: {
+        userId: carta.usuarioId,
+        status: 'ACTIVE'
+      }
+    });
+
+    // Crear ciclo de 90 días si no existe
+    if (!cicloExistente) {
+      const hoy = new Date();
+      const fechaFin = addDays(hoy, 90);
+      
+      await prisma.programEnrollment.create({
+        data: {
+          userId: carta.usuarioId,
+          mentorId: carta.usuarioId, // Ciclo personal (SOLO)
+          cycleType: 'SOLO',
+          cycleStartDate: hoy,
+          cycleEndDate: fechaFin,
+          startDate: hoy, // Legacy field
+          endDate: fechaFin, // Legacy field
+          totalWeeks: 13, // ~90 días = 13 semanas
+          status: 'ACTIVE'
+        }
+      });
+      
+      console.log(`🎯 Ciclo de 90 días creado para ${carta.Usuario.nombre}`);
+    } else {
+      console.log(`ℹ️  ${carta.Usuario.nombre} ya tiene un ciclo activo`);
+    }
 
     // TODO: Aquí puedes agregar notificación al usuario
     // - Email

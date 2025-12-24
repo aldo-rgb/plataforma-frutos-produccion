@@ -5,9 +5,10 @@ import { prisma } from './prisma';
  * Motor de Cálculo de Fechas para Ciclos Híbridos
  * 
  * REGLAS DE NEGOCIO:
- * 1. Usuario SOLO (sin visión) → 100 días desde aprobación
+ * 1. Usuario SOLO (sin visión) → 90 días desde aprobación de carta
  * 2. Usuario VISIÓN (en grupo) → Hasta Vision.endDate
  * 3. Si el usuario entra tarde a visión → Genera solo días restantes
+ * 4. El ciclo se crea SOLO cuando la carta es aprobada
  */
 
 export interface CycleDates {
@@ -55,20 +56,20 @@ export async function calculateCycleDates(
   let visionName: string | undefined;
 
   // Por ahora, el campo `vision` es solo texto y no hay modelo Vision
-  // Todos los usuarios son SOLO con ciclo de 100 días
+  // Todos los usuarios son SOLO con ciclo de 90 días
   if (user.vision) {
     // FUTURO: Aquí se manejaría la lógica de visión si existiera el modelo
     console.log(`⚠️  Usuario tiene vision text: "${user.vision}", pero no hay modelo Vision implementado. Usando SOLO mode.`);
   }
   
   // =============================================
-  // MODO SOLO (100 DÍAS)
+  // MODO SOLO (90 DÍAS)
   // =============================================
   cycleType = 'SOLO';
-  endDate = addDays(startDate, 100);
+  endDate = addDays(startDate, 90);
 
   console.log(`📅 Usuario #${userId} en MODO SOLO`);
-  console.log(`   Ciclo personal: 100 días (hasta ${endDate.toISOString().split('T')[0]})`);
+  console.log(`   Ciclo personal: 90 días (hasta ${endDate.toISOString().split('T')[0]})`);
 
   const totalDays = differenceInDays(endDate, startDate) + 1; // +1 para incluir el día final
 

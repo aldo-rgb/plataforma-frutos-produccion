@@ -150,11 +150,6 @@ export async function GET(
           select: {
             nombre: true
           }
-        },
-        _count: {
-          select: {
-            Participantes: true
-          }
         }
       },
       orderBy: {
@@ -162,7 +157,25 @@ export async function GET(
       }
     });
 
-    return NextResponse.json({ gameChangers });
+    // Obtener el conteo de participantes por cada Game Changer
+    const gameChangersWithCount = await Promise.all(
+      gameChangers.map(async (gc) => {
+        const participantCount = await prisma.visionParticipante.count({
+          where: {
+            visionId,
+            gameChangerId: gc.gameChangerId
+          }
+        });
+        return {
+          ...gc,
+          _count: {
+            Participantes: participantCount
+          }
+        };
+      })
+    );
+
+    return NextResponse.json({ gameChangers: gameChangersWithCount });
 
   } catch (error) {
     console.error('Error loading game changers:', error);

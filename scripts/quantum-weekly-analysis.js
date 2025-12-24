@@ -57,7 +57,7 @@ async function runWeeklyAnalysis() {
         } else {
           console.log(`  ⚪ Sin patrones significativos`);
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error(`  ❌ Error al analizar usuario ${user.id}:`, error.message);
       }
 

@@ -140,7 +140,7 @@ export async function GET(req: NextRequest) {
     });
 
     // Solo MENTOR, COORDINADOR, GAMECHANGER o ADMIN pueden revisar
-    if (!['MENTOR', 'COORDINADOR', 'GAMECHANGER', 'ADMINISTRADOR'].includes(user?.rol || '')) {
+    if (!user || !['MENTOR', 'COORDINADOR', 'GAMECHANGER', 'ADMINISTRADOR'].includes(user.rol)) {
       return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
     }
 

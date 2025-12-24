@@ -8,32 +8,35 @@ export const dynamic = 'force-dynamic';
 // GET - Listar usuarios por tipo de ciclo
 export async function GET(request: Request) {
   try {
+    console.log('🔵 Iniciando GET /api/admin/usuarios-ciclos');
+    
     const session = await getServerSession(authOptions);
+    console.log('🔵 Session:', session?.user?.email);
+    
     if (!session?.user?.email) {
+      console.log('❌ No hay sesión');
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
     const usuario = await prisma.usuario.findUnique({
       where: { email: session.user.email },
-      select: { rol: true }
+      select: { rol: true, nombre: true }
     });
 
-    if (usuario?.rol !== 'ADMIN' && usuario?.rol !== 'STAFF') {
+    console.log('🔵 Usuario encontrado:', usuario?.nombre, 'Rol:', usuario?.rol);
+
+    if (usuario?.rol !== 'ADMINISTRADOR' && usuario?.rol !== 'COORDINADOR') {
+      console.log('❌ Sin permisos, rol:', usuario?.rol);
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') || 'ALL'; // ALL, SOLO, VISION
 
-    /*
-    // Cuando la migración esté ejecutada, usar esta consulta:
-    let whereClause: any = {};
-
-    if (type === 'SOLO') {
-      whereClause.visionId = null;
-    } else if (type === 'VISION') {
-      whereClause.visionId = { not: null };
-    }
+    // Construir where clause para filtrar por tipo de ciclo
+    let whereClause: any = {
+      rol: 'PARTICIPANTE'
+    };
 
     const usuarios = await prisma.usuario.findMany({
       where: whereClause,
@@ -41,13 +44,9 @@ export async function GET(request: Request) {
         id: true,
         nombre: true,
         email: true,
-        visionId: true,
-        vision: {
-          select: {
-            name: true
-          }
-        },
-        ProgramEnrollment: {
+        createdAt: true,
+        vision: true, // Campo texto legacy
+        ProgramEnrollment_ProgramEnrollment_userIdToUsuario: {
           where: {
             status: 'ACTIVE'
           },
@@ -68,35 +67,43 @@ export async function GET(request: Request) {
       }
     });
 
-    return NextResponse.json({ usuarios });
-    */
+    console.log(`📊 Total usuarios encontrados: ${usuarios.length}`);
+    console.log(`🔍 Filtro tipo: ${type}`);
 
-    // Por ahora, retornar usuarios básicos sin la info de ciclo
-    const usuarios = await prisma.usuario.findMany({
-      where: {
-        rol: 'PARTICIPANTE'
-      },
-      select: {
-        id: true,
-        nombre: true,
-        email: true,
-        createdAt: true
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: 50
-    });
+    // Filtrar por tipo de ciclo si es necesario
+    let usuariosFiltrados = usuarios;
+    
+    if (type === 'SOLO') {
+      // Mostrar TODOS los usuarios que deberían tener ciclo personal
+      // Esto incluye usuarios con ciclo SOLO Y usuarios sin ciclo (que lo tendrán al aprobar carta)
+      usuariosFiltrados = usuarios.filter(u => {
+        const enrollment = u.ProgramEnrollment_ProgramEnrollment_userIdToUsuario[0];
+        // Mostrar si: NO tiene ciclo, o tiene ciclo SOLO
+        return !enrollment || enrollment.cycleType === 'SOLO';
+      });
+    } else if (type === 'VISION') {
+      // Mostrar solo usuarios con ciclo VISION
+      usuariosFiltrados = usuarios.filter(u => 
+        u.ProgramEnrollment_ProgramEnrollment_userIdToUsuario.length > 0 &&
+        u.ProgramEnrollment_ProgramEnrollment_userIdToUsuario[0]?.cycleType === 'VISION'
+      );
+    }
+    // Si type === 'ALL', mostrar todos (no filtrar)
 
-    return NextResponse.json({ 
-      usuarios: usuarios.map(u => ({
-        ...u,
-        visionId: null,
-        vision: null,
-        ProgramEnrollment: []
-      })),
-      message: 'Sistema de ciclos pendiente de migración. Los datos de ciclo no están disponibles aún.'
-    });
+    // Mapear a formato esperado por el frontend
+    const usuariosFormateados = usuariosFiltrados.map(u => ({
+      id: u.id,
+      nombre: u.nombre,
+      email: u.email,
+      createdAt: u.createdAt,
+      visionId: null, // Por ahora no hay visiones implementadas
+      vision: null,
+      ProgramEnrollment: u.ProgramEnrollment_ProgramEnrollment_userIdToUsuario
+    }));
+
+    console.log(`✅ Usuarios a retornar: ${usuariosFormateados.length}`);
+    
+    return NextResponse.json({ usuarios: usuariosFormateados });
 
   } catch (error) {
     console.error('Error loading usuarios:', error);

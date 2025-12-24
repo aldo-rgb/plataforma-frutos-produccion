@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   BarChart3, Users, PhoneOff, Zap, AlertTriangle, 
-  Clock, TrendingUp, ShieldCheck, UserPlus, Gamepad2 
+  Clock, TrendingUp, ShieldCheck, UserPlus, Gamepad2, CreditCard
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -61,10 +61,12 @@ const PERFORMANCE_GAMECHANGERS = [
 
 export default function AdminPerformancePage() {
   const [mentoresInactivos, setMentoresInactivos] = useState(0);
+  const [pendingPayments, setPendingPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     cargarMentoresInactivos();
+    cargarPagosPendientes();
   }, []);
 
   const cargarMentoresInactivos = async () => {
@@ -84,6 +86,18 @@ export default function AdminPerformancePage() {
     }
   };
 
+  const cargarPagosPendientes = async () => {
+    try {
+      const res = await fetch('/api/admin/pending-payments');
+      const data = await res.json();
+      if (data.success) {
+        setPendingPayments(data.pendingPayments || []);
+      }
+    } catch (error) {
+      console.error('Error al cargar pagos pendientes:', error);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-20">
       
@@ -97,8 +111,52 @@ export default function AdminPerformancePage() {
         </div>
       </div>
 
+      {/* NOTIFICACIÓN DE PAGOS PENDIENTES */}
+      {pendingPayments.length > 0 && (
+        <div className="bg-gradient-to-r from-blue-500/20 via-cyan-500/20 to-blue-500/20 border-2 border-blue-500/50 rounded-2xl p-5 shadow-2xl animate-pulse backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-75"></div>
+                <div className="relative flex items-center justify-center w-12 h-12 bg-blue-500 rounded-full">
+                  <AlertTriangle className="text-white" size={24} />
+                </div>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <span className="animate-pulse">💳</span>
+                  Tienes {pendingPayments.length} pago(s) pendiente(s) de autorización
+                </h3>
+                <p className="text-sm text-blue-200 mt-1">
+                  {pendingPayments.length === 1 
+                    ? 'Hay un comprobante de pago esperando tu aprobación'
+                    : `Hay ${pendingPayments.length} comprobantes de pago esperando tu aprobación`
+                  }
+                </p>
+              </div>
+            </div>
+            <Link href="/dashboard/admin/ordenes">
+              <button className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-blue-500/50 flex items-center gap-2">
+                <ShieldCheck size={20} />
+                <span>Revisar Pagos</span>
+              </button>
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* KPI CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <Link href="/dashboard/admin/ordenes" className="block">
+          <KpiCard 
+            icon={<CreditCard className="text-blue-400" />} 
+            label="Pagos Pendientes" 
+            value={pendingPayments.length.toString()} 
+            trend={pendingPayments.length > 0 ? '💳 Requiere Autorización' : '✅ Todo al día'} 
+            color="blue"
+            isClickable={true}
+          />
+        </Link>
         <KpiCard 
           icon={<Users className="text-cyan-400" />} 
           label="Líderes Activos" 
@@ -116,13 +174,6 @@ export default function AdminPerformancePage() {
             isClickable={true}
           />
         </Link>
-        <KpiCard 
-          icon={<PhoneOff className="text-red-400" />} 
-          label="Tasa de Faltas (Global)" 
-          value="12%" 
-          trend="⚠️ Subió 2%" 
-          color="red"
-        />
         <KpiCard 
           icon={<Clock className="text-yellow-400" />} 
           label="Tiempo Prom. Revisión" 
@@ -274,6 +325,7 @@ export default function AdminPerformancePage() {
 function KpiCard({ icon, label, value, trend, color, isClickable }: any) {
   const colors: any = {
     cyan: "border-cyan-500/20 bg-cyan-500/5",
+    blue: "border-blue-500/20 bg-blue-500/5",
     red: "border-red-500/20 bg-red-500/5",
     yellow: "border-yellow-500/20 bg-yellow-500/5",
     green: "border-green-500/20 bg-green-500/5",

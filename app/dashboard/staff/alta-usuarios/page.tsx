@@ -31,7 +31,8 @@ export default function AltaUsuariosPage() {
     // Roles disponibles para crear usuarios
     return [
       { value: 'ADMINISTRADOR', label: 'Administrador (Acceso Total)' },
-      { value: 'COORDINADOR', label: 'Admin' },
+      { value: 'SCHOOL_ADMIN', label: 'Director de Centro' },
+      { value: 'COORDINADOR', label: 'Coordinador' },
       { value: 'GAMECHANGER', label: 'Game Changer' },
       { value: 'MENTOR', label: 'Mentor' },
       { value: 'PARTICIPANTE', label: 'Participante' },

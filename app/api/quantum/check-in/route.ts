@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const userId = parseInt(session.user.id);
+    const userId = session.user.id as number;
 
     // Buscar el usuario con sus grupos/visiones
     const user = await prisma.usuario.findUnique({

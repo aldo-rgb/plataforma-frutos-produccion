@@ -47,7 +47,15 @@ export const MENU_ITEMS = [
 ];
 
 // 2. Definimos los roles disponibles (usando los valores exactos del enum Prisma)
-export const ROLES = ['ADMINISTRADOR', 'COORDINADOR', 'MENTOR', 'GAMECHANGER', 'PARTICIPANTE'] as const;
+export const ROLES = [
+  'SUPER_ADMIN',      // Administrador global del sistema
+  'ADMINISTRADOR',    // Administrador de plataforma
+  'SCHOOL_ADMIN',     // Director/Coordinador de escuela
+  'COORDINADOR',      // Coordinador de programas
+  'MENTOR',           // Mentor/Coach
+  'GAMECHANGER',      // GameChanger (estudiante líder)
+  'PARTICIPANTE'      // Participante/Estudiante
+] as const;
 
 // 3. Tipo para TypeScript
 export type RolType = typeof ROLES[number];

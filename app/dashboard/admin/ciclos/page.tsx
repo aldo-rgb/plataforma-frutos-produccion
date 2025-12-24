@@ -56,6 +56,11 @@ export default function AdminCycleManagement() {
   const [usuarios, setUsuarios] = useState<User[]>([]);
   const [loadingUsuarios, setLoadingUsuarios] = useState(false);
   const [filterCycleType, setFilterCycleType] = useState<'ALL' | 'SOLO' | 'VISION'>('ALL');
+  
+  // Estados para selector de usuarios en visión
+  const [usuariosDisponibles, setUsuariosDisponibles] = useState<User[]>([]);
+  const [usuariosSeleccionados, setUsuariosSeleccionados] = useState<number[]>([]);
+  const [loadingDisponibles, setLoadingDisponibles] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'visiones') {
@@ -64,6 +69,16 @@ export default function AdminCycleManagement() {
       loadUsuarios();
     }
   }, [activeTab]);
+
+  // Cargar usuarios disponibles cuando se abre el modal
+  useEffect(() => {
+    if (showCreateModal) {
+      loadUsuariosDisponibles();
+    } else {
+      // Limpiar selección al cerrar modal
+      setUsuariosSeleccionados([]);
+    }
+  }, [showCreateModal]);
 
   // ========== BÚSQUEDA INDIVIDUAL ==========
   const handleSearch = async (e: React.FormEvent) => {
@@ -115,9 +130,29 @@ export default function AdminCycleManagement() {
     }
   };
 
+  const loadUsuariosDisponibles = async () => {
+    setLoadingDisponibles(true);
+    try {
+      const res = await fetch('/api/admin/usuarios-disponibles');
+      const data = await res.json();
+      if (res.ok) {
+        setUsuariosDisponibles(data.usuarios || []);
+      }
+    } catch (err) {
+      console.error('Error loading usuarios disponibles:', err);
+    } finally {
+      setLoadingDisponibles(false);
+    }
+  };
+
   const handleCreateVision = async () => {
     if (!newVision.name || !newVision.startDate || !newVision.endDate) {
       alert('Completa todos los campos obligatorios');
+      return;
+    }
+
+    if (usuariosSeleccionados.length === 0) {
+      alert('Selecciona al menos un usuario para la visión');
       return;
     }
 
@@ -125,7 +160,10 @@ export default function AdminCycleManagement() {
       const res = await fetch('/api/admin/visiones', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newVision)
+        body: JSON.stringify({
+          ...newVision,
+          usuarioIds: usuariosSeleccionados
+        })
       });
 
       const data = await res.json();
@@ -133,7 +171,19 @@ export default function AdminCycleManagement() {
       if (res.ok) {
         setShowCreateModal(false);
         setNewVision({ name: '', description: '', startDate: '', endDate: '' });
+        setUsuariosSeleccionados([]);
+        
+        // Mostrar mensaje de éxito
+        if (data.message) {
+          alert(`✅ ${data.message}`);
+        }
+        
         loadVisiones();
+        
+        // Si estamos en la pestaña de usuarios, recargar también
+        if (activeTab === 'usuarios') {
+          loadUsuarios();
+        }
       } else {
         if (data.migracionRequerida) {
           setShowMigrationWarning(true);
@@ -175,17 +225,9 @@ export default function AdminCycleManagement() {
     <div className="min-h-screen bg-[#0f1015] p-6">
       <div className="max-w-7xl mx-auto">
         {/* HEADER */}
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-black text-white mb-2">Administración de Ciclos</h1>
-            <p className="text-gray-400">Sistema Híbrido: Ciclos Personales vs Visiones Grupales</p>
-          </div>
-          <a
-            href="/dashboard/ciclos/guia"
-            className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2 transition-all shadow-lg shadow-cyan-900/30"
-          >
-            📖 Guía de Inicio
-          </a>
+        <div className="mb-8">
+          <h1 className="text-3xl font-black text-white mb-2">Administración de Ciclos</h1>
+          <p className="text-gray-400">Sistema Híbrido: Ciclos Personales vs Visiones Grupales</p>
         </div>
 
         {/* ALERTA DE MIGRACIÓN */}
@@ -584,6 +626,67 @@ export default function AdminCycleManagement() {
                     className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-purple-500 focus:outline-none"
                   />
                 </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-bold text-gray-400">
+                    Usuarios * {usuariosSeleccionados.length > 0 && (
+                      <span className="text-purple-400">({usuariosSeleccionados.length} seleccionados)</span>
+                    )}
+                  </label>
+                  {usuariosDisponibles.length > 0 && (
+                    <button
+                      onClick={() => {
+                        if (usuariosSeleccionados.length === usuariosDisponibles.length) {
+                          setUsuariosSeleccionados([]);
+                        } else {
+                          setUsuariosSeleccionados(usuariosDisponibles.map(u => u.id));
+                        }
+                      }}
+                      className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                    >
+                      {usuariosSeleccionados.length === usuariosDisponibles.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                    </button>
+                  )}
+                </div>
+                
+                {loadingDisponibles ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="animate-spin text-purple-500" size={24} />
+                  </div>
+                ) : usuariosDisponibles.length === 0 ? (
+                  <div className="bg-gray-800 rounded-lg p-4 text-center">
+                    <p className="text-sm text-gray-400">No hay usuarios disponibles sin ciclo activo</p>
+                    <p className="text-xs text-gray-500 mt-1">Los usuarios deben completar su carta primero</p>
+                  </div>
+                ) : (
+                  <div className="bg-gray-800 border border-gray-700 rounded-lg max-h-48 overflow-y-auto">
+                    {usuariosDisponibles.map((user) => (
+                      <label
+                        key={user.id}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-gray-750 cursor-pointer border-b border-gray-700 last:border-0 transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={usuariosSeleccionados.includes(user.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setUsuariosSeleccionados([...usuariosSeleccionados, user.id]);
+                            } else {
+                              setUsuariosSeleccionados(usuariosSeleccionados.filter(id => id !== user.id));
+                            }
+                          }}
+                          className="w-4 h-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500 focus:ring-offset-gray-800"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-white">{user.nombre}</p>
+                          <p className="text-xs text-gray-400">{user.email}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">

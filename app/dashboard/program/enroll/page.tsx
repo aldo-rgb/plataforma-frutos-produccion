@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, AlertTriangle, CheckCircle2, Loader2, PhoneOff, Zap } from 'lucide-react';
+import { Calendar, Clock, AlertTriangle, CheckCircle2, Loader2, PhoneOff, Zap, CreditCard, Users, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 
 interface MentorAsignado {
   id: number;
@@ -9,6 +10,23 @@ interface MentorAsignado {
   profileImage?: string;
   imagen?: string;
   email: string;
+  PerfilMentor?: {
+    especialidad?: string;
+    nivel?: string;
+  };
+}
+
+interface MentorDisponible {
+  id: number;
+  nombre: string;
+  profileImage?: string;
+  email: string;
+  PerfilMentor: {
+    especialidad?: string;
+    nivel?: string;
+    biografia?: string;
+  };
+  tieneDisciplina: boolean;
 }
 
 interface Slot {
@@ -40,6 +58,10 @@ const DIAS_SEMANA_CORTO = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 export default function ProgramEnrollPage() {
   const [mentorAsignado, setMentorAsignado] = useState<MentorAsignado | null>(null);
+  const [mentoresDisponibles, setMentoresDisponibles] = useState<MentorDisponible[]>([]);
+  const [mostrarSeleccionMentor, setMostrarSeleccionMentor] = useState(false);
+  const [mentorSeleccionado, setMentorSeleccionado] = useState<number | null>(null);
+  const [mostrarPagoLicencia, setMostrarPagoLicencia] = useState(false);
   const [disponibilidadMentor, setDisponibilidadMentor] = useState<DisponibilidadMentor[]>([]);
   const [slotsDisponibles, setSlotsDisponibles] = useState<SlotsDisponibles>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -52,7 +74,19 @@ export default function ProgramEnrollPage() {
   const [slot2, setSlot2] = useState<Slot>({ dayOfWeek: -1, time: '' });
 
   useEffect(() => {
-    cargarMentorAsignado();
+    // Verificar si viene de un pago exitoso
+    const urlParams = new URLSearchParams(window.location.search);
+    const action = urlParams.get('action');
+    
+    if (action === 'select-mentor') {
+      // El usuario acaba de pagar, mostrar selección de mentores
+      cargarMentoresDisponibles();
+      setMostrarSeleccionMentor(true);
+      setMostrarPagoLicencia(false);
+    } else {
+      // Flujo normal
+      cargarMentorAsignado();
+    }
   }, []);
 
   const cargarMentorAsignado = async () => {
@@ -65,7 +99,9 @@ export default function ProgramEnrollPage() {
       
       // Verificar que tenga mentor asignado (el API retorna data.user.assignedMentorId)
       if (!data.user?.assignedMentorId) {
-        setError('No tienes un mentor asignado. Contacta al coordinador.');
+        // No tiene mentor asignado, cargar lista de mentores disponibles con horarios de disciplina
+        await cargarMentoresDisponibles();
+        setMostrarPagoLicencia(true);
         setIsLoading(false);
         return;
       }
@@ -111,6 +147,72 @@ export default function ProgramEnrollPage() {
       setError('Error al cargar información del mentor');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const cargarMentoresDisponibles = async () => {
+    try {
+      const response = await fetch('/api/mentor/disponibles-disciplina');
+      if (!response.ok) throw new Error('Error al cargar mentores');
+      
+      const data = await response.json();
+      setMentoresDisponibles(data.mentores || []);
+    } catch (error) {
+      console.error('Error cargando mentores:', error);
+      setError('Error al cargar mentores disponibles');
+    }
+  };
+
+  const seleccionarMentor = async (mentorId: number) => {
+    setMentorSeleccionado(mentorId);
+    
+    try {
+      // 1. Asignar el mentor al usuario
+      const assignResponse = await fetch('/api/user/assign-mentor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mentorId })
+      });
+
+      if (!assignResponse.ok) {
+        throw new Error('Error al asignar mentor');
+      }
+
+      // 2. Cargar slots disponibles del mentor seleccionado
+      const slotsResponse = await fetch(`/api/mentor/slots-disponibles?mentorId=${mentorId}`);
+      if (!slotsResponse.ok) throw new Error('Error al cargar slots disponibles');
+      
+      const slotsData = await slotsResponse.json();
+      setDisponibilidadMentor(slotsData.disponibilidad || []);
+      setSlotsDisponibles(slotsData.slotsDisponibles || {});
+      
+      // 3. Auto-seleccionar primeros slots disponibles
+      const diasDisponibles = Object.keys(slotsData.slotsDisponibles || {}).map(Number).sort();
+      if (diasDisponibles.length >= 2) {
+        const dia1 = diasDisponibles[0];
+        const dia2 = diasDisponibles[1];
+        const horarios1 = slotsData.slotsDisponibles[dia1];
+        const horarios2 = slotsData.slotsDisponibles[dia2];
+        
+        if (horarios1?.length > 0 && horarios2?.length > 0) {
+          setSlot1({ dayOfWeek: dia1, time: horarios1[0] });
+          setSlot2({ dayOfWeek: dia2, time: horarios2[0] });
+        }
+      }
+      
+      // 4. Cargar información del mentor asignado
+      const mentorData = mentoresDisponibles.find(m => m.id === mentorId);
+      if (mentorData) {
+        setMentorAsignado(mentorData);
+      }
+      
+      // 5. Ocultar UI de selección
+      setMostrarSeleccionMentor(false);
+      setMostrarPagoLicencia(false);
+      
+    } catch (error) {
+      console.error('Error:', error);
+      setError('Error al seleccionar mentor. Por favor intenta de nuevo.');
     }
   };
 
@@ -231,6 +333,190 @@ export default function ProgramEnrollPage() {
           </p>
         </div>
 
+        {/* Opciones de Pago - Solo si no tiene mentor asignado */}
+        {mostrarPagoLicencia && !mentorAsignado && (
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-8">
+            <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+              <CreditCard className="text-purple-400" size={28} />
+              Selecciona tu Licencia
+            </h2>
+            <p className="text-slate-400 mb-6">
+              Para inscribirte al programa intensivo, necesitas una licencia activa
+            </p>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Licencia STANDARD */}
+              <div className="bg-slate-800/50 border-2 border-slate-700 rounded-xl p-6 hover:border-blue-500/50 transition-all">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-white">STANDARD</h3>
+                  <div className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full text-sm font-semibold">
+                    Básica
+                  </div>
+                </div>
+                <div className="text-3xl font-black text-white mb-4">
+                  $800 <span className="text-lg text-slate-400 font-normal">MXN</span>
+                </div>
+                <p className="text-xs text-slate-500 mb-2">
+                  Pago anual · <span className="text-green-400">Ahorras $388</span> vs mensual
+                </p>
+                <p className="text-xs text-slate-600 mb-4">
+                  (Mensual: $99/mes = $1,188/año)
+                </p>
+                <ul className="space-y-2 mb-6">
+                  <li className="flex items-start gap-2 text-slate-300 text-sm">
+                    <CheckCircle2 className="text-green-400 mt-0.5 flex-shrink-0" size={16} />
+                    Acceso completo al sistema
+                  </li>
+                  <li className="flex items-start gap-2 text-slate-300 text-sm">
+                    <CheckCircle2 className="text-green-400 mt-0.5 flex-shrink-0" size={16} />
+                    Mentor asignado para disciplina
+                  </li>
+                  <li className="flex items-start gap-2 text-slate-300 text-sm">
+                    <CheckCircle2 className="text-green-400 mt-0.5 flex-shrink-0" size={16} />
+                    34 sesiones programadas
+                  </li>
+                  <li className="flex items-start gap-2 text-slate-300 text-sm">
+                    <CheckCircle2 className="text-green-400 mt-0.5 flex-shrink-0" size={16} />
+                    Seguimiento de progreso
+                  </li>
+                </ul>
+                <Link
+                  href="/dashboard/suscripcion?plan=STANDARD&returnUrl=/dashboard/program/enroll&action=select-mentor"
+                  className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2"
+                >
+                  Continuar
+                  <ArrowRight size={18} />
+                </Link>
+              </div>
+
+              {/* Licencia PREMIUM */}
+              <div className="bg-gradient-to-br from-purple-900/30 to-pink-900/30 border-2 border-purple-500/50 rounded-xl p-6 hover:border-purple-400 transition-all relative overflow-hidden">
+                <div className="absolute top-2 right-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-1 rounded-full text-xs font-bold">
+                  SOLO ANUAL
+                </div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-white">PREMIUM</h3>
+                  <div className="bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full text-sm font-semibold">
+                    Avanzada
+                  </div>
+                </div>
+                <div className="text-3xl font-black text-white mb-4">
+                  $2,500 <span className="text-lg text-slate-400 font-normal">MXN</span>
+                </div>
+                <p className="text-xs text-slate-500 mb-4">Pago anual único</p>
+                <ul className="space-y-2 mb-6">
+                  <li className="flex items-start gap-2 text-slate-300 text-sm">
+                    <CheckCircle2 className="text-green-400 mt-0.5 flex-shrink-0" size={16} />
+                    Todo lo de STANDARD
+                  </li>
+                  <li className="flex items-start gap-2 text-slate-300 text-sm">
+                    <CheckCircle2 className="text-green-400 mt-0.5 flex-shrink-0" size={16} />
+                    <strong>2 Mentorías 1-a-1 al año</strong>
+                  </li>
+                  <li className="flex items-start gap-2 text-slate-300 text-sm">
+                    <CheckCircle2 className="text-green-400 mt-0.5 flex-shrink-0" size={16} />
+                    Llamadas de disciplina programadas
+                  </li>
+                  <li className="flex items-start gap-2 text-slate-300 text-sm">
+                    <CheckCircle2 className="text-green-400 mt-0.5 flex-shrink-0" size={16} />
+                    Soporte prioritario
+                  </li>
+                  <li className="flex items-start gap-2 text-slate-300 text-sm">
+                    <CheckCircle2 className="text-green-400 mt-0.5 flex-shrink-0" size={16} />
+                    Acceso a eventos exclusivos
+                  </li>
+                </ul>
+                <Link
+                  href="/dashboard/suscripcion?plan=PREMIUM&returnUrl=/dashboard/program/enroll&action=select-mentor"
+                  className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2"
+                >
+                  Continuar
+                  <ArrowRight size={18} />
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Selección de Mentor - Después de pagar */}
+        {mostrarSeleccionMentor && mentoresDisponibles.length > 0 && (
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-8">
+            <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+              <Users className="text-purple-400" size={28} />
+              Selecciona tu Mentor
+            </h2>
+            <p className="text-slate-400 mb-6">
+              Elige el mentor que te acompañará durante el programa intensivo
+            </p>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              {mentoresDisponibles.map((mentor) => (
+                <div
+                  key={mentor.id}
+                  onClick={() => setMentorSeleccionado(mentor.id)}
+                  className={`
+                    bg-slate-800/50 border-2 rounded-xl p-5 cursor-pointer transition-all hover:scale-105
+                    ${mentorSeleccionado === mentor.id 
+                      ? 'border-purple-500 bg-purple-900/20 shadow-lg shadow-purple-500/30' 
+                      : 'border-slate-700 hover:border-purple-500/50'
+                    }
+                  `}
+                >
+                  <div className="flex flex-col items-center text-center">
+                    <img
+                      src={mentor.profileImage || '/default-avatar.png'}
+                      alt={mentor.nombre}
+                      className={`
+                        w-20 h-20 rounded-full object-cover mb-3 border-2
+                        ${mentorSeleccionado === mentor.id ? 'border-purple-500' : 'border-slate-600'}
+                      `}
+                    />
+                    <h3 className="text-white font-bold text-lg mb-1">{mentor.nombre}</h3>
+                    <p className="text-slate-400 text-xs mb-2">{mentor.email}</p>
+                    
+                    {mentor.PerfilMentor && (
+                      <div className="space-y-1 w-full">
+                        {mentor.PerfilMentor.especialidad && (
+                          <div className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs font-semibold">
+                            {mentor.PerfilMentor.especialidad}
+                          </div>
+                        )}
+                        {mentor.PerfilMentor.nivel && (
+                          <div className="bg-green-500/20 text-green-400 px-2 py-1 rounded text-xs">
+                            Nivel {mentor.PerfilMentor.nivel}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="mt-3 flex items-center gap-1 text-purple-400 text-sm">
+                      <Calendar size={14} />
+                      <span>{mentor.diasDisponibles} días disponibles</span>
+                    </div>
+
+                    {mentorSeleccionado === mentor.id && (
+                      <div className="mt-3 bg-purple-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                        <CheckCircle2 size={14} />
+                        Seleccionado
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {mentorSeleccionado && (
+              <button
+                onClick={() => seleccionarMentor(mentorSeleccionado)}
+                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-4 rounded-lg transition-all flex items-center justify-center gap-2 text-lg"
+              >
+                Confirmar Mentor y Continuar
+                <ArrowRight size={20} />
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Características del Programa */}
         <div className="grid md:grid-cols-3 gap-4 mb-8">
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 text-center">
@@ -282,10 +568,46 @@ export default function ProgramEnrollPage() {
               </div>
             </div>
           ) : (
-            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 text-center">
-              <AlertTriangle className="text-yellow-400 mx-auto mb-2" size={32} />
-              <p className="text-yellow-300">No tienes un mentor asignado</p>
-              <p className="text-slate-400 text-sm mt-1">Contacta al administrador</p>
+            <div className="bg-gradient-to-br from-purple-900/30 via-blue-900/20 to-slate-900/50 border-2 border-purple-500/40 rounded-xl p-6">
+              <div className="text-center mb-4">
+                <AlertTriangle className="text-yellow-400 mx-auto mb-3" size={40} />
+                <p className="text-yellow-300 font-bold text-lg mb-2">No tienes un mentor asignado</p>
+              </div>
+              
+              <div className="bg-slate-800/50 rounded-lg p-4 mb-4">
+                <p className="text-white text-sm mb-3">
+                  🎯 <strong>¡Desbloquea tu potencial con un mentor personal!</strong>
+                </p>
+                <p className="text-slate-300 text-sm mb-3">
+                  Con los planes <span className="text-blue-400 font-semibold">STANDARD</span> o <span className="text-purple-400 font-semibold">PREMIUM</span> obtendrás:
+                </p>
+                <ul className="text-slate-300 text-sm space-y-2 mb-4">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="text-green-400 mt-0.5 flex-shrink-0" size={16} />
+                    <span><strong>Mentor dedicado</strong> que guiará tu crecimiento personal</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="text-green-400 mt-0.5 flex-shrink-0" size={16} />
+                    <span><strong>Llamadas</strong> personalizadas cada semana</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="text-green-400 mt-0.5 flex-shrink-0" size={16} />
+                    <span><strong>Retroalimentación experta</strong> en tus cartas y evidencias</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="text-green-400 mt-0.5 flex-shrink-0" size={16} />
+                    <span><strong>Seguimiento continuo</strong> de tu progreso y metas</span>
+                  </li>
+                </ul>
+              </div>
+
+              <a 
+                href="/dashboard/suscripcion" 
+                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2"
+              >
+                <Zap size={20} />
+                <span>Ver Planes</span>
+              </a>
             </div>
           )}
         </div>

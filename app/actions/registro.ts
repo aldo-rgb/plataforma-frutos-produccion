@@ -38,6 +38,8 @@ export async function registrarUsuario(formData: FormData) {
       },
     });
 
+    // NOTA: El ciclo de 90 días se creará automáticamente cuando su carta sea aprobada
+
     return { success: true };
 
   } catch (error) {

@@ -39,12 +39,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Carta no encontrada' }, { status: 404 });
     }
 
-    // ========== VALIDACIÓN DE SUSCRIPCIÓN PARA PARTICIPANTES ==========
+    // ========== VALIDACIÓN DE SUSCRIPCIÓN/TIER PARA PARTICIPANTES ==========
     const usuario = await prisma.usuario.findUnique({
       where: { id: userId },
       select: { 
         rol: true, 
         suscripcion: true,
+        tier: true,
         mentorId: true, 
         assignedMentorId: true 
       }
@@ -52,6 +53,34 @@ export async function POST(req: Request) {
 
     // Solo validar suscripción si es PARTICIPANTE
     if (usuario?.rol === 'PARTICIPANTE') {
+      const userTier = usuario.tier || 'FREE';
+      
+      // Usuarios FREE pueden enviar sin suscripción (auto-aprobación)
+      if (userTier === 'FREE') {
+        console.log('🆓 Usuario FREE - Procesando auto-aprobación');
+        
+        // Auto-aprobar la carta (estado APROBADO)
+        const autoApprovedCarta = await prisma.cartaFrutos.update({
+          where: { id: carta.id },
+          data: {
+            estado: 'APROBADO',
+            fechaActualizacion: new Date(),
+            comentariosMentor: 'Carta auto-aprobada - Plan FREE (sin mentor asignado)'
+          }
+        });
+
+        console.log('✅ Carta auto-aprobada para usuario FREE');
+        
+        return NextResponse.json({
+          success: true,
+          carta: autoApprovedCarta,
+          autoApproved: true,
+          message: '✅ Tu carta ha sido guardada. Como usuario FREE, puedes comenzar a trabajar en tus metas inmediatamente.',
+          tier: 'FREE'
+        });
+      }
+      
+      // STANDARD y PREMIUM requieren suscripción activa
       const tieneAcceso = usuario.suscripcion === 'ACTIVO' || usuario.suscripcion === 'PRUEBA';
       
       if (!tieneAcceso) {

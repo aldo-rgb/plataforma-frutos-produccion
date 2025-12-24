@@ -6,7 +6,7 @@ interface PhoenixContextType {
   isPhoenixMode: boolean;
   phoenixSessionId: number | null;
   activatePhoenix: (reason?: string) => Promise<void>;
-  exitPhoenix: () => void;
+  exitPhoenix: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -64,11 +64,26 @@ export function PhoenixProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const exitPhoenix = () => {
-    setIsPhoenixMode(false);
-    setPhoenixSessionId(null);
-    sessionStorage.removeItem('phoenixMode');
-    sessionStorage.removeItem('phoenixSessionId');
+  const exitPhoenix = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/phoenix/exit', {
+        method: 'POST'
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setIsPhoenixMode(false);
+        setPhoenixSessionId(null);
+        sessionStorage.removeItem('phoenixMode');
+        sessionStorage.removeItem('phoenixSessionId');
+      }
+    } catch (error) {
+      console.error('Error exiting Phoenix:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

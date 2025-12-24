@@ -4,30 +4,34 @@ import { NivelMentor } from '@prisma/client';
 // =====================================================
 // REGLAS DEL SISTEMA DE ASCENSO AUTOMÁTICO
 // =====================================================
-// Definimos las reglas del juego aquí para fácil ajuste
+// Sistema HÍBRIDO: Mantiene requisitos mínimos + Sistema de Puntos
 
 const RULES = {
   SENIOR: { 
     minSessions: 20,    // Mínimo 20 sesiones completadas
-    minRating: 4.5      // Rating promedio mínimo de 4.5 estrellas
+    minRating: 4.5,     // Rating promedio mínimo de 4.5 estrellas
+    minPuntos: 500      // 🎯 NUEVO: Sistema de Puntos
   },
   MASTER: { 
     minSessions: 50,    // Mínimo 50 sesiones completadas
-    minRating: 4.7      // Rating promedio mínimo de 4.7 estrellas
+    minRating: 4.7,     // Rating promedio mínimo de 4.7 estrellas
+    minPuntos: 1500     // 🎯 NUEVO: Sistema de Puntos
   }
 };
 
 // =====================================================
-// FUNCIÓN PRINCIPAL DE EVALUACIÓN
+// FUNCIÓN PRINCIPAL DE EVALUACIÓN (CON SISTEMA DE PUNTOS)
 // =====================================================
 /**
  * Evalúa si un mentor debe subir de nivel basado en:
- * - Sesiones completadas
- * - Rating promedio
+ * - Sesiones completadas (mínimo)
+ * - Rating promedio (mínimo)
+ * - 🎯 NUEVO: Sistema de Puntos (incluye XP de mentorados, evidencias HQ, etc.)
  * 
  * Se ejecuta automáticamente después de:
  * - Completar una sesión
  * - Recibir una nueva review
+ * - Actualizar métricas de mentorados
  * 
  * @param mentorId - ID del usuario mentor a evaluar
  */
@@ -44,7 +48,11 @@ export async function evaluateMentorLevel(mentorId: number): Promise<void> {
         ratingSum: true,
         ratingCount: true,
         comisionMentor: true,
-        comisionPlataforma: true
+        comisionPlataforma: true,
+        puntosTotales: true,                    // 🎯 NUEVO
+        mentoradosActivos: true,                // 🎯 NUEVO
+        evidenciasHighQuality: true,            // 🎯 NUEVO
+        xpTotalMentorados: true                 // 🎯 NUEVO
       }
     });
 
@@ -60,27 +68,56 @@ export async function evaluateMentorLevel(mentorId: number): Promise<void> {
       : 0;
 
     const sessionsCount = perfilMentor.completedSessionsCount;
+    const puntosTotales = perfilMentor.puntosTotales;
 
-    console.log(`📊 Evaluando Mentor ${mentorId}: ${sessionsCount} sesiones | Rating: ${currentRating.toFixed(2)}`);
+    console.log(`📊 Evaluando Mentor ${mentorId}:`);
+    console.log(`   - Sesiones: ${sessionsCount}`);
+    console.log(`   - Rating: ${currentRating.toFixed(2)} ⭐`);
+    console.log(`   - 🎯 Puntos: ${puntosTotales}`);
+    console.log(`   - Mentorados: ${perfilMentor.mentoradosActivos}`);
+    console.log(`   - Evidencias HQ: ${perfilMentor.evidenciasHighQuality}`);
+    console.log(`   - XP generado: ${perfilMentor.xpTotalMentorados.toLocaleString()}`);
 
-    // 3. LÓGICA DE ASCENSO (LEVEL UP) 🚀
-    let newLevel: NivelMentor = 'JUNIOR'; // Empezamos asumiendo lo básico
+    // 3. LÓGICA DE ASCENSO (SISTEMA HÍBRIDO) 🚀
+    let newLevel: NivelMentor = 'JUNIOR';
     let shouldUpdate = false;
 
-    // ¿Cumple para MASTER?
-    if (sessionsCount >= RULES.MASTER.minSessions && currentRating >= RULES.MASTER.minRating) {
+    // ¿Cumple para MASTER? (Sesiones + Rating + Puntos)
+    if (
+      sessionsCount >= RULES.MASTER.minSessions && 
+      currentRating >= RULES.MASTER.minRating &&
+      puntosTotales >= RULES.MASTER.minPuntos
+    ) {
       newLevel = 'MASTER';
       shouldUpdate = perfilMentor.nivel !== 'MASTER';
     } 
-    // Si no, ¿cumple para SENIOR?
-    else if (sessionsCount >= RULES.SENIOR.minSessions && currentRating >= RULES.SENIOR.minRating) {
+    // Si no, ¿cumple para SENIOR? (Sesiones + Rating + Puntos)
+    else if (
+      sessionsCount >= RULES.SENIOR.minSessions && 
+      currentRating >= RULES.SENIOR.minRating &&
+      puntosTotales >= RULES.SENIOR.minPuntos
+    ) {
       newLevel = 'SENIOR';
       shouldUpdate = perfilMentor.nivel !== 'SENIOR';
     }
-    // Si no cumple ninguno, mantener JUNIOR
+    // Si no cumple, mantener JUNIOR
     else {
       newLevel = 'JUNIOR';
       shouldUpdate = perfilMentor.nivel !== 'JUNIOR';
+      
+      // Mostrar qué le falta para SENIOR
+      if (perfilMentor.nivel === 'JUNIOR') {
+        const faltaSesiones = Math.max(0, RULES.SENIOR.minSessions - sessionsCount);
+        const faltaRating = Math.max(0, RULES.SENIOR.minRating - currentRating);
+        const faltaPuntos = Math.max(0, RULES.SENIOR.minPuntos - puntosTotales);
+        
+        if (faltaSesiones > 0 || faltaRating > 0 || faltaPuntos > 0) {
+          console.log(`   📈 Para SENIOR necesita:`);
+          if (faltaSesiones > 0) console.log(`      - ${faltaSesiones} sesiones más`);
+          if (faltaRating > 0) console.log(`      - ${faltaRating.toFixed(1)} puntos de rating más`);
+          if (faltaPuntos > 0) console.log(`      - ${faltaPuntos} puntos más 🎯`);
+        }
+      }
     }
 
     // 4. APLICAR CAMBIOS (Solo si el nivel es diferente)
@@ -110,7 +147,8 @@ export async function evaluateMentorLevel(mentorId: number): Promise<void> {
         }
       });
 
-      console.log(`🚀 ¡LEVEL UP! Mentor ${mentorId} ahora es ${newLevel} (Comisión Mentor: ${newCommissionMentor}% | Plataforma: ${newCommissionPlatform}%)`);
+      console.log(`🚀 ¡LEVEL UP! Mentor ${mentorId} ahora es ${newLevel}`);
+      console.log(`   💰 Nueva comisión: ${newCommissionMentor}% mentor / ${newCommissionPlatform}% plataforma`);
       
       // TODO OPCIONAL: Aquí podrías:
       // - Enviar un email de felicitación
@@ -119,13 +157,12 @@ export async function evaluateMentorLevel(mentorId: number): Promise<void> {
       // - Otorgar puntos cuánticos bonus
       
     } else {
-      console.log(`✅ Mentor ${mentorId} mantiene nivel ${perfilMentor.nivel} (Cumple requisitos actuales)`);
+      console.log(`✅ Mentor ${mentorId} mantiene nivel ${perfilMentor.nivel}`);
     }
 
   } catch (error) {
     console.error(`❌ Error al evaluar nivel de mentor ${mentorId}:`, error);
     // No lanzamos el error para no afectar el flujo principal
-    // El sistema debe continuar funcionando aunque falle la evaluación
   }
 }
 

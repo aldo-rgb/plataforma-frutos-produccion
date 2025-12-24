@@ -1,0 +1,652 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  Users, TrendingUp, Target, Ticket, Award, BarChart3, Download,
+  AlertTriangle, CheckCircle, XCircle, Plus, X, CreditCard, Clock,
+  DollarSign, ShoppingCart, Building2, UserCheck, Activity, Zap,
+  Shield, BookOpen, GraduationCap, Star
+} from 'lucide-react';
+import Link from 'next/link';
+
+interface DashboardData {
+  overview: {
+    totalStudents: number;
+    activeStudents: number;
+    completionRate: number;
+    approvedLetters: number;
+  };
+  tierDistribution: {
+    tier: string;
+    count: number;
+    percentage: number;
+  }[];
+  topStudents: {
+    id: number;
+    nombre: string;
+    email: string;
+    puntosCultivo: number;
+    racha: number;
+    tier: string;
+  }[];
+  students: {
+    id: number;
+    nombre: string;
+    email: string;
+    tier: string;
+    puntosCultivo: number;
+    racha: number;
+    isActive: boolean;
+  }[];
+  pendingOrders: {
+    id: string;
+    quantity: number;
+    tier: string;
+    amount: number;
+    createdAt: string;
+    status: string;
+  }[];
+  availableCredits: number;
+  pendingPayment: boolean;
+}
+
+export default function SchoolAdminDashboard() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [organization, setOrganization] = useState<any>(null);
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/signin');
+    } else if (session?.user?.rol !== 'SCHOOL_ADMIN') {
+      router.push('/dashboard');
+    } else {
+      fetchDashboardData();
+      checkPaymentStatus();
+    }
+  }, [status, session]);
+
+  const checkPaymentStatus = () => {
+    const success = searchParams.get('success');
+    const error = searchParams.get('error');
+    const quantity = searchParams.get('quantity');
+    const tier = searchParams.get('tier');
+
+    if (success === 'true') {
+      setNotification({
+        type: 'success',
+        message: `✅ ¡Pago exitoso! Se han activado ${quantity} licencias ${tier}.`,
+      });
+      // Limpiar query params después de 5 segundos
+      setTimeout(() => {
+        router.replace('/dashboard/school-admin');
+        setNotification(null);
+      }, 5000);
+    } else if (error) {
+      setNotification({
+        type: 'error',
+        message: `❌ Error en el pago: ${error}`,
+      });
+      setTimeout(() => {
+        router.replace('/dashboard/school-admin');
+        setNotification(null);
+      }, 5000);
+    }
+  };
+
+  const fetchDashboardData = async () => {
+    try {
+      const res = await fetch('/api/school-admin/dashboard');
+      const result = await res.json();
+
+      console.log('Dashboard API response:', result); // Debug log
+
+      if (res.ok) {
+        // Transformar los datos del API al formato esperado por el componente
+        const transformedData: DashboardData = {
+          overview: {
+            totalStudents: result.stats.totalStudents,
+            activeStudents: result.users.filter((u: any) => u.isActive && u.rol === 'PARTICIPANTE').length,
+            completionRate: 0, // TODO: calcular desde cartas
+            approvedLetters: 0, // TODO: calcular desde cartas
+          },
+          tierDistribution: Object.entries(result.tierDistribution).map(([tier, count]) => ({
+            tier,
+            count: count as number,
+            percentage: ((count as number) / result.stats.totalUsers) * 100,
+          })),
+          topStudents: result.topStudents.map((s: any) => ({
+            id: s.id,
+            nombre: s.nombre,
+            email: '',
+            puntosCultivo: s.experienciaXP,
+            racha: 0,
+            tier: s.tier,
+          })),
+          students: result.users
+            .filter((u: any) => u.rol === 'PARTICIPANTE')
+            .map((u: any) => ({
+              id: u.id,
+              nombre: u.nombre,
+              email: u.email,
+              tier: u.tier || 'BASIC',
+              puntosCultivo: u.experienciaXP || 0,
+              racha: 0,
+              isActive: u.isActive,
+            })),
+          pendingOrders: result.pendingOrders,
+          availableCredits: result.stats.availableCredits,
+          pendingPayment: result.pendingPayment,
+        };
+        
+        setData(transformedData);
+        setOrganization(result.organization);
+      } else {
+        console.error('API error:', result);
+        setNotification({
+          type: 'error',
+          message: result.error || 'Error al cargar datos del dashboard'
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard:', error);
+      setNotification({
+        type: 'error',
+        message: 'Error de conexión al cargar el dashboard'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      </div>
+    );
+  }
+
+  if (!data || !organization) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-6">
+        <div className="text-center">
+          <AlertTriangle className="mx-auto mb-4 text-yellow-400" size={64} />
+          <h2 className="text-2xl font-bold text-white mb-2">No hay datos disponibles</h2>
+          <p className="text-slate-400">Por favor contacte al administrador del sistema</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Notificación de Pago */}
+        {notification && (
+          <div
+            className={`flex items-center justify-between p-4 rounded-xl border ${
+              notification.type === 'success'
+                ? 'bg-green-500/10 border-green-500/30 text-green-400'
+                : 'bg-red-500/10 border-red-500/30 text-red-400'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              {notification.type === 'success' ? (
+                <CheckCircle size={24} />
+              ) : (
+                <XCircle size={24} />
+              )}
+              <span className="font-medium">{notification.message}</span>
+            </div>
+            <button
+              onClick={() => setNotification(null)}
+              className="text-slate-400 hover:text-white transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        )}
+
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/10 pb-6">
+          <div className="flex items-center gap-4">
+            {organization?.logoUrl ? (
+              <img
+                src={organization.logoUrl}
+                alt={organization.name}
+                className="w-20 h-20 rounded-xl object-cover shadow-lg ring-2 ring-purple-500/30"
+              />
+            ) : (
+              <div
+                className="w-20 h-20 rounded-xl flex items-center justify-center text-white font-bold text-3xl shadow-lg bg-purple-600"
+                style={{ backgroundColor: organization?.brandColor || '#8B5CF6' }}
+              >
+                {organization?.name?.charAt(0) || 'C'}
+              </div>
+            )}
+            <div>
+              <h1 className="text-4xl font-black text-white tracking-tight flex items-center gap-3">
+                {organization?.name || 'Centro Educativo'}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500 text-2xl">
+                  Centro
+                </span>
+              </h1>
+              <p className="text-slate-400 mt-1">DIRECTOR • Panel de Control</p>
+              <p className="text-sm text-slate-500">{session?.user?.email}</p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => alert('Función de descarga en desarrollo')}
+            className="flex items-center gap-2 px-6 py-3 bg-slate-800 text-white rounded-xl hover:bg-slate-700 transition-colors border border-slate-700"
+          >
+            <Download size={20} />
+            <span>Descargar Reporte</span>
+          </button>
+        </div>
+
+        {/* Banner de Alerta - Órdenes Pendientes */}
+        {data.pendingOrders && data.pendingOrders.length > 0 && (() => {
+          const hasProcessing = data.pendingOrders.some((o: any) => o.status === 'PROCESSING');
+          const bgColor = hasProcessing ? 'from-blue-500/20 via-cyan-500/20 to-blue-500/20 border-blue-500/50' : 'from-red-500/20 via-orange-500/20 to-red-500/20 border-red-500/50';
+          const iconBg = hasProcessing ? 'bg-blue-500' : 'bg-red-500';
+          const iconPing = hasProcessing ? 'bg-blue-400' : 'bg-red-400';
+          const textColor = hasProcessing ? 'text-blue-200' : 'text-red-200';
+          const btnColor = hasProcessing ? 'bg-blue-500 hover:bg-blue-600 shadow-blue-500/50' : 'bg-red-500 hover:bg-red-600 shadow-red-500/50';
+          
+          return (
+            <div className={`bg-gradient-to-r ${bgColor} border-2 rounded-2xl p-5 shadow-2xl animate-pulse backdrop-blur-sm`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className={`absolute inset-0 ${iconPing} rounded-full animate-ping opacity-75`}></div>
+                    <div className={`relative flex items-center justify-center w-12 h-12 ${iconBg} rounded-full`}>
+                      <AlertTriangle className="text-white" size={24} />
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                      <span className="animate-pulse">{hasProcessing ? '📋' : '⚠️'}</span>
+                      {(() => {
+                        const processingOrders = data.pendingOrders.filter((o: any) => o.status === 'PROCESSING');
+                        const pendingOrders = data.pendingOrders.filter((o: any) => o.status === 'PENDING');
+                        
+                        if (processingOrders.length > 0 && pendingOrders.length > 0) {
+                          return `Tienes ${processingOrders.length} orden(es) pendiente(s) de aprobación y ${pendingOrders.length} sin pagar`;
+                        } else if (processingOrders.length > 0) {
+                          return `Tienes ${processingOrders.length} orden(es) pendiente(s) de aprobación`;
+                        } else {
+                          return `Tienes ${pendingOrders.length} orden(es) pendiente(s) de pago`;
+                        }
+                      })()}
+                    </h3>
+                    <p className={`text-sm ${textColor} mt-1`}>
+                      {hasProcessing
+                        ? 'El comprobante de pago está en revisión. Se activarán las licencias pronto.'
+                        : 'Completa el proceso de pago para activar tus licencias'
+                      }
+                    </p>
+                  </div>
+                </div>
+                <Link href="/dashboard/school-admin/licenses/payment">
+                  <button className={`px-6 py-3 ${btnColor} text-white font-bold rounded-xl transition-all shadow-lg flex items-center gap-2`}>
+                    <ShoppingCart size={20} />
+                    <span>Ver Órdenes</span>
+                  </button>
+                </Link>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Widget de Pago Pendiente - COMPACTO - Solo para órdenes PENDING */}
+        {data.pendingPayment && data.pendingOrders && data.pendingOrders.filter((o: any) => o.status === 'PENDING').length > 0 && (
+          <div className="relative overflow-hidden bg-gradient-to-br from-purple-900/50 via-pink-900/30 to-slate-900 border-2 border-purple-500/50 rounded-2xl p-6 shadow-2xl">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl -mt-24 -mr-24"></div>
+            <div className="relative z-10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-purple-500/20 rounded-xl">
+                    <CreditCard className="text-purple-300" size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <Zap className="text-yellow-400" size={20} />
+                      Licencias Pendientes de Pago
+                    </h2>
+                    <p className="text-purple-200 text-sm mt-0.5">
+                      Completa el pago para activar tus licencias
+                    </p>
+                  </div>
+                </div>
+                <span className="px-3 py-1.5 bg-yellow-500/20 text-yellow-300 rounded-full text-xs font-bold border border-yellow-500/30">
+                  ⚠️ ACCIÓN REQUERIDA
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                {data.pendingOrders.filter((o: any) => o.status === 'PENDING').map((order: any) => (
+                  <div
+                    key={order.id}
+                    className="bg-slate-900/50 backdrop-blur border border-purple-500/20 rounded-xl p-3"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-slate-400">Orden #{order.id.slice(0, 8)}</span>
+                      <span className="px-2 py-0.5 bg-yellow-500/10 text-yellow-400 rounded text-xs font-bold">
+                        PENDIENTE
+                      </span>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400 text-xs">Licencias:</span>
+                        <span className="text-white font-bold text-sm">{order.quantity}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400 text-xs">Tipo:</span>
+                        <span className="text-purple-300 font-semibold text-sm">{order.tier}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400 text-xs">Precio unitario:</span>
+                        <span className="text-green-300 font-semibold text-sm">
+                          ${(order.amount / order.quantity).toLocaleString()} MXN
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center border-t border-slate-700 pt-1.5">
+                        <span className="text-slate-400 text-xs">Total:</span>
+                        <span className="text-xl font-bold text-white">
+                          ${order.amount.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <Link
+                href="/dashboard/school-admin/licenses/payment"
+                className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/50"
+              >
+                <ShoppingCart size={18} />
+                <span>Proceder al Pago</span>
+              </Link>
+
+              <p className="text-xs text-purple-200/60 mt-3 flex items-center gap-2">
+                <Shield size={12} />
+                Las licencias se activarán automáticamente después de confirmar el pago
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <KpiCard
+            icon={<Users className="text-cyan-400" />}
+            label="Estudiantes Totales"
+            value={data.overview.totalStudents.toString()}
+            trend={`${data.overview.activeStudents} activos`}
+            color="cyan"
+          />
+          <KpiCard
+            icon={<Target className="text-purple-400" />}
+            label="Tasa de Cumplimiento"
+            value={`${data.overview.completionRate}%`}
+            trend="Cartas y evidencias"
+            color="purple"
+          />
+          <KpiCard
+            icon={<CheckCircle className="text-green-400" />}
+            label="Cartas Aprobadas"
+            value={data.overview.approvedLetters.toString()}
+            trend="Total del mes"
+            color="green"
+          />
+          <KpiCard
+            icon={<Ticket className="text-yellow-400" />}
+            label="Licencias Disponibles"
+            value={data.availableCredits.toString()}
+            trend={(() => {
+              if (data.pendingOrders.length > 0) {
+                const totalLicensesPending = data.pendingOrders.reduce((sum: number, order: any) => sum + order.quantity, 0);
+                return `${totalLicensesPending} licencias por activar`;
+              }
+              return '✅ Activos';
+            })()}
+            color={data.pendingOrders.length > 0 ? 'blue' : 'yellow'}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Columna Izquierda: Distribución de Planes */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-black text-white uppercase flex items-center gap-2">
+                <BarChart3 className="text-purple-400" /> Distribución de Estudiantes
+              </h2>
+            </div>
+
+            <div className="bg-slate-900/50 backdrop-blur border border-slate-800 rounded-3xl p-6">
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                {data.tierDistribution.map((tier) => (
+                  <div
+                    key={tier.tier}
+                    className="bg-slate-800/50 rounded-xl p-4 border border-slate-700"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-bold text-slate-400">{tier.tier}</span>
+                      <span className="text-2xl font-black text-white">{tier.count}</span>
+                    </div>
+                    <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${
+                          tier.tier === 'PREMIUM'
+                            ? 'bg-purple-500'
+                            : tier.tier === 'ELITE'
+                            ? 'bg-yellow-500'
+                            : 'bg-cyan-500'
+                        }`}
+                        style={{ width: `${tier.percentage}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-slate-500 mt-1 block">{tier.percentage}%</span>
+                  </div>
+                ))}
+              </div>
+
+              <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                <Star className="text-yellow-400" size={16} />
+                Top Estudiantes
+              </h3>
+              <div className="space-y-3">
+                {data.topStudents.slice(0, 5).map((student, index) => (
+                  <div
+                    key={student.id}
+                    className="flex items-center justify-between p-3 bg-slate-800/30 rounded-xl border border-slate-700/50 hover:border-purple-500/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <p className="text-white font-semibold text-sm">{student.nombre}</p>
+                        <p className="text-xs text-slate-400">{student.tier}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-white font-bold">{student.puntosCultivo} pts</p>
+                      <p className="text-xs text-yellow-400">🔥 {student.racha} días</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Columna Derecha: Acciones Rápidas */}
+          <div className="space-y-6">
+            <h2 className="text-xl font-black text-white uppercase flex items-center gap-2">
+              <Zap className="text-yellow-400" /> Acciones Rápidas
+            </h2>
+
+            <Link href={data.pendingOrders.length > 0 ? "/dashboard/school-admin/licenses/payment" : "/dashboard/school-admin/licenses/request"}>
+              <div className={`bg-gradient-to-br ${(() => {
+                if (data.pendingOrders.length === 0) return 'from-purple-900/50 to-slate-900 border-2 border-purple-500/30';
+                const hasProcessing = data.pendingOrders.some((o: any) => o.status === 'PROCESSING');
+                return hasProcessing 
+                  ? 'from-blue-900/50 to-slate-900 border-2 border-blue-500/50 animate-pulse'
+                  : 'from-red-900/50 to-slate-900 border-2 border-red-500/50 animate-pulse';
+              })()} rounded-2xl p-6 transition-all cursor-pointer group relative overflow-hidden`}>
+                {/* Badge animado para órdenes pendientes */}
+                {data.pendingOrders.length > 0 && (() => {
+                  const hasProcessing = data.pendingOrders.some((o: any) => o.status === 'PROCESSING');
+                  const badgeBg = hasProcessing ? 'bg-blue-500' : 'bg-red-500';
+                  const badgePing = hasProcessing ? 'bg-blue-400' : 'bg-red-400';
+                  return (
+                    <div className="absolute top-2 right-2">
+                      <div className="relative">
+                        <div className={`animate-ping absolute inline-flex h-6 w-6 rounded-full ${badgePing} opacity-75`}></div>
+                        <div className={`relative inline-flex items-center justify-center h-6 w-6 rounded-full ${badgeBg} border-2 border-slate-900`}>
+                          <span className="text-white font-bold text-xs">{data.pendingOrders.length}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+                
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`p-3 ${(() => {
+                    if (data.pendingOrders.length === 0) return 'bg-purple-500/20 group-hover:bg-purple-500/30';
+                    const hasProcessing = data.pendingOrders.some((o: any) => o.status === 'PROCESSING');
+                    return hasProcessing
+                      ? 'bg-blue-500/20 group-hover:bg-blue-500/30'
+                      : 'bg-red-500/20 group-hover:bg-red-500/30';
+                  })()} rounded-xl transition-colors`}>
+                    {data.pendingOrders.length > 0 ? (
+                      data.pendingOrders.some((o: any) => o.status === 'PROCESSING') ? (
+                        <AlertTriangle size={24} className="text-blue-300" />
+                      ) : (
+                        <AlertTriangle size={24} className="text-red-300" />
+                      )
+                    ) : (
+                      <Plus size={24} className="text-purple-300" />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm uppercase">
+                      {data.pendingOrders.length > 0 
+                        ? (data.pendingOrders.some((o: any) => o.status === 'PROCESSING') ? '📋 Órdenes en Revisión' : '⚠️ Completar Pago')
+                        : 'Comprar Licencias'
+                      }
+                    </h3>
+                    <p className={`text-xs ${(() => {
+                      if (data.pendingOrders.length === 0) return 'text-purple-300';
+                      const hasProcessing = data.pendingOrders.some((o: any) => o.status === 'PROCESSING');
+                      return hasProcessing ? 'text-blue-300' : 'text-red-300';
+                    })()}`}>
+                      {data.pendingOrders.length > 0 
+                        ? (data.pendingOrders.some((o: any) => o.status === 'PROCESSING') ? 'Pendientes de aprobación' : 'Tienes órdenes pendientes')
+                        : 'Expande tu capacidad'
+                      }
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400">
+                  {data.pendingOrders.length > 0 
+                    ? (() => {
+                        const processingCount = data.pendingOrders.filter((o: any) => o.status === 'PROCESSING').length;
+                        const pendingCount = data.pendingOrders.filter((o: any) => o.status === 'PENDING').length;
+                        
+                        if (processingCount > 0 && pendingCount > 0) {
+                          return `${processingCount} en revisión, ${pendingCount} sin pagar`;
+                        } else if (processingCount > 0) {
+                          return `${processingCount} orden(es) en revisión - El administrador aprobará pronto`;
+                        } else {
+                          return `${pendingCount} orden(es) esperando pago`;
+                        }
+                      })()
+                    : 'Adquiere más licencias para tus estudiantes'
+                  }
+                </p>
+              </div>
+            </Link>
+
+            <div className="bg-gradient-to-br from-cyan-900/50 to-slate-900 border border-cyan-500/30 rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-cyan-500/20 rounded-xl">
+                  <UserCheck size={24} className="text-cyan-300" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-sm uppercase">Participantes Activos</h3>
+                  <p className="text-xs text-cyan-300">Monitoreo en tiempo real</p>
+                </div>
+              </div>
+              <div className="text-center py-4">
+                <p className="text-4xl font-black text-white">{data.overview.activeStudents}</p>
+                <p className="text-xs text-slate-400 mt-1">de {data.overview.totalStudents} totales</p>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-900/50 to-slate-900 border border-green-500/30 rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-green-500/20 rounded-xl">
+                  <Activity size={24} className="text-green-300" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-sm uppercase">Progreso Global</h3>
+                  <p className="text-xs text-green-300">Rendimiento general</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Cumplimiento:</span>
+                  <span className="text-white font-bold">{data.overview.completionRate}%</span>
+                </div>
+                <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-green-500"
+                    style={{ width: `${data.overview.completionRate}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function KpiCard({ icon, label, value, trend, color }: any) {
+  const colors: any = {
+    cyan: 'border-cyan-500/20 bg-cyan-500/5',
+    blue: 'border-blue-500/20 bg-blue-500/5',
+    red: 'border-red-500/20 bg-red-500/5',
+    yellow: 'border-yellow-500/20 bg-yellow-500/5',
+    green: 'border-green-500/20 bg-green-500/5',
+    purple: 'border-purple-500/20 bg-purple-500/5',
+  };
+
+  return (
+    <div className={`p-6 rounded-2xl border ${colors[color]} backdrop-blur-sm`}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="p-2 bg-slate-900 rounded-lg">{icon}</div>
+        <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">KPI</span>
+      </div>
+      <p className="text-3xl font-black text-white">{value}</p>
+      <p className="text-xs font-medium text-slate-400 mt-1">{label}</p>
+      <div className="mt-4 pt-4 border-t border-white/5 text-[10px] font-mono text-slate-500">
+        {trend}
+      </div>
+    </div>
+  );
+}

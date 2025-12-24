@@ -80,6 +80,15 @@ export async function POST(req: Request) {
 
       const publicUrl = `/uploads/evidencias/${fileName}`;
 
+      // Obtener tier del usuario para determinar estado inicial
+      const usuario = await prisma.usuario.findUnique({
+        where: { id: userId },
+        select: { tier: true }
+      });
+
+      const userTier = usuario?.tier || 'FREE';
+      const estadoInicial = userTier === 'FREE' ? 'APROBADO' : 'PENDIENTE';
+
       // Crear registro en EvidenciaAccion
       const evidenciaAccion = await prisma.evidenciaAccion.create({
         data: {
@@ -87,28 +96,43 @@ export async function POST(req: Request) {
           usuarioId: userId,
           fotoUrl: publicUrl,
           descripcion: comentario,
-          estado: 'PENDIENTE',
-          updatedAt: new Date()
+          estado: estadoInicial,
+          updatedAt: new Date(),
+          // Usuarios FREE: Auto-aprobado pero sin puntos
+          ...(userTier === 'FREE' && {
+            puntosCompromiso: 0,
+            comentariosMentor: 'Auto-aprobado - Plan FREE (sin revisión de mentor)'
+          })
         }
       });
 
-      // Actualizar el evidenceStatus de la tarea a PENDING
+      // Actualizar el evidenceStatus de la tarea según tier
+      const taskStatus = userTier === 'FREE' ? 'APPROVED' : 'PENDING';
       await prisma.taskInstance.update({
         where: { id: taskId },
         data: {
-          evidenceStatus: 'PENDING'
+          evidenceStatus: taskStatus,
+          ...(userTier === 'FREE' && {
+            completedAt: new Date()
+          })
         }
       });
 
-      console.log(`✅ Evidencia CARTA subida para tarea ${taskId} por usuario ${userId}`);
+      console.log(`✅ Evidencia CARTA subida para tarea ${taskId} por usuario ${userId} (${userTier}) - Estado: ${estadoInicial}`);
 
       return NextResponse.json({
         success: true,
         type: 'CARTA',
+        tier: userTier,
+        autoApproved: userTier === 'FREE',
         evidencia: {
           id: evidenciaAccion.id,
-          url: publicUrl
-        }
+          url: publicUrl,
+          estado: estadoInicial
+        },
+        message: userTier === 'FREE' 
+          ? '✅ Evidencia guardada y aprobada automáticamente. Actualiza a Standard para ganar puntos.' 
+          : '✅ Evidencia enviada para revisión de tu mentor.'
       });
     }
 

@@ -55,6 +55,10 @@ export default async function DashboardPage() {
     redirect("/dashboard/admin");
   }
 
+  if (usuario.rol === "SCHOOL_ADMIN") {
+    redirect("/dashboard/school-admin");
+  }
+
   if (usuario.rol === "MENTOR") {
     redirect("/dashboard/mentor");
   }

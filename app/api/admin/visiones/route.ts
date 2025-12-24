@@ -96,10 +96,26 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { name, description, startDate, endDate } = body;
+    const { name, description, startDate, endDate, usuarioIds } = body;
 
     if (!name) {
       return NextResponse.json({ error: 'El nombre es requerido' }, { status: 400 });
+    }
+
+    if (!startDate || !endDate) {
+      return NextResponse.json({ error: 'Las fechas son requeridas' }, { status: 400 });
+    }
+
+    if (!usuarioIds || usuarioIds.length === 0) {
+      return NextResponse.json({ error: 'Debes seleccionar al menos un usuario' }, { status: 400 });
+    }
+
+    // Validar fechas
+    const fechaInicio = new Date(startDate);
+    const fechaFin = new Date(endDate);
+    
+    if (fechaFin <= fechaInicio) {
+      return NextResponse.json({ error: 'La fecha fin debe ser posterior a la fecha inicio' }, { status: 400 });
     }
 
     // Crear visión con el coordinador que la crea
@@ -112,9 +128,43 @@ export async function POST(request: Request) {
       }
     });
 
+    // Crear ciclos VISION para cada usuario seleccionado
+    const ciclosCreados = [];
+    for (const userId of usuarioIds) {
+      // Verificar que el usuario no tenga ciclo activo
+      const cicloExistente = await prisma.programEnrollment.findFirst({
+        where: {
+          userId: userId,
+          status: 'ACTIVE'
+        }
+      });
+
+      if (!cicloExistente) {
+        // Calcular duración en semanas (aproximado)
+        const duracionMs = fechaFin.getTime() - fechaInicio.getTime();
+        const duracionSemanas = Math.ceil(duracionMs / (7 * 24 * 60 * 60 * 1000));
+
+        const ciclo = await prisma.programEnrollment.create({
+          data: {
+            userId: userId,
+            mentorId: userId, // Por ahora el mentor es el mismo usuario
+            visionId: nuevaVision.id,
+            cycleType: 'VISION',
+            cycleStartDate: fechaInicio,
+            cycleEndDate: fechaFin,
+            totalWeeks: duracionSemanas,
+            status: 'ACTIVE'
+          }
+        });
+        ciclosCreados.push(ciclo);
+      }
+    }
+
     return NextResponse.json({ 
       success: true, 
-      vision: nuevaVision 
+      vision: nuevaVision,
+      ciclosCreados: ciclosCreados.length,
+      message: `Visión creada con ${ciclosCreados.length} ciclos iniciados`
     });
 
   } catch (error) {

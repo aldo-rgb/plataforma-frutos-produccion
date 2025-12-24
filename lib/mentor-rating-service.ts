@@ -12,6 +12,7 @@
 import { PrismaClient, NivelMentor } from '@prisma/client';
 import { evaluateMentorLevel } from './levelUpSystem';
 import { checkAndAwardBadges } from './badgeSystem'; // 🏅 NUEVO: Sistema de medallas
+import { actualizarMetricasMentor } from './mentorMetricsUpdater'; // 📊 NUEVO: Sistema de puntos
 
 const prisma = new PrismaClient();
 
@@ -124,6 +125,8 @@ export async function crearReview(data: {
     });
     
     if (perfilMentor) {
+      // 📊 NUEVO: Actualizar métricas antes de evaluar nivel
+      await actualizarMetricasMentor(perfilMentor.usuarioId);
       await evaluateMentorLevel(perfilMentor.usuarioId);
       // 🏅 NUEVO: Evaluar medallas después de la reseña
       await checkAndAwardBadges(perfilMentor.usuarioId);
@@ -167,7 +170,16 @@ export async function completarSesion(solicitudId: number) {
     });
 
     // Evaluar promoción automática (incluye actualización de comisiones)
-    await evaluateMentorLevel(perfilActualizado.usuarioId);
+    const perfil = await prisma.perfilMentor.findUnique({
+      where: { id: perfilActualizado.id },
+      select: { usuarioId: true }
+    });
+    
+    if (perfil) {
+      // 📊 NUEVO: Actualizar métricas antes de evaluar nivel
+      await actualizarMetricasMentor(perfil.usuarioId);
+      await evaluateMentorLevel(perfil.usuarioId);
+    }
 
     return {
       success: true,

@@ -45,6 +45,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // NOTA: El ciclo de 90 días se creará automáticamente cuando su carta sea aprobada
+
     return NextResponse.json({
       success: true,
       usuario: {

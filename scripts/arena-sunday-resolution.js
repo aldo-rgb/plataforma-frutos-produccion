@@ -64,7 +64,7 @@ async function runSundayResolution() {
       if (duel.resolutionType === 'WIN' && duel.Winner) {
         console.log(`  🏆 Ganador: ${duel.Winner.nombre} (${duel.prize} PC)`);
       } else if (duel.resolutionType === 'TIE') {
-        console.log(`  🤝 Empate - Ambos recibieron ${duel.prize! / 2} PC`);
+        console.log(`  🤝 Empate - Ambos recibieron ${duel.prize / 2} PC`);
       } else if (duel.resolutionType === 'DOUBLE_KO') {
         console.log(`  💀 Doble K.O. - 1000 PC quemados`);
       }

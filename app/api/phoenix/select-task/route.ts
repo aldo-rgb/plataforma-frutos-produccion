@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const usuarioId = parseInt(session.user.id);
+    const usuarioId = session.user.id as number;
     const body = await req.json();
     const { phoenixSessionId, microTaskType } = body;
 

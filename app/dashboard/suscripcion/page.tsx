@@ -61,7 +61,7 @@ export default function SuscripcionPage() {
           planNombre = `Institucional (${numParticipantes} participantes)`;
           monto = totalPagar;
       } else {
-          planNombre = planIndividual === 'STANDARD' ? 'Standard' : 'Salto Cuántico';
+          planNombre = planIndividual === 'STANDARD' ? 'Standard' : 'Premium';
           monto = totalPagar;
       }
 
@@ -90,11 +90,11 @@ export default function SuscripcionPage() {
       
       {/* HEADER */}
       <div className="mb-10 text-center">
-        <h1 className="text-4xl font-bold text-white mb-4 flex items-center justify-center gap-3">
+        <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 flex items-center justify-center gap-3">
           <ShieldCheck className="text-blue-500" size={40} />
-          Elige tu Nivel de Impacto
+          Elige tu Plan de Transformación
         </h1>
-        <p className="text-slate-400">Planes diseñados para líderes y centros de transformación.</p>
+        <p className="text-slate-400 text-lg">Todos los planes incluyen <span className="text-blue-400 font-semibold">mentor personal</span> dedicado a tu crecimiento</p>
       </div>
 
       {/* VISTA 1: SELECCIÓN DE PLANES (Si no está activo) */}
@@ -130,24 +130,59 @@ export default function SuscripcionPage() {
                         </span>
                     </div>
 
+                    {/* Banner informativo sobre Mentores */}
+                    <div className="bg-gradient-to-r from-blue-900/30 via-purple-900/30 to-blue-900/30 border border-blue-500/30 rounded-xl p-6 mb-8">
+                        <div className="text-center mb-4">
+                            <h3 className="text-xl font-bold text-white mb-2 flex items-center justify-center gap-2">
+                                <Users className="text-blue-400" size={24} />
+                                ✨ Todos los Planes Incluyen Mentor Personal
+                            </h3>
+                            <p className="text-slate-300 text-sm">
+                                Un experto dedicado que te acompaña en cada paso de tu transformación
+                            </p>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                            <div className="bg-slate-900/50 rounded-lg p-3">
+                                <div className="text-2xl mb-1">🎯</div>
+                                <p className="text-xs text-slate-300 font-semibold">Guía Personalizada</p>
+                            </div>
+                            <div className="bg-slate-900/50 rounded-lg p-3">
+                                <div className="text-2xl mb-1">📞</div>
+                                <p className="text-xs text-slate-300 font-semibold">Sesiones 1:1</p>
+                            </div>
+                            <div className="bg-slate-900/50 rounded-lg p-3">
+                                <div className="text-2xl mb-1">💬</div>
+                                <p className="text-xs text-slate-300 font-semibold">Retroalimentación</p>
+                            </div>
+                            <div className="bg-slate-900/50 rounded-lg p-3">
+                                <div className="text-2xl mb-1">📈</div>
+                                <p className="text-xs text-slate-300 font-semibold">Seguimiento</p>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Tarjetas Comparativas */}
                     <div className="grid md:grid-cols-2 gap-8">
                         
                         {/* PLAN STANDARD */}
                         <div className={`relative p-8 rounded-2xl border transition-all cursor-pointer ${planIndividual === 'STANDARD' ? 'bg-slate-900 border-blue-500 shadow-2xl shadow-blue-900/20 transform scale-105 z-10' : 'bg-slate-950 border-slate-800 opacity-80 hover:opacity-100'}`} onClick={() => setPlanIndividual('STANDARD')}>
+                            <div className="absolute top-0 right-0 bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">POPULAR</div>
+                            
                             <h3 className="text-2xl font-bold text-white mb-2">Standard</h3>
-                            <p className="text-slate-400 text-sm mb-6">Autogestión y acceso total al sistema.</p>
+                            <p className="text-slate-400 text-sm mb-6">Transformación personal con mentor dedicado</p>
                             <div className="text-4xl font-bold text-white mb-6">
                                 {formatoMXN(frecuencia === 'MENSUAL' ? PRECIOS.standard.mensual : PRECIOS.standard.anual)}
                                 <span className="text-sm text-slate-500 font-normal"> / {frecuencia.toLowerCase()}</span>
                             </div>
                             
                             <ul className="space-y-3 mb-8">
-                                <li className="flex gap-3 text-slate-300 text-sm"><Check size={16} className="text-blue-500"/> Acceso 24/7 Plataforma</li>
-                                <li className="flex gap-3 text-slate-300 text-sm"><Check size={16} className="text-blue-500"/> Carta F.R.U.T.O.S. Digital</li>
-                                <li className="flex gap-3 text-slate-300 text-sm"><Check size={16} className="text-blue-500"/> Tienda de Recompensas</li>
-                                <li className="flex gap-3 text-slate-500 text-sm line-through decoration-slate-600"><X size={16}/> Mentor Asignado</li>
-                                <li className="flex gap-3 text-slate-500 text-sm line-through decoration-slate-600"><X size={16}/> Coaching 1:1 Mensual</li>
+                                <li className="flex gap-3 text-white text-sm font-semibold"><Check size={16} className="text-blue-500"/> Acceso 24/7 Plataforma</li>
+                                <li className="flex gap-3 text-white text-sm font-semibold"><Check size={16} className="text-blue-500"/> Carta F.R.U.T.O.S. Digital</li>
+                                <li className="flex gap-3 text-white text-sm font-semibold"><Check size={16} className="text-blue-500"/> Tienda de Recompensas</li>
+                                <li className="flex gap-3 text-white text-sm font-bold"><Check size={16} className="text-blue-500"/> 🎯 Mentor Personal Asignado</li>
+                                <li className="flex gap-3 text-white text-sm font-bold"><Check size={16} className="text-blue-500"/> 📞 Sesiones 1:1 Semanales</li>
+                                <li className="flex gap-3 text-white text-sm"><Check size={16} className="text-blue-500"/> Retroalimentación Experta</li>
+                                <li className="flex gap-3 text-white text-sm"><Check size={16} className="text-blue-500"/> Seguimiento de Progreso</li>
                             </ul>
 
                             <button className={`w-full py-3 rounded-xl font-bold transition-colors ${planIndividual === 'STANDARD' ? 'bg-blue-600 text-white hover:bg-blue-500' : 'bg-slate-800 text-slate-400'}`} onClick={iniciarProceso}>
@@ -155,26 +190,29 @@ export default function SuscripcionPage() {
                             </button>
                         </div>
 
-                        {/* PLAN SALTO CUÁNTICO */}
+                        {/* PLAN PREMIUM (anteriormente QUANTUM) */}
                         <div className={`relative p-8 rounded-2xl border transition-all cursor-pointer overflow-hidden ${planIndividual === 'QUANTUM' ? 'bg-slate-900 border-yellow-500 shadow-2xl shadow-yellow-900/20 transform scale-105 z-10' : 'bg-slate-950 border-slate-800 opacity-80 hover:opacity-100'}`} onClick={() => setPlanIndividual('QUANTUM')}>
-                            <div className="absolute top-0 right-0 bg-yellow-500 text-slate-900 text-xs font-bold px-3 py-1 rounded-bl-lg">RECOMENDADO</div>
+                            <div className="absolute top-0 right-0 bg-gradient-to-r from-yellow-500 to-orange-500 text-slate-900 text-xs font-bold px-3 py-1 rounded-bl-lg">⭐ RECOMENDADO</div>
                             
-                            <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">Salto Cuántico <Zap size={20} className="text-yellow-500 fill-current"/></h3>
-                            <p className="text-slate-400 text-sm mb-6">Acompañamiento total para resultados acelerados.</p>
+                            <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">Premium <Zap size={20} className="text-yellow-500 fill-current"/></h3>
+                            <p className="text-slate-400 text-sm mb-6">Máxima transformación con acompañamiento VIP</p>
                             <div className="text-4xl font-bold text-white mb-6">
                                 {formatoMXN(frecuencia === 'MENSUAL' ? PRECIOS.quantum.mensual : PRECIOS.quantum.anual)}
                                 <span className="text-sm text-slate-500 font-normal"> / {frecuencia.toLowerCase()}</span>
                             </div>
                             
                             <ul className="space-y-3 mb-8">
-                                <li className="flex gap-3 text-white text-sm font-bold"><Check size={16} className="text-yellow-500"/> Todo lo de Standard</li>
-                                <li className="flex gap-3 text-white text-sm font-bold"><Check size={16} className="text-yellow-500"/> Mentor Personal Asignado</li>
-                                <li className="flex gap-3 text-white text-sm font-bold"><Check size={16} className="text-yellow-500"/> 1 Llamada Coaching / Mes</li>
+                                <li className="flex gap-3 text-yellow-300 text-sm font-bold"><Star size={16} className="text-yellow-500 fill-current"/> Todo lo de Standard</li>
+                                <li className="flex gap-3 text-white text-sm font-bold"><Check size={16} className="text-yellow-500"/> 🏆 Mentor Elite Asignado</li>
+                                <li className="flex gap-3 text-white text-sm font-bold"><Check size={16} className="text-yellow-500"/> 📞 2 Sesiones 1:1 / Semana</li>
+                                <li className="flex gap-3 text-white text-sm font-bold"><Check size={16} className="text-yellow-500"/> 💬 Chat Directo con Mentor</li>
+                                <li className="flex gap-3 text-white text-sm"><Check size={16} className="text-yellow-500"/> Revisión Inmediata de Tareas</li>
                                 <li className="flex gap-3 text-white text-sm"><Check size={16} className="text-yellow-500"/> Prioridad en Soporte</li>
+                                <li className="flex gap-3 text-white text-sm"><Check size={16} className="text-yellow-500"/> Acceso a Contenido Exclusivo</li>
                             </ul>
 
-                            <button className={`w-full py-3 rounded-xl font-bold transition-colors ${planIndividual === 'QUANTUM' ? 'bg-yellow-500 text-slate-900 hover:bg-yellow-400' : 'bg-slate-800 text-slate-400'}`} onClick={iniciarProceso}>
-                                {planIndividual === 'QUANTUM' ? 'DAR EL SALTO' : 'SELECCIONAR'}
+                            <button className={`w-full py-3 rounded-xl font-bold transition-colors ${planIndividual === 'QUANTUM' ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-slate-900 hover:from-yellow-400 hover:to-orange-400' : 'bg-slate-800 text-slate-400'}`} onClick={iniciarProceso}>
+                                {planIndividual === 'QUANTUM' ? '⚡ ELEGIR PREMIUM' : 'SELECCIONAR'}
                             </button>
                         </div>
 
@@ -215,18 +253,19 @@ export default function SuscripcionPage() {
 
                             <div className="space-y-6 bg-slate-950/50 p-6 rounded-xl border border-slate-800">
                                 <h3 className="text-white font-bold flex items-center gap-2">
-                                    <Star size={18} className="text-purple-500"/> Nivel Incluido: Salto Cuántico*
+                                    <Star size={18} className="text-purple-500"/> Nivel Incluido: Standard
                                 </h3>
-                                <p className="text-xs text-slate-400">Tu comunidad obtiene beneficios avanzados.</p>
+                                <p className="text-xs text-slate-400">Cada estudiante obtiene acceso completo con mentor.</p>
                                 
                                 <div className="mt-4 pt-4 border-t border-slate-800">
-                                    <h4 className="text-purple-400 text-xs font-bold uppercase mb-3">Panel Cuántico Administrativo</h4>
+                                    <h4 className="text-purple-400 text-xs font-bold uppercase mb-3">Panel Administrativo</h4>
                                     <ul className="space-y-3">
-                                        <li className="flex gap-3 text-slate-300 text-sm"><Check size={16} className="text-purple-500"/> Monitor de progreso global</li>
-                                        <li className="flex gap-3 text-slate-300 text-sm"><Check size={16} className="text-purple-500"/> Gestión de licencias activa</li>
-                                        <li className="flex gap-3 text-slate-300 text-sm"><Check size={16} className="text-purple-500"/> Reportes de comunidad</li>
-                                        <li className="flex gap-3 text-slate-300 text-sm"><Check size={16} className="text-purple-500"/> Mentor Personal Asignado</li>
-                                        <li className="flex gap-3 text-slate-500 text-sm items-start"><X size={16} className="mt-0.5 shrink-0"/> <span className="italic text-xs">Llamada de Coaching 1:1 (Opcional)</span></li>
+                                        <li className="flex gap-3 text-white text-sm font-semibold"><Check size={16} className="text-purple-500"/> Monitor de progreso global</li>
+                                        <li className="flex gap-3 text-white text-sm font-semibold"><Check size={16} className="text-purple-500"/> Gestión de licencias activa</li>
+                                        <li className="flex gap-3 text-white text-sm font-semibold"><Check size={16} className="text-purple-500"/> Reportes de comunidad</li>
+                                        <li className="flex gap-3 text-white text-sm font-bold"><Check size={16} className="text-purple-500"/> 🎯 Mentor asignado por estudiante</li>
+                                        <li className="flex gap-3 text-white text-sm font-bold"><Check size={16} className="text-purple-500"/> 📞 Sesiones 1:1 semanales</li>
+                                        <li className="flex gap-3 text-slate-300 text-sm"><Check size={16} className="text-purple-500"/> Retroalimentación personalizada</li>
                                     </ul>
                                 </div>
                             </div>
@@ -263,7 +302,7 @@ export default function SuscripcionPage() {
 
       {/* --- MODAL CHECKOUT --- */}
       {showCheckout && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-30 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
             <div className="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-300">
                 <div className="p-6 border-b border-slate-800 bg-slate-950 flex justify-between items-center">
                     <h2 className="text-xl font-bold text-white">
@@ -281,7 +320,7 @@ export default function SuscripcionPage() {
                                 <div>
                                     <p className="text-sm text-slate-400 uppercase font-bold">Plan Seleccionado</p>
                                     <p className="text-white font-bold text-lg">
-                                        {tipoCliente === 'CENTRO' ? 'Institucional / Centro' : (planIndividual === 'STANDARD' ? 'Standard' : 'Salto Cuántico')}
+                                        {tipoCliente === 'CENTRO' ? 'Institucional / Centro' : (planIndividual === 'STANDARD' ? 'Standard' : 'Premium')}
                                     </p>
                                     <p className="text-xs text-slate-500">
                                         {tipoCliente === 'CENTRO' ? `${numParticipantes} Licencias` : `Pago ${frecuencia.toLowerCase()}`}

@@ -40,11 +40,30 @@ const MENU_ITEMS = [
   { id: 'quantum_locations', section: 'Panel Maestro' },
 ];
 
-const ROLES = ['ADMINISTRADOR', 'COORDINADOR', 'MENTOR', 'GAMECHANGER', 'PARTICIPANTE'];
+const ROLES = [
+  'SUPER_ADMIN',
+  'ADMINISTRADOR',
+  'SCHOOL_ADMIN',
+  'COORDINADOR',
+  'MENTOR',
+  'GAMECHANGER',
+  'PARTICIPANTE'
+];
 
 // Permisos predeterminados por rol
 const DEFAULT_PERMISSIONS = {
-  ADMINISTRADOR: 'ALL', // Todos los permisos
+  SUPER_ADMIN: 'ALL', // Todos los permisos - administrador global
+  ADMINISTRADOR: 'ALL', // Todos los permisos - administrador de plataforma
+  SCHOOL_ADMIN: [ // Director/Coordinador de escuela
+    // General
+    'ranking', 'tienda', 'membresia', 'mentor_ia', 'carta_frutos', 'the_vault', 'hoy', 'guia_inicio',
+    // Panel Mentor (puede hacer de mentor)
+    'mentor_revisar_cartas', 'mentor_validar_evidencias', 'mentor_misiones', 'mentor_participantes',
+    'mentor_horarios_llamadas', 'mentor_horarios_mentorias', 'mentor_sesiones', 'mentor_perfil',
+    // Panel Maestro (gestión de su escuela)
+    'auth_cartas', 'auth_evidencias', 'alta_usuarios', 'gestion_usuarios', 'misiones_eventos',
+    'gestion_ciclos'
+  ],
   COORDINADOR: [
     // General
     'ranking', 'tienda', 'membresia', 'mentor_ia', 'carta_frutos', 'the_vault', 'hoy', 'guia_inicio',

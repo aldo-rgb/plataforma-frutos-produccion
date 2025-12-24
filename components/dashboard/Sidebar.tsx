@@ -19,13 +19,22 @@ interface SidebarProps {
     rol: string;
     suscripcion: string | null;
     puntosCuanticos: number;
+    tier?: 'FREE' | 'STANDARD' | 'PREMIUM';
     permissions?: string[]; // Array de IDs de permisos permitidos
+    organization?: {
+      id: number;
+      name: string;
+      logoUrl: string | null;
+      brandColor: string | null;
+    } | null;
   };
 }
 
 export function Sidebar({ usuario }: SidebarProps) {
   const pathname = usePathname();
   const [cartaStatus, setCartaStatus] = useState<string | null>(null);
+  const [showUpsellModal, setShowUpsellModal] = useState(false);
+  const [upsellMessage, setUpsellMessage] = useState('');
 
   // Obtener estado de la carta
   useEffect(() => {
@@ -51,9 +60,28 @@ export function Sidebar({ usuario }: SidebarProps) {
     await signOut({ callbackUrl: '/login' });
   };
 
-  // Lógica de bloqueo visual
+  // Lógica de bloqueo visual basada en TIER
   const esStaff = ['ADMINISTRADOR', 'COORDINADOR', 'MENTOR', 'GAMECHANGER'].includes(usuario.rol);
-  const esUsuarioInactivo = !esStaff && usuario.suscripcion === 'INACTIVO';
+  const userTier = usuario.tier || 'FREE';
+  
+  // NOTA: Usuarios PARTICIPANTES ya NO están bloqueados por falta de visión
+  // Todos los PARTICIPANTES tienen acceso completo, solo difieren en:
+  // - Usuarios gratuitos: NO generan puntos cuánticos, solo XP
+  // - Usuarios gratuitos: NO necesitan autorización para carta ni evidencias
+  // - Usuarios gratuitos: NO pueden enviar carta a revisión sin pagar primero
+  const esUsuarioInactivo = false; // DESHABILITADO - todos tienen acceso
+  
+  // Helper para verificar si un tier tiene acceso
+  const tierLevel = {
+    'FREE': 1,
+    'STANDARD': 2,
+    'PREMIUM': 3
+  };
+  
+  const canAccessByTier = (requiredTier: 'FREE' | 'STANDARD' | 'PREMIUM') => {
+    if (esStaff) return true; // Staff siempre tiene acceso
+    return true; // TODOS los usuarios tienen acceso completo
+  };
 
   // =====================================================
   // FILTRADO MÁGICO DE PERMISOS
@@ -95,12 +123,58 @@ export function Sidebar({ usuario }: SidebarProps) {
     <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col">
       {/* Logo */}
       <div className="p-6 flex items-center gap-3 border-b border-slate-800">
-        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-          <Target className="text-white" size={20} />
-        </div>
-        <span className="font-bold text-xl text-white tracking-wider">
-          IMPACTO <span className="text-blue-500">VIA</span>
-        </span>
+        {usuario.organization?.logoUrl ? (
+          // Logo de la organización
+          <>
+            <div className="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center bg-white/10">
+              <img 
+                src={usuario.organization.logoUrl} 
+                alt={usuario.organization.name}
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <span className="font-bold text-lg text-white tracking-wide">
+              {usuario.organization.name}
+            </span>
+          </>
+        ) : (
+          // Logo QUANTUM para usuarios sin organización
+          <>
+            <div className="relative w-10 h-10 flex items-center justify-center">
+              {/* Campo cuántico de fondo */}
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-600 via-blue-500 to-cyan-400 rounded-lg opacity-20 blur-sm animate-pulse"></div>
+              
+              {/* Cerebro cuántico */}
+              <div className="relative w-10 h-10 bg-gradient-to-br from-purple-600 to-cyan-500 rounded-lg flex items-center justify-center overflow-hidden">
+                {/* Circuito neural */}
+                <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  {/* Cerebro base */}
+                  <path d="M12 2C8.5 2 6 4.5 6 8c0 1 .2 2 .5 3C5 12 4 14 4 16c0 3.5 2.5 6 6 6h4c3.5 0 6-2.5 6-6 0-2-1-4-2.5-5 .3-1 .5-2 .5-3 0-3.5-2.5-6-6-6z" 
+                        strokeLinecap="round" strokeLinejoin="round" opacity="0.3" />
+                  {/* Conexiones cuánticas */}
+                  <circle cx="9" cy="9" r="1.5" fill="currentColor" />
+                  <circle cx="15" cy="9" r="1.5" fill="currentColor" />
+                  <circle cx="12" cy="13" r="1.5" fill="currentColor" />
+                  <circle cx="9" cy="16" r="1.5" fill="currentColor" />
+                  <circle cx="15" cy="16" r="1.5" fill="currentColor" />
+                  {/* Enlaces neuronales */}
+                  <line x1="9" y1="9" x2="12" y2="13" strokeWidth="1" opacity="0.5" />
+                  <line x1="15" y1="9" x2="12" y2="13" strokeWidth="1" opacity="0.5" />
+                  <line x1="12" y1="13" x2="9" y2="16" strokeWidth="1" opacity="0.5" />
+                  <line x1="12" y1="13" x2="15" y2="16" strokeWidth="1" opacity="0.5" />
+                </svg>
+              </div>
+            </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-xl text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 tracking-wider">
+                QUANTUM
+              </span>
+              <span className="text-[9px] text-slate-500 uppercase tracking-widest -mt-1">
+                Neural Network
+              </span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Navigation */}
@@ -122,15 +196,11 @@ export function Sidebar({ usuario }: SidebarProps) {
           className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
             pathname === '/dashboard/hoy' 
               ? 'bg-blue-600 text-white' 
-              : esUsuarioInactivo 
-                ? 'text-slate-600 opacity-50 cursor-not-allowed' 
-                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
           }`}
-          onClick={(e) => esUsuarioInactivo && e.preventDefault()}
         >
           <CalendarCheck size={20} className="text-blue-400" />
           <span>HOY</span>
-          {esUsuarioInactivo && <Lock className="w-3 h-3 ml-auto text-slate-500" />}
         </Link>
 
         {/* THE VAULT - Quantum Archive */}
@@ -139,15 +209,11 @@ export function Sidebar({ usuario }: SidebarProps) {
           className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group ${
             pathname === '/dashboard/vault' 
               ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white' 
-              : esUsuarioInactivo 
-                ? 'text-slate-600 opacity-50 cursor-not-allowed' 
-                : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-900/50 hover:to-blue-900/50 hover:text-white'
+              : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-900/50 hover:to-blue-900/50 hover:text-white'
           }`}
-          onClick={(e) => esUsuarioInactivo && e.preventDefault()}
         >
           <Camera size={20} className="text-purple-400 group-hover:text-purple-300" />
           <span className="font-semibold">The Vault</span>
-          {esUsuarioInactivo && <Lock className="w-3 h-3 ml-auto text-slate-500" />}
         </Link>
 
         <Link 
@@ -155,15 +221,11 @@ export function Sidebar({ usuario }: SidebarProps) {
           className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
             pathname === '/dashboard/ciclos/guia' 
               ? 'bg-blue-600 text-white' 
-              : esUsuarioInactivo 
-                ? 'text-slate-600 opacity-50 cursor-not-allowed' 
-                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
           }`}
-          onClick={(e) => esUsuarioInactivo && e.preventDefault()}
         >
           <Compass size={20} className="text-pink-500" />
           <span>Guía de Inicio</span>
-          {esUsuarioInactivo && <Lock className="w-3 h-3 ml-auto text-slate-500" />}
         </Link>
 
         {/* Carta F.R.U.T.O.S. - Redirección dinámica según estado */}
@@ -176,15 +238,11 @@ export function Sidebar({ usuario }: SidebarProps) {
           className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
             pathname === '/dashboard/carta' || pathname === '/dashboard/carta/resumen'
               ? 'bg-blue-600 text-white' 
-              : esUsuarioInactivo 
-                ? 'text-slate-600 opacity-50 cursor-not-allowed' 
-                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
           }`}
-          onClick={(e) => esUsuarioInactivo && e.preventDefault()}
         >
           <Target size={20} className="text-purple-500" />
           <span>Carta F.R.U.T.O.S.</span>
-          {esUsuarioInactivo && <Lock className="w-3 h-3 ml-auto text-slate-500" />}
         </Link>
 
         <Link 
@@ -192,118 +250,91 @@ export function Sidebar({ usuario }: SidebarProps) {
           className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
             pathname === '/dashboard/mentor-ia' 
               ? 'bg-blue-600 text-white' 
-              : esUsuarioInactivo 
-                ? 'text-slate-600 opacity-50 cursor-not-allowed' 
-                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
           }`}
-          onClick={(e) => esUsuarioInactivo && e.preventDefault()}
         >
           <Bot size={20} className="text-indigo-400" />
           <span>Mentor IA</span>
-          {esUsuarioInactivo && <Lock className="w-3 h-3 ml-auto text-slate-500" />}
         </Link>
 
-        {/* Solicitar Mentoría - Solo PARTICIPANTE */}
+        {/* Solicitar Mentoría - Solo PARTICIPANTE - SIEMPRE DESBLOQUEADO (Upsell) */}
         {usuario.rol === 'PARTICIPANTE' && (
           <Link 
             href="/dashboard/mentorias" 
             className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
               pathname === '/dashboard/mentorias' 
                 ? 'bg-purple-600 text-white' 
-                : esUsuarioInactivo 
-                  ? 'text-slate-600 opacity-50 cursor-not-allowed' 
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
             }`}
-            onClick={(e) => esUsuarioInactivo && e.preventDefault()}
           >
             <Users size={20} className="text-purple-400" />
             <span>Solicitar Mentoría</span>
-            {esUsuarioInactivo && <Lock className="w-3 h-3 ml-auto text-slate-500" />}
           </Link>
         )}
 
-        {/* Mis Sesiones - Solo PARTICIPANTE */}
+        {/* Mis Sesiones - Desbloqueado para todos */}
         {usuario.rol === 'PARTICIPANTE' && (
           <Link 
-            href="/dashboard/student/mis-sesiones" 
+            href='/dashboard/student/mis-sesiones' 
             className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
               pathname === '/dashboard/student/mis-sesiones' 
                 ? 'bg-blue-600 text-white' 
-                : esUsuarioInactivo 
-                  ? 'text-slate-600 opacity-50 cursor-not-allowed' 
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
             }`}
-            onClick={(e) => esUsuarioInactivo && e.preventDefault()}
           >
             <CheckCircle2 size={20} className="text-blue-400" />
             <span>Mis Sesiones</span>
-            {esUsuarioInactivo && <Lock className="w-3 h-3 ml-auto text-slate-500" />}
           </Link>
         )}
 
         <Link 
-          href="/dashboard/ranking" 
+          href='/dashboard/ranking' 
           className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
             pathname === '/dashboard/ranking' 
               ? 'bg-blue-600 text-white' 
-              : esUsuarioInactivo || !canAccess('ranking')
-                ? 'text-slate-600 opacity-50 cursor-not-allowed' 
-                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
           }`}
-          onClick={(e) => (esUsuarioInactivo || !canAccess('ranking')) && e.preventDefault()}
         >
           <Trophy size={20} />
           <span>Ranking Global</span>
-          {(esUsuarioInactivo || !canAccess('ranking')) && <Lock className="w-3 h-3 ml-auto text-slate-500" />}
         </Link>
 
-        {/* Muro de la Excelencia - Social Feed */}
+        {/* Muro de la Excelencia - SIEMPRE DESBLOQUEADO */}
         <Link 
           href="/dashboard/muro" 
           className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group ${
             pathname === '/dashboard/muro' 
               ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white' 
-              : esUsuarioInactivo
-                ? 'text-slate-600 opacity-50 cursor-not-allowed' 
-                : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-900/50 hover:to-pink-900/50 hover:text-white'
+              : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-900/50 hover:to-pink-900/50 hover:text-white'
           }`}
-          onClick={(e) => esUsuarioInactivo && e.preventDefault()}
         >
           <Sparkles size={20} className="text-pink-400 group-hover:text-pink-300" />
           <span className="font-semibold">Muro de la Excelencia</span>
-          {esUsuarioInactivo && <Lock className="w-3 h-3 ml-auto text-slate-500" />}
         </Link>
 
         <Link 
-          href="/dashboard/canjear" 
+          href='/dashboard/canjear' 
           className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
             pathname === '/dashboard/canjear' 
               ? 'bg-blue-600 text-white' 
-              : esUsuarioInactivo || !canAccess('tienda')
-                ? 'text-slate-600 opacity-50 cursor-not-allowed' 
-                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
           }`}
-          onClick={(e) => (esUsuarioInactivo || !canAccess('tienda')) && e.preventDefault()}
         >
           <Package size={20} />
           <span>Tienda / Canje</span>
-          {(esUsuarioInactivo || !canAccess('tienda')) && <Lock className="w-3 h-3 ml-auto text-slate-500" />}
         </Link>
 
+        {/* Membresía - SIEMPRE VISIBLE (para upgrades) */}
         <Link 
           href="/dashboard/suscripcion" 
           className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
             pathname === '/dashboard/suscripcion' 
               ? 'bg-blue-600 text-white' 
-              : !canAccess('membresia')
-                ? 'text-slate-600 opacity-50 cursor-not-allowed'
-                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
           }`}
-          onClick={(e) => !canAccess('membresia') && e.preventDefault()}
         >
           <CreditCard size={20} />
           <span>Membresía</span>
-          {!canAccess('membresia') && <Lock className="w-3 h-3 ml-auto text-slate-500" />}
         </Link>
 
         {/* Panel de Mentor/Coordinador */}
@@ -490,6 +521,50 @@ export function Sidebar({ usuario }: SidebarProps) {
               </Link>
             )}
 
+            {/* Gestión de Escuelas B2B - Solo ADMIN */}
+            {(usuario.rol === 'ADMIN' || usuario.rol === 'ADMINISTRADOR') && (
+              <Link 
+                href="/dashboard/admin/schools" 
+                className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                  pathname.startsWith('/dashboard/admin/schools')
+                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                    : 'text-slate-400 hover:text-white hover:bg-purple-900/20'
+                }`}
+              >
+                <Users size={18} className="text-purple-400" />
+                <span>Gestión de Escuelas</span>
+              </Link>
+            )}
+
+            {/* Órdenes de Licencias - Solo ADMIN */}
+            {(usuario.rol === 'ADMIN' || usuario.rol === 'ADMINISTRADOR') && (
+              <Link 
+                href="/dashboard/admin/ordenes" 
+                className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                  pathname.startsWith('/dashboard/admin/ordenes')
+                    ? 'bg-gradient-to-r from-emerald-600 to-cyan-600 text-white shadow-lg'
+                    : 'text-slate-400 hover:text-white hover:bg-emerald-900/20'
+                }`}
+              >
+                <CreditCard size={18} className="text-emerald-400" />
+                <span>Órdenes de Compra</span>
+              </Link>
+            )}
+
+            {usuario.rol === 'ADMINISTRADOR' && (
+              <Link 
+                href="/dashboard/admin/payment-settings" 
+                className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                  pathname.startsWith('/dashboard/admin/payment-settings')
+                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                    : 'text-slate-400 hover:text-white hover:bg-purple-900/20'
+                }`}
+              >
+                <DollarSign size={18} className="text-purple-400" />
+                <span>Config. Pagos</span>
+              </Link>
+            )}
+
             {canAccess('codigos') && (
               <Link 
                 href="/dashboard/admin/codigos" 
@@ -578,6 +653,38 @@ export function Sidebar({ usuario }: SidebarProps) {
           <span>Cerrar Sesión</span>
         </button>
       </div>
+
+      {/* Modal de Upsell */}
+      {showUpsellModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 rounded-xl p-6 max-w-md w-full border border-slate-700 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-orange-500/20 rounded-lg">
+                <Lock className="w-6 h-6 text-orange-500" />
+              </div>
+              <h3 className="text-xl font-bold text-white">Función Premium</h3>
+            </div>
+            
+            <p className="text-slate-300 mb-6">{upsellMessage}</p>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowUpsellModal(false)}
+                className="flex-1 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors"
+              >
+                Cerrar
+              </button>
+              <Link
+                href="/dashboard/suscripcion"
+                onClick={() => setShowUpsellModal(false)}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-lg hover:from-orange-600 hover:to-pink-600 transition-colors text-center font-semibold"
+              >
+                Ver Planes
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

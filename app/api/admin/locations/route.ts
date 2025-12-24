@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     }
 
     const user = await prisma.usuario.findUnique({
-      where: { id: parseInt(session.user.id) }
+      where: { id: session.user.id as number }
     });
 
     // Solo ADMIN, COORDINADOR o GAMECHANGER pueden ver locations
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     }
 
     const user = await prisma.usuario.findUnique({
-      where: { id: parseInt(session.user.id) }
+      where: { id: session.user.id as number }
     });
 
     // Solo ADMIN puede crear locations
@@ -121,7 +121,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const user = await prisma.usuario.findUnique({
-      where: { id: parseInt(session.user.id) }
+      where: { id: session.user.id as number }
     });
 
     if (user?.rol !== 'ADMINISTRADOR') {
@@ -157,7 +157,7 @@ export async function DELETE(req: NextRequest) {
     }
 
     const user = await prisma.usuario.findUnique({
-      where: { id: parseInt(session.user.id) }
+      where: { id: session.user.id as number }
     });
 
     if (user?.rol !== 'ADMINISTRADOR') {

@@ -45,6 +45,133 @@ model CallAvailability {
   @@index([type])
 }
 
+model Organization {
+  id                Int                  @id @default(autoincrement())
+  name              String
+  slug              String               @unique
+  logoUrl           String?
+  brandColor        String               @default("#6366F1")
+  contactEmail      String
+  status            OrganizationStatus   @default(ACTIVE)
+  
+  // Geofencing para NFC/Check-in físico
+  isGeofenced       Boolean              @default(false)
+  campusLatitude    Float?
+  campusLongitude   Float?
+  geofenceRadius    Int                  @default(100) // metros
+  
+  // 👤 Coordinador asignado - OBLIGATORIO (SCHOOL_ADMIN o DIRECTOR)
+  schoolAdminId     Int                  @unique
+  
+  // 🏫 PRICING DE LICENCIAS ESCOLARES (MXN) - Configurable por Admin
+  standardLicensePrice   Float           @default(600.00)  // Precio NEGOCIABLE por licencia Standard
+  premiumLicensePrice    Float           @default(1250.00) // Precio NEGOCIABLE por licencia Premium
+  visionCycleDuration    Int             @default(6)       // Duración del ciclo en meses (ej: semestre)
+  renewalOfferDiscount   Float           @default(50.00)   // 50% descuento post-visión
+  renewalOfferEnabled    Boolean         @default(true)    // Hook de renovación activo
+  
+  // Métricas agregadas
+  totalLicenses     Int                  @default(0)
+  activeLicenses    Int                  @default(0)
+  totalStudents     Int                  @default(0)
+  
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  
+  // Relaciones
+  Licenses          License[]
+  Users             Usuario[]            @relation("OrganizationUsers")
+  SchoolAdmin       Usuario?             @relation("SchoolAdmins", fields: [schoolAdminId], references: [id])
+  SchoolCredits     SchoolCredit[]
+  LicenseOrders     LicenseOrder[]
+  
+  @@index([slug])
+  @@index([status])
+}
+
+// 🏦 BANCO CENTRAL DE LICENCIAS - Sistema de Créditos para Escuelas
+model SchoolCredit {
+  id                Int           @id @default(autoincrement())
+  organizationId    Int
+  planType          UserTier      @default(STANDARD)      // STANDARD o PREMIUM
+  totalPurchased    Int           @default(0)             // Cuántas licencias compró la escuela
+  totalAllocated    Int           @default(0)             // Cuántas ya convirtió el coordinador en códigos
+  unitPrice         Float         @default(600.00)        // Precio pactado por unidad (para reportes)
+  totalPaid         Float         @default(0.00)          // Monto total pagado
+  expirationDate    DateTime?                             // Fecha límite global
+  isActive          Boolean       @default(true)
+  notes             String?                               // Notas del admin (Ej: "Pago completo", "Pendiente 50%")
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  
+  Organization      Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId])
+  @@index([planType])
+  @@index([expirationDate])
+}
+
+model License {
+  id                Int           @id @default(autoincrement())
+  code              String        @unique
+  batchName         String?                               // Nombre del lote (Ej: "Generación 2025 - Grupo A")
+  organizationId    Int?
+  tierAssigned      UserTier      @default(STANDARD)
+  maxUses           Int           @default(100)           // Límite de usos (cupo)
+  usedCount         Int           @default(0)             // Cuántos ya se canjearon
+  isMasterCode      Boolean       @default(false)         // ¿Es código maestro o único?
+  autoAssignVision  String?                               // Visión automática al canjear
+  generatedBy       Int?                                  // ID del coordinador que lo generó
+  generationMode    String?       @default("INDIVIDUAL")  // "MASIVO", "INDIVIDUAL", "EXTRAORDINARIO"
+  studentName       String?                               // Para códigos individuales (referencia)
+  isRevoked         Boolean       @default(false)         // Botón de pánico - código cancelado
+  revokedAt         DateTime?                             // Cuándo se revocó
+  revokedBy         Int?                                  // Quién lo revocó
+  expiresAt         DateTime?
+  isActive          Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  
+  Organization      Organization? @relation(fields: [organizationId], references: [id])
+  
+  @@index([code])
+  @@index([organizationId])
+}
+
+// 💳 ÓRDENES DE COMPRA DE LICENCIAS - Sistema de Pago
+model LicenseOrder {
+  id                 String              @id @default(cuid())
+  organizationId     Int
+  requestedBy        Int                                  // Usuario que solicitó (SCHOOL_ADMIN)
+  quantity           Int                                  // Cantidad de licencias solicitadas
+  tier               UserTier            @default(STANDARD) // Tipo de plan
+  amount             Float                                // Monto total en USD
+  paymentMethod      String                               // 'paypal', 'stripe', 'mercadopago'
+  status             LicenseOrderStatus  @default(PENDING)
+  externalPaymentId  String?                              // ID de la orden en la pasarela
+  paymentUrl         String?                              // URL de pago
+  paidAt             DateTime?                            // Fecha de confirmación de pago
+  paymentData        Json?                                // Datos adicionales del pago
+  creditsGenerated   Boolean             @default(false)  // Si ya se generaron los créditos
+  creditsGeneratedAt DateTime?                            // Cuándo se generaron
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  
+  Organization       Organization        @relation(fields: [organizationId], references: [id])
+  RequestedByUser    Usuario             @relation(fields: [requestedBy], references: [id])
+  
+  @@index([organizationId])
+  @@index([status])
+  @@index([externalPaymentId])
+}
+
+model PaymentSettings {
+  id        Int      @id @default(autoincrement())
+  settings  Json     // Configuración de pagos (bank, stripe, paypal, mercadopago)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model CallBooking {
   id                                     Int                @id @default(autoincrement())
   mentorId                               Int
@@ -86,6 +213,9 @@ model ProgramEnrollment {
   mentorId                                    Int
   startDate                                   DateTime
   endDate                                     DateTime
+  cycleType                                   String        @default("SOLO") // 'SOLO' (100 días) o 'VISION' (duración variable)
+  cycleStartDate                              DateTime      @default(now())
+  cycleEndDate                                DateTime?
   totalWeeks                                  Int           @default(17)
   missedCallsCount                            Int           @default(0)
   maxMissedAllowed                            Int           @default(3)
@@ -99,6 +229,7 @@ model ProgramEnrollment {
   @@index([userId])
   @@index([mentorId])
   @@index([status])
+  @@index([cycleType])
 }
 
 model CallLog {
@@ -328,6 +459,16 @@ model PerfilMentor {
   aiGeneratedBio            Boolean                   @default(false) // Indica si fue generada por IA
   lastAiInterviewAt         DateTime?                 // Última vez que usó Quantum Bio-Writer
   
+  // 📊 MÉTRICAS DE IMPACTO (Sistema de Puntos)
+  mentoradosActivos         Int                       @default(0)    // Participantes activos bajo su mentoría
+  mentoradosTotales         Int                       @default(0)    // Total histórico de mentorados
+  evidenciasHighQuality     Int                       @default(0)    // Evidencias 85+ de sus mentorados
+  xpTotalMentorados         Int                       @default(0)    // XP acumulado por todos sus mentorados
+  promedioXPPorMentorado    Float                     @default(0)    // xpTotal / mentoradosActivos
+  porcentajeHighQuality     Float                     @default(0)    // % evidencias HIGH QUALITY vs total
+  puntosTotales             Int                       @default(0)    // Sistema de puntos para level-up
+  lastMetricsUpdate         DateTime?                 // Última actualización de métricas
+  
   Usuario                   Usuario                   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   ResenasMentoria           ResenasMentoria[]
   ServicioMentoria          ServicioMentoria[]
@@ -449,10 +590,102 @@ model Transaccion {
   Usuario           Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 }
 
+// 💰 MODELO DE SUSCRIPCIONES INDIVIDUALES
+model Subscription {
+  id                    Int                @id @default(autoincrement())
+  userId                Int
+  plan                  SubscriptionPlan
+  status                String             @default("ACTIVE") // ACTIVE, CANCELLED, EXPIRED
+  
+  // Pricing
+  basePrice             Float              // Precio base ($99, $800, $299, $2500)
+  finalPrice            Float              // Precio final (con descuentos aplicados)
+  discount              Float              @default(0.00)     // Descuento aplicado (%)
+  isPostVisionDiscount  Boolean            @default(false)    // ¿Es descuento de ex-alumno?
+  
+  // Fechas
+  startDate             DateTime           @default(now())
+  endDate               DateTime
+  nextBillingDate       DateTime?
+  cancelledAt           DateTime?
+  
+  // Metadata
+  originalOrganization  String?            // Nombre de la escuela de origen (para Alumni Badge)
+  renewalCount          Int                @default(0)        // Cuántas veces ha renovado
+  
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  
+  // Relaciones
+  Payments              Payment[]
+  RenewalOffers         RenewalOffer[]
+  
+  @@index([userId])
+  @@index([status])
+  @@index([endDate])
+}
+
+// 💳 MODELO DE PAGOS
+model Payment {
+  id                Int             @id @default(autoincrement())
+  subscriptionId    Int?
+  userId            Int
+  organizationId    Int?            // Si es pago de escuela
+  
+  // Detalles del pago
+  amount            Float
+  currency          String          @default("MXN")
+  status            PaymentStatus   @default(PENDING)
+  paymentMethod     String?         // 'stripe', 'paypal', 'transfer', etc.
+  transactionId     String?         // ID de la transacción en el gateway
+  
+  // Metadata
+  description       String?
+  isRenewal         Boolean         @default(false)
+  isSchoolPayment   Boolean         @default(false)
+  
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  Subscription      Subscription?   @relation(fields: [subscriptionId], references: [id])
+  
+  @@index([userId])
+  @@index([status])
+  @@index([organizationId])
+}
+
+// 🔄 MODELO DE OFERTAS DE RENOVACIÓN (Retention Loop)
+model RenewalOffer {
+  id                Int             @id @default(autoincrement())
+  subscriptionId    Int
+  userId            Int
+  
+  // Oferta
+  originalPrice     Float           // Precio público normal
+  offeredPrice      Float           // Precio con 50% descuento
+  discountPercent   Float           @default(50.00)
+  
+  // Estado
+  status            RenewalStatus   @default(OFFERED)
+  offeredAt         DateTime        @default(now())
+  expiresAt         DateTime        // 15 días después
+  respondedAt       DateTime?
+  
+  // Mensaje personalizado
+  message           String          @default("¡No pierdas tu ritmo! Continúa tu visión con 50% de descuento.")
+  
+  Subscription      Subscription    @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
 model Usuario {
   id                                                               Int                      @id @default(autoincrement())
   nombre                                                           String
   email                                                            String                   @unique
+  telefono                                                         String?
   password                                                         String?
   imagen                                                           String?
   rol                                                              Rol                      @default(PARTICIPANTE)
@@ -461,6 +694,21 @@ model Usuario {
   suscripcion                                                      EstadoSuscripcion        @default(INACTIVO)
   planActual                                                       String?
   fechaFinSuscripcion                                              DateTime?
+  tier                                                             UserTier                 @default(FREE)
+  subscriptionStatus                                               String                   @default("INACTIVE") // INACTIVE, ACTIVE, ACTIVE_BY_LICENSE
+  licenseCode                                                      String?
+  organizationId                                                   Int?
+  schoolId                                                         Int?
+  
+  // 💰 SISTEMA DE SUSCRIPCIONES INDIVIDUALES
+  subscriptionPlan                                                 SubscriptionPlan?        @default(NONE)        // MONTHLY_STANDARD, ANNUAL_STANDARD, MONTHLY_PREMIUM, ANNUAL_PREMIUM
+  subscriptionStartDate                                            DateTime?                                      // Fecha de inicio de suscripción
+  subscriptionEndDate                                              DateTime?                                      // Fecha de expiración
+  isPostVisionUser                                                 Boolean                  @default(false)       // Ex-alumno de escuela (elegible para 50% OFF)
+  renewalOfferShown                                                Boolean                  @default(false)       // Ya se mostró la oferta de renovación
+  lastRenewalOfferDate                                             DateTime?                                      // Última vez que se ofreció renovación
+  originalOrganizationId                                           Int?                                           // De qué escuela viene (para Alumni Badge)
+  
   mentorId                                                         Int?
   coordinadorId                                                    Int?
   vision                                                           String?
@@ -531,6 +779,11 @@ model Usuario {
   ServiceReviews                                                   UserServiceContribution[] @relation("ServiceReviews")
   ServiceLadderProgress                                            ServiceLadderProgress?
   PhoenixSessions                                                  PhoenixSession[]
+  
+  // Sistema B2B Organizations
+  Organization                                                     Organization?            @relation("OrganizationUsers", fields: [organizationId], references: [id])
+  ManagedOrganization                                              Organization?            @relation("SchoolAdmins")
+  LicenseOrdersRequested                                           LicenseOrder[]
   
   // Sistema de Visiones
   VisionesCoordinadas                                              Vision[]                 @relation("VisionCoordinador")
@@ -613,6 +866,8 @@ enum Rol {
   COORDINADOR
   ADMINISTRADOR
   GAMECHANGER
+  SCHOOL_ADMIN          // Director/Coordinador de organización educativa
+  SUPER_ADMIN           // Administrador global del sistema
 }
 
 enum TipoPago {
@@ -1478,4 +1733,50 @@ enum MentorStyle {
   HARDCORE      // Coach estricto, sin excusas, orientado a resultados
   EMPATHIC      // Guía paciente, enfoque en proceso y sanación
   BALANCED      // Balance entre exigencia y comprensión
+}
+
+enum UserTier {
+  FREE          // Usuario gratuito (autogestión)
+  STANDARD      // Plan Standard (accountability + validación)
+  PREMIUM       // Plan Premium (coaching 1:1)
+}
+
+enum SubscriptionPlan {
+  NONE                  // Sin suscripción (FREE tier)
+  MONTHLY_STANDARD      // $99/mes Standard
+  ANNUAL_STANDARD       // $800/año Standard (ahorro 32%)
+  MONTHLY_PREMIUM       // $299/mes Premium
+  ANNUAL_PREMIUM        // $2,500/año Premium (ahorro 30%)
+  SCHOOL_LICENSE        // Licencia escolar (precio configurable)
+}
+
+enum PaymentStatus {
+  PENDING               // Pago pendiente
+  COMPLETED             // Pago completado
+  FAILED                // Pago fallido
+  REFUNDED              // Reembolsado
+  CANCELLED             // Cancelado
+}
+
+enum RenewalStatus {
+  NOT_OFFERED           // No se ha ofrecido renovación
+  OFFERED               // Oferta de renovación enviada
+  ACCEPTED              // Usuario aceptó renovación
+  DECLINED              // Usuario rechazó renovación
+  EXPIRED               // Oferta expiró sin respuesta
+}
+
+enum OrganizationStatus {
+  ACTIVE        // Organización activa
+  INACTIVE      // Suspendida (no pueden canjear códigos)
+  TRIAL         // Periodo de prueba
+}
+
+enum LicenseOrderStatus {
+  PENDING       // Orden creada, esperando pago
+  PROCESSING    // Pago en proceso de verificación
+  COMPLETED     // Pago confirmado, créditos generados
+  FAILED        // Pago fallido
+  CANCELLED     // Orden cancelada
+  REFUNDED      // Orden reembolsada
 }

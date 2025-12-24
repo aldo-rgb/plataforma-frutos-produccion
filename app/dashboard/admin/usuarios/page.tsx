@@ -334,6 +334,11 @@ export default function GestionUsuariosPage() {
       }
   };
 
+  const getRolLabel = (rol: string) => {
+      if (rol === 'SCHOOL_ADMIN') return 'DIRECTOR';
+      return rol;
+  };
+
   if (isLoading) {
     return (
       <div className="p-4 md:p-8 max-w-7xl mx-auto min-h-screen flex items-center justify-center">
@@ -402,7 +407,7 @@ export default function GestionUsuariosPage() {
                         </td>
                         <td className="p-4">
                             <span className={`px-2 py-1 rounded text-[10px] font-bold border ${getRolColor(user.rol)}`}>
-                                {user.rol}
+                                {getRolLabel(user.rol)}
                             </span>
                         </td>
                         <td className="p-4">

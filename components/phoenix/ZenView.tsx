@@ -53,6 +53,14 @@ export function ZenView() {
       });
       
       const data = await response.json();
+      
+      // Si ya se completó hoy, salir automáticamente
+      if (data.alreadyCompletedToday) {
+        console.log('✅ Protocolo Fénix ya completado hoy');
+        exitPhoenix();
+        return;
+      }
+      
       if (data.microTaskOptions) {
         setMicroTasks(data.microTaskOptions);
       }
@@ -139,11 +147,11 @@ export function ZenView() {
 
         phoenixAnimation();
 
-        // Auto-exit after 5 seconds
+        // Auto-exit after 3 seconds - NO RELOAD para evitar ciclo
         setTimeout(() => {
           exitPhoenix();
-          window.location.reload();
-        }, 5000);
+          // NO recargar la página, solo salir del protocolo
+        }, 3000);
       }
     } catch (error) {
       console.error('Error completing task:', error);

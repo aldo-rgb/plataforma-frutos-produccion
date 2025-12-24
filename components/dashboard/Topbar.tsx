@@ -12,6 +12,12 @@ interface TopbarProps {
     suscripcion: string | null;
     puntosCuanticos: number;
     timezone?: string;
+    organization?: {
+      id: number;
+      name: string;
+      logoUrl: string | null;
+      brandColor: string | null;
+    } | null;
   };
 }
 
