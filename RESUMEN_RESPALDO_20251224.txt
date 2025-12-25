@@ -1,0 +1,29 @@
+
+📦 RESUMEN DE RESPALDOS - 24/12/2025 18:23:16
+================================================================
+
+✅ CÓDIGO FUENTE:
+   • backup_plataforma-frutos_20251224_182001.zip (24 MB)
+   • Incluye: código, configuraciones, documentación
+   • Excluye: node_modules, .next, .git
+
+✅ BASE DE DATOS:
+   • backups/db/backup_prisma_20251224_182248.json (117 KB)
+   • backups/db/backup_prisma_20251224_182248.json.gz (comprimido)
+   • Tablas respaldadas:
+     - Usuario: 14 registros
+     - Organization: 2 registros
+     - Vision: 1 registro
+     - PerfilMentor: 2 registros
+     - CartaFrutos: 3 registros
+     - ProgramEnrollment: 1 registro
+     - CallBooking: 68 registros
+     - TaskInstance: 0 registros
+
+✅ GIT COMMIT:
+   • Hash: fd8eef1
+   • Mensaje: Rediseño de QuantumCoachModal con tema indigo/purple similar a Bio-Writer
+   • Archivos modificados: 1 (QuantumCoachModal.tsx)
+
+================================================================
+
