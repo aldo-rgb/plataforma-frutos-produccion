@@ -65,17 +65,12 @@ export async function GET(request: NextRequest) {
         }
 
         // Buscar llamada HOY (tipo DISCIPLINE, estado PENDING, que no esté marcada como ABSENT)
-        // Ajustar a zona horaria de México (UTC-6)
-        const ahora = new Date();
-        const offsetMexico = -6 * 60; // -6 horas en minutos
-        const offsetActual = ahora.getTimezoneOffset(); // minutos de diferencia con UTC
-        const diffOffset = offsetMexico - offsetActual;
-        
-        const hoy = new Date(ahora.getTime() + diffOffset * 60000);
-        hoy.setHours(0, 0, 0, 0);
+        // Usar fecha UTC del servidor - el cliente maneja su zona horaria
+        const hoy = new Date();
+        hoy.setUTCHours(0, 0, 0, 0);
         
         const manana = new Date(hoy);
-        manana.setDate(manana.getDate() + 1);
+        manana.setUTCDate(manana.getUTCDate() + 1);
 
         const llamadaHoy = await prisma.callBooking.findFirst({
           where: {
