@@ -277,65 +277,62 @@ export default function QuantumCoachModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="relative bg-gradient-to-br from-slate-950 via-blue-950/30 to-slate-950 border-2 border-cyan-500/30 rounded-3xl w-full max-w-4xl h-[85vh] flex flex-col shadow-2xl shadow-cyan-500/20 overflow-hidden">
-        
-        {/* Glow effect */}
-        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-blue-500/5 pointer-events-none"></div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border border-indigo-500/30 rounded-3xl w-full max-w-4xl h-[85vh] flex flex-col shadow-2xl overflow-hidden">
         
         {/* Header */}
-        <div className="relative px-6 py-5 border-b border-cyan-500/20 flex items-center justify-between backdrop-blur-sm">
-          <div className="flex items-center gap-4">
-            {/* Quantum Avatar - Orbe Animado */}
-            <div className="relative">
-              <div className="absolute inset-0 bg-cyan-500 rounded-full blur-2xl opacity-40 animate-pulse"></div>
-              <div className="relative bg-gradient-to-br from-cyan-400 to-blue-600 p-3 rounded-full shadow-lg shadow-cyan-500/50 animate-pulse">
-                <Atom className="w-7 h-7 text-white animate-spin" style={{ animationDuration: '8s' }} />
+        <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-t-3xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="text-4xl">🎙️</div>
+              <div>
+                <h2 className="text-2xl font-bold text-white">QUANTUM</h2>
+                <p className="text-indigo-200 text-sm flex items-center gap-2">
+                  <span className="inline-block w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                  {isLoading ? 'Analizando patrones...' : 'Conectado al campo cuántico'}
+                </p>
               </div>
             </div>
-            <div>
-              <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400 tracking-wider" style={{ fontFamily: 'monospace', letterSpacing: '0.1em' }}>
-                QUANTUM
-              </h2>
-              <p className="text-xs text-cyan-300/70 font-mono flex items-center gap-2">
-                <span className="inline-block w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></span>
-                {isLoading ? 'Analizando patrones...' : 'Conectado al campo cuántico'}
-              </p>
-            </div>
+            <button
+              onClick={onClose}
+              className="text-white hover:text-indigo-200 transition-colors"
+            >
+              <X size={24} />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-cyan-400 transition-colors p-2 hover:bg-cyan-500/10 rounded-lg"
-          >
-            <X size={24} />
-          </button>
         </div>
 
         {/* Messages Area */}
-        <div className="relative flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-transparent via-blue-950/5 to-transparent">
+        <div className="flex-1 overflow-y-auto p-8 bg-slate-800/30">
           {messages.map((message, index) => (
             <div
               key={index}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-300`}
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} mb-4 animate-in slide-in-from-bottom-2 duration-300`}
               style={{ animationDelay: `${index * 50}ms` }}
             >
               <div
-                className={`max-w-[80%] rounded-2xl px-5 py-4 ${
+                className={`max-w-[80%] rounded-xl px-5 py-4 ${
                   message.role === 'user'
-                    ? 'bg-gradient-to-br from-slate-800 to-slate-900 text-white border border-slate-700'
-                    : 'bg-gradient-to-br from-cyan-950/40 to-blue-950/40 text-cyan-50 border-l-4 border-cyan-400 shadow-lg shadow-cyan-500/10'
+                    ? 'bg-slate-700 text-white'
+                    : 'bg-slate-800/50 text-white border-l-4 border-indigo-500'
                 }`}
               >
                 {message.role === 'assistant' && (
-                  <div className="flex items-center gap-2 mb-3 text-cyan-400">
-                    <Zap size={14} className="animate-pulse" />
-                    <span className="text-xs font-bold font-mono tracking-wider">QUANTUM</span>
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="text-2xl flex-shrink-0">🤖</div>
+                    <div className="flex-1">
+                      <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                        {message.content}
+                      </p>
+                    </div>
                   </div>
                 )}
-                <p className={`text-sm whitespace-pre-wrap leading-relaxed ${message.role === 'assistant' ? 'font-mono' : ''}`}>
-                  {message.content}
-                </p>
-                <p className="text-xs opacity-40 mt-3 font-mono">
+                {message.role === 'user' && (
+                  <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                    {message.content}
+                  </p>
+                )}
+                <p className="text-xs opacity-40 mt-2">
                   {message.timestamp.toLocaleTimeString('es-MX', { 
                     hour: '2-digit', 
                     minute: '2-digit' 
@@ -346,11 +343,11 @@ export default function QuantumCoachModal({
           ))}
           
           {isLoading && (
-            <div className="flex justify-start animate-in slide-in-from-bottom-2">
-              <div className="bg-gradient-to-br from-cyan-950/40 to-blue-950/40 border-l-4 border-cyan-400 rounded-2xl px-5 py-4 shadow-lg shadow-cyan-500/10">
-                <div className="flex items-center gap-3 text-cyan-400">
+            <div className="flex justify-start animate-in slide-in-from-bottom-2 mb-4">
+              <div className="bg-slate-800/50 border-l-4 border-indigo-500 rounded-xl px-5 py-4">
+                <div className="flex items-center gap-3 text-indigo-400">
                   <Loader2 size={16} className="animate-spin" />
-                  <span className="text-sm font-mono">QUANTUM está procesando...</span>
+                  <span className="text-sm">Procesando...</span>
                 </div>
               </div>
             </div>
@@ -360,7 +357,7 @@ export default function QuantumCoachModal({
         </div>
 
         {/* Input Area */}
-        <div className="relative px-6 py-5 border-t border-cyan-500/20 bg-gradient-to-br from-slate-950 via-blue-950/20 to-slate-950">
+        <div className="p-6 bg-slate-900">
           <div className="flex gap-3">
             <input
               ref={inputRef}
@@ -370,19 +367,19 @@ export default function QuantumCoachModal({
               onKeyPress={handleKeyPress}
               placeholder="Escribe tu respuesta..."
               disabled={isLoading || isProcessing}
-              className="flex-1 px-5 py-3 bg-slate-900/50 border-2 border-cyan-500/30 rounded-xl
-                       text-cyan-50 placeholder-cyan-700 font-mono text-sm
-                       focus:outline-none focus:border-cyan-400 focus:shadow-lg focus:shadow-cyan-500/20
+              className="flex-1 px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl
+                       text-white placeholder-gray-500
+                       focus:outline-none focus:ring-2 focus:ring-indigo-500
                        disabled:opacity-50 disabled:cursor-not-allowed
                        transition-all duration-300"
             />
             <button
               onClick={sendMessage}
               disabled={isLoading || isProcessing || !inputValue.trim()}
-              className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold rounded-xl
-                       hover:shadow-lg hover:shadow-cyan-500/50 hover:scale-105
-                       disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
-                       transition-all duration-300 font-mono tracking-wide"
+              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-xl
+                       hover:shadow-lg
+                       disabled:opacity-50 disabled:cursor-not-allowed
+                       transition-all duration-300"
             >
               {isLoading ? (
                 <Loader2 size={20} className="animate-spin" />
@@ -396,10 +393,9 @@ export default function QuantumCoachModal({
             onClick={handleFinalize}
             disabled={isProcessing || messages.length < 3}
             className="w-full mt-4 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold rounded-xl
-                     hover:shadow-lg hover:shadow-green-500/50 hover:scale-[1.02]
+                     hover:shadow-lg
                      disabled:opacity-50 disabled:cursor-not-allowed
-                     transition-all duration-300 font-mono tracking-wide
-                     border-2 border-green-400/30"
+                     transition-all duration-300"
           >
             {isProcessing ? (
               <span className="flex items-center justify-center gap-2">
@@ -408,7 +404,7 @@ export default function QuantumCoachModal({
               </span>
             ) : (
               <span className="flex items-center justify-center gap-2">
-                <Sparkles size={18} className="animate-pulse" />
+                <Sparkles size={18} />
                 ✨ Aplicar declaraciones
               </span>
             )}
@@ -419,19 +415,16 @@ export default function QuantumCoachModal({
       {/* Success Modal */}
       {showSuccessModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="relative bg-gradient-to-br from-slate-900 via-cyan-950/30 to-slate-900 border-2 border-cyan-400/50 rounded-2xl p-6 max-w-sm mx-4 shadow-2xl shadow-cyan-500/30 animate-in zoom-in-95 duration-300">
-            
-            {/* Glow Effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-blue-500/10 rounded-2xl pointer-events-none"></div>
+          <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border border-indigo-500/30 rounded-2xl p-8 max-w-sm mx-4 shadow-2xl animate-in zoom-in-95 duration-300">
             
             {/* Content */}
-            <div className="relative space-y-4">
+            <div className="space-y-4">
               {/* Message with Icon */}
               <div className="flex items-start gap-3">
                 <div className="flex-shrink-0 mt-0.5">
-                  <Sparkles className="w-5 h-5 text-cyan-400" />
+                  <Sparkles className="w-5 h-5 text-indigo-400" />
                 </div>
-                <p className="text-sm text-cyan-50 leading-relaxed">
+                <p className="text-sm text-white leading-relaxed">
                   ¡Tus declaraciones han sido actualizadas por Quantum!
                 </p>
               </div>
@@ -439,7 +432,7 @@ export default function QuantumCoachModal({
               {/* Button */}
               <button
                 onClick={handleConfirmSuccess}
-                className="w-full px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold rounded-xl transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-cyan-500/50 text-sm"
+                className="w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold rounded-xl transition-all duration-300 hover:shadow-lg text-sm"
               >
                 Aceptar
               </button>
