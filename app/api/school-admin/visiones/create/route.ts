@@ -39,11 +39,34 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { nombre, descripcion, maxParticipantes } = body;
+    const { 
+      nombre, 
+      descripcion, 
+      maxParticipantes,
+      startDate,
+      endDate,
+      forceFinanzasArea,
+      forceRelacionesArea,
+      forceTalentosArea,
+      forceSaludArea,
+      forcePazMentalArea,
+      forceOcioArea,
+      forceTransformationArea,
+      transformationGuestsTarget,
+      forceCommunityServiceArea 
+    } = body;
 
     if (!nombre) {
       return NextResponse.json(
         { success: false, error: 'El nombre es requerido' },
+        { status: 400 }
+      );
+    }
+
+    // Validar que si se activa el área de transformación, tenga un target válido
+    if (forceTransformationArea && (!transformationGuestsTarget || transformationGuestsTarget < 1)) {
+      return NextResponse.json(
+        { success: false, error: 'Debes especificar un número válido de invitados objetivo' },
         { status: 400 }
       );
     }
@@ -54,9 +77,20 @@ export async function POST(req: NextRequest) {
         nombre,
         descripcion,
         maxParticipantes,
+        startDate: startDate ? new Date(startDate) : null,
+        endDate: endDate ? new Date(endDate) : null,
         coordinadorId: user.id,
         organizationId: user.organizationId,
         isActive: true,
+        forceFinanzasArea: forceFinanzasArea ?? undefined,
+        forceRelacionesArea: forceRelacionesArea ?? undefined,
+        forceTalentosArea: forceTalentosArea ?? undefined,
+        forceSaludArea: forceSaludArea ?? undefined,
+        forcePazMentalArea: forcePazMentalArea ?? undefined,
+        forceOcioArea: forceOcioArea ?? undefined,
+        forceTransformationArea: forceTransformationArea ?? undefined,
+        transformationGuestsTarget: forceTransformationArea ? transformationGuestsTarget : null,
+        forceCommunityServiceArea: forceCommunityServiceArea ?? undefined,
       },
     });
 

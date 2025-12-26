@@ -115,6 +115,7 @@ model LicenseAssignment {
   Organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   User           Usuario      @relation("LicenseAssignmentUser", fields: [userId], references: [id], onDelete: Cascade)
   Vision         Vision?      @relation(fields: [visionId], references: [id])
+  License        License      @relation("LicenseToAssignments", fields: [licenseCode], references: [code])
 
   @@index([userId])
   @@index([organizationId])
@@ -123,26 +124,27 @@ model LicenseAssignment {
 }
 
 model License {
-  id               Int           @id @default(autoincrement())
-  code             String        @unique
-  tierAssigned     UserTier      @default(STANDARD)
-  maxUses          Int           @default(100)
-  usedCount        Int           @default(0)
-  expiresAt        DateTime?
-  isActive         Boolean       @default(true)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  autoAssignVision String?
-  batchName        String?
-  isMasterCode     Boolean       @default(false)
-  organizationId   Int?
-  generatedBy      Int?
-  generationMode   String?       @default("INDIVIDUAL")
-  isRevoked        Boolean       @default(false)
-  revokedAt        DateTime?
-  revokedBy        Int?
-  studentName      String?
-  Organization     Organization? @relation(fields: [organizationId], references: [id])
+  id                 Int                 @id @default(autoincrement())
+  code               String              @unique
+  tierAssigned       UserTier            @default(STANDARD)
+  maxUses            Int                 @default(100)
+  usedCount          Int                 @default(0)
+  expiresAt          DateTime?
+  isActive           Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  autoAssignVision   String?
+  batchName          String?
+  isMasterCode       Boolean             @default(false)
+  organizationId     Int?
+  generatedBy        Int?
+  generationMode     String?             @default("INDIVIDUAL")
+  isRevoked          Boolean             @default(false)
+  revokedAt          DateTime?
+  revokedBy          Int?
+  studentName        String?
+  Organization       Organization?       @relation(fields: [organizationId], references: [id])
+  LicenseAssignment  LicenseAssignment[] @relation("LicenseToAssignments")
 
   @@index([code])
   @@index([organizationId])
@@ -1163,24 +1165,33 @@ model PhoenixSession {
 }
 
 model Vision {
-  id                 Int                  @id @default(autoincrement())
-  nombre             String
-  descripcion        String?
-  coordinadorId      Int
-  isActive           Boolean              @default(true)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  licensesAllocated  Int                  @default(0)
-  maxParticipantes   Int?
-  organizationId     Int?
-  endDate            DateTime?
-  startDate          DateTime?
-  LicenseAssignments LicenseAssignment[]
-  Coordinador        Usuario              @relation("VisionCoordinador", fields: [coordinadorId], references: [id], onDelete: Cascade)
-  Organization       Organization?        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  GameChangers       VisionGameChanger[]
-  Mentores           VisionMentor[]       @relation("VisionMentores")
-  Participantes      VisionParticipante[]
+  id                              Int                  @id @default(autoincrement())
+  nombre                          String
+  descripcion                     String?
+  coordinadorId                   Int
+  isActive                        Boolean              @default(true)
+  createdAt                       DateTime             @default(now())
+  updatedAt                       DateTime             @updatedAt
+  licensesAllocated               Int                  @default(0)
+  maxParticipantes                Int?
+  organizationId                  Int?
+  endDate                         DateTime?
+  startDate                       DateTime?
+  forceFinanzasArea               Boolean              @default(true)
+  forceRelacionesArea             Boolean              @default(true)
+  forceTalentosArea               Boolean              @default(true)
+  forceSaludArea                  Boolean              @default(true)
+  forcePazMentalArea              Boolean              @default(true)
+  forceOcioArea                   Boolean              @default(true)
+  forceTransformationArea         Boolean              @default(true)
+  transformationGuestsTarget      Int?                 @default(4)
+  forceCommunityServiceArea       Boolean              @default(true)
+  LicenseAssignments              LicenseAssignment[]
+  Coordinador                     Usuario              @relation("VisionCoordinador", fields: [coordinadorId], references: [id], onDelete: Cascade)
+  Organization                    Organization?        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  GameChangers                    VisionGameChanger[]
+  Mentores                        VisionMentor[]       @relation("VisionMentores")
+  Participantes                   VisionParticipante[]
 
   @@index([coordinadorId])
   @@index([organizationId])

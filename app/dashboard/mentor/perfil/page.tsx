@@ -329,7 +329,7 @@ export default function MentorProfileEditorPage() {
             <div className="text-3xl">🎙️</div>
             <div>
               <h3 className="text-lg font-bold text-white">Tu perfil es lo mas importante</h3>
-              <p className="text-sm text-gray-400">Permite que QUANTUM te guie y genera tu perfil completo en 2 minutos</p>
+              <p className="text-sm text-gray-400">Permite que QUANTUM te guiefrutos.com y genera tu perfil completo en 2 minutos</p>
             </div>
           </div>
           <button 

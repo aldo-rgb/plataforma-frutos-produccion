@@ -349,15 +349,31 @@ export default function ZonaEjecucionDiaria() {
         <div className="p-4 space-y-3 max-h-[500px] overflow-y-auto">
           {tareas.length === 0 ? (
             <div className="text-center py-12">
-              <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
+              <CheckCircle className="w-16 h-16 text-amber-400 mx-auto mb-4" />
               <p className="text-slate-300 text-lg font-semibold">
-                {activeTab === 'hoy' ? '¡Todo al día!' : 'Sin tareas pendientes'}
+                La vida sin objetivos no tiene sentido
               </p>
-              <p className="text-slate-500 text-sm mt-2">
-                {activeTab === 'hoy' 
-                  ? 'No tienes tareas programadas para hoy' 
-                  : 'Excelente, estás al corriente con todas tus tareas'}
+              <p className="text-slate-500 text-sm mt-2 mb-6">
+                Define tus metas y empieza a construir el futuro que deseas
               </p>
+              
+              {/* Botón para definir objetivos con Quantum */}
+              <div className="bg-gradient-to-r from-purple-900/30 to-blue-900/30 border border-purple-500/40 rounded-xl p-6 max-w-md mx-auto">
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <Zap className="text-purple-400" size={24} />
+                  <h3 className="text-white font-bold text-lg">Define tus Objetivos</h3>
+                </div>
+                <p className="text-slate-300 text-sm mb-4">
+                  Chatea con <strong className="text-purple-400">Quantum IA</strong> para definir tus metas y obtener tareas personalizadas
+                </p>
+                <a
+                  href="/dashboard/mentor-ia"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg font-semibold transition-all shadow-lg shadow-purple-500/30"
+                >
+                  <Zap size={18} />
+                  Hablar con Quantum
+                </a>
+              </div>
             </div>
           ) : (
             tareas.map((tarea) => {

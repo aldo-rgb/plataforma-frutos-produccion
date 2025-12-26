@@ -337,8 +337,27 @@ export function Sidebar({ usuario }: SidebarProps) {
           <span>Membresía</span>
         </Link>
 
+        {/* Panel de Game Changer */}
+        {usuario.rol === 'GAME_CHANGER' && (
+          <div className="pt-6 mt-6 border-t border-slate-800">
+            <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">Panel Game Changer</p>
+            
+            <Link 
+              href="/dashboard/game-changer" 
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/game-changer' || pathname.startsWith('/dashboard/game-changer/participante')
+                  ? 'bg-gradient-to-r from-cyan-600 to-purple-600 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <Users size={18} className="text-cyan-400" />
+              <span>Mis Participantes</span>
+            </Link>
+          </div>
+        )}
+
         {/* Panel de Mentor/Coordinador */}
-        {(usuario.rol === 'MENTOR' || usuario.rol === 'COORDINADOR' || usuario.rol === 'GAME_CHANGER') && (
+        {(usuario.rol === 'MENTOR' || usuario.rol === 'COORDINADOR') && (
           <div className="pt-6 mt-6 border-t border-slate-800">
             <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">Panel de Mentor</p>
             

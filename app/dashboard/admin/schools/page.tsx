@@ -178,7 +178,7 @@ export default function SchoolsManagementPage() {
           <div className="flex items-center justify-between mb-2">
             <Users className="text-green-400" size={24} />
             <span className="text-3xl font-bold text-white">
-              {organizations.reduce((sum, org) => sum + org.totalStudents, 0)}
+              {organizations.reduce((sum, org) => sum + (org._count?.Users || 0), 0)}
             </span>
           </div>
           <p className="text-slate-400 text-sm">Estudiantes Activos</p>
@@ -188,10 +188,10 @@ export default function SchoolsManagementPage() {
           <div className="flex items-center justify-between mb-2">
             <BookOpen className="text-blue-400" size={24} />
             <span className="text-3xl font-bold text-white">
-              {organizations.reduce((sum, org) => sum + org.totalLicenses, 0)}
+              {organizations.reduce((sum, org) => sum + (org._count?.Licenses || 0), 0)}
             </span>
           </div>
-          <p className="text-slate-400 text-sm">Licencias Creadas</p>
+          <p className="text-slate-400 text-sm">Licencias Activas</p>
         </div>
 
         <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">

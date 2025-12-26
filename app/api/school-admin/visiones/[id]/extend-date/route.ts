@@ -122,11 +122,43 @@ export async function POST(
       );
     }
 
-    // Actualizar la fecha de la visión
-    await prisma.vision.update({
-      where: { id: visionId },
-      data: { endDate: newEnd }
-    });
+    // Actualizar la fecha de la visión Y todas las licencias asociadas
+    await prisma.$transaction([
+      // 1. Actualizar la fecha de fin de la visión
+      prisma.vision.update({
+        where: { id: visionId },
+        data: { endDate: newEnd }
+      }),
+      
+      // 2. Actualizar licencias con autoAssignVision que coincida con el nombre de la visión
+      prisma.license.updateMany({
+        where: {
+          autoAssignVision: vision.nombre,
+          organizationId: vision.organizationId,
+          isActive: true
+        },
+        data: {
+          expiresAt: newEnd
+        }
+      }),
+      
+      // 3. Actualizar licencias asignadas a través de LicenseAssignment
+      prisma.$executeRaw`
+        UPDATE "License"
+        SET "expiresAt" = ${newEnd}
+        WHERE "code" IN (
+          SELECT DISTINCT "licenseCode"
+          FROM "LicenseAssignment"
+          WHERE "visionId" = ${visionId}
+            AND "isActive" = true
+        )
+      `
+    ]);
+
+    // Log para confirmar la actualización
+    console.log(`✅ Fecha de visión ${visionId} (${vision.nombre}) extendida a ${newEnd.toISOString()}`);
+    console.log(`✅ Licencias con autoAssignVision="${vision.nombre}" actualizadas`);
+    console.log(`✅ Licencias en LicenseAssignment para visionId=${visionId} actualizadas`);
 
     const results = {
       extendedUsers: 0,

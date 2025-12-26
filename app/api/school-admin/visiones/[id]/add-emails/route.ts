@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
-const DEFAULT_PASSWORD = 'Frutos2025!';
+const DEFAULT_PASSWORD = 'Quantum123';
 
 export async function POST(
   request: NextRequest,
@@ -60,7 +60,8 @@ export async function POST(
           password: hashed,
           rol: 'PARTICIPANTE',
           isActive: true,
-          organizationId: director.organizationId
+          organizationId: director.organizationId,
+          requirePasswordChange: true // Forzar cambio de contraseña en primer ingreso
         },
         select: { id: true, email: true }
       });

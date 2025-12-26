@@ -13,8 +13,24 @@ export async function POST(request: NextRequest) {
 
     const { currentPassword, newPassword } = await request.json();
 
-    if (!currentPassword || !newPassword) {
-      return NextResponse.json({ success: false, error: 'Ambas contraseñas son requeridas' }, { status: 400 });
+    if (!newPassword) {
+      return NextResponse.json({ success: false, error: 'Nueva contraseña es requerida' }, { status: 400 });
+    }
+
+    if (newPassword.length < 8) {
+      return NextResponse.json({ success: false, error: 'La contraseña debe tener al menos 8 caracteres' }, { status: 400 });
+    }
+
+    // Validar fortaleza de contraseña
+    const hasUpperCase = /[A-Z]/.test(newPassword);
+    const hasLowerCase = /[a-z]/.test(newPassword);
+    const hasNumber = /\d/.test(newPassword);
+
+    if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+      return NextResponse.json(
+        { success: false, error: 'La contraseña debe contener mayúsculas, minúsculas y números' },
+        { status: 400 }
+      );
     }
 
     // Obtener usuario actual
@@ -27,10 +43,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // Verificar contraseña actual
-    const isValid = await bcrypt.compare(currentPassword, usuario.password);
-    if (!isValid) {
-      return NextResponse.json({ success: false, error: 'Contraseña actual incorrecta' }, { status: 401 });
+    // Si NO requiere cambio obligatorio, verificar contraseña actual
+    if (!usuario.requirePasswordChange) {
+      if (!currentPassword) {
+        return NextResponse.json({ success: false, error: 'Contraseña actual es requerida' }, { status: 400 });
+      }
+
+      const isValid = await bcrypt.compare(currentPassword, usuario.password);
+      if (!isValid) {
+        return NextResponse.json({ success: false, error: 'Contraseña actual incorrecta' }, { status: 401 });
+      }
     }
 
     // Hashear nueva contraseña

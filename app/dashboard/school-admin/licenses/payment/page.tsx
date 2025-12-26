@@ -382,7 +382,7 @@ export default function PaymentPage() {
                 key={order.id}
                 className="bg-slate-800/50 border border-slate-700 rounded-xl p-4"
               >
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   <div>
                     <p className="text-slate-400 text-xs mb-1">Orden</p>
                     <p className="text-white font-semibold">#{order.id.slice(0, 8)}</p>
@@ -396,18 +396,17 @@ export default function PaymentPage() {
                     <p className="text-purple-300 font-semibold">{order.tier}</p>
                   </div>
                   <div>
+                    <p className="text-slate-400 text-xs mb-1">Precio unitario</p>
+                    <p className="text-blue-300 font-semibold">
+                      ${(order.amount / order.quantity).toFixed(2)} MXN
+                    </p>
+                  </div>
+                  <div>
                     <p className="text-slate-400 text-xs mb-1">Total</p>
                     <p className="text-white font-bold text-lg">
                       ${order.amount.toLocaleString()} MXN
                     </p>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2 text-sm text-slate-400">
-                  <Package size={16} />
-                  <span>
-                    Precio unitario: ${(order.amount / order.quantity).toLocaleString()} MXN
-                  </span>
                 </div>
               </div>
             ))}

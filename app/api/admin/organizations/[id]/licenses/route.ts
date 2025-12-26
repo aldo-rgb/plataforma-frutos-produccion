@@ -103,7 +103,24 @@ export async function POST(
 
     // Generar códigos
     const licenses = [];
-    const expirationDate = expiresAt ? new Date(expiresAt) : null;
+    let expirationDate = expiresAt ? new Date(expiresAt) : null;
+
+    // Si hay autoAssignVision, obtener la fecha de fin de la visión
+    if (autoAssignVision) {
+      const vision = await prisma.vision.findFirst({
+        where: {
+          nombre: autoAssignVision,
+          organizationId,
+          isActive: true,
+        },
+        select: { endDate: true },
+      });
+
+      if (vision?.endDate) {
+        expirationDate = new Date(vision.endDate);
+        console.log(`✅ Licencias vinculadas a visión "${autoAssignVision}" expirarán el: ${expirationDate.toISOString()}`);
+      }
+    }
 
     if (codeType === 'MASTER') {
       // Generar UN código maestro
@@ -192,6 +209,68 @@ export async function POST(
       },
     });
 
+    // 💰 CREAR ORDEN DE PAGO para SCHOOL_ADMIN (director de la escuela)
+    let paymentOrder = null;
+    if (user.rol === 'ADMINISTRADOR') {
+      // Obtener el precio de licencia de la organización
+      const pricePerLicense = tierAssigned === 'PREMIUM' 
+        ? (organization.premiumLicensePrice || 500) 
+        : (organization.standardLicensePrice || 300);
+      
+      const totalAmount = capacity * pricePerLicense;
+
+      // Obtener el director de la escuela
+      const schoolAdmin = await prisma.usuario.findUnique({
+        where: { id: organization.schoolAdminId! },
+        select: { id: true, nombre: true, email: true },
+      });
+
+      if (schoolAdmin) {
+        // Crear orden de pago PENDING para el director
+        paymentOrder = await prisma.licenseOrder.create({
+          data: {
+            organizationId,
+            requestedBy: schoolAdmin.id, // Asociado al director
+            quantity: capacity,
+            tier: tierAssigned,
+            amount: totalAmount,
+            status: 'PENDING',
+            paymentMethod: 'transfer', // Por defecto, el director puede elegir después
+            paymentData: {
+              unitPrice: pricePerLicense,
+              generatedByAdmin: true,
+              adminId: user.id,
+              batchName: batchName || 'Licencias generadas por admin',
+              createdAt: new Date().toISOString(),
+            },
+          },
+        });
+
+        // 📢 CREAR NOTIFICACIÓN para el director
+        await prisma.notificacion.create({
+          data: {
+            usuarioId: schoolAdmin.id,
+            tipo: 'PAGO_PENDIENTE',
+            titulo: '💳 Pago de Licencias Pendiente',
+            mensaje: `Se generaron ${capacity} licencia(s) ${tierAssigned}. Total a pagar: $${totalAmount.toFixed(2)} MXN. Por favor completa el pago.`,
+            leido: false,
+            metadata: {
+              orderId: paymentOrder.id,
+              quantity: capacity,
+              amount: totalAmount,
+              tier: tierAssigned,
+            },
+          },
+        });
+
+        console.log('✅ Orden de pago y notificación creadas para el director:', {
+          orderId: paymentOrder.id,
+          schoolAdmin: schoolAdmin.email,
+          amount: totalAmount,
+        });
+      }
+    }
+
     return NextResponse.json(
       {
         message: `✅ Se generaron ${licenseCount} codigo con capacidad total de ${capacity} licencias`,
@@ -205,6 +284,11 @@ export async function POST(
         creditsConsumed: user.rol === 'ADMINISTRADOR' ? 0 : capacity,
         remainingCredits: user.rol === 'ADMINISTRADOR' ? 'N/A (pago pendiente)' : totalAvailable - capacity,
         paymentRequired: user.rol === 'ADMINISTRADOR',
+        paymentOrder: paymentOrder ? {
+          id: paymentOrder.id,
+          amount: paymentOrder.amount,
+          status: paymentOrder.status,
+        } : null,
       },
       { status: 201 }
     );

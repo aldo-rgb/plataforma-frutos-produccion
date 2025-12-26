@@ -34,6 +34,8 @@ interface ProgramStatus {
     };
   } | null;
   isSuspended: boolean;
+  startDate?: string;
+  endDate?: string;
 }
 
 export default function ProgramStatusWidget() {
@@ -125,7 +127,7 @@ export default function ProgramStatusWidget() {
           <div className="bg-purple-500/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <Calendar className="w-8 h-8 text-purple-400" />
           </div>
-          <h3 className="text-2xl font-bold text-white mb-3">Programa Intensivo 17 Semanas</h3>
+          <h3 className="text-2xl font-bold text-white mb-3">Programa Intensivo</h3>
           <p className="text-slate-300 mb-6 max-w-md mx-auto">
             Únete al programa de disciplina con llamadas semanales programadas. 
             Sistema de oportunidades y seguimiento completo.
@@ -235,11 +237,16 @@ export default function ProgramStatusWidget() {
             </div>
             <div>
               <h3 className="text-xl font-bold text-white">
-                Programa Intensivo
+                Programa Intensivo {status.totalWeeks} Semanas
               </h3>
               <p className="text-purple-100 text-sm">
                 Semana {status.currentWeek} de {status.totalWeeks}
               </p>
+              {status.startDate && status.endDate && (
+                <p className="text-purple-200 text-xs mt-0.5">
+                  {new Date(status.startDate).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })} - {new Date(status.endDate).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+              )}
             </div>
           </div>
           

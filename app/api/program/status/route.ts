@@ -42,6 +42,35 @@ export async function GET() {
       });
     }
 
+    // Obtener datos actuales de la Vision si el usuario está inscrito
+    const visionParticipante = await prisma.visionParticipante.findFirst({
+      where: { participanteId: session.user.id },
+      include: {
+        Vision: {
+          select: {
+            startDate: true,
+            endDate: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Calcular totalWeeks desde la Vision
+    let totalWeeks = enrollment.totalWeeks;
+    let startDate = enrollment.startDate;
+    let endDate = enrollment.endDate;
+
+    if (visionParticipante?.Vision) {
+      const visionStart = new Date(visionParticipante.Vision.startDate);
+      const visionEnd = new Date(visionParticipante.Vision.endDate);
+      const diffTime = Math.abs(visionEnd.getTime() - visionStart.getTime());
+      const diffWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
+      totalWeeks = diffWeeks;
+      startDate = visionParticipante.Vision.startDate;
+      endDate = visionParticipante.Vision.endDate;
+    }
+
     // Obtener próxima sesión
     const nextSession = await prisma.callBooking.findFirst({
       where: {
@@ -98,7 +127,7 @@ export async function GET() {
       hasProgram: true,
       status: enrollment.status,
       currentWeek,
-      totalWeeks: enrollment.totalWeeks,
+      totalWeeks,
       missedCalls: enrollment.missedCallsCount,
       maxMissedAllowed: enrollment.maxMissedAllowed,
       livesRemaining,
@@ -125,8 +154,8 @@ export async function GET() {
         scheduledAt: nextSession.scheduledAt,
         timeUntil: timeUntilNext
       } : null,
-      startDate: enrollment.startDate,
-      endDate: enrollment.endDate,
+      startDate,
+      endDate,
       isSuspended: enrollment.status === 'SUSPENDED'
     });
 

@@ -154,6 +154,27 @@ Semanas restantes: ${semanasRestantes}
 
     console.log(`✅ Re-agendadas ${nuevasSesiones.length} sesiones para ${semanasRestantes} semanas`);
 
+    // 6. Marcar como leídas todas las notificaciones de MENTOR_ASSIGNMENT del usuario
+    try {
+      const notificacionesActualizadas = await prisma.notification.updateMany({
+        where: {
+          userId: session.user.id,
+          type: 'MENTOR_ASSIGNMENT',
+          isRead: false
+        },
+        data: {
+          isRead: true
+        }
+      });
+
+      if (notificacionesActualizadas.count > 0) {
+        console.log(`📬 Marcadas ${notificacionesActualizadas.count} notificaciones como leídas`);
+      }
+    } catch (notifError) {
+      console.warn('⚠️ No se pudieron marcar las notificaciones como leídas:', notifError);
+      // No fallar la operación principal si falla la actualización de notificaciones
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Sesiones re-agendadas exitosamente',

@@ -47,6 +47,7 @@ interface Vision {
 interface Participante {
   id: number;
   participanteId: number;
+  gameChangerId: number | null;
   Participante: {
     id: number;
     nombre: string;
@@ -61,6 +62,12 @@ interface Participante {
       imagen: string | null;
     } | null;
   };
+  GameChanger: {
+    id: number;
+    nombre: string;
+    email: string;
+    imagen: string | null;
+  } | null;
   createdAt: string;
 }
 
@@ -133,6 +140,9 @@ export default function VisionDetailPage() {
   const [randomAssigning, setRandomAssigning] = useState(false);
   const [visibleCodes, setVisibleCodes] = useState<Set<string>>(new Set());
   const [showRandomAssignModal, setShowRandomAssignModal] = useState(false);
+  const [showGameChangerModal, setShowGameChangerModal] = useState(false);
+  const [selectedParticipanteForGC, setSelectedParticipanteForGC] = useState<Participante | null>(null);
+  const [assigningGameChanger, setAssigningGameChanger] = useState(false);
   const [showMentorChangeModal, setShowMentorChangeModal] = useState(false);
   const [mentorChangeData, setMentorChangeData] = useState<{
     userId: number;
@@ -145,6 +155,19 @@ export default function VisionDetailPage() {
   const [showExtendDateModal, setShowExtendDateModal] = useState(false);
   const [newEndDate, setNewEndDate] = useState('');
   const [extendingDate, setExtendingDate] = useState(false);
+  const [showEditAreasModal, setShowEditAreasModal] = useState(false);
+  const [areasConfigLocked, setAreasConfigLocked] = useState(false);
+  const [areasConfig, setAreasConfig] = useState({
+    forceFinanzasArea: true,
+    forceRelacionesArea: true,
+    forceTalentosArea: true,
+    forceSaludArea: true,
+    forcePazMentalArea: true,
+    forceOcioArea: true,
+    forceTransformationArea: true,
+    transformationGuestsTarget: 4,
+    forceCommunityServiceArea: true,
+  });
   const { showToast, toasts } = useToast();
 
   useEffect(() => {
@@ -170,6 +193,25 @@ export default function VisionDetailPage() {
         setVision(data.vision);
         setParticipantes(data.participantes);
         setGameChangers(data.gameChangers || []);
+        
+        // Cargar configuración de áreas
+        setAreasConfig({
+          forceFinanzasArea: data.vision.forceFinanzasArea ?? true,
+          forceRelacionesArea: data.vision.forceRelacionesArea ?? true,
+          forceTalentosArea: data.vision.forceTalentosArea ?? true,
+          forceSaludArea: data.vision.forceSaludArea ?? true,
+          forcePazMentalArea: data.vision.forcePazMentalArea ?? true,
+          forceOcioArea: data.vision.forceOcioArea ?? true,
+          forceTransformationArea: data.vision.forceTransformationArea ?? true,
+          transformationGuestsTarget: data.vision.transformationGuestsTarget ?? 4,
+          forceCommunityServiceArea: data.vision.forceCommunityServiceArea ?? true,
+        });
+
+        // Verificar si hay participantes con cartas activas
+        const hasActiveParticipants = data.participantes?.some((p: any) => 
+          p.Participante?.CartaFrutos?.some((c: any) => c.estado !== 'BORRADOR')
+        );
+        setAreasConfigLocked(hasActiveParticipants || false);
       }
     } catch (error) {
       console.error('Error fetching vision:', error);
@@ -548,6 +590,85 @@ export default function VisionDetailPage() {
     }
   };
 
+  // Asignar Game Changer a Participante
+  const handleAssignGameChanger = async (participanteId: number, gameChangerId: number | null) => {
+    try {
+      setAssigningGameChanger(true);
+      const res = await fetch(`/api/school-admin/visiones/${visionId}/assign-gamechanger`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participanteId, gameChangerId }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setShowGameChangerModal(false);
+        setSelectedParticipanteForGC(null);
+        fetchVisionDetails();
+        showToast({
+          message: gameChangerId ? 'Game Changer asignado exitosamente' : 'Game Changer removido',
+          type: 'success'
+        });
+      } else {
+        showToast({
+          message: data.error || 'Error al asignar Game Changer',
+          type: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Error assigning game changer:', error);
+      showToast({
+        message: 'Error al asignar Game Changer',
+        type: 'error'
+      });
+    } finally {
+      setAssigningGameChanger(false);
+    }
+  };
+
+  // Asignación aleatoria de mentores y game changers
+  const handleRandomAssignment = async () => {
+    try {
+      setRandomAssigning(true);
+      const res = await fetch(`/api/school-admin/visiones/${visionId}/random-assign`, {
+        method: 'POST',
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setShowRandomAssignModal(false);
+        fetchVisionDetails();
+        
+        const { details } = data;
+        let message = `Asignación completada: ${details.mentorAssignments} mentor(es) y ${details.gameChangerAssignments} game changer(s) asignados.`;
+        
+        if (details.errors && details.errors.length > 0) {
+          message += ` ${details.errors.length} error(es) encontrado(s).`;
+        }
+
+        showToast({
+          message,
+          type: details.errors && details.errors.length > 0 ? 'warning' : 'success',
+          duration: 8000
+        });
+      } else {
+        showToast({
+          message: data.error || 'Error en la asignación aleatoria',
+          type: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Error in random assignment:', error);
+      showToast({
+        message: 'Error en la asignación aleatoria',
+        type: 'error'
+      });
+    } finally {
+      setRandomAssigning(false);
+    }
+  };
 
   // Alta masiva por correo
   const handleAddEmails = async () => {
@@ -695,7 +816,7 @@ export default function VisionDetailPage() {
   };
 
   const handleRemoveParticipante = async (participanteRelationId: number) => {
-    if (!confirm('¿Estás seguro de eliminar este participante?')) return;
+    if (!confirm('¿Estás seguro de eliminar este participante? Si tiene licencia asignada, será cancelada automáticamente.')) return;
 
     try {
       const res = await fetch(`/api/school-admin/visiones/${visionId}/remove-participante`, {
@@ -708,9 +829,11 @@ export default function VisionDetailPage() {
 
       if (data.success) {
         fetchVisionDetails();
+        fetchCredits(); // Actualizar créditos disponibles
         showToast({
-          message: 'Participante eliminado',
-          type: 'success'
+          message: data.message || 'Participante eliminado',
+          type: 'success',
+          duration: 5000
         });
       } else {
         showToast({
@@ -744,6 +867,47 @@ export default function VisionDetailPage() {
       newVisible.add(code);
     }
     setVisibleCodes(newVisible);
+  };
+
+  const handleUpdateAreasConfig = async () => {
+    try {
+      const res = await fetch(`/api/school-admin/visiones/${visionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(areasConfig),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setShowEditAreasModal(false);
+        fetchVisionDetails();
+        showToast({
+          message: 'Configuración de áreas actualizada exitosamente',
+          type: 'success'
+        });
+      } else {
+        // Si hay participantes con cartas activas, mostrar mensaje detallado
+        if (data.participantesAfectados) {
+          showToast({
+            message: data.details || data.error,
+            type: 'warning',
+            duration: 8000
+          });
+        } else {
+          showToast({
+            message: data.error || 'Error al actualizar configuración',
+            type: 'error'
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error updating areas config:', error);
+      showToast({
+        message: 'Error al actualizar configuración',
+        type: 'error'
+      });
+    }
   };
 
   const participantesWithLicense = participantes.filter(p => p.Participante.licenseCode);
@@ -790,34 +954,57 @@ export default function VisionDetailPage() {
               {vision.descripcion && (
                 <p className="text-slate-400">{vision.descripcion}</p>
               )}
+              {/* Fechas de la Visión */}
               {(vision.startDate || vision.endDate) && (
-                <div className="flex items-center gap-8 mt-4">
+                <div className="flex items-center gap-4 mt-4">
                   {vision.startDate && (
-                    <div className="flex items-center gap-3 bg-purple-500/10 border border-purple-500/30 rounded-lg px-4 py-3">
-                      <Calendar className="text-purple-400" size={18} />
+                    <div className="flex items-center gap-3 bg-purple-500/10 border border-purple-500/30 rounded-lg px-4 py-2.5">
+                      <Calendar className="text-purple-400 shrink-0" size={20} />
                       <div>
-                        <span className="text-xs text-purple-400 font-medium block mb-1">Inicio</span>
+                        <span className="text-xs text-purple-400 font-medium block">Inicio</span>
                         <span className="text-sm text-white font-semibold">
-                          {new Date(vision.startDate).toLocaleDateString('es-MX', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
+                          {(() => {
+                            try {
+                              const dateStr = typeof vision.startDate === 'string' 
+                                ? vision.startDate 
+                                : vision.startDate?.toISOString();
+                              if (!dateStr) return 'No definida';
+                              const date = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
+                              return date.toLocaleDateString('es-MX', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              });
+                            } catch (e) {
+                              return 'No definida';
+                            }
+                          })()}
                         </span>
                       </div>
                     </div>
                   )}
                   {vision.endDate && (
-                    <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-4 py-3">
-                      <Calendar className="text-emerald-400" size={18} />
+                    <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-4 py-2.5">
+                      <Calendar className="text-emerald-400 shrink-0" size={20} />
                       <div>
-                        <span className="text-xs text-emerald-400 font-medium block mb-1">Finalización</span>
+                        <span className="text-xs text-emerald-400 font-medium block">Finalización</span>
                         <span className="text-sm text-white font-semibold">
-                          {new Date(vision.endDate).toLocaleDateString('es-MX', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
+                          {(() => {
+                            try {
+                              const dateStr = typeof vision.endDate === 'string' 
+                                ? vision.endDate 
+                                : vision.endDate?.toISOString();
+                              if (!dateStr) return 'No definida';
+                              const date = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
+                              return date.toLocaleDateString('es-MX', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              });
+                            } catch (e) {
+                              return 'No definida';
+                            }
+                          })()}
                         </span>
                       </div>
                     </div>
@@ -834,6 +1021,13 @@ export default function VisionDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowEditAreasModal(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-colors"
+            >
+              <Edit size={16} />
+              Configurar Áreas
+            </button>
             <button
               onClick={() => setShowExtendDateModal(true)}
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors"
@@ -989,6 +1183,9 @@ export default function VisionDetailPage() {
                       Mentor Asignado
                     </th>
                     <th className="px-6 py-4 text-center text-xs font-semibold text-slate-400 uppercase">
+                      Game Changer
+                    </th>
+                    <th className="px-6 py-4 text-center text-xs font-semibold text-slate-400 uppercase">
                       Estado Licencia
                     </th>
                     <th className="px-6 py-4 text-center text-xs font-semibold text-slate-400 uppercase">
@@ -1061,6 +1258,45 @@ export default function VisionDetailPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
+                        {p.GameChanger ? (
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="text-xs text-cyan-400 font-medium">
+                              {p.GameChanger.nombre}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => {
+                                  setSelectedParticipanteForGC(p);
+                                  setShowGameChangerModal(true);
+                                }}
+                                className="inline-flex items-center gap-1 px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded transition-colors"
+                              >
+                                <Users size={12} />
+                                Cambiar
+                              </button>
+                              <button
+                                onClick={() => handleAssignGameChanger(p.Participante.id, null)}
+                                className="p-1 hover:bg-red-600/20 text-red-400 rounded transition-colors"
+                                title="Remover game changer"
+                              >
+                                <XCircle size={12} />
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setSelectedParticipanteForGC(p);
+                              setShowGameChangerModal(true);
+                            }}
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-semibold rounded-lg transition-colors"
+                          >
+                            <Users size={14} />
+                            Asignar GC
+                          </button>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-center">
                         {p.Participante.licenseCode ? (
                           <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-900/20 text-green-400 border border-green-600 rounded-full text-xs font-medium">
                             <CheckCircle size={14} />
@@ -1076,35 +1312,16 @@ export default function VisionDetailPage() {
                       <td className="px-6 py-4 text-center">
                         {p.Participante.licenseCode ? (
                           <div className="flex items-center justify-center gap-2">
-                            {visibleCodes.has(p.Participante.licenseCode) ? (
-                              <>
-                                <code className="px-2 py-1 bg-slate-800 rounded text-xs text-slate-300 font-mono">
-                                  {p.Participante.licenseCode}
-                                </code>
-                                <button
-                                  onClick={() => toggleCodeVisibility(p.Participante.licenseCode!)}
-                                  className="p-1 hover:bg-slate-700 rounded transition-colors"
-                                  title="Ocultar código"
-                                >
-                                  <Eye size={14} className="text-slate-400" />
-                                </button>
-                                <button
-                                  onClick={() => copyToClipboard(p.Participante.licenseCode!)}
-                                  className="p-1 hover:bg-slate-700 rounded transition-colors"
-                                  title="Copiar código"
-                                >
-                                  <Copy size={14} className="text-slate-400" />
-                                </button>
-                              </>
-                            ) : (
-                              <button
-                                onClick={() => toggleCodeVisibility(p.Participante.licenseCode!)}
-                                className="inline-flex items-center gap-1 px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-semibold rounded transition-colors"
-                              >
-                                <Eye size={12} />
-                                Ver Código
-                              </button>
-                            )}
+                            <code className="px-3 py-1.5 bg-gradient-to-r from-emerald-900/30 to-cyan-900/30 border border-emerald-500/30 rounded-lg text-sm text-emerald-300 font-mono font-semibold tracking-wide">
+                              {p.Participante.licenseCode}
+                            </code>
+                            <button
+                              onClick={() => copyToClipboard(p.Participante.licenseCode!)}
+                              className="p-1.5 hover:bg-emerald-600/20 text-emerald-400 hover:text-emerald-300 rounded-lg transition-all"
+                              title="Copiar código"
+                            >
+                              <Copy size={16} />
+                            </button>
                           </div>
                         ) : (
                           <span className="text-slate-500 text-sm">—</span>
@@ -1267,35 +1484,16 @@ export default function VisionDetailPage() {
                       <td className="px-6 py-4 text-center">
                         {gc.GameChanger.licenseCode ? (
                           <div className="flex items-center justify-center gap-2">
-                            {visibleCodes.has(gc.GameChanger.licenseCode) ? (
-                              <>
-                                <code className="px-2 py-1 bg-slate-800 rounded text-xs text-slate-300 font-mono">
-                                  {gc.GameChanger.licenseCode}
-                                </code>
-                                <button
-                                  onClick={() => toggleCodeVisibility(gc.GameChanger.licenseCode!)}
-                                  className="p-1 hover:bg-slate-700 rounded transition-colors"
-                                  title="Ocultar código"
-                                >
-                                  <Eye size={14} className="text-slate-400" />
-                                </button>
-                                <button
-                                  onClick={() => copyToClipboard(gc.GameChanger.licenseCode!)}
-                                  className="p-1 hover:bg-slate-700 rounded transition-colors"
-                                  title="Copiar código"
-                                >
-                                  <Copy size={14} className="text-slate-400" />
-                                </button>
-                              </>
-                            ) : (
-                              <button
-                                onClick={() => toggleCodeVisibility(gc.GameChanger.licenseCode!)}
-                                className="inline-flex items-center gap-1 px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-semibold rounded transition-colors"
-                              >
-                                <Eye size={12} />
-                                Ver Código
-                              </button>
-                            )}
+                            <code className="px-3 py-1.5 bg-gradient-to-r from-emerald-900/30 to-cyan-900/30 border border-emerald-500/30 rounded-lg text-sm text-emerald-300 font-mono font-semibold tracking-wide">
+                              {gc.GameChanger.licenseCode}
+                            </code>
+                            <button
+                              onClick={() => copyToClipboard(gc.GameChanger.licenseCode!)}
+                              className="p-1.5 hover:bg-emerald-600/20 text-emerald-400 hover:text-emerald-300 rounded-lg transition-all"
+                              title="Copiar código"
+                            >
+                              <Copy size={16} />
+                            </button>
                           </div>
                         ) : (
                           <span className="text-slate-500 text-sm">—</span>
@@ -1913,6 +2111,502 @@ export default function VisionDetailPage() {
                   <Loader2 className="w-5 h-5 animate-spin mx-auto" />
                 ) : (
                   'Extender'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Configuración de Áreas */}
+      {showEditAreasModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-purple-500/30 rounded-2xl p-8 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-center w-16 h-16 bg-purple-600/20 rounded-full mx-auto mb-6">
+              <Users size={32} className="text-purple-400" />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-white text-center mb-3">
+              Configurar Áreas Obligatorias
+            </h2>
+            
+            <p className="text-slate-300 text-center mb-6 leading-relaxed">
+              Estas áreas serán obligatorias para todos los participantes en el Wizard de Carta F.R.U.T.O.S.
+            </p>
+
+            {areasConfigLocked && (
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="text-amber-400 flex-shrink-0 mt-0.5" size={20} />
+                  <div>
+                    <h3 className="text-amber-400 font-semibold text-sm mb-1">
+                      ⚠️ Configuración Bloqueada
+                    </h3>
+                    <p className="text-amber-200/80 text-sm leading-relaxed">
+                      No se pueden modificar las áreas porque hay participantes que ya iniciaron su ciclo con el wizard. 
+                      Cambiar la configuración ahora podría afectar su progreso.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="space-y-4">
+              {/* Área de Finanzas */}
+              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <label className="text-base font-semibold text-white flex items-center gap-2">
+                      💰 Finanzas
+                    </label>
+                    <p className="text-slate-400 text-sm mt-1">
+                      Declaración y meta de abundancia financiera
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={areasConfigLocked}
+                    onClick={() =>
+                      setAreasConfig({
+                        ...areasConfig,
+                        forceFinanzasArea: !areasConfig.forceFinanzasArea,
+                      })
+                    }
+                    className={`relative inline-flex h-6 w-11 items-centers rounded-full transition-colors ${
+                      areasConfig.forceFinanzasArea
+                        ? 'bg-purple-600'
+                        : 'bg-slate-600'
+                    } ${areasConfigLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        areasConfig.forceFinanzasArea
+                          ? 'translate-x-6'
+                          : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Área de Relaciones */}
+              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <label className="text-base font-semibold text-white flex items-center gap-2">
+                      ❤️ Relaciones
+                    </label>
+                    <p className="text-slate-400 text-sm mt-1">
+                      Construcción de vínculos genuinos y significativos
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAreasConfig({
+                        ...areasConfig,
+                        forceRelacionesArea: !areasConfig.forceRelacionesArea,
+                      })
+                    }
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      areasConfig.forceRelacionesArea
+                        ? 'bg-purple-600'
+                        : 'bg-slate-600'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        areasConfig.forceRelacionesArea
+                          ? 'translate-x-6'
+                          : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Área de Talentos */}
+              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <label className="text-base font-semibold text-white flex items-center gap-2">
+                      🎨 Talentos
+                    </label>
+                    <p className="text-slate-400 text-sm mt-1">
+                      Desarrollo de habilidades y creatividad personal
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAreasConfig({
+                        ...areasConfig,
+                        forceTalentosArea: !areasConfig.forceTalentosArea,
+                      })
+                    }
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      areasConfig.forceTalentosArea
+                        ? 'bg-purple-600'
+                        : 'bg-slate-600'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        areasConfig.forceTalentosArea
+                          ? 'translate-x-6'
+                          : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Área de Salud */}
+              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <label className="text-base font-semibold text-white flex items-center gap-2">
+                      💪 Salud
+                    </label>
+                    <p className="text-slate-400 text-sm mt-1">
+                      Cuidado del bienestar físico y energía vital
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAreasConfig({
+                        ...areasConfig,
+                        forceSaludArea: !areasConfig.forceSaludArea,
+                      })
+                    }
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      areasConfig.forceSaludArea
+                        ? 'bg-purple-600'
+                        : 'bg-slate-600'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        areasConfig.forceSaludArea
+                          ? 'translate-x-6'
+                          : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Área de Paz Mental */}
+              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <label className="text-base font-semibold text-white flex items-center gap-2">
+                      🧘 Paz Mental
+                    </label>
+                    <p className="text-slate-400 text-sm mt-1">
+                      Cultivo de serenidad y equilibrio emocional
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAreasConfig({
+                        ...areasConfig,
+                        forcePazMentalArea: !areasConfig.forcePazMentalArea,
+                      })
+                    }
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      areasConfig.forcePazMentalArea
+                        ? 'bg-purple-600'
+                        : 'bg-slate-600'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        areasConfig.forcePazMentalArea
+                          ? 'translate-x-6'
+                          : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Área de Ocio */}
+              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <label className="text-base font-semibold text-white flex items-center gap-2">
+                      🎮 Ocio
+                    </label>
+                    <p className="text-slate-400 text-sm mt-1">
+                      Disfrute consciente y tiempo de descanso
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAreasConfig({
+                        ...areasConfig,
+                        forceOcioArea: !areasConfig.forceOcioArea,
+                      })
+                    }
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      areasConfig.forceOcioArea
+                        ? 'bg-purple-600'
+                        : 'bg-slate-600'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        areasConfig.forceOcioArea
+                          ? 'translate-x-6'
+                          : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Área de Servicio a Transformación */}
+              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-5 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <label className="text-base font-semibold text-white flex items-center gap-2">
+                      🎯 Servicio a Transformación (Invitados)
+                    </label>
+                    <p className="text-slate-400 text-sm mt-1">
+                      Los participantes deberán invitar personas al programa
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAreasConfig({
+                        ...areasConfig,
+                        forceTransformationArea: !areasConfig.forceTransformationArea,
+                      })
+                    }
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      areasConfig.forceTransformationArea
+                        ? 'bg-purple-600'
+                        : 'bg-slate-600'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        areasConfig.forceTransformationArea
+                          ? 'translate-x-6'
+                          : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {areasConfig.forceTransformationArea && (
+                  <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Meta de invitados efectivos *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="20"
+                      value={areasConfig.transformationGuestsTarget}
+                      onChange={(e) =>
+                        setAreasConfig({
+                          ...areasConfig,
+                          transformationGuestsTarget: parseInt(e.target.value) || 1,
+                        })
+                      }
+                      className="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                    />
+                    <p className="text-amber-400 text-xs mt-2 flex items-start gap-2">
+                      <span className="text-base">⚠️</span>
+                      <span>
+                        Esto creará <strong>{areasConfig.transformationGuestsTarget} tareas bloqueadas</strong> en el Wizard.
+                        Los primeros {Math.ceil(areasConfig.transformationGuestsTarget / 2)} invitados deberán completarse antes de la mitad del ciclo.
+                      </span>
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Área de Servicio Comunitario */}
+              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-5">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <label className="text-base font-semibold text-white flex items-center gap-2">
+                      🤝 Servicio Comunitario
+                    </label>
+                    <p className="text-slate-400 text-sm mt-1">
+                      Los participantes deberán definir acciones de servicio a su comunidad
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAreasConfig({
+                        ...areasConfig,
+                        forceCommunityServiceArea: !areasConfig.forceCommunityServiceArea,
+                      })
+                    }
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      areasConfig.forceCommunityServiceArea
+                        ? 'bg-purple-600'
+                        : 'bg-slate-600'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        areasConfig.forceCommunityServiceArea
+                          ? 'translate-x-6'
+                          : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 mt-8">
+              <button
+                onClick={() => setShowEditAreasModal(false)}
+                className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-colors"
+              >
+                {areasConfigLocked ? 'Cerrar' : 'Cancelar'}
+              </button>
+              {!areasConfigLocked && (
+                <button
+                  onClick={handleUpdateAreasConfig}
+                  className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors shadow-lg shadow-purple-500/20"
+                >
+                  Guardar Cambios
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Asignar Game Changer */}
+      {showGameChangerModal && selectedParticipanteForGC && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-cyan-500/30 rounded-2xl p-8 max-w-md w-full shadow-2xl">
+            <div className="flex items-center justify-center w-16 h-16 bg-cyan-600/20 rounded-full mx-auto mb-6">
+              <Users size={32} className="text-cyan-400" />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-white text-center mb-3">
+              Asignar Game Changer
+            </h2>
+            
+            <p className="text-slate-300 text-center mb-6">
+              Selecciona un Game Changer para <strong>{selectedParticipanteForGC.Participante.nombre}</strong>
+            </p>
+
+            <div className="space-y-2 max-h-96 overflow-y-auto mb-6">
+              {gameChangers.map((gc) => (
+                <button
+                  key={gc.GameChanger.id}
+                  onClick={() => handleAssignGameChanger(selectedParticipanteForGC.Participante.id, gc.GameChanger.id)}
+                  disabled={assigningGameChanger}
+                  className="w-full p-4 bg-slate-800/50 hover:bg-cyan-600/20 border border-slate-700 hover:border-cyan-500/50 rounded-lg transition-all text-left disabled:opacity-50"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-white font-semibold">{gc.GameChanger.nombre}</p>
+                      <p className="text-xs text-slate-400">{gc.GameChanger.email}</p>
+                    </div>
+                    {selectedParticipanteForGC.gameChangerId === gc.GameChanger.id && (
+                      <CheckCircle className="text-green-400" size={20} />
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowGameChangerModal(false);
+                  setSelectedParticipanteForGC(null);
+                }}
+                disabled={assigningGameChanger}
+                className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 text-white rounded-lg font-semibold transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación de Asignación Aleatoria */}
+      {showRandomAssignModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-gradient-to-br from-slate-900 via-indigo-950/50 to-slate-900 border-2 border-indigo-500/40 rounded-2xl p-8 max-w-lg w-full shadow-2xl shadow-indigo-500/20 animate-in zoom-in-95 duration-200">
+            {/* Icon Header */}
+            <div className="relative mb-6">
+              <div className="absolute inset-0 bg-indigo-500/20 blur-3xl rounded-full"></div>
+              <div className="relative flex items-center justify-center w-20 h-20 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl mx-auto shadow-lg shadow-indigo-500/50 rotate-3 hover:rotate-0 transition-transform duration-300">
+                <Users size={36} className="text-white" />
+              </div>
+            </div>
+            
+            {/* Title */}
+            <h2 className="text-3xl font-bold text-white text-center mb-3 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+              Asignación Aleatoria
+            </h2>
+            
+            {/* Description */}
+            <p className="text-slate-300 text-center mb-6 leading-relaxed text-base">
+              Se asignarán <span className="font-semibold text-indigo-400">aleatoriamente</span> mentores y game changers a todos los participantes que no tengan asignación.
+            </p>
+
+            {/* Info Box */}
+            <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/30 rounded-xl p-5 mb-6 backdrop-blur-sm">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-8 h-8 bg-indigo-500/20 rounded-lg flex items-center justify-center mt-0.5">
+                  <AlertCircle className="text-indigo-400" size={18} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-indigo-200 font-medium mb-1">
+                    Requisitos para la asignación:
+                  </p>
+                  <ul className="text-sm text-indigo-300/90 space-y-1 list-disc list-inside">
+                    <li>Los mentores deben tener horarios configurados</li>
+                    <li>Los game changers deben estar agregados a la visión</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowRandomAssignModal(false)}
+                disabled={randomAssigning}
+                className="flex-1 px-6 py-3.5 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-800/50 disabled:text-slate-500 text-white rounded-xl font-semibold transition-all duration-200 border border-slate-700 hover:border-slate-600"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleRandomAssignment}
+                disabled={randomAssigning}
+                className="flex-1 px-6 py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-slate-700 disabled:to-slate-700 text-white rounded-xl font-bold transition-all duration-200 shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-105 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-2"
+              >
+                {randomAssigning ? (
+                  <>
+                    <Loader2 className="animate-spin" size={18} />
+                    <span>Asignando...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle size={18} />
+                    <span>Confirmar</span>
+                  </>
                 )}
               </button>
             </div>

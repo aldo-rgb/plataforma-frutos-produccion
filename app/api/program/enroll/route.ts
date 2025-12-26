@@ -66,7 +66,7 @@ export async function GET() {
     const endDate = enrollment.cycleEndDate ? new Date(enrollment.cycleEndDate) : null;
     const startDate = enrollment.cycleStartDate ? new Date(enrollment.cycleStartDate) : null;
 
-    let totalWeeks = enrollment.totalWeeks || 17;
+    let totalWeeks = enrollment.totalWeeks || 8;
     let remainingWeeks = 0;
 
     if (endDate && startDate) {
@@ -215,7 +215,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { mentorId, slot1, slot2, totalWeeks = 17 } = body;
+    const { mentorId, slot1, slot2, totalWeeks = 8 } = body;
 
     // Validaciones
     if (!mentorId || !slot1 || !slot2) {
@@ -256,7 +256,7 @@ export async function POST(request: Request) {
       });
 
       // Calcular cuántas sesiones debería tener
-      let expectedSessions = (existingEnrollment.totalWeeks || 17) * 2;
+      let expectedSessions = (existingEnrollment.totalWeeks || 8) * 2;
       
       // Si tiene todas las sesiones activas agendadas, no puede crear más
       if (activeSessionsCount >= expectedSessions) {
@@ -411,6 +411,27 @@ export async function POST(request: Request) {
         nextSession
       };
     });
+
+    // 5. Marcar como leídas todas las notificaciones de MENTOR_ASSIGNMENT del usuario
+    try {
+      const notificacionesActualizadas = await prisma.notification.updateMany({
+        where: {
+          userId: session.user.id,
+          type: 'MENTOR_ASSIGNMENT',
+          isRead: false
+        },
+        data: {
+          isRead: true
+        }
+      });
+
+      if (notificacionesActualizadas.count > 0) {
+        console.log(`📬 Marcadas ${notificacionesActualizadas.count} notificaciones como leídas`);
+      }
+    } catch (notifError) {
+      console.warn('⚠️ No se pudieron marcar las notificaciones como leídas:', notifError);
+      // No fallar la operación principal si falla la actualización de notificaciones
+    }
 
     return NextResponse.json({
       success: true,

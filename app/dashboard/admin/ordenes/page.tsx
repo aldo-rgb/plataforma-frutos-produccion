@@ -451,26 +451,44 @@ export default function AdminOrdenesPage() {
                       <td className="px-6 py-4 text-center">
                         {(order.status === 'PENDING' || order.status === 'PROCESSING') && (
                           <div className="flex items-center gap-2 justify-center">
+                            {/* Ver Comprobante */}
+                            {order.paymentData?.proofUrl && (
+                              <button
+                                onClick={() => {
+                                  setSelectedOrder(order);
+                                  setShowProofModal(true);
+                                }}
+                                className="group relative p-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 rounded-lg transition-colors"
+                                title="Ver comprobante"
+                              >
+                                <Eye size={18} />
+                                <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                  Ver comprobante
+                                </span>
+                              </button>
+                            )}
+                            
+                            {/* Marcar como Pagada */}
                             <button
                               onClick={() => {
                                 setSelectedOrder(order);
                                 setShowConfirmModal(true);
                               }}
                               disabled={processingOrderId === order.id}
-                              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white text-sm font-semibold rounded-lg transition-colors"
+                              className="group relative p-2 bg-green-600/20 hover:bg-green-600/40 disabled:bg-gray-600/20 text-green-400 disabled:text-gray-500 rounded-lg transition-colors"
+                              title="Marcar como pagada"
                             >
                               {processingOrderId === order.id ? (
-                                <>
-                                  <Loader2 size={16} className="animate-spin" />
-                                  Procesando...
-                                </>
+                                <Loader2 size={18} className="animate-spin" />
                               ) : (
-                                <>
-                                  <Check size={16} />
-                                  Pagada
-                                </>
+                                <Check size={18} />
                               )}
+                              <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                Marcar como pagada
+                              </span>
                             </button>
+                            
+                            {/* Rechazar */}
                             <button
                               onClick={() => {
                                 setSelectedOrder(order);
@@ -478,10 +496,13 @@ export default function AdminOrdenesPage() {
                                 setShowRejectModal(true);
                               }}
                               disabled={processingOrderId === order.id}
-                              className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white text-sm font-semibold rounded-lg transition-colors"
+                              className="group relative p-2 bg-red-600/20 hover:bg-red-600/40 disabled:bg-gray-600/20 text-red-400 disabled:text-gray-500 rounded-lg transition-colors"
+                              title="Rechazar orden"
                             >
-                              <XCircle size={16} />
-                              Rechazar
+                              <XCircle size={18} />
+                              <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                Rechazar orden
+                              </span>
                             </button>
                           </div>
                         )}

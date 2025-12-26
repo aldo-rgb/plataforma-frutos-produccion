@@ -404,7 +404,7 @@ export default function ProgramEnrollPage() {
           mentorId: mentorAsignado.id,
           slot1,
           slot2,
-          totalWeeks: 17
+          totalWeeks: enrollmentInfo?.stats?.totalWeeks || 8
         })
       });
 
@@ -485,12 +485,17 @@ export default function ProgramEnrollPage() {
           </div>
           <h1 className="text-4xl font-bold text-white mb-2">
             {enrollmentInfo?.vision ? 
-              enrollmentInfo.vision.nombre 
-              : 'Programa Intensivo 17 Semanas'}
+              `${enrollmentInfo.vision.nombre}` 
+              : `Programa Intensivo ${enrollmentInfo?.stats?.totalWeeks || 8} Semanas`}
           </h1>
+          {enrollmentInfo?.vision && enrollmentInfo.stats?.totalWeeks && (
+            <p className="text-purple-300 text-lg font-semibold mb-2">
+              {enrollmentInfo.stats.totalWeeks} Semanas · {enrollmentInfo.stats.totalWeeks * 2} Sesiones
+            </p>
+          )}
           <p className="text-slate-400">
             {enrollmentInfo?.vision ? 
-              `Inscríbete al programa de ${enrollmentInfo.stats?.totalWeeks || 17} semanas con llamadas semanales programadas` 
+              `Inscríbete al programa de ${enrollmentInfo.stats?.totalWeeks || 8} semanas con llamadas semanales programadas` 
               : 'Inscríbete al programa de disciplina con llamadas semanales programadas'}
           </p>
           {enrollmentInfo?.vision && enrollmentInfo.vision.endDate && (
@@ -699,12 +704,12 @@ export default function ProgramEnrollPage() {
             <h3 className="text-white font-bold mb-1">
               {enrollmentInfo?.stats ? 
                 `${enrollmentInfo.stats.remainingSessions || enrollmentInfo.stats.totalSessions} Sesiones ${enrollmentInfo.stats.remainingSessions ? 'Restantes' : ''}` 
-                : `${(enrollmentInfo?.stats?.totalWeeks || 17) * 2} Sesiones`}
+                : `${(enrollmentInfo?.stats?.totalWeeks || 8) * 2} Sesiones`}
             </h3>
             <p className="text-slate-500 text-sm">
               {enrollmentInfo?.stats ? 
                 `${enrollmentInfo.stats.remainingWeeks || enrollmentInfo.stats.totalWeeks} de ${enrollmentInfo.stats.totalWeeks} semanas · 2 llamadas/semana` 
-                : `${enrollmentInfo?.stats?.totalWeeks || 17} semanas · 2 llamadas/semana`}
+                : `${enrollmentInfo?.stats?.totalWeeks || 8} semanas · 2 llamadas/semana`}
             </p>
             {enrollmentInfo?.vision && (
               <p className="text-purple-400 text-xs mt-2 font-semibold">
@@ -1006,7 +1011,7 @@ export default function ProgramEnrollPage() {
                 <span className="text-white font-bold">
                   {enrollmentInfo?.stats ? 
                     `${enrollmentInfo.stats.totalSessions} sesiones` 
-                    : `${(enrollmentInfo?.stats?.totalWeeks || 17) * 2} sesiones`}
+                    : `${(enrollmentInfo?.stats?.totalWeeks || 8) * 2} sesiones`}
                 </span>
               </div>
               <div className="flex justify-between mt-2">
@@ -1014,7 +1019,7 @@ export default function ProgramEnrollPage() {
                 <span className="text-white font-bold">
                   {enrollmentInfo?.stats ? 
                     `${enrollmentInfo.stats.totalWeeks} semanas` 
-                    : `${enrollmentInfo?.stats?.totalWeeks || 17} semanas`}
+                    : `${enrollmentInfo?.stats?.totalWeeks || 8} semanas`}
                 </span>
               </div>
               {enrollmentInfo?.vision && (

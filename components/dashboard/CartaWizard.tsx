@@ -34,6 +34,8 @@ export default function CartaWizard() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [visionConfig, setVisionConfig] = useState<any>(null);
+  const [areas, setAreas] = useState(AREAS);
   
   // Datos de la carta
   const [cartaData, setCartaData] = useState<any>({
@@ -68,6 +70,32 @@ export default function CartaWizard() {
     try {
       const res = await fetch('/api/carta/my-carta');
       const data = await res.json();
+      
+      // Guardar configuración de visión
+      if (data.visionConfig) {
+        setVisionConfig(data.visionConfig);
+        
+        // Filtrar áreas según configuración
+        const filteredAreas = [...AREAS];
+        const areasToShow = filteredAreas.filter(area => {
+          // Mapeo de áreas del wizard a configuración de visión
+          const areaConfigMap: Record<string, boolean> = {
+            'finanzas': data.visionConfig.forceFinanzasArea ?? true,
+            'relaciones': data.visionConfig.forceRelacionesArea ?? true,
+            'talentos': data.visionConfig.forceTalentosArea ?? true,
+            'salud': data.visionConfig.forceSaludArea ?? true,
+            'pazMental': data.visionConfig.forcePazMentalArea ?? true,
+            'ocio': data.visionConfig.forceOcioArea ?? true,
+            'servicioTrans': data.visionConfig.forceTransformationArea ?? true,
+            'servicioComun': data.visionConfig.forceCommunityServiceArea ?? true,
+          };
+          
+          // Mostrar área solo si está configurada como activa
+          return areaConfigMap[area.key] ?? true;
+        });
+        
+        setAreas(areasToShow);
+      }
       
       if (data.carta) {
         setCartaData({
@@ -181,7 +209,7 @@ export default function CartaWizard() {
   
   // Validar Step 1: Todas las áreas deben tener "Yo soy" + contenido
   const validateStep1 = () => {
-    const allAreasValid = AREAS.every(area => 
+    const allAreasValid = areas.every(area => 
       validateYoSoy(cartaData[`${area.key}Declaracion`] || '')
     );
     return allAreasValid;
@@ -189,7 +217,7 @@ export default function CartaWizard() {
 
   // Validar Step 2: Todas las áreas deben tener meta SMART válida
   const validateStep2 = () => {
-    const allMetasValid = AREAS.every(area => {
+    const allMetasValid = areas.every(area => {
       const meta = cartaData[`${area.key}Meta`] || '';
       if (!meta.trim()) return false;
       
@@ -329,7 +357,7 @@ export default function CartaWizard() {
               </div>
             </div>
 
-            {AREAS.map((area) => {
+            {areas.map((area) => {
               const fieldKey = `${area.key}Declaracion`;
               const fieldValue = cartaData[fieldKey] || '';
               const isRejected = feedback[`${area.name}_identity`];
@@ -337,12 +365,25 @@ export default function CartaWizard() {
               const isValid = validateYoSoy(fieldValue);
               const showValidation = fieldValue.trim().length > 0;
               
+              // Verificar si es un área obligatoria por la visión
+              const isLockedByVision = (area.key === 'servicioTrans' && visionConfig?.forceTransformationArea) ||
+                                      (area.key === 'servicioComun' && visionConfig?.forceCommunityServiceArea);
+              
               return (
-                <div key={area.key} className="bg-[#1a1b1f] border-2 border-gray-800 rounded-xl p-5 hover:border-gray-700 transition-all">
+                <div key={area.key} className={`bg-[#1a1b1f] border-2 rounded-xl p-5 hover:border-gray-700 transition-all ${
+                  isLockedByVision ? 'border-amber-500/50 bg-amber-900/5' : 'border-gray-800'
+                }`}>
                   <div className="flex items-center gap-3 mb-3">
                     <div className="text-3xl">{area.emoji}</div>
                     <div className="flex-1">
-                      <h3 className="text-white font-bold">{area.name}</h3>
+                      <h3 className="text-white font-bold flex items-center gap-2">
+                        {area.name}
+                        {isLockedByVision && (
+                          <span className="text-xs bg-amber-500/20 text-amber-300 px-2 py-1 rounded-full font-normal flex items-center gap-1">
+                            🔒 Área Obligatoria de tu Visión
+                          </span>
+                        )}
+                      </h3>
                       {isRejected && (
                         <p className="text-xs text-red-400 mt-1">❌ {isRejected}</p>
                       )}
@@ -370,6 +411,15 @@ export default function CartaWizard() {
                       </div>
                     )}
                   </div>
+
+                  {isLockedByVision && (
+                    <div className="mb-3 bg-amber-900/20 border border-amber-500/30 rounded-lg p-3">
+                      <p className="text-xs text-amber-200">
+                        <strong>💡 Nota:</strong> Esta área fue establecida por la dirección de tu visión <strong>{visionConfig.nombre}</strong>. 
+                        Aunque la meta es obligatoria, tu declaración de identidad debe ser auténtica y personal.
+                      </p>
+                    </div>
+                  )}
 
                   <textarea
                     value={fieldValue}
@@ -405,7 +455,7 @@ export default function CartaWizard() {
               </div>
             </div>
 
-            {AREAS.map((area) => {
+            {areas.map((area) => {
               const fieldKey = `${area.key}Meta`;
               const fieldValue = cartaData[fieldKey] || '';
               const isRejected = feedback[`${area.name}_meta`];
@@ -415,12 +465,28 @@ export default function CartaWizard() {
               const validation = fieldValue.trim() ? validateMetaSMART(fieldValue) : null;
               const showValidation = fieldValue.trim().length > 0;
               
+              // Verificar si es un área obligatoria con meta bloqueada
+              const isLockedByVision = area.key === 'servicioTrans' && visionConfig?.forceTransformationArea;
+              const guestsTarget = visionConfig?.transformationGuestsTarget;
+              const lockedMeta = isLockedByVision && guestsTarget 
+                ? `Lograr ${guestsTarget} invitados efectivos al programa` 
+                : null;
+              
               return (
-                <div key={area.key} className="bg-[#1a1b1f] border-2 border-gray-800 rounded-xl p-5">
+                <div key={area.key} className={`bg-[#1a1b1f] border-2 rounded-xl p-5 ${
+                  isLockedByVision ? 'border-amber-500/50 bg-amber-900/5' : 'border-gray-800'
+                }`}>
                   <div className="flex items-center gap-3 mb-3">
                     <div className="text-3xl">{area.emoji}</div>
                     <div className="flex-1">
-                      <h3 className="text-white font-bold">{area.name}</h3>
+                      <h3 className="text-white font-bold flex items-center gap-2">
+                        {area.name}
+                        {isLockedByVision && (
+                          <span className="text-xs bg-amber-500/20 text-amber-300 px-2 py-1 rounded-full font-normal flex items-center gap-1">
+                            🔒 Meta Fija (Visión)
+                          </span>
+                        )}
+                      </h3>
                       {isRejected && (
                         <p className="text-xs text-red-400 mt-1">❌ {isRejected}</p>
                       )}
@@ -437,14 +503,24 @@ export default function CartaWizard() {
                     )}
                   </div>
 
+                  {isLockedByVision && lockedMeta && (
+                    <div className="mb-3 bg-amber-900/20 border border-amber-500/30 rounded-lg p-3">
+                      <p className="text-xs text-amber-200">
+                        <strong>🎯 Meta establecida por tu Visión:</strong> Esta meta fue configurada por la dirección de tu visión y no puede ser modificada. 
+                        Se crearán {guestsTarget} tareas individuales en el siguiente paso.
+                      </p>
+                    </div>
+                  )}
+
                   <textarea
-                    value={fieldValue}
+                    value={isLockedByVision && lockedMeta ? lockedMeta : fieldValue}
                     onChange={(e) => setCartaData({ ...cartaData, [fieldKey]: e.target.value })}
                     placeholder={`Ej: Generar $50,000 en ventas de nuevos clientes durante los próximos 90 días`}
-                    disabled={isApproved}
+                    disabled={isApproved || (isLockedByVision && lockedMeta)}
                     className={`w-full bg-gray-900 text-white p-4 rounded-lg resize-none focus:ring-2 transition-all ${
                       isRejected ? 'border-2 border-red-500 focus:ring-red-500' :
                       isApproved ? 'border-2 border-green-500/50 opacity-75 cursor-not-allowed' :
+                      isLockedByVision && lockedMeta ? 'border-2 border-amber-500/50 opacity-75 cursor-not-allowed' :
                       showValidation && !validation?.valid ? 'border-2 border-red-500 focus:ring-red-500' :
                       showValidation && validation?.valid ? 'border-2 border-green-500 focus:ring-green-500 shadow-[0_0_15px_rgba(34,197,94,0.2)]' :
                       'border border-gray-700 focus:ring-purple-500'

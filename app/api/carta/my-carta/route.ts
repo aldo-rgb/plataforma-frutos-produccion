@@ -16,6 +16,40 @@ export async function GET(req: Request) {
 
     const userId = typeof session.user.id === 'string' ? parseInt(session.user.id) : session.user.id;
 
+    // Obtener usuario con su visión
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        nombre: true,
+        VisionParticipante: {
+          include: {
+            Vision: {
+              select: {
+                id: true,
+                nombre: true,
+                startDate: true,
+                endDate: true,
+                forceFinanzasArea: true,
+                forceRelacionesArea: true,
+                forceTalentosArea: true,
+                forceSaludArea: true,
+                forcePazMentalArea: true,
+                forceOcioArea: true,
+                forceTransformationArea: true,
+                transformationGuestsTarget: true,
+                forceCommunityServiceArea: true
+              }
+            }
+          },
+          take: 1
+        }
+      }
+    });
+
+    const visionConfig = usuario?.VisionParticipante?.[0]?.Vision || null;
+
     const carta = await prisma.cartaFrutos.findFirst({
       where: { usuarioId: userId },
       include: {
@@ -35,13 +69,7 @@ export async function GET(req: Request) {
     });
 
     if (!carta) {
-      // Si no existe carta, obtener datos del usuario para incluir en la respuesta
-      const usuario = await prisma.usuario.findUnique({
-        where: { id: userId },
-        select: { email: true, nombre: true }
-      });
-      
-      // Crear una nueva carta en estado BORRADOR
+      // Si no existe carta, crear una nueva carta en estado BORRADOR
       const newCarta = await prisma.cartaFrutos.create({
         data: {
           usuarioId: userId,
@@ -64,10 +92,18 @@ export async function GET(req: Request) {
         }
       });
 
-      return NextResponse.json({ carta: newCarta, isNew: true });
+      return NextResponse.json({ 
+        carta: newCarta, 
+        isNew: true,
+        visionConfig 
+      });
     }
 
-    return NextResponse.json({ carta, isNew: false });
+    return NextResponse.json({ 
+      carta, 
+      isNew: false,
+      visionConfig 
+    });
 
   } catch (error: any) {
     console.error('Error getting carta:', error);

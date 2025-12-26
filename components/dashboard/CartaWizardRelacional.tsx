@@ -129,7 +129,132 @@ export default function CartaWizardRelacional() {
 
   useEffect(() => {
     loadCarta();
+    // Cargar datos de Quantum si vienen desde allí
+    loadQuantumDraft();
   }, []);
+
+  const loadQuantumDraft = () => {
+    try {
+      const quantumDraft = localStorage.getItem('quantum-carta-draft');
+      if (!quantumDraft) return;
+
+      const cartaData = JSON.parse(quantumDraft);
+      console.log('🤖 Cargando datos desde Quantum IA:', cartaData);
+
+      // Prellenar declaraciones del ser
+      const declaraciones: Record<string, string> = {};
+      const identidades: Record<string, Meta[]> = {};
+      const metas: Record<string, Meta[]> = {};
+      const configs: MetaConfig[] = [];
+
+      // Mapear las áreas de Quantum a las áreas del wizard
+      const areaMapping: Record<string, string> = {
+        finanzas: 'finanzas',
+        relaciones: 'relaciones',
+        talentos: 'talentos',
+        salud: 'salud',
+        pazMental: 'pazMental',
+        ocio: 'ocio',
+        transformacion: 'servicioTrans',
+        comunidad: 'servicioComun'
+      };
+
+      Object.entries(cartaData).forEach(([quantumKey, data]: [string, any]) => {
+        const areaKey = areaMapping[quantumKey];
+        if (!areaKey || !data) return;
+
+        // Declaración del ser (Paso 1)
+        if (data.declaracion) {
+          declaraciones[areaKey] = data.declaracion;
+        }
+
+        // Objetivo (Paso 2)
+        if (data.objetivo) {
+          identidades[areaKey] = [{
+            id: `${areaKey}-obj-1`,
+            description: data.objetivo,
+            isValid: true
+          }];
+        }
+
+        // Acciones (Paso 3)
+        if (data.acciones && Array.isArray(data.acciones)) {
+          metas[areaKey] = data.acciones.map((accion: any, idx: number) => ({
+            id: `${areaKey}-meta-${idx + 1}`,
+            description: accion.nombre,
+            isValid: true
+          }));
+
+          // Configuración de frecuencia (Paso 4)
+          data.acciones.forEach((accion: any, idx: number) => {
+            const metaId = `${areaKey}-meta-${idx + 1}`;
+            
+            // Convertir frecuencia de Quantum al formato del wizard
+            let frecuencia = 'DIARIA';
+            let diasSeleccionados: string[] = [];
+
+            if (accion.frecuencia === 'Diaria') {
+              frecuencia = 'DIARIA';
+            } else if (accion.frecuencia === 'Lun-Vie') {
+              frecuencia = 'LUN_VIE';
+            } else if (accion.frecuencia === 'Personalizada' && accion.dias) {
+              frecuencia = 'PERSONALIZADA';
+              // Convertir nombres de días a números
+              const diasMap: Record<string, string> = {
+                'Lunes': '1',
+                'Martes': '2',
+                'Miércoles': '3',
+                'Jueves': '4',
+                'Viernes': '5',
+                'Sábado': '6',
+                'Domingo': '0'
+              };
+              diasSeleccionados = accion.dias
+                .map((dia: string) => diasMap[dia])
+                .filter((d: string) => d !== undefined);
+            }
+
+            configs.push({
+              metaId,
+              areaKey,
+              description: accion.nombre,
+              config: {
+                frecuencia,
+                diasSeleccionados
+              }
+            });
+          });
+        }
+      });
+
+      // Aplicar los datos extraídos
+      if (Object.keys(declaraciones).length > 0) {
+        setDeclaracionesSer(declaraciones);
+        console.log('✅ Declaraciones del ser prellenadas desde Quantum');
+      }
+      if (Object.keys(identidades).length > 0) {
+        setIdentidadesPorArea(identidades);
+        console.log('✅ Objetivos prellenados desde Quantum');
+      }
+      if (Object.keys(metas).length > 0) {
+        setMetasPorArea(metas);
+        console.log('✅ Acciones prellenadas desde Quantum');
+      }
+      if (configs.length > 0) {
+        setMetasConfiguradas(configs);
+        console.log('✅ Configuración de frecuencias prellenada desde Quantum');
+      }
+
+      // Mostrar notificación de éxito
+      showToast('✨ Información de Quantum cargada exitosamente');
+
+      // Limpiar el draft de Quantum para evitar cargas duplicadas
+      localStorage.removeItem('quantum-carta-draft');
+
+    } catch (error) {
+      console.error('Error cargando draft de Quantum:', error);
+    }
+  };
 
   const loadCarta = async () => {
     try {
@@ -1071,7 +1196,7 @@ Responde SOLO con la acción, sin numeración ni explicaciones adicionales.`
                              disabled:from-slate-700 disabled:to-slate-700 text-white px-5 py-3 rounded-xl font-bold 
                              transition-all flex items-center gap-3 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/60 
                              hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
-                             border-2 border-cyan-400/30 font-mono tracking-wide overflow-hidden group"
+                             border-2 border-cyan-400/30 overflow-hidden group"
                   >
                     {/* Glow effect */}
                     <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>

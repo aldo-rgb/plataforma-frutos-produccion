@@ -50,6 +50,17 @@ export default function VisionesSchoolAdminPage() {
     nombre: '',
     descripcion: '',
     maxParticipantes: 30,
+    startDate: '',
+    endDate: '',
+    forceFinanzasArea: true,
+    forceRelacionesArea: true,
+    forceTalentosArea: true,
+    forceSaludArea: true,
+    forcePazMentalArea: true,
+    forceOcioArea: true,
+    forceTransformationArea: true,
+    transformationGuestsTarget: 4,
+    forceCommunityServiceArea: true,
   });
 
   useEffect(() => {
@@ -105,7 +116,22 @@ export default function VisionesSchoolAdminPage() {
 
       if (data.success) {
         setShowCreateModal(false);
-        setFormData({ nombre: '', descripcion: '', maxParticipantes: 30 });
+        setFormData({ 
+          nombre: '', 
+          descripcion: '', 
+          maxParticipantes: 30,
+          startDate: '',
+          endDate: '',
+          forceFinanzasArea: true,
+          forceRelacionesArea: true,
+          forceTalentosArea: true,
+          forceSaludArea: true,
+          forcePazMentalArea: true,
+          forceOcioArea: true,
+          forceTransformationArea: true,
+          transformationGuestsTarget: 4,
+          forceCommunityServiceArea: true,
+        });
         fetchVisiones();
       } else {
         alert(data.error || 'Error al crear la visión');
@@ -296,7 +322,7 @@ export default function VisionesSchoolAdminPage() {
       {/* Create Vision Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 max-w-2xl w-full">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold text-white mb-4">
               Crear Nueva Visión
             </h2>
@@ -351,6 +377,415 @@ export default function VisionesSchoolAdminPage() {
                 />
               </div>
 
+              {/* Fechas de la Visión */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Fecha de Inicio *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.startDate}
+                    onChange={(e) =>
+                      setFormData({ ...formData, startDate: e.target.value })
+                    }
+                    className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Fecha de Fin *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.endDate}
+                    onChange={(e) =>
+                      setFormData({ ...formData, endDate: e.target.value })
+                    }
+                    className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+              </div>
+
+              {/* Banner de información de fechas */}
+              {(formData.startDate || formData.endDate) && (
+                <div className="bg-purple-600/10 border border-purple-500/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Calendar className="text-purple-400 shrink-0 mt-0.5" size={20} />
+                    <div className="flex-1">
+                      <h4 className="text-purple-300 font-semibold text-sm mb-2">
+                        Período de la Visión
+                      </h4>
+                      <div className="space-y-1 text-sm">
+                        {formData.startDate && (
+                          <p className="text-slate-300">
+                            <span className="text-slate-400">Inicio:</span>{' '}
+                            <span className="font-semibold">
+                              {new Date(formData.startDate + 'T00:00:00').toLocaleDateString('es-MX', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })}
+                            </span>
+                          </p>
+                        )}
+                        {formData.endDate && (
+                          <p className="text-slate-300">
+                            <span className="text-slate-400">Fin:</span>{' '}
+                            <span className="font-semibold">
+                              {new Date(formData.endDate + 'T00:00:00').toLocaleDateString('es-MX', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })}
+                            </span>
+                          </p>
+                        )}
+                        {formData.startDate && formData.endDate && (
+                          <p className="text-purple-300 font-semibold mt-2">
+                            Duración: {Math.ceil((new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) / (1000 * 60 * 60 * 24))} días
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Separador */}
+              <div className="border-t border-slate-700 my-6"></div>
+
+              {/* Configuración de Áreas Obligatorias */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Users size={20} className="text-purple-400" />
+                  Áreas Obligatorias del Wizard
+                </h3>
+                <p className="text-slate-400 text-sm -mt-2">
+                  Configura qué áreas serán obligatorias para todos los participantes de esta visión
+                </p>
+
+                {/* Área de Finanzas */}
+                <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <label className="text-base font-semibold text-white flex items-center gap-2">
+                        💰 Finanzas
+                      </label>
+                      <p className="text-slate-400 text-sm mt-1">
+                        Declaración y meta de abundancia financiera
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          forceFinanzasArea: !formData.forceFinanzasArea,
+                        })
+                      }
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        formData.forceFinanzasArea
+                          ? 'bg-purple-600'
+                          : 'bg-slate-600'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          formData.forceFinanzasArea
+                            ? 'translate-x-6'
+                            : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Área de Relaciones */}
+                <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <label className="text-base font-semibold text-white flex items-center gap-2">
+                        ❤️ Relaciones
+                      </label>
+                      <p className="text-slate-400 text-sm mt-1">
+                        Construcción de vínculos genuinos y significativos
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          forceRelacionesArea: !formData.forceRelacionesArea,
+                        })
+                      }
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        formData.forceRelacionesArea
+                          ? 'bg-purple-600'
+                          : 'bg-slate-600'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          formData.forceRelacionesArea
+                            ? 'translate-x-6'
+                            : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Área de Talentos */}
+                <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <label className="text-base font-semibold text-white flex items-center gap-2">
+                        🎨 Talentos
+                      </label>
+                      <p className="text-slate-400 text-sm mt-1">
+                        Desarrollo de habilidades y creatividad personal
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          forceTalentosArea: !formData.forceTalentosArea,
+                        })
+                      }
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        formData.forceTalentosArea
+                          ? 'bg-purple-600'
+                          : 'bg-slate-600'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          formData.forceTalentosArea
+                            ? 'translate-x-6'
+                            : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Área de Salud */}
+                <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <label className="text-base font-semibold text-white flex items-center gap-2">
+                        💪 Salud
+                      </label>
+                      <p className="text-slate-400 text-sm mt-1">
+                        Cuidado del bienestar físico y energía vital
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          forceSaludArea: !formData.forceSaludArea,
+                        })
+                      }
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        formData.forceSaludArea
+                          ? 'bg-purple-600'
+                          : 'bg-slate-600'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          formData.forceSaludArea
+                            ? 'translate-x-6'
+                            : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Área de Paz Mental */}
+                <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <label className="text-base font-semibold text-white flex items-center gap-2">
+                        🧘 Paz Mental
+                      </label>
+                      <p className="text-slate-400 text-sm mt-1">
+                        Cultivo de serenidad y equilibrio emocional
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          forcePazMentalArea: !formData.forcePazMentalArea,
+                        })
+                      }
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        formData.forcePazMentalArea
+                          ? 'bg-purple-600'
+                          : 'bg-slate-600'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          formData.forcePazMentalArea
+                            ? 'translate-x-6'
+                            : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Área de Ocio */}
+                <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <label className="text-base font-semibold text-white flex items-center gap-2">
+                        🎮 Ocio
+                      </label>
+                      <p className="text-slate-400 text-sm mt-1">
+                        Disfrute consciente y tiempo de descanso
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          forceOcioArea: !formData.forceOcioArea,
+                        })
+                      }
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        formData.forceOcioArea
+                          ? 'bg-purple-600'
+                          : 'bg-slate-600'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          formData.forceOcioArea
+                            ? 'translate-x-6'
+                            : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Área de Servicio a Transformación (Invitados) */}
+                <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-5 space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <label className="text-base font-semibold text-white flex items-center gap-2">
+                        🎯 Servicio a Transformación (Invitados)
+                      </label>
+                      <p className="text-slate-400 text-sm mt-1">
+                        Los participantes deberán invitar personas al programa
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          forceTransformationArea: !formData.forceTransformationArea,
+                        })
+                      }
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        formData.forceTransformationArea
+                          ? 'bg-purple-600'
+                          : 'bg-slate-600'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          formData.forceTransformationArea
+                            ? 'translate-x-6'
+                            : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {formData.forceTransformationArea && (
+                    <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Meta de invitados efectivos *
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={formData.transformationGuestsTarget}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            transformationGuestsTarget: parseInt(e.target.value),
+                          })
+                        }
+                        className="w-full px-4 py-2 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                      />
+                      <p className="text-amber-400 text-xs mt-2 flex items-start gap-2">
+                        <span className="text-base">⚠️</span>
+                        <span>
+                          Esto creará <strong>{formData.transformationGuestsTarget} tareas bloqueadas</strong> en el Wizard de todos los participantes.
+                          Los primeros {Math.ceil(formData.transformationGuestsTarget / 2)} invitados deberán completarse antes de la mitad del ciclo.
+                        </span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Área de Servicio Comunitario */}
+                <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-5">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <label className="text-base font-semibold text-white flex items-center gap-2">
+                        🤝 Servicio Comunitario
+                      </label>
+                      <p className="text-slate-400 text-sm mt-1">
+                        Los participantes deberán definir acciones de servicio a su comunidad
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          forceCommunityServiceArea: !formData.forceCommunityServiceArea,
+                        })
+                      }
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        formData.forceCommunityServiceArea
+                          ? 'bg-purple-600'
+                          : 'bg-slate-600'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          formData.forceCommunityServiceArea
+                            ? 'translate-x-6'
+                            : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex items-center gap-3 pt-4">
                 <button
                   type="button"
@@ -361,7 +796,13 @@ export default function VisionesSchoolAdminPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors"
+                  disabled={
+                    !formData.nombre.trim() ||
+                    !formData.startDate ||
+                    !formData.endDate ||
+                    !formData.maxParticipantes
+                  }
+                  className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-colors"
                 >
                   Crear Visión
                 </button>
