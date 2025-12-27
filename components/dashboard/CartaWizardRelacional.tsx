@@ -1817,99 +1817,123 @@ Responde SOLO con la acción, sin numeración ni explicaciones adicionales.`
                   </div>
                 </div>
 
-                {/* Instrucciones */}
-                <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 mb-4">
-                  <p className="text-sm text-blue-200 mb-2">
-                    <strong>🎯 Acciones SMART:</strong> Selecciona de las sugerencias o escribe tus propias acciones.
-                  </p>
-                  <div className="text-xs text-blue-300 space-y-1">
-                    <div>✅ Cada acción debe ser medible (incluye números/cantidades)</div>
-                    <div>✅ Puedes agregar múltiples acciones para un mismo objetivo</div>
-                    <div>🚫 Sin lenguaje especulativo ("tratar", "intentar", etc.)</div>
-                  </div>
-                </div>
-
-                {/* Sugerencias QUANTUM inline */}
-                {!isReadOnly && (
-                  <div className="mb-4">
-                    {loadingActionSuggestions ? (
-                      <div className="bg-gradient-to-r from-purple-900/20 via-blue-900/20 to-purple-900/20 border border-purple-500/40 rounded-lg p-4">
-                        <div className="flex items-center gap-3">
-                          <Atom className="w-6 h-6 text-purple-400 animate-spin" style={{ animationDuration: '2s' }} />
-                          <div>
-                            <p className="text-purple-300 font-medium text-sm">QUANTUM generando posibilidades de acción...</p>
-                          </div>
+                {/* Verificar si es Servicio Transformacional */}
+                {currentObjetivoData.areaKey === 'servicioTrans' ? (
+                  /* Mensaje especial para Servicio Transformacional */
+                  <div className="bg-gradient-to-r from-amber-900/20 via-yellow-900/20 to-amber-900/20 border-2 border-amber-500/50 rounded-xl p-6 mb-4">
+                    <div className="flex items-start gap-4">
+                      <div className="text-5xl">✨</div>
+                      <div className="flex-1">
+                        <h4 className="text-amber-300 font-bold text-lg mb-2">Este objetivo no requiere acciones</h4>
+                        <p className="text-amber-100 text-sm leading-relaxed mb-3">
+                          Este objetivo trata de <strong>tu SER</strong> - quién estás siendo para obtenerlo. 
+                          No se trata de acciones específicas, sino de la identidad y el estado del ser que encarnas.
+                        </p>
+                        <div className="bg-black/30 rounded-lg p-3 border border-amber-500/30">
+                          <p className="text-xs text-amber-200">
+                            💡 <strong>Enfócate en:</strong> La persona en la que te estás convirtiendo, no en las tareas que debes hacer.
+                          </p>
                         </div>
                       </div>
-                    ) : actionSuggestionsByObjetivo[currentObjetivoData.objetivo.id]?.length > 0 ? (
-                      <div className="bg-gradient-to-r from-purple-900/10 via-blue-900/10 to-purple-900/10 border border-purple-500/30 rounded-lg p-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Atom className="w-5 h-5 text-purple-400" />
-                          <h4 className="text-purple-300 font-bold text-sm">💡 Sugerencias de QUANTUM</h4>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          {actionSuggestionsByObjetivo[currentObjetivoData.objetivo.id].map((suggestion, index) => (
-                            <button
-                              key={index}
-                              onClick={() => handleSelectActionSuggestionInline(suggestion, currentObjetivoData.objetivo.id)}
-                              className="group w-full text-left bg-gray-800/50 hover:bg-purple-600/20 border border-gray-700 hover:border-purple-500/50 rounded-lg p-3 transition-all duration-200 hover:scale-[1.01]"
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="flex-shrink-0 w-6 h-6 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs group-hover:scale-110 transition-transform">
-                                  {index + 1}
-                                </div>
-                                <p className="text-white text-sm leading-snug group-hover:text-purple-200 transition-colors flex-1">
-                                  {suggestion}
-                                </p>
-                                <ChevronRight className="w-4 h-4 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Instrucciones normales */}
+                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 mb-4">
+                      <p className="text-sm text-blue-200 mb-2">
+                        <strong>🎯 Acciones SMART:</strong> Selecciona de las sugerencias o escribe tus propias acciones.
+                      </p>
+                      <div className="text-xs text-blue-300 space-y-1">
+                        <div>✅ Cada acción debe ser medible (incluye números/cantidades)</div>
+                        <div>✅ Puedes agregar múltiples acciones para un mismo objetivo</div>
+                        <div>🚫 Sin lenguaje especulativo ("tratar", "intentar", etc.)</div>
+                      </div>
+                    </div>
+
+                    {/* Sugerencias QUANTUM inline */}
+                    {!isReadOnly && (
+                      <div className="mb-4">
+                        {loadingActionSuggestions ? (
+                          <div className="bg-gradient-to-r from-purple-900/20 via-blue-900/20 to-purple-900/20 border border-purple-500/40 rounded-lg p-4">
+                            <div className="flex items-center gap-3">
+                              <Atom className="w-6 h-6 text-purple-400 animate-spin" style={{ animationDuration: '2s' }} />
+                              <div>
+                                <p className="text-purple-300 font-medium text-sm">QUANTUM generando posibilidades de acción...</p>
                               </div>
-                            </button>
-                          ))}
-                        </div>
+                            </div>
+                          </div>
+                        ) : actionSuggestionsByObjetivo[currentObjetivoData.objetivo.id]?.length > 0 ? (
+                          <div className="bg-gradient-to-r from-purple-900/10 via-blue-900/10 to-purple-900/10 border border-purple-500/30 rounded-lg p-4">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Atom className="w-5 h-5 text-purple-400" />
+                              <h4 className="text-purple-300 font-bold text-sm">💡 Sugerencias de QUANTUM</h4>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              {actionSuggestionsByObjetivo[currentObjetivoData.objetivo.id].map((suggestion, index) => (
+                                <button
+                                  key={index}
+                                  onClick={() => handleSelectActionSuggestionInline(suggestion, currentObjetivoData.objetivo.id)}
+                                  className="group w-full text-left bg-gray-800/50 hover:bg-purple-600/20 border border-gray-700 hover:border-purple-500/50 rounded-lg p-3 transition-all duration-200 hover:scale-[1.01]"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className="flex-shrink-0 w-6 h-6 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-xs group-hover:scale-110 transition-transform">
+                                      {index + 1}
+                                    </div>
+                                    <p className="text-white text-sm leading-snug group-hover:text-purple-200 transition-colors flex-1">
+                                      {suggestion}
+                                    </p>
+                                    <ChevronRight className="w-4 h-4 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
-                    ) : null}
-                  </div>
-                )}
+                    )}
 
-                {/* Input de metas para este objetivo */}
-                <div className="bg-[#1a1b1f] border-2 border-gray-800 rounded-xl p-6">
-                  <MetaInputDynamic
-                    key={currentObjetivoData.objetivo.id} // IMPORTANTE: Key único por objetivo
-                    areaKey={currentObjetivoData.objetivo.id} // Usar ID del objetivo como key única
-                    areaName={`${currentObjetivoData.areaName} - Objetivo ${currentObjetivoData.index}`}
-                    areaEmoji={currentObjetivoData.areaEmoji}
-                    metas={metasPorArea[currentObjetivoData.objetivo.id] || []} // Usar metas (controlled)
-                    onMetasChange={(metas) => {
-                      const previousMetas = metasPorArea[currentObjetivoData.objetivo.id] || [];
-                      setMetasPorArea({ ...metasPorArea, [currentObjetivoData.objetivo.id]: metas });
-                      setHasChanges(true);
-                      
-                      // NUEVO: Analizar automáticamente cada nueva acción
-                      if (metas.length > previousMetas.length) {
-                        const nuevaAccion = metas[metas.length - 1];
-                        const extracted = extractSmartInfo(nuevaAccion.description);
-                        
-                        // Guardar análisis para esta acción
-                        setExtractedInfoByMeta(prev => ({
-                          ...prev,
-                          [nuevaAccion.id]: extracted
-                        }));
-                        
-                        console.log('🤖 ACCIÓN MANUAL ANALIZADA:', {
-                          accionId: nuevaAccion.id,
-                          descripcion: nuevaAccion.description,
-                          extracted
-                        });
-                      }
-                      
-                      console.log('🔄 Acciones actualizadas para objetivo:', currentObjetivoData.objetivo.id);
-                    }}
-                    disabled={estado === 'APROBADA'}
-                    placeholder="Ej: Ahorrar $5,000 mensuales en cuenta de inversión"
-                    label="Acción SMART"
-                  />
-                </div>
+                    {/* Input de metas para este objetivo */}
+                    <div className="bg-[#1a1b1f] border-2 border-gray-800 rounded-xl p-6">
+                      <MetaInputDynamic
+                        key={currentObjetivoData.objetivo.id} // IMPORTANTE: Key único por objetivo
+                        areaKey={currentObjetivoData.objetivo.id} // Usar ID del objetivo como key única
+                        areaName={`${currentObjetivoData.areaName} - Objetivo ${currentObjetivoData.index}`}
+                        areaEmoji={currentObjetivoData.areaEmoji}
+                        metas={metasPorArea[currentObjetivoData.objetivo.id] || []} // Usar metas (controlled)
+                        onMetasChange={(metas) => {
+                          const previousMetas = metasPorArea[currentObjetivoData.objetivo.id] || [];
+                          setMetasPorArea({ ...metasPorArea, [currentObjetivoData.objetivo.id]: metas });
+                          setHasChanges(true);
+                          
+                          // NUEVO: Analizar automáticamente cada nueva acción
+                          if (metas.length > previousMetas.length) {
+                            const nuevaAccion = metas[metas.length - 1];
+                            const extracted = extractSmartInfo(nuevaAccion.description);
+                            
+                            // Guardar análisis para esta acción
+                            setExtractedInfoByMeta(prev => ({
+                              ...prev,
+                              [nuevaAccion.id]: extracted
+                            }));
+                            
+                            console.log('🤖 ACCIÓN MANUAL ANALIZADA:', {
+                              accionId: nuevaAccion.id,
+                              descripcion: nuevaAccion.description,
+                              extracted
+                            });
+                          }
+                          
+                          console.log('🔄 Acciones actualizadas para objetivo:', currentObjetivoData.objetivo.id);
+                        }}
+                        disabled={estado === 'APROBADA'}
+                        placeholder="Ej: Ahorrar $5,000 mensuales en cuenta de inversión"
+                        label="Acción SMART"
+                      />
+                    </div>
+                  </>
+                )}
 
                 {/* Navegación entre objetivos */}
                 <div className="flex items-center justify-between gap-4 pt-4">
