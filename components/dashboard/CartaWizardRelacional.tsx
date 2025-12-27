@@ -161,15 +161,16 @@ export default function CartaWizardRelacional() {
       const quantumDraft = JSON.parse(quantumDraftStr);
       console.log('🤖 Cargando datos desde Quantum IA:', quantumDraft);
 
-      // Determinar si viene del nuevo formato (Mentor IA) o formato antiguo
+      // Determinar si viene del nuevo formato (array metas[]) o formato antiguo
       const cartaData = quantumDraft.cartaData || quantumDraft;
+      const metasArray = cartaData.metas || [];
       
       // Crear set de áreas activas para filtrado rápido
       const areasActivasKeys = new Set(areasActivas.map(a => a.key));
       console.log('📦 Estructura de datos detectada:', { 
         tieneCartaData: !!quantumDraft.cartaData,
         source: quantumDraft.source,
-        areasEnDatos: Object.keys(cartaData),
+        metasCount: metasArray.length,
         areasActivas: Array.from(areasActivasKeys)
       });
 
@@ -179,24 +180,33 @@ export default function CartaWizardRelacional() {
       const metas: Record<string, Meta[]> = {};
       const configs: MetaConfig[] = [];
 
-      // Mapear las áreas de Quantum a las áreas del wizard
+      // Mapear las áreas de Quantum al formato del wizard
       const areaMapping: Record<string, string> = {
-        finanzas: 'finanzas',
-        relaciones: 'relaciones',
-        talentos: 'talentos',
-        salud: 'salud',
-        pazMental: 'pazMental',
-        ocio: 'ocio',
-        transformacion: 'servicioTrans',
-        comunidad: 'servicioComun'
+        'FINANZAS': 'finanzas',
+        'RELACIONES': 'relaciones',
+        'TALENTOS': 'talentos',
+        'SALUD': 'salud',
+        'PAZ MENTAL': 'pazMental',
+        'OCIO': 'ocio',
+        'SERVICIO TRANSFORMACIONAL': 'servicioTrans',
+        'COMUNIDAD': 'servicioComun'
       };
 
-      Object.entries(cartaData).forEach(([quantumKey, data]: [string, any]) => {
-        const areaKey = areaMapping[quantumKey];
-        console.log(`🔍 Procesando área: ${quantumKey} → ${areaKey}`, data);
+      // Contador de objetivos por área para generar IDs únicos
+      const objetivosPorArea: Record<string, number> = {};
+
+      metasArray.forEach((meta: any, metaIndex: number) => {
+        const quantumArea = meta.area; // "SALUD", "RELACIONES", etc.
+        const areaKey = areaMapping[quantumArea];
         
-        if (!areaKey || !data) {
-          console.log(`⚠️ Área ${quantumKey} no mapeada o sin datos`);
+        console.log(`🔍 Procesando meta ${metaIndex + 1}:`, { 
+          quantumArea, 
+          areaKey, 
+          meta_principal: meta.meta_principal 
+        });
+        
+        if (!areaKey) {
+          console.log(`⚠️ Área ${quantumArea} no mapeada`);
           return;
         }
 
@@ -208,66 +218,77 @@ export default function CartaWizardRelacional() {
 
         console.log(`✅ Área ${areaKey} está habilitada - procesando...`);
 
-        // Declaración del ser (Paso 1)
-        if (data.declaracion) {
-          declaraciones[areaKey] = data.declaracion;
-          console.log(`✅ Declaración guardada para ${areaKey}:`, data.declaracion);
+        // Declaración del ser (Paso 1) - Solo guardar UNA VEZ por área
+        if (meta.declaracion_poder && !declaraciones[areaKey]) {
+          declaraciones[areaKey] = meta.declaracion_poder;
+          console.log(`✅ Declaración guardada para ${areaKey}:`, meta.declaracion_poder);
         }
 
-        // Objetivo (Paso 2)
-        if (data.objetivo) {
-          const objetivoId = `${areaKey}-obj-1`;
-          identidades[areaKey] = [{
-            id: objetivoId,
-            description: data.objetivo,
-            isValid: true
-          }];
-          console.log(`✅ Objetivo guardado para ${areaKey}:`, data.objetivo);
+        // Incrementar contador de objetivos para esta área
+        if (!objetivosPorArea[areaKey]) {
+          objetivosPorArea[areaKey] = 0;
+          identidades[areaKey] = []; // Inicializar array de objetivos
+        }
+        objetivosPorArea[areaKey]++;
+        const objNum = objetivosPorArea[areaKey];
+        const objetivoId = `${areaKey}-obj-${objNum}`;
 
-          // Acciones (Paso 3) - GUARDAR CON ID DEL OBJETIVO, NO DEL ÁREA
-          if (data.acciones && Array.isArray(data.acciones) && data.acciones.length > 0) {
-            // El Wizard V2 usa objetivoId como key para las acciones, NO areaKey
-            metas[objetivoId] = data.acciones.map((accion: any, idx: number) => ({
+        // Objetivo (Paso 2) - AGREGAR al array, no reemplazar
+        if (meta.meta_principal) {
+          identidades[areaKey].push({
+            id: objetivoId,
+            description: meta.meta_principal,
+            isValid: true
+          });
+          console.log(`✅ Objetivo ${objNum} guardado para ${areaKey}:`, meta.meta_principal);
+
+          // Acciones (Paso 3) - Parsear desde "Acción (Frecuencia)"
+          if (meta.tareas_acciones && Array.isArray(meta.tareas_acciones) && meta.tareas_acciones.length > 0) {
+            metas[objetivoId] = meta.tareas_acciones.map((accionStr: string, idx: number) => ({
               id: `${objetivoId}-meta-${idx + 1}`,
               description: accion.nombre,
+              id: `${objetivoId}-meta-${idx + 1}`,
+              description: accionStr.split('(')[0].trim(), // Extraer nombre de acción
               isValid: true
             }));
-            console.log(`✅ ${data.acciones.length} acciones guardadas para objetivo ${objetivoId}:`, 
-              data.acciones.map((a: any) => a.nombre));
+            console.log(`✅ ${meta.tareas_acciones.length} acciones guardadas para objetivo ${objetivoId}:`, 
+              meta.tareas_acciones);
 
             // Configuración de frecuencia (Paso 4)
-            data.acciones.forEach((accion: any, idx: number) => {
+            meta.tareas_acciones.forEach((accionStr: string, idx: number) => {
               const metaId = `${objetivoId}-meta-${idx + 1}`;
+              
+              // Extraer frecuencia del formato "Acción (Frecuencia)"
+              const match = accionStr.match(/\(([^)]+)\)/);
+              const frecuenciaStr = match ? match[1].trim() : 'Diaria';
               
               // Convertir frecuencia de Quantum al formato del wizard
               let frecuencia = 'DIARIA';
               let diasSeleccionados: string[] = [];
 
-              if (accion.frecuencia === 'Diaria') {
+              if (frecuenciaStr === 'Diaria') {
                 frecuencia = 'DIARIA';
-              } else if (accion.frecuencia === 'Lun-Vie') {
+              } else if (frecuenciaStr === 'Semanal') {
+                frecuencia = 'SEMANAL';
+                diasSeleccionados = ['1']; // Lunes por defecto
+              } else if (frecuenciaStr === 'Quincenal') {
+                frecuencia = 'QUINCENAL';
+                diasSeleccionados = ['1']; // Lunes por defecto
+              } else if (frecuenciaStr === 'Mensual') {
+                frecuencia = 'MENSUAL';
+                diasSeleccionados = ['1']; // Día 1 por defecto
+              } else if (frecuenciaStr.includes('Lun-Vie')) {
                 frecuencia = 'LUN_VIE';
-              } else if (accion.frecuencia === 'Personalizada' && accion.dias) {
-                frecuencia = 'PERSONALIZADA';
-                // Convertir nombres de días a números
-                const diasMap: Record<string, string> = {
-                  'Lunes': '1',
-                  'Martes': '2',
-                  'Miércoles': '3',
-                  'Jueves': '4',
-                  'Viernes': '5',
-                  'Sábado': '6',
-                  'Domingo': '0'
-                };
-                diasSeleccionados = accion.dias
-                  .map((dia: string) => diasMap[dia])
-                  .filter((d: string) => d !== undefined);
+              } else {
+                // Por defecto: Semanal
+                frecuencia = 'SEMANAL';
+                diasSeleccionados = ['1']; // Lunes por defecto
               }
 
               configs.push({
                 metaId,
                 areaKey,
-                description: accion.nombre,
+                description: accionStr.split('(')[0].trim(),
                 config: {
                   frecuencia,
                   diasSeleccionados
@@ -285,10 +306,10 @@ export default function CartaWizardRelacional() {
         metasConfiguradas: configs
       });
       console.log(`📋 Procesando ${configs.length} acciones totales`);
-      console.log(`✅ Áreas procesadas: ${Object.keys(declaraciones).length} declaraciones, ${Object.keys(identidades).length} objetivos, ${Object.keys(metas).length} grupos de acciones`);
+      console.log(`✅ Áreas procesadas: ${Object.keys(declaraciones).length} declaraciones, ${Object.keys(identidades).length} áreas con objetivos, ${Object.keys(metas).length} objetivos con acciones`);
       console.log(`📊 Resumen por área:`, {
         declaraciones: Object.keys(declaraciones),
-        objetivos: Object.keys(identidades),
+        objetivosPorArea,
         acciones: Object.keys(metas)
       });
       
