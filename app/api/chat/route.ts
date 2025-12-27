@@ -298,7 +298,7 @@ Genera el JSON completo empezando con { y terminando con }. NO agregues texto ex
 CRÍTICO: El formato EXACTO debe ser:
 [Mensaje amigable del PASO 1]
 <<<JSON_START>>>
-```json
+\`\`\`json
 {
   "carta_de_frutos": {
     "usuario": "Nombre del Usuario",
@@ -308,26 +308,49 @@ CRÍTICO: El formato EXACTO debe ser:
     ]
   }
 }
-```
+\`\`\`
 
-IMPORTANTE - Estructura de cada meta:
-- area: Usar EXACTAMENTE estos nombres: "RELACIONES", "SALUD", "SERVICIO TRANSFORMACIONAL", "COMUNIDAD" (o las áreas que configuraste)
-- meta_principal: El objetivo específico y medible del usuario
-- declaracion_poder: La declaración del SER que construyeron juntos (empezando con "Yo soy...")
-- tareas_acciones: Array con las acciones en formato "Acción (Frecuencia)" donde frecuencia es Diaria/Semanal/Quincenal/Mensual
+IMPORTANTE - Estructura del JSON:
+
+CRÍTICO: Si el usuario mencionó MÚLTIPLES OBJETIVOS para la misma área, debes crear ENTRADAS SEPARADAS para cada objetivo.
+
+Estructura:
+- area: Usar EXACTAMENTE estos nombres: "RELACIONES", "SALUD", "SERVICIO TRANSFORMACIONAL", "COMUNIDAD"
+- meta_principal: UN SOLO objetivo específico y medible (si hay varios objetivos en un área, crea múltiples entradas con la misma área)
+- declaracion_poder: La declaración del SER (puede repetirse si hay múltiples objetivos en la misma área)
+- tareas_acciones: Array con las acciones SOLO para este objetivo específico en formato "Acción (Frecuencia)"
   - Para SERVICIO TRANSFORMACIONAL: usar array vacío []
+
+EJEMPLO: Si el usuario tiene 2 objetivos en SALUD, debes crear 2 entradas separadas:
 
 Ejemplo completo del formato final:
 ¡Excelente trabajo! He capturado toda tu información.
 Generando tus objetivos personalizados...
 ⏳ IMPORTANTE: Este proceso tomará aproximadamente 2-3 minutos.
 <<<JSON_START>>>
-```json
+\`\`\`json
 {
   "carta_de_frutos": {
-    "usuario": "Juan Pérez",
+    "usuario": "Nombre Usuario",
     "duracion_programa": "3 meses",
     "metas": [
+      {
+        "area": "SALUD",
+        "meta_principal": "Alcanzar peso ideal de 75kg con 15% grasa corporal",
+        "declaracion_poder": "Yo soy energía vital que honra mi templo sagrado",
+        "tareas_acciones": [
+          "Preparar meal prep (Semanal)",
+          "Caminar 30 minutos (Diaria)"
+        ]
+      },
+      {
+        "area": "SALUD",
+        "meta_principal": "Ir al gym para sentirme fuerte",
+        "declaracion_poder": "Yo soy energía vital que honra mi templo sagrado",
+        "tareas_acciones": [
+          "Entrenar en el gimnasio (Semanal)"
+        ]
+      },
       {
         "area": "RELACIONES",
         "meta_principal": "Fortalecer vínculos familiares",
@@ -336,27 +359,17 @@ Generando tus objetivos personalizados...
           "Llamadas de calidad con familiares (Diaria)",
           "Cenas familiares sin distracciones (Semanal)"
         ]
-      }
-    ]
-  }
-}
-```
-        "area": "SERVICIO TRANSFORMACIONAL",
-        "meta_principal": "Enrolar a 4 personas",
-        "declaracion_poder": "Yo soy impacto que transforma vidas...",
-        "tareas_acciones": []
       },
       {
-        "area": "SALUD",
-        "meta_principal": "Chequeo general completo",
-        "declaracion_poder": "Yo soy responsabilidad...",
-        "tareas_acciones": [
-          "Visita y ajuste con nutricionista (Mensual)"
-        ]
+        "area": "SERVICIO TRANSFORMACIONAL",
+        "meta_principal": "Enrolar a 4 personas",
+        "declaracion_poder": "Yo soy impacto que transforma vidas",
+        "tareas_acciones": []
       }
     ]
   }
 }
+\`\`\`
 `;
 
   // 5. Llamada a OpenAI con Streaming
