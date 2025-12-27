@@ -264,7 +264,8 @@ export default function MentorIAPage() {
                 }
                 
                 const parteJSON = partesRespuesta[1].trim();
-                console.log('📄 JSON extraído:', parteJSON.substring(0, 200) + '...');
+                console.log('📄 JSON extraído (primeros 500 caracteres):', parteJSON.substring(0, 500));
+                console.log('📄 JSON extraído (últimos 500 caracteres):', parteJSON.substring(Math.max(0, parteJSON.length - 500)));
                 
                 // Parsear el JSON directamente
                 let cartaDeFrutos;
@@ -274,20 +275,27 @@ export default function MentorIAPage() {
                     const match = parteJSON.match(patronCodeBlock);
                     
                     if (match) {
-                        cartaDeFrutos = JSON.parse(match[1].trim());
+                        const jsonStr = match[1].trim();
+                        console.log('🔍 JSON en bloque de código detectado:', jsonStr.substring(0, 200));
+                        cartaDeFrutos = JSON.parse(jsonStr);
                     } else {
                         // Si no tiene bloques, intentar parsear directamente
                         const inicio = parteJSON.indexOf("{");
                         const fin = parteJSON.lastIndexOf("}") + 1;
                         if (inicio !== -1 && fin !== 0) {
-                            cartaDeFrutos = JSON.parse(parteJSON.substring(inicio, fin));
+                            const jsonStr = parteJSON.substring(inicio, fin);
+                            console.log('🔍 JSON sin bloques detectado:', jsonStr.substring(0, 200));
+                            cartaDeFrutos = JSON.parse(jsonStr);
                         } else {
+                            console.error('❌ No se encontró { } en el texto');
+                            console.error('📄 Texto completo:', parteJSON);
                             throw new Error('No se encontró JSON válido');
                         }
                     }
                 } catch (parseError) {
                     console.error('❌ Error parseando JSON:', parseError);
-                    throw new Error('JSON inválido en la respuesta');
+                    console.error('📄 JSON que causó el error:', parteJSON);
+                    throw new Error(`JSON inválido: ${parseError instanceof Error ? parseError.message : 'Error desconocido'}`);
                 }
                 
                 console.log('✅ Carta de frutos parseada:', cartaDeFrutos);
