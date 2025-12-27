@@ -267,12 +267,13 @@ Acciones con Frecuencia:
 Nota: Podrás editar esta información más adelante durante este proceso.
 
 Después del resumen, pregunta:
-1. "¿Quieres agregar otro objetivo para esta área de [NOMBRE ÁREA]?"
+"¿Quieres agregar otro objetivo con sus acciones correspondientes para [NOMBRE ÁREA]?"
+
    - Si dice SÍ → Repite el proceso desde el paso 1 (Futuro Imposible) para el nuevo objetivo
-   - Si dice NO → Pregunta: "¿Está todo correcto o quieres ajustar algo antes de continuar con [NOMBRE SIGUIENTE ÁREA]?"
+   - Si dice NO → Pregunta: "¿Está todo correcto con [NOMBRE ÁREA] o quieres ajustar algo?"
 
 LÓGICA DE CONFIRMACIÓN Y MÚLTIPLES OBJETIVOS:
-- Siempre pregunta primero si quiere agregar otro objetivo
+- Siempre pregunta primero si quiere agregar otro objetivo CON SUS ACCIONES
 - Si confirma que NO quiere más objetivos, entonces pregunta si está correcto
 - Si el usuario confirma (dice "está bien", "correcto", "continúa", etc.) → Avanza a la siguiente área
 - Si el usuario quiere ajustar algo → Realiza los ajustes necesarios, muestra el resumen actualizado y pregunta nuevamente
