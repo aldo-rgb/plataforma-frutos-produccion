@@ -349,8 +349,22 @@ export default function CartaWizardRelacional() {
 
       // Mostrar notificación de éxito
       showToast('✨ Información de Quantum cargada exitosamente');
+      
+      // IMPORTANTE: Guardar inmediatamente en localStorage para que persista
+      const localStorageKey = `carta-wizard-draft-${email}`;
+      const draftToSave = {
+        declaracionesSer: declaraciones,
+        identidadesPorArea: identidades,
+        metasPorArea: metas,
+        metasConfiguradas: configs,
+        currentStep: 4, // Ir directo al Paso 4
+        currentMetaIndex: 0,
+        timestamp: new Date().toISOString()
+      };
+      localStorage.setItem(localStorageKey, JSON.stringify(draftToSave));
+      console.log('💾 Draft de Quantum guardado en localStorage con configs:', configs.length);
 
-      // Limpiar ambos formatos de draft para evitar cargas duplicadas
+      // Limpiar ambos formatos de draft de Quantum para evitar cargas duplicadas
       localStorage.removeItem('quantum-carta-draft');
       localStorage.removeItem(`quantum_draft_data_${email}`);
 
@@ -2056,7 +2070,13 @@ Responde SOLO con la acción, sin numeración ni explicaciones adicionales.`
                       totalMetas={currentMetaData.total}
                       areaName={currentMetaData.areaName}
                       areaEmoji={currentMetaData.areaEmoji}
-                      initialConfig={metasConfiguradas.find(mc => mc.metaId === currentMetaData.meta.id)?.config}
+                      initialConfig={(() => {
+                        const config = metasConfiguradas.find(mc => mc.metaId === currentMetaData.meta.id)?.config;
+                        console.log('🔍 Buscando config para:', currentMetaData.meta.id);
+                        console.log('📋 Configs disponibles:', metasConfiguradas);
+                        console.log('✅ Config encontrado:', config);
+                        return config;
+                      })()}
                       suggestedConfig={extractedInfoByMeta[currentMetaData.meta.id] ? {
                         frequency: extractedInfoByMeta[currentMetaData.meta.id].frequency || undefined,
                         days: extractedInfoByMeta[currentMetaData.meta.id].detectedDays,
@@ -2124,7 +2144,7 @@ Responde SOLO con la acción, sin numeración ni explicaciones adicionales.`
                           ) : (
                             <>
                               <Send size={20} />
-                              {estado === 'BORRADOR' ? 'Enviar Carta F.R.U.T.O.S. 2.0 →' : 'Actualizar Carta →'}
+                              {estado === 'BORRADOR' ? 'Enviar Objetivos al Mentor →' : 'Actualizar Carta →'}
                             </>
                           )}
                         </button>

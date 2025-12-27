@@ -51,6 +51,22 @@ export async function POST(req: Request) {
       }
     });
 
+    // 🎫 VERIFICAR PRIMERO SI TIENE LICENCIA ASIGNADA (mayor prioridad)
+    const licenseAssignment = await prisma.licenseAssignment.findFirst({
+      where: {
+        userId: userId,
+        isActive: true,
+        activatedAt: null // Licencia no activada aún
+      },
+      include: {
+        license: {
+          include: {
+            vision: true
+          }
+        }
+      }
+    });
+
     // Solo validar suscripción si es PARTICIPANTE
     if (usuario?.rol === 'PARTICIPANTE') {
       const userTier = usuario.tier || 'FREE';
@@ -75,15 +91,7 @@ export async function POST(req: Request) {
           data: { wizardCompleted: true }
         });
 
-        // 🎫 ACTIVAR LICENCIA si existe
-        const licenseAssignment = await prisma.licenseAssignment.findFirst({
-          where: {
-            userId: userId,
-            isActive: true,
-            activatedAt: null
-          }
-        });
-
+        // 🎫 ACTIVAR LICENCIA si existe (ya verificada arriba)
         if (licenseAssignment) {
           await prisma.licenseAssignment.update({
             where: { id: licenseAssignment.id },
@@ -107,15 +115,21 @@ export async function POST(req: Request) {
         });
       }
       
-      // STANDARD y PREMIUM requieren suscripción activa
-      const tieneAcceso = usuario.suscripcion === 'ACTIVO' || usuario.suscripcion === 'PRUEBA';
-      
-      if (!tieneAcceso) {
-        return NextResponse.json({ 
-          error: 'Suscripción requerida',
-          message: 'Necesitas una suscripción activa para enviar tu carta a revisión',
-          requiresSubscription: true
-        }, { status: 403 });
+      // 🎫 Si tiene LICENCIA ASIGNADA, permitir acceso independientemente de suscripción
+      if (licenseAssignment) {
+        console.log('🎫 Usuario tiene licencia asignada - Permitiendo envío sin verificar suscripción');
+        // Continuar con el flujo normal (no hacer return aquí)
+      } else {
+        // STANDARD y PREMIUM SIN licencia requieren suscripción activa
+        const tieneAcceso = usuario.suscripcion === 'ACTIVO' || usuario.suscripcion === 'PRUEBA';
+        
+        if (!tieneAcceso) {
+          return NextResponse.json({ 
+            error: 'Suscripción requerida',
+            message: 'Necesitas una suscripción activa o una licencia asignada para enviar tu carta a revisión',
+            requiresSubscription: true
+          }, { status: 403 });
+        }
       }
     }
     // ==================================================================
@@ -173,15 +187,7 @@ export async function POST(req: Request) {
       data: { wizardCompleted: true }
     });
 
-    // 🎫 ACTIVAR LICENCIA: Marcar la licencia como activada
-    const licenseAssignment = await prisma.licenseAssignment.findFirst({
-      where: {
-        userId: userId,
-        isActive: true,
-        activatedAt: null // Solo licencias no activadas
-      }
-    });
-
+    // 🎫 ACTIVAR LICENCIA: Marcar la licencia como activada (ya verificada arriba)
     if (licenseAssignment) {
       await prisma.licenseAssignment.update({
         where: { id: licenseAssignment.id },
@@ -190,7 +196,7 @@ export async function POST(req: Request) {
           expiresAt: null // Ya no expira porque fue activada
         }
       });
-      console.log('🎫 Licencia activada para usuario:', userId);
+      console.log('🎫 Licencia activada para usuario:', userId, '- Vision:', licenseAssignment.license.vision?.nombre || 'N/A');
     }
 
     console.log('✅ Wizard marcado como completado para usuario:', userId);
