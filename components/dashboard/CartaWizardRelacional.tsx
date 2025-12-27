@@ -206,62 +206,65 @@ export default function CartaWizardRelacional() {
 
         // Objetivo (Paso 2)
         if (data.objetivo) {
+          const objetivoId = `${areaKey}-obj-1`;
           identidades[areaKey] = [{
-            id: `${areaKey}-obj-1`,
+            id: objetivoId,
             description: data.objetivo,
             isValid: true
           }];
           console.log(`✅ Objetivo guardado para ${areaKey}:`, data.objetivo);
-        }
 
-        // Acciones (Paso 3)
-        if (data.acciones && Array.isArray(data.acciones)) {
-          metas[areaKey] = data.acciones.map((accion: any, idx: number) => ({
-            id: `${areaKey}-meta-${idx + 1}`,
-            description: accion.nombre,
-            isValid: true
-          }));
-          console.log(`✅ ${data.acciones.length} acciones guardadas para ${areaKey}`);
-
-          // Configuración de frecuencia (Paso 4)
-          data.acciones.forEach((accion: any, idx: number) => {
-            const metaId = `${areaKey}-meta-${idx + 1}`;
-            
-            // Convertir frecuencia de Quantum al formato del wizard
-            let frecuencia = 'DIARIA';
-            let diasSeleccionados: string[] = [];
-
-            if (accion.frecuencia === 'Diaria') {
-              frecuencia = 'DIARIA';
-            } else if (accion.frecuencia === 'Lun-Vie') {
-              frecuencia = 'LUN_VIE';
-            } else if (accion.frecuencia === 'Personalizada' && accion.dias) {
-              frecuencia = 'PERSONALIZADA';
-              // Convertir nombres de días a números
-              const diasMap: Record<string, string> = {
-                'Lunes': '1',
-                'Martes': '2',
-                'Miércoles': '3',
-                'Jueves': '4',
-                'Viernes': '5',
-                'Sábado': '6',
-                'Domingo': '0'
-              };
-              diasSeleccionados = accion.dias
-                .map((dia: string) => diasMap[dia])
-                .filter((d: string) => d !== undefined);
-            }
-
-            configs.push({
-              metaId,
-              areaKey,
+          // Acciones (Paso 3) - GUARDAR CON ID DEL OBJETIVO, NO DEL ÁREA
+          if (data.acciones && Array.isArray(data.acciones) && data.acciones.length > 0) {
+            // El Wizard V2 usa objetivoId como key para las acciones, NO areaKey
+            metas[objetivoId] = data.acciones.map((accion: any, idx: number) => ({
+              id: `${objetivoId}-meta-${idx + 1}`,
               description: accion.nombre,
-              config: {
-                frecuencia,
-                diasSeleccionados
+              isValid: true
+            }));
+            console.log(`✅ ${data.acciones.length} acciones guardadas para objetivo ${objetivoId}:`, 
+              data.acciones.map((a: any) => a.nombre));
+
+            // Configuración de frecuencia (Paso 4)
+            data.acciones.forEach((accion: any, idx: number) => {
+              const metaId = `${objetivoId}-meta-${idx + 1}`;
+              
+              // Convertir frecuencia de Quantum al formato del wizard
+              let frecuencia = 'DIARIA';
+              let diasSeleccionados: string[] = [];
+
+              if (accion.frecuencia === 'Diaria') {
+                frecuencia = 'DIARIA';
+              } else if (accion.frecuencia === 'Lun-Vie') {
+                frecuencia = 'LUN_VIE';
+              } else if (accion.frecuencia === 'Personalizada' && accion.dias) {
+                frecuencia = 'PERSONALIZADA';
+                // Convertir nombres de días a números
+                const diasMap: Record<string, string> = {
+                  'Lunes': '1',
+                  'Martes': '2',
+                  'Miércoles': '3',
+                  'Jueves': '4',
+                  'Viernes': '5',
+                  'Sábado': '6',
+                  'Domingo': '0'
+                };
+                diasSeleccionados = accion.dias
+                  .map((dia: string) => diasMap[dia])
+                  .filter((d: string) => d !== undefined);
               }
+
+              configs.push({
+                metaId,
+                areaKey,
+                description: accion.nombre,
+                config: {
+                  frecuencia,
+                  diasSeleccionados
+                }
+              });
             });
-          });
+          }
         }
       });
 
