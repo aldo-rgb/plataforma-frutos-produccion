@@ -322,6 +322,23 @@ export default function CartaWizardRelacional() {
       if (Object.keys(metas).length > 0) {
         setMetasPorArea(metas);
         console.log('✅ Acciones prellenadas desde Quantum');
+        
+        // NUEVO: Analizar cada acción precargada para extraer información SMART
+        const extractedInfo: Record<string, ExtractedInfo> = {};
+        Object.entries(metas).forEach(([objetivoId, acciones]) => {
+          acciones.forEach((accion) => {
+            const extracted = extractSmartInfo(accion.description);
+            extractedInfo[accion.id] = extracted;
+            console.log(`🔍 Acción de Quantum analizada [${accion.id}]:`, {
+              descripcion: accion.description,
+              frecuenciaDetectada: extracted.frequency,
+              confidence: extracted.confidence
+            });
+          });
+        });
+        
+        setExtractedInfoByMeta(extractedInfo);
+        console.log(`✅ ${Object.keys(extractedInfo).length} acciones analizadas para sugerencias de frecuencia`);
       }
       if (configs.length > 0) {
         setMetasConfiguradas(configs);
