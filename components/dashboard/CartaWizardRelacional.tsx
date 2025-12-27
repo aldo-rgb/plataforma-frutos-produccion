@@ -261,27 +261,27 @@ export default function CartaWizardRelacional() {
               const match = accionStr.match(/\(([^)]+)\)/);
               const frecuenciaStr = match ? match[1].trim() : 'Diaria';
               
-              // Convertir frecuencia de Quantum al formato del wizard
-              let frecuencia = 'DIARIA';
-              let diasSeleccionados: string[] = [];
+              // Convertir frecuencia de Quantum al formato del ConfiguradorAccionIterativo
+              let type: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'ONE_TIME' = 'DAILY';
+              let selectedDays: number[] = [];
 
               if (frecuenciaStr === 'Diaria') {
-                frecuencia = 'DIARIA';
+                type = 'DAILY';
               } else if (frecuenciaStr === 'Semanal') {
-                frecuencia = 'SEMANAL';
-                diasSeleccionados = ['1']; // Lunes por defecto
+                type = 'WEEKLY';
+                selectedDays = [1]; // Lunes por defecto
               } else if (frecuenciaStr === 'Quincenal') {
-                frecuencia = 'QUINCENAL';
-                diasSeleccionados = ['1']; // Lunes por defecto
+                type = 'WEEKLY';
+                selectedDays = [1]; // Lunes por defecto (cada 2 semanas)
               } else if (frecuenciaStr === 'Mensual') {
-                frecuencia = 'MENSUAL';
-                diasSeleccionados = ['1']; // Día 1 por defecto
+                type = 'MONTHLY';
+                selectedDays = [1]; // Día 1 por defecto
               } else if (frecuenciaStr.includes('Lun-Vie')) {
-                frecuencia = 'LUN_VIE';
+                type = 'WEEKLY';
+                selectedDays = [1, 2, 3, 4, 5]; // Lunes a Viernes
               } else {
-                // Por defecto: Semanal
-                frecuencia = 'SEMANAL';
-                diasSeleccionados = ['1']; // Lunes por defecto
+                // Por defecto: Diaria
+                type = 'DAILY';
               }
 
               configs.push({
@@ -289,8 +289,9 @@ export default function CartaWizardRelacional() {
                 areaKey,
                 description: accionStr.split('(')[0].trim(),
                 config: {
-                  frecuencia,
-                  diasSeleccionados
+                  type,
+                  selectedDays: type === 'WEEKLY' ? selectedDays : undefined,
+                  monthDays: type === 'MONTHLY' ? selectedDays : undefined
                 }
               });
             });
