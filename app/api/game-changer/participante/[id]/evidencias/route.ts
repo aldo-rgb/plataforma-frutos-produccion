@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 
 export async function GET(
   req: NextRequest,
@@ -14,7 +14,7 @@ export async function GET(
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
-    const gameChangerId = parseInt(session.user.id);
+    const gameChangerId = session.user.id;
     const participanteId = parseInt(params.id);
 
     if (isNaN(participanteId)) {
@@ -79,7 +79,7 @@ export async function GET(
     });
 
     // Formatear las evidencias
-    const evidenciasFormateadas = evidencias.map((e) => ({
+    const evidenciasFormateadas = evidencias.map((e: any) => ({
       id: e.id,
       description: e.description,
       evidenceUrl: e.evidenceUrl,

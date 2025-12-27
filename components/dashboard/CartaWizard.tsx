@@ -290,16 +290,31 @@ export default function CartaWizard() {
               <p className="text-sm text-gray-400">Constructor de mi futuro en 100 días</p>
             </div>
             
-            {/* Estado */}
-            <div className={`px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 ${
-              estado === 'APROBADA' ? 'bg-green-500/20 text-green-400' :
-              estado === 'CAMBIOS_SOLICITADOS' ? 'bg-orange-500/20 text-orange-400' :
-              estado === 'PENDIENTE_MENTOR' || estado === 'PENDIENTE_ADMIN' ? 'bg-yellow-500/20 text-yellow-400' :
-              'bg-gray-500/20 text-gray-400'
-            }`}>
-              {estado === 'APROBADA' && <Check size={16} />}
-              {estado === 'CAMBIOS_SOLICITADOS' && <AlertCircle size={16} />}
-              {estado}
+            <div className="flex items-center gap-3">
+              {/* Botón "Hacerlo después" */}
+              <button
+                onClick={async () => {
+                  if (confirm('¿Deseas completar tu carta más tarde? Podrás acceder cuando quieras desde tu dashboard.')) {
+                    await fetch('/api/wizard/skip', { method: 'POST' });
+                    window.location.href = '/dashboard';
+                  }
+                }}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 transition-all"
+              >
+                Hacerlo después
+              </button>
+
+              {/* Estado */}
+              <div className={`px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 ${
+                estado === 'APROBADA' ? 'bg-green-500/20 text-green-400' :
+                estado === 'CAMBIOS_SOLICITADOS' ? 'bg-orange-500/20 text-orange-400' :
+                estado === 'PENDIENTE_MENTOR' || estado === 'PENDIENTE_ADMIN' ? 'bg-yellow-500/20 text-yellow-400' :
+                'bg-gray-500/20 text-gray-400'
+              }`}>
+                {estado === 'APROBADA' && <Check size={16} />}
+                {estado === 'CAMBIOS_SOLICITADOS' && <AlertCircle size={16} />}
+                {estado}
+              </div>
             </div>
           </div>
 

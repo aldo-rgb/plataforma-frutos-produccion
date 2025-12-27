@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { sendOrganicWelcomeMessage } from '@/lib/whatsapp';
+import { sendOrganicWelcomeEmail } from '@/lib/email';
 
 const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
-    const { nombre, email, password, rol } = await request.json();
+    const { nombre, email, password, telefono, rol } = await request.json();
 
     // Validar datos
     if (!nombre || !email || !password || !rol) {
@@ -38,14 +40,38 @@ export async function POST(request: NextRequest) {
         nombre,
         email,
         password: hashedPassword,
+        telefono: telefono || null,
         rol,
         isActive: rol !== 'MENTOR', // MENTOR = false, otros roles = true
         llamadasPerdidas: 0,
         puntosCuanticos: 0,
+        onboardingOrigin: 'ORGANIC_SIGNUP',
+        wizardCompleted: false,
+        requirePasswordChange: false, // Usuario creó su propia contraseña
       },
     });
 
     // NOTA: El ciclo de 90 días se creará automáticamente cuando su carta sea aprobada
+
+    // Enviar mensaje de WhatsApp de bienvenida (si tiene teléfono)
+    if (telefono && telefono.trim()) {
+      try {
+        await sendOrganicWelcomeMessage(telefono, nombre);
+        console.log(`📱 WhatsApp enviado a ${nombre} (${telefono})`);
+      } catch (error) {
+        console.warn('⚠️ No se pudo enviar WhatsApp:', error);
+        // No fallar la creación del usuario si WhatsApp falla
+      }
+    }
+
+    // Enviar correo de bienvenida
+    try {
+      await sendOrganicWelcomeEmail(email, nombre);
+      console.log(`📧 Email de bienvenida enviado a ${nombre} (${email})`);
+    } catch (error) {
+      console.warn('⚠️ No se pudo enviar email:', error);
+      // No fallar la creación del usuario si el email falla
+    }
 
     return NextResponse.json({
       success: true,

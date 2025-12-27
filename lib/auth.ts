@@ -54,24 +54,28 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Contraseña incorrecta")
         }
 
-        // 5. Retornar objeto usuario (excluyendo password, incluyendo requirePasswordChange)
+        // 5. Retornar objeto usuario (excluyendo password, incluyendo flags de onboarding)
         return {
           id: user.id,
           email: user.email,
           nombre: user.nombre,
           rol: user.rol,
           requirePasswordChange: user.requirePasswordChange || false,
+          wizardCompleted: user.wizardCompleted || false,
+          onboardingOrigin: user.onboardingOrigin || 'ORGANIC_SIGNUP',
         }
       }
     })
   ],
   callbacks: {
-    // 1. Cuando se crea el JWT, le incrustamos el ID, el ROL y requirePasswordChange
+    // 1. Cuando se crea el JWT, le incrustamos el ID, el ROL y flags de onboarding
     async jwt({ token, user }) {
       if (user) {
         token.id = typeof user.id === "string" ? Number(user.id) : user.id
         token.rol = user.rol
         token.requirePasswordChange = user.requirePasswordChange || false
+        token.wizardCompleted = user.wizardCompleted || false
+        token.onboardingOrigin = user.onboardingOrigin || 'ORGANIC_SIGNUP'
       }
       return token
     },
@@ -81,6 +85,8 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as number
         session.user.rol = token.rol as string
         session.user.requirePasswordChange = token.requirePasswordChange as boolean
+        session.user.wizardCompleted = token.wizardCompleted as boolean
+        session.user.onboardingOrigin = token.onboardingOrigin as string
       }
       return session
     }

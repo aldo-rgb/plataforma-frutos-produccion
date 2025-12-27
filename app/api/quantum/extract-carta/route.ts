@@ -55,15 +55,18 @@ export async function POST(req: Request) {
       transformacion: visionParticipante.Vision.forceTransformationArea,
       comunidad: visionParticipante.Vision.forceCommunityServiceArea,
     } : {
-      finanzas: true,
+      // Si no hay Vision, solo habilitar áreas básicas
+      finanzas: false,
       relaciones: true,
-      talentos: true,
+      talentos: false,
       salud: true,
-      pazMental: true,
-      ocio: true,
-      transformacion: true,
-      comunidad: true,
+      pazMental: false,
+      ocio: false,
+      transformacion: false,
+      comunidad: false,
     };
+
+    console.log('📋 Áreas asignadas desde Vision:', areasAsignadas);
 
     // Construir lista de áreas disponibles
     const areasDisponibles = [];
@@ -84,11 +87,20 @@ El usuario tiene acceso a las siguientes áreas: ${areasDisponibles.join(', ')}
 De la conversación proporcionada, extrae la siguiente información SOLO para las áreas mencionadas arriba:
 
 Para cada área (si aplica):
-1. **Declaración del Ser**: Una declaración profunda y significativa de quién quiere ser la persona en esa área (máximo 200 caracteres)
+1. **Declaración del Ser (CRÍTICO)**: Una declaración profunda de identidad en primera persona presente. Busca frases como:
+   - "Yo soy [cualidad/identidad] que [acción/impacto]"
+   - Ejemplos: "Yo soy compromiso que genera abundancia", "Yo soy amor que construye vínculos", "Yo soy impacto que transforma vidas"
+   - Si no está explícita, intenta inferirla de la conversación sobre quién quiere SER la persona
+   - Máximo 200 caracteres
 2. **Objetivos**: Qué quiere lograr específicamente (máximo 200 caracteres)
 3. **Acciones**: Lista de acciones concretas y medibles que realizará
 4. **Frecuencia**: Para cada acción, la frecuencia (Diaria, Lun-Vie, Personalizada)
 5. **Días específicos**: Si es personalizada, qué días (Lunes, Martes, etc.)
+
+IMPORTANTE: 
+- Para áreas como SERVICIO TRANSFORMACIONAL y COMUNIDAD, la declaración del ser es ESENCIAL
+- Si el usuario menciona quién quiere ser o cómo se define, captúralo en "declaracion"
+- Si dice cosas como "quiero ser una persona que ayuda", conviértelo a: "Yo soy ayuda que transforma comunidades"
 
 Responde ÚNICAMENTE con un JSON válido siguiendo esta estructura exacta:
 

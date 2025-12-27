@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/expire-tasks",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/expire-licenses",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/detector-diario",
+      "schedule": "0 6 * * *"
     }
   ]
 }

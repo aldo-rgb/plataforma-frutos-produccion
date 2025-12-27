@@ -257,6 +257,20 @@ export function Sidebar({ usuario }: SidebarProps) {
           <span>Mentor IA</span>
         </Link>
 
+        {/* Quantum Detector - Monitor de Retrasos */}
+        <Link 
+          href="/dashboard/quantum-detector" 
+          className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group ${
+            pathname === '/dashboard/quantum-detector' 
+              ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white' 
+              : 'text-slate-400 hover:bg-gradient-to-r hover:from-amber-900/50 hover:to-orange-900/50 hover:text-white'
+          }`}
+        >
+          <Zap size={20} className="text-amber-400 group-hover:text-amber-300" />
+          <span className="font-semibold">Quantum IA</span>
+          <span className="ml-auto text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">Beta</span>
+        </Link>
+
         {/* Solicitar Mentoría - Solo PARTICIPANTE - SIEMPRE DESBLOQUEADO (Upsell) */}
         {usuario.rol === 'PARTICIPANTE' && (
           <Link 

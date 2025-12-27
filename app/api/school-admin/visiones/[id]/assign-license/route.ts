@@ -192,6 +192,7 @@ export async function POST(
           licenseCode,
           assignedBy: session.user.id,
           assignedAt: new Date(),
+          expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10 días para activar
         },
       });
 

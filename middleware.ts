@@ -8,13 +8,36 @@ export default withAuth(
     const token = req.nextauth.token
     const path = req.nextUrl.pathname
 
-    // Si el usuario necesita cambiar contraseña y no está en /change-password
-    if (token?.requirePasswordChange && path !== '/change-password' && !path.startsWith('/api/')) {
-      return NextResponse.redirect(new URL('/change-password', req.url))
+    // CASO 1: Usuario con contraseña temporal (mayor prioridad)
+    if (token?.requirePasswordChange && 
+        path !== '/change-password' && 
+        path !== '/auth/change-password' && 
+        !path.startsWith('/api/')) {
+      return NextResponse.redirect(new URL('/auth/change-password', req.url))
     }
 
-    // Si ya cambió la contraseña y está en /change-password, redirigir al dashboard
-    if (!token?.requirePasswordChange && path === '/change-password') {
+    // CASO 2: PARTICIPANTE sin wizard completado accediendo al dashboard principal
+    // DESHABILITADO: Ahora permitimos acceso libre a todas las funciones del sidebar
+    // aunque el usuario no haya completado el wizard
+    // const esParticipante = token?.rol === 'PARTICIPANTE'
+    // const esPrimeraVez = token?.onboardingOrigin && !token?.wizardCompleted
+    // const estaSaliendoDelWizard = path.startsWith('/dashboard') && 
+    //                                !path.startsWith('/dashboard/carta/wizard-v2') &&
+    //                                !path.startsWith('/dashboard/mentor-ia') &&
+    //                                !path.startsWith('/dashboard/mentorship/sessions') &&
+    //                                !path.startsWith('/dashboard/mentorship/request')
+    // 
+    // if (esParticipante && 
+    //     esPrimeraVez && 
+    //     !token?.requirePasswordChange && 
+    //     estaSaliendoDelWizard && 
+    //     !path.startsWith('/api/')) {
+    //   return NextResponse.redirect(new URL('/dashboard/carta/wizard-v2', req.url))
+    // }
+
+    // CASO 3: Usuario ya completó todo y está intentando acceder a cambio de password
+    if (!token?.requirePasswordChange && 
+        (path === '/change-password' || path === '/auth/change-password')) {
       return NextResponse.redirect(new URL('/dashboard', req.url))
     }
 
@@ -40,7 +63,10 @@ export const config = {
     "/dashboard/:path*", // Protege /dashboard, /dashboard/mentor-ia, etc.
     "/admin/:path*",     // Protege todo el panel de administración
     "/staff/:path*",     // Protege las herramientas de mentores
-    "/change-password",  // Protege la página de cambio de contraseña
+    "/change-password",  // Protege la página de cambio de contraseña (legacy)
+    "/auth/change-password", // Nueva ruta de cambio de contraseña
+    "/wizard/:path*",    // Protege el wizard de onboarding (legacy)
+    "/wizard-v2/:path*", // Protege el wizard V2 de onboarding
   ]
 }
 

@@ -9,6 +9,7 @@ import TimezoneWrapper from "../../components/dashboard/TimezoneWrapper";
 import { ToastProvider } from "../../components/ui/ToastProvider";
 import { PhoenixProvider } from "../../contexts/PhoenixContext";
 import { PhoenixWrapper } from "../../components/phoenix/PhoenixWrapper";
+import { QuantumNotificationBanner } from "../../components/notifications/QuantumNotificationBanner";
 
 export default async function DashboardLayout({
   children,
@@ -88,6 +89,9 @@ export default async function DashboardLayout({
               <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
                 {/* También pasamos datos al Topbar (Nombre, Avatar, Puntos) */}
                 <Topbar usuario={usuarioSerializado} />
+
+                {/* Banner de Notificación Quantum */}
+                <QuantumNotificationBanner />
 
                 <main className="w-full flex-grow p-6">
                   {/* Envolvemos el contenido con el Guardián */}

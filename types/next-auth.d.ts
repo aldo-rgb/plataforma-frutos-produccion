@@ -5,6 +5,8 @@ declare module "next-auth" {
     rol: string
     id: number // En tu schema el ID es Int
     requirePasswordChange?: boolean
+    wizardCompleted?: boolean
+    onboardingOrigin?: string
   }
 
   interface Session {
@@ -12,6 +14,8 @@ declare module "next-auth" {
       rol: string
       id: number
       requirePasswordChange?: boolean
+      wizardCompleted?: boolean
+      onboardingOrigin?: string
     }
   }
 }
@@ -21,5 +25,7 @@ declare module "next-auth/jwt" {
     rol: string
     id: number
     requirePasswordChange?: boolean
+    wizardCompleted?: boolean
+    onboardingOrigin?: string
   }
 }

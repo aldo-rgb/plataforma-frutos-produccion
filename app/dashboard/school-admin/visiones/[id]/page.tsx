@@ -52,6 +52,7 @@ interface Participante {
     id: number;
     nombre: string;
     email: string;
+    telefono: string | null;
     tier: string;
     licenseCode: string | null;
     assignedMentorId: number | null;
@@ -78,6 +79,7 @@ interface GameChanger {
     id: number;
     nombre: string;
     email: string;
+    telefono: string | null;
     tier: string;
     licenseCode: string | null;
     assignedMentorId: number | null;
@@ -168,6 +170,14 @@ export default function VisionDetailPage() {
     transformationGuestsTarget: 4,
     forceCommunityServiceArea: true,
   });
+  const [showEditPhoneModal, setShowEditPhoneModal] = useState(false);
+  const [editPhoneData, setEditPhoneData] = useState<{
+    userId: number;
+    userName: string;
+    currentPhone: string | null;
+  } | null>(null);
+  const [newPhone, setNewPhone] = useState('');
+  const [savingPhone, setSavingPhone] = useState(false);
   const { showToast, toasts } = useToast();
 
   useEffect(() => {
@@ -859,6 +869,53 @@ export default function VisionDetailPage() {
     });
   };
 
+  const handleOpenEditPhone = (userId: number, userName: string, currentPhone: string | null) => {
+    setEditPhoneData({ userId, userName, currentPhone });
+    setNewPhone(currentPhone || '');
+    setShowEditPhoneModal(true);
+  };
+
+  const handleSavePhone = async () => {
+    if (!editPhoneData) return;
+    
+    setSavingPhone(true);
+    try {
+      const res = await fetch(`/api/usuarios/${editPhoneData.userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          telefono: newPhone.trim() || null
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setShowEditPhoneModal(false);
+        setEditPhoneData(null);
+        setNewPhone('');
+        fetchVisionDetails();
+        showToast({
+          message: 'Teléfono actualizado correctamente',
+          type: 'success'
+        });
+      } else {
+        showToast({
+          message: data.error || 'Error al actualizar teléfono',
+          type: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Error updating phone:', error);
+      showToast({
+        message: 'Error al actualizar teléfono',
+        type: 'error'
+      });
+    } finally {
+      setSavingPhone(false);
+    }
+  };
+
   const toggleCodeVisibility = (code: string) => {
     const newVisible = new Set(visibleCodes);
     if (newVisible.has(code)) {
@@ -1213,6 +1270,14 @@ export default function VisionDetailPage() {
                         <div>
                           <p className="font-semibold text-white">{p.Participante.nombre}</p>
                           <p className="text-xs text-slate-500">{p.Participante.email}</p>
+                          {p.Participante.telefono && (
+                            <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                              </svg>
+                              {p.Participante.telefono}
+                            </p>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
@@ -1329,6 +1394,15 @@ export default function VisionDetailPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleOpenEditPhone(p.Participante.id, p.Participante.nombre, p.Participante.telefono)}
+                            className="p-2 hover:bg-blue-600/20 text-blue-400 rounded-lg transition-colors"
+                            title="Editar teléfono"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                            </svg>
+                          </button>
                           {!p.Participante.licenseCode && (
                             <button
                               onClick={() => {
@@ -1424,6 +1498,14 @@ export default function VisionDetailPage() {
                         <div>
                           <p className="font-semibold text-white">{gc.GameChanger.nombre}</p>
                           <p className="text-xs text-slate-500">{gc.GameChanger.email}</p>
+                          {gc.GameChanger.telefono && (
+                            <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                              </svg>
+                              {gc.GameChanger.telefono}
+                            </p>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
@@ -1501,6 +1583,15 @@ export default function VisionDetailPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleOpenEditPhone(gc.GameChanger.id, gc.GameChanger.nombre, gc.GameChanger.telefono)}
+                            className="p-2 hover:bg-blue-600/20 text-blue-400 rounded-lg transition-colors"
+                            title="Editar teléfono"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                            </svg>
+                          </button>
                           {!gc.GameChanger.licenseCode && (
                             <button
                               onClick={() => {
@@ -2606,6 +2697,74 @@ export default function VisionDetailPage() {
                   <>
                     <CheckCircle size={18} />
                     <span>Confirmar</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Edición de Teléfono */}
+      {showEditPhoneModal && editPhoneData && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-blue-500/30 rounded-2xl p-8 max-w-md w-full shadow-2xl">
+            <div className="flex items-center justify-center w-16 h-16 bg-blue-600/20 rounded-full mx-auto mb-6">
+              <svg className="text-blue-400" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+              </svg>
+            </div>
+            
+            <h2 className="text-2xl font-bold text-white text-center mb-3">
+              Editar Teléfono
+            </h2>
+            
+            <p className="text-slate-300 text-center mb-6">
+              Actualiza el teléfono de <strong>{editPhoneData.userName}</strong>
+            </p>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Número de Teléfono
+              </label>
+              <input
+                type="tel"
+                value={newPhone}
+                onChange={(e) => setNewPhone(e.target.value)}
+                placeholder="+52 55 1234 5678"
+                className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+              />
+              <p className="text-xs text-slate-400 mt-2">
+                Incluye el código de país para mejor formato
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowEditPhoneModal(false);
+                  setEditPhoneData(null);
+                  setNewPhone('');
+                }}
+                disabled={savingPhone}
+                className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 text-white rounded-lg font-semibold transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSavePhone}
+                disabled={savingPhone}
+                className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+              >
+                {savingPhone ? (
+                  <>
+                    <Loader2 className="animate-spin" size={18} />
+                    <span>Guardando...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle size={18} />
+                    <span>Guardar</span>
                   </>
                 )}
               </button>

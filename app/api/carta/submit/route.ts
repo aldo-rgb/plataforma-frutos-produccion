@@ -69,7 +69,34 @@ export async function POST(req: Request) {
           }
         });
 
+        // Marcar wizard como completado
+        await prisma.usuario.update({
+          where: { id: userId },
+          data: { wizardCompleted: true }
+        });
+
+        // 🎫 ACTIVAR LICENCIA si existe
+        const licenseAssignment = await prisma.licenseAssignment.findFirst({
+          where: {
+            userId: userId,
+            isActive: true,
+            activatedAt: null
+          }
+        });
+
+        if (licenseAssignment) {
+          await prisma.licenseAssignment.update({
+            where: { id: licenseAssignment.id },
+            data: {
+              activatedAt: new Date(),
+              expiresAt: null
+            }
+          });
+          console.log('🎫 Licencia activada para usuario FREE:', userId);
+        }
+
         console.log('✅ Carta auto-aprobada para usuario FREE');
+        console.log('✅ Wizard marcado como completado');
         
         return NextResponse.json({
           success: true,
@@ -139,6 +166,34 @@ export async function POST(req: Request) {
         fechaActualizacion: new Date()
       }
     });
+
+    // Marcar wizard como completado
+    await prisma.usuario.update({
+      where: { id: userId },
+      data: { wizardCompleted: true }
+    });
+
+    // 🎫 ACTIVAR LICENCIA: Marcar la licencia como activada
+    const licenseAssignment = await prisma.licenseAssignment.findFirst({
+      where: {
+        userId: userId,
+        isActive: true,
+        activatedAt: null // Solo licencias no activadas
+      }
+    });
+
+    if (licenseAssignment) {
+      await prisma.licenseAssignment.update({
+        where: { id: licenseAssignment.id },
+        data: {
+          activatedAt: new Date(),
+          expiresAt: null // Ya no expira porque fue activada
+        }
+      });
+      console.log('🎫 Licencia activada para usuario:', userId);
+    }
+
+    console.log('✅ Wizard marcado como completado para usuario:', userId);
 
     return NextResponse.json({
       success: true,

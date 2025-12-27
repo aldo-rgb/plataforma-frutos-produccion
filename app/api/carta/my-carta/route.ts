@@ -23,7 +23,7 @@ export async function GET(req: Request) {
         id: true,
         email: true,
         nombre: true,
-        VisionParticipante: {
+        ParticipanteEnVisiones: {
           include: {
             Vision: {
               select: {
@@ -48,7 +48,7 @@ export async function GET(req: Request) {
       }
     });
 
-    const visionConfig = usuario?.VisionParticipante?.[0]?.Vision || null;
+    const visionConfig = usuario?.ParticipanteEnVisiones?.[0]?.Vision || null;
 
     const carta = await prisma.cartaFrutos.findFirst({
       where: { usuarioId: userId },

@@ -110,6 +110,8 @@ model LicenseAssignment {
   assignedBy     Int
   assignedAt     DateTime     @default(now())
   isActive       Boolean      @default(true)
+  activatedAt    DateTime?    // Cuando el usuario envía su carta
+  expiresAt      DateTime?    // 10 días después de assignedAt si no activa
   notes          String?
   AssignedBy     Usuario      @relation("LicenseAssignmentAssignedBy", fields: [assignedBy], references: [id])
   Organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -715,6 +717,11 @@ model Usuario {
   subscriptionStartDate                                            DateTime?
   telefono                                                         String?
   requirePasswordChange                                            Boolean                   @default(false)
+  wizardCompleted                                                  Boolean                   @default(false)
+  onboardingOrigin                                                 String?                   @default("ORGANIC_SIGNUP")
+  magicLinkToken                                                   String?                   @unique
+  magicLinkExpiry                                                  DateTime?
+  temporaryPassword                                                String?
   changeRequestedAt                                                DateTime?
   changeRequestedBy                                                Int?
   newOrganizationId                                                Int?

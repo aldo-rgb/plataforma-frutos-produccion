@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     // Obtener usuario actual
     const currentUser = await prisma.usuario.findUnique({
       where: { email: session.user.email },
-      select: { id: true, rol: true, vision: true }
+      select: { id: true, rol: true }
     });
 
     if (!currentUser) {
@@ -55,19 +55,94 @@ export async function GET(req: NextRequest) {
       where: { usuarioId: userId }
     });
 
-    // Obtener info del usuario target
+    // Obtener info del usuario target y verificar si pertenece a una visión
     const targetUser = await prisma.usuario.findUnique({
       where: { id: userId },
-      select: { vision: true }
+      select: { 
+        ParticipanteEnVisiones: {
+          include: {
+            Vision: {
+              select: {
+                id: true,
+                nombre: true,
+                transformationGuestsTarget: true,
+                forceFinanzasArea: true,
+                forceRelacionesArea: true,
+                forceTalentosArea: true,
+                forceSaludArea: true,
+                forcePazMentalArea: true,
+                forceOcioArea: true,
+                forceTransformationArea: true,
+                forceCommunityServiceArea: true
+              }
+            }
+          },
+          take: 1
+        }
+      }
     });
 
-    const perteneceAGrupo = !!(targetUser?.vision && targetUser.vision.trim() !== '');
+    const visionParticipante = targetUser?.ParticipanteEnVisiones?.[0];
+    const perteneceAGrupo = !!visionParticipante;
+    const visionConfig = visionParticipante?.Vision;
 
-    // Si no tiene configuración, crear defaults basados en si pertenece a grupo
+    // Si pertenece a una Vision, SIEMPRE usar la configuración de la Vision
+    // (ignorar cualquier configuración previa en areaConfig)
+    if (perteneceAGrupo && visionConfig) {
+      const areasFromVision = [];
+      
+      console.log('🔍 Usuario pertenece a Vision:', visionConfig.nombre);
+      console.log('📋 Construyendo áreas desde configuración de Vision...');
+      
+      if (visionConfig.forceFinanzasArea) {
+        console.log('  ✅ FINANZAS enabled');
+        areasFromVision.push({ areaKey: 'finanzas', enabled: true });
+      }
+      if (visionConfig.forceRelacionesArea) {
+        console.log('  ✅ RELACIONES enabled');
+        areasFromVision.push({ areaKey: 'relaciones', enabled: true });
+      }
+      if (visionConfig.forceTalentosArea) {
+        console.log('  ✅ TALENTOS enabled');
+        areasFromVision.push({ areaKey: 'talentos', enabled: true });
+      }
+      if (visionConfig.forceSaludArea) {
+        console.log('  ✅ SALUD enabled');
+        areasFromVision.push({ areaKey: 'salud', enabled: true });
+      }
+      if (visionConfig.forcePazMentalArea) {
+        console.log('  ✅ PAZ MENTAL enabled');
+        areasFromVision.push({ areaKey: 'pazMental', enabled: true });
+      }
+      if (visionConfig.forceOcioArea) {
+        console.log('  ✅ OCIO enabled');
+        areasFromVision.push({ areaKey: 'ocio', enabled: true });
+      }
+      if (visionConfig.forceTransformationArea) {
+        console.log('  ✅ SERVICIO TRANS enabled');
+        areasFromVision.push({ areaKey: 'servicioTrans', enabled: true });
+      }
+      if (visionConfig.forceCommunityServiceArea) {
+        console.log('  ✅ SERVICIO COMUN enabled');
+        areasFromVision.push({ areaKey: 'servicioComun', enabled: true });
+      }
+
+      console.log(`📋 Total áreas habilitadas: ${areasFromVision.length}`);
+      console.log('📤 Áreas finales:', areasFromVision.map(a => a.areaKey));
+
+      return NextResponse.json({
+        areas: areasFromVision,
+        perteneceAGrupo: true,
+        isDefault: false,
+        visionName: visionConfig.nombre,
+        transformationGuestsTarget: visionConfig.transformationGuestsTarget
+      });
+    }
+
+    // Si NO tiene configuración Y NO pertenece a visión, crear defaults
     if (configs.length === 0) {
-      const defaultAreas = perteneceAGrupo 
-        ? DEFAULT_AREAS 
-        : DEFAULT_AREAS.filter(a => a !== 'servicioTrans' && a !== 'servicioComun');
+      // Usuario orgánico: excluir áreas de servicio
+      const defaultAreas = DEFAULT_AREAS.filter(a => a !== 'servicioTrans' && a !== 'servicioComun');
 
       const defaultConfigs = defaultAreas.map(areaKey => ({
         areaKey,
@@ -76,7 +151,7 @@ export async function GET(req: NextRequest) {
 
       return NextResponse.json({
         areas: defaultConfigs,
-        perteneceAGrupo,
+        perteneceAGrupo: false,
         isDefault: true
       });
     }
@@ -115,16 +190,27 @@ export async function POST(req: NextRequest) {
     // Obtener usuario actual
     const currentUser = await prisma.usuario.findUnique({
       where: { email: session.user.email },
-      select: { id: true, rol: true, vision: true }
+      select: { id: true, rol: true }
     });
 
     if (!currentUser) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // Determinar qué usuario modificar
+    // Determinar qué usuario modificar y verificar si pertenece a visión
     let userId = currentUser.id;
-    const perteneceAGrupo = !!(currentUser.vision && currentUser.vision.trim() !== '');
+    
+    // Verificar si el usuario actual pertenece a una visión
+    const currentUserVision = await prisma.usuario.findUnique({
+      where: { id: currentUser.id },
+      select: {
+        ParticipanteEnVisiones: {
+          select: { id: true },
+          take: 1
+        }
+      }
+    });
+    const perteneceAGrupo = !!(currentUserVision?.ParticipanteEnVisiones && currentUserVision.ParticipanteEnVisiones.length > 0);
     
     if (targetUserId) {
       // Solo admin/coordinador pueden modificar otros usuarios
@@ -145,10 +231,15 @@ export async function POST(req: NextRequest) {
     // Obtener info del usuario target para validación
     const targetUser = await prisma.usuario.findUnique({
       where: { id: userId },
-      select: { vision: true }
+      select: { 
+        ParticipanteEnVisiones: {
+          select: { id: true },
+          take: 1
+        }
+      }
     });
 
-    const targetPerteneceAGrupo = !!(targetUser?.vision && targetUser.vision.trim() !== '');
+    const targetPerteneceAGrupo = !!(targetUser?.ParticipanteEnVisiones && targetUser.ParticipanteEnVisiones.length > 0);
 
     // Validar mínimo de áreas habilitadas según tipo de usuario
     const enabledCount = areas.filter((a: any) => a.enabled).length;

@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Send, Bot, User, Sparkles, Loader2, FileText, Volume2 } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Loader2, Volume2 } from 'lucide-react';
 import { obtenerHistorialChat, guardarMensajeChat } from '../../actions/chat-ia';
-import { useRouter } from 'next/navigation';
 import VoiceButton from '@/components/quantum/VoiceButton';
+import { useSession } from 'next-auth/react';
 
 interface Mensaje {
   role: 'user' | 'assistant';
@@ -13,19 +13,17 @@ interface Mensaje {
 }
 
 export default function MentorIAPage() {
-  const router = useRouter();
+  const { data: session } = useSession();
   const [input, setInput] = useState('');
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(true);
   const [procesando, setProcesando] = useState(false);
   const [estadoGuardado, setEstadoGuardado] = useState('');
-  const [mostrarBotonCarta, setMostrarBotonCarta] = useState(false);
-  const [extrayendoCarta, setExtrayendoCarta] = useState(false);
-  const [modoVoz, setModoVoz] = useState(false);
+  const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
+  const [showClearModal, setShowClearModal] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const respuestaActualRef = useRef('');
-  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -42,6 +40,9 @@ export default function MentorIAPage() {
             content: m.contenido
           }));
           setMensajes(historialFormateado);
+        } else {
+          // Si no hay historial, mostrar mensaje de bienvenida
+          setMensajes([]);
         }
       } catch (error) {
         console.error("Error cargando historial:", error);
@@ -52,93 +53,95 @@ export default function MentorIAPage() {
     cargarMemoria();
   }, []);
 
-  useEffect(() => {
-    scrollToBottom();
-    // Detectar si hay suficiente conversación para crear carta
-    if (mensajes.length >= 6) { // Al menos 3 intercambios
-      setMostrarBotonCarta(true);
-    }
-  }, [mensajes]);
+  // Función para iniciar con "Estoy listo"
+  const iniciarProceso = async () => {
+    await handleSendMessage("Estoy listo, inicia el proceso.");
+  };
 
-  const handleExtractCarta = async () => {
-    setExtrayendoCarta(true);
-    setEstadoGuardado('🔍 Analizando conversación y extrayendo información...');
+  // Función auxiliar para enviar mensaje programáticamente
+  const handleSendMessage = async (mensaje: string) => {
+    if (procesando) return;
+
+    setProcesando(true);
 
     try {
-      const response = await fetch('/api/quantum/extract-carta', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversacion: mensajes })
-      });
+        // 1. UI Optimista
+        const nuevosMensajes = [
+            ...mensajes,
+            { role: 'user' as const, content: mensaje },
+            { role: 'assistant' as const, content: '' }
+        ];
+        setMensajes(nuevosMensajes);
 
-      if (!response.ok) {
-        throw new Error('Error extrayendo carta');
-      }
+        // Guardar mensaje del usuario en BD
+        await guardarMensajeChat('user', mensaje);
 
-      const { cartaData } = await response.json();
-      
-      // Guardar en localStorage para que el wizard lo use
-      localStorage.setItem('quantum-carta-draft', JSON.stringify(cartaData));
-      
-      setEstadoGuardado('✅ Información extraída. Redirigiendo al Wizard...');
-      
-      // Redirigir al wizard después de 1 segundo
-      setTimeout(() => {
-        router.push('/dashboard/carta/wizard-v2?from=quantum');
-      }, 1000);
+        // 2. Llamada a la API
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messages: [...mensajes, { role: 'user', content: mensaje }]
+            }),
+        });
+
+        if (!response.ok) throw new Error('Error en la API');
+        if (!response.body) throw new Error('Sin respuesta');
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        respuestaActualRef.current = '';
+        let lastUpdate = 0;
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            respuestaActualRef.current += chunk;
+
+            const now = Date.now();
+            if (now - lastUpdate > 50) {
+                lastUpdate = now;
+                setMensajes(prevMensajes => {
+                    const copia = [...prevMensajes];
+                    const ultimoIndex = copia.length - 1;
+                    if (copia[ultimoIndex]?.role === 'assistant') {
+                        copia[ultimoIndex] = {
+                            ...copia[ultimoIndex],
+                            content: respuestaActualRef.current
+                        };
+                    }
+                    return copia;
+                });
+            }
+        }
+
+        setMensajes(prevMensajes => {
+            const copia = [...prevMensajes];
+            const ultimoIndex = copia.length - 1;
+            if (copia[ultimoIndex]?.role === 'assistant') {
+                copia[ultimoIndex] = {
+                    ...copia[ultimoIndex],
+                    content: respuestaActualRef.current
+                };
+            }
+            return copia;
+        });
+
+        await guardarMensajeChat('assistant', respuestaActualRef.current);
 
     } catch (error) {
-      console.error('Error extrayendo carta:', error);
-      setEstadoGuardado('❌ Error al extraer información. Intenta de nuevo.');
-      setTimeout(() => setEstadoGuardado(''), 3000);
+        console.error('Error:', error);
+        setEstadoGuardado('❌ Error en la comunicación');
     } finally {
-      setExtrayendoCarta(false);
+        setProcesando(false);
     }
   };
 
-  const handleVoiceTranscript = async (text: string) => {
-    // Agregar mensaje del usuario inmediatamente
-    const nuevosMensajes = [
-      ...mensajes,
-      { role: 'user' as const, content: text },
-      { role: 'assistant' as const, content: '🎙️ Quantum está pensando...' }
-    ];
-    setMensajes(nuevosMensajes);
-
-    // Guardar mensaje del usuario
-    await guardarMensajeChat('user', text);
-  };
-
-  const handleVoiceResponse = async (audioUrl: string, responseText: string) => {
-    // Actualizar el último mensaje del asistente con la respuesta real
-    setMensajes(prev => {
-      const updated = [...prev];
-      const lastIndex = updated.length - 1;
-      if (lastIndex >= 0 && updated[lastIndex].role === 'assistant') {
-        updated[lastIndex] = {
-          role: 'assistant',
-          content: responseText,
-          audioUrl: audioUrl
-        };
-      }
-      return updated;
-    });
-
-    // Guardar respuesta del asistente
-    await guardarMensajeChat('assistant', responseText);
-  };
-
-  const playAudio = (audioUrl: string) => {
-    // Detener audio actual si existe
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current = null;
-    }
-
-    const audio = new Audio(audioUrl);
-    currentAudioRef.current = audio;
-    audio.play().catch(err => console.error('Error reproduciendo audio:', err));
-  };
+  useEffect(() => {
+    scrollToBottom();
+  }, [mensajes]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -224,47 +227,78 @@ export default function MentorIAPage() {
             return nuevos;
         });
 
-        // 5. DETECCIÓN DE JSON Y GUARDADO
+        // 5. DETECCIÓN DE ÁREAS Y GUARDADO AUTOMÁTICO
         const respuestaCompleta = respuestaActualRef.current;
         
-        // Regex para buscar el bloque JSON de forma más robusta
-        const regexJson = /```json([\s\S]*?)```/;
-        const match = respuestaCompleta.match(regexJson);
-
-        if (match && match[1]) {
-            console.log('✅ JSON detectado, iniciando guardado automático...');
+        // Detectar la señal especial que indica que Quantum terminó
+        const tieneSeñalJSON = respuestaCompleta.includes('<<<JSON_START>>>');
+        
+        // Si detectamos la señal, ocultamos el JSON y mostramos solo el mensaje amigable
+        if (tieneSeñalJSON) {
+            console.log('✅ Señal JSON_START detectada, procesando...');
+            
+            // Extraer solo la parte antes de la señal (el mensaje amigable)
+            const parteVisible = respuestaCompleta.split('<<<JSON_START>>>')[0].trim();
+            
+            // Actualizar el último mensaje para mostrar SOLO el mensaje amigable
+            setMensajes(prevMensajes => {
+                const copia = [...prevMensajes];
+                const ultimoIndex = copia.length - 1;
+                if (copia[ultimoIndex]?.role === 'assistant') {
+                    copia[ultimoIndex] = {
+                        ...copia[ultimoIndex],
+                        content: parteVisible + '\n\n⏳ Procesando automáticamente...'
+                    };
+                }
+                return copia;
+            });
             
             // FEEDBACK VISUAL INMEDIATO
-            setEstadoGuardado('⚙️ Detectando metas... Guardando en tu tablero, por favor espera.');
+            setEstadoGuardado('⚙️ Extrayendo áreas configuradas.Esto puede tomar una minutos');
             
             try {
-                // Enviamos la respuesta completa (el backend extraerá el JSON)
-                const procesarResponse = await fetch('/api/chat/procesar', {
+                // Usar el endpoint de extracción inteligente
+                const extractResponse = await fetch('/api/quantum/extract-carta', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        respuestaCompleta: respuestaCompleta 
+                        conversacion: mensajes.concat([{ role: 'assistant', content: respuestaCompleta }])
                     }),
                 });
 
-                if (procesarResponse.ok) {
-                    console.log('✅ ¡Metas guardadas en base de datos!');
-                    
-                    // Feedback visual de éxito
-                    setEstadoGuardado('✅ ¡Guardado! Redirigiendo a tu Carta de Frutos...');
-                    
-                    // Redirigir a la carta después de un breve momento
-                    setTimeout(() => {
-                        window.location.href = '/dashboard/carta';
-                    }, 1500);
-                } else {
-                    const errorData = await procesarResponse.json();
-                    console.error('❌ Error guardando en BD:', errorData);
-                    setEstadoGuardado('❌ Error al guardar. Ver consola para detalles.');
+                if (!extractResponse.ok) {
+                    throw new Error('Error en extracción');
                 }
+
+                const extractData = await extractResponse.json();
+                console.log('✅ Datos extraídos:', extractData);
+
+                // NO guardar en BD todavía - solo redirigir al wizard con los datos
+                setEstadoGuardado('✅ Datos capturados! Redirigiendo al wizard para revisión...');
+                
+                // Obtener email del usuario de la sesión
+                const userEmail = session?.user?.email || 'guest';
+                
+                // Guardar en localStorage ESPECÍFICO del usuario
+                const quantumDraftKey = `quantum_draft_data_${userEmail}`;
+                localStorage.setItem(quantumDraftKey, JSON.stringify({
+                    cartaData: extractData.cartaData,
+                    areasDisponibles: extractData.areasDisponibles,
+                    timestamp: new Date().toISOString(),
+                    source: 'quantum',
+                    userEmail
+                }));
+                
+                console.log(`💾 Draft guardado para usuario: ${userEmail}`);
+
+                // Redirigir al wizard después de un breve momento
+                setTimeout(() => {
+                    window.location.href = '/dashboard/carta/wizard-v2';
+                }, 1500);
+                
             } catch (e) {
-                console.error('Error parseando o enviando JSON:', e);
-                setEstadoGuardado('❌ Error de conexión. Verifica tu red.');
+                console.error('Error en extracción:', e);
+                setEstadoGuardado('❌ Error procesando. Revisa la consola.');
             }
         }
 
@@ -275,21 +309,131 @@ export default function MentorIAPage() {
     }
   };
 
+  // Handler para cuando el VoiceButton transcribe el audio
+  const handleTranscriptReady = (text: string) => {
+    setMensajes(prev => [...prev, { role: 'user', content: text }]);
+    guardarMensajeChat('user', text);
+  };
+
+  // Handler para cuando el VoiceButton tiene la respuesta en audio
+  const handleAudioResponse = (audioUrl: string, responseText: string) => {
+    setMensajes(prev => [...prev, { role: 'assistant', content: responseText, audioUrl }]);
+    guardarMensajeChat('assistant', responseText);
+  };
+
+  // Función para reproducir audio de respuestas anteriores
+  const playAudio = (audioUrl: string) => {
+    if (currentAudio) {
+      currentAudio.pause();
+    }
+    const audio = new Audio(audioUrl);
+    setCurrentAudio(audio);
+    audio.play();
+    audio.onended = () => setCurrentAudio(null);
+  };
+
+  const limpiarConversacion = async () => {
+    try {
+      // Limpiar en el servidor
+      const response = await fetch('/api/chat/clear', { method: 'POST' });
+      if (response.ok) {
+        setMensajes([]);
+        setShowClearModal(false);
+        setEstadoGuardado('✅ Conversación limpiada');
+        setTimeout(() => setEstadoGuardado(''), 2000);
+      }
+    } catch (error) {
+      console.error('Error limpiando conversación:', error);
+      setEstadoGuardado('❌ Error al limpiar');
+      setShowClearModal(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] bg-slate-900 rounded-xl overflow-hidden border border-slate-800 shadow-2xl">
       
-      <div className="bg-slate-950 p-4 border-b border-slate-800 flex items-center gap-3">
-        <div className="p-2 bg-purple-600/20 rounded-lg border border-purple-500/30">
-          <Bot className="w-6 h-6 text-purple-400" />
+      <div className="bg-slate-950 p-4 border-b border-slate-800 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-purple-600/20 rounded-lg border border-purple-500/30">
+            <Bot className="w-6 h-6 text-purple-400" />
+          </div>
+          <div>
+            <h2 className="text-white font-bold flex items-center gap-2">
+              Quantum IA por Voz 🎙️
+              <Sparkles className="w-4 h-4 text-purple-400" />
+            </h2>
+            <p className="text-xs text-slate-400">Habla con Quantum IA - Interacción bidireccional</p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-white font-bold flex items-center gap-2">
-            Coach Ontológico IA
-            <Sparkles className="w-4 h-4 text-purple-400" />
-          </h2>
-          <p className="text-xs text-slate-400">Tu mentor de liderazgo imposible</p>
-        </div>
+        
+        {/* Botón para limpiar conversación */}
+        <button
+          onClick={() => setShowClearModal(true)}
+          disabled={procesando || mensajes.length === 0}
+          className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 disabled:opacity-50 disabled:cursor-not-allowed text-red-400 rounded-lg border border-red-500/30 text-sm font-semibold transition-colors"
+          title="Limpiar conversación y empezar de nuevo"
+        >
+          🗑️ Nueva Conversación
+        </button>
       </div>
+      
+      {/* Modal de Confirmación */}
+      {showClearModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 rounded-2xl border-2 border-red-500/50 shadow-2xl max-w-md w-full overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-red-600/20 to-orange-600/20 border-b border-red-500/30 p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center border-2 border-red-500/50">
+                  <span className="text-3xl">🗑️</span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Nueva Conversación</h3>
+                  <p className="text-sm text-red-400">Esta acción no se puede deshacer</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              <p className="text-gray-300 text-base leading-relaxed">
+                ¿Estás seguro de que deseas <span className="text-red-400 font-semibold">limpiar toda la conversación</span>?
+              </p>
+              
+              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 space-y-2">
+                <p className="text-sm text-gray-400 flex items-start gap-2">
+                  <span className="text-red-400">•</span>
+                  <span>Se eliminará todo el historial de mensajes</span>
+                </p>
+                <p className="text-sm text-gray-400 flex items-start gap-2">
+                  <span className="text-green-400">•</span>
+                  <span>La próxima conversación usará la configuración actualizada de áreas</span>
+                </p>
+                <p className="text-sm text-gray-400 flex items-start gap-2">
+                  <span className="text-blue-400">•</span>
+                  <span>Podrás empezar de nuevo con un contexto limpio</span>
+                </p>
+              </div>
+            </div>
+            
+            {/* Footer - Buttons */}
+            <div className="bg-slate-800/50 border-t border-slate-700 p-6 flex gap-3">
+              <button
+                onClick={() => setShowClearModal(false)}
+                className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-semibold transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={limpiarConversacion}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white rounded-xl font-semibold transition-all shadow-lg shadow-red-500/30 hover:shadow-red-500/50"
+              >
+                Sí, Limpiar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-slate-900/50">
         {cargandoHistorial ? (
@@ -297,41 +441,89 @@ export default function MentorIAPage() {
             <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
           </div>
         ) : mensajes.length === 0 ? (
-          <div className="text-center text-slate-400 mt-10 max-w-2xl mx-auto">
-            <div className="bg-gradient-to-br from-purple-900/40 to-blue-900/40 border border-purple-500/30 rounded-2xl p-8 mb-6">
-              <Sparkles className="w-16 h-16 mx-auto mb-4 text-purple-400" />
-              <h3 className="text-2xl font-bold text-white mb-3">Bienvenido a Quantum IA</h3>
-              <p className="text-slate-300 mb-4 leading-relaxed">
-                Soy tu coach ontológico personal. Puedo ayudarte a:
-              </p>
-              <ul className="text-left space-y-2 mb-6 text-slate-300">
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span><strong className="text-white">Definir tus objetivos</strong> en las 8 áreas de vida</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span><strong className="text-white">Crear tu Carta F.R.U.T.O.S.</strong> de forma conversacional</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span><strong className="text-white">Diseñar acciones concretas</strong> con frecuencias específicas</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-bold">✓</span>
-                  <span><strong className="text-white">Transformar conversaciones</strong> en planes de acción</span>
-                </li>
-              </ul>
-              <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-4 text-sm">
-                <p className="text-blue-300">
-                  💡 <strong>Tip:</strong> Después de conversar sobre tus objetivos, aparecerá un botón para 
-                  crear tu Carta automáticamente. Podrás revisar y ajustar todo antes de confirmar.
-                </p>
+          <div className="flex items-center justify-center h-full p-6">
+            <div className="max-w-2xl w-full">
+              {/* Mensaje de Bienvenida Quantum */}
+              <div className="bg-gradient-to-br from-purple-900/40 to-blue-900/40 border-2 border-purple-500/50 rounded-2xl p-8 shadow-2xl">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <Sparkles className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-white">Bienvenido, Arquitecto</h3>
+                    <p className="text-purple-300">Soy QUANTUM</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4 text-gray-300 mb-6">
+                  <p className="text-base leading-relaxed">
+                    Estás a punto de diseñar el <span className="text-purple-400 font-semibold">código fuente de tu futuro</span>: tu Carta F.R.U.T.O.S.
+                  </p>
+                  
+                  <p className="text-base leading-relaxed">
+                    No vamos a simplemente "anotar deseos". Vamos a extraer y definir con precisión quirúrgica:
+                  </p>
+
+                  <div className="bg-slate-900/50 border border-purple-500/30 rounded-xl p-4 space-y-2">
+                    <div className="flex items-start gap-3">
+                      <span className="text-purple-400 text-lg">🎯</span>
+                      <div>
+                        <p className="font-semibold text-white">Tu Identidad</p>
+                        <p className="text-sm text-gray-400">Quién necesitas SER (Declaraciones de Poder)</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="text-blue-400 text-lg">📊</span>
+                      <div>
+                        <p className="font-semibold text-white">Tus Objetivos</p>
+                        <p className="text-sm text-gray-400">Qué vas a LOGRAR (Números fríos)</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="text-pink-400 text-lg">⚡</span>
+                      <div>
+                        <p className="font-semibold text-white">Tus Acciones</p>
+                        <p className="text-sm text-gray-400">Qué harás y con qué Frecuencia para garantizar el éxito</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-orange-900/20 border border-orange-500/50 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                      <span className="text-orange-400 text-2xl">⚠️</span>
+                      <div>
+                        <p className="font-bold text-orange-300 mb-2">ADVERTENCIA DE SISTEMA</p>
+                        <p className="text-sm text-gray-300">
+                          Este proceso requiere profundidad e interiorización. Necesitas al menos <span className="text-orange-400 font-semibold">40 minutos de enfoque total</span> y un lugar tranquilo donde puedas ser honesto contigo mismo.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-center text-lg font-semibold text-white mt-6">
+                    ¿Tienes el tiempo y la disposición mental para comenzar ahora?
+                  </p>
+                </div>
+
+                {/* Botones de Acción */}
+                <div className="flex gap-4">
+                  <button
+                    onClick={iniciarProceso}
+                    disabled={procesando}
+                    className="flex-1 px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold text-lg transition-all shadow-lg shadow-purple-500/50 hover:shadow-purple-500/80 hover:scale-105 flex items-center justify-center gap-2"
+                  >
+                    <Sparkles className="w-6 h-6" />
+                    <span>🚀 ESTOY LISTO</span>
+                  </button>
+                  <button
+                    onClick={() => window.location.href = '/dashboard'}
+                    className="px-8 py-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-semibold transition-colors"
+                  >
+                    ⏳ AHORA NO
+                  </button>
+                </div>
               </div>
             </div>
-            <p className="text-slate-500 text-sm">
-              Escribe algo para comenzar tu transformación...
-            </p>
           </div>
         ) : (
           mensajes.map((m, idx) => (
@@ -344,7 +536,7 @@ export default function MentorIAPage() {
                 {m.role === 'user' ? <User size={16} /> : <Bot size={16} />}
               </div>
 
-              className={`max-w-[80%] rounded-2xl p-4 text-sm leading-relaxed shadow-md
+              <div className={`max-w-[80%] rounded-2xl p-4 text-sm leading-relaxed shadow-md
                 ${m.role === 'user' 
                   ? 'bg-blue-600 text-white rounded-tr-none' 
                   : 'bg-slate-800 text-slate-200 border border-slate-700 rounded-tl-none'
@@ -354,13 +546,13 @@ export default function MentorIAPage() {
                 ))}
                 
                 {/* Botón para reproducir audio si existe */}
-                {m.audioUrl && m.role === 'assistant' && (
+                {m.audioUrl && (
                   <button
                     onClick={() => playAudio(m.audioUrl!)}
-                    className="mt-2 flex items-center gap-2 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                    className="mt-2 flex items-center gap-2 text-xs bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 px-3 py-1 rounded-lg transition"
                   >
                     <Volume2 size={14} />
-                    <span>Reproducir audio</span>
+                    Reproducir audio
                   </button>
                 )}
               </div>
@@ -389,60 +581,34 @@ export default function MentorIAPage() {
             {estadoGuardado}
           </div>
         )}
-
-        {/* Botón para crear carta desde conversación */}
-        {mostrarBotonCarta && !extrayendoCarta && !estadoGuardado && (
-          <div className="mb-3 bg-gradient-to-r from-emerald-900/30 to-teal-900/30 border border-emerald-500/40 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <FileText className="text-emerald-400" size={24} />
-                <div>
-                  <h3 className="text-white font-semibold">¿Listo para formalizar tus objetivos?</h3>
-                  <p className="text-slate-300 text-sm">Crea tu Carta F.R.U.T.O.S. con lo que hemos conversado</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleExtractCarta}
-                className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-lg font-semibold transition-all shadow-lg shadow-emerald-500/30 flex items-center gap-2"
-              >
-                <FileText size={18} />
-                Crear Carta
-              </button>
-            </div>
-          </div>
-        )}
         
-        <div className="flex gap-3 items-end">
+        <div className="flex gap-3">
+          {/* Botón de Voz - Izquierda */}
+          <VoiceButton
+            onTranscriptReady={handleTranscriptReady}
+            onAudioResponse={handleAudioResponse}
+            disabled={procesando}
+            conversationHistory={mensajes.map(m => ({ role: m.role, content: m.content }))}
+          />
+          
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Escribe o usa el micrófono para hablar..."
-            disabled={procesando || extrayendoCarta}
+            placeholder="Pregunta algo sobre tu liderazgo..."
+            disabled={procesando}
             className="flex-1 bg-slate-800 text-white rounded-xl px-4 py-3 border border-slate-700 focus:border-purple-500 focus:outline-none disabled:opacity-50"
           />
-          
-          {/* Botón de voz cuando no hay texto */}
-          {!input.trim() && !procesando && !extrayendoCarta ? (
-            <VoiceButton
-              onTranscriptReady={handleVoiceTranscript}
-              onAudioResponse={handleVoiceResponse}
-              conversationHistory={mensajes.map(m => ({ role: m.role, content: m.content }))}
-              disabled={procesando || extrayendoCarta}
-            />
-          ) : (
-            <button
-              type="submit"
-              disabled={procesando || extrayendoCarta || !input.trim()}
-              className="bg-purple-600 hover:bg-purple-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-colors"
-            >
-              {procesando ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-            </button>
-          )}
+          <button
+            type="submit"
+            disabled={procesando || !input.trim()}
+            className="bg-purple-600 hover:bg-purple-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white px-6 py-3 rounded-xl flex items-center gap-2 transition-colors"
+          >
+            <Send size={18} />
+          </button>
         </div>
         <p className="text-xs text-slate-500 mt-2 text-center">
-          Quantum IA puede cometer errores. Verifica la información importante.
+          Impacto AI puede cometer errores. Verifica la información importante.
         </p>
       </form>
     </div>

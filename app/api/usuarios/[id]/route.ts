@@ -35,10 +35,10 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { nombre, email, rol, isActive } = body;
+    const { nombre, email, rol, isActive, telefono } = body;
 
     // Validar que al menos uno de los campos esté presente
-    if (nombre === undefined && email === undefined && rol === undefined && isActive === undefined) {
+    if (nombre === undefined && email === undefined && rol === undefined && isActive === undefined && telefono === undefined) {
       return NextResponse.json(
         { error: 'Debe proporcionar al menos un campo para actualizar' },
         { status: 400 }
@@ -84,6 +84,7 @@ export async function PUT(
     if (email !== undefined) dataToUpdate.email = email.trim().toLowerCase();
     if (rol !== undefined) dataToUpdate.rol = rol;
     if (isActive !== undefined) dataToUpdate.isActive = isActive;
+    if (telefono !== undefined) dataToUpdate.telefono = telefono ? telefono.trim() : null;
 
     // Actualizar usuario
     const usuarioActualizado = await prisma.usuario.update({

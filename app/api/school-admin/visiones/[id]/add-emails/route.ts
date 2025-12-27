@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { generateMagicLinkToken, sendVisionMagicLinkMessage } from '@/lib/whatsapp';
+import { sendVisionMagicLinkEmail } from '@/lib/email';
 
 const DEFAULT_PASSWORD = 'Quantum123';
 
@@ -53,6 +55,9 @@ export async function POST(
     const created: any[] = [];
     for (const email of newEmails) {
       const hashed = await bcrypt.hash(DEFAULT_PASSWORD, 10);
+      const magicToken = generateMagicLinkToken();
+      const tokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 días
+      
       const user = await prisma.usuario.create({
         data: {
           email,
@@ -61,11 +66,54 @@ export async function POST(
           rol: 'PARTICIPANTE',
           isActive: true,
           organizationId: director.organizationId,
-          requirePasswordChange: true // Forzar cambio de contraseña en primer ingreso
+          requirePasswordChange: true, // Forzar cambio de contraseña en primer ingreso
+          onboardingOrigin: 'VISION_IMPORT',
+          wizardCompleted: false,
+          magicLinkToken: magicToken,
+          magicLinkExpiry: tokenExpiry,
+          temporaryPassword: DEFAULT_PASSWORD
         },
-        select: { id: true, email: true }
+        select: { id: true, email: true, nombre: true, telefono: true }
       });
       created.push(user);
+      
+      // Enviar WhatsApp con Magic Link si tiene teléfono
+      if (user.telefono) {
+        try {
+          const visionData = await prisma.vision.findUnique({
+            where: { id: visionId },
+            select: { nombre: true }
+          });
+          
+          await sendVisionMagicLinkMessage(
+            user.telefono,
+            user.nombre,
+            visionData?.nombre || 'Quantum',
+            magicToken
+          );
+          console.log(`📱 Magic Link enviado a ${user.nombre} (${user.telefono})`);
+        } catch (error) {
+          console.warn('⚠️ No se pudo enviar WhatsApp:', error);
+        }
+      }
+
+      // Enviar Email con Magic Link
+      try {
+        const visionData = await prisma.vision.findUnique({
+          where: { id: visionId },
+          select: { nombre: true }
+        });
+        
+        await sendVisionMagicLinkEmail(
+          user.email,
+          user.nombre,
+          visionData?.nombre || 'Quantum',
+          magicToken
+        );
+        console.log(`📧 Magic Link email enviado a ${user.nombre} (${user.email})`);
+      } catch (error) {
+        console.warn('⚠️ No se pudo enviar email:', error);
+      }
     }
     // Marcar usuarios de OTRA organización como cambio pendiente
     const pendingChanges: any[] = [];

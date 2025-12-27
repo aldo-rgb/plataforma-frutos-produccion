@@ -62,6 +62,7 @@ export default function CartaWizardRelacional() {
   const [perteneceAGrupo, setPerteneceAGrupo] = useState(false);
   const [areasActivas, setAreasActivas] = useState<typeof AREAS>([]);
   const [showAreaConfig, setShowAreaConfig] = useState(false);
+  const [objetivoInvitados, setObjetivoInvitados] = useState<number | null>(null);
   
   // PASO 1: Declaración del Ser (NUEVO)
   const [declaracionesSer, setDeclaracionesSer] = useState<Record<string, string>>({});
@@ -98,6 +99,9 @@ export default function CartaWizardRelacional() {
   // Sistema de notificaciones toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   
+  // NUEVO: Modal de selección Quantum (Voz vs Texto)
+  const [showQuantumSelectionModal, setShowQuantumSelectionModal] = useState(false);
+  
   // PASO 4: Iterador de configuración
   const [currentMetaIndex, setCurrentMetaIndex] = useState(0);
   const [metasConfiguradas, setMetasConfiguradas] = useState<MetaConfig[]>([]);
@@ -129,17 +133,35 @@ export default function CartaWizardRelacional() {
 
   useEffect(() => {
     loadCarta();
-    // Cargar datos de Quantum si vienen desde allí
-    loadQuantumDraft();
   }, []);
 
-  const loadQuantumDraft = () => {
+  const loadQuantumDraft = (email: string, areasActivas: typeof AREAS = []) => {
     try {
-      const quantumDraft = localStorage.getItem('quantum-carta-draft');
-      if (!quantumDraft) return;
+      // Intentar buscar primero con la key nueva (con email)
+      const quantumDraftKey = `quantum_draft_data_${email}`;
+      let quantumDraftStr = localStorage.getItem(quantumDraftKey);
+      
+      // Si no existe, buscar la key antigua para retrocompatibilidad
+      if (!quantumDraftStr) {
+        quantumDraftStr = localStorage.getItem('quantum-carta-draft');
+      }
+      
+      if (!quantumDraftStr) return;
 
-      const cartaData = JSON.parse(quantumDraft);
-      console.log('🤖 Cargando datos desde Quantum IA:', cartaData);
+      const quantumDraft = JSON.parse(quantumDraftStr);
+      console.log('🤖 Cargando datos desde Quantum IA:', quantumDraft);
+
+      // Determinar si viene del nuevo formato (Mentor IA) o formato antiguo
+      const cartaData = quantumDraft.cartaData || quantumDraft;
+      
+      // Crear set de áreas activas para filtrado rápido
+      const areasActivasKeys = new Set(areasActivas.map(a => a.key));
+      console.log('📦 Estructura de datos detectada:', { 
+        tieneCartaData: !!quantumDraft.cartaData,
+        source: quantumDraft.source,
+        areasEnDatos: Object.keys(cartaData),
+        areasActivas: Array.from(areasActivasKeys)
+      });
 
       // Prellenar declaraciones del ser
       const declaraciones: Record<string, string> = {};
@@ -161,11 +183,25 @@ export default function CartaWizardRelacional() {
 
       Object.entries(cartaData).forEach(([quantumKey, data]: [string, any]) => {
         const areaKey = areaMapping[quantumKey];
-        if (!areaKey || !data) return;
+        console.log(`🔍 Procesando área: ${quantumKey} → ${areaKey}`, data);
+        
+        if (!areaKey || !data) {
+          console.log(`⚠️ Área ${quantumKey} no mapeada o sin datos`);
+          return;
+        }
+
+        // FILTRO: Solo procesar si el área está activa para esta Vision
+        if (areasActivas.length > 0 && !areasActivasKeys.has(areaKey)) {
+          console.log(`⛔ Área ${areaKey} NO está habilitada para esta Vision - OMITIENDO`);
+          return;
+        }
+
+        console.log(`✅ Área ${areaKey} está habilitada - procesando...`);
 
         // Declaración del ser (Paso 1)
         if (data.declaracion) {
           declaraciones[areaKey] = data.declaracion;
+          console.log(`✅ Declaración guardada para ${areaKey}:`, data.declaracion);
         }
 
         // Objetivo (Paso 2)
@@ -175,6 +211,7 @@ export default function CartaWizardRelacional() {
             description: data.objetivo,
             isValid: true
           }];
+          console.log(`✅ Objetivo guardado para ${areaKey}:`, data.objetivo);
         }
 
         // Acciones (Paso 3)
@@ -184,6 +221,7 @@ export default function CartaWizardRelacional() {
             description: accion.nombre,
             isValid: true
           }));
+          console.log(`✅ ${data.acciones.length} acciones guardadas para ${areaKey}`);
 
           // Configuración de frecuencia (Paso 4)
           data.acciones.forEach((accion: any, idx: number) => {
@@ -228,6 +266,19 @@ export default function CartaWizardRelacional() {
       });
 
       // Aplicar los datos extraídos
+      console.log('📦 Datos extraídos de Quantum:', {
+        identidadesPorArea: identidades,
+        metasPorArea: metas,
+        metasConfiguradas: configs
+      });
+      console.log(`📋 Procesando ${configs.length} acciones totales`);
+      console.log(`✅ Áreas procesadas: ${Object.keys(declaraciones).length} declaraciones, ${Object.keys(identidades).length} objetivos, ${Object.keys(metas).length} grupos de acciones`);
+      console.log(`📊 Resumen por área:`, {
+        declaraciones: Object.keys(declaraciones),
+        objetivos: Object.keys(identidades),
+        acciones: Object.keys(metas)
+      });
+      
       if (Object.keys(declaraciones).length > 0) {
         setDeclaracionesSer(declaraciones);
         console.log('✅ Declaraciones del ser prellenadas desde Quantum');
@@ -248,8 +299,9 @@ export default function CartaWizardRelacional() {
       // Mostrar notificación de éxito
       showToast('✨ Información de Quantum cargada exitosamente');
 
-      // Limpiar el draft de Quantum para evitar cargas duplicadas
+      // Limpiar ambos formatos de draft para evitar cargas duplicadas
       localStorage.removeItem('quantum-carta-draft');
+      localStorage.removeItem(`quantum_draft_data_${email}`);
 
     } catch (error) {
       console.error('Error cargando draft de Quantum:', error);
@@ -257,6 +309,9 @@ export default function CartaWizardRelacional() {
   };
 
   const loadCarta = async () => {
+    let userEmailForDraft = 'guest';
+    let areasActivasParaDraft: typeof AREAS = [];
+    
     try {
       // PRIMERO: Obtener datos del usuario actual
       const res = await fetch('/api/carta/my-carta');
@@ -271,32 +326,60 @@ export default function CartaWizardRelacional() {
       console.log('⚙️ Areas config:', areasConfigData);
       
       const perteneceGrupo = areasConfigData.perteneceAGrupo || false;
+      const transformationTarget = areasConfigData.transformationGuestsTarget || null;
+      
+      // Guardar objetivo de invitados si existe
+      if (transformationTarget) {
+        setObjetivoInvitados(transformationTarget);
+        console.log(`🎯 Objetivo de invitados: ${transformationTarget} personas`);
+      }
       
       // Filtrar áreas según configuración personalizada
       const areasHabilitadas = areasConfigData.areas || [];
+      
+      console.log('🔍 Respuesta de /api/areas-config:', {
+        perteneceAGrupo: perteneceGrupo,
+        totalAreasDevueltas: areasHabilitadas.length,
+        areas: areasHabilitadas.map((a: any) => ({ key: a.areaKey, enabled: a.enabled }))
+      });
+      
       const areasFiltradas = AREAS.filter(area => {
         const config = areasHabilitadas.find((c: any) => c.areaKey === area.key);
         
-        // Si hay configuración explícita, usar esa
+        // Si hay configuración explícita, SOLO usar esa
         if (config) {
-          return config.enabled;
+          const isEnabled = config.enabled === true;
+          console.log(`${isEnabled ? '✅' : '⛔'} Área ${area.name} (${area.key}): ${config.enabled ? 'HABILITADA' : 'DESHABILITADA'}`);
+          return isEnabled;
         }
         
-        // Si NO pertenece a grupo, excluir servicios
+        // Si NO hay configuración explícita Y NO pertenece a Vision:
+        // Solo habilitar áreas básicas (excluir servicios)
         if (!perteneceGrupo && (area.key === 'servicioTrans' || area.key === 'servicioComun')) {
+          console.log(`⛔ Área ${area.name} (${area.key}): DESHABILITADA (no pertenece a Vision)`);
           return false;
         }
         
-        // Por defecto, habilitadas las demás
+        // Si NO hay configuración explícita PERO pertenece a Vision:
+        // NO habilitar por defecto - Vision debe definir explícitamente
+        if (perteneceGrupo) {
+          console.log(`⛔ Área ${area.name} (${area.key}): DESHABILITADA (Vision no la configuró explícitamente)`);
+          return false;
+        }
+        
+        // Usuario individual sin Vision: habilitar áreas básicas por defecto
+        console.log(`✅ Área ${area.name} (${area.key}): HABILITADA (usuario individual, área básica)`);
         return true;
       });
       
       setAreasActivas(areasFiltradas);
+      areasActivasParaDraft = areasFiltradas;
       setPerteneceAGrupo(perteneceGrupo);
       console.log(`📋 Áreas activas configuradas:`, areasFiltradas.map(a => a.name));
       
       // Obtener ID del usuario para el localStorage key específico
       const email = data.carta?.Usuario?.email || 'guest';
+      userEmailForDraft = email;
       setUserEmail(email);
       const localStorageKey = `carta-wizard-draft-${email}`;
       
@@ -393,8 +476,60 @@ export default function CartaWizardRelacional() {
       console.error('❌ Error loading carta:', error);
     } finally {
       setLoading(false);
+      
+      // IMPORTANTE: Cargar datos de Quantum DESPUÉS de tener el email
+      // Usar setTimeout para asegurar que el estado se haya actualizado
+      setTimeout(() => {
+        loadQuantumDraft(userEmailForDraft, areasActivasParaDraft);
+        
+        // DESPUÉS de cargar Quantum, asegurar que el objetivo de SERVICIO TRANSFORMACIONAL
+        // esté configurado si la Vision lo requiere
+        if (transformationTarget && areasActivasParaDraft.some(a => a.key === 'servicioTrans')) {
+          setTimeout(() => {
+            setIdentidadesPorArea(prev => {
+              // Si ya existe un objetivo de Quantum, no sobrescribir
+              if (prev.servicioTrans && prev.servicioTrans.length > 0) {
+                console.log('✅ SERVICIO TRANSFORMACIONAL ya tiene objetivos de Quantum');
+                return prev;
+              }
+              
+              // Si no hay objetivos, establecer el objetivo predefinido
+              console.log(`✅ Estableciendo objetivo predefinido para SERVICIO TRANSFORMACIONAL: Enrolar a ${transformationTarget} personas`);
+              return {
+                ...prev,
+                servicioTrans: [{
+                  id: 'servicioTrans-obj-predefinido',
+                  description: `Enrolar a ${transformationTarget} personas`,
+                  isValid: true
+                }]
+              };
+            });
+          }, 200);
+        }
+      }, 100);
     }
   };
+
+  // Prellenar objetivo de SERVICIO TRANSFORMACIONAL cuando esté disponible
+  useEffect(() => {
+    if (objetivoInvitados && areasActivas.some(a => a.key === 'servicioTrans')) {
+      setIdentidadesPorArea(prev => {
+        // Solo prellenar si no existe ya o está vacío
+        if (!prev.servicioTrans || prev.servicioTrans.length === 0) {
+          console.log(`✅ Prellenando objetivo de Servicio Transformacional: Enrolar a ${objetivoInvitados} personas`);
+          return {
+            ...prev,
+            servicioTrans: [{
+              id: 'servicioTrans-obj-predefinido',
+              description: `Enrolar a ${objetivoInvitados} personas`,
+              isValid: true
+            }]
+          };
+        }
+        return prev;
+      });
+    }
+  }, [objetivoInvitados, areasActivas]);
 
   const saveProgress = async () => {
     if (estado === 'APROBADA') return;
@@ -1190,7 +1325,7 @@ Responde SOLO con la acción, sin numeración ni explicaciones adicionales.`
                   
                   {/* Botón Quantum Coach */}
                   <button
-                    onClick={() => setShowQuantumModal(true)}
+                    onClick={() => setShowQuantumSelectionModal(true)}
                     disabled={isReadOnly}
                     className="relative bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 
                              disabled:from-slate-700 disabled:to-slate-700 text-white px-5 py-3 rounded-xl font-bold 
@@ -1207,11 +1342,150 @@ Responde SOLO con la acción, sin numeración ni explicaciones adicionales.`
                       <Atom size={22} className="relative text-white animate-spin" style={{ animationDuration: '8s' }} />
                     </div>
                     
-                    <span className="relative">✨ ¿No sabes que escribir? Invoca a QUANTUM</span>
+                    <span className="relative">✨ ¿No sabes que escribir? Pide ayuda a QUANTUM</span>
                   </button>
                 </div>
               </div>
             </div>
+
+            {/* Modal de Selección: Voz o Texto */}
+            {showQuantumSelectionModal && (
+              <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+                <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full border-2 border-cyan-500/30 overflow-hidden">
+                  {/* Header */}
+                  <div className="bg-gradient-to-r from-cyan-600 to-blue-600 p-6 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10"></div>
+                    <div className="relative flex items-center gap-4">
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-cyan-300 rounded-full blur-xl opacity-50 animate-pulse"></div>
+                        <Atom size={40} className="relative text-white animate-spin" style={{ animationDuration: '8s' }} />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-black text-white">
+                          🚀 Asistente QUANTUM
+                        </h2>
+                        <p className="text-cyan-100 text-sm">
+                          Elige cómo quieres definir tu carta de frutos
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowQuantumSelectionModal(false)}
+                      className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-8">
+                    <p className="text-gray-300 text-center mb-8">
+                      Selecciona tu método preferido para trabajar con QUANTUM
+                    </p>
+
+                    {/* Opciones */}
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {/* Opción 1: VOZ - Mentor IA */}
+                      <button
+                        onClick={() => {
+                          setShowQuantumSelectionModal(false);
+                          window.location.href = '/dashboard/mentor-ia';
+                        }}
+                        className="group relative bg-gradient-to-br from-purple-900/50 to-pink-900/50 hover:from-purple-800/70 hover:to-pink-800/70 
+                                 border-2 border-purple-500/30 hover:border-purple-400/60 rounded-xl p-6 transition-all hover:scale-105 
+                                 hover:shadow-2xl hover:shadow-purple-500/30"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        
+                        <div className="relative space-y-4">
+                          {/* Icono */}
+                          <div className="flex justify-center">
+                            <div className="relative">
+                              <div className="absolute inset-0 bg-purple-500 rounded-full blur-xl opacity-50 group-hover:opacity-70 transition-opacity"></div>
+                              <div className="relative bg-gradient-to-br from-purple-600 to-pink-600 p-4 rounded-full">
+                                <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Título */}
+                          <div className="text-center">
+                            <h3 className="text-xl font-black text-white mb-2">
+                              🎤 Platicar por VOZ
+                            </h3>
+                            <p className="text-purple-200 text-sm">
+                              Conversa con Quantum IA y define tus Objetivos de manera natural
+                            </p>
+                          </div>
+
+                          {/* Badge */}
+                          <div className="flex justify-center">
+                            <span className="bg-purple-500/20 border border-purple-400/30 text-purple-200 text-xs font-bold px-3 py-1 rounded-full">
+                              BETA
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+
+                      {/* Opción 2: TEXTO - Quantum Wizard */}
+                      <button
+                        onClick={() => {
+                          setShowQuantumSelectionModal(false);
+                          setShowQuantumModal(true);
+                        }}
+                        className="group relative bg-gradient-to-br from-cyan-900/50 to-blue-900/50 hover:from-cyan-800/70 hover:to-blue-800/70 
+                                 border-2 border-cyan-500/30 hover:border-cyan-400/60 rounded-xl p-6 transition-all hover:scale-105 
+                                 hover:shadow-2xl hover:shadow-cyan-500/30"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        
+                        <div className="relative space-y-4">
+                          {/* Icono */}
+                          <div className="flex justify-center">
+                            <div className="relative">
+                              <div className="absolute inset-0 bg-cyan-500 rounded-full blur-xl opacity-50 group-hover:opacity-70 transition-opacity"></div>
+                              <div className="relative bg-gradient-to-br from-cyan-600 to-blue-600 p-4 rounded-full">
+                                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Título */}
+                          <div className="text-center">
+                            <h3 className="text-xl font-black text-white mb-2">
+                              ✍️ Escribir TEXTO
+                            </h3>
+                            <p className="text-cyan-200 text-sm">
+                              Responde preguntas y genera tu carta paso a paso
+                            </p>
+                          </div>
+
+                          {/* Badge */}
+                          <div className="flex justify-center">
+                            <span className="bg-cyan-500/20 border border-cyan-400/30 text-cyan-200 text-xs font-bold px-3 py-1 rounded-full">
+                              RECOMENDADO
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+
+                    {/* Footer Info */}
+                    <div className="mt-8 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+                      <p className="text-gray-400 text-sm text-center">
+                        💡 <strong className="text-white">Tip:</strong> Si es tu primera vez, te recomendamos <strong className="text-purple-300">VOZ</strong> para una experiencia más natural
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Modal de Quantum Coach */}
             <QuantumCoachModal
@@ -1438,9 +1712,11 @@ Responde SOLO con la acción, sin numeración ni explicaciones adicionales.`
                       console.log('🔄 Cambio detectado en identidades:', area.key);
                     }
                   }}
-                  placeholder="Ej: Incrementar mis ingresos mensuales en un 30%"
+                  placeholder={area.key === 'servicioTrans' && objetivoInvitados 
+                    ? `Enrolar a ${objetivoInvitados} personas` 
+                    : "Ej: Incrementar mis ingresos mensuales en un 30%"}
                   maxMetas={5}
-                  isReadOnly={isReadOnly}
+                  isReadOnly={isReadOnly || (area.key === 'servicioTrans' && objetivoInvitados !== null)}
                   validateFunction={(text) => {
                     // Rule A: Min 15 chars
                     if (text.length < 15) return false;
