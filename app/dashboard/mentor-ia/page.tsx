@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Send, Bot, User, Sparkles, Loader2, Volume2 } from 'lucide-react';
 import { obtenerHistorialChat, guardarMensajeChat } from '../../actions/chat-ia';
 import VoiceButton from '@/components/quantum/VoiceButton';
@@ -14,6 +15,7 @@ interface Mensaje {
 
 export default function MentorIAPage() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [input, setInput] = useState('');
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(true);
@@ -326,21 +328,18 @@ export default function MentorIAPage() {
                 console.log(`📦 Datos guardados:`, draftData);
                 
                 // Verificar que se guardó correctamente
-                const verificacion = localStorage.getItem(quantumDraftKey);
-                console.log(`✅ Verificación de guardado:`, verificacion ? 'ÉXITO' : 'FALLO');
-                console.log(`💾 Draft guardado para usuario: ${userEmail}`, draftData);
-                
-                // Verificar que se guardó correctamente
-                const verificacion = localStorage.getItem(quantumDraftKey);
-                if (!verificacion) {
+                const verificacionGuardado = localStorage.getItem(quantumDraftKey);
+                if (!verificacionGuardado) {
                     console.error('❌ Error: localStorage no guardó el draft');
                     throw new Error('No se pudo guardar en localStorage');
                 }
                 console.log('✅ Verificación exitosa: draft guardado en localStorage');
 
                 // Redirigir al wizard después de un breve momento
+                console.log('🔄 Preparando redirección al Wizard V2...');
                 setTimeout(() => {
-                    window.location.href = '/dashboard/carta/wizard-v2';
+                    console.log('🚀 Redirigiendo a /dashboard/carta/wizard-v2');
+                    router.push('/dashboard/carta/wizard-v2');
                 }, 1500);
                 
             } catch (e) {
