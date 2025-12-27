@@ -59,11 +59,7 @@ export async function POST(req: Request) {
         activatedAt: null // Licencia no activada aún
       },
       include: {
-        License: {
-          include: {
-            Vision: true
-          }
-        }
+        Vision: true
       }
     });
 
@@ -196,7 +192,7 @@ export async function POST(req: Request) {
           expiresAt: null // Ya no expira porque fue activada
         }
       });
-      console.log('🎫 Licencia activada para usuario:', userId, '- Vision:', licenseAssignment.License.Vision?.nombre || 'N/A');
+      console.log('🎫 Licencia activada para usuario:', userId, '- Vision:', licenseAssignment.Vision?.nombre || 'N/A');
     }
 
     console.log('✅ Wizard marcado como completado para usuario:', userId);
