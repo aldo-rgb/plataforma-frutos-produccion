@@ -246,8 +246,6 @@ export default function CartaWizardRelacional() {
           if (meta.tareas_acciones && Array.isArray(meta.tareas_acciones) && meta.tareas_acciones.length > 0) {
             metas[objetivoId] = meta.tareas_acciones.map((accionStr: string, idx: number) => ({
               id: `${objetivoId}-meta-${idx + 1}`,
-              description: accion.nombre,
-              id: `${objetivoId}-meta-${idx + 1}`,
               description: accionStr.split('(')[0].trim(), // Extraer nombre de acción
               isValid: true
             }));
