@@ -137,16 +137,26 @@ export default function CartaWizardRelacional() {
 
   const loadQuantumDraft = (email: string, areasActivas: typeof AREAS = []) => {
     try {
+      console.log(`🔍 Intentando cargar draft de Quantum para: ${email}`);
+      
       // Intentar buscar primero con la key nueva (con email)
       const quantumDraftKey = `quantum_draft_data_${email}`;
       let quantumDraftStr = localStorage.getItem(quantumDraftKey);
       
+      console.log(`🔑 Buscando en localStorage con key: ${quantumDraftKey}`);
+      console.log(`📦 Resultado: ${quantumDraftStr ? 'ENCONTRADO' : 'NULL/UNDEFINED'}`);
+      
       // Si no existe, buscar la key antigua para retrocompatibilidad
       if (!quantumDraftStr) {
+        console.log('🔄 No encontrado con key nueva, intentando key antigua: quantum-carta-draft');
         quantumDraftStr = localStorage.getItem('quantum-carta-draft');
+        console.log(`📦 Resultado key antigua: ${quantumDraftStr ? 'ENCONTRADO' : 'NULL/UNDEFINED'}`);
       }
       
-      if (!quantumDraftStr) return;
+      if (!quantumDraftStr) {
+        console.log('⚠️ No se encontró ningún draft de Quantum en localStorage');
+        return;
+      }
 
       const quantumDraft = JSON.parse(quantumDraftStr);
       console.log('🤖 Cargando datos desde Quantum IA:', quantumDraft);

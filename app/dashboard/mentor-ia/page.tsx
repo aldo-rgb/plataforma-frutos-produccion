@@ -254,10 +254,50 @@ export default function MentorIAPage() {
             });
             
             // FEEDBACK VISUAL INMEDIATO
-            setEstadoGuardado('⚙️ Extrayendo áreas configuradas.Esto puede tomar una minutos');
+            setEstadoGuardado('⚙️ Extrayendo datos de tu carta...');
             
             try {
-                // Usar el endpoint de extracción inteligente
+                // Extraer el JSON directamente de la respuesta (después de <<<JSON_START>>>)
+                const partesRespuesta = respuestaCompleta.split('<<<JSON_START>>>');
+                if (partesRespuesta.length < 2) {
+                    throw new Error('No se encontró JSON después de la señal');
+                }
+                
+                const parteJSON = partesRespuesta[1].trim();
+                console.log('📄 JSON extraído:', parteJSON.substring(0, 200) + '...');
+                
+                // Parsear el JSON directamente
+                let cartaDeFrutos;
+                try {
+                    // Intentar extraer JSON con el patrón de bloques de código
+                    const patronCodeBlock = /```json\s*([\s\S]*?)```/i;
+                    const match = parteJSON.match(patronCodeBlock);
+                    
+                    if (match) {
+                        cartaDeFrutos = JSON.parse(match[1].trim());
+                    } else {
+                        // Si no tiene bloques, intentar parsear directamente
+                        const inicio = parteJSON.indexOf("{");
+                        const fin = parteJSON.lastIndexOf("}") + 1;
+                        if (inicio !== -1 && fin !== 0) {
+                            cartaDeFrutos = JSON.parse(parteJSON.substring(inicio, fin));
+                        } else {
+                            throw new Error('No se encontró JSON válido');
+                        }
+                    }
+                } catch (parseError) {
+                    console.error('❌ Error parseando JSON:', parseError);
+                    throw new Error('JSON inválido en la respuesta');
+                }
+                
+                console.log('✅ Carta de frutos parseada:', cartaDeFrutos);
+                
+                // Verificar que tenga la estructura esperada
+                if (!cartaDeFrutos.carta_de_frutos) {
+                    throw new Error('Estructura de carta de frutos inválida');
+                }
+                
+                // Usar el endpoint de extracción para transformar al formato del wizard
                 const extractResponse = await fetch('/api/quantum/extract-carta', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -267,11 +307,11 @@ export default function MentorIAPage() {
                 });
 
                 if (!extractResponse.ok) {
-                    throw new Error('Error en extracción');
+                    throw new Error('Error en transformación de datos');
                 }
 
                 const extractData = await extractResponse.json();
-                console.log('✅ Datos extraídos:', extractData);
+                console.log('✅ Datos transformados:', extractData);
 
                 // NO guardar en BD todavía - solo redirigir al wizard con los datos
                 setEstadoGuardado('✅ Datos capturados! Redirigiendo al wizard para revisión...');
@@ -281,15 +321,24 @@ export default function MentorIAPage() {
                 
                 // Guardar en localStorage ESPECÍFICO del usuario
                 const quantumDraftKey = `quantum_draft_data_${userEmail}`;
-                localStorage.setItem(quantumDraftKey, JSON.stringify({
+                const draftData = {
                     cartaData: extractData.cartaData,
                     areasDisponibles: extractData.areasDisponibles,
                     timestamp: new Date().toISOString(),
                     source: 'quantum',
                     userEmail
-                }));
+                };
                 
-                console.log(`💾 Draft guardado para usuario: ${userEmail}`);
+                localStorage.setItem(quantumDraftKey, JSON.stringify(draftData));
+                console.log(`💾 Draft guardado para usuario: ${userEmail}`, draftData);
+                
+                // Verificar que se guardó correctamente
+                const verificacion = localStorage.getItem(quantumDraftKey);
+                if (!verificacion) {
+                    console.error('❌ Error: localStorage no guardó el draft');
+                    throw new Error('No se pudo guardar en localStorage');
+                }
+                console.log('✅ Verificación exitosa: draft guardado en localStorage');
 
                 // Redirigir al wizard después de un breve momento
                 setTimeout(() => {
@@ -297,8 +346,8 @@ export default function MentorIAPage() {
                 }, 1500);
                 
             } catch (e) {
-                console.error('Error en extracción:', e);
-                setEstadoGuardado('❌ Error procesando. Revisa la consola.');
+                console.error('❌ Error en extracción:', e);
+                setEstadoGuardado(`❌ Error procesando: ${e instanceof Error ? e.message : 'Error desconocido'}`);
             }
         }
 
