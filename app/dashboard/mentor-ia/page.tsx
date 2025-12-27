@@ -305,39 +305,29 @@ export default function MentorIAPage() {
                     throw new Error('Estructura de carta de frutos inválida');
                 }
                 
-                // Usar el endpoint de extracción para transformar al formato del wizard
-                const extractResponse = await fetch('/api/quantum/extract-carta', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        conversacion: mensajes.concat([{ role: 'assistant', content: respuestaCompleta }])
-                    }),
-                });
-
-                if (!extractResponse.ok) {
-                    throw new Error('Error en transformación de datos');
-                }
-
-                const extractData = await extractResponse.json();
-                console.log('✅ Datos transformados:', extractData);
-
-                // NO guardar en BD todavía - solo redirigir al wizard con los datos
+                // NO transformar - guardar directamente el JSON de Quantum
                 setEstadoGuardado('✅ Datos capturados! Redirigiendo al wizard para revisión...');
                 
                 // Obtener email del usuario de la sesión
                 const userEmail = session?.user?.email || 'guest';
                 
-                // Guardar en localStorage ESPECÍFICO del usuario
+                // Guardar en localStorage ESPECÍFICO del usuario con formato metas[]
                 const quantumDraftKey = `quantum_draft_data_${userEmail}`;
                 const draftData = {
-                    cartaData: extractData.cartaData,
-                    areasDisponibles: extractData.areasDisponibles,
+                    metas: cartaDeFrutos.carta_de_frutos.metas, // ← NUEVO FORMATO
                     timestamp: new Date().toISOString(),
                     source: 'quantum',
                     userEmail
                 };
                 
                 localStorage.setItem(quantumDraftKey, JSON.stringify(draftData));
+                console.log(`💾 Borrador guardado en localStorage para: ${userEmail}`);
+                console.log(`🔑 Key usada: ${quantumDraftKey}`);
+                console.log(`📦 Datos guardados:`, draftData);
+                
+                // Verificar que se guardó correctamente
+                const verificacion = localStorage.getItem(quantumDraftKey);
+                console.log(`✅ Verificación de guardado:`, verificacion ? 'ÉXITO' : 'FALLO');
                 console.log(`💾 Draft guardado para usuario: ${userEmail}`, draftData);
                 
                 // Verificar que se guardó correctamente
