@@ -105,6 +105,7 @@ export default function CartaWizardRelacional() {
   // PASO 4: Iterador de configuración
   const [currentMetaIndex, setCurrentMetaIndex] = useState(0);
   const [metasConfiguradas, setMetasConfiguradas] = useState<MetaConfig[]>([]);
+  const [accionesRevisadas, setAccionesRevisadas] = useState<Set<string>>(new Set()); // Track de acciones que el usuario ya revisó
   
   // NUEVO: Sistema de Autocompletado Inteligente
   const [extractedInfoByMeta, setExtractedInfoByMeta] = useState<Record<string, ExtractedInfo>>({});
@@ -1015,16 +1016,26 @@ Responde SOLO con la acción, sin numeración ni explicaciones adicionales.`
     };
 
     setMetasConfiguradas([...metasConfiguradas.filter(mc => mc.metaId !== newConfig.metaId), newConfig]);
+    
+    // Marcar esta acción como revisada por el usuario
+    setAccionesRevisadas(prev => new Set([...prev, currentMetaData.meta.id]));
+    
     setHasChanges(true);
     console.log('🔄 Cambio detectado en configuración de meta');
+    console.log('✅ Acción marcada como revisada:', currentMetaData.meta.id);
   };
 
   const handleNextMeta = () => {
+    // Marcar la acción actual como revisada antes de avanzar
+    if (currentMetaData) {
+      setAccionesRevisadas(prev => new Set([...prev, currentMetaData.meta.id]));
+    }
+    
     if (currentMetaIndex < metasFlattened.length - 1) {
       setCurrentMetaIndex(currentMetaIndex + 1);
     } else {
       // Si ya configuramos todas las metas, mostrar mensaje de éxito
-      console.log('✅ Todas las metas configuradas');
+      console.log('✅ Todas las metas configuradas y revisadas');
       // Hacer scroll hacia arriba para ver el mensaje de progreso completo
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -2062,26 +2073,27 @@ Responde SOLO con la acción, sin numeración ni explicaciones adicionales.`
                 {/* Progreso global */}
                 <div className="mt-6 bg-gray-900/50 border border-gray-800 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-gray-400">Progreso global</span>
+                    <span className="text-sm text-gray-400">Progreso de revisión</span>
                     <span className="text-sm font-bold text-purple-300">
-                      {metasConfiguradas.length} de {metasFlattened.length} {metasConfiguradas.length < metasFlattened.length ? 'por configurar' : 'configuradas'}
+                      {accionesRevisadas.size} de {metasFlattened.length} {accionesRevisadas.size < metasFlattened.length ? 'revisadas' : 'completadas'}
                     </span>
                   </div>
                   <div className="w-full bg-gray-800 rounded-full h-2">
                     <div 
                       className="bg-gradient-to-r from-purple-600 to-pink-600 h-2 rounded-full transition-all"
-                      style={{ width: `${(metasConfiguradas.length / metasFlattened.length) * 100}%` }}
+                      style={{ width: `${(accionesRevisadas.size / metasFlattened.length) * 100}%` }}
                     />
                   </div>
-                  {metasConfiguradas.length < metasFlattened.length && (
+                  {accionesRevisadas.size < metasFlattened.length && (
                     <p className="text-xs text-yellow-400 mt-2">
-                      ⚠️ Faltan {metasFlattened.length - metasConfiguradas.length} acciones por configurar. Navega con las flechas para completarlas.
+                      ⚠️ Faltan {metasFlattened.length - accionesRevisadas.size} acciones por revisar. Navega con las flechas para completarlas.
                     </p>
                   )}
                 </div>
 
-                {/* Mensaje de éxito cuando todas las metas están configuradas */}
-                {metasConfiguradas.length === metasFlattened.length && (
+                {/* Mensaje de éxito cuando todas las metas están configuradas Y revisadas */}
+                {metasConfiguradas.length === metasFlattened.length && 
+                 accionesRevisadas.size === metasFlattened.length && (
                   <div className="mt-6 bg-gradient-to-r from-green-900/40 to-emerald-900/40 border-2 border-green-500/50 rounded-xl p-6 animate-in slide-in-from-bottom-4">
                     <div className="flex items-start gap-4">
                       <div className="text-5xl">🎉</div>
