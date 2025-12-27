@@ -11,7 +11,7 @@ export default function SuscripcionPage() {
   
   // ESTADOS
   const [tipoCliente, setTipoCliente] = useState<'INDIVIDUAL' | 'CENTRO'>('INDIVIDUAL');
-  const [planIndividual, setPlanIndividual] = useState<'STANDARD' | 'QUANTUM'>('STANDARD'); 
+  const [planIndividual, setPlanIndividual] = useState<'FREE' | 'STANDARD' | 'QUANTUM'>('STANDARD'); 
   const [frecuencia, setFrecuencia] = useState<'MENSUAL' | 'ANUAL'>('ANUAL');
   
   // ESTADOS CHECKOUT
@@ -161,11 +161,47 @@ export default function SuscripcionPage() {
                         </div>
                     </div>
 
-                    {/* Tarjetas Comparativas */}
-                    <div className="grid md:grid-cols-2 gap-8">
+                    {/* Tarjetas Comparativas - 3 Columnas */}
+                    <div className="grid md:grid-cols-3 gap-6 mb-12">
+                        
+                        {/* PLAN FREE / AUTOGESTIÓN */}
+                        <div className={`relative p-6 rounded-2xl border transition-all cursor-pointer ${planIndividual === 'FREE' ? 'bg-slate-900 border-emerald-500 shadow-2xl shadow-emerald-900/20 transform scale-105 z-10' : 'bg-slate-950 border-slate-800 opacity-80 hover:opacity-100'}`} onClick={() => setPlanIndividual('FREE')}>
+                            
+                            <h3 className="text-2xl font-bold text-white mb-2">Básico</h3>
+                            <p className="text-slate-400 text-sm mb-6">Para quienes tienen disciplina de acero</p>
+                            <div className="text-4xl font-bold text-emerald-400 mb-6">
+                                $0
+                                <span className="text-sm text-slate-500 font-normal"> / mes</span>
+                            </div>
+                            
+                            <ul className="space-y-3 mb-8">
+                                <li className="flex gap-3 text-white text-sm"><Check size={16} className="text-emerald-500"/> Acceso al Wizard de Planeación</li>
+                                <li className="flex gap-3 text-white text-sm"><Check size={16} className="text-emerald-500"/> Dashboard de Tareas</li>
+                                <li className="flex gap-3 text-white text-sm font-bold"><Zap size={16} className="text-emerald-500"/> Autorización Inmediata (Sin Mentor)</li>
+                                <li className="flex gap-3 text-slate-500 text-sm line-through"><X size={16} className="text-slate-600"/> Sin Puntos Cuánticos</li>
+                                <li className="flex gap-3 text-slate-500 text-sm line-through"><X size={16} className="text-slate-600"/> Sin Revisión de Evidencias</li>
+                                <li className="flex gap-3 text-slate-500 text-sm line-through"><X size={16} className="text-slate-600"/> Sin Llamadas de Disciplina</li>
+                            </ul>
+
+                            <button 
+                              className={`w-full py-3 rounded-xl font-bold transition-colors ${planIndividual === 'FREE' ? 'bg-emerald-600 text-white hover:bg-emerald-500' : 'bg-slate-800 text-slate-400'}`} 
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (planIndividual === 'FREE') {
+                                  // Activar plan FREE directamente
+                                  const res = await fetch('/api/user/activate-free-tier', { method: 'POST' });
+                                  if (res.ok) {
+                                    router.push('/dashboard/carta/wizard-v2');
+                                  }
+                                }
+                              }}
+                            >
+                              {planIndividual === 'FREE' ? 'CONTINUAR GRATIS' : 'SELECCIONAR'}
+                            </button>
+                        </div>
                         
                         {/* PLAN STANDARD */}
-                        <div className={`relative p-8 rounded-2xl border transition-all cursor-pointer ${planIndividual === 'STANDARD' ? 'bg-slate-900 border-blue-500 shadow-2xl shadow-blue-900/20 transform scale-105 z-10' : 'bg-slate-950 border-slate-800 opacity-80 hover:opacity-100'}`} onClick={() => setPlanIndividual('STANDARD')}>
+                        <div className={`relative p-6 rounded-2xl border transition-all cursor-pointer ${planIndividual === 'STANDARD' ? 'bg-slate-900 border-blue-500 shadow-2xl shadow-blue-900/20 transform scale-105 z-10' : 'bg-slate-950 border-slate-800 opacity-80 hover:opacity-100'}`} onClick={() => setPlanIndividual('STANDARD')}>
                             <div className="absolute top-0 right-0 bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">POPULAR</div>
                             
                             <h3 className="text-2xl font-bold text-white mb-2">Standard</h3>
@@ -182,7 +218,6 @@ export default function SuscripcionPage() {
                                 <li className="flex gap-3 text-white text-sm font-bold"><Check size={16} className="text-blue-500"/> 🎯 Mentor Personal Asignado</li>
                                 <li className="flex gap-3 text-white text-sm font-bold"><Check size={16} className="text-blue-500"/> 📞 Sesiones 1:1 Semanales</li>
                                 <li className="flex gap-3 text-white text-sm"><Check size={16} className="text-blue-500"/> Retroalimentación Experta</li>
-                                <li className="flex gap-3 text-white text-sm"><Check size={16} className="text-blue-500"/> Seguimiento de Progreso</li>
                             </ul>
 
                             <button className={`w-full py-3 rounded-xl font-bold transition-colors ${planIndividual === 'STANDARD' ? 'bg-blue-600 text-white hover:bg-blue-500' : 'bg-slate-800 text-slate-400'}`} onClick={iniciarProceso}>
@@ -191,7 +226,7 @@ export default function SuscripcionPage() {
                         </div>
 
                         {/* PLAN PREMIUM (anteriormente QUANTUM) */}
-                        <div className={`relative p-8 rounded-2xl border transition-all cursor-pointer overflow-hidden ${planIndividual === 'QUANTUM' ? 'bg-slate-900 border-yellow-500 shadow-2xl shadow-yellow-900/20 transform scale-105 z-10' : 'bg-slate-950 border-slate-800 opacity-80 hover:opacity-100'}`} onClick={() => setPlanIndividual('QUANTUM')}>
+                        <div className={`relative p-6 rounded-2xl border transition-all cursor-pointer overflow-hidden ${planIndividual === 'QUANTUM' ? 'bg-slate-900 border-yellow-500 shadow-2xl shadow-yellow-900/20 transform scale-105 z-10' : 'bg-slate-950 border-slate-800 opacity-80 hover:opacity-100'}`} onClick={() => setPlanIndividual('QUANTUM')}>
                             <div className="absolute top-0 right-0 bg-gradient-to-r from-yellow-500 to-orange-500 text-slate-900 text-xs font-bold px-3 py-1 rounded-bl-lg">⭐ RECOMENDADO</div>
                             
                             <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">Premium <Zap size={20} className="text-yellow-500 fill-current"/></h3>
@@ -208,7 +243,6 @@ export default function SuscripcionPage() {
                                 <li className="flex gap-3 text-white text-sm font-bold"><Check size={16} className="text-yellow-500"/> 💬 Chat Directo con Mentor</li>
                                 <li className="flex gap-3 text-white text-sm"><Check size={16} className="text-yellow-500"/> Revisión Inmediata de Tareas</li>
                                 <li className="flex gap-3 text-white text-sm"><Check size={16} className="text-yellow-500"/> Prioridad en Soporte</li>
-                                <li className="flex gap-3 text-white text-sm"><Check size={16} className="text-yellow-500"/> Acceso a Contenido Exclusivo</li>
                             </ul>
 
                             <button className={`w-full py-3 rounded-xl font-bold transition-colors ${planIndividual === 'QUANTUM' ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-slate-900 hover:from-yellow-400 hover:to-orange-400' : 'bg-slate-800 text-slate-400'}`} onClick={iniciarProceso}>
