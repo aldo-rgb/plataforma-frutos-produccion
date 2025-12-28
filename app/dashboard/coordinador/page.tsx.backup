@@ -1,0 +1,300 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import {
+  Users, Target, Ticket, BarChart3, Zap,
+  AlertTriangle, Building2, GraduationCap, Star, Activity
+} from 'lucide-react';
+import Link from 'next/link';
+
+interface DashboardData {
+  overview: {
+    totalStudents: number;
+    activeStudents: number;
+    completionRate: number;
+    totalCommunityMembers?: number;
+  };
+  tierDistribution: {
+    tier: string;
+    count: number;
+    percentage: number;
+  }[];
+  topStudents: {
+    id: number;
+    nombre: string;
+    puntosCultivo: number;
+    racha: number;
+    tier: string;
+  }[];
+  availableCredits: number;
+}
+
+export default function CoordinadorDashboard() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/signin');
+    } else if (session?.user?.rol !== 'COORDINADOR') {
+      router.push('/dashboard');
+    } else {
+      fetchDashboardData();
+    }
+  }, [status, session]);
+
+  const fetchDashboardData = async () => {
+    try {
+      const res = await fetch('/api/coordinador/dashboard-stats');
+      const result = await res.json();
+
+      if (res.ok && result.success) {
+        setData(result.stats);
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-6">
+        <div className="text-center">
+          <AlertTriangle className="mx-auto mb-4 text-yellow-400" size={64} />
+          <h2 className="text-2xl font-bold text-white mb-2">No hay datos disponibles</h2>
+          <p className="text-slate-400">Por favor contacte al administrador del sistema</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
+
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/10 pb-6">
+          <div>
+            <h1 className="text-4xl font-black text-white tracking-tight flex items-center gap-3">
+              Dashboard
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500 text-2xl">
+                Coordinador
+              </span>
+            </h1>
+            <p className="text-slate-400 mt-1">COORDINADOR • Panel de Control</p>
+            <p className="text-sm text-slate-500">{session?.user?.email}</p>
+          </div>
+        </div>
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <KpiCard
+            icon={<Users className="text-cyan-400" />}
+            label="Usuarios Totales"
+            value={data.overview.totalStudents.toString()}
+            trend="✅ Activos"
+            color="cyan"
+          />
+          <KpiCard
+            icon={<Building2 className="text-blue-400" />}
+            label="Comunidad"
+            value={(data.overview.totalCommunityMembers || 0).toString()}
+            trend="Todos los usuarios que pertenecen la comunidad"
+            color="blue"
+          />
+          <KpiCard
+            icon={<Target className="text-purple-400" />}
+            label="Tasa de Cumplimiento"
+            value={`${data.overview.completionRate}%`}
+            trend="Cartas y evidencias"
+            color="purple"
+          />
+          <KpiCard
+            icon={<Ticket className="text-yellow-400" />}
+            label="Licencias Disponibles"
+            value={data.availableCredits.toString()}
+            trend="✅ Activos"
+            color="yellow"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Columna Izquierda: Distribución de Planes */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-black text-white uppercase flex items-center gap-2">
+                <BarChart3 className="text-purple-400" /> Distribución de Estudiantes
+              </h2>
+            </div>
+
+            <div className="bg-slate-900/50 backdrop-blur border border-slate-800 rounded-3xl p-6">
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                {data.tierDistribution.map((tier) => (
+                  <div
+                    key={tier.tier}
+                    className="bg-slate-800/50 rounded-xl p-4 border border-slate-700"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-bold text-slate-400">{tier.tier}</span>
+                      <span className="text-2xl font-black text-white">{tier.count}</span>
+                    </div>
+                    <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${
+                          tier.tier === 'PREMIUM'
+                            ? 'bg-purple-500'
+                            : tier.tier === 'ELITE'
+                            ? 'bg-yellow-500'
+                            : 'bg-cyan-500'
+                        }`}
+                        style={{ width: `${tier.percentage}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-slate-500 mt-1 block">{tier.percentage.toFixed(0)}%</span>
+                  </div>
+                ))}
+              </div>
+
+              <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                <Star className="text-yellow-400" size={16} />
+                Top Estudiantes
+              </h3>
+              <div className="space-y-3">
+                {data.topStudents.slice(0, 5).map((student, index) => (
+                  <div
+                    key={student.id}
+                    className="flex items-center justify-between p-3 bg-slate-800/30 rounded-xl border border-slate-700/50 hover:border-purple-500/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <p className="text-white font-semibold text-sm">{student.nombre}</p>
+                        <p className="text-xs text-slate-400">{student.tier}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-white font-bold">{student.puntosCultivo} pts</p>
+                      <p className="text-xs text-yellow-400">🔥 {student.racha} días</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Columna Derecha: Acciones Rápidas */}
+          <div className="space-y-6">
+            <h2 className="text-xl font-black text-white uppercase flex items-center gap-2">
+              <Zap className="text-yellow-400" /> Acciones Rápidas
+            </h2>
+
+            <Link href="/dashboard/school-admin/visiones" className="block">
+              <div className="bg-gradient-to-br from-emerald-900/50 to-slate-900 border-2 border-emerald-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-emerald-500/20 group-hover:bg-emerald-500/30 rounded-xl transition-colors">
+                    <Users size={24} className="text-emerald-300" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm uppercase">
+                      Gestionar Visiones
+                    </h3>
+                    <p className="text-xs text-emerald-300">
+                      Crea y asigna licencias
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Crea visiones/grupos y gestiona las licencias de tus participantes
+                </p>
+              </div>
+            </Link>
+
+            <Link href="/dashboard/school-admin/users" className="block">
+              <div className="bg-gradient-to-br from-cyan-900/50 to-slate-900 border-2 border-cyan-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-cyan-500/20 group-hover:bg-cyan-500/30 rounded-xl transition-colors">
+                    <GraduationCap size={24} className="text-cyan-300" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm uppercase">
+                      Ver Mis Participantes
+                    </h3>
+                    <p className="text-xs text-cyan-300">
+                      Detalle y avances
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Lista completa: Participantes, Game Changers, Coordinadores y Mentores
+                </p>
+              </div>
+            </Link>
+
+            <div className="bg-gradient-to-br from-green-900/50 to-slate-900 border border-green-500/30 rounded-2xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-green-500/20 rounded-xl">
+                  <Activity size={24} className="text-green-300" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-sm uppercase">Progreso Global</h3>
+                  <p className="text-xs text-green-300">Rendimiento general</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Cumplimiento:</span>
+                  <span className="text-white font-bold">{data.overview.completionRate}%</span>
+                </div>
+                <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-green-500"
+                    style={{ width: `${data.overview.completionRate}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function KpiCard({ icon, label, value, trend, color }: any) {
+  const colors: any = {
+    cyan: 'border-cyan-500/20 bg-cyan-500/5',
+    blue: 'border-blue-500/20 bg-blue-500/5',
+    purple: 'border-purple-500/20 bg-purple-500/5',
+    yellow: 'border-yellow-500/20 bg-yellow-500/5',
+  };
+
+  return (
+    <div className={`p-6 rounded-2xl border ${colors[color]} backdrop-blur-sm`}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="p-2 bg-slate-900 rounded-lg">{icon}</div>
+        <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">KPI</span>
+      </div>
+      <p className="text-3xl font-black text-white">{value}</p>
+      <p className="text-xs font-medium text-slate-400 mt-1">{label}</p>
+      <div className="mt-4 pt-4 border-t border-white/5 text-[10px] font-mono text-slate-500">
+        {trend}
+      </div>
+    </div>
+  );
+}

@@ -28,20 +28,23 @@ export async function GET() {
       return NextResponse.json({ error: 'Solo mentores pueden acceder' }, { status: 403 });
     }
 
-    // Obtener todos los enrollments donde este usuario es mentor con estado ACTIVE
+    // Obtener todos los enrollments donde este usuario es mentor
     const enrollments = await prisma.programEnrollment.findMany({
       where: {
-        mentorId: usuario.id,
-        status: 'ACTIVE'
+        mentorId: usuario.id
+        // Removido el filtro de status para mostrar todos los mentorados
       },
       include: {
-        participant: {
+        Usuario_ProgramEnrollment_userIdToUsuario: {
           select: {
             id: true,
             nombre: true,
-            avatar: true,
+            profileImage: true,
             puntosCuanticos: true,
             nivelActual: true,
+            experienciaXP: true,
+            rangoActual: true,
+            tier: true,
             Organization: {
               select: {
                 name: true,
@@ -70,26 +73,36 @@ export async function GET() {
 
     // Formatear los datos
     const mentorados = enrollments.map(enrollment => {
-      const participant = enrollment.participant;
+      const participant = enrollment.Usuario_ProgramEnrollment_userIdToUsuario;
       const visionActiva = participant.ParticipanteEnVisiones[0]?.Vision;
       
       return {
         id: participant.id,
         nombre: participant.nombre,
-        avatar: participant.avatar,
+        avatar: participant.profileImage,
+        profileImage: participant.profileImage,
         quantumPoints: participant.puntosCuanticos || 0,
+        xp: participant.experienciaXP || 0,
         nivel: participant.nivelActual || 1,
+        tier: participant.tier || 'FREE',
+        rangoActual: participant.rangoActual || 'NOVATO_RASTREADOR',
         school: participant.Organization?.name || null,
         schoolLogo: participant.Organization?.logoUrl || null,
         vision: visionActiva?.nombre || null,
         visionId: visionActiva?.id || null,
-        status: 'ACTIVE', // Siempre ACTIVE porque filtramos por eso
-        enrollmentId: enrollment.id
+        status: enrollment.status || 'ACTIVE',
+        enrollmentId: enrollment.id,
+        position: 0 // Se actualizará después de ordenar
       };
     });
 
     // Ordenar por puntos cuánticos de mayor a menor
     mentorados.sort((a, b) => b.quantumPoints - a.quantumPoints);
+    
+    // Asignar posiciones después de ordenar
+    mentorados.forEach((mentorado, index) => {
+      mentorado.position = index + 1;
+    });
 
     return NextResponse.json({
       success: true,

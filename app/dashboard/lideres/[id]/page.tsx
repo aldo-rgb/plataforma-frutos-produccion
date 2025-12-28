@@ -2,8 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Zap, Trophy, Users, ShieldCheck, Target, Clock, CheckCircle, XCircle, Loader2, AlertTriangle 
+  Zap, Trophy, Users, ShieldCheck, Target, Clock, CheckCircle, XCircle, Loader2, AlertTriangle,
+  Award, TrendingUp, Calendar, Phone, Mail, MapPin, School, UserCircle, Flame, Star,
+  BookOpen, Activity, BarChart3, Eye, AlertCircle, Image as ImageIcon, ArrowLeft
 } from 'lucide-react';
+import Link from 'next/link';
 
 interface Meta {
   categoria: string;
@@ -11,6 +14,8 @@ interface Meta {
   objetivo: string;
   avance: number;
   meta: number;
+  estado?: 'completada' | 'en_progreso' | 'retrasada';
+  fechaLimite?: string;
 }
 
 interface Evidencia {
@@ -25,17 +30,54 @@ interface Evidencia {
   imagenUrl: string | null;
 }
 
+interface CallHistory {
+  fecha: string;
+  estado: 'asistio' | 'falto' | 'justificada';
+  tipo: string;
+}
+
 interface LiderData {
   id: number;
   nombre: string;
   email: string;
+  telefono: string | null;
   rol: string;
   puntosCuanticos: number;
+  experienciaXP: number;
+  nivelActual: number;
+  rangoActual: string;
   ranking: number;
   profileImage: string | null;
   estadoCarta: string;
+  tier: string;
+  completionStreak: number;
+  badges: string[];
+  
+  // Información organizacional
+  escuela: string | null;
+  vision: string | null;
+  coordinador: string | null;
+  director: string | null;
+  mentor: string | null;
+  
+  // Metas y progreso
   metas: Meta[];
+  metasProximas: Meta[];
+  metasRetrasadas: Meta[];
+  
+  // Llamadas
+  totalLlamadas: number;
+  llamadasAsistidas: number;
+  llamadasPerdidas: number;
+  tasaAsistencia: number;
+  historialLlamadas: CallHistory[];
+  
+  // Evidencias
   historialEvidencias: Evidencia[];
+  evidenciasAprobadas: number;
+  evidenciasRechazadas: number;
+  evidenciasPendientes: number;
+  
   miembroDesde: string;
 }
 
@@ -140,136 +182,384 @@ export default function LiderProfilePage({ params }: { params: Promise<{ id: str
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-20">
-      
-      {/* HEADER */}
-      <div className="border-b border-white/10 pb-6">
-        <p className="text-sm text-slate-500">Perfil de {getRolDisplay(lider.rol)} / ID: {lider.id}</p>
-        <h1 className="text-4xl font-black text-white italic tracking-tighter mt-1">
-          {lider.nombre}
-        </h1>
-        <p className="text-slate-400 mt-2 flex items-center gap-2">
-          <Users size={18} className='text-cyan-400' />
-          {getRolDisplay(lider.rol)} | Miembro desde {new Date(lider.miembroDesde).toLocaleDateString('es-MX', { year: 'numeric', month: 'long' })}
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 pb-20">
+      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        
+        {/* BOTÓN VOLVER */}
+        <Link 
+          href="/dashboard/mentor/participantes"
+          className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors group"
+        >
+          <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+          <span>Volver a Participantes</span>
+        </Link>
 
-      {/* MÉTRICAS CLAVE */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card title="Puntos Cuánticos" icon={<Zap size={18} className='text-yellow-400' />}>
-          <p className="text-4xl font-black text-yellow-400">{lider.puntosCuanticos.toLocaleString()}</p>
-        </Card>
-        <Card title="Ranking Actual" icon={<Trophy size={18} className='text-sky-400' />}>
-          <p className="text-4xl font-black text-sky-400">#{lider.ranking}</p>
-        </Card>
-        <Card title="Estado de Carta" icon={<ShieldCheck size={18} className='text-green-400' />}>
-          <p className={`text-4xl font-black ${getEstadoCartaColor(lider.estadoCarta)}`}>
-            {getEstadoCartaTexto(lider.estadoCarta)}
-          </p>
-        </Card>
-      </div>
-
-      {/* PROGRESO DE METAS FRUTOS */}
-      {lider.metas.length > 0 && (
-        <Card title="Progreso de Metas FRUTOS" icon={<Target size={18} className='text-pink-400' />}>
-          <div className="space-y-4">
-            {lider.metas.map((meta, index) => (
-              <div key={index}>
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-white font-medium">{meta.categoria}: {meta.objetivo}</span>
-                  <span className="text-sm font-bold text-slate-300">{meta.progreso}%</span>
+        {/* ===== HEADER CON FOTO Y DATOS PRINCIPALES ===== */}
+        <div className="bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 border border-purple-500/30 rounded-2xl p-8 shadow-2xl">
+          <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
+            
+            {/* Avatar */}
+            <div className="relative">
+              {lider.profileImage ? (
+                <img 
+                  src={lider.profileImage} 
+                  alt={lider.nombre}
+                  className="w-32 h-32 rounded-2xl object-cover border-4 border-purple-500 shadow-xl"
+                />
+              ) : (
+                <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center border-4 border-purple-500 shadow-xl">
+                  <UserCircle size={64} className="text-white" />
                 </div>
-                <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-pink-500 to-purple-500 transition-all duration-500" 
-                    style={{ width: `${meta.progreso}%` }}
-                  ></div>
-                </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  Avance: {meta.avance} / {meta.meta}
-                </p>
+              )}
+              <div className="absolute -bottom-2 -right-2 bg-purple-600 rounded-full p-2 border-4 border-slate-900">
+                <Trophy className="text-yellow-400" size={20} />
               </div>
-            ))}
-          </div>
-        </Card>
-      )}
+            </div>
 
-      {lider.metas.length === 0 && (
-        <Card title="Progreso de Metas FRUTOS" icon={<Target size={18} className='text-pink-400' />}>
-          <div className="text-center py-8 text-slate-500">
-            <Target className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>Este participante aún no tiene metas definidas</p>
-          </div>
-        </Card>
-      )}
+            {/* Info Principal */}
+            <div className="flex-1 space-y-3">
+              <div>
+                <h1 className="text-4xl font-black text-white mb-2">{lider.nombre}</h1>
+                <div className="flex flex-wrap gap-3">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-sm font-semibold border border-purple-500/30">
+                    <ShieldCheck size={16} />
+                    {getRolDisplay(lider.rol)}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/20 text-amber-300 rounded-full text-sm font-semibold border border-amber-500/30">
+                    <Star size={16} />
+                    {lider.tier || 'FREE'}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-500/20 text-green-300 rounded-full text-sm font-semibold border border-green-500/30">
+                    <Flame size={16} />
+                    {lider.completionStreak || 0} días racha
+                  </span>
+                </div>
+              </div>
 
-      {/* HISTORIAL DE EVIDENCIAS */}
-      <Card title="Historial de Revisión de Evidencias" icon={<Clock size={18} className='text-slate-400' />}>
-        {lider.historialEvidencias.length > 0 ? (
-          <div className="space-y-3">
-            {lider.historialEvidencias.map((ev) => {
-              const isApproved = ev.estado === 'APROBADO';
-              const isPending = ev.estado === 'PENDIENTE';
-              const isRejected = ev.estado === 'RECHAZADO';
+              {/* Contacto */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                <div className="flex items-center gap-2 text-slate-300">
+                  <Mail size={16} className="text-blue-400" />
+                  <span>{lider.email}</span>
+                </div>
+                {lider.telefono && (
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <Phone size={16} className="text-green-400" />
+                    <span>{lider.telefono}</span>
+                  </div>
+                )}
+                {lider.escuela && (
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <School size={16} className="text-purple-400" />
+                    <span>{lider.escuela}</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-slate-300">
+                  <Calendar size={16} className="text-cyan-400" />
+                  <span>Miembro desde {new Date(lider.miembroDesde).toLocaleDateString('es-MX', { month: 'short', year: 'numeric' })}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ===== MÉTRICAS CLAVE ===== */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <Card title="Nivel" icon={<Award size={18} className='text-purple-400' />}>
+            <p className="text-3xl font-black text-purple-400">{lider.nivelActual || 1}</p>
+            <p className="text-xs text-slate-400 mt-1">{lider.rangoActual || 'Sin rango'}</p>
+          </Card>
+          
+          <Card title="Puntos Cuánticos" icon={<Zap size={18} className='text-yellow-400' />}>
+            <p className="text-3xl font-black text-yellow-400">{(lider.puntosCuanticos || 0).toLocaleString()}</p>
+            <p className="text-xs text-slate-400 mt-1">PC</p>
+          </Card>
+          
+          <Card title="Experiencia" icon={<TrendingUp size={18} className='text-blue-400' />}>
+            <p className="text-3xl font-black text-blue-400">{(lider.experienciaXP || 0).toLocaleString()}</p>
+            <p className="text-xs text-slate-400 mt-1">XP</p>
+          </Card>
+          
+          <Card title="Ranking" icon={<Trophy size={18} className='text-amber-400' />}>
+            <p className="text-3xl font-black text-amber-400">#{lider.ranking || '--'}</p>
+            <p className="text-xs text-slate-400 mt-1">Global</p>
+          </Card>
+          
+          <Card title="Estado" icon={<Activity size={18} className='text-green-400' />}>
+            <p className={`text-2xl font-black ${getEstadoCartaColor(lider.estadoCarta)}`}>
+              {getEstadoCartaTexto(lider.estadoCarta)}
+            </p>
+          </Card>
+        </div>
+
+        {/* ===== INFORMACIÓN ORGANIZACIONAL ===== */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card title="Estructura Organizacional" icon={<Users size={18} className='text-cyan-400' />}>
+            <div className="space-y-2.5">
+              {lider.vision && (
+                <div className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg">
+                  <span className="text-slate-400 text-sm">Visión:</span>
+                  <span className="text-white font-semibold">{lider.vision}</span>
+                </div>
+              )}
+              {lider.director && (
+                <div className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg">
+                  <span className="text-slate-400 text-sm">Director:</span>
+                  <span className="text-white font-semibold">{lider.director}</span>
+                </div>
+              )}
+              {lider.coordinador && (
+                <div className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg">
+                  <span className="text-slate-400 text-sm">Coordinador:</span>
+                  <span className="text-white font-semibold">{lider.coordinador}</span>
+                </div>
+              )}
+              {lider.mentor && (
+                <div className="flex items-center justify-between p-2 bg-slate-800/50 rounded-lg">
+                  <span className="text-slate-400 text-sm">Mentor:</span>
+                  <span className="text-white font-semibold">{lider.mentor}</span>
+                </div>
+              )}
+              {!lider.vision && !lider.director && !lider.coordinador && !lider.mentor && (
+                <p className="text-slate-500 text-center py-4">Sin información organizacional</p>
+              )}
+            </div>
+          </Card>
+
+          <Card title="Historial de Llamadas" icon={<Phone size={18} className='text-green-400' />}>
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-2">
+                <div className="text-center p-2 bg-green-500/10 rounded-lg">
+                  <p className="text-2xl font-black text-green-400">{lider.llamadasAsistidas || 0}</p>
+                  <p className="text-xs text-slate-400">Asistidas</p>
+                </div>
+                <div className="text-center p-2 bg-red-500/10 rounded-lg">
+                  <p className="text-2xl font-black text-red-400">{lider.llamadasPerdidas || 0}</p>
+                  <p className="text-xs text-slate-400">Perdidas</p>
+                </div>
+                <div className="text-center p-2 bg-blue-500/10 rounded-lg">
+                  <p className="text-2xl font-black text-blue-400">{lider.tasaAsistencia || 0}%</p>
+                  <p className="text-xs text-slate-400">Asistencia</p>
+                </div>
+              </div>
               
-              return (
-                <div 
-                  key={ev.id} 
-                  className={`flex justify-between items-start p-3 rounded-lg transition-colors ${
-                    isApproved ? 'bg-green-500/10 hover:bg-green-500/20' : 
-                    isRejected ? 'bg-red-500/10 hover:bg-red-500/20' : 
-                    'bg-yellow-500/10 hover:bg-yellow-500/20'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    {isApproved && <CheckCircle size={20} className="text-green-500 mt-0.5 flex-shrink-0" />}
-                    {isRejected && <XCircle size={20} className="text-red-500 mt-0.5 flex-shrink-0" />}
-                    {isPending && <Clock size={20} className="text-yellow-500 mt-0.5 flex-shrink-0 animate-pulse" />}
-                    
-                    <div className="flex-1">
-                      <p className="text-white font-medium">{ev.meta}</p>
-                      {ev.categoria && (
-                        <span className="inline-block text-xs bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full mt-1">
-                          {ev.categoria}
-                        </span>
-                      )}
-                      <p className="text-xs text-slate-400 mt-1">
-                        Revisado por: {ev.mentor} • {ev.fecha}
-                      </p>
-                      {ev.feedback && (
-                        <p className="text-xs text-red-300 mt-2 italic bg-red-500/10 p-2 rounded">
-                          <strong>Feedback:</strong> {ev.feedback}
+              {lider.historialLlamadas && lider.historialLlamadas.length > 0 && (
+                <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                  {lider.historialLlamadas.slice(0, 5).map((llamada, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-xs p-2 bg-slate-800/30 rounded">
+                      <span className="text-slate-400">{llamada.fecha}</span>
+                      <span className={`font-semibold ${
+                        llamada.estado === 'asistio' ? 'text-green-400' :
+                        llamada.estado === 'justificada' ? 'text-yellow-400' :
+                        'text-red-400'
+                      }`}>
+                        {llamada.estado === 'asistio' ? '✓ Asistió' :
+                         llamada.estado === 'justificada' ? '⚠ Justificada' :
+                         '✗ Faltó'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+
+        {/* ===== LOGROS Y BADGES ===== */}
+        {lider.badges && lider.badges.length > 0 && (
+          <Card title="Logros Desbloqueados" icon={<Award size={18} className='text-amber-400' />}>
+            <div className="flex flex-wrap gap-3">
+              {lider.badges.map((badge, idx) => (
+                <div key={idx} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-full">
+                  <Star className="text-amber-400" size={16} />
+                  <span className="text-amber-200 font-semibold text-sm">{badge}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* ===== METAS PRÓXIMAS ===== */}
+        {lider.metasProximas && lider.metasProximas.length > 0 && (
+          <Card title="Metas Próximas" icon={<Target size={18} className='text-green-400' />}>
+            <div className="space-y-3">
+              {lider.metasProximas.map((meta, index) => (
+                <div key={index} className="p-3 bg-green-500/5 border border-green-500/20 rounded-lg">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <p className="text-white font-semibold">{meta.categoria}: {meta.objetivo}</p>
+                      {meta.fechaLimite && (
+                        <p className="text-xs text-green-400 flex items-center gap-1 mt-1">
+                          <Clock size={12} />
+                          Límite: {meta.fechaLimite}
                         </p>
                       )}
                     </div>
+                    <span className="text-sm font-bold text-green-400">{meta.progreso}%</span>
                   </div>
-                  
-                  <div className="flex flex-col items-end gap-1">
-                    <span className={`text-sm font-bold ${
-                      isApproved ? 'text-green-400' : 
-                      isRejected ? 'text-red-400' : 
-                      'text-yellow-400'
-                    }`}>
-                      {ev.estado}
-                    </span>
-                    {ev.puntos > 0 && (
-                      <span className="text-xs text-yellow-500 flex items-center gap-1">
-                        <Zap size={12} fill="currentColor" /> +{ev.puntos} PC
-                      </span>
-                    )}
+                  <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-green-500 to-emerald-500 transition-all duration-500" 
+                      style={{ width: `${meta.progreso}%` }}
+                    ></div>
                   </div>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Avance: {meta.avance} / {meta.meta}
+                  </p>
                 </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-slate-500">
-            <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>No hay evidencias registradas todavía</p>
-          </div>
+              ))}
+            </div>
+          </Card>
         )}
-      </Card>
-      
+
+        {/* ===== METAS RETRASADAS ===== */}
+        {lider.metasRetrasadas && lider.metasRetrasadas.length > 0 && (
+          <Card title="Metas Retrasadas" icon={<AlertCircle size={18} className='text-red-400' />}>
+            <div className="space-y-3">
+              {lider.metasRetrasadas.map((meta, index) => (
+                <div key={index} className="p-3 bg-red-500/5 border border-red-500/20 rounded-lg">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <p className="text-white font-semibold">{meta.categoria}: {meta.objetivo}</p>
+                      {meta.fechaLimite && (
+                        <p className="text-xs text-red-400 flex items-center gap-1 mt-1">
+                          <AlertTriangle size={12} />
+                          Venció: {meta.fechaLimite}
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-sm font-bold text-red-400">{meta.progreso}%</span>
+                  </div>
+                  <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-red-500 to-orange-500 transition-all duration-500" 
+                      style={{ width: `${meta.progreso}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Avance: {meta.avance} / {meta.meta}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* ===== PROGRESO DE METAS FRUTOS GENERAL ===== */}
+        {lider.metas && lider.metas.length > 0 && (
+          <Card title="Todas las Metas FRUTOS" icon={<Target size={18} className='text-pink-400' />}>
+            <div className="space-y-3">
+              {lider.metas.map((meta, index) => (
+                <div key={index} className="p-3 bg-slate-800/30 rounded-lg hover:bg-slate-800/50 transition-colors">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-white font-medium">{meta.categoria}: {meta.objetivo}</span>
+                    <span className="text-sm font-bold text-slate-300">{meta.progreso}%</span>
+                  </div>
+                  <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-pink-500 to-purple-500 transition-all duration-500" 
+                      style={{ width: `${meta.progreso}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Avance: {meta.avance} / {meta.meta}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* ===== ESTADÍSTICAS DE EVIDENCIAS ===== */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card title="Evidencias Aprobadas" icon={<CheckCircle size={18} className='text-green-400' />}>
+            <p className="text-4xl font-black text-green-400">{lider.evidenciasAprobadas || 0}</p>
+          </Card>
+          <Card title="Evidencias Pendientes" icon={<Clock size={18} className='text-yellow-400' />}>
+            <p className="text-4xl font-black text-yellow-400">{lider.evidenciasPendientes || 0}</p>
+          </Card>
+          <Card title="Evidencias Rechazadas" icon={<XCircle size={18} className='text-red-400' />}>
+            <p className="text-4xl font-black text-red-400">{lider.evidenciasRechazadas || 0}</p>
+          </Card>
+        </div>
+
+        {/* ===== HISTORIAL DE EVIDENCIAS ===== */}
+        <Card title="Historial Completo de Evidencias" icon={<ImageIcon size={18} className='text-purple-400' />}>
+          {lider.historialEvidencias && lider.historialEvidencias.length > 0 ? (
+            <div className="space-y-2">
+              {lider.historialEvidencias.map((ev) => {
+                const isApproved = ev.estado === 'APROBADO';
+                const isPending = ev.estado === 'PENDIENTE';
+                const isRejected = ev.estado === 'RECHAZADO';
+                
+                return (
+                  <div 
+                    key={ev.id} 
+                    className={`flex justify-between items-start p-3 rounded-lg transition-all hover:scale-[1.01] ${
+                      isApproved ? 'bg-green-500/10 border border-green-500/20' : 
+                      isRejected ? 'bg-red-500/10 border border-red-500/20' : 
+                      'bg-yellow-500/10 border border-yellow-500/20'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3 flex-1">
+                      {isApproved && <CheckCircle size={20} className="text-green-500 mt-0.5 flex-shrink-0" />}
+                      {isRejected && <XCircle size={20} className="text-red-500 mt-0.5 flex-shrink-0" />}
+                      {isPending && <Clock size={20} className="text-yellow-500 mt-0.5 flex-shrink-0 animate-pulse" />}
+                      
+                      <div className="flex-1">
+                        <p className="text-white font-semibold">{ev.meta}</p>
+                        {ev.categoria && (
+                          <span className="inline-block text-xs bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full mt-1">
+                            {ev.categoria}
+                          </span>
+                        )}
+                        <p className="text-xs text-slate-400 mt-1 flex items-center gap-2">
+                          <UserCircle size={12} />
+                          {ev.mentor} • {ev.fecha}
+                        </p>
+                        {ev.feedback && (
+                          <div className="mt-2 p-2 bg-slate-900/50 rounded border-l-2 border-red-500">
+                            <p className="text-xs text-slate-300">
+                              <strong className="text-red-400">Feedback:</strong> {ev.feedback}
+                            </p>
+                          </div>
+                        )}
+                        {ev.imagenUrl && (
+                          <button className="mt-2 text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                            <Eye size={12} />
+                            Ver imagen
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col items-end gap-1 ml-3">
+                      <span className={`text-xs font-bold px-2 py-1 rounded ${
+                        isApproved ? 'bg-green-500/20 text-green-400' : 
+                        isRejected ? 'bg-red-500/20 text-red-400' : 
+                        'bg-yellow-500/20 text-yellow-400'
+                      }`}>
+                        {ev.estado}
+                      </span>
+                      {ev.puntos > 0 && (
+                        <span className="text-xs text-yellow-500 flex items-center gap-1 font-semibold">
+                          <Zap size={12} fill="currentColor" /> +{ev.puntos} PC
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-slate-500">
+              <ImageIcon className="w-16 h-16 mx-auto mb-4 opacity-30" />
+              <p className="font-semibold">No hay evidencias registradas</p>
+              <p className="text-sm mt-1">Este participante aún no ha subido evidencias</p>
+            </div>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }

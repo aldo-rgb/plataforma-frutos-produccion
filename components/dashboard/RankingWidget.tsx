@@ -4,9 +4,24 @@ import { useEffect, useState } from 'react';
 import { Trophy } from 'lucide-react';
 import Link from 'next/link';
 
+// Función para generar un color aleatorio basado en el ID del usuario
+const getRandomAvatarColor = (userId: number) => {
+  const colors = [
+    'bg-gradient-to-br from-purple-500 to-pink-500',
+    'bg-gradient-to-br from-blue-500 to-cyan-500',
+    'bg-gradient-to-br from-green-500 to-emerald-500',
+    'bg-gradient-to-br from-orange-500 to-red-500',
+    'bg-gradient-to-br from-indigo-500 to-purple-500',
+    'bg-gradient-to-br from-rose-500 to-pink-500',
+    'bg-gradient-to-br from-teal-500 to-green-500',
+    'bg-gradient-to-br from-amber-500 to-yellow-500',
+  ];
+  return colors[userId % colors.length];
+};
+
 export default function RankingWidget() {
   const [rankingData, setRankingData] = useState<{
-    topUsers: Array<{ id: number; nombre: string; puntos: number; position: number }>;
+    topUsers: Array<{ id: number; nombre: string; puntos: number; position: number; avatar?: string | null; xp: number }>;
     userRank: { position: number; total: number } | null;
     currentUserId: number | null;
   } | null>(null);
@@ -83,42 +98,72 @@ export default function RankingWidget() {
       </div>
 
       {/* Top 3 */}
-      <div className="px-3 py-3 space-y-2">
+      <div className="p-4 space-y-3">
         {rankingData.topUsers.slice(0, 3).map((user, index) => {
           const isCurrentUser = user.id === rankingData.currentUserId;
 
           return (
             <div
               key={user.id}
-              className={`flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+              className={`relative overflow-hidden rounded-xl transition-all ${
                 isCurrentUser 
                   ? `bg-gradient-to-r ${gradients[index]} border-2 shadow-lg` 
-                  : `bg-slate-800/50 border border-slate-700/30 hover:bg-slate-800/80`
+                  : `bg-slate-800/50 border border-slate-700/30 hover:bg-slate-800/80 hover:border-slate-600`
               }`}
             >
-              {/* Posición con medalla */}
-              <div className="flex-shrink-0 w-9 h-9 flex items-center justify-center text-2xl">
-                {medals[index]}
-              </div>
+              <div className="flex items-center justify-between p-3">
+                {/* Lado izquierdo: Avatar + Info */}
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  {/* Avatar o imagen */}
+                  <div className="flex-shrink-0 relative">
+                    {user.avatar ? (
+                      <img 
+                        src={user.avatar} 
+                        alt={user.nombre}
+                        className="w-12 h-12 rounded-full object-cover border-2 border-slate-600 shadow-lg"
+                      />
+                    ) : (
+                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-base border-2 border-slate-600 shadow-lg ${getRandomAvatarColor(user.id)}`}>
+                        {user.nombre.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    {/* Medalla en la esquina */}
+                    <div className="absolute -bottom-1 -right-1 text-base drop-shadow-md">
+                      {medals[index]}
+                    </div>
+                  </div>
 
-              {/* Info del usuario */}
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm font-bold truncate ${
-                  isCurrentUser ? 'text-white' : 'text-slate-300'
-                }`}>
-                  {isCurrentUser ? 'Tú' : user.nombre.split(' ')[0]}
-                </p>
-                <p className="text-xs text-slate-400 font-medium">
-                  {user.puntos.toLocaleString()} PC
-                </p>
-              </div>
-
-              {/* Badge si es el usuario actual */}
-              {isCurrentUser && (
-                <div className="flex-shrink-0 px-2 py-1 bg-purple-600 rounded-full">
-                  <span className="text-[10px] font-bold text-white">TÚ</span>
+                  {/* Info del usuario */}
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-bold truncate mb-0.5 ${
+                      isCurrentUser ? 'text-white' : 'text-slate-200'
+                    }`}>
+                      {isCurrentUser ? 'Tú' : user.nombre.split(' ')[0]}
+                    </p>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-slate-400 font-medium">
+                        #{user.position} • {user.puntos.toLocaleString()} PC
+                      </span>
+                      <span className="text-blue-400 font-semibold">
+                        • {user.xp.toLocaleString()} XP
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              )}
+
+                {/* Lado derecho: Badge o Posición */}
+                <div className="flex-shrink-0 ml-2">
+                  {isCurrentUser ? (
+                    <div className="px-3 py-1.5 bg-purple-600 rounded-full shadow-lg">
+                      <span className="text-xs font-bold text-white">TÚ</span>
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-slate-900/50 border border-slate-700 flex items-center justify-center">
+                      <span className="text-lg font-bold text-slate-400">#{user.position}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           );
         })}

@@ -120,6 +120,13 @@ export default function QuantumLeaderboardPage() {
         return;
       }
 
+      // Si es VISION o SCHOOL y no hay entityId seleccionado, no cargar
+      if ((rankingType === 'VISION' || rankingType === 'SCHOOL') && !selectedEntity) {
+        setRanking([]);
+        setLoading(false);
+        return;
+      }
+
       const params = new URLSearchParams({
         type: rankingType,
         timeframe,
@@ -364,6 +371,28 @@ export default function QuantumLeaderboardPage() {
                 </p>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Mensaje: Selecciona una visión */}
+        {rankingType === 'VISION' && !selectedEntity && !loading && (
+          <div className="mb-6 bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/30 rounded-lg p-6 text-center">
+            <Eye className="text-blue-400 mx-auto mb-3" size={40} />
+            <p className="text-blue-200 font-semibold mb-2">Selecciona una Visión</p>
+            <p className="text-slate-300 text-sm">
+              Por favor selecciona una visión del menú desplegable para ver el ranking de participantes.
+            </p>
+          </div>
+        )}
+
+        {/* Mensaje: Selecciona una escuela */}
+        {rankingType === 'SCHOOL' && !selectedEntity && !loading && (
+          <div className="mb-6 bg-gradient-to-r from-blue-900/30 to-cyan-900/30 border border-cyan-500/30 rounded-lg p-6 text-center">
+            <Building2 className="text-cyan-400 mx-auto mb-3" size={40} />
+            <p className="text-cyan-200 font-semibold mb-2">Selecciona una Escuela</p>
+            <p className="text-slate-300 text-sm">
+              Por favor selecciona una institución del menú desplegable para ver su ranking.
+            </p>
           </div>
         )}
 
@@ -753,14 +782,20 @@ export default function QuantumLeaderboardPage() {
                       >
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-3">
-                            <img
-                              src={mentorado.avatar || '/default-avatar.png'}
-                              alt={mentorado.nombre}
-                              className="w-12 h-12 rounded-full object-cover border-2 border-green-500"
-                            />
+                            {mentorado.avatar || mentorado.profileImage ? (
+                              <img
+                                src={mentorado.avatar || mentorado.profileImage}
+                                alt={mentorado.nombre}
+                                className="w-12 h-12 rounded-full object-cover border-2 border-green-500"
+                              />
+                            ) : (
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white font-bold border-2 border-green-500">
+                                {mentorado.nombre?.charAt(0) || '?'}
+                              </div>
+                            )}
                             <div>
                               <p className="text-white font-bold">{mentorado.nombre}</p>
-                              <p className="text-slate-400 text-xs">ID: {mentorado.id}</p>
+                              <p className="text-slate-400 text-xs">{mentorado.rangoActual || 'Sin rango'}</p>
                             </div>
                           </div>
                         </td>

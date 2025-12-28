@@ -117,7 +117,7 @@ model LicenseAssignment {
   Organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   User           Usuario      @relation("LicenseAssignmentUser", fields: [userId], references: [id], onDelete: Cascade)
   Vision         Vision?      @relation(fields: [visionId], references: [id])
-  License        License      @relation("LicenseToAssignments", fields: [licenseCode], references: [code])
+  // License        License      @relation("LicenseToAssignments", fields: [licenseCode], references: [code])
 
   @@index([userId])
   @@index([organizationId])
@@ -146,7 +146,7 @@ model License {
   revokedBy          Int?
   studentName        String?
   Organization       Organization?       @relation(fields: [organizationId], references: [id])
-  LicenseAssignment  LicenseAssignment[] @relation("LicenseToAssignments")
+  // LicenseAssignment  LicenseAssignment[] @relation("LicenseToAssignments")
 
   @@index([code])
   @@index([organizationId])
@@ -396,6 +396,10 @@ model EvidenciaAccion {
   qualityScore     Int?
   rarityBonus      Boolean          @default(false)
   sharedCount      Int              @default(0)
+  tipoRechazo      TipoRechazo?
+  rechazadaDefinitivamente Boolean  @default(false)
+  puntosGenerados  Int              @default(0)
+  intentosCorreccion Int            @default(0)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime
   Accion           Accion           @relation(fields: [accionId], references: [id], onDelete: Cascade)
@@ -767,6 +771,7 @@ model Usuario {
   ProgramEnrollment_ProgramEnrollment_userIdToUsuario              ProgramEnrollment[]       @relation("ProgramEnrollment_userIdToUsuario")
   QuantumInsights                                                  QuantumInsight[]          @relation("QuantumInsights")
   QuantumPatterns                                                  QuantumPattern[]          @relation("QuantumPatterns")
+  QuantumIdentities                                                QuantumIdentity[]
   ReporteAnonimo_estudiante                                        ReporteAnonimo[]          @relation("ReporteAnonimo_estudiante")
   ReporteAnonimo_mentor                                            ReporteAnonimo[]          @relation("ReporteAnonimo_mentor")
   ResenasMentoria                                                  ResenasMentoria[]
@@ -1441,6 +1446,12 @@ enum EstadoEvidencia {
   PENDIENTE
   APROBADA
   RECHAZADA
+  REQUIERE_CORRECCION
+}
+
+enum TipoRechazo {
+  DEFINITIVO
+  REQUIERE_ACTUALIZACION
 }
 
 enum EstadoLlamada {
@@ -1699,4 +1710,19 @@ enum NotificationType {
   MENTOR_ASSIGNMENT
   SYSTEM_ALERT
   OTHER
+}
+
+model QuantumIdentity {
+  id              Int       @id @default(autoincrement())
+  userId          Int
+  candidates      Json      // Array de 3 opciones generadas
+  selectedOption  Json?     // La opción que el usuario eligió
+  status          String    @default("PENDING_SELECTION") // PENDING_SELECTION, COMPLETED
+  avatarUrl       String?   // URL del avatar generado
+  generatedAt     DateTime  @default(now())
+  completedAt     DateTime?
+  Usuario         Usuario   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
 }

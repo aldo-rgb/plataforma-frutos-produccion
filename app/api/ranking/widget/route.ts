@@ -64,10 +64,12 @@ export async function GET() {
       select: {
         id: true,
         nombre: true,
-        quantumPoints: true
+        puntosCuanticos: true,
+        profileImage: true,
+        experienciaXP: true
       },
       orderBy: {
-        quantumPoints: 'desc'
+        puntosCuanticos: 'desc'
       }
     });
 
@@ -75,8 +77,10 @@ export async function GET() {
     const topUsers = usersInVision.slice(0, 3).map((user, index) => ({
       id: user.id,
       nombre: user.nombre,
-      puntos: user.quantumPoints || 0,
-      position: index + 1
+      puntos: user.puntosCuanticos || 0,
+      position: index + 1,
+      avatar: user.profileImage,
+      xp: user.experienciaXP || 0
     }));
 
     // Encontrar la posición del usuario actual

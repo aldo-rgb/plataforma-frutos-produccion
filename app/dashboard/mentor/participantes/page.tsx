@@ -288,29 +288,13 @@ export default function MisParticipantes() {
                     </div>
                   </td>
                   <td className="p-4 text-right">
-                    <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Link 
-                        href={`/dashboard/mentor/chat/${p.id}`}
-                        title="Enviar Mensaje" 
-                        className="p-2 hover:bg-slate-700 rounded-lg text-gray-400 hover:text-white transition"
-                      >
-                        <Mail size={18} />
-                      </Link>
-                      <Link 
-                        href={`/dashboard/mentor/agendar/${p.id}`}
-                        title="Agendar Sesión" 
-                        className="p-2 hover:bg-slate-700 rounded-lg text-gray-400 hover:text-purple-400 transition"
-                      >
-                        <Calendar size={18} />
-                      </Link>
-                      <Link 
-                        href={`/dashboard/lideres/${p.id}`}
-                        title="Ver Perfil Completo" 
-                        className="p-2 hover:bg-slate-700 rounded-lg text-gray-400 hover:text-white transition"
-                      >
-                        <TrendingUp size={18} />
-                      </Link>
-                    </div>
+                    <Link 
+                      href={`/dashboard/lideres/${p.id}`}
+                      className="inline-flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-gray-300 hover:text-white transition-all group"
+                    >
+                      <TrendingUp size={18} className="group-hover:scale-110 transition-transform" />
+                      <span className="text-sm font-medium">Ver Progreso</span>
+                    </Link>
                   </td>
                 </tr>
               ))}

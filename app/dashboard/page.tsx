@@ -359,7 +359,7 @@ export default async function DashboardPage() {
   }
 
   if (usuario.rol === "COORDINADOR") {
-    redirect("/dashboard/staff");
+    redirect("/dashboard/coordinador");
   }
 
   // 3. Lógica visual según el Rol - Solo PARTICIPANTE, LIDER o GAMECHANGER llegan aquí

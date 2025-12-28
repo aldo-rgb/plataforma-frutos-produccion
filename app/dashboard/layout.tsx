@@ -10,6 +10,7 @@ import { ToastProvider } from "../../components/ui/ToastProvider";
 import { PhoenixProvider } from "../../contexts/PhoenixContext";
 import { PhoenixWrapper } from "../../components/phoenix/PhoenixWrapper";
 import { QuantumNotificationBanner } from "../../components/notifications/QuantumNotificationBanner";
+import { QuantumIdentityWrapper } from "../../components/quantum/QuantumIdentityWrapper";
 
 export default async function DashboardLayout({
   children,
@@ -92,6 +93,9 @@ export default async function DashboardLayout({
 
                 {/* Banner de Notificación Quantum */}
                 <QuantumNotificationBanner />
+
+                {/* Modal de Identidad Cuántica */}
+                <QuantumIdentityWrapper />
 
                 <main className="w-full flex-grow p-6">
                   {/* Envolvemos el contenido con el Guardián */}
