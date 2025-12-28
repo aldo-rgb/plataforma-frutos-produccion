@@ -217,6 +217,48 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { mentorId, slot1, slot2, totalWeeks = 8 } = body;
 
+    // ===== VALIDACIÓN 1: LICENCIA ACTIVA =====
+    // Verificar que el usuario tenga una licencia activa
+    const activeLicense = await prisma.licenseAssignment.findFirst({
+      where: {
+        userId: session.user.id,
+        status: 'ACTIVE'
+      },
+      include: {
+        License: {
+          select: {
+            planType: true,
+            expirationDate: true
+          }
+        }
+      }
+    });
+
+    if (!activeLicense) {
+      return NextResponse.json({ 
+        error: 'No tienes una licencia activa. Contacta a tu coordinador para obtener acceso al programa.' 
+      }, { status: 403 });
+    }
+
+    // Verificar que la licencia no haya expirado
+    if (activeLicense.License?.expirationDate) {
+      const expirationDate = new Date(activeLicense.License.expirationDate);
+      const now = new Date();
+      
+      if (expirationDate < now) {
+        return NextResponse.json({ 
+          error: 'Tu licencia ha expirado. Contacta a tu coordinador para renovarla.' 
+        }, { status: 403 });
+      }
+    }
+
+    console.log('✅ Usuario tiene licencia activa:', {
+      userId: session.user.id,
+      planType: activeLicense.License?.planType,
+      expirationDate: activeLicense.License?.expirationDate
+    });
+
+    // ===== VALIDACIÓN 2: DATOS REQUERIDOS =====
     // Validaciones
     if (!mentorId || !slot1 || !slot2) {
       return NextResponse.json({ 

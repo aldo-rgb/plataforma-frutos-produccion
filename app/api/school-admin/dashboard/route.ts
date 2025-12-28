@@ -94,13 +94,25 @@ export async function GET(req: Request) {
       },
       _sum: {
         totalPurchased: true,
-        totalAllocated: true,
+      }
+    });
+
+    // Contar solo las licencias ACTIVADAS (con activatedAt no nulo)
+    const activatedLicenses = await prisma.licenseAssignment.count({
+      where: {
+        Organization: {
+          id: fullUser.organizationId
+        },
+        isActive: true,
+        activatedAt: {
+          not: null
+        }
       }
     });
 
     const totalPurchased = schoolCredits._sum.totalPurchased || 0;
-    const totalAllocated = schoolCredits._sum.totalAllocated || 0;
-    const availableCredits = totalPurchased - totalAllocated;
+    const totalActivated = activatedLicenses;
+    const availableCredits = totalPurchased - totalActivated;
 
     // 4. Calcular distribución de tiers
     const tierDistribution = organization.Users.reduce((acc: Record<string, number>, user: any) => {
@@ -122,7 +134,7 @@ export async function GET(req: Request) {
       }));
 
     // 6. Estadísticas generales
-    const totalStudents = totalAllocated; // Número de licencias asignadas
+    const totalStudents = totalActivated; // Número de licencias activadas
     const totalMentors = organization.Users.filter((u: any) => u.rol === 'MENTOR').length;
     const totalUsers = organization.Users.length;
     
@@ -174,7 +186,7 @@ export async function GET(req: Request) {
         totalCommunityMembers, // NUEVO: Contador de comunidad total
         availableCredits,
         totalPurchased,
-        totalAllocated,
+        totalActivated,
       },
       pendingOrders,
       completedOrders,

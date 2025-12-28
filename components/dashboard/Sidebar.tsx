@@ -35,6 +35,17 @@ export function Sidebar({ usuario }: SidebarProps) {
   const [cartaStatus, setCartaStatus] = useState<string | null>(null);
   const [showUpsellModal, setShowUpsellModal] = useState(false);
   const [upsellMessage, setUpsellMessage] = useState('');
+  const [rankingData, setRankingData] = useState<{
+    topUsers: Array<{ id: number; nombre: string; puntos: number; position: number }>;
+    userRank: { position: number; total: number } | null;
+  } | null>(null);
+  const [iaRecommendation, setIaRecommendation] = useState<{
+    message: string;
+    emoji: string;
+  }>({
+    message: 'Completa tus tareas de hoy para ganar más puntos 🚀',
+    emoji: '💡'
+  });
 
   // Obtener estado de la carta
   useEffect(() => {
@@ -53,6 +64,47 @@ export function Sidebar({ usuario }: SidebarProps) {
     // Solo fetch si es participante
     if (usuario.rol === 'PARTICIPANTE') {
       fetchCartaStatus();
+    }
+  }, [usuario.rol]);
+
+  // Obtener datos de ranking
+  useEffect(() => {
+    const fetchRanking = async () => {
+      try {
+        const response = await fetch('/api/ranking/widget');
+        if (response.ok) {
+          const data = await response.json();
+          setRankingData(data);
+        }
+      } catch (error) {
+        console.error('Error fetching ranking:', error);
+      }
+    };
+
+    if (usuario.rol === 'PARTICIPANTE') {
+      fetchRanking();
+    }
+  }, [usuario.rol]);
+
+  // Obtener recomendación de IA
+  useEffect(() => {
+    const fetchIARecommendation = async () => {
+      try {
+        const response = await fetch('/api/quantum-ia/recommendation');
+        if (response.ok) {
+          const data = await response.json();
+          setIaRecommendation({
+            message: data.message,
+            emoji: data.emoji || '💡'
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching IA recommendation:', error);
+      }
+    };
+
+    if (usuario.rol === 'PARTICIPANTE') {
+      fetchIARecommendation();
     }
   }, [usuario.rol]);
 
@@ -242,19 +294,7 @@ export function Sidebar({ usuario }: SidebarProps) {
           }`}
         >
           <Target size={20} className="text-purple-500" />
-          <span>Carta F.R.U.T.O.S.</span>
-        </Link>
-
-        <Link 
-          href="/dashboard/mentor-ia" 
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-            pathname === '/dashboard/mentor-ia' 
-              ? 'bg-blue-600 text-white' 
-              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-          }`}
-        >
-          <Bot size={20} className="text-indigo-400" />
-          <span>Mentor IA</span>
+          <span>Objetivos</span>
         </Link>
 
         {/* Quantum Detector - Monitor de Retrasos */}
@@ -397,19 +437,6 @@ export function Sidebar({ usuario }: SidebarProps) {
             >
               <CheckCircle2 size={18} className="text-cyan-400" />
               <span>Validar Evidencias</span>
-            </Link>
-
-            {/* Nuevo: Misiones y Eventos para Mentores */}
-            <Link 
-              href="/dashboard/admin/tareas" 
-              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
-                pathname.startsWith('/dashboard/admin/tareas')
-                  ? 'bg-gradient-to-r from-amber-600 to-purple-600 text-white shadow-lg'
-                  : 'text-slate-400 hover:text-white hover:bg-amber-900/20'
-              }`}
-            >
-              <Zap size={18} className="text-amber-400" />
-              <span>Misiones y Eventos</span>
             </Link>
 
             <Link 
@@ -618,8 +645,8 @@ export function Sidebar({ usuario }: SidebarProps) {
               </Link>
             )}
 
-            {/* Gestor de Misiones y Eventos - Solo Admin y Coordinador */}
-            {(usuario.rol === 'ADMIN' || usuario.rol === 'ADMINISTRADOR' || usuario.rol === 'COORDINADOR') && (
+            {/* Gestor de Misiones y Eventos - Solo Admin, Coordinador y Director */}
+            {(usuario.rol === 'ADMIN' || usuario.rol === 'ADMINISTRADOR' || usuario.rol === 'COORDINADOR' || usuario.rol === 'DIRECTOR') && (
               <Link 
                 href="/dashboard/admin/tareas" 
                 className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
@@ -661,6 +688,118 @@ export function Sidebar({ usuario }: SidebarProps) {
           </div>
         )}
       </nav>
+
+      {/* Widget de Ranking - Solo para PARTICIPANTE */}
+      {usuario.rol === 'PARTICIPANTE' && rankingData && (
+        <div className="px-4 pb-4 border-t border-slate-800 pt-4">
+          <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 rounded-2xl overflow-hidden border border-slate-700/50 shadow-xl">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 px-4 py-3 border-b border-slate-700/50">
+              <div className="flex items-center justify-between">
+                <h3 className="text-slate-300 font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+                  <Trophy className="w-4 h-4 text-yellow-400" />
+                  Top Ranking
+                </h3>
+                <Link 
+                  href="/dashboard/ranking"
+                  className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                >
+                  Ver todo →
+                </Link>
+              </div>
+            </div>
+
+            {/* Top 3 */}
+            <div className="px-3 py-3 space-y-2">
+              {rankingData.topUsers.slice(0, 3).map((user, index) => {
+                const isCurrentUser = user.id === usuario.id;
+                const medals = ['🥇', '🥈', '🥉'];
+                const gradients = [
+                  'from-yellow-500/20 to-amber-600/20 border-yellow-500/40',
+                  'from-slate-400/20 to-slate-500/20 border-slate-400/40',
+                  'from-amber-600/20 to-orange-700/20 border-orange-500/40'
+                ];
+
+                return (
+                  <div
+                    key={user.id}
+                    className={`flex items-center gap-3 p-2 rounded-xl transition-all ${
+                      isCurrentUser 
+                        ? `bg-gradient-to-r ${gradients[index]} border-2 shadow-lg scale-105` 
+                        : `bg-slate-800/50 border border-slate-700/30 hover:bg-slate-800/80`
+                    }`}
+                  >
+                    {/* Posición con medalla */}
+                    <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center text-xl">
+                      {medals[index]}
+                    </div>
+
+                    {/* Info del usuario */}
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-bold truncate ${
+                        isCurrentUser ? 'text-white' : 'text-slate-300'
+                      }`}>
+                        {isCurrentUser ? 'Tú' : user.nombre.split(' ')[0]}
+                      </p>
+                      <p className="text-xs text-slate-400 font-medium">
+                        {user.puntos.toLocaleString()} PC
+                      </p>
+                    </div>
+
+                    {/* Badge si es el usuario actual */}
+                    {isCurrentUser && (
+                      <div className="flex-shrink-0 px-2 py-1 bg-purple-600 rounded-full">
+                        <span className="text-[10px] font-bold text-white">TÚ</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Posición del usuario si no está en el top 3 */}
+            {rankingData.userRank && rankingData.userRank.position > 3 && (
+              <div className="px-3 pb-3">
+                <div className="h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent mb-3"></div>
+                <div className="bg-gradient-to-br from-indigo-900/30 to-purple-900/30 border-2 border-indigo-500/50 rounded-xl p-3 shadow-lg">
+                  <div className="text-center mb-2">
+                    <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Tu Posición</p>
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">
+                        #{rankingData.userRank.position}
+                      </span>
+                      <span className="text-sm text-slate-500">
+                        de {rankingData.userRank.total}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-xs bg-black/20 rounded-lg px-3 py-2">
+                    <span className="text-slate-400">Tus puntos:</span>
+                    <span className="font-bold text-purple-300">{usuario.puntosCuanticos.toLocaleString()} PC</span>
+                  </div>
+                  <Link
+                    href="/dashboard/ranking"
+                    className="mt-2 w-full flex items-center justify-center gap-1 px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-xs font-bold rounded-lg transition-all shadow-lg"
+                  >
+                    <Trophy className="w-3 h-3" />
+                    Subir de Nivel
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {/* Si está en el top 3, mostrar una mini celebración */}
+            {rankingData.userRank && rankingData.userRank.position <= 3 && (
+              <div className="px-3 pb-3">
+                <div className="bg-gradient-to-r from-yellow-900/30 to-amber-900/30 border border-yellow-500/50 rounded-xl p-3 text-center">
+                  <p className="text-yellow-400 font-bold text-sm mb-1">🎉 ¡Estás en el Top 3!</p>
+                  <p className="text-xs text-yellow-200/80">Sigue así para mantenerte en la cima</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Logout Button */}
       <div className="p-4 border-t border-slate-800 space-y-2">

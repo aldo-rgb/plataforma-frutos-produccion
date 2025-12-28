@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Check, Sparkles, AlertCircle, Loader2, CheckCircle2, Brain, Atom, Settings, Send } from 'lucide-react';
 import { validateYoSoy } from '@/lib/validaciones-carta';
 import { extractSmartInfo, generateClosingMessage, type ExtractedInfo } from '@/lib/smart-extractor';
@@ -376,6 +376,7 @@ export default function CartaWizardRelacional() {
   const loadCarta = async () => {
     let userEmailForDraft = 'guest';
     let areasActivasParaDraft: typeof AREAS = [];
+    let transformationTargetValue: number | null = null;
     
     try {
       // PRIMERO: Obtener datos del usuario actual
@@ -391,12 +392,12 @@ export default function CartaWizardRelacional() {
       console.log('⚙️ Areas config:', areasConfigData);
       
       const perteneceGrupo = areasConfigData.perteneceAGrupo || false;
-      const transformationTarget = areasConfigData.transformationGuestsTarget || null;
+      transformationTargetValue = areasConfigData.transformationGuestsTarget || null;
       
       // Guardar objetivo de invitados si existe
-      if (transformationTarget) {
-        setObjetivoInvitados(transformationTarget);
-        console.log(`🎯 Objetivo de invitados: ${transformationTarget} personas`);
+      if (transformationTargetValue) {
+        setObjetivoInvitados(transformationTargetValue);
+        console.log(`🎯 Objetivo de invitados: ${transformationTargetValue} personas`);
       }
       
       // Filtrar áreas según configuración personalizada
@@ -549,7 +550,7 @@ export default function CartaWizardRelacional() {
         
         // DESPUÉS de cargar Quantum, asegurar que el objetivo de SERVICIO TRANSFORMACIONAL
         // esté configurado si la Vision lo requiere
-        if (transformationTarget && areasActivasParaDraft.some(a => a.key === 'servicioTrans')) {
+        if (transformationTargetValue && areasActivasParaDraft.some(a => a.key === 'servicioTrans')) {
           setTimeout(() => {
             setIdentidadesPorArea(prev => {
               // Si ya existe un objetivo de Quantum, no sobrescribir
@@ -559,12 +560,12 @@ export default function CartaWizardRelacional() {
               }
               
               // Si no hay objetivos, establecer el objetivo predefinido
-              console.log(`✅ Estableciendo objetivo predefinido para SERVICIO TRANSFORMACIONAL: Enrolar a ${transformationTarget} personas`);
+              console.log(`✅ Estableciendo objetivo predefinido para SERVICIO TRANSFORMACIONAL: Enrolar a ${transformationTargetValue} personas`);
               return {
                 ...prev,
                 servicioTrans: [{
                   id: 'servicioTrans-obj-predefinido',
-                  description: `Enrolar a ${transformationTarget} personas`,
+                  description: `Enrolar a ${transformationTargetValue} personas`,
                   isValid: true
                 }]
               };
@@ -869,20 +870,23 @@ export default function CartaWizardRelacional() {
     };
 
     const currentMetas = metasPorArea[objetoId] || [];
+    const updatedMetas = [...currentMetas, newMeta];
     setMetasPorArea({
       ...metasPorArea,
-      [objetoId]: [...currentMetas, newMeta]
+      [objetoId]: updatedMetas
     });
     setHasChanges(true);
     
     // Mostrar notificación
     showToast('✅ Acción agregada exitosamente');
     
-    // Generar una nueva sugerencia para reemplazar la seleccionada
+    // Generar 3 nuevas sugerencias para reemplazar todas
     const currentSuggestions = actionSuggestionsByObjetivo[objetoId] || [];
-    const remainingSuggestions = currentSuggestions.filter(s => s !== suggestion);
+    // Usar updatedMetas que incluye la acción recién agregada
+    const accionesExistentes = updatedMetas.map(a => a.description);
+    const todasLasSugerenciasPrevias = [...currentSuggestions, ...accionesExistentes];
     
-    // Solicitar una nueva sugerencia
+    // Solicitar 3 nuevas sugerencias
     try {
       const objetivo = getObjetivosFlattened().find(obj => obj.objetivo.id === objetoId);
       if (objetivo) {
@@ -890,50 +894,66 @@ export default function CartaWizardRelacional() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            prompt: `Genera 1 acción SMART específica y medible para el objetivo: "${objetivo.objetivo.description}" en el área de ${objetivo.areaName}. 
+            prompt: `Genera EXACTAMENTE 3 acciones SMART diferentes, específicas y medibles para el objetivo: "${objetivo.objetivo.description}" en el área de ${objetivo.areaName}. 
             
-Evita estas acciones ya sugeridas: ${currentSuggestions.join(', ')}
+Evita estas acciones ya sugeridas o agregadas:
+${todasLasSugerenciasPrevias.map(s => `- ${s}`).join('\n')}
 
-La acción debe:
+Cada acción debe:
 - Ser específica y medible
 - Incluir números o cantidades cuando sea posible
 - Ser realizable en 3 meses
 - Evitar lenguaje especulativo ("tratar", "intentar")
+- Ser completamente diferente a las anteriores
 
-Responde SOLO con la acción, sin numeración ni explicaciones adicionales.`
+IMPORTANTE: Responde con EXACTAMENTE 3 acciones, una por línea, sin numeración, sin viñetas, sin texto adicional.`
           })
         });
 
         if (response.ok) {
           const data = await response.json();
-          const newSuggestion = data.respuesta?.trim() || '';
+          const respuesta = data.respuesta?.trim() || '';
           
-          if (newSuggestion) {
+          // Parsear las 3 sugerencias (líneas no vacías)
+          const nuevasSugerencias = respuesta
+            .split('\n')
+            .map(s => s.trim())
+            .filter(s => s.length > 15)
+            .slice(0, 3);
+          
+          if (nuevasSugerencias.length >= 3) {
             setActionSuggestionsByObjetivo(prev => ({
               ...prev,
-              [objetoId]: [...remainingSuggestions, newSuggestion]
+              [objetoId]: nuevasSugerencias
             }));
-          } else {
-            // Si no se generó nueva sugerencia, mantener solo las restantes
+            console.log(`✨ 3 nuevas sugerencias generadas para objetivo ${objetoId}`);
+          } else if (nuevasSugerencias.length > 0) {
+            // Si generó menos de 3, mantener las que generó
             setActionSuggestionsByObjetivo(prev => ({
               ...prev,
-              [objetoId]: remainingSuggestions
+              [objetoId]: nuevasSugerencias
+            }));
+            console.log(`⚠️ Solo se generaron ${nuevasSugerencias.length} sugerencias`);
+          } else {
+            // Si no se generaron sugerencias, limpiar
+            setActionSuggestionsByObjetivo(prev => ({
+              ...prev,
+              [objetoId]: []
             }));
           }
         } else {
-          // Si falla la petición, mantener solo las restantes
+          console.error('Error en respuesta de API');
           setActionSuggestionsByObjetivo(prev => ({
             ...prev,
-            [objetoId]: remainingSuggestions
+            [objetoId]: []
           }));
         }
       }
     } catch (error) {
-      console.error('Error generando nueva sugerencia:', error);
-      // En caso de error, mantener solo las restantes
+      console.error('Error generando nuevas sugerencias:', error);
       setActionSuggestionsByObjetivo(prev => ({
         ...prev,
-        [objetoId]: remainingSuggestions
+        [objetoId]: []
       }));
     }
   };
@@ -989,8 +1009,9 @@ Responde SOLO con la acción, sin numeración ni explicaciones adicionales.`
   // ========== NAVEGACIÓN PASO 4 (ITERATIVA) - PLAN DE ACCIÓN ==========
   
   // Obtener lista plana de TODAS LAS ACCIONES del Paso 3 para configurar frecuencia
-  const getAllMetasFlattened = (): { areaKey: string; areaName: string; areaEmoji: string; meta: Meta; objetivoDescription: string; index: number; total: number }[] => {
+  const metasFlattened = useMemo(() => {
     const flattened: any[] = [];
+    const seenIds = new Set<string>();
     
     // Iterar sobre cada objetivo del Paso 2
     areasActivas.forEach(area => {
@@ -1001,6 +1022,18 @@ Responde SOLO con la acción, sin numeración ni explicaciones adicionales.`
         const accionesPorObjetivo = metasPorArea[objetivo.id] || [];
         
         accionesPorObjetivo.forEach((accion) => {
+          // Detectar duplicados por ID
+          if (seenIds.has(accion.id)) {
+            console.warn('⚠️ DUPLICADO DETECTADO:', {
+              id: accion.id,
+              description: accion.description,
+              areaKey: area.key,
+              objetivoId: objetivo.id
+            });
+            return; // Skip este duplicado
+          }
+          
+          seenIds.add(accion.id);
           flattened.push({
             areaKey: area.key,
             areaName: area.name,
@@ -1016,10 +1049,16 @@ Responde SOLO con la acción, sin numeración ni explicaciones adicionales.`
     
     // Actualizar total
     flattened.forEach(item => item.total = flattened.length);
+    
+    console.log('📊 metasFlattened calculado:', {
+      total: flattened.length,
+      uniqueIds: seenIds.size,
+      actions: flattened.map(f => ({ id: f.meta.id, desc: f.meta.description.substring(0, 30) }))
+    });
+    
     return flattened;
-  };
+  }, [areasActivas, identidadesPorArea, metasPorArea]);
 
-  const metasFlattened = getAllMetasFlattened();
   const currentMetaData = metasFlattened[currentMetaIndex];
 
   const handleSaveMetaConfig = (config: any) => {
@@ -1106,9 +1145,22 @@ Responde SOLO con la acción, sin numeración ni explicaciones adicionales.`
       
       // 4. Guardar todas las metas y acciones configuradas
       console.log('💾 Guardando', metasConfiguradas.length, 'metas con sus acciones...');
+      console.log('📊 DEBUG Resumen - metasFlattened:', metasFlattened.length);
+      console.log('📊 DEBUG Resumen - metasConfiguradas:', metasConfiguradas.length);
       
-      for (let i = 0; i < metasConfiguradas.length; i++) {
-        const metaConfig = metasConfiguradas[i];
+      // DEDUPLICAR metasConfiguradas por metaId antes de guardar
+      const uniqueMetasConfiguradas = Array.from(
+        new Map(metasConfiguradas.map(m => [m.metaId, m])).values()
+      );
+      
+      if (uniqueMetasConfiguradas.length < metasConfiguradas.length) {
+        console.warn(`⚠️ Se detectaron ${metasConfiguradas.length - uniqueMetasConfiguradas.length} metas duplicadas. Eliminando...`);
+      }
+      
+      console.log('💾 Guardando', uniqueMetasConfiguradas.length, 'metas únicas...');
+      
+      for (let i = 0; i < uniqueMetasConfiguradas.length; i++) {
+        const metaConfig = uniqueMetasConfiguradas[i];
         const metaData = metasFlattened.find(m => m.meta.id === metaConfig.metaId);
         
         if (!metaData) {
@@ -1733,7 +1785,7 @@ Responde SOLO con la acción, sin numeración ni explicaciones adicionales.`
                     <span className="text-2xl">{area.emoji}</span>
                     {area.name}
                   </h3>
-                  {!isReadOnly && (
+                  {!isReadOnly && area.key !== 'servicioTrans' && (
                     <button
                       onClick={() => handleGetSuggestions(area.key)}
                       disabled={loadingSuggestions === area.key}
@@ -1789,7 +1841,7 @@ Responde SOLO con la acción, sin numeración ni explicaciones adicionales.`
                   }}
                   placeholder={area.key === 'servicioTrans' && objetivoInvitados 
                     ? `Enrolar a ${objetivoInvitados} personas` 
-                    : "Ej: Incrementar mis ingresos mensuales en un 30%"}
+                    : "Usa la Fórmula de Poder: Verbo de Acción + Resultado Exacto (Cantidad/Número/Métrica)"}
                   maxMetas={5}
                   isReadOnly={isReadOnly || (area.key === 'servicioTrans' && objetivoInvitados !== null)}
                   validateFunction={(text) => {
@@ -2256,7 +2308,7 @@ Responde SOLO con la acción, sin numeración ni explicaciones adicionales.`
                       {submitting ? (
                         <>
                           <Loader2 size={20} className="animate-spin" />
-                          Por favor espere...
+                           Activando Licencia espere un momento...
                         </>
                       ) : (
                         <>

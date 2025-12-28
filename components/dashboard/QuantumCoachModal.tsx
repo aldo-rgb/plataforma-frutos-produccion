@@ -119,6 +119,9 @@ export default function QuantumCoachModal({
     const esConfirmacion = /^(s[ií]|ok|confirmo|esa|perfecto|exacto|correcto|de acuerdo)$/i.test(userMessage.content.trim());
     let declaracionesParaEnviar = { ...declaracionesActuales };
     
+    console.log('📊 Estado actual de declaraciones:', declaracionesActuales);
+    console.log('📋 Áreas activas configuradas:', areasActivas.map(a => `${a.key}: ${a.name}`));
+    
     // Si es confirmación, buscar la declaración propuesta en el último mensaje del asistente
     if (esConfirmacion && messages.length > 0) {
       const lastAssistantMessage = [...messages].reverse().find(m => m.role === 'assistant');
@@ -130,6 +133,9 @@ export default function QuantumCoachModal({
           const areasYaCompletas = Object.keys(declaracionesActuales).filter(k => declaracionesActuales[k]);
           const indiceAreaActual = areasYaCompletas.length;
           
+          console.log(`✅ Áreas completadas hasta ahora (${areasYaCompletas.length}):`, areasYaCompletas);
+          console.log(`📍 Índice área actual: ${indiceAreaActual} de ${areasActivas.length}`);
+          
           if (indiceAreaActual < areasActivas.length) {
             const areaActual = areasActivas[indiceAreaActual];
             declaracionesParaEnviar = {
@@ -139,7 +145,7 @@ export default function QuantumCoachModal({
             
             // Actualizar el estado inmediatamente
             setDeclaracionesActuales(declaracionesParaEnviar);
-            console.log(`✅ Pre-registrando declaración para ${areaActual.key}:`, propuestaMatch[1].trim());
+            console.log(`✅ Pre-registrando declaración para ${areaActual.key} (${areaActual.name}):`, propuestaMatch[1].trim());
           }
         }
       }
@@ -219,12 +225,23 @@ export default function QuantumCoachModal({
       const data = await response.json();
 
       if (data.declaraciones) {
-        // Store the declarations for when user clicks "Aceptar"
+        // Guardar las declaraciones pero NO cerrar automáticamente
         setDeclaracionesActuales(data.declaraciones);
-        setShowSuccessModal(true);
+        
+        // Mostrar mensaje pidiendo al usuario que haga clic en el botón
+        setMessages(prev => [...prev, {
+          role: 'system',
+          content: '✅ ¡Perfecto! He preparado tus declaraciones del SER. Ahora haz clic en el botón verde "✨ Aplicar declaraciones" para guardar tu nueva identidad.',
+          timestamp: new Date()
+        }]);
       }
     } catch (error) {
       console.error('Error auto-finalizing:', error);
+      setMessages(prev => [...prev, {
+        role: 'system',
+        content: '⚠️ Hubo un error al preparar las declaraciones. Intenta usar el botón "Aplicar declaraciones".',
+        timestamp: new Date()
+      }]);
     } finally {
       setIsProcessing(false);
     }
@@ -284,7 +301,84 @@ export default function QuantumCoachModal({
         <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-t-3xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="text-4xl">🎙️</div>
+              <div className="relative">
+                {/* Quantum Brain Logo */}
+                <svg 
+                  width="48" 
+                  height="48" 
+                  viewBox="0 0 48 48" 
+                  fill="none" 
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="drop-shadow-lg"
+                >
+                  {/* Quantum Field - Outer Glow */}
+                  <circle cx="24" cy="24" r="22" fill="url(#quantumGlow)" opacity="0.3" className="animate-pulse" />
+                  
+                  {/* Brain Structure */}
+                  <path 
+                    d="M24 8C17.5 8 12 13 12 19.5C12 22 13 24 14.5 25.5C13 27 12 29 12 31.5C12 36 16 40 21 40C22.5 40 24 39.5 25 38.5C26 39.5 27.5 40 29 40C34 40 38 36 38 31.5C38 29 37 27 35.5 25.5C37 24 38 22 38 19.5C38 13 32.5 8 26 8" 
+                    stroke="url(#brainGradient)" 
+                    strokeWidth="2.5" 
+                    strokeLinecap="round"
+                    fill="none"
+                  />
+                  
+                  {/* Brain Folds - Left */}
+                  <path 
+                    d="M16 20C16 20 18 18 20 20C22 22 20 24 18 24" 
+                    stroke="url(#brainGradient)" 
+                    strokeWidth="2" 
+                    strokeLinecap="round"
+                    fill="none"
+                  />
+                  
+                  {/* Brain Folds - Right */}
+                  <path 
+                    d="M32 20C32 20 30 18 28 20C26 22 28 24 30 24" 
+                    stroke="url(#brainGradient)" 
+                    strokeWidth="2" 
+                    strokeLinecap="round"
+                    fill="none"
+                  />
+                  
+                  {/* Neural Connections */}
+                  <line x1="20" y1="28" x2="28" y2="28" stroke="url(#neuralGradient)" strokeWidth="1.5" opacity="0.8" />
+                  <line x1="18" y1="32" x2="30" y2="32" stroke="url(#neuralGradient)" strokeWidth="1.5" opacity="0.8" />
+                  
+                  {/* Quantum Particles - Floating */}
+                  <circle cx="12" cy="16" r="1.5" fill="#60a5fa" className="animate-pulse" style={{animationDelay: '0s'}} />
+                  <circle cx="36" cy="14" r="1.5" fill="#a78bfa" className="animate-pulse" style={{animationDelay: '0.3s'}} />
+                  <circle cx="10" cy="26" r="1.5" fill="#c084fc" className="animate-pulse" style={{animationDelay: '0.6s'}} />
+                  <circle cx="38" cy="28" r="1.5" fill="#60a5fa" className="animate-pulse" style={{animationDelay: '0.9s'}} />
+                  <circle cx="14" cy="36" r="1.5" fill="#a78bfa" className="animate-pulse" style={{animationDelay: '1.2s'}} />
+                  <circle cx="34" cy="38" r="1.5" fill="#c084fc" className="animate-pulse" style={{animationDelay: '1.5s'}} />
+                  
+                  {/* Energy Waves */}
+                  <circle cx="24" cy="24" r="18" stroke="url(#waveGradient)" strokeWidth="0.5" opacity="0.3" fill="none" className="animate-ping" style={{animationDuration: '3s'}} />
+                  <circle cx="24" cy="24" r="20" stroke="url(#waveGradient)" strokeWidth="0.5" opacity="0.2" fill="none" className="animate-ping" style={{animationDuration: '4s', animationDelay: '1s'}} />
+                  
+                  {/* Gradients */}
+                  <defs>
+                    <radialGradient id="quantumGlow">
+                      <stop offset="0%" stopColor="#8b5cf6" />
+                      <stop offset="100%" stopColor="#3b82f6" />
+                    </radialGradient>
+                    <linearGradient id="brainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#60a5fa" />
+                      <stop offset="50%" stopColor="#a78bfa" />
+                      <stop offset="100%" stopColor="#c084fc" />
+                    </linearGradient>
+                    <linearGradient id="neuralGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#60a5fa" />
+                      <stop offset="100%" stopColor="#c084fc" />
+                    </linearGradient>
+                    <linearGradient id="waveGradient">
+                      <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.8" />
+                      <stop offset="100%" stopColor="#a78bfa" stopOpacity="0.4" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
               <div>
                 <h2 className="text-2xl font-bold text-white">QUANTUM</h2>
                 <p className="text-indigo-200 text-sm flex items-center gap-2">

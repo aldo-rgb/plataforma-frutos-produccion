@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 // PUT: Rechazar una carta con feedback
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -15,7 +15,8 @@ export async function PUT(
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
-    const cartaId = parseInt(params.id);
+    const { id } = await params;
+    const cartaId = parseInt(id);
 
     if (isNaN(cartaId)) {
       return NextResponse.json({ error: 'ID de carta inválido' }, { status: 400 });

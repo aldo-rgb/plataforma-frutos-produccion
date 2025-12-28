@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 /**
  * GET /api/tareas/zona-ejecucion
@@ -46,6 +48,30 @@ export async function GET(req: Request) {
       today: today.toISOString(),
       tomorrow: tomorrow.toISOString()
     });
+
+    // DEBUG: Verificar todas las tareas del usuario sin filtros de fecha
+    const allUserTasks = await prisma.taskInstance.findMany({
+      where: {
+        usuarioId: userId
+      },
+      select: {
+        id: true,
+        dueDate: true,
+        status: true
+      },
+      orderBy: {
+        dueDate: 'asc'
+      },
+      take: 20
+    });
+    console.log(`🔍 DEBUG: Usuario ${userId} tiene ${allUserTasks.length} tareas totales (sample 20):`, 
+      allUserTasks.map(t => ({
+        id: t.id,
+        dueDate: t.dueDate.toISOString(),
+        dueDateLocal: format(new Date(t.dueDate), 'yyyy-MM-dd', { locale: es }),
+        status: t.status
+      }))
+    );
 
     // Mapeo de áreas a íconos
     const AREA_ICONS: Record<string, string> = {
@@ -94,6 +120,14 @@ export async function GET(req: Request) {
         dueDate: 'asc'
       }
     });
+
+    console.log(`📦 Total tareas carta encontradas: ${tareasCartaHoy.length}`);
+    console.log('  - Tareas de hoy:', tareasCartaHoy.map(t => ({ 
+      id: t.id, 
+      accion: t.Accion?.texto, 
+      dueDate: t.dueDate,
+      status: t.status 
+    })));
 
     // ========== 2. TAREAS DE CARTA (RETRASADAS) ==========
     const tareasCartaRetrasadas = await prisma.taskInstance.findMany({

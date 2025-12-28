@@ -7,7 +7,7 @@ import {
   Users, Building2, Eye, Brain, Globe, Shield
 } from 'lucide-react';
 
-type RankingType = 'GLOBAL' | 'SCHOOL' | 'VISION' | 'MENTOR' | 'SCHOOL_WAR' | 'MY_MENTORADOS';
+type RankingType = 'GLOBAL' | 'SCHOOL' | 'VISION' | 'MENTOR' | 'SCHOOL_WAR';
 type Timeframe = 'WEEKLY' | 'MONTHLY' | 'CYCLE' | 'ALL_TIME';
 type AttendanceStatus = 'PERFECT' | 'WARNING' | 'RISK';
 
@@ -92,9 +92,8 @@ export default function QuantumLeaderboardPage() {
         setOrganizations(data.availableSchools || []);
         setVisiones(data.availableVisions || []);
         
-        // Pre-seleccionar solo si NO es mentor y tiene una organización específica
-        // Los mentores deben ver el global general sin filtro de escuela
-        if (data.userOrganizationId && data.availableSchools.length > 0 && rankingType === 'SCHOOL') {
+        // Si el usuario tiene una organización/visión específica, pre-seleccionarla
+        if (data.userOrganizationId && !data.canViewSchoolWar) {
           setSelectedEntity(data.userOrganizationId);
         }
         if (data.userVisionId && rankingType === 'VISION') {
@@ -109,17 +108,6 @@ export default function QuantumLeaderboardPage() {
   const loadRanking = async () => {
     try {
       setLoading(true);
-      
-      // Si es MY_MENTORADOS, cargar directamente desde el endpoint de mentorados
-      if (rankingType === 'MY_MENTORADOS') {
-        const res = await fetch('/api/mentor/mentorados');
-        if (!res.ok) throw new Error('Error al cargar mentorados');
-        const data = await res.json();
-        setRanking(data.mentorados || []);
-        setLoading(false);
-        return;
-      }
-
       const params = new URLSearchParams({
         type: rankingType,
         timeframe,
@@ -172,7 +160,7 @@ export default function QuantumLeaderboardPage() {
         <div className="mb-8">
           <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 mb-2 flex items-center gap-3">
             <Sparkles className="text-yellow-400" size={36} />
-            Quantum Matter Leaderboard 360°
+            QuantumMatter Leaderboard 360°
           </h1>
           <p className="text-slate-400 text-lg">
             Visualiza el rendimiento desde todas las dimensiones del ecosistema
@@ -267,29 +255,9 @@ export default function QuantumLeaderboardPage() {
                     }
                   `}
                 >
-                  <Brain size={18} />
-                  Top Mentores
-                </button>
-              )}
-
-              {permissions?.role === 'MENTOR' && (
-                <button
-                  onClick={() => {
-                    setRankingType('MY_MENTORADOS');
-                    setSelectedEntity(null);
-                  }}
-                  className={`
-                    px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2
-                    ${rankingType === 'MY_MENTORADOS'
-                      ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg'
-                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-                    }
-                  `}
-                >
-                  <Users size={18} />
-                  Mis Mentorados
-                </button>
-              )}
+                <Brain size={18} />
+                Top Mentores
+              </button>
             </div>
           </div>
 
@@ -351,22 +319,6 @@ export default function QuantumLeaderboardPage() {
           </div>
         </div>
 
-        {/* Mensaje informativo para mentores en Global */}
-        {rankingType === 'GLOBAL' && permissions?.availableSchools?.length === 0 && (
-          <div className="mb-6 bg-gradient-to-r from-purple-900/30 to-blue-900/30 border border-purple-500/30 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <Brain className="text-purple-400 mt-0.5" size={20} />
-              <div>
-                <p className="text-purple-200 font-semibold mb-1">Vista Global de Mentor</p>
-                <p className="text-slate-300 text-sm">
-                  Estás viendo el ranking global de todos los participantes. 
-                  Usa el filtro "Por Visión" para monitorear el desempeño de tus mentorados en cada visión.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Loading State */}
         {loading && (
           <div className="text-center py-20">
@@ -376,7 +328,7 @@ export default function QuantumLeaderboardPage() {
         )}
 
         {/* Podio Top 3 */}
-        {!loading && ranking.length >= 3 && rankingType !== 'SCHOOL_WAR' && rankingType !== 'MENTOR' && rankingType !== 'MY_MENTORADOS' && (
+        {!loading && ranking.length >= 3 && rankingType !== 'SCHOOL_WAR' && rankingType !== 'MENTOR' && (
           <div className="grid grid-cols-3 gap-4 mb-8">
             {/* 2nd Place */}
             <div className="bg-gradient-to-br from-slate-800 to-slate-900 border-2 border-slate-600 rounded-xl p-4 flex flex-col items-center transform translate-y-4">
@@ -532,8 +484,8 @@ export default function QuantumLeaderboardPage() {
                           </td>
                           <td className="px-4 py-4 text-center">
                             <div className="flex flex-col items-center">
-                              <span className="text-white font-bold">{(user.xp || 0).toLocaleString()}</span>
-                              <span className="text-slate-400 text-xs">Nv. {user.nivel || 0}</span>
+                              <span className="text-white font-bold">{user.xp.toLocaleString()}</span>
+                              <span className="text-slate-400 text-xs">Nv. {user.nivel}</span>
                             </div>
                           </td>
                           <td className="px-4 py-4 text-right">
@@ -629,7 +581,7 @@ export default function QuantumLeaderboardPage() {
                           <span className="text-green-400 font-bold">{school.retentionRate}%</span>
                         </td>
                         <td className="px-4 py-4 text-right text-slate-300 font-bold text-lg">
-                          {(school.totalPoints || 0).toLocaleString()}
+                          {school.totalPoints.toLocaleString()}
                         </td>
                       </tr>
                     ))}
@@ -658,8 +610,8 @@ export default function QuantumLeaderboardPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800">
-                    {ranking.map((mentor: MentorRanking, index: number) => (
-                      <tr key={mentor.mentorId || `mentor-${index}`} className="hover:bg-slate-800/30 transition-colors">
+                    {ranking.map((mentor: MentorRanking) => (
+                      <tr key={mentor.mentorId} className="hover:bg-slate-800/30 transition-colors">
                         <td className="px-4 py-4 text-center">
                           {getMedalIcon(mentor.position)}
                         </td>
@@ -708,99 +660,7 @@ export default function QuantumLeaderboardPage() {
                         <td className="px-4 py-4 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <span className="text-yellow-400 text-lg">★</span>
-                            <span className="text-white font-bold">{mentor.rating ? mentor.rating.toFixed(1) : 'N/A'}</span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TABLA: MIS MENTORADOS */}
-        {!loading && rankingType === 'MY_MENTORADOS' && (
-          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl overflow-hidden">
-            {ranking.length > 0 && (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 border-b border-slate-700">
-                      <th className="px-4 py-4 text-left text-slate-300 font-bold text-sm uppercase tracking-wider">
-                        Mentorado
-                      </th>
-                      <th className="px-4 py-4 text-center text-slate-300 font-bold text-sm uppercase tracking-wider">
-                        Visión
-                      </th>
-                      <th className="px-4 py-4 text-center text-slate-300 font-bold text-sm uppercase tracking-wider">
-                        Escuela
-                      </th>
-                      <th className="px-4 py-4 text-center text-slate-300 font-bold text-sm uppercase tracking-wider">
-                        Puntos Cuánticos
-                      </th>
-                      <th className="px-4 py-4 text-center text-slate-300 font-bold text-sm uppercase tracking-wider">
-                        Nivel
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    {ranking.map((mentorado: any, index: number) => (
-                      <tr 
-                        key={mentorado.id || index}
-                        className="hover:bg-slate-800/30 transition-colors"
-                      >
-                        <td className="px-4 py-4">
-                          <div className="flex items-center gap-3">
-                            <img
-                              src={mentorado.avatar || '/default-avatar.png'}
-                              alt={mentorado.nombre}
-                              className="w-12 h-12 rounded-full object-cover border-2 border-green-500"
-                            />
-                            <div>
-                              <p className="text-white font-bold">{mentorado.nombre}</p>
-                              <p className="text-slate-400 text-xs">ID: {mentorado.id}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 text-center">
-                          {mentorado.vision ? (
-                            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                              {mentorado.vision}
-                            </span>
-                          ) : (
-                            <span className="text-slate-500 text-sm italic">Pendiente asignar</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-4 text-center">
-                          {mentorado.school ? (
-                            <div className="flex items-center justify-center gap-2">
-                              {mentorado.schoolLogo && (
-                                <img 
-                                  src={mentorado.schoolLogo} 
-                                  alt={mentorado.school}
-                                  className="w-6 h-6 rounded-full object-cover"
-                                />
-                              )}
-                              <span className="text-slate-300 text-sm font-medium">{mentorado.school}</span>
-                            </div>
-                          ) : (
-                            <span className="text-slate-500 text-sm italic">Sin institución</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-4 text-center">
-                          <div className="flex flex-col items-center">
-                            <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-400">
-                              {mentorado.quantumPoints || 0}
-                            </span>
-                            <span className="text-xs text-slate-500">PC</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <TrendingUp className="text-blue-400" size={16} />
-                            <span className="text-white font-bold text-lg">{mentorado.nivel || 1}</span>
+                            <span className="text-white font-bold">{mentor.rating.toFixed(1)}</span>
                           </div>
                         </td>
                       </tr>

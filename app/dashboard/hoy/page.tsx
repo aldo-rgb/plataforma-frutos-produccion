@@ -8,7 +8,8 @@ import SpecialMissionTask from '@/components/dashboard/SpecialMissionTask';
 import EvidenceModal from '@/components/dashboard/EvidenceModal';
 import DashboardCalendarHeader from '@/components/dashboard/DashboardCalendarHeader';
 import UserLevelBadge from '@/components/dashboard/UserLevelBadge';
-import { ChevronLeft, ChevronRight, Calendar, Sparkles, TrendingUp, Check, Zap } from 'lucide-react';
+import UpcomingCallCard from '@/components/dashboard/UpcomingCallCard';
+import { ChevronLeft, ChevronRight, Calendar, Sparkles, TrendingUp, Check, Zap, Phone } from 'lucide-react';
 
 interface Task {
   id: string | number; // Puede ser number (carta) o string (admin)
@@ -45,9 +46,34 @@ interface Stats {
   completionRate: number;
 }
 
+interface UpcomingCall {
+  id: number;
+  type: 'DISCIPLINE' | 'VISION';
+  scheduledDate: string;
+  scheduledTime?: string;
+  status: string;
+  meetingUrl?: string;
+  discipline?: {
+    id: number;
+    name: string;
+    icon?: string;
+  } | null;
+  vision?: {
+    id: number;
+    name: string;
+  } | null;
+  mentor?: {
+    id: number;
+    nombre: string;
+    imagen?: string;
+  };
+  weekNumber?: number;
+}
+
 export default function TodayPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [upcomingCalls, setUpcomingCalls] = useState<UpcomingCall[]>([]);
   const [stats, setStats] = useState<Stats>({
     total: 0,
     completed: 0,
@@ -65,6 +91,7 @@ export default function TodayPage() {
 
   useEffect(() => {
     fetchTasks();
+    fetchUpcomingCalls();
   }, [selectedDate]);
 
   const fetchTasks = async () => {
@@ -72,13 +99,23 @@ export default function TodayPage() {
     try {
       // Usar zona-ejecucion endpoint que incluye tareas wizard + extraordinarias
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      console.log('📅 Fetching tasks for date:', dateStr);
       const response = await fetch(`/api/tareas/zona-ejecucion?date=${dateStr}`);
+      
+      if (!response.ok) {
+        console.error('❌ Error en respuesta:', response.status, response.statusText);
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
       
+      console.log('📦 Respuesta completa del servidor:', data);
+      console.log('📦 Tareas de hoy recibidas:', data.tareasHoy?.length || 0);
+      console.log('📦 Tareas retrasadas:', data.tareasRetrasadas?.length || 0);
+      console.log('📦 Breakdown:', data.breakdown);
+      
       if (data.tareasHoy) {
-        console.log('📦 Tareas recibidas del servidor:', data.tareasHoy);
-        console.log('📦 Tareas retrasadas:', data.tareasRetrasadas);
-        console.log('📦 Breakdown:', data.breakdown);
+        console.log('📋 Detalle de tareasHoy:', data.tareasHoy);
         
         // Filtrar misiones especiales vencidas (EXPIRED o que ya pasó el deadline)
         const allTasks = data.tareasHoy.filter((t: any) => {
@@ -102,7 +139,8 @@ export default function TodayPage() {
           return true;
         });
         
-        console.log('✅ Tareas después del filtro:', allTasks);
+        console.log('✅ Tareas después del filtro:', allTasks.length);
+        console.log('📋 Tareas filtradas:', allTasks);
         
         setTasks(allTasks);
         
@@ -127,6 +165,38 @@ export default function TodayPage() {
       console.error('Error fetching tasks:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUpcomingCalls = async () => {
+    try {
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const response = await fetch(`/api/calls/upcoming?date=${dateStr}`);
+      
+      if (!response.ok) {
+        console.error('Error fetching calls:', response.status);
+        return;
+      }
+      
+      const data = await response.json();
+      console.log('📞 Llamadas próximas:', data.calls);
+      
+      // Filtrar solo las del día seleccionado o próximas (24h)
+      const relevantCalls = data.calls.filter((call: UpcomingCall) => {
+        const callDate = new Date(call.scheduledDate);
+        const now = new Date();
+        const diffHours = (callDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+        
+        // Mostrar si es del día seleccionado o si faltan menos de 24 horas
+        const isSelectedDate = format(callDate, 'yyyy-MM-dd') === dateStr;
+        const isWithin24Hours = diffHours > 0 && diffHours <= 24;
+        
+        return isSelectedDate || isWithin24Hours;
+      });
+      
+      setUpcomingCalls(relevantCalls);
+    } catch (error) {
+      console.error('Error fetching upcoming calls:', error);
     }
   };
 
@@ -370,6 +440,25 @@ export default function TodayPage() {
       <div className="max-w-4xl mx-auto px-6 pt-6 pb-4">
         <UserLevelBadge mode="full" />
       </div>
+
+      {/* UPCOMING CALLS - Llamadas Agendadas con Countdown */}
+      {upcomingCalls.length > 0 && (
+        <div className="max-w-4xl mx-auto px-6 pb-4">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-blue-400 font-bold mb-3">
+            <Phone size={14} />
+            Llamadas Agendadas
+          </div>
+          <div className="space-y-3">
+            {upcomingCalls.map(call => (
+              <UpcomingCallCard 
+                key={call.id} 
+                call={call}
+                onJoinCall={(url) => window.open(url, '_blank')}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* STATS BAR */}
       {stats.total > 0 && (

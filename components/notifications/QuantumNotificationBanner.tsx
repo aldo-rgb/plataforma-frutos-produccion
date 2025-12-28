@@ -29,15 +29,18 @@ export function QuantumNotificationBanner() {
   const fetchNotificacion = async () => {
     try {
       const res = await fetch('/api/notificaciones/quantum');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.notificacion && !dismissed) {
-          setNotificacion(data.notificacion);
-          setVisible(true);
-        }
+      if (!res.ok) {
+        console.error('Error al cargar notificación:', res.status);
+        return;
+      }
+      const data = await res.json();
+      if (data.notificacion && !dismissed) {
+        setNotificacion(data.notificacion);
+        setVisible(true);
       }
     } catch (error) {
       console.error('Error fetching notificación:', error);
+      // No mostrar error al usuario, simplemente no mostrar banner
     }
   };
 

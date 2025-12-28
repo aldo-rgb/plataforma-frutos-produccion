@@ -10,7 +10,7 @@ import { verificarColecciones } from '@/lib/collectionVerifier';
 // PUT: Aprobar evidencia y otorgar puntos
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -19,7 +19,8 @@ export async function PUT(
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
-    const evidenciaId = parseInt(params.id);
+    const { id } = await context.params;
+    const evidenciaId = parseInt(id);
 
     if (isNaN(evidenciaId)) {
       return NextResponse.json({ error: 'ID de evidencia inválido' }, { status: 400 });

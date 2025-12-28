@@ -82,7 +82,9 @@ const AREAS_CONFIG = [
   { id: 'salud', nombre: 'Salud', icono: '🏃' },
   { id: 'tiempo', nombre: 'Ocio', icono: '⏰' },
   { id: 'ocupacion', nombre: 'Talentos', icono: '💼' },
-  { id: 'espiritualidad', nombre: 'Paz Mental', icono: '🙏' }
+  { id: 'espiritualidad', nombre: 'Paz Mental', icono: '🙏' },
+  { id: 'servicioTrans', nombre: 'Servicio Transformacional', icono: '🌟' },
+  { id: 'servicioComun', nombre: 'Servicio Comunitario', icono: '🤝' }
 ];
 
 export default function CartaResumenPage() {
@@ -95,6 +97,7 @@ export default function CartaResumenPage() {
   const [submitting, setSubmitting] = useState(false);
   const [expandedAreas, setExpandedAreas] = useState<Set<string>>(new Set());
   const [editedMetas, setEditedMetas] = useState<Set<number>>(new Set()); // IDs de metas editadas
+  const [visionConfig, setVisionConfig] = useState<any>(null); // Configuración de visión
   
   // Estados para el popup de edición
   const [editingMeta, setEditingMeta] = useState<Accion | null>(null);
@@ -165,6 +168,13 @@ export default function CartaResumenPage() {
       const data = await res.json();
 
       console.log('📊 Datos de la carta API:', data);
+      
+      // Guardar configuración de visión
+      const vision = data.visionConfig || null;
+      if (vision) {
+        setVisionConfig(vision);
+        console.log('🎯 Configuración de visión:', vision);
+      }
 
       if (res.ok && data.carta) {
         console.log('📋 Estado:', data.carta.estado);
@@ -180,7 +190,7 @@ export default function CartaResumenPage() {
         console.log('🔀 Carta combinada:', cartaCombinada);
         
         setCartaData(cartaCombinada);
-        organizarMetasPorArea(cartaCombinada);
+        organizarMetasPorArea(cartaCombinada, vision);
       } else {
         console.log('❌ No se encontró carta');
         setCartaData(null);
@@ -192,9 +202,10 @@ export default function CartaResumenPage() {
     }
   };
 
-  const organizarMetasPorArea = (carta: CartaData) => {
+  const organizarMetasPorArea = (carta: CartaData, vision: any = null) => {
     console.log('🔄 Organizando metas de carta:', carta);
     console.log('📊 Estructura completa:', JSON.stringify(carta, null, 2));
+    console.log('🎯 Vision recibida:', vision);
 
     const areasConMetas: Area[] = [];
 
@@ -220,7 +231,11 @@ export default function CartaResumenPage() {
           'pazmental': 'espiritualidad',
           'espiritualidad': 'espiritualidad',
           'ocio': 'tiempo',
-          'tiempo': 'tiempo'
+          'tiempo': 'tiempo',
+          'serviciotrans': 'servicioTrans',
+          'serviciocomun': 'servicioComun',
+          'servicio transformacional': 'servicioTrans',
+          'servicio comunitario': 'servicioComun'
         };
         
         areaKey = mapeoAreas[areaKey] || areaKey;
@@ -266,7 +281,23 @@ export default function CartaResumenPage() {
       console.log('📦 Áreas agrupadas por objetivo:', areasPorCategoria);
 
       // Crear áreas con sus objetivos y metas
-      AREAS_CONFIG.forEach(areaConfig => {
+      // Filtrar áreas basado en visión
+      const areasActivas = vision ? AREAS_CONFIG.filter(areaConfig => {
+        // Áreas básicas siempre activas
+        if (['finanzas', 'relaciones', 'salud', 'tiempo', 'ocupacion', 'espiritualidad'].includes(areaConfig.id)) {
+          return true;
+        }
+        // Áreas de servicio solo si están en la visión
+        if (areaConfig.id === 'servicioTrans') {
+          return vision.forceTransformationArea === true;
+        }
+        if (areaConfig.id === 'servicioComun') {
+          return vision.forceCommunityServiceArea === true;
+        }
+        return false;
+      }) : AREAS_CONFIG.filter(a => !['servicioTrans', 'servicioComun'].includes(a.id));
+      
+      areasActivas.forEach(areaConfig => {
         const objetivos = areasPorCategoria[areaConfig.id] || [];
         if (objetivos.length > 0) {
           // Crear un área por cada objetivo
@@ -303,7 +334,21 @@ export default function CartaResumenPage() {
       });
 
       // Crear áreas con sus metas
-      AREAS_CONFIG.forEach(areaConfig => {
+      // Filtrar áreas basado en visión
+      const areasActivas = vision ? AREAS_CONFIG.filter(areaConfig => {
+        if (['finanzas', 'relaciones', 'salud', 'tiempo', 'ocupacion', 'espiritualidad'].includes(areaConfig.id)) {
+          return true;
+        }
+        if (areaConfig.id === 'servicioTrans') {
+          return vision.forceTransformationArea === true;
+        }
+        if (areaConfig.id === 'servicioComun') {
+          return vision.forceCommunityServiceArea === true;
+        }
+        return false;
+      }) : AREAS_CONFIG.filter(a => !['servicioTrans', 'servicioComun'].includes(a.id));
+      
+      areasActivas.forEach(areaConfig => {
         const metas = metasPorArea[areaConfig.id] || [];
         if (metas.length > 0 || carta.identidades?.[areaConfig.id]) {
           areasConMetas.push({
@@ -326,7 +371,9 @@ export default function CartaResumenPage() {
         { id: 'salud', campo: 'saludMeta', dias: 'saludScheduledDays' },
         { id: 'tiempo', campo: 'ocioMeta', dias: 'ocioScheduledDays' },
         { id: 'ocupacion', campo: 'talentosMeta', dias: 'talentosScheduledDays' },
-        { id: 'espiritualidad', campo: 'pazMentalMeta', dias: 'pazMentalScheduledDays' }
+        { id: 'espiritualidad', campo: 'pazMentalMeta', dias: 'pazMentalScheduledDays' },
+        { id: 'servicioTrans', campo: 'servicioTransMeta', dias: 'servicioTransScheduledDays' },
+        { id: 'servicioComun', campo: 'servicioComunMeta', dias: 'servicioComunScheduledDays' }
       ];
 
       mapeoAreas.forEach((mapeo, index) => {
@@ -737,7 +784,7 @@ export default function CartaResumenPage() {
               </div>
               <div className="flex-1">
                 <p className="text-green-400 font-bold text-sm">
-                  ✅ Carta Aprobada - Solo Lectura
+                  ✅ Felicitaciones!!! Tus Objetivos han sido aprobados, Gestiona tu Tareas en HOY.
                 </p>
                 <p className="text-gray-400 text-xs mt-1">
                   Tu carta ha sido aprobada por tu mentor. No se pueden realizar cambios en este momento.
@@ -969,7 +1016,7 @@ export default function CartaResumenPage() {
                             return (
                               <div
                                 key={accion.id}
-                                className={`group relative rounded-xl p-5 pr-48 border transition-all duration-300 ${
+                                className={`group relative rounded-xl p-5 border transition-all duration-300 ${
                                   wasEdited && (meta.status === 'REJECTED' || cartaData?.estado === 'EN_REVISION')
                                     ? 'bg-blue-900/10 border-blue-500/50 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/10'
                                     : meta.status === 'APPROVED' 
@@ -981,37 +1028,37 @@ export default function CartaResumenPage() {
                               >
                                 {/* Indicador de Estado */}
                                 {wasEdited && cartaData?.estado === 'EN_REVISION' && (
-                                  <div className="absolute top-3 right-3 flex items-center gap-2 bg-blue-900/50 border border-blue-500 px-3 py-1.5 rounded-full">
+                                  <div className="absolute top-3 right-3 flex items-center gap-2 bg-blue-900/50 border border-blue-500 px-3 py-1.5 rounded-full z-10">
                                     <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
-                                    <span className="text-xs font-bold text-blue-300">En revisión por mentor</span>
+                                    <span className="text-xs font-bold text-blue-300 whitespace-nowrap">En revisión por mentor</span>
                                   </div>
                                 )}
                                 {wasEdited && meta.status === 'REJECTED' && cartaData?.estado !== 'EN_REVISION' && (
-                                  <div className="absolute top-3 right-3 flex items-center gap-2 bg-blue-900/50 border border-blue-500 px-3 py-1.5 rounded-full">
+                                  <div className="absolute top-3 right-3 flex items-center gap-2 bg-blue-900/50 border border-blue-500 px-3 py-1.5 rounded-full z-10">
                                     <Edit className="w-4 h-4 text-blue-400" />
-                                    <span className="text-xs font-bold text-blue-300">Editada - Lista para reenviar</span>
+                                    <span className="text-xs font-bold text-blue-300 whitespace-nowrap">Editada - Lista para reenviar</span>
                                   </div>
                                 )}
                                 {!wasEdited && meta.status === 'APPROVED' && (
-                                  <div className="absolute top-3 right-3 flex items-center gap-2 bg-green-900/50 border border-green-500 px-3 py-1.5 rounded-full">
+                                  <div className="absolute top-3 right-3 flex items-center gap-2 bg-green-900/50 border border-green-500 px-3 py-1.5 rounded-full z-10">
                                     <CheckCircle2 className="w-4 h-4 text-green-400" />
-                                    <span className="text-xs font-bold text-green-300">Aprobada</span>
+                                    <span className="text-xs font-bold text-green-300 whitespace-nowrap">Aprobada</span>
                                   </div>
                                 )}
                                 {!wasEdited && meta.status === 'REJECTED' && (
-                                  <div className="absolute top-3 right-3 flex items-center gap-2 bg-red-900/50 border border-red-500 px-3 py-1.5 rounded-full">
+                                  <div className="absolute top-3 right-3 flex items-center gap-2 bg-red-900/50 border border-red-500 px-3 py-1.5 rounded-full z-10">
                                     <AlertCircle className="w-4 h-4 text-red-400" />
-                                    <span className="text-xs font-bold text-red-300">Rechazada</span>
+                                    <span className="text-xs font-bold text-red-300 whitespace-nowrap">Rechazada</span>
                                   </div>
                                 )}
 
-                                <div className="flex flex-col gap-4">
+                                <div className="flex flex-col gap-4 pr-0 sm:pr-48">
                                   <div className="flex items-start gap-3">
                                     <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white text-sm font-bold shadow-lg flex-shrink-0">
                                       {index + 1}
                                     </span>
-                                    <div className="flex-1">
-                                      <p className="text-lg text-gray-100 font-medium leading-relaxed mb-3">
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-lg text-gray-100 font-medium leading-relaxed mb-3 break-words">
                                         {accion.texto}
                                       </p>
                                         

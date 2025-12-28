@@ -76,6 +76,27 @@ export async function POST(
         select: { id: true, email: true, nombre: true, telefono: true }
       });
       created.push(user);
+
+      // Asignar licencia pendiente automáticamente
+      try {
+        const licenseCode = `QNT-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+        await prisma.licenseAssignment.create({
+          data: {
+            userId: user.id,
+            licenseCode: licenseCode,
+            visionId: visionId,
+            organizationId: director.organizationId,
+            assignedBy: session.user.id,
+            isActive: true,
+            activatedAt: null, // Pendiente hasta que envíe su carta
+            assignedAt: new Date(),
+            expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000) // 10 días para activar
+          }
+        });
+        console.log(`🎫 Licencia pendiente asignada a ${user.email}: ${licenseCode}`);
+      } catch (error) {
+        console.error('Error asignando licencia automática:', error);
+      }
       
       // Enviar WhatsApp con Magic Link si tiene teléfono
       if (user.telefono) {
@@ -152,6 +173,37 @@ export async function POST(
           data: { visionId, participanteId: user.id } 
         });
         results.push(user.email);
+
+        // Asignar licencia pendiente si no tiene una para esta visión
+        const existingLicense = await prisma.licenseAssignment.findFirst({
+          where: {
+            userId: user.id,
+            visionId: visionId,
+            isActive: true
+          }
+        });
+
+        if (!existingLicense) {
+          try {
+            const licenseCode = `QNT-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+            await prisma.licenseAssignment.create({
+              data: {
+                userId: user.id,
+                licenseCode: licenseCode,
+                visionId: visionId,
+                organizationId: director.organizationId!,
+                assignedBy: session.user.id,
+                isActive: true,
+                activatedAt: null, // Pendiente
+                assignedAt: new Date(),
+                expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
+              }
+            });
+            console.log(`🎫 Licencia pendiente asignada a usuario existente ${user.email}`);
+          } catch (error) {
+            console.error('Error asignando licencia a usuario existente:', error);
+          }
+        }
 
         // Si el usuario ya existía (no es nuevo), reiniciar su wizard
         if (!created.find(c => c.id === user.id)) {

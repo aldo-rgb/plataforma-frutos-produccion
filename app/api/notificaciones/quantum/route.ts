@@ -23,6 +23,35 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
+    // TODO: Implementar tabla de notificaciones en el schema
+    // Por ahora retornamos null para evitar errores
+    return NextResponse.json({ notificacion: null });
+
+    /*
+    // Buscar notificación Quantum no leída más reciente
+    const notificacion = await prisma.notificacion.findFirst({
+      where: {
+        usuarioId: usuario.id,
+        tipo: 'QUANTUM_INTERVENTION',
+        leida: false
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    if (!notificacion) {
+      return NextResponse.json({ notificacion: null });
+    }
+
+    // Parsear metadata
+    const metadata = notificacion.metadata 
+      ? JSON.parse(notificacion.metadata as string)
+    // TODO: Implementar tabla de notificaciones en el schema
+    // Por ahora retornamos null para evitar errores
+    return NextResponse.json({ notificacion: null });
+
+    /*
     // Buscar notificación Quantum no leída más reciente
     const notificacion = await prisma.notificacion.findFirst({
       where: {
@@ -54,6 +83,7 @@ export async function GET(req: Request) {
         createdAt: notificacion.createdAt
       }
     });
+    */
 
   } catch (error: any) {
     console.error('Error obteniendo notificación:', error);

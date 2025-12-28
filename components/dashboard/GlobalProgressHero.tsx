@@ -3,18 +3,31 @@
 import { ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+interface AreaProgress {
+  key: string;
+  label: string;
+  tasksCompleted: number;
+  tasksTotal: number;
+  percent: number;
+  hasDeclaration: boolean;
+}
+
 interface GlobalProgressHeroProps {
   percent: number;
   label?: string;
   totalMetas?: number;
   completedMetas?: number;
+  areas?: string[];
+  areaProgress?: AreaProgress[];
 }
 
 export default function GlobalProgressHero({ 
   percent, 
   label = "Estado total de avance de tus metas",
   totalMetas = 6,
-  completedMetas = 3
+  completedMetas = 3,
+  areas = ['Finanzas', 'Relaciones', 'Talentos', 'Paz Mental', 'Ocio', 'Salud'],
+  areaProgress = []
 }: GlobalProgressHeroProps) {
   const router = useRouter();
 
@@ -88,22 +101,34 @@ export default function GlobalProgressHero({
             ))}
           </div>
 
-          {/* Etiquetas de las 6 áreas */}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mt-4 pt-4 border-t border-slate-800">
-            {['Finanzas', 'Relaciones', 'Talentos', 'Paz Mental', 'Ocio', 'Salud'].map((area, idx) => (
-              <div key={area} className="text-center">
-                <div className={`w-2 h-2 rounded-full mx-auto mb-1 ${
-                  idx < completedMetas 
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg shadow-purple-500/50' 
-                    : 'bg-slate-700'
-                }`} />
-                <span className={`text-xs ${
-                  idx < completedMetas ? 'text-slate-300 font-medium' : 'text-slate-600'
-                }`}>
-                  {area}
-                </span>
-              </div>
-            ))}
+          {/* Etiquetas de las áreas dinámicas */}
+          <div className={`grid gap-2 mt-4 pt-4 border-t border-slate-800 ${
+            areas.length <= 4 ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-2 md:grid-cols-6'
+          }`}>
+            {areas.map((area, idx) => {
+              const progress = areaProgress.find(p => p.label === area);
+              const isCompleted = progress?.hasDeclaration || idx < completedMetas;
+              
+              return (
+                <div key={area} className="text-center group/area">
+                  <div className={`w-2 h-2 rounded-full mx-auto mb-1 transition-all ${
+                    isCompleted
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg shadow-purple-500/50' 
+                      : 'bg-slate-700'
+                  }`} />
+                  <span className={`text-xs transition-colors ${
+                    isCompleted ? 'text-slate-300 font-medium' : 'text-slate-600'
+                  }`}>
+                    {area}
+                  </span>
+                  {progress && progress.tasksTotal > 0 && (
+                    <div className="text-[10px] text-slate-500 mt-0.5 opacity-0 group-hover/area:opacity-100 transition-opacity">
+                      {progress.tasksCompleted}/{progress.tasksTotal} tareas
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

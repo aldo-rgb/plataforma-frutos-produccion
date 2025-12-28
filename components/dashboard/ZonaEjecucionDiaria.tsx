@@ -46,6 +46,7 @@ export default function ZonaEjecucionDiaria() {
     comentario: ''
   });
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     loadTareas();
@@ -349,29 +350,29 @@ export default function ZonaEjecucionDiaria() {
         <div className="p-4 space-y-3 max-h-[500px] overflow-y-auto">
           {tareas.length === 0 ? (
             <div className="text-center py-12">
-              <CheckCircle className="w-16 h-16 text-amber-400 mx-auto mb-4" />
+              <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
               <p className="text-slate-300 text-lg font-semibold">
-                La vida sin objetivos no tiene sentido
+                🎉 ¡Todo listo para hoy!
               </p>
               <p className="text-slate-500 text-sm mt-2 mb-6">
-                Define tus metas y empieza a construir el futuro que deseas
+                No tienes tareas pendientes. Disfruta tu día o revisa tus metas en la Carta F.R.U.T.O.S.
               </p>
               
-              {/* Botón para definir objetivos con Quantum */}
+              {/* Botón para ir a la carta */}
               <div className="bg-gradient-to-r from-purple-900/30 to-blue-900/30 border border-purple-500/40 rounded-xl p-6 max-w-md mx-auto">
                 <div className="flex items-center justify-center gap-2 mb-3">
                   <Zap className="text-purple-400" size={24} />
-                  <h3 className="text-white font-bold text-lg">Define tus Objetivos</h3>
+                  <h3 className="text-white font-bold text-lg">Revisa tu Progreso</h3>
                 </div>
                 <p className="text-slate-300 text-sm mb-4">
-                  Chatea con <strong className="text-purple-400">Quantum IA</strong> para definir tus metas y obtener tareas personalizadas
+                  Ve a tu <strong className="text-purple-400">Carta F.R.U.T.O.S.</strong> para ver tus metas y generar nuevas tareas
                 </p>
                 <a
-                  href="/dashboard/mentor-ia"
+                  href="/dashboard/carta"
                   className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg font-semibold transition-all shadow-lg shadow-purple-500/30"
                 >
                   <Zap size={18} />
-                  Hablar con Quantum
+                  Ver mi Carta
                 </a>
               </div>
             </div>
@@ -398,7 +399,7 @@ export default function ZonaEjecucionDiaria() {
               const getBadge = () => {
                 if (isExpired && tarea.tipo === 'EXTRAORDINARIA') {
                   return (
-                    <div className="absolute -top-2 -right-2 bg-red-900 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1 border-2 border-red-700">
+                    <div className="absolute -top-2 -right-2 bg-red-900 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1 border-2 border-red-700 z-20">
                       💀 EXPIRADA - 0 PC
                     </div>
                   );
@@ -406,14 +407,14 @@ export default function ZonaEjecucionDiaria() {
                 
                 if (tarea.tipo === 'EVENTO') {
                   return (
-                    <div className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg animate-pulse flex items-center gap-1">
+                    <div className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg animate-pulse flex items-center gap-1 z-20">
                       <Calendar className="w-3 h-3" />
                       EVENTO +{tarea.pointsReward || 0} PC
                     </div>
                   );
                 } else if (tarea.tipo === 'EXTRAORDINARIA') {
                   return (
-                    <div className="absolute -top-2 -right-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-900 text-xs font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1">
+                    <div className="absolute -top-2 -right-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-900 text-xs font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1 z-20">
                       <Zap className="w-3 h-3" />
                       +{tarea.pointsReward || 0} PC
                     </div>
@@ -440,14 +441,14 @@ export default function ZonaEjecucionDiaria() {
                   
                   {/* Countdown Timer para TODAS las tareas extraordinarias y eventos */}
                   {(tarea.tipo === 'EXTRAORDINARIA' || tarea.tipo === 'EVENTO') && timeRemaining && !timeRemaining.expired && (
-                    <div className={`absolute -top-2 -left-2 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg flex items-center gap-1 ${
+                    <div className={`absolute -top-2 -left-2 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg flex items-center gap-1 z-20 ${
                       timeRemaining.isUrgent ? 'bg-red-600 animate-pulse' : 'bg-orange-500'
                     }`}>
                       ⏱ Expira en {timeRemaining.hours}h {timeRemaining.minutes}m
                     </div>
                   )}
                   
-                  <div className="flex items-center gap-4 flex-1">
+                  <div className="flex items-center gap-4 flex-1 min-w-0 overflow-hidden">
                     {/* Icono del área */}
                     <div className={`h-12 w-12 rounded-full flex items-center justify-center text-2xl flex-shrink-0 ${
                       isExpired ? 'bg-gray-800/50' :
@@ -460,37 +461,62 @@ export default function ZonaEjecucionDiaria() {
                     
                     {/* Info de la tarea */}
                     <div className="flex-1 min-w-0">
-                      <h4 className={`text-white font-medium truncate ${
-                        isExpired ? 'line-through decoration-red-500/50' : ''
-                      }`}>
-                        {tarea.texto}
-                      </h4>
-                      <p className="text-xs text-slate-400 truncate">
-                        {tarea.metaContext}
-                        {tarea.tipo === 'EVENTO' && tarea.horaEvento && (
-                          <span className="ml-2 text-purple-400 font-semibold">⏰ {tarea.horaEvento}</span>
-                        )}
-                        {tarea.tipo === 'EVENTO' && tarea.lugar && (
-                          <span className="ml-2 text-purple-400">📍 {tarea.lugar}</span>
-                        )}
-                        {tarea.tipo === 'EXTRAORDINARIA' && tarea.deadline && (() => {
-                          // CRÍTICO: deadline viene como UTC string, extraer componentes UTC
-                          const deadlineUTC = new Date(tarea.deadline);
-                          const year = deadlineUTC.getUTCFullYear();
-                          const month = deadlineUTC.getUTCMonth();
-                          const day = deadlineUTC.getUTCDate();
-                          // Reconstruir en local timezone
-                          const deadlineLocal = new Date(year, month, day);
-                          
-                          return (
-                            <span className="ml-2 text-amber-400 font-semibold">
-                              📅 {deadlineLocal.toLocaleDateString('es-MX', { month: 'short', day: 'numeric' })}
-                              {tarea.horaLimite && ` ⏰ ${tarea.horaLimite}`}
-                            </span>
-                          );
-                        })()}
-                      </p>
-                      <p className="text-xs text-slate-500 mt-0.5">{tarea.area}</p>
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h4 className={`text-white font-medium ${
+                            expandedTaskId === tarea.id ? 'break-words' : 'truncate'
+                          } ${isExpired ? 'line-through decoration-red-500/50' : ''}`}>
+                            {tarea.texto}
+                          </h4>
+                          <p className={`text-xs text-slate-400 mt-1 ${expandedTaskId === tarea.id ? 'break-words' : 'truncate'}`}>
+                            {tarea.metaContext}
+                          </p>
+                          <p className="text-xs text-slate-500 mt-0.5">{tarea.area}</p>
+                        </div>
+                        <button
+                          onClick={() => setExpandedTaskId(expandedTaskId === tarea.id ? null : tarea.id)}
+                          className="text-xs bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 px-3 py-1.5 rounded-lg transition-all flex-shrink-0 font-medium border border-indigo-500/30 hover:border-indigo-500/60"
+                        >
+                          {expandedTaskId === tarea.id ? '▲ Ocultar' : '▼ Detalles'}
+                        </button>
+                      </div>
+                      
+                      {/* Detalles expandidos */}
+                      {expandedTaskId === tarea.id && (
+                        <div className="mt-3 space-y-2 animate-in slide-in-from-top-2">
+                          {tarea.tipo === 'EVENTO' && tarea.horaEvento && (
+                            <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg px-3 py-2 flex items-center gap-2">
+                              <span className="text-purple-400 font-semibold text-sm">⏰ Hora:</span>
+                              <span className="text-purple-300 text-sm">{tarea.horaEvento}</span>
+                            </div>
+                          )}
+                          {tarea.tipo === 'EVENTO' && tarea.lugar && (
+                            <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg px-3 py-2 flex items-center gap-2">
+                              <span className="text-purple-400 font-semibold text-sm">📍 Lugar:</span>
+                              <span className="text-purple-300 text-sm">{tarea.lugar}</span>
+                            </div>
+                          )}
+                          {tarea.tipo === 'EXTRAORDINARIA' && tarea.deadline && (() => {
+                            const deadlineUTC = new Date(tarea.deadline);
+                            const year = deadlineUTC.getUTCFullYear();
+                            const month = deadlineUTC.getUTCMonth();
+                            const day = deadlineUTC.getUTCDate();
+                            const deadlineLocal = new Date(year, month, day);
+                            
+                            return (
+                              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-amber-400 font-semibold text-sm">📅 Fecha límite:</span>
+                                  <span className="text-amber-300 text-sm">
+                                    {deadlineLocal.toLocaleDateString('es-MX', { month: 'long', day: 'numeric', year: 'numeric' })}
+                                    {tarea.horaLimite && ` - ${tarea.horaLimite}`}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
                       
                       {/* Mensaje de puntos perdidos para EXPIRED */}
                       {isExpired && tarea.tipo === 'EXTRAORDINARIA' && (

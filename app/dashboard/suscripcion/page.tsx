@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { procesarPagoSimulado } from '../../actions/pagos';
-import { CreditCard, Building2, User, Check, Calculator, ShieldCheck, X, Globe, Smartphone, CheckCircle2, Loader2, ArrowRight, Zap, Star, Users } from 'lucide-react';
+import { CreditCard, Building2, User, Check, Calculator, ShieldCheck, X, Globe, Smartphone, CheckCircle2, Loader2, ArrowRight, Zap, Star, Users, Crown, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 
 export default function SuscripcionPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   
   // ESTADOS
   const [tipoCliente, setTipoCliente] = useState<'INDIVIDUAL' | 'CENTRO'>('INDIVIDUAL');
@@ -18,9 +20,36 @@ export default function SuscripcionPage() {
   const [showCheckout, setShowCheckout] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState<'RESUMEN' | 'PAGO' | 'PROCESANDO' | 'EXITO'>('RESUMEN');
   
-  // ESTADO DE SUSCRIPCIÓN (Simulado)
+  // ESTADO DE SUSCRIPCIÓN - Ahora se obtiene del usuario
+  const [planActual, setPlanActual] = useState<string | null>(null);
   const [estadoSuscripcion, setEstadoSuscripcion] = useState<'INACTIVO' | 'ACTIVO'>('INACTIVO');
   const [errorPago, setErrorPago] = useState<string | null>(null);
+  const [cargandoPlan, setCargandoPlan] = useState(true);
+  const [paidBySchool, setPaidBySchool] = useState(false);
+  const [schoolInfo, setSchoolInfo] = useState<any>(null);
+
+  // Cargar plan actual del usuario
+  useEffect(() => {
+    const cargarPlanActual = async () => {
+      try {
+        const res = await fetch('/api/user/current-plan');
+        if (res.ok) {
+          const data = await res.json();
+          console.log('Plan data received:', data); // Debug
+          setPlanActual(data.plan || 'FREE');
+          setEstadoSuscripcion(data.activo ? 'ACTIVO' : 'INACTIVO');
+          setPaidBySchool(data.paidBySchool || false);
+          setSchoolInfo(data.organization || null);
+        }
+      } catch (error) {
+        console.error('Error cargando plan:', error);
+      } finally {
+        setCargandoPlan(false);
+      }
+    };
+    
+    cargarPlanActual();
+  }, []);
 
   // MOCK DATA
   const PRECIOS = {
@@ -85,6 +114,34 @@ export default function SuscripcionPage() {
 
   const cerrarCheckout = () => setShowCheckout(false);
 
+  // Obtener información del plan actual
+  const getPlanInfo = (plan: string) => {
+    switch(plan) {
+      case 'FREE':
+        return { nombre: 'Básico', icon: '🆓', color: 'emerald', descripcion: 'Plan gratuito de autogestión' };
+      case 'STANDARD':
+        return { nombre: 'Standard', icon: '⭐', color: 'blue', descripcion: 'Transformación personal con mentor' };
+      case 'PREMIUM':
+      case 'QUANTUM':
+        return { nombre: 'Premium', icon: '⚡', color: 'purple', descripcion: 'Máxima transformación con acompañamiento VIP' };
+      default:
+        return { nombre: 'Sin Plan', icon: '❓', color: 'gray', descripcion: 'No tienes un plan activo' };
+    }
+  };
+
+  if (cargandoPlan) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-purple-500 mx-auto mb-4" />
+          <p className="text-slate-400">Cargando tu membresía...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const planInfo = getPlanInfo(planActual || 'FREE');
+
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto min-h-screen relative">
       
@@ -96,6 +153,114 @@ export default function SuscripcionPage() {
         </h1>
         <p className="text-slate-400 text-lg">Todos los planes incluyen <span className="text-blue-400 font-semibold">mentor personal</span> dedicado a tu crecimiento</p>
       </div>
+
+      {/* BANNER DE MEMBRESÍA ACTUAL - Solo mostrar si tiene plan pagado */}
+      {planActual && planActual !== 'FREE' && estadoSuscripcion === 'ACTIVO' && (
+        <div className={`max-w-4xl mx-auto mb-10 bg-gradient-to-r from-${planInfo.color}-900/30 to-${planInfo.color}-800/20 border border-${planInfo.color}-500/30 rounded-2xl p-6 shadow-xl`}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <div className="text-5xl">{planInfo.icon}</div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Crown className={`text-${planInfo.color}-400`} size={20} />
+                  <h3 className="text-xl font-bold text-white">Plan Actual: {planInfo.nombre}</h3>
+                </div>
+                <p className="text-slate-300 text-sm">{planInfo.descripcion}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-slate-400 mb-1">Estado</p>
+              <span className={`px-4 py-2 rounded-full text-sm font-bold bg-green-600 text-white`}>
+                ✓ Plan Activo
+              </span>
+            </div>
+          </div>
+          
+          {/* Mostrar si está pagado por escuela */}
+          {paidBySchool && schoolInfo && (
+            <div className="flex items-center gap-3 bg-slate-900/50 rounded-lg px-4 py-3 border border-slate-700">
+              {schoolInfo.logo && (
+                <img 
+                  src={schoolInfo.logo} 
+                  alt={schoolInfo.name}
+                  className="w-10 h-10 rounded-full object-cover border-2 border-slate-600"
+                />
+              )}
+              <div>
+                <p className="text-xs text-slate-400">Membresía pagada por</p>
+                <p className="text-base font-bold text-white">{schoolInfo.name}</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* BANNER ESPECIAL - Usuario con visión pero sin plan de pago activo */}
+      {(!planActual || planActual === 'FREE') && schoolInfo && (
+        <div className="max-w-4xl mx-auto mb-10 bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/30 rounded-2xl p-6 shadow-xl">
+          <div className="flex items-center gap-3 mb-4">
+            {schoolInfo.logo && (
+              <img 
+                src={schoolInfo.logo} 
+                alt={schoolInfo.name}
+                className="w-12 h-12 rounded-full object-cover border-2 border-blue-500"
+              />
+            )}
+            <div>
+              <h3 className="text-lg font-bold text-white">Miembro de {schoolInfo.name}</h3>
+              <p className="text-slate-300 text-sm">Tu institución te da acceso a la plataforma</p>
+            </div>
+          </div>
+          <div className="bg-slate-900/50 rounded-lg px-4 py-3 border border-slate-700">
+            <p className="text-sm text-slate-300">
+              💡 <span className="font-semibold">Tip:</span> Habla con tu coordinador sobre activar un plan premium 
+              para desbloquear todas las funciones de transformación personal.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* CTA DE UPGRADE */}
+      {planActual === 'FREE' && (
+        <div className="max-w-4xl mx-auto mb-10 bg-gradient-to-r from-purple-900/30 to-pink-900/30 border border-purple-500/30 rounded-2xl p-6 shadow-xl">
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <TrendingUp className="text-purple-400" size={28} />
+              <h3 className="text-2xl font-bold text-white">¡Desbloquea Todo tu Potencial!</h3>
+            </div>
+            <p className="text-slate-300 mb-4">
+              Actualmente estás en el Plan Básico. Actualiza para obtener mentor personal, 
+              puntos cuánticos, y aceleración de tu transformación.
+            </p>
+            <div className="flex justify-center gap-4">
+              <div className="bg-slate-900/50 rounded-lg p-3 text-center flex-1 max-w-xs">
+                <div className="text-2xl mb-1">⭐</div>
+                <p className="text-sm text-white font-semibold mb-1">Standard</p>
+                <p className="text-xs text-slate-400">Mentor + Gamificación</p>
+              </div>
+              <div className="bg-slate-900/50 rounded-lg p-3 text-center flex-1 max-w-xs">
+                <div className="text-2xl mb-1">⚡</div>
+                <p className="text-sm text-white font-semibold mb-1">Premium</p>
+                <p className="text-xs text-slate-400">Acompañamiento VIP</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {planActual === 'STANDARD' && (
+        <div className="max-w-4xl mx-auto mb-10 bg-gradient-to-r from-purple-900/30 to-pink-900/30 border border-purple-500/30 rounded-2xl p-6 shadow-xl">
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <Star className="text-yellow-400" size={28} />
+              <h3 className="text-2xl font-bold text-white">¿Listo para el Siguiente Nivel?</h3>
+            </div>
+            <p className="text-slate-300 mb-4">
+              Actualiza a Premium ⚡ y obtén acompañamiento VIP con máxima transformación
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* VISTA 1: SELECCIÓN DE PLANES (Si no está activo) */}
       {estadoSuscripcion === 'INACTIVO' && (

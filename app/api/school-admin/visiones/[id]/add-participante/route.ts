@@ -87,9 +87,41 @@ export async function POST(
       },
     });
 
+    // Asignar licencia pendiente automáticamente
+    try {
+      // Verificar si ya tiene licencia para esta visión
+      const existingLicense = await prisma.licenseAssignment.findFirst({
+        where: {
+          userId: participanteId,
+          visionId: visionId,
+          isActive: true
+        }
+      });
+
+      if (!existingLicense) {
+        const licenseCode = `QNT-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+        await prisma.licenseAssignment.create({
+          data: {
+            userId: participanteId,
+            licenseCode: licenseCode,
+            visionId: visionId,
+            organizationId: user.organizationId,
+            assignedBy: session.user.id,
+            isActive: true,
+            activatedAt: null, // Pendiente hasta que envíe su carta
+            assignedAt: new Date(),
+            expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000) // 10 días para activar
+          }
+        });
+        console.log(`🎫 Licencia pendiente asignada automáticamente`);
+      }
+    } catch (error) {
+      console.error('Error asignando licencia automática:', error);
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'Participante agregado exitosamente',
+      message: 'Participante agregado exitosamente con licencia pendiente',
       relation,
     });
   } catch (error) {

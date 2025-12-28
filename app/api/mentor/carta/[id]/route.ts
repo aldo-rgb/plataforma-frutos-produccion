@@ -9,7 +9,7 @@ import { prisma } from '@/lib/prisma';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +18,8 @@ export async function GET(
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
-    const cartaId = parseInt(params.id);
+    const { id } = await params;
+    const cartaId = parseInt(id);
 
     if (isNaN(cartaId)) {
       return NextResponse.json({ error: 'ID de carta inválido' }, { status: 400 });
@@ -104,23 +105,31 @@ export async function GET(
           status: enrollment.status
         } : null
       },
-      metas: (carta as any).Meta.map((meta: any) => ({
-        id: meta.id,
-        categoria: meta.categoria,
-        orden: meta.orden,
-        declaracionPoder: meta.declaracionPoder,
-        metaPrincipal: meta.metaPrincipal,
-        status: meta.status,
-        mentorFeedback: meta.mentorFeedback,
-        acciones: meta.Accion.map((accion: any) => ({
-          id: accion.id,
-          texto: accion.texto,
-          frequency: accion.frequency,
-          assignedDays: accion.assignedDays,
-          specificDate: accion.specificDate,
-          completada: accion.completada
-        }))
-      }))
+      metas: (carta as any).Meta.map((meta: any) => {
+        // Filtrar acciones duplicadas por ID
+        const uniqueAcciones = Array.from(
+          new Map(meta.Accion.map((accion: any) => [accion.id, accion])).values()
+        );
+        
+        return {
+          id: meta.id,
+          categoria: meta.categoria,
+          orden: meta.orden,
+          declaracionPoder: meta.declaracionPoder,
+          metaPrincipal: meta.metaPrincipal,
+          status: meta.status,
+          mentorFeedback: meta.mentorFeedback,
+          acciones: uniqueAcciones.map((accion: any) => ({
+            id: accion.id,
+            texto: accion.texto,
+            frequency: accion.frequency,
+            assignedDays: accion.assignedDays,
+            specificDate: accion.specificDate,
+            completada: accion.completada,
+            requiereEvidencia: accion.requiereEvidencia
+          }))
+        };
+      })
     };
 
     return NextResponse.json(response);

@@ -622,16 +622,16 @@ export default function CartaReviewPage() {
                                   <div className="flex-shrink-0">
                                     <button
                                       onClick={() => handleToggleEvidence(accion.id, accion.requiereEvidencia)}
-                                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border-2 transition-all ${
+                                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all ${
                                         accion.requiereEvidencia
                                           ? 'bg-blue-900/30 border-blue-500/50 text-blue-400 hover:bg-blue-900/50'
-                                          : 'bg-slate-800 border-slate-600 text-slate-400 hover:border-slate-500'
+                                          : 'bg-red-900/30 border-red-500/50 text-red-400 hover:bg-red-900/50'
                                       }`}
-                                      title={accion.requiereEvidencia ? 'Evidencia fotográfica obligatoria' : 'Solo Honor Code (sin evidencia)'}
+                                      title={accion.requiereEvidencia ? 'Click para cambiar a: No requiere evidencia' : 'Click para cambiar a: Sí requiere evidencia'}
                                     >
                                       <span className="text-base">{accion.requiereEvidencia ? '📸' : '🚫'}</span>
-                                      <span className="text-[10px] font-bold uppercase tracking-wider">
-                                        {accion.requiereEvidencia ? 'SÍ' : 'NO'}
+                                      <span className="text-xs font-semibold whitespace-nowrap">
+                                        {accion.requiereEvidencia ? 'Sí requiere evidencia' : 'No requiere evidencia'}
                                       </span>
                                     </button>
                                   </div>

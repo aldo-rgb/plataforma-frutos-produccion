@@ -76,8 +76,8 @@ export async function GET(
             id: true,
             nombre: true,
             email: true,
+            telefono: true,
             tier: true,
-            licenseCode: true,
             assignedMentorId: true,
             Usuario_Usuario_assignedMentorIdToUsuario: {
               select: {
@@ -93,6 +93,20 @@ export async function GET(
                 estado: true,
               },
             },
+            LicenseAssignments: {
+              where: {
+                visionId: visionId,
+                isActive: true
+              },
+              select: {
+                id: true,
+                licenseCode: true,
+                activatedAt: true,
+                assignedAt: true,
+                expiresAt: true
+              },
+              take: 1
+            }
           },
         },
         GameChanger: {
@@ -118,8 +132,8 @@ export async function GET(
             id: true,
             nombre: true,
             email: true,
+            telefono: true,
             tier: true,
-            licenseCode: true,
             assignedMentorId: true,
             Usuario_Usuario_assignedMentorIdToUsuario: {
               select: {
@@ -129,6 +143,20 @@ export async function GET(
                 imagen: true,
               },
             },
+            LicenseAssignments: {
+              where: {
+                visionId: visionId,
+                isActive: true
+              },
+              select: {
+                id: true,
+                licenseCode: true,
+                activatedAt: true,
+                assignedAt: true,
+                expiresAt: true
+              },
+              take: 1
+            }
           },
         },
       },

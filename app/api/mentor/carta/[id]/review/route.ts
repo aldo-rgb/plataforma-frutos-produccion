@@ -9,7 +9,7 @@ import { prisma } from '@/lib/prisma';
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +18,8 @@ export async function POST(
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
-    const cartaId = parseInt(params.id);
+    const { id } = await params;
+    const cartaId = parseInt(id);
     const mentorId = session.user.id;
 
     if (isNaN(cartaId)) {
@@ -39,7 +40,10 @@ export async function POST(
     const body = await request.json();
     const { metasReview } = body;
 
+    console.log('📝 Revisión recibida:', { cartaId, mentorId, metasCount: metasReview?.length });
+
     if (!metasReview || !Array.isArray(metasReview)) {
+      console.error('❌ Datos de revisión inválidos:', { metasReview });
       return NextResponse.json({ error: 'Datos de revisión inválidos' }, { status: 400 });
     }
 
@@ -62,12 +66,22 @@ export async function POST(
       return NextResponse.json({ error: 'Carta no encontrada' }, { status: 404 });
     }
 
+    if (!carta.Usuario) {
+      return NextResponse.json({ error: 'Usuario de la carta no encontrado' }, { status: 404 });
+    }
+
     const usuario = carta.Usuario;
     const isAssigned = usuario.mentorId === mentorId || usuario.assignedMentorId === mentorId;
     
     if (!isAssigned && !['ADMIN', 'STAFF', 'COORDINADOR', 'GAMECHANGER'].includes(mentor.rol)) {
       return NextResponse.json({ error: 'Esta carta no está asignada a ti' }, { status: 403 });
     }
+
+    console.log('✅ Validaciones OK, procesando revisión...', { 
+      cartaId, 
+      usuarioId: usuario.id, 
+      metasCount: metasReview.length 
+    });
 
     // Actualizar cada meta con su estado y feedback
     const updatePromises = metasReview.map((review: any) => {
@@ -81,6 +95,8 @@ export async function POST(
     });
 
     await Promise.all(updatePromises);
+
+    console.log('✅ Metas actualizadas correctamente');
 
     // Determinar el nuevo estado de la carta
     const allApproved = metasReview.every((r: any) => r.status === 'APPROVED');
@@ -103,21 +119,33 @@ export async function POST(
       }
     });
 
+    console.log('✅ Estado de carta actualizado:', { newEstado, allApproved });
+
     // Si todo fue aprobado, generar tareas automáticamente
     if (allApproved) {
       try {
+        console.log('🔄 Generando tareas para usuario:', usuario.id);
         // Llamar al endpoint de generar tareas
         const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-        await fetch(`${baseUrl}/api/generar-tareas`, {
+        const taskResponse = await fetch(`${baseUrl}/api/generar-tareas`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ usuarioId: usuario.id })
         });
+        
+        if (taskResponse.ok) {
+          console.log('✅ Tareas generadas exitosamente');
+        } else {
+          const errorData = await taskResponse.json();
+          console.error('⚠️ Error en generación de tareas:', errorData);
+        }
       } catch (error) {
-        console.error('Error generando tareas:', error);
+        console.error('❌ Error generando tareas:', error);
         // No fallar la revisión si falla la generación de tareas
       }
     }
+
+    console.log('✅ Revisión completada exitosamente');
 
     return NextResponse.json({
       success: true,

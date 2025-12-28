@@ -494,7 +494,8 @@ async function getMentorRanking(startDate?: Date) {
 
     const totalCompletedCalls = enrollments.reduce((sum, e) => sum + e.CallBookings.length, 0);
     const perfilMentor = mentor.PerfilMentor;
-    const completionRate = perfilMentor ? (perfilMentor.calificacionPromedio || 0) * 20 : 0; // Convertir escala 5 a 100
+    const rating = perfilMentor?.calificacionPromedio ?? 0;
+    const completionRate = rating > 0 ? rating * 20 : 0; // Convertir escala 5 a 100
 
     return {
       mentorId: mentor.id,
@@ -506,7 +507,7 @@ async function getMentorRanking(startDate?: Date) {
       totalHQEvidences,
       completedCalls: totalCompletedCalls,
       completionRate: Math.round(completionRate),
-      rating: perfilMentor?.calificacionPromedio || 0,
+      rating: Number(rating) || 0,
       totalPoints: perfilMentor?.puntosTotales || 0
     };
   });

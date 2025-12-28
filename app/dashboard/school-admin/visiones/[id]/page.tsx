@@ -20,7 +20,8 @@ import {
   Copy,
   Eye,
   Download,
-  Calendar
+  Calendar,
+  Clock
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -62,6 +63,13 @@ interface Participante {
       email: string;
       imagen: string | null;
     } | null;
+    LicenseAssignments: {
+      id: number;
+      licenseCode: string;
+      activatedAt: Date | null;
+      assignedAt: Date;
+      expiresAt: Date | null;
+    }[];
   };
   GameChanger: {
     id: number;
@@ -89,6 +97,13 @@ interface GameChanger {
       email: string;
       imagen: string | null;
     } | null;
+    LicenseAssignments: {
+      id: number;
+      licenseCode: string;
+      activatedAt: Date | null;
+      assignedAt: Date;
+      expiresAt: Date | null;
+    }[];
   };
   createdAt: string;
 }
@@ -1362,11 +1377,18 @@ export default function VisionDetailPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {p.Participante.licenseCode ? (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-900/20 text-green-400 border border-green-600 rounded-full text-xs font-medium">
-                            <CheckCircle size={14} />
-                            Activa
-                          </span>
+                        {p.Participante.LicenseAssignments?.[0]?.licenseCode ? (
+                          p.Participante.LicenseAssignments[0].activatedAt ? (
+                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-900/20 text-green-400 border border-green-600 rounded-full text-xs font-medium">
+                              <CheckCircle size={14} />
+                              Activa
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-900/20 text-amber-400 border border-amber-600 rounded-full text-xs font-medium">
+                              <Clock size={14} />
+                              Pendiente
+                            </span>
+                          )
                         ) : (
                           <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-900/20 text-red-400 border border-red-600 rounded-full text-xs font-medium">
                             <XCircle size={14} />
@@ -1375,13 +1397,13 @@ export default function VisionDetailPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {p.Participante.licenseCode ? (
+                        {p.Participante.LicenseAssignments?.[0]?.licenseCode ? (
                           <div className="flex items-center justify-center gap-2">
                             <code className="px-3 py-1.5 bg-gradient-to-r from-emerald-900/30 to-cyan-900/30 border border-emerald-500/30 rounded-lg text-sm text-emerald-300 font-mono font-semibold tracking-wide">
-                              {p.Participante.licenseCode}
+                              {p.Participante.LicenseAssignments[0].licenseCode}
                             </code>
                             <button
-                              onClick={() => copyToClipboard(p.Participante.licenseCode!)}
+                              onClick={() => copyToClipboard(p.Participante.LicenseAssignments[0].licenseCode)}
                               className="p-1.5 hover:bg-emerald-600/20 text-emerald-400 hover:text-emerald-300 rounded-lg transition-all"
                               title="Copiar código"
                             >
@@ -1403,7 +1425,7 @@ export default function VisionDetailPage() {
                               <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
                             </svg>
                           </button>
-                          {!p.Participante.licenseCode && (
+                          {!p.Participante.LicenseAssignments?.[0]?.licenseCode && (
                             <button
                               onClick={() => {
                                 setSelectedParticipante(p);
@@ -1551,11 +1573,18 @@ export default function VisionDetailPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {gc.GameChanger.licenseCode ? (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-900/20 text-green-400 border border-green-600 rounded-full text-xs font-medium">
-                            <CheckCircle size={14} />
-                            Activa
-                          </span>
+                        {gc.GameChanger.LicenseAssignments?.[0]?.licenseCode ? (
+                          gc.GameChanger.LicenseAssignments[0].activatedAt ? (
+                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-900/20 text-green-400 border border-green-600 rounded-full text-xs font-medium">
+                              <CheckCircle size={14} />
+                              Activa
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-900/20 text-amber-400 border border-amber-600 rounded-full text-xs font-medium">
+                              <Clock size={14} />
+                              Pendiente
+                            </span>
+                          )
                         ) : (
                           <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-900/20 text-red-400 border border-red-600 rounded-full text-xs font-medium">
                             <XCircle size={14} />
@@ -1564,13 +1593,13 @@ export default function VisionDetailPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {gc.GameChanger.licenseCode ? (
+                        {gc.GameChanger.LicenseAssignments?.[0]?.licenseCode ? (
                           <div className="flex items-center justify-center gap-2">
                             <code className="px-3 py-1.5 bg-gradient-to-r from-emerald-900/30 to-cyan-900/30 border border-emerald-500/30 rounded-lg text-sm text-emerald-300 font-mono font-semibold tracking-wide">
-                              {gc.GameChanger.licenseCode}
+                              {gc.GameChanger.LicenseAssignments[0].licenseCode}
                             </code>
                             <button
-                              onClick={() => copyToClipboard(gc.GameChanger.licenseCode!)}
+                              onClick={() => copyToClipboard(gc.GameChanger.LicenseAssignments[0].licenseCode)}
                               className="p-1.5 hover:bg-emerald-600/20 text-emerald-400 hover:text-emerald-300 rounded-lg transition-all"
                               title="Copiar código"
                             >
@@ -1592,7 +1621,7 @@ export default function VisionDetailPage() {
                               <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
                             </svg>
                           </button>
-                          {!gc.GameChanger.licenseCode && (
+                          {!gc.GameChanger.LicenseAssignments?.[0]?.licenseCode && (
                             <button
                               onClick={() => {
                                 setSelectedGameChanger(gc);

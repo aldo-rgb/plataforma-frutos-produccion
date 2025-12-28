@@ -34,40 +34,53 @@ export default function DashboardCalendarHeader({ selectedDate, onDateSelect, st
   const [isLoading, setIsLoading] = useState(true);
   const calendarRef = useRef<HTMLDivElement>(null);
 
-  // Cargar datos del calendario
+  // Cargar datos del calendario (mes actual + adyacentes)
   useEffect(() => {
-    const monthStr = format(selectedDate, 'yyyy-MM');
-    
-    console.log('🔄 Cargando datos del calendario para:', monthStr);
-    setIsLoading(true);
-    fetch(`/api/tasks/calendar-summary?month=${monthStr}`)
-      .then(res => res.json())
-      .then(data => {
-        console.log('✅ Datos recibidos:', data);
-        console.log('📊 Número de días con tareas:', Object.keys(data).length);
-        setTaskSummary(data);
+    const loadMonths = async () => {
+      const currentMonthStr = format(selectedDate, 'yyyy-MM');
+      const prevMonthStr = format(subMonths(selectedDate, 1), 'yyyy-MM');
+      const nextMonthStr = format(addMonths(selectedDate, 1), 'yyyy-MM');
+      
+      console.log('🔄 Cargando datos del calendario:', { currentMonthStr, prevMonthStr, nextMonthStr });
+      setIsLoading(true);
+      
+      try {
+        const [current, prev, next] = await Promise.all([
+          fetch(`/api/tasks/calendar-summary?month=${currentMonthStr}`).then(r => r.json()),
+          fetch(`/api/tasks/calendar-summary?month=${prevMonthStr}`).then(r => r.json()),
+          fetch(`/api/tasks/calendar-summary?month=${nextMonthStr}`).then(r => r.json())
+        ]);
+        
+        const combined = { ...prev, ...current, ...next };
+        console.log('✅ Datos recibidos:', Object.keys(combined).length, 'días');
+        setTaskSummary(combined);
         setIsLoading(false);
-      })
-      .catch(err => {
+      } catch (err) {
         console.error('❌ Error loading calendar summary:', err);
         setIsLoading(false);
-      });
+      }
+    };
+    
+    loadMonths();
   }, [selectedDate]);
 
-  // Cargar mes actual cuando se abre el dropdown
+  // Cargar mes actual cuando se abre el dropdown o cambia de mes
   useEffect(() => {
     if (!isMonthViewOpen) return;
     
     const monthStr = format(currentMonth, 'yyyy-MM');
+    const prevMonthStr = format(subMonths(currentMonth, 1), 'yyyy-MM');
+    const nextMonthStr = format(addMonths(currentMonth, 1), 'yyyy-MM');
     
-    fetch(`/api/tasks/calendar-summary?month=${monthStr}`)
-      .then(res => res.json())
-      .then(data => {
-        setTaskSummary(prev => ({ ...prev, ...data }));
-      })
-      .catch(err => {
-        console.error('Error loading calendar summary:', err);
-      });
+    Promise.all([
+      fetch(`/api/tasks/calendar-summary?month=${monthStr}`).then(r => r.json()),
+      fetch(`/api/tasks/calendar-summary?month=${prevMonthStr}`).then(r => r.json()),
+      fetch(`/api/tasks/calendar-summary?month=${nextMonthStr}`).then(r => r.json())
+    ]).then(([current, prev, next]) => {
+      setTaskSummary(prev => ({ ...prev, ...prev, ...current, ...next }));
+    }).catch(err => {
+      console.error('Error loading calendar summary:', err);
+    });
   }, [currentMonth, isMonthViewOpen]);
 
   // Cerrar al hacer click fuera

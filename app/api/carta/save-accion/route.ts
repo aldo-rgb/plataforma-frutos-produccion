@@ -41,20 +41,45 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Meta no encontrada' }, { status: 404 });
     }
 
-    // Crear la acción
-    const accion = await prisma.accion.create({
-      data: {
+    // BUSCAR si ya existe una acción con el mismo texto para esta meta
+    const existingAccion = await prisma.accion.findFirst({
+      where: {
         metaId,
-        texto,
-        frequency: frequency || 'WEEKLY',
-        assignedDays: assignedDays || [],
-        requiereEvidencia: requiereEvidencia || false,
-        specificDate: specificDate ? new Date(specificDate) : null,
-        completada: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        texto
       }
     });
+
+    let accion;
+    if (existingAccion) {
+      // ACTUALIZAR la acción existente (evita duplicados)
+      accion = await prisma.accion.update({
+        where: { id: existingAccion.id },
+        data: {
+          frequency: frequency || 'WEEKLY',
+          assignedDays: assignedDays || [],
+          requiereEvidencia: requiereEvidencia || false,
+          specificDate: specificDate ? new Date(specificDate) : null,
+          updatedAt: new Date()
+        }
+      });
+      console.log('✅ Acción actualizada (evitando duplicado) ID:', accion.id);
+    } else {
+      // CREAR nueva acción
+      accion = await prisma.accion.create({
+        data: {
+          metaId,
+          texto,
+          frequency: frequency || 'WEEKLY',
+          assignedDays: assignedDays || [],
+          requiereEvidencia: requiereEvidencia || false,
+          specificDate: specificDate ? new Date(specificDate) : null,
+          completada: false,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      });
+      console.log('✅ Acción creada ID:', accion.id);
+    }
 
     return NextResponse.json({ 
       success: true, 

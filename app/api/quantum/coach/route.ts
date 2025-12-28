@@ -60,10 +60,12 @@ FLUJO DE INTERACCIÓN:
 - Di: "➡️ Pasemos al área de [Siguiente Área]. ¿Quién eres tú en...?"
 
 **IMPORTANTE - FINALIZACIÓN AUTOMÁTICA:**
-Cuando hayas completado TODAS las áreas requeridas, debes finalizar la conversación con un mensaje como:
-"✅ ¡Excelente trabajo! Hemos completado tus declaraciones del SER en todas las áreas. Voy a guardar tu identidad ahora."
+Cuando hayas completado TODAS las áreas requeridas, debes finalizar la conversación con EXACTAMENTE este mensaje:
+"✅ ¡Excelente trabajo! Hemos completado tus declaraciones del SER en todas las áreas. Ahora haz clic en el botón verde '✨ Aplicar declaraciones' para guardar tu nueva identidad."
 
-NO sigas haciendo preguntas después de completar todas las áreas. Finaliza inmediatamente.
+NO sigas haciendo preguntas después de completar todas las áreas. 
+NO apliques las declaraciones automáticamente.
+El usuario DEBE hacer clic en el botón verde para confirmar y aplicar los cambios.
 
 IMPORTANTE: El número de áreas puede variar (6 u 8) según si el usuario pertenece a un grupo/visión. Siempre procesa TODAS las áreas que se te indiquen en el orden establecido.
 
@@ -146,7 +148,8 @@ export async function POST(req: NextRequest) {
     if (action === 'initialize') {
       const hasExistingDeclaraciones = currentDeclaraciones && Object.keys(currentDeclaraciones).length > 0;
       
-      const areasListText = areasConfig.map(a => `${a.emoji} ${a.name || a.nombre}`).join(' → ');
+      console.log('🔍 Áreas configuradas para Quantum:', areasConfig);
+      const areasListText = areasConfig.map(a => `${a.emoji} ${a.name}`).join(' → ');
       const totalAreas = areasConfig.length;
       
       let initialMessage = `⚡ QUANTUM - Conectado al campo cuántico
@@ -179,21 +182,27 @@ Soy Quantum. Vamos a construir declaraciones precisas del SER para ${totalAreas}
       const { areasRequeridas = 6 } = body;
       const areasKeys = areasConfig.map(a => a.key);
       
+      console.log('📊 Áreas configuradas:', areasConfig.map(a => `${a.key}: ${a.name}`));
+      console.log('📋 Declaraciones actuales:', currentDeclaraciones);
+      
       // Contar áreas ya completadas
       const areasCompletadas = areasKeys.filter(key => 
         currentDeclaraciones?.[key] && currentDeclaraciones[key].trim().length > 0
       );
       
+      console.log(`✅ Áreas completadas (${areasCompletadas.length}/${areasConfig.length}):`, areasCompletadas);
+      console.log(`⏳ Áreas pendientes:`, areasKeys.filter(k => !areasCompletadas.includes(k)));
+      
       const contextMessage = `\n\n[CONTEXTO DEL SISTEMA - NO MENCIONES ESTO AL USUARIO]
-Áreas configuradas para este usuario: ${areasConfig.map(a => `${a.emoji} ${a.name || a.nombre}`).join(', ')}
-Total de áreas: ${areasConfig.length}
-Áreas completadas: ${areasCompletadas.length}
+Áreas configuradas para este usuario: ${areasConfig.map(a => `${a.emoji} ${a.name}`).join(', ')}
+Total de áreas requeridas: ${areasConfig.length}
+Áreas completadas hasta ahora: ${areasCompletadas.length}
 Áreas pendientes: ${areasConfig.length - areasCompletadas.length}
-Declaraciones registradas: ${areasCompletadas.map(k => areasConfig.find(a => a.key === k)?.name || areasConfig.find(a => a.key === k)?.nombre).join(', ') || 'Ninguna'}
+Declaraciones ya registradas: ${areasCompletadas.map(k => areasConfig.find(a => a.key === k)?.name).join(', ') || 'Ninguna'}
 
 ${areasCompletadas.length >= areasConfig.length ? 
-  'TODAS LAS ÁREAS COMPLETADAS - Debes finalizar la conversación en tu próxima respuesta con un mensaje de despedida y confirmación de que vas a guardar.' : 
-  `Siguiente área a trabajar: ${areasConfig[areasCompletadas.length]?.name || areasConfig[areasCompletadas.length]?.nombre || 'N/A'}`}`;
+  'TODAS LAS ÁREAS COMPLETADAS - Debes finalizar la conversación diciendo: "✅ ¡Excelente trabajo! Hemos completado tus declaraciones del SER en todas las áreas. Ahora haz clic en el botón verde \'✨ Aplicar declaraciones\' para guardar tu nueva identidad."' : 
+  `Siguiente área pendiente que DEBES trabajar: ${areasConfig[areasCompletadas.length]?.name || 'N/A'} ${areasConfig[areasCompletadas.length]?.emoji || ''}`}`;
       
       const messages = [
         { role: 'system', content: SYSTEM_PROMPT + contextMessage },

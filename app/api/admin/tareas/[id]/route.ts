@@ -70,12 +70,12 @@ export async function PATCH(
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    // Verificar que el usuario sea ADMIN, COORDINADOR o MENTOR
+    // Verificar que el usuario sea ADMIN, COORDINADOR o DIRECTOR
     const usuario = await prisma.usuario.findUnique({
       where: { id: session.user.id }
     });
 
-    if (!usuario || !['ADMINISTRADOR', 'COORDINADOR', 'MENTOR'].includes(usuario.rol)) {
+    if (!usuario || !['ADMINISTRADOR', 'ADMIN', 'COORDINADOR', 'DIRECTOR'].includes(usuario.rol)) {
       return NextResponse.json(
         { error: 'No tienes permisos para realizar esta acción' },
         { status: 403 }
@@ -224,12 +224,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    // Verificar que el usuario sea ADMIN, COORDINADOR o MENTOR
+    // Verificar que el usuario sea ADMIN, COORDINADOR o DIRECTOR
     const usuario = await prisma.usuario.findUnique({
       where: { id: session.user.id }
     });
 
-    if (!usuario || !['ADMINISTRADOR', 'COORDINADOR', 'MENTOR'].includes(usuario.rol)) {
+    if (!usuario || !['ADMINISTRADOR', 'ADMIN', 'COORDINADOR', 'DIRECTOR'].includes(usuario.rol)) {
       return NextResponse.json(
         { error: 'No tienes permisos para realizar esta acción' },
         { status: 403 }
