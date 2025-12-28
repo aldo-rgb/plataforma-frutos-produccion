@@ -65,11 +65,6 @@ export async function GET() {
             }
           }
         }
-      },
-      orderBy: {
-        participant: {
-          puntosCuanticos: 'desc'
-        }
       }
     });
 
@@ -92,6 +87,9 @@ export async function GET() {
         enrollmentId: enrollment.id
       };
     });
+
+    // Ordenar por puntos cuánticos de mayor a menor
+    mentorados.sort((a, b) => b.quantumPoints - a.quantumPoints);
 
     return NextResponse.json({
       success: true,
