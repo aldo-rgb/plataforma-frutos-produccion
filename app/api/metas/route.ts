@@ -103,10 +103,52 @@ export async function PUT(request: NextRequest) {
     // Buscar usuario
     const usuario = await prisma.usuario.findUnique({
       where: { email: session.user.email },
+      select: {
+        id: true,
+        rol: true,
+        licenseCode: true,
+        assignedMentorId: true,
+        organizationId: true
+      }
     });
 
     if (!usuario) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
+    // 🔒 VALIDACIÓN DE SEGURIDAD: Verificar requisitos según rol
+    // GameChangers y Participantes DEBEN tener licencia y mentor antes de enviar a revisión
+    if (usuario.rol === 'GAMECHANGER' || usuario.rol === 'PARTICIPANTE') {
+      // Validar que tenga licencia
+      if (!usuario.licenseCode) {
+        return NextResponse.json({ 
+          error: 'Necesitas una licencia activa para enviar tu carta a revisión. Contacta a tu coordinador.',
+          code: 'NO_LICENSE'
+        }, { status: 403 });
+      }
+
+      // Validar que tenga mentor asignado (en Usuario.assignedMentorId o en ProgramEnrollment)
+      let tieneMentor = !!usuario.assignedMentorId;
+      
+      if (!tieneMentor) {
+        // Verificar si tiene mentor en ProgramEnrollment activo
+        const enrollment = await prisma.programEnrollment.findFirst({
+          where: {
+            userId: usuario.id,
+            status: 'ACTIVE'
+          },
+          select: { mentorId: true }
+        });
+        
+        tieneMentor = !!enrollment?.mentorId;
+      }
+
+      if (!tieneMentor) {
+        return NextResponse.json({ 
+          error: 'Necesitas un mentor asignado para enviar tu carta a revisión. Inscríbete al programa de disciplina primero.',
+          code: 'NO_MENTOR'
+        }, { status: 403 });
+      }
     }
 
     // Buscar carta del usuario

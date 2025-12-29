@@ -48,7 +48,7 @@ export async function POST(
       select: { organizationId: true },
     });
 
-    // Coordinador verificado en session {
+    if (!coordinador?.organizationId) {
       return NextResponse.json(
         { success: false, error: 'No tienes organización asignada' },
         { status: 400 }
