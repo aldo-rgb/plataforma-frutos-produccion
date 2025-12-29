@@ -1858,7 +1858,7 @@ export default function VisionDetailPage() {
                 value={emailInput}
                 onChange={e => setEmailInput(e.target.value)}
               />
-              <p className="text-xs text-slate-400 mt-2">Se crearán cuentas nuevas para los correos que no existan. Contraseña temporal: <span className="font-mono">Frutos2025!</span></p>
+              <p className="text-xs text-slate-400 mt-2">Se crearán cuentas nuevas para los correos que no existan. Contraseña temporal: <span className="font-mono">Quantum123</span></p>
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -1897,7 +1897,7 @@ export default function VisionDetailPage() {
                 value={teamEmailInput}
                 onChange={e => setTeamEmailInput(e.target.value)}
               />
-              <p className="text-xs text-slate-400 mt-2">Se crearán cuentas Game Changer para los correos que no existan. Contraseña temporal: <span className="font-mono">Frutos2025!</span></p>
+              <p className="text-xs text-slate-400 mt-2">Se crearán cuentas Game Changer para los correos que no existan. Contraseña temporal: <span className="font-mono">Quantum123</span></p>
             </div>
             <div className="flex items-center gap-3">
               <button

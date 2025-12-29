@@ -64,6 +64,8 @@ export default function SchoolAdminDashboard() {
     type: 'success' | 'error';
     message: string;
   } | null>(null);
+  const [consejoQuantum, setConsejoQuantum] = useState<any>(null);
+  const [loadingConsejo, setLoadingConsejo] = useState(true);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -73,6 +75,7 @@ export default function SchoolAdminDashboard() {
     } else {
       fetchDashboardData();
       checkPaymentStatus();
+      fetchConsejoQuantum();
     }
   }, [status, session]);
 
@@ -167,6 +170,20 @@ export default function SchoolAdminDashboard() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchConsejoQuantum = async () => {
+    try {
+      const res = await fetch('/api/quantum/consejo-vision');
+      const result = await res.json();
+      if (res.ok && result.success) {
+        setConsejoQuantum(result.consejo);
+      }
+    } catch (error) {
+      console.error('Error fetching consejo quantum:', error);
+    } finally {
+      setLoadingConsejo(false);
     }
   };
 
@@ -457,7 +474,108 @@ export default function SchoolAdminDashboard() {
                 ))}
               </div>
 
-              <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+              {/* NUEVO: Widget de Misiones y Tareas Extraordinarias */}
+              <div className="mt-8 bg-gradient-to-br from-orange-900/40 via-yellow-900/30 to-orange-900/40 border-2 border-orange-600/40 rounded-2xl p-6">
+                <h3 className="text-lg font-black text-white mb-4 flex items-center gap-2">
+                  <Zap className="text-yellow-400" size={20} />
+                  Misiones & Tareas Extraordinarias
+                </h3>
+                
+                <div className="space-y-3">
+                  {/* Revisar Evidencias */}
+                  <Link 
+                    href="/dashboard/admin/evidencias"
+                    className="block p-4 bg-slate-900/60 border border-amber-600/30 rounded-xl hover:border-amber-500/60 hover:shadow-lg hover:shadow-amber-500/20 transition-all group"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg">
+                          <CheckCircle size={20} className="text-white" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-white group-hover:text-amber-300 transition-colors">
+                            ✅ Revisar Evidencias
+                          </h4>
+                          <p className="text-xs text-slate-400 mt-1">
+                            Aprueba misiones y tareas extraordinarias
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-amber-400 group-hover:translate-x-1 transition-transform">→</div>
+                    </div>
+                  </Link>
+
+                  {/* Misiones con Quantum IA */}
+                  <Link 
+                    href="/dashboard/admin/tareas/nueva?quantum=true"
+                    className="block p-4 bg-slate-900/60 border border-purple-600/30 rounded-xl hover:border-purple-500/60 hover:shadow-lg hover:shadow-purple-500/20 transition-all group"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
+                          <BookOpen size={20} className="text-white" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-white group-hover:text-purple-300 transition-colors">
+                            🧠 Misiones con Quantum IA
+                          </h4>
+                          <p className="text-xs text-slate-400 mt-1">
+                            Crea misiones personalizadas con IA para tu comunidad
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-purple-400 group-hover:translate-x-1 transition-transform">→</div>
+                    </div>
+                  </Link>
+
+                  {/* Tareas Extraordinarias */}
+                  <Link 
+                    href="/dashboard/admin/tareas/nueva"
+                    className="block p-4 bg-slate-900/60 border border-orange-600/30 rounded-xl hover:border-orange-500/60 hover:shadow-lg hover:shadow-orange-500/20 transition-all group"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg">
+                          <Shield size={20} className="text-white" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-white group-hover:text-orange-300 transition-colors">
+                            ⚡ Tareas Extraordinarias
+                          </h4>
+                          <p className="text-xs text-slate-400 mt-1">
+                            Asigna tareas especiales para activar la visión
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-orange-400 group-hover:translate-x-1 transition-transform">→</div>
+                    </div>
+                  </Link>
+
+                  {/* Tip de Quantum IA */}
+                  <div className="mt-4 p-4 bg-gradient-to-r from-cyan-900/20 to-blue-900/20 border border-cyan-600/30 rounded-xl">
+                    <div className="flex items-start gap-3">
+                      <div className="text-2xl">{loadingConsejo ? '⏳' : consejoQuantum?.emoji || '🧬'}</div>
+                      <div className="flex-1">
+                        <p className="text-sm text-cyan-200 font-semibold mb-1">
+                          💡 Consejo de Quantum IA {consejoQuantum?.tipo && `- ${consejoQuantum.tipo}`}
+                        </p>
+                        {loadingConsejo ? (
+                          <p className="text-xs text-cyan-100/60 animate-pulse">
+                            Cargando consejo de activación...
+                          </p>
+                        ) : (
+                          <div 
+                            className="text-xs text-cyan-100/80"
+                            dangerouslySetInnerHTML={{ __html: consejoQuantum?.consejo || 'No hay consejo disponible' }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2 mt-8">
                 <Star className="text-yellow-400" size={16} />
                 Top Estudiantes
               </h3>
@@ -591,6 +709,48 @@ export default function SchoolAdminDashboard() {
                 </div>
                 <p className="text-xs text-slate-400">
                   Crea visiones/grupos y gestiona las licencias de tus participantes
+                </p>
+              </div>
+            </Link>
+
+            <Link href="/dashboard/school-admin/strikes" className="block mt-6">
+              <div className="bg-gradient-to-br from-purple-900/50 via-pink-900/30 to-slate-900 border-2 border-purple-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-purple-500/20 group-hover:bg-purple-500/30 rounded-xl transition-colors">
+                    <Shield size={24} className="text-purple-300" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm uppercase">
+                      Gestión de Strikes
+                    </h3>
+                    <p className="text-xs text-purple-300">
+                      Administrar vidas extra
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Asigna tareas extraordinarias y revisa el status de llamadas
+                </p>
+              </div>
+            </Link>
+
+            <Link href="/dashboard/school-admin/coordinadores" className="block mt-6">
+              <div className="bg-gradient-to-br from-blue-900/50 to-slate-900 border-2 border-blue-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-blue-500/20 group-hover:bg-blue-500/30 rounded-xl transition-colors">
+                    <UserCheck size={24} className="text-blue-300" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm uppercase">
+                      Gestionar Coordinadores
+                    </h3>
+                    <p className="text-xs text-blue-300">
+                      Crear y asignar
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Crea coordinadores y asígnalos a tus visiones
                 </p>
               </div>
             </Link>

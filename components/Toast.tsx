@@ -70,7 +70,7 @@ export function Toast({ message, type, details, onClose }: DetailedToast) {
               {details.created !== undefined && details.created > 0 && (
                 <div className="bg-black/20 rounded p-2">
                   <p className="text-green-300 font-medium">🆕 Cuentas nuevas: {details.created}</p>
-                  <p className="text-gray-400 text-xs mt-1">Contraseña temporal: <span className="font-mono text-purple-300">Frutos2025!</span></p>
+                  <p className="text-gray-400 text-xs mt-1">Contraseña temporal: <span className="font-mono text-purple-300">Quantum123</span></p>
                   <p className="text-gray-400 text-xs">Deberán cambiarla al primer login</p>
                 </div>
               )}

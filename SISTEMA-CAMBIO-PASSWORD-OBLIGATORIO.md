@@ -256,7 +256,7 @@ export async function POST(request: NextRequest) {
 ### Caso 1: Participante creado por email
 ```
 Email: alumno1@escuela.com
-Password Temporal: Frutos2025!
+Password Temporal: Quantum123
 Flag: requirePasswordChange = true
 
 → Login exitoso
@@ -424,7 +424,7 @@ Antes de hacer deploy, verificar:
 
 ### Mensajes al Usuario:
 - **Login:** "Por seguridad, debes cambiar tu contraseña temporal"
-- **Alta masiva:** "Se crearán cuentas nuevas... Contraseña temporal: Frutos2025!"
+- **Alta masiva:** "Se crearán cuentas nuevas... Contraseña temporal: Quantum123"
 - **Cambio exitoso:** "¡Contraseña Actualizada! Redirigiendo al dashboard..."
 
 ---

@@ -50,6 +50,8 @@ export default function CoordinadorDashboard() {
     participantesRiesgo: 0
   });
   const [loading, setLoading] = useState(true);
+  const [consejoQuantum, setConsejoQuantum] = useState<any>(null);
+  const [loadingConsejo, setLoadingConsejo] = useState(true);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -59,6 +61,7 @@ export default function CoordinadorDashboard() {
     } else {
       fetchDashboardData();
       fetchActionStats();
+      fetchConsejoQuantum();
     }
   }, [status, session]);
 
@@ -86,6 +89,20 @@ export default function CoordinadorDashboard() {
       }
     } catch (error) {
       console.error('Error fetching action stats:', error);
+    }
+  };
+
+  const fetchConsejoQuantum = async () => {
+    try {
+      const res = await fetch('/api/quantum/consejo-vision');
+      const result = await res.json();
+      if (res.ok && result.success) {
+        setConsejoQuantum(result.consejo);
+      }
+    } catch (error) {
+      console.error('Error fetching consejo quantum:', error);
+    } finally {
+      setLoadingConsejo(false);
     }
   };
 
@@ -178,7 +195,7 @@ export default function CoordinadorDashboard() {
           </Link>
 
           {/* Widget 2: Cartas Autorizadas */}
-          <Link href="/dashboard/coordinador/cartas-aprobadas">
+          <Link href="/dashboard/coordinador/cartas-pendientes?filter=APROBADA">
             <div className="bg-gradient-to-br from-green-900/40 to-slate-900 border-2 border-green-500/30 rounded-3xl p-8 hover:border-green-500/50 transition-all cursor-pointer group">
               <div className="flex items-center justify-between mb-6">
                 <div className="p-3 bg-green-500/20 group-hover:bg-green-500/30 rounded-xl transition-colors">
@@ -207,86 +224,162 @@ export default function CoordinadorDashboard() {
             </div>
           </Link>
 
-          {/* Widget 4: En Riesgo */}
-          <Link href="/dashboard/coordinador/en-riesgo">
-            <div className="bg-gradient-to-br from-orange-900/40 to-slate-900 border-2 border-orange-500/30 rounded-3xl p-8 hover:border-orange-500/50 transition-all cursor-pointer group">
-              <div className="flex items-center justify-between mb-6">
-                <div className="p-3 bg-orange-500/20 group-hover:bg-orange-500/30 rounded-xl transition-colors">
-                  <Shield size={32} className="text-orange-400" />
-                </div>
-                <Target size={20} className="text-orange-400/60" />
+          {/* Widget 4: En Riesgo + Gestión de Strikes (FUSIONADO) */}
+          <div className="bg-gradient-to-br from-orange-900/40 via-purple-900/30 to-slate-900 border-2 border-orange-500/30 rounded-3xl p-8 hover:border-orange-500/50 transition-all group">
+            <div className="flex items-center justify-between mb-6">
+              <div className="p-3 bg-gradient-to-br from-orange-500/20 to-purple-500/20 group-hover:from-orange-500/30 group-hover:to-purple-500/30 rounded-xl transition-colors">
+                <Shield size={32} className="text-orange-400" />
               </div>
-              <p className="text-6xl font-black text-white mb-2">{stats.participantesRiesgo}</p>
-              <p className="text-lg font-bold text-white mb-1">En Riesgo</p>
-              <p className="text-xs text-slate-400">Participantes con 2+ faltas</p>
+              <Target size={20} className="text-orange-400/60" />
             </div>
-          </Link>
+            <p className="text-6xl font-black text-white mb-2">{stats.participantesRiesgo}</p>
+            <p className="text-lg font-bold text-white mb-1">En Riesgo</p>
+            <p className="text-xs text-slate-400 mb-4">Participantes con 2+ faltas</p>
+            
+            {/* Botón de acceso a Strikes */}
+            <Link href="/dashboard/coordinador/strikes">
+              <button className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 flex items-center justify-center gap-2">
+                <Shield size={18} />
+                Gestionar Strikes
+              </button>
+            </Link>
+          </div>
 
-          {/* Widget 5: Gestión de Strikes */}
-          <Link href="/dashboard/coordinador/gestion-strikes">
-            <div className="bg-gradient-to-br from-purple-900/40 to-slate-900 border-2 border-purple-500/30 rounded-3xl p-8 hover:border-purple-500/50 transition-all cursor-pointer group">
-              <div className="flex items-center justify-between mb-6">
-                <div className="p-3 bg-purple-500/20 group-hover:bg-purple-500/30 rounded-xl transition-colors">
-                  <Shield size={32} className="text-purple-400" />
+          {/* Widget 5: Misiones & Tareas Extraordinarias (NUEVO - DOBLE ESPACIO) */}
+          <div className="lg:col-span-2 bg-gradient-to-br from-orange-900/40 via-yellow-900/30 to-orange-900/40 border-2 border-orange-600/40 rounded-3xl p-8">
+            <h3 className="text-2xl font-black text-white mb-6 flex items-center gap-3">
+              <Zap className="text-yellow-400" size={28} />
+              Misiones & Tareas Extraordinarias
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Misiones con Quantum IA */}
+              <Link 
+                href="/dashboard/admin/tareas/nueva?quantum=true"
+                className="block p-5 bg-slate-900/60 border border-purple-600/30 rounded-xl hover:border-purple-500/60 hover:shadow-lg hover:shadow-purple-500/20 transition-all group"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-start gap-3">
+                    <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
+                      <FileText size={24} className="text-white" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-white text-lg group-hover:text-purple-300 transition-colors">
+                        🧠 Misiones con Quantum IA
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Crea misiones personalizadas con IA
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-purple-400 group-hover:translate-x-1 transition-transform text-2xl">→</div>
                 </div>
-                <Star size={20} className="text-purple-400/60" />
-              </div>
-              <p className="text-6xl font-black text-white mb-2">-</p>
-              <p className="text-lg font-bold text-white mb-1">Gestión de Strikes</p>
-              <p className="text-xs text-slate-400">Administrar vidas extra</p>
-            </div>
-          </Link>
+              </Link>
 
-          {/* Widget 6: Autorizar Cartas */}
-          <Link href="/dashboard/coordinador/autorizar-cartas">
-            <div className="bg-gradient-to-br from-cyan-900/40 to-slate-900 border-2 border-cyan-500/30 rounded-3xl p-8 hover:border-cyan-500/50 transition-all cursor-pointer group">
-              <div className="flex items-center justify-between mb-6">
-                <div className="p-3 bg-cyan-500/20 group-hover:bg-cyan-500/30 rounded-xl transition-colors">
-                  <FileText size={32} className="text-cyan-400" />
+              {/* Tareas Extraordinarias */}
+              <Link 
+                href="/dashboard/admin/tareas/nueva"
+                className="block p-5 bg-slate-900/60 border border-orange-600/30 rounded-xl hover:border-orange-500/60 hover:shadow-lg hover:shadow-orange-500/20 transition-all group"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-start gap-3">
+                    <div className="p-3 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg">
+                      <Shield size={24} className="text-white" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-white text-lg group-hover:text-orange-300 transition-colors">
+                        ⚡ Tareas Extraordinarias
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Asigna tareas para activar visión
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-orange-400 group-hover:translate-x-1 transition-transform text-2xl">→</div>
                 </div>
-                <CheckCircle size={20} className="text-cyan-400/60" />
-              </div>
-              <p className="text-6xl font-black text-white mb-2">→</p>
-              <p className="text-lg font-bold text-white mb-1">Autorizar Cartas</p>
-              <p className="text-xs text-slate-400">Revisar cartas pendientes</p>
+              </Link>
             </div>
-          </Link>
+
+            {/* Tip de Quantum IA */}
+            <div className="mt-5 p-5 bg-gradient-to-r from-cyan-900/20 to-blue-900/20 border border-cyan-600/30 rounded-xl">
+              <div className="flex items-start gap-3">
+                <div className="text-3xl">{loadingConsejo ? '⏳' : consejoQuantum?.emoji || '🧬'}</div>
+                <div className="flex-1">
+                  <p className="text-sm text-cyan-200 font-semibold mb-2">
+                    💡 Consejo de Quantum IA {consejoQuantum?.tipo && `- ${consejoQuantum.tipo}`}
+                  </p>
+                  {loadingConsejo ? (
+                    <p className="text-sm text-cyan-100/60 animate-pulse">
+                      Cargando consejo de activación...
+                    </p>
+                  ) : (
+                    <div 
+                      className="text-sm text-cyan-100/80"
+                      dangerouslySetInnerHTML={{ __html: consejoQuantum?.consejo || 'No hay consejo disponible' }}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
 
         </div>
 
         {/* Sección de acciones adicionales */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
+          {/* Revisar Evidencias de Tareas Extraordinarias */}
+          <Link href="/dashboard/admin/evidencias" className="block h-full">
+            <div className="h-full bg-gradient-to-br from-amber-900/50 to-slate-900 border-2 border-amber-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-500/10 flex flex-col">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-amber-500/20 group-hover:bg-amber-500/30 rounded-xl transition-colors">
+                  <Zap size={24} className="text-amber-300" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-white text-sm uppercase">
+                    Revisar Evidencias
+                  </h3>
+                  <p className="text-xs text-amber-300">
+                    Tareas extraordinarias y eventos
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-slate-400 mt-auto">
+                Revisa y aprueba evidencias de misiones y tareas especiales
+              </p>
+            </div>
+          </Link>
+
           {/* Gestionar Visiones */}
-          <Link href="/dashboard/coordinador/visiones" className="block">
-            <div className="bg-gradient-to-br from-emerald-900/50 to-slate-900 border-2 border-emerald-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/10">
+          <Link href="/dashboard/coordinador/visiones" className="block h-full">
+            <div className="h-full bg-gradient-to-br from-emerald-900/50 to-slate-900 border-2 border-emerald-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/10 flex flex-col">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-3 bg-emerald-500/20 group-hover:bg-emerald-500/30 rounded-xl transition-colors">
                   <Users size={24} className="text-emerald-300" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <h3 className="font-bold text-white text-sm uppercase">
                     Gestionar Visiones
                   </h3>
-                    <p className="text-xs text-emerald-300">
-                      Crea y asigna licencias
-                    </p>
-                  </div>
+                  <p className="text-xs text-emerald-300">
+                    Crea y asigna licencias
+                  </p>
                 </div>
-                <p className="text-xs text-slate-400">
-                  Crea visiones/grupos y gestiona las licencias de tus participantes
-                </p>
               </div>
-            </Link>
+              <p className="text-xs text-slate-400 mt-auto">
+                Crea visiones/grupos y gestiona las licencias de tus participantes
+              </p>
+            </div>
+          </Link>
 
           {/* Ver Participantes */}
-          <Link href="/dashboard/coordinador/participantes" className="block">
-            <div className="bg-gradient-to-br from-cyan-900/50 to-slate-900 border-2 border-cyan-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10">
+          <Link href="/dashboard/coordinador/participantes" className="block h-full">
+            <div className="h-full bg-gradient-to-br from-cyan-900/50 to-slate-900 border-2 border-cyan-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10 flex flex-col">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-3 bg-cyan-500/20 group-hover:bg-cyan-500/30 rounded-xl transition-colors">
                   <GraduationCap size={24} className="text-cyan-300" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <h3 className="font-bold text-white text-sm uppercase">
                     Ver Mis Participantes
                   </h3>
@@ -295,7 +388,7 @@ export default function CoordinadorDashboard() {
                   </p>
                 </div>
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-400 mt-auto">
                 Lista completa: Participantes, Game Changers, Coordinadores y Mentores
               </p>
             </div>

@@ -41,11 +41,11 @@ export async function GET() {
     console.log(`✅ ${visiones.length} visiones encontradas`);
 
     return NextResponse.json({
+      success: true,
       visiones: visiones.map(vision => ({
         id: vision.id,
         nombre: vision.nombre,
-        descripcion: vision.descripcion,
-        activeStudents: vision._count.Participantes
+        totalParticipantes: vision._count.Participantes
       }))
     });
 

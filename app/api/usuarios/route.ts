@@ -10,11 +10,79 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    // Si no es admin, devolver solo usuarios activos sin rol
-    const esAdmin = session?.user?.rol === 'ADMINISTRADOR';
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    // Obtener información del usuario actual
+    const currentUser = await prisma.usuario.findUnique({
+      where: { email: session.user.email },
+      select: {
+        id: true,
+        rol: true,
+        organizationId: true
+      }
+    });
+
+    if (!currentUser) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
+    // Determinar filtros según el rol
+    let whereClause: any = {};
+    
+    if (currentUser.rol === 'ADMINISTRADOR' || currentUser.rol === 'ADMIN') {
+      // Admin puede ver todos
+      whereClause = {};
+    } else if (currentUser.rol === 'DIRECTOR' || currentUser.rol === 'SCHOOL_ADMIN') {
+      // Director/School Admin solo ve usuarios de su organización
+      if (!currentUser.organizationId) {
+        return NextResponse.json({ error: 'Director sin organización asignada' }, { status: 400 });
+      }
+      whereClause = {
+        organizationId: currentUser.organizationId,
+        rol: {
+          in: ['PARTICIPANTE', 'GAMECHANGER']
+        }
+      };
+    } else if (currentUser.rol === 'COORDINADOR') {
+      // Coordinador solo ve usuarios de sus visiones
+      const visiones = await prisma.vision.findMany({
+        where: { coordinadorId: currentUser.id },
+        select: { id: true }
+      });
+      
+      const visionIds = visiones.map(v => v.id);
+      
+      if (visionIds.length === 0) {
+        return NextResponse.json({ usuarios: [] });
+      }
+
+      whereClause = {
+        OR: [
+          {
+            ParticipanteEnVisiones: {
+              some: {
+                visionId: { in: visionIds }
+              }
+            }
+          },
+          {
+            GameChangerEnVisiones: {
+              some: {
+                visionId: { in: visionIds }
+              }
+            }
+          }
+        ]
+      };
+    } else {
+      // Otros roles solo ven usuarios activos
+      whereClause = { isActive: true };
+    }
     
     const usuarios = await prisma.usuario.findMany({
-      where: esAdmin ? {} : { isActive: true },
+      where: whereClause,
       select: {
         id: true,
         nombre: true,

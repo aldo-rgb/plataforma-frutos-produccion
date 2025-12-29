@@ -95,6 +95,7 @@ export default function ProgramEnrollPage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [enrollmentInfo, setEnrollmentInfo] = useState<EnrollmentInfo | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   // Slots seleccionados
   const [slot1, setSlot1] = useState<Slot>({ dayOfWeek: -1, time: '' });
@@ -245,17 +246,31 @@ export default function ProgramEnrollPage() {
       if (!profileResponse.ok) throw new Error('Error al cargar perfil');
       
       const profileData = await profileResponse.json();
+      setUserRole(profileData.user?.rol || null);
+      
       console.log('👤 Datos de perfil:', {
         hasUser: !!profileData.user,
-        assignedMentorId: profileData.user?.assignedMentorId
+        assignedMentorId: profileData.user?.assignedMentorId,
+        rol: profileData.user?.rol
       });
       
       // Verificar que tenga mentor asignado
-      if (!profileData.user?.assignedMentorId) {
-        console.log('❌ NO tiene assignedMentorId, mostrando pago de licencia');
-        // No tiene mentor asignado, cargar lista de mentores disponibles
+      // GAMECHANGER con mentor asignado no necesita pagar
+      if (!profileData.user?.assignedMentorId && profileData.user?.rol !== 'GAMECHANGER') {
+        console.log('❌ NO tiene assignedMentorId y no es GAMECHANGER, mostrando pago de licencia');
+        // No tiene mentor asignado y no es GAMECHANGER, cargar lista de mentores disponibles
         await cargarMentoresDisponibles();
         setMostrarPagoLicencia(true);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Si es GAMECHANGER sin mentor, también debe poder ver mentores disponibles pero sin pago
+      if (!profileData.user?.assignedMentorId && profileData.user?.rol === 'GAMECHANGER') {
+        console.log('⚡ GAMECHANGER sin mentor asignado, mostrando selección de mentores sin pago');
+        await cargarMentoresDisponibles();
+        setMostrarSeleccionMentor(true);
+        setMostrarPagoLicencia(false);
         setIsLoading(false);
         return;
       }
@@ -512,6 +527,19 @@ export default function ProgramEnrollPage() {
         {/* Opciones de Pago - Solo si no tiene mentor asignado */}
         {mostrarPagoLicencia && !mentorAsignado && (
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-8">
+            {userRole === 'GAMECHANGER' && (
+              <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/30 rounded-lg p-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <Zap className="text-yellow-400" size={24} />
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Acceso Especial GameChanger</h3>
+                    <p className="text-slate-300 text-sm">
+                      Como GameChanger, tienes acceso directo sin costo adicional. Selecciona tu mentor para continuar.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
               <CreditCard className="text-purple-400" size={28} />
               Selecciona tu Licencia
@@ -614,9 +642,22 @@ export default function ProgramEnrollPage() {
           </div>
         )}
 
-        {/* Selección de Mentor - Después de pagar */}
+        {/* Selección de Mentor - Después de pagar o para GAMECHANGER */}
         {mostrarSeleccionMentor && mentoresDisponibles.length > 0 && (
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-8">
+            {userRole === 'GAMECHANGER' && (
+              <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/30 rounded-lg p-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <Zap className="text-yellow-400" size={24} />
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Selección Exclusiva GameChanger</h3>
+                    <p className="text-slate-300 text-sm">
+                      Tu licencia STANDARD está incluida. Selecciona tu mentor para comenzar el programa intensivo.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             <h2 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
               <Users className="text-purple-400" size={28} />
               Selecciona tu Mentor

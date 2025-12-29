@@ -367,6 +367,29 @@ model DisciplineSubscription {
   @@index([status])
 }
 
+model MentorAbsenceReport {
+  id                    Int                      @id @default(autoincrement())
+  studentId             Int
+  mentorId              Int
+  subscriptionId        Int?
+  callBookingId         Int?
+  reportedAt            DateTime                 @default(now())
+  scheduledTime         DateTime
+  reason                String?
+  status                AbsenceReportStatus      @default(PENDING)
+  reviewedBy            Int?
+  reviewedAt            DateTime?
+  reviewNotes           String?
+  Student               Usuario                  @relation("AbsenceReportStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  Mentor                Usuario                  @relation("AbsenceReportMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+  ReviewedByUser        Usuario?                 @relation("AbsenceReportReviewer", fields: [reviewedBy], references: [id])
+  
+  @@index([mentorId])
+  @@index([studentId])
+  @@index([status])
+  @@index([reportedAt])
+}
+
 model Evidencia {
   id          Int      @id @default(autoincrement())
   usuarioId   Int
@@ -488,6 +511,65 @@ model PerfilMentor {
   ResenasMentoria           ResenasMentoria[]
   ServicioMentoria          ServicioMentoria[]
   SolicitudMentoria         SolicitudMentoria[]
+}
+
+model PerfilCompleto {
+  id                    Int      @id @default(autoincrement())
+  usuarioId             Int      @unique
+  
+  // Datos personales
+  apellido              String?
+  fechaNacimiento       DateTime?
+  whatsapp              String?
+  
+  // Tribu
+  misionTribu           String?
+  logoTribu             String?
+  fraseFavorita         String?
+  numeroVision          String?
+  angelEnrolamiento     String?
+  
+  // Domicilio
+  calle                 String?
+  numero                String?
+  colonia               String?
+  codigoPostal          String?
+  estadoMunicipio       String?
+  
+  // Datos físicos
+  ocupacion             String?
+  tallaCamiseta         String?
+  peso                  String?
+  imc                   String?
+  estatura              String?
+  fotoTicketPeso        String?
+  
+  // Hábitos
+  fuma                  Boolean  @default(false)
+  fumaCantidad          String?
+  quiereSerStaff        Boolean  @default(false)
+  
+  // Fotos y documentos
+  fotoPrimerDia         String?
+  fotoUltimoDiaPL       String?
+  fotoContrato          String?
+  contratoAvanzado      String?
+  
+  // Coaches y Staff
+  coachBasico           String?
+  staffBasico           String?
+  coachAvanzado         String?
+  staffAvanzado         String?
+  gameChangerNombre     String?
+  coachPrimerFin        String?
+  coachSegundoFin       String?
+  coachTercerFin        String?
+  
+  // Condecoraciones (asignadas por coordinador)
+  condecoraciones       String[] @default([])
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
 
 model PermisoMenu {
@@ -709,6 +791,10 @@ model Usuario {
   profileImage                                                     String?
   skills                                                           String[]                  @default([])
   badges                                                           String[]                  @default([])
+  accumulatedMissedCalls                                           Int                       @default(0)
+  mentorStatus                                                     MentorStatus              @default(ACTIVE)
+  isAcceptingNewStudents                                           Boolean                   @default(true)
+  lastStrikeDate                                                   DateTime?
   timezone                                                         String                    @default("America/Mexico_City")
   socialVisibility                                                 SocialVisibility          @default(COMMUNITY)
   organizationId                                                   Int?
@@ -786,12 +872,16 @@ model Usuario {
   UserCollectionProgress                                           UserCollectionProgress[]
   ServiceReviews                                                   UserServiceContribution[] @relation("ServiceReviews")
   ServiceContributions                                             UserServiceContribution[]
+  AbsenceReportsAsStudent                                          MentorAbsenceReport[]     @relation("AbsenceReportStudent")
+  AbsenceReportsAsMentor                                           MentorAbsenceReport[]     @relation("AbsenceReportMentor")
+  AbsenceReportsReviewed                                           MentorAbsenceReport[]     @relation("AbsenceReportReviewer")
   Usuario_Usuario_assignedMentorIdToUsuario                        Usuario?                  @relation("Usuario_assignedMentorIdToUsuario", fields: [assignedMentorId], references: [id], onUpdate: NoAction)
   other_Usuario_Usuario_assignedMentorIdToUsuario                  Usuario[]                 @relation("Usuario_assignedMentorIdToUsuario")
   CommunityOrganization                                            Organization?             @relation("CommunityMembers", fields: [communityOrganizationId], references: [id])
   Usuario_Usuario_coordinadorIdToUsuario                           Usuario?                  @relation("Usuario_coordinadorIdToUsuario", fields: [coordinadorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   other_Usuario_Usuario_coordinadorIdToUsuario                     Usuario[]                 @relation("Usuario_coordinadorIdToUsuario")
   Usuario_Usuario_gameChangerIdToUsuario                           Usuario?                  @relation("Usuario_gameChangerIdToUsuario", fields: [gameChangerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
   other_Usuario_Usuario_gameChangerIdToUsuario                     Usuario[]                 @relation("Usuario_gameChangerIdToUsuario")
   Usuario_Usuario_mentorIdToUsuario                                Usuario?                  @relation("Usuario_mentorIdToUsuario", fields: [mentorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   other_Usuario_Usuario_mentorIdToUsuario                          Usuario[]                 @relation("Usuario_mentorIdToUsuario")
@@ -973,14 +1063,24 @@ model AdminTask {
   rewardLogic       RewardLogic      @default(STANDARD)
   raceLimit         Int?
   strictDeadline    Boolean          @default(false)
+  // Multi-Day Mission fields
+  isMultiDay        Boolean          @default(false)
+  duracionDias      Int?
+  horaLimiteDiaria  String?
+  parentTaskId      Int?
+  diaNumero         Int?
   Creator           Usuario          @relation("AdminTaskCreator", fields: [createdBy], references: [id], onDelete: Cascade)
   Submissions       TaskSubmission[]
+  ParentTask        AdminTask?       @relation("MultiDayTasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
+  DailyTasks        AdminTask[]      @relation("MultiDayTasks")
 
   @@index([type])
   @@index([targetType])
   @@index([fechaLimite])
   @@index([isActive])
   @@index([rewardLogic])
+  @@index([parentTaskId])
+  @@index([isMultiDay])
 }
 
 model TaskSubmission {
@@ -1490,6 +1590,21 @@ enum Rol {
   GAMECHANGER
   SCHOOL_ADMIN
   SUPER_ADMIN
+}
+
+enum MentorStatus {
+  ACTIVE
+  PROBATION
+  SUSPENDED
+  UNDER_REVIEW
+}
+
+enum AbsenceReportStatus {
+  PENDING
+  CONFIRMED
+  DISPUTED
+  RESOLVED
+  DISMISSED
 }
 
 enum TipoPago {

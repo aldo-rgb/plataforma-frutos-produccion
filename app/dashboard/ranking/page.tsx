@@ -6,6 +6,7 @@ import {
   ChevronUp, ChevronDown, Diamond, Phone, Zap,
   Users, Building2, Eye, Brain, Globe, Shield
 } from 'lucide-react';
+import CondecoracionesBadge from '@/components/condecoraciones/CondecoracionesBadge';
 
 type RankingType = 'GLOBAL' | 'SCHOOL' | 'VISION' | 'MENTOR' | 'SCHOOL_WAR' | 'MY_MENTORADOS';
 type Timeframe = 'WEEKLY' | 'MONTHLY' | 'CYCLE' | 'ALL_TIME';
@@ -26,6 +27,7 @@ interface RankingUser {
   attendanceStatus: AttendanceStatus;
   streak: number;
   badges: string[];
+  condecoraciones?: string[];
   organization?: string;
   organizationLogo?: string;
   isOnFire: boolean;
@@ -57,6 +59,7 @@ interface MentorRanking {
   completionRate: number;
   rating: number;
   totalPoints: number;
+  accumulatedMissedCalls?: number;
 }
 
 export default function QuantumLeaderboardPage() {
@@ -168,6 +171,42 @@ export default function QuantumLeaderboardPage() {
       case 'WARNING': return <div className="w-3 h-3 rounded-full bg-yellow-500" />;
       case 'RISK': return <div className="w-3 h-3 rounded-full bg-red-500" />;
       default: return <div className="w-3 h-3 rounded-full bg-gray-500" />;
+    }
+  };
+
+  const getReliabilityIndicator = (strikes: number = 0) => {
+    if (strikes === 0) {
+      return {
+        icon: '🛡️',
+        text: 'Excelente',
+        color: 'text-green-400',
+        bgColor: 'bg-green-500/10',
+        percentage: 100
+      };
+    } else if (strikes <= 2) {
+      return {
+        icon: '🛡️',
+        text: 'Bueno',
+        color: 'text-blue-400',
+        bgColor: 'bg-blue-500/10',
+        percentage: 80
+      };
+    } else if (strikes <= 4) {
+      return {
+        icon: '⚠️',
+        text: 'Probation',
+        color: 'text-yellow-400',
+        bgColor: 'bg-yellow-500/10',
+        percentage: 40
+      };
+    } else {
+      return {
+        icon: '🚫',
+        text: 'Suspendido',
+        color: 'text-red-400',
+        bgColor: 'bg-red-500/10',
+        percentage: 0
+      };
     }
   };
 
@@ -528,15 +567,13 @@ export default function QuantumLeaderboardPage() {
                               <div>
                                 <p className="text-white font-bold">{user.nombre}</p>
                                 <p className="text-slate-400 text-xs">{user.rangoActual}</p>
-                                {user.badges && user.badges.length > 0 && (
-                                  <div className="flex gap-1 mt-1">
-                                    {user.badges.slice(0, 3).map((badge, idx) => (
-                                      <span key={idx} className="text-xs bg-purple-600/20 text-purple-300 px-2 py-0.5 rounded">
-                                        {badge}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
+                                <div className="mt-1">
+                                  <CondecoracionesBadge 
+                                    condecoraciones={user.condecoraciones} 
+                                    size="sm" 
+                                    maxDisplay={5}
+                                  />
+                                </div>
                               </div>
                             </div>
                           </td>
@@ -683,6 +720,7 @@ export default function QuantumLeaderboardPage() {
                       </th>
                       <th className="px-4 py-3 text-center text-slate-400 text-sm font-semibold">Llamadas</th>
                       <th className="px-4 py-3 text-center text-slate-400 text-sm font-semibold">% Cumplimiento</th>
+                      <th className="px-4 py-3 text-center text-slate-400 text-sm font-semibold">Confiabilidad</th>
                       <th className="px-4 py-3 text-right text-slate-400 text-sm font-semibold">Rating</th>
                     </tr>
                   </thead>
@@ -733,6 +771,24 @@ export default function QuantumLeaderboardPage() {
                           `}>
                             {mentor.completionRate}%
                           </span>
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          {(() => {
+                            const reliability = getReliabilityIndicator(mentor.accumulatedMissedCalls || 0);
+                            return (
+                              <div className="flex items-center justify-center gap-2">
+                                <span className="text-xl">{reliability.icon}</span>
+                                <div className="flex flex-col items-start">
+                                  <span className={`text-sm font-bold ${reliability.color}`}>
+                                    {reliability.text}
+                                  </span>
+                                  <span className="text-xs text-slate-400">
+                                    {mentor.accumulatedMissedCalls || 0}/5 strikes
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td className="px-4 py-4 text-right">
                           <div className="flex items-center justify-end gap-1">

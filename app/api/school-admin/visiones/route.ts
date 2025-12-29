@@ -45,6 +45,13 @@ export async function GET(req: NextRequest) {
         isActive: true,
       },
       include: {
+        Coordinador: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+          },
+        },
         _count: {
           select: {
             Participantes: true,

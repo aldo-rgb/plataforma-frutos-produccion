@@ -19,7 +19,7 @@ export async function GET() {
       where: { email: session.user.email },
       include: {
         CartaFrutos: {
-          where: { estado: 'AUTORIZADA' },
+          where: { estado: 'APROBADA' },
           select: { id: true },
           orderBy: { createdAt: 'desc' },
           take: 1

@@ -288,7 +288,7 @@ export default function CartasTrackingPage() {
                             className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium transition"
                           >
                             <Eye size={16} />
-                            Ver Carta
+                            Ver Objetivos
                           </Link>
                         ) : (
                           <span className="text-slate-500 text-sm">Sin carta</span>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Calendar, Phone, PhoneOff, Clock, AlertTriangle, CheckCircle2, XCircle, Timer } from 'lucide-react';
+import ReportMentorAbsenceModal from '@/components/mentor/ReportMentorAbsenceModal';
 
 interface IntensiveProgramCardProps {
   week: number;
@@ -10,6 +11,9 @@ interface IntensiveProgramCardProps {
   nextCallDate?: Date;
   attendance?: Array<{ attended: boolean; date: Date }>;
   missedCalls?: number;
+  mentorName?: string;
+  mentorId?: number;
+  subscriptionId?: number;
 }
 
 export default function IntensiveProgramCard({
@@ -18,10 +22,15 @@ export default function IntensiveProgramCard({
   nextCall,
   nextCallDate,
   attendance = [],
-  missedCalls = 0
+  missedCalls = 0,
+  mentorName = 'Tu Mentor',
+  mentorId,
+  subscriptionId
 }: IntensiveProgramCardProps) {
   const [countdown, setCountdown] = useState<string | null>(null);
   const [showCountdown, setShowCountdown] = useState(false);
+  const [showReportButton, setShowReportButton] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   useEffect(() => {
     if (!nextCallDate) return;
@@ -31,6 +40,7 @@ export default function IntensiveProgramCard({
       const callDate = new Date(nextCallDate);
       const diffMs = callDate.getTime() - now.getTime();
       const diffHours = diffMs / (1000 * 60 * 60);
+      const diffMinutes = diffMs / (1000 * 60);
 
       // Mostrar countdown solo si faltan menos de 24 horas
       if (diffHours > 0 && diffHours <= 24) {
@@ -43,6 +53,12 @@ export default function IntensiveProgramCard({
         setShowCountdown(false);
         setCountdown(null);
       }
+
+      // Mostrar botón de reporte: desde 10 min después de inicio hasta 60 min después del fin
+      // Asumiendo que la llamada dura 30-60 minutos típicamente
+      const tenMinutesAfterStart = diffMinutes < -10; // Ya pasaron 10 minutos desde el inicio
+      const sixtyMinutesAfterEnd = diffMinutes > -120; // No han pasado más de 2 horas desde el inicio
+      setShowReportButton(tenMinutesAfterStart && sixtyMinutesAfterEnd);
     };
 
     updateCountdown();
@@ -168,7 +184,33 @@ export default function IntensiveProgramCard({
             </div>
           </div>
         )}
+
+        {/* Botón para reportar ausencia del mentor */}
+        {showReportButton && nextCallDate && (
+          <button
+            onClick={() => setShowReportModal(true)}
+            className="w-full bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 hover:border-red-500 text-red-300 hover:text-red-200 rounded-lg p-3 transition-all flex items-center justify-center gap-2 font-bold text-sm"
+          >
+            <AlertTriangle className="w-4 h-4" />
+            Reportar Mentor Ausente
+          </button>
+        )}
       </div>
+
+      {/* Modal de Reporte */}
+      {nextCallDate && (
+        <ReportMentorAbsenceModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          mentorName={mentorName}
+          scheduledTime={nextCallDate}
+          subscriptionId={subscriptionId}
+          onSuccess={() => {
+            // Recargar la página o actualizar el estado
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
 }

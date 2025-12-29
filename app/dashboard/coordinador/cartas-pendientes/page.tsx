@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { FileText, Clock, User, Eye, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
 interface CartaPendiente {
-  id: number;
+  id: number | null;
   usuarioId: number;
   usuario: {
     nombre: string;
@@ -18,16 +18,25 @@ interface CartaPendiente {
     email: string;
   } | null;
   estado: string;
-  createdAt: string;
-  updatedAt: string;
+  fechaCreacion: string | null;
+  fechaActualizacion: string | null;
 }
 
 export default function CartasPendientesPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [cartas, setCartas] = useState<CartaPendiente[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'BORRADOR' | 'EN_REVISION'>('all');
+  const [filter, setFilter] = useState<'all' | 'BORRADOR' | 'EN_REVISION' | 'SIN_INICIAR' | 'APROBADA'>('all');
+
+  useEffect(() => {
+    // Leer el filtro de la URL si existe
+    const filterFromUrl = searchParams.get('filter');
+    if (filterFromUrl && ['all', 'BORRADOR', 'EN_REVISION', 'SIN_INICIAR', 'APROBADA'].includes(filterFromUrl)) {
+      setFilter(filterFromUrl as any);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -76,14 +85,14 @@ export default function CartasPendientesPage() {
               <FileText size={32} className="text-yellow-400" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Cartas Pendientes</h1>
-              <p className="text-slate-400">Participantes sin carta autorizada</p>
+              <h1 className="text-3xl font-bold text-white">Status de Cartas</h1>
+              <p className="text-slate-400">Todos los participantes</p>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="flex gap-3 mb-6">
+        <div className="flex gap-3 mb-6 flex-wrap">
           <button
             onClick={() => setFilter('all')}
             className={`px-4 py-2 rounded-lg font-medium transition-all ${
@@ -93,6 +102,16 @@ export default function CartasPendientesPage() {
             }`}
           >
             Todas ({cartas.length})
+          </button>
+          <button
+            onClick={() => setFilter('SIN_INICIAR')}
+            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              filter === 'SIN_INICIAR'
+                ? 'bg-yellow-500 text-black'
+                : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+            }`}
+          >
+            Sin Iniciar ({cartas.filter(c => c.estado === 'SIN_INICIAR').length})
           </button>
           <button
             onClick={() => setFilter('BORRADOR')}
@@ -114,6 +133,16 @@ export default function CartasPendientesPage() {
           >
             En Revisión ({cartas.filter(c => c.estado === 'EN_REVISION').length})
           </button>
+          <button
+            onClick={() => setFilter('APROBADA')}
+            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              filter === 'APROBADA'
+                ? 'bg-emerald-500 text-black'
+                : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+            }`}
+          >
+            Aprobadas ({cartas.filter(c => c.estado === 'APROBADA').length})
+          </button>
         </div>
 
         {/* Lista de cartas */}
@@ -127,7 +156,7 @@ export default function CartasPendientesPage() {
           <div className="grid gap-4">
             {filteredCartas.map((carta) => (
               <div
-                key={carta.id}
+                key={`carta-${carta.usuarioId}`}
                 className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 rounded-2xl p-6 hover:border-yellow-500/50 transition-all"
               >
                 <div className="flex items-center justify-between">
@@ -140,44 +169,59 @@ export default function CartasPendientesPage() {
                         {carta.usuario.nombre}
                       </h3>
                       <p className="text-sm text-slate-400 mb-2">{carta.usuario.email}</p>
-                      <div className="flex items-center gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Clock size={16} className="text-slate-500" />
-                          <span className="text-slate-400">
-                            Actualizado: {new Date(carta.updatedAt).toLocaleDateString('es-MX')}
-                          </span>
-                        </div>
+                      <div className="flex items-center gap-4 text-sm flex-wrap">
                         {carta.mentor && (
-                          <div className="flex items-center gap-2">
-                            <User size={16} className="text-slate-500" />
-                            <span className="text-slate-400">
+                          <div className="flex items-center gap-2 bg-purple-500/10 px-3 py-1 rounded-lg border border-purple-500/30">
+                            <User size={16} className="text-purple-400" />
+                            <span className="text-purple-300 font-semibold">
                               Mentor: {carta.mentor.nombre}
                             </span>
                           </div>
                         )}
+                        <div className="flex items-center gap-2">
+                          <Clock size={16} className="text-slate-500" />
+                          <span className="text-slate-400">
+                            {carta.fechaActualizacion 
+                              ? `Actualizado: ${new Date(carta.fechaActualizacion).toLocaleDateString('es-MX')}`
+                              : 'No ha iniciado su proceso'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
                   
                   <div className="flex items-center gap-4">
                     <div className={`px-4 py-2 rounded-lg font-bold ${
-                      carta.estado === 'BORRADOR'
+                      carta.estado === 'SIN_INICIAR'
+                        ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                        : carta.estado === 'BORRADOR'
                         ? 'bg-slate-700 text-slate-300'
                         : carta.estado === 'EN_REVISION'
                         ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                        : carta.estado === 'APROBADA'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                         : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
                     }`}>
-                      {carta.estado === 'BORRADOR' ? 'Borrador' : 
-                       carta.estado === 'EN_REVISION' ? 'En Revisión' : carta.estado}
+                      {carta.estado === 'SIN_INICIAR' ? 'No ha iniciado' :
+                       carta.estado === 'BORRADOR' ? 'Borrador' : 
+                       carta.estado === 'EN_REVISION' ? 'En Revisión' :
+                       carta.estado === 'APROBADA' ? 'Aprobada' : carta.estado}
                     </div>
                     
-                    <Link
-                      href={`/dashboard/coordinador/carta/${carta.id}`}
-                      className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black rounded-lg font-bold transition-all flex items-center gap-2"
-                    >
-                      <Eye size={18} />
-                      Ver Carta
-                    </Link>
+                    {carta.id ? (
+                      <Link
+                        href={`/dashboard/coordinador/carta/${carta.id}`}
+                        className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-black rounded-lg font-bold transition-all flex items-center gap-2"
+                      >
+                        <Eye size={18} />
+                        Ver Objetivos
+                      </Link>
+                    ) : (
+                      <div className="px-4 py-2 bg-slate-700 text-slate-400 rounded-lg font-bold flex items-center gap-2 cursor-not-allowed">
+                        <Eye size={18} />
+                        Sin Carta
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

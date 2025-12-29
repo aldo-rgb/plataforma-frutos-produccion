@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 import { generateMagicLinkToken, sendVisionMagicLinkMessage } from '@/lib/whatsapp';
 import { sendVisionMagicLinkEmail } from '@/lib/email';
 
-const DEFAULT_PASSWORD = 'Frutos2025!';
+const DEFAULT_PASSWORD = 'Quantum123';
 
 export async function POST(
   request: NextRequest,

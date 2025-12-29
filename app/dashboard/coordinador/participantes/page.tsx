@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { GraduationCap, Users, Eye, ChevronDown, ChevronUp, Trophy, Zap, Target, Star } from 'lucide-react';
+import { GraduationCap, Users, Eye, ChevronDown, ChevronUp, Trophy, Zap, Target, Star, CheckCircle2, FileText, Award, ScrollText } from 'lucide-react';
 import Link from 'next/link';
 
 interface Participante {
@@ -16,6 +16,10 @@ interface Participante {
   racha: number;
   tier: string;
   ranking: number;
+  cartaId?: number;
+  cartaEstado?: string;
+  cartaAutorizada?: boolean;
+  mentoringStartDate?: string;
 }
 
 interface VisionConParticipantes {
@@ -157,13 +161,35 @@ export default function MisParticipantesPage() {
                             </div>
                           </div>
                           
-                          <Link
-                            href={`/dashboard/coordinador/participante/${participante.id}`}
-                            className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-black rounded-lg font-bold transition-all flex items-center gap-2"
-                          >
-                            <Eye size={18} />
-                            Ver Perfil
-                          </Link>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {participante.cartaAutorizada && (
+                              <Link
+                                href={`/dashboard/coordinador/carta/${participante.id}`}
+                                className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/50 text-purple-400 rounded-lg font-bold transition-all flex items-center gap-2"
+                                title="Ver Carta"
+                              >
+                                <ScrollText size={18} />
+                                Ver Carta
+                              </Link>
+                            )}
+                            
+                            <Link
+                              href={`/dashboard/coordinador/condecoraciones?userId=${participante.id}&nombre=${encodeURIComponent(participante.nombre)}`}
+                              className="px-4 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/50 text-yellow-400 rounded-lg font-bold transition-all flex items-center gap-2"
+                              title="Asignar Condecoraciones"
+                            >
+                              <Award size={18} />
+                              Condecoraciones
+                            </Link>
+                            
+                            <Link
+                              href={`/dashboard/coordinador/participante/${participante.id}`}
+                              className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-black rounded-lg font-bold transition-all flex items-center gap-2"
+                            >
+                              <Eye size={18} />
+                              Ver Perfil
+                            </Link>
+                          </div>
                         </div>
 
                         {/* Stats Grid */}

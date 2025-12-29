@@ -46,12 +46,18 @@ export async function GET(req: Request) {
     }
 
     // Obtener todas las submissions pendientes de esos mentorados
+    // EXCLUIR tareas extraordinarias y eventos (esas las revisan Admin/Coordinador/Director)
     const submissions = await prisma.taskSubmission.findMany({
       where: {
         usuarioId: {
           in: mentoradosIds
         },
-        status: 'SUBMITTED' // Solo las que están esperando revisión
+        status: 'SUBMITTED', // Solo las que están esperando revisión
+        AdminTask: {
+          type: {
+            notIn: ['EXTRAORDINARY', 'EVENT'] // Excluir tareas administrativas
+          }
+        }
       },
       include: {
         Usuario: {

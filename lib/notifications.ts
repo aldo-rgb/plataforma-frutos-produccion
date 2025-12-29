@@ -99,7 +99,7 @@ export async function notifyCartaSubmitted(userId: number, mentorId?: number) {
             <p><strong>${user.nombre}</strong> ha enviado su Carta F.R.U.T.O.S. para tu revisión.</p>
             <p>Por favor, revisa y proporciona feedback:</p>
             <a href="${process.env.NEXT_PUBLIC_URL}/dashboard/mentor" style="display: inline-block; padding: 12px 24px; background: #9333ea; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">
-              Ver Carta
+              Ver Objetivos
             </a>
             <p style="margin-top: 20px; color: #666; font-size: 14px;">
               Recuerda: Proporciona feedback específico, constructivo y motivador. 💪

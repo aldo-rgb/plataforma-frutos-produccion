@@ -31,25 +31,27 @@ export async function GET() {
     const visiones = await prisma.vision.findMany({
       where: visionesWhere,
       include: {
-        Enrollments: {
-          where: {
-            Usuario: {
-              rol: {
-                in: ['PARTICIPANTE', 'GAMECHANGER']
-              }
-            }
-          },
+        Participantes: {
           include: {
-            Usuario: {
+            Participante: {
               select: {
                 id: true,
                 nombre: true,
                 email: true,
-                puntosCultivo: true,
-                puntosQuantum: true,
-                xp: true,
-                racha: true,
-                tier: true
+                rol: true,
+                puntosGamificacion: true,
+                puntosCuanticos: true,
+                experienciaXP: true,
+                completionStreak: true,
+                tier: true,
+                CartaFrutos: {
+                  select: {
+                    id: true,
+                    estado: true,
+                    autorizadoMentor: true,
+                    fechaCreacion: true
+                  }
+                }
               }
             }
           }
@@ -59,19 +61,24 @@ export async function GET() {
 
     // Organizar por visión y calcular ranking
     const visionesConParticipantes = visiones.map(vision => {
-      const participantes = vision.Enrollments
-        .map(e => e.Usuario)
-        .sort((a, b) => b.puntosCultivo - a.puntosCultivo)
+      const participantes = vision.Participantes
+        .filter(vp => vp.Participante.rol === 'PARTICIPANTE' || vp.Participante.rol === 'GAMECHANGER')
+        .map(vp => vp.Participante)
+        .sort((a, b) => (b.puntosGamificacion || 0) - (a.puntosGamificacion || 0))
         .map((p, index) => ({
           id: p.id,
           nombre: p.nombre,
           email: p.email,
-          puntosCultivo: p.puntosCultivo,
-          puntosQuantum: p.puntosQuantum,
-          xp: p.xp,
-          racha: p.racha,
+          puntosCultivo: p.puntosGamificacion || 0,
+          puntosQuantum: p.puntosCuanticos || 0,
+          xp: p.experienciaXP || 0,
+          racha: p.completionStreak || 0,
           tier: p.tier || 'Bronce',
-          ranking: index + 1
+          ranking: index + 1,
+          cartaId: p.CartaFrutos[0]?.id,
+          cartaEstado: p.CartaFrutos[0]?.estado,
+          cartaAutorizada: p.CartaFrutos[0]?.autorizadoMentor === true,
+          mentoringStartDate: p.CartaFrutos[0]?.fechaCreacion
         }));
 
       return {

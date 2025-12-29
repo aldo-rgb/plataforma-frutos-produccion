@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { EstadoCarta } from '@prisma/client';
 
 export async function GET() {
   try {
@@ -40,36 +41,42 @@ export async function GET() {
     });
     const usuarioIds = usuarios.map(u => u.id);
 
-    // Cartas pendientes: contar cartas en estados no aprobados
-    const cartasPendientes = await prisma.cartaFrutos.count({
+    // Contar cartas existentes por estado
+    const cartasExistentes = await prisma.cartaFrutos.findMany({
       where: {
-        usuarioId: { in: usuarioIds },
-        estado: {
-          in: ['BORRADOR', 'EN_REVISION', 'PENDIENTE']
-        }
+        usuarioId: { in: usuarioIds }
+      },
+      select: {
+        usuarioId: true,
+        estado: true
       }
     });
 
+    // Usuarios con carta
+    const usuariosConCarta = new Set(cartasExistentes.map(c => c.usuarioId));
+    const usuariosSinCarta = usuarioIds.length - usuariosConCarta.size;
+
+    // Cartas pendientes: usuarios sin carta + cartas en estados no aprobados
+    const cartasEnEstadoPendiente = cartasExistentes.filter(c => 
+      [EstadoCarta.BORRADOR, EstadoCarta.EN_REVISION, EstadoCarta.CAMBIOS_REQUERIDOS, EstadoCarta.RECHAZADA].includes(c.estado as any)
+    );
+    const cartasPendientes = usuariosSinCarta + cartasEnEstadoPendiente.length;
+
     // Cartas autorizadas
-    const cartasAutorizadas = await prisma.cartaFrutos.count({
-      where: {
-        usuarioId: { in: usuarioIds },
-        estado: 'APROBADA'
-      }
-    });
+    const cartasAutorizadas = cartasExistentes.filter(c => c.estado === EstadoCarta.APROBADA).length;
 
     // Alertas activas: usuarios con tareas postergadas +30 días
     const fechaLimite30Dias = new Date();
     fechaLimite30Dias.setDate(fechaLimite30Dias.getDate() - 30);
     
-    const tareasPostergadas = await prisma.tarea.groupBy({
+    const tareasPostergadas = await prisma.taskInstance.groupBy({
       by: ['usuarioId'],
       where: {
         usuarioId: { in: usuarioIds },
-        fechaLimite: {
+        dueDate: {
           lt: fechaLimite30Dias
         },
-        completada: false
+        status: 'PENDING'
       }
     });
     const alertasActivas = tareasPostergadas.length;

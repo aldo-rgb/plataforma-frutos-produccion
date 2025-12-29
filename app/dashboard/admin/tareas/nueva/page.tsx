@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Calendar, Zap, Users, User, Globe, Loader2, CheckCircle, ArrowLeft, Clock, MapPin, Image, Sparkles } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useToast } from '@/components/ui/ToastProvider';
 
 interface Usuario {
@@ -22,10 +23,14 @@ interface MisionQuantum {
 
 export default function NuevaTareaAdminPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { data: session } = useSession();
   const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [visiones, setVisiones] = useState<Vision[]>([]);
   const [loadingUsuarios, setLoadingUsuarios] = useState(false);
+  const [loadingVisiones, setLoadingVisiones] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
   // Estados para QUANTUM Generator
@@ -50,19 +55,91 @@ export default function NuevaTareaAdminPage() {
     // QPC Engine fields
     rewardLogic: 'STANDARD' as 'STANDARD' | 'RACE' | 'GROUP_ALL' | 'GROUP_THRESHOLD' | 'STRICT_DEADLINE',
     raceLimit: 3,
-    strictDeadline: false
+    strictDeadline: false,
+    // Multi-Day Mission fields
+    isMultiDay: false,
+    duracionDias: 1,
+    horaLimiteDiaria: '23:59'
   });
 
   useEffect(() => {
     if (formData.targetType === 'USER') {
       loadUsuarios();
+    } else if (formData.targetType === 'GROUP') {
+      loadVisiones();
     }
   }, [formData.targetType]);
+
+  // Auto-abrir modal de Quantum si viene del widget
+  useEffect(() => {
+    const quantum = searchParams.get('quantum');
+    if (quantum === 'true') {
+      setTimeout(() => {
+        setShowVibeSelector(true);
+      }, 500);
+    }
+  }, [searchParams]);
+
+  const getUserRole = () => {
+    console.log('🔐 Session completa:', JSON.stringify(session, null, 2));
+    console.log('👤 Usuario rol:', session?.user?.rol);
+    return session?.user?.rol || 'ADMIN';
+  };
+
+  const loadVisiones = async () => {
+    try {
+      setLoadingVisiones(true);
+      const userRole = getUserRole();
+      
+      // Determinar qué API usar según el rol
+      let endpoint = '/api/visiones'; // Default para ADMIN
+      if (userRole === 'DIRECTOR' || userRole === 'SCHOOL_ADMIN') {
+        endpoint = '/api/director/visiones';
+      } else if (userRole === 'COORDINADOR') {
+        endpoint = '/api/coordinador/visiones';
+      }
+
+      console.log('🔍 Cargando visiones desde:', endpoint, 'Rol:', userRole);
+
+      const response = await fetch(endpoint);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error response:', errorData);
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('✅ Visiones cargadas:', data);
+      
+      const visionesArray = data.visiones || data;
+      setVisiones(Array.isArray(visionesArray) ? visionesArray : []);
+      console.log('📊 Visiones establecidas:', visionesArray.length);
+    } catch (error) {
+      console.error('❌ Error al cargar visiones:', error);
+      toast?.error('Error al cargar las visiones: ' + (error instanceof Error ? error.message : 'Error desconocido'));
+      setVisiones([]);
+    } finally {
+      setLoadingVisiones(false);
+    }
+  };
 
   const loadUsuarios = async () => {
     try {
       setLoadingUsuarios(true);
-      const response = await fetch('/api/usuarios');
+      const userRole = getUserRole();
+      
+      // Determinar qué API usar según el rol
+      let endpoint = '/api/usuarios'; // Default para ADMIN
+      if (userRole === 'DIRECTOR' || userRole === 'SCHOOL_ADMIN') {
+        endpoint = '/api/director/usuarios';
+      } else if (userRole === 'COORDINADOR') {
+        endpoint = '/api/coordinador/usuarios';
+      }
+
+      console.log('🔍 Cargando usuarios desde:', endpoint, 'Rol:', userRole);
+
+      const response = await fetch(endpoint);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -221,6 +298,22 @@ export default function NuevaTareaAdminPage() {
       if (fechaHoraLimite <= ahora) {
         const horaActual = ahora.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true });
         toast.error(`⚠️ La hora límite debe ser futura. Hora actual: ${horaActual}`);
+        return;
+      }
+    }
+
+    // VALIDACIÓN: Misión Multi-Día
+    if (formData.isMultiDay) {
+      if (!formData.duracionDias || formData.duracionDias < 2) {
+        toast.error('⚠️ La duración de una misión multi-día debe ser al menos 2 días');
+        return;
+      }
+      if (formData.duracionDias > 30) {
+        toast.error('⚠️ La duración máxima es 30 días');
+        return;
+      }
+      if (!formData.horaLimiteDiaria) {
+        toast.error('⚠️ Debes establecer una hora límite diaria');
         return;
       }
     }
@@ -596,12 +689,14 @@ export default function NuevaTareaAdminPage() {
                   value={formData.targetId || ''}
                   onChange={(e) => setFormData({ ...formData, targetId: parseInt(e.target.value) || null })}
                   className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-indigo-500"
+                  disabled={loadingVisiones}
                 >
                   <option value="">Seleccionar visión...</option>
-                  <option value="1">Visión Empresarial</option>
-                  <option value="2">Visión Liderazgo</option>
-                  <option value="3">Visión Salud</option>
-                  <option value="4">Visión Finanzas</option>
+                  {visiones.map(vision => (
+                    <option key={vision.id} value={vision.id}>
+                      {vision.nombre}
+                    </option>
+                  ))}
                 </select>
               </div>
             )}
@@ -713,6 +808,99 @@ export default function NuevaTareaAdminPage() {
                   <Clock className="w-4 h-4" />
                   Después de esta fecha/hora, la misión se bloqueará automáticamente
                 </p>
+
+                {/* Toggle y Configuración de Misión Multi-Día */}
+                <div className="mt-6 space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-purple-900/20 border-2 border-purple-500/30 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="text-2xl">🗓️</div>
+                      <div>
+                        <p className="text-white font-bold">Misión Multi-Día (Desafío Consecutivo)</p>
+                        <p className="text-xs text-purple-300">El usuario debe completar la tarea varios días seguidos</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, isMultiDay: !formData.isMultiDay })}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        formData.isMultiDay ? 'bg-purple-600' : 'bg-slate-600'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          formData.isMultiDay ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {formData.isMultiDay && (
+                    <div className="space-y-4 p-4 bg-purple-900/10 border border-purple-500/30 rounded-xl">
+                      {/* Warning Multi-Day */}
+                      <div className="bg-purple-900/30 border border-purple-500/50 rounded-lg p-3">
+                        <p className="text-purple-200 text-sm">
+                          <span className="font-bold">⚡ Regla Estricta:</span> El usuario debe completar <span className="font-bold text-purple-400">TODOS los días consecutivos</span>. 
+                          Si falla <span className="font-bold text-red-400">UN SOLO DÍA</span>, pierde toda la misión y no puede recuperar los puntos.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-white font-semibold mb-2">
+                            Duración del Desafío (días) <span className="text-red-400">*</span>
+                          </label>
+                          <input
+                            type="number"
+                            min="2"
+                            max="30"
+                            value={formData.duracionDias}
+                            onChange={(e) => setFormData({ ...formData, duracionDias: parseInt(e.target.value) || 1 })}
+                            className="w-full px-4 py-3 bg-slate-800 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-500"
+                            placeholder="Ej: 5"
+                          />
+                          <p className="text-xs text-slate-400 mt-1">
+                            Entre 2 y 30 días consecutivos
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-white font-semibold mb-2">
+                            Hora Límite Diaria <span className="text-red-400">*</span>
+                          </label>
+                          <input
+                            type="time"
+                            value={formData.horaLimiteDiaria}
+                            onChange={(e) => setFormData({ ...formData, horaLimiteDiaria: e.target.value })}
+                            className="w-full px-4 py-3 bg-slate-800 border border-purple-500/30 rounded-xl text-white focus:outline-none focus:border-purple-500"
+                          />
+                          <p className="text-xs text-slate-400 mt-1">
+                            Hora límite cada día
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Preview de días */}
+                      <div className="bg-slate-900/50 rounded-lg p-3 border border-purple-500/20">
+                        <p className="text-sm text-purple-300 font-semibold mb-2">📅 Vista previa del desafío:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {Array.from({ length: Math.min(formData.duracionDias, 10) }).map((_, i) => (
+                            <div key={i} className="px-3 py-1 bg-purple-500/20 border border-purple-500/40 rounded-lg text-xs text-purple-200">
+                              Día {i + 1}
+                            </div>
+                          ))}
+                          {formData.duracionDias > 10 && (
+                            <div className="px-3 py-1 bg-purple-500/10 rounded-lg text-xs text-purple-300">
+                              ... +{formData.duracionDias - 10} días más
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-xs text-purple-400 mt-2">
+                          🎯 Total: <span className="font-bold">{formData.pointsReward} PC</span> al completar los {formData.duracionDias} días
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

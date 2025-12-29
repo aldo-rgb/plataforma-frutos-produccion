@@ -128,6 +128,11 @@ async function getGlobalRanking(startDate?: Date) {
           logoUrl: true
         }
       },
+      PerfilCompleto: {
+        select: {
+          condecoraciones: true
+        }
+      },
       // Evidencias de alta calidad
       EvidenciaAccion: {
         where: {
@@ -186,6 +191,7 @@ async function getGlobalRanking(startDate?: Date) {
       attendanceStatus: getAttendanceStatus(attendanceRate),
       streak: user.completionStreak,
       badges: user.badges || [],
+      condecoraciones: user.PerfilCompleto?.condecoraciones || [],
       organization: user.Organization?.name,
       organizationLogo: user.Organization?.logoUrl,
       isOnFire: user.completionStreak >= 7
@@ -217,6 +223,11 @@ async function getSchoolRanking(organizationId: number, startDate?: Date) {
       rangoActual: true,
       completionStreak: true,
       badges: true,
+      PerfilCompleto: {
+        select: {
+          condecoraciones: true
+        }
+      },
       EvidenciaAccion: {
         where: {
           highQuality: true,
@@ -271,6 +282,7 @@ async function getSchoolRanking(organizationId: number, startDate?: Date) {
       attendanceStatus: getAttendanceStatus(attendanceRate),
       streak: user.completionStreak,
       badges: user.badges || [],
+      condecoraciones: user.PerfilCompleto?.condecoraciones || [],
       isOnFire: user.completionStreak >= 7
     };
   });
@@ -440,6 +452,7 @@ async function getMentorRanking(startDate?: Date) {
       imagen: true,
       profileImage: true,
       badges: true,
+      accumulatedMissedCalls: true,
       PerfilMentor: {
         select: {
           mentoradosActivos: true,
@@ -508,7 +521,8 @@ async function getMentorRanking(startDate?: Date) {
       completedCalls: totalCompletedCalls,
       completionRate: Math.round(completionRate),
       rating: Number(rating) || 0,
-      totalPoints: perfilMentor?.puntosTotales || 0
+      totalPoints: perfilMentor?.puntosTotales || 0,
+      accumulatedMissedCalls: mentor.accumulatedMissedCalls || 0
     };
   });
 

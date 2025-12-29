@@ -362,10 +362,9 @@ export default async function DashboardPage() {
     redirect("/dashboard/coordinador");
   }
 
-  // 3. Lógica visual según el Rol - Solo PARTICIPANTE, LIDER o GAMECHANGER llegan aquí
-  const mensajeBienvenida = usuario.rol === "GAMECHANGER" 
-    ? "El panel de control maestro está listo." 
-    : "Tu transformación ha comenzado.";
+  if (usuario.rol === "GAMECHANGER") {
+    redirect("/dashboard/gamechanger");
+  }
 
   return (
     <div className="space-y-6">
@@ -384,7 +383,7 @@ export default async function DashboardPage() {
       {/* ============================================ */}
       {/* ZONA SUPERIOR: Hero Section Condicional      */}
       {/* ============================================ */}
-      {isAuthorized ? (
+      {isAuthorized && (
         // MODO EJECUCIÓN: Barra de Progreso Maestra
         <GlobalProgressHero 
           percent={progressPercent}
@@ -394,23 +393,6 @@ export default async function DashboardPage() {
           areas={areasActivas.map(area => area.label)}
           areaProgress={areaProgress}
         />
-      ) : (
-        // MODO ONBOARDING: Banner de Bienvenida
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 to-purple-600 p-8 shadow-lg shadow-blue-900/20">
-          <div className="relative z-10">
-            <h1 className="text-3xl font-bold text-white mb-2">
-              Hola, {usuario.nombre}
-            </h1>
-            <p className="text-blue-100 text-lg mb-6">
-              {mensajeBienvenida}
-            </p>
-            <button className="bg-white text-blue-600 px-6 py-2.5 rounded-xl font-semibold hover:bg-blue-50 transition-colors shadow-lg">
-              Ver mis Metas de Hoy
-            </button>
-          </div>
-          {/* Decoración de fondo */}
-          <div className="absolute right-0 top-0 h-full w-1/3 bg-white/10 skew-x-12 blur-xl" />
-        </div>
       )}
 
       {/* ============================================ */}

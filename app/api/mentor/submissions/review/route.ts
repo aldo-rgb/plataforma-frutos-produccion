@@ -72,7 +72,10 @@ export async function POST(req: Request) {
             pointsReward: true,
             type: true,
             fechaLimite: true,
-            horaEvento: true
+            horaEvento: true,
+            parentTaskId: true,
+            isMultiDay: true,
+            diaNumero: true
           }
         }
       }
@@ -82,6 +85,17 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: 'Submission no encontrada' },
         { status: 404 }
+      );
+    }
+
+    // BLOQUEAR revisión de tareas extraordinarias y eventos por mentores
+    if (submission.AdminTask.type === 'EXTRAORDINARY' || submission.AdminTask.type === 'EVENT') {
+      return NextResponse.json(
+        { 
+          error: 'Las tareas extraordinarias y eventos son revisadas por Admin, Coordinador o Director',
+          mensaje: 'Esta evidencia debe ser revisada por el equipo administrativo'
+        },
+        { status: 403 }
       );
     }
 
@@ -163,6 +177,57 @@ export async function POST(req: Request) {
         `de ${submission.Usuario.nombre} - ` +
         `Otorgados ${submission.AdminTask.pointsReward} PC`
       );
+
+      // 🗓️ VERIFICAR SI ES PARTE DE UNA MISIÓN MULTI-DÍA
+      if (submission.AdminTask.parentTaskId) {
+        console.log(`🗓️ Esta tarea es parte de una misión multi-día (Parent: ${submission.AdminTask.parentTaskId})`);
+        
+        // Obtener todas las tareas hermanas de esta misión multi-día
+        const parentTask = await prisma.adminTask.findUnique({
+          where: { id: submission.AdminTask.parentTaskId },
+          include: {
+            DailyTasks: {
+              include: {
+                Submissions: {
+                  where: {
+                    usuarioId: submission.usuarioId
+                  }
+                }
+              }
+            }
+          }
+        });
+
+        if (parentTask) {
+          // Verificar si el usuario completó TODAS las tareas diarias
+          const todasCompletadas = parentTask.DailyTasks.every(tarea => 
+            tarea.Submissions.length > 0 && 
+            tarea.Submissions[0].status === 'APPROVED'
+          );
+
+          if (todasCompletadas) {
+            console.log(`🎉 Usuario ${submission.usuarioId} completó TODA la misión multi-día "${parentTask.titulo}"!`);
+            
+            // Otorgar los puntos del premio completo
+            await prisma.usuario.update({
+              where: { id: submission.usuarioId },
+              data: {
+                puntosCuanticos: {
+                  increment: parentTask.pointsReward
+                }
+              }
+            });
+
+            console.log(`💰 Bonus otorgado: ${parentTask.pointsReward} PC por completar misión de ${parentTask.duracionDias} días`);
+          } else {
+            const diasCompletados = parentTask.DailyTasks.filter(tarea => 
+              tarea.Submissions.length > 0 && 
+              tarea.Submissions[0].status === 'APPROVED'
+            ).length;
+            console.log(`📊 Progreso: ${diasCompletados}/${parentTask.duracionDias} días completados`);
+          }
+        }
+      }
 
       // Crear notificación (opcional - si tienes sistema de notificaciones)
       // await prisma.notification.create({...})

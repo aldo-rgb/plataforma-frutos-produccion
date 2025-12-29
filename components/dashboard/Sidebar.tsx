@@ -387,8 +387,8 @@ export function Sidebar({ usuario }: SidebarProps) {
           </div>
         )}
 
-        {/* Panel de Mentor/Coordinador */}
-        {(usuario.rol === 'MENTOR' || usuario.rol === 'COORDINADOR') && (
+        {/* Panel de Mentor */}
+        {usuario.rol === 'MENTOR' && (
           <div className="pt-6 mt-6 border-t border-slate-800">
             <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">Panel de Mentor</p>
             
@@ -684,7 +684,7 @@ export function Sidebar({ usuario }: SidebarProps) {
         <Link
           href="/dashboard/configuracion"
           className={`flex items-center gap-3 px-4 py-3 w-full rounded-lg transition-colors ${
-            pathname === '/dashboard/configuracion'
+            pathname === '/dashboard/configuracion' || pathname === '/dashboard/perfil-completo'
               ? 'bg-slate-800 text-white'
               : 'text-slate-400 hover:bg-slate-800 hover:text-white'
           }`}

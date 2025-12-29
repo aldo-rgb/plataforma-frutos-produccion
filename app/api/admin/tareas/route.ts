@@ -3,6 +3,102 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+// Helper para crear submissions según targetType
+async function crearSubmissionsMultiDay(
+  tareasDiarias: any[],
+  targetType: string,
+  targetId: number | null,
+  usuario: any,
+  userId: number
+) {
+  if (targetType === 'ALL') {
+    const whereClause: any = {
+      rol: { in: ['PARTICIPANTE', 'GAMECHANGER'] },
+      isActive: true
+    };
+    
+    if (usuario.rol === 'MENTOR') {
+      whereClause.assignedMentorId = userId;
+    }
+
+    const usuarios = await prisma.usuario.findMany({
+      where: whereClause,
+      select: { id: true }
+    });
+
+    // Crear submissions para TODAS las tareas diarias
+    for (const tarea of tareasDiarias) {
+      if (usuarios.length > 0) {
+        await prisma.taskSubmission.createMany({
+          data: usuarios.map(u => ({
+            adminTaskId: tarea.id,
+            usuarioId: u.id,
+            status: 'PENDING'
+          })),
+          skipDuplicates: true
+        });
+      }
+    }
+
+    console.log(`✅ ${usuarios.length} usuarios × ${tareasDiarias.length} días = ${usuarios.length * tareasDiarias.length} submissions creadas`);
+    
+  } else if (targetType === 'GROUP' && targetId) {
+    const whereClause: any = {
+      rol: { in: ['PARTICIPANTE', 'GAMECHANGER'] },
+      isActive: true,
+      visionId: targetId
+    };
+    
+    if (usuario.rol === 'MENTOR') {
+      whereClause.assignedMentorId = userId;
+    }
+
+    const usuarios = await prisma.usuario.findMany({
+      where: whereClause,
+      select: { id: true }
+    });
+
+    for (const tarea of tareasDiarias) {
+      if (usuarios.length > 0) {
+        await prisma.taskSubmission.createMany({
+          data: usuarios.map(u => ({
+            adminTaskId: tarea.id,
+            usuarioId: u.id,
+            status: 'PENDING'
+          })),
+          skipDuplicates: true
+        });
+      }
+    }
+
+    console.log(`✅ Grupo: ${usuarios.length} usuarios × ${tareasDiarias.length} días`);
+    
+  } else if (targetType === 'USER' && targetId) {
+    if (usuario.rol === 'MENTOR') {
+      const targetUser = await prisma.usuario.findUnique({
+        where: { id: targetId },
+        select: { assignedMentorId: true }
+      });
+
+      if (!targetUser || targetUser.assignedMentorId !== userId) {
+        throw new Error('Solo puedes asignar tareas a tus mentorados');
+      }
+    }
+    
+    for (const tarea of tareasDiarias) {
+      await prisma.taskSubmission.create({
+        data: {
+          adminTaskId: tarea.id,
+          usuarioId: targetId,
+          status: 'PENDING'
+        }
+      });
+    }
+
+    console.log(`✅ Usuario individual: ${tareasDiarias.length} tareas diarias asignadas`);
+  }
+}
+
 /**
  * GET /api/admin/tareas
  * Obtiene todas las tareas administrativas
@@ -147,7 +243,10 @@ export async function POST(req: Request) {
       fechaEvento,
       horaEvento,
       lugar,
-      requiereEvidencia
+      requiereEvidencia,
+      isMultiDay,
+      duracionDias,
+      horaLimiteDiaria
     } = body;
 
     // Validaciones
@@ -250,7 +349,72 @@ export async function POST(req: Request) {
       fechaEventoParsed
     });
 
-    // Crear la tarea
+    // Si es multi-día, crear tarea padre y tareas diarias
+    if (isMultiDay && duracionDias && duracionDias > 1) {
+      console.log(`🗓️ Creando misión multi-día de ${duracionDias} días`);
+
+      // Crear la tarea padre (contenedor)
+      const tareaParent = await prisma.adminTask.create({
+        data: {
+          type,
+          titulo,
+          descripcion: descripcion || null,
+          pointsReward: pointsReward || 0,
+          targetType,
+          targetId: targetId || null,
+          fechaLimite: fechaLimiteParsed,
+          horaEvento: horaEvento || null,
+          requiereEvidencia: requiereEvidencia || false,
+          createdBy: userId,
+          isMultiDay: true,
+          duracionDias,
+          horaLimiteDiaria: horaLimiteDiaria || '23:59'
+        }
+      });
+
+      // Crear tareas diarias (subtareas)
+      const fechaInicio = fechaLimiteParsed ? new Date(fechaLimiteParsed) : new Date();
+      const tareasDiarias = [];
+
+      for (let dia = 1; dia <= duracionDias; dia++) {
+        const fechaDia = new Date(fechaInicio);
+        fechaDia.setDate(fechaInicio.getDate() + (dia - 1));
+
+        const tareaHija = await prisma.adminTask.create({
+          data: {
+            type,
+            titulo: `${titulo} - Día ${dia}/${duracionDias}`,
+            descripcion: `${descripcion || ''}\n\n🗓️ Día ${dia} de ${duracionDias} - Debes completar TODOS los días para ganar los puntos.`,
+            pointsReward: 0, // Los puntos se dan al completar TODA la misión
+            targetType,
+            targetId: targetId || null,
+            fechaLimite: fechaDia,
+            horaEvento: horaLimiteDiaria || '23:59',
+            requiereEvidencia: requiereEvidencia || false,
+            createdBy: userId,
+            isMultiDay: false,
+            parentTaskId: tareaParent.id,
+            diaNumero: dia
+          }
+        });
+
+        tareasDiarias.push(tareaHija);
+      }
+
+      console.log(`✅ Misión multi-día creada: 1 padre + ${tareasDiarias.length} tareas diarias`);
+
+      // Auto-crear submissions para las tareas diarias
+      await crearSubmissionsMultiDay(tareasDiarias, targetType, targetId, usuario, userId);
+
+      return NextResponse.json({
+        success: true,
+        tarea: tareaParent,
+        tareasDiarias: tareasDiarias.length,
+        mensaje: `Misión multi-día creada con ${duracionDias} días consecutivos`
+      });
+    }
+
+    // Crear la tarea normal (no multi-día)
     const tarea = await prisma.adminTask.create({
       data: {
         type,
