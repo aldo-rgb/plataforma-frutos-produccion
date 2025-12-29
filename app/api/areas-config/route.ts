@@ -135,7 +135,8 @@ export async function GET(req: NextRequest) {
         perteneceAGrupo: true,
         isDefault: false,
         visionName: visionConfig.nombre,
-        transformationGuestsTarget: visionConfig.transformationGuestsTarget
+        transformationGuestsTarget: visionConfig.transformationGuestsTarget,
+        visionEndDate: visionConfig.endDate
       });
     }
 

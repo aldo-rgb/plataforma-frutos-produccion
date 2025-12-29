@@ -63,6 +63,7 @@ export default function CartaWizardRelacional() {
   const [areasActivas, setAreasActivas] = useState<typeof AREAS>([]);
   const [showAreaConfig, setShowAreaConfig] = useState(false);
   const [objetivoInvitados, setObjetivoInvitados] = useState<number | null>(null);
+  const [visionEndDate, setVisionEndDate] = useState<string | null>(null);
   
   // PASO 1: Declaración del Ser (NUEVO)
   const [declaracionesSer, setDeclaracionesSer] = useState<Record<string, string>>({});
@@ -393,11 +394,18 @@ export default function CartaWizardRelacional() {
       
       const perteneceGrupo = areasConfigData.perteneceAGrupo || false;
       transformationTargetValue = areasConfigData.transformationGuestsTarget || null;
+      const visionEndDateValue = areasConfigData.visionEndDate || null;
       
       // Guardar objetivo de invitados si existe
       if (transformationTargetValue) {
         setObjetivoInvitados(transformationTargetValue);
         console.log(`🎯 Objetivo de invitados: ${transformationTargetValue} personas`);
+      }
+      
+      // Guardar fecha de fin de Vision si existe
+      if (visionEndDateValue) {
+        setVisionEndDate(visionEndDateValue);
+        console.log(`📅 Fecha fin de Vision: ${visionEndDateValue}`);
       }
       
       // Filtrar áreas según configuración personalizada
@@ -743,19 +751,52 @@ export default function CartaWizardRelacional() {
         if (!metasPorArea[objetoId] || metasPorArea[objetoId].length === 0) {
           console.log('🎯 Generando tareas automáticas de enrolamiento para:', objetivoInvitados, 'personas');
           const tareasEnrolamiento: Meta[] = [];
+          const configsEnrolamiento: MetaConfig[] = [];
+          
           for (let i = 1; i <= objetivoInvitados; i++) {
+            const tareaId = `${objetoId}-enrolamiento-${i}-${Date.now()}-${Math.random()}`;
             tareasEnrolamiento.push({
-              id: `${objetoId}-enrolamiento-${i}-${Date.now()}-${Math.random()}`,
+              id: tareaId,
               description: `Enrolar a 1 Participante`,
               isValid: true
             });
+            
+            // Pre-configurar con ONE_TIME y fecha de fin de Vision
+            configsEnrolamiento.push({
+              metaId: tareaId,
+              areaKey: 'servicioTrans',
+              description: `Enrolar a 1 Participante`,
+              config: {
+                type: 'ONE_TIME',
+                deadline: visionEndDate,
+                specificDate: visionEndDate
+              }
+            });
           }
+          
           setMetasPorArea(prev => ({
             ...prev,
             [objetoId]: tareasEnrolamiento
           }));
+          
+          // Pre-configurar todas las tareas de enrolamiento
+          setMetasConfiguradas(prev => {
+            // Filtrar cualquier configuración previa de estas tareas
+            const sinEnrolamiento = prev.filter(mc => !mc.metaId.includes('-enrolamiento-'));
+            return [...sinEnrolamiento, ...configsEnrolamiento];
+          });
+          
+          // Marcar todas las tareas de enrolamiento como revisadas automáticamente
+          setAccionesRevisadas(prev => {
+            const nuevasRevisadas = new Set(prev);
+            configsEnrolamiento.forEach(config => nuevasRevisadas.add(config.metaId));
+            return nuevasRevisadas;
+          });
+          
           setHasChanges(true);
-          console.log(`✅ ${objetivoInvitados} tareas de enrolamiento creadas automáticamente`);
+          console.log(`✅ ${objetivoInvitados} tareas de enrolamiento creadas y pre-configuradas automáticamente`);
+          console.log(`📅 Fecha límite configurada: ${visionEndDate}`);
+          console.log(`✅ Tareas marcadas como revisadas automáticamente`);
         }
       } else {
         // Para otras áreas, cargar sugerencias QUANTUM
