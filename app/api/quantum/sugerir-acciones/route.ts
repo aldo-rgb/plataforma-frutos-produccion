@@ -9,16 +9,36 @@ const openai = new OpenAI({
 
 export async function POST(req: NextRequest) {
   try {
+    console.log('🔷 QUANTUM API: Iniciando solicitud');
+    
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
+      console.error('❌ QUANTUM API: No autenticado');
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
-    const { objetivo, area } = await req.json();
+    console.log('✅ QUANTUM API: Usuario autenticado:', session.user.email);
+
+    const body = await req.json();
+    console.log('📦 QUANTUM API: Body recibido:', body);
+    
+    const { objetivo, area } = body;
 
     if (!objetivo) {
+      console.error('❌ QUANTUM API: Objetivo no proporcionado');
       return NextResponse.json({ error: 'Objetivo requerido' }, { status: 400 });
     }
+
+    console.log('🎯 QUANTUM API: Objetivo:', objetivo);
+    console.log('📍 QUANTUM API: Área:', area);
+
+    // Verificar API key
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('❌ QUANTUM API: OPENAI_API_KEY no configurada');
+      return NextResponse.json({ error: 'API key no configurada' }, { status: 500 });
+    }
+
+    console.log('🔑 QUANTUM API: API Key presente:', process.env.OPENAI_API_KEY.substring(0, 10) + '...');
 
     // Detectar timezone del usuario
     const timezone = req.headers.get('x-timezone') || 'America/Mexico_City';
@@ -93,6 +113,8 @@ Devuelve SOLO un JSON con esta estructura exacta:
 
 NO incluyas explicaciones adicionales. SOLO el JSON.`;
 
+    console.log('🤖 QUANTUM API: Llamando a OpenAI...');
+
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
@@ -104,12 +126,20 @@ NO incluyas explicaciones adicionales. SOLO el JSON.`;
       response_format: { type: "json_object" }
     });
 
+    console.log('✅ QUANTUM API: Respuesta de OpenAI recibida');
+    console.log('📝 QUANTUM API: Content:', completion.choices[0].message.content);
+
     const responseText = completion.choices[0].message.content || '{}';
     const parsedResponse = JSON.parse(responseText);
 
+    console.log('📊 QUANTUM API: Respuesta parseada:', parsedResponse);
+
     if (!parsedResponse.acciones || !Array.isArray(parsedResponse.acciones)) {
+      console.error('❌ QUANTUM API: Formato de respuesta inválido');
       throw new Error('Formato de respuesta inválido');
     }
+
+    console.log('✅ QUANTUM API: Devolviendo', parsedResponse.acciones.length, 'acciones');
 
     return NextResponse.json({
       success: true,
@@ -118,7 +148,11 @@ NO incluyas explicaciones adicionales. SOLO el JSON.`;
     });
 
   } catch (error: any) {
-    console.error('❌ Error generando acciones QUANTUM:', error);
+    console.error('❌ QUANTUM API: Error general:', error);
+    console.error('❌ QUANTUM API: Error name:', error.name);
+    console.error('❌ QUANTUM API: Error message:', error.message);
+    console.error('❌ QUANTUM API: Error stack:', error.stack);
+    
     return NextResponse.json(
       { error: 'Error generando acciones', details: error.message },
       { status: 500 }

@@ -737,13 +737,38 @@ export default function CartaWizardRelacional() {
     if (currentStep === 3 && currentObjetivoData && !isReadOnly) {
       const objetoId = currentObjetivoData.objetivo.id;
       
-      // Solo cargar si no hay sugerencias ya cargadas para este objetivo
-      if (!showActionSuggestionsModal.objetoId || showActionSuggestionsModal.objetoId !== objetoId) {
-        handleGetActionSuggestions(
-          currentObjetivoData.objetivo.description,
-          currentObjetivoData.objetivo.id,
-          currentObjetivoData.areaKey
-        );
+      // Si es Servicio Transformacional, generar tareas automáticamente
+      if (currentObjetivoData.areaKey === 'servicioTrans') {
+        // Solo generar si no hay tareas ya creadas para este objetivo
+        if (!metasPorArea[objetoId] || metasPorArea[objetoId].length === 0) {
+          console.log('🎯 Generando tareas automáticas de enrolamiento para:', objetivoInvitados, 'personas');
+          const tareasEnrolamiento: Meta[] = [];
+          for (let i = 1; i <= objetivoInvitados; i++) {
+            tareasEnrolamiento.push({
+              id: `${objetoId}-enrolamiento-${i}-${Date.now()}-${Math.random()}`,
+              description: `Enrolar a 1 Participante`,
+              isValid: true
+            });
+          }
+          setMetasPorArea(prev => ({
+            ...prev,
+            [objetoId]: tareasEnrolamiento
+          }));
+          setHasChanges(true);
+          console.log(`✅ ${objetivoInvitados} tareas de enrolamiento creadas automáticamente`);
+        }
+      } else {
+        // Para otras áreas, cargar sugerencias QUANTUM
+        if (!actionSuggestionsByObjetivo[objetoId] || actionSuggestionsByObjetivo[objetoId].length === 0) {
+          console.log('🔄 Cargando sugerencias QUANTUM para objetivo:', currentObjetivoData.objetivo.description);
+          handleGetActionSuggestions(
+            currentObjetivoData.objetivo.description,
+            currentObjetivoData.objetivo.id,
+            currentObjetivoData.areaKey
+          );
+        } else {
+          console.log('✅ Sugerencias ya cargadas para este objetivo');
+        }
       }
     }
   }, [currentStep, currentObjetivoIndexStep3, currentObjetivoData?.objetivo.id]);
@@ -828,6 +853,7 @@ export default function CartaWizardRelacional() {
   // QUANTUM PASO 3: Función para obtener sugerencias de acciones
   const handleGetActionSuggestions = async (objetivo: string, objetoId: string, areaKey: string) => {
     setLoadingActionSuggestions(true);
+    console.log('🔄 Solicitando sugerencias para:', { objetivo, areaKey });
     try {
       // Detectar timezone del usuario
       const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -844,9 +870,20 @@ export default function CartaWizardRelacional() {
         })
       });
 
-      if (!response.ok) throw new Error('Error obteniendo sugerencias de acciones');
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
+        }
+        console.error('❌ Error response:', errorData);
+        console.error('❌ Status:', response.status, response.statusText);
+        throw new Error(errorData.error || 'Error obteniendo sugerencias de acciones');
+      }
 
       const data = await response.json();
+      console.log('✅ Sugerencias recibidas:', data);
       
       // Guardar sugerencias inline en lugar de modal
       setActionSuggestionsByObjetivo(prev => ({
@@ -854,7 +891,7 @@ export default function CartaWizardRelacional() {
         [objetoId]: data.acciones || []
       }));
     } catch (error) {
-      console.error('Error obteniendo sugerencias de acciones:', error);
+      console.error('❌ Error obteniendo sugerencias de acciones:', error);
       // No mostrar modal de error, solo log
     } finally {
       setLoadingActionSuggestions(false);
@@ -1919,7 +1956,7 @@ IMPORTANTE: Responde con EXACTAMENTE 3 acciones, una por línea, sin numeración
                     <div className="flex items-start gap-4">
                       <div className="text-5xl">✨</div>
                       <div className="flex-1">
-                        <h4 className="text-amber-300 font-bold text-lg mb-2">Este objetivo no requiere acciones</h4>
+                        <h4 className="text-amber-300 font-bold text-lg mb-2">Este objetivo no requiere acciones específicas</h4>
                         <p className="text-amber-100 text-sm leading-relaxed mb-3">
                           Este objetivo trata de <strong>tu SER</strong> - quién estás siendo para obtenerlo. 
                           No se trata de acciones específicas, sino de la identidad y el estado del ser que encarnas.
@@ -1929,6 +1966,18 @@ IMPORTANTE: Responde con EXACTAMENTE 3 acciones, una por línea, sin numeración
                             💡 <strong>Enfócate en:</strong> La persona en la que te estás convirtiendo, no en las tareas que debes hacer.
                           </p>
                         </div>
+                        
+                        {/* Mostrar tareas auto-generadas (ocultas visualmente pero ya creadas) */}
+                        {metasPorArea[currentObjetivoData.objetivo.id]?.length > 0 && (
+                          <div className="mt-4 bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+                            <p className="text-green-300 text-sm">
+                              ✅ {metasPorArea[currentObjetivoData.objetivo.id].length} tarea{metasPorArea[currentObjetivoData.objetivo.id].length !== 1 ? 's' : ''} de enrolamiento generada{metasPorArea[currentObjetivoData.objetivo.id].length !== 1 ? 's' : ''} automáticamente
+                            </p>
+                            <p className="text-green-200 text-xs mt-1">
+                              Configurarás la frecuencia en el siguiente paso
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
