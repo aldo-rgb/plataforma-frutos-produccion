@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/detector-diario",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/avatar-reminder",
+      "schedule": "0 10 1 * *"
     }
   ]
 }

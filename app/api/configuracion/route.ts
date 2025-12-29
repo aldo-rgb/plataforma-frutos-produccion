@@ -23,9 +23,10 @@ export async function GET(req: NextRequest) {
         telefono: true,
         rol: true,
         organizationId: true,
-        gameChangerId: true
+        gameChangerId: true,
+        profileImage: true
       }
-    });
+    }) as any;
 
     if (!usuario) {
       return NextResponse.json(
@@ -56,28 +57,120 @@ export async function GET(req: NextRequest) {
       gameChangerNombre = gameChanger?.nombre || '';
     }
 
-    // Obtener número de visión actual
-    let numeroVision = '';
+    // Obtener historial completo de visiones
+    let visionesHistorial: Array<{nombre: string, rol: string, fecha: Date}> = [];
     if (usuario.organizationId) {
-      const visionActiva = await prisma.visionParticipante.findFirst({
-        where: {
-          participanteId: usuario.id,
-          Vision: {
-            estado: 'ACTIVA'
+      try {
+        // Mapa para rastrear visiones y sus roles (puede tener múltiples roles)
+        const visionesMap = new Map<string, {roles: Array<{rol: string, fecha: Date}>, nombre: string}>();
+
+        // Como participante
+        const visionesParticipante = await (prisma as any).visionParticipante.findMany({
+          where: { participanteId: usuario.id },
+          include: {
+            Vision: { select: { nombre: true } }
+          },
+          orderBy: { createdAt: 'asc' }
+        });
+        
+        visionesParticipante.forEach((vp: any) => {
+          if (!visionesMap.has(vp.Vision.nombre)) {
+            visionesMap.set(vp.Vision.nombre, { nombre: vp.Vision.nombre, roles: [] });
           }
-        },
-        include: {
-          Vision: {
-            select: { nombre: true }
+          visionesMap.get(vp.Vision.nombre)!.roles.push({ rol: 'Participante', fecha: vp.createdAt });
+        });
+
+        // Como GameChanger
+        const visionesGameChanger = await (prisma as any).visionGameChanger.findMany({
+          where: { gameChangerId: usuario.id },
+          include: {
+            Vision: { select: { nombre: true } }
+          },
+          orderBy: { createdAt: 'asc' }
+        });
+        
+        visionesGameChanger.forEach((vg: any) => {
+          if (!visionesMap.has(vg.Vision.nombre)) {
+            visionesMap.set(vg.Vision.nombre, { nombre: vg.Vision.nombre, roles: [] });
           }
-        },
-        orderBy: { createdAt: 'desc' }
-      });
-      
-      if (visionActiva) {
-        numeroVision = visionActiva.Vision.nombre;
+          visionesMap.get(vg.Vision.nombre)!.roles.push({ rol: 'GameChanger', fecha: vg.createdAt });
+        });
+
+        // Como Mentor
+        const visionesMentor = await (prisma as any).visionMentor.findMany({
+          where: { mentorId: usuario.id },
+          include: {
+            Vision: { select: { nombre: true } }
+          },
+          orderBy: { createdAt: 'asc' }
+        });
+        
+        visionesMentor.forEach((vm: any) => {
+          if (!visionesMap.has(vm.Vision.nombre)) {
+            visionesMap.set(vm.Vision.nombre, { nombre: vm.Vision.nombre, roles: [] });
+          }
+          visionesMap.get(vm.Vision.nombre)!.roles.push({ rol: 'Mentor', fecha: vm.createdAt });
+        });
+
+        // Como Coordinador (si es SCHOOL_ADMIN de una organización)
+        if (usuario.rol === 'SCHOOL_ADMIN') {
+          const visionesCoordinador = await (prisma as any).vision.findMany({
+            where: { organizationId: usuario.organizationId },
+            select: { nombre: true, createdAt: true },
+            orderBy: { createdAt: 'asc' }
+          });
+          
+          visionesCoordinador.forEach((vc: any) => {
+            if (!visionesMap.has(vc.nombre)) {
+              visionesMap.set(vc.nombre, { nombre: vc.nombre, roles: [] });
+            }
+            visionesMap.get(vc.nombre)!.roles.push({ rol: 'Coordinador', fecha: vc.createdAt });
+          });
+        }
+
+        // Determinar el rol principal para cada visión basado en el rol del usuario
+        const prioridadRoles: Record<string, number> = {
+          'GAMECHANGER': { 'GameChanger': 1, 'Mentor': 2, 'Participante': 3, 'Coordinador': 4 },
+          'MENTOR': { 'Mentor': 1, 'GameChanger': 2, 'Participante': 3, 'Coordinador': 4 },
+          'PARTICIPANTE': { 'Participante': 1, 'GameChanger': 2, 'Mentor': 3, 'Coordinador': 4 },
+          'SCHOOL_ADMIN': { 'Coordinador': 1, 'Mentor': 2, 'GameChanger': 3, 'Participante': 4 }
+        };
+
+        const prioridades = prioridadRoles[usuario.rol] || prioridadRoles['PARTICIPANTE'];
+
+        visionesMap.forEach((vision) => {
+          // Si hay múltiples roles, elegir el de mayor prioridad según el rol del usuario
+          let rolSeleccionado = vision.roles[0];
+          if (vision.roles.length > 1) {
+            rolSeleccionado = vision.roles.reduce((mejor, actual) => {
+              const prioridadMejor = prioridades[mejor.rol] || 999;
+              const prioridadActual = prioridades[actual.rol] || 999;
+              return prioridadActual < prioridadMejor ? actual : mejor;
+            });
+          }
+          
+          visionesHistorial.push({
+            nombre: vision.nombre,
+            rol: rolSeleccionado.rol,
+            fecha: rolSeleccionado.fecha
+          });
+        });
+
+        // Ordenar por fecha
+        visionesHistorial.sort((a, b) => a.fecha.getTime() - b.fecha.getTime());
+        
+        console.log('✅ Visiones historial encontradas:', visionesHistorial.length);
+        console.log('📊 Detalles:', visionesHistorial);
+        
+      } catch (visionError) {
+        console.log('⚠️ Error cargando visiones (no crítico):', visionError);
       }
     }
+
+    // Obtener lastAvatarChangeDate usando prisma con type assertion
+    const usuarioWithDate = await prisma.usuario.findUnique({
+      where: { id: usuario.id }
+    }) as any;
 
     return NextResponse.json({
       success: true,
@@ -86,8 +179,13 @@ export async function GET(req: NextRequest) {
         nombre: usuario.nombre,
         email: usuario.email,
         telefono: usuario.telefono,
-        gameChangerNombre,
-        numeroVision
+        gameChangerNombre
+      },
+      visionesHistorial: visionesHistorial,
+      usuario: {
+        email: usuario.email,
+        profileImage: usuario.profileImage,
+        lastAvatarChangeDate: usuarioWithDate?.lastAvatarChangeDate || null
       }
     });
 

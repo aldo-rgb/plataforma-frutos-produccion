@@ -789,6 +789,7 @@ model Usuario {
   experienceYears                                                  Int                       @default(0)
   jobTitle                                                         String?
   profileImage                                                     String?
+  lastAvatarChangeDate                                             DateTime?
   skills                                                           String[]                  @default([])
   badges                                                           String[]                  @default([])
   accumulatedMissedCalls                                           Int                       @default(0)
@@ -858,6 +859,7 @@ model Usuario {
   QuantumInsights                                                  QuantumInsight[]          @relation("QuantumInsights")
   QuantumPatterns                                                  QuantumPattern[]          @relation("QuantumPatterns")
   QuantumIdentities                                                QuantumIdentity[]
+  AvatarGenerationAttempts                                         AvatarGenerationAttempt[]
   ReporteAnonimo_estudiante                                        ReporteAnonimo[]          @relation("ReporteAnonimo_estudiante")
   ReporteAnonimo_mentor                                            ReporteAnonimo[]          @relation("ReporteAnonimo_mentor")
   ResenasMentoria                                                  ResenasMentoria[]
@@ -1824,6 +1826,7 @@ enum NotificationType {
   TASK_SUBMISSION
   MENTOR_ASSIGNMENT
   SYSTEM_ALERT
+  AVATAR_RENEWAL_REMINDER
   OTHER
 }
 
@@ -1834,10 +1837,25 @@ model QuantumIdentity {
   selectedOption  Json?     // La opción que el usuario eligió
   status          String    @default("PENDING_SELECTION") // PENDING_SELECTION, COMPLETED
   avatarUrl       String?   // URL del avatar generado
+  gender          String?   // male, female, neutral
   generatedAt     DateTime  @default(now())
   completedAt     DateTime?
   Usuario         Usuario   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
+}
+
+model AvatarGenerationAttempt {
+  id            Int       @id @default(autoincrement())
+  usuarioId     Int
+  sourceImage   String    // 'selfie' o 'generic' - No guardamos la imagen real
+  generatedUrl  String    // URL del avatar generado
+  vibe          String    @default("cyberpunk") // cyberpunk, mystic, etc
+  gender        String    // male, female, neutral
+  createdAt     DateTime  @default(now())
+  Usuario       Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@index([createdAt])
 }

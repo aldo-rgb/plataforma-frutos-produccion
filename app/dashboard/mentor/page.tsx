@@ -8,6 +8,8 @@ import WidgetDisciplinaV2 from '@/components/dashboard/mentor/WidgetDisciplinaV2
 import CartaReviewPanel from '@/components/dashboard/mentor/CartaReviewPanel';
 import RevisionEvidenciasWidget from '@/components/dashboard/RevisionEvidenciasWidget';
 import AlertasProcrastinacion from '@/components/dashboard/mentor/AlertasProcrastinacion';
+import MentorStrikesWidget from '@/components/dashboard/mentor/MentorStrikesWidget';
+import MentorAccountabilityWidget from '@/components/dashboard/mentor/MentorAccountabilityWidget';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -207,6 +209,12 @@ export default async function MentorDashboard() {
               "La disciplina es hacer lo que tienes que hacer, cuando lo tienes que hacer, tengas ganas o no."
             </p>
           </div>
+
+          {/* WIDGET DE STRIKES */}
+          <MentorStrikesWidget />
+
+          {/* WIDGET DE ACCOUNTABILITY DEL MENTOR */}
+          <MentorAccountabilityWidget />
         </div>
       </div>
     </div>

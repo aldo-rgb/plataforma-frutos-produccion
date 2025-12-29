@@ -21,7 +21,7 @@ export async function GET() {
         CartaFrutos: {
           where: { estado: 'APROBADA' },
           select: { id: true },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { fechaCreacion: 'desc' },
           take: 1
         }
       }

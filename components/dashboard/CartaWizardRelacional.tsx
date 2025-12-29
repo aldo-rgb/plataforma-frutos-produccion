@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Check, Sparkles, AlertCircle, Loader2, CheckCircle2, Brain, Atom, Settings, Send } from 'lucide-react';
+import QuantumIdentityModal from '@/components/quantum/QuantumIdentityModal';
 import { validateYoSoy } from '@/lib/validaciones-carta';
 import { extractSmartInfo, generateClosingMessage, type ExtractedInfo } from '@/lib/smart-extractor';
 import MetaInputDynamic from './MetaInputDynamic';
@@ -20,7 +21,8 @@ const WIZARD_STEPS: WizardStep[] = [
   { id: 1, title: 'SER', subtitle: 'Quién ser', emoji: '🧘' },
   { id: 2, title: 'Objetivo', subtitle: 'Visualización', emoji: '✨' },
   { id: 3, title: 'HACER', subtitle: 'Acciones', emoji: '🎯' },
-  { id: 4, title: 'Plan de Acción', subtitle: 'Frecuencia', emoji: '🔥' }
+  { id: 4, title: 'Acciones', subtitle: 'Frecuencia', emoji: '🔥' },
+  { id: 5, title: 'Avatar Cuántico', subtitle: 'Tu Identidad', emoji: '⚡' }
 ];
 
 const AREAS = [
@@ -52,6 +54,9 @@ export default function CartaWizardRelacional() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [hasAvatar, setHasAvatar] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string>('');
   const [errorModal, setErrorModal] = useState<{ show: boolean; title: string; message: string }>({ 
     show: false, 
     title: '', 
@@ -386,6 +391,17 @@ export default function CartaWizardRelacional() {
       
       console.log('📥 Data from API:', data);
       
+      // Verificar si el usuario tiene avatar cuántico
+      if (data.carta?.Usuario?.profileImage) {
+        setHasAvatar(true);
+        setAvatarUrl(data.carta.Usuario.profileImage);
+        console.log('✅ Usuario tiene avatar cuántico');
+      } else {
+        setHasAvatar(false);
+        setAvatarUrl('');
+        console.log('⚠️ Usuario no tiene avatar cuántico');
+      }
+      
       // NUEVO: Obtener configuración personalizada de áreas
       const areasConfigRes = await fetch('/api/areas-config');
       const areasConfigData = await areasConfigRes.json();
@@ -712,7 +728,8 @@ export default function CartaWizardRelacional() {
   const canAdvanceToStep2 = () => validateStep1();
   const canAdvanceToStep3 = () => validateStep1() && validateStep2();
   const canAdvanceToStep4 = () => validateStep1() && validateStep2() && validateStep3();
-  const canSubmit = () => validateStep1() && validateStep2() && validateStep3() && validateStep4();
+  const canAdvanceToStep5 = () => validateStep1() && validateStep2() && validateStep3() && validateStep4();
+  const canSubmit = () => validateStep1() && validateStep2() && validateStep3() && validateStep4() && hasAvatar;
 
   // ========== NAVEGACIÓN PASO 3 (ITERATIVA) - OBJETIVOS ==========
   
@@ -753,11 +770,22 @@ export default function CartaWizardRelacional() {
           const tareasEnrolamiento: Meta[] = [];
           const configsEnrolamiento: MetaConfig[] = [];
           
-          for (let i = 1; i <= objetivoInvitados; i++) {
+          // Función para obtener el ordinal correcto
+          const getOrdinal = (num: number): string => {
+            if (num === 1) return '1er';
+            if (num === 2) return '2ndo';
+            if (num === 3) return '3er';
+            if (num === 4) return '4to';
+            return `${num}to`; // Para casos mayores a 4
+          };
+          
+          for (let i = 1; i <= (objetivoInvitados || 0); i++) {
             const tareaId = `${objetoId}-enrolamiento-${i}-${Date.now()}-${Math.random()}`;
+            const descripcionTarea = `Enrolar al ${getOrdinal(i)} Participante`;
+            
             tareasEnrolamiento.push({
               id: tareaId,
-              description: `Enrolar a 1 Participante`,
+              description: descripcionTarea,
               isValid: true
             });
             
@@ -765,7 +793,7 @@ export default function CartaWizardRelacional() {
             configsEnrolamiento.push({
               metaId: tareaId,
               areaKey: 'servicioTrans',
-              description: `Enrolar a 1 Participante`,
+              description: descripcionTarea,
               config: {
                 type: 'ONE_TIME',
                 deadline: visionEndDate,
@@ -1328,6 +1356,15 @@ IMPORTANTE: Responde con EXACTAMENTE 3 acciones, una por línea, sin numeración
       });
 
       const submitData = await submitRes.json();
+      
+      // ⚠️ Verificar si requiere pago (402 Payment Required)
+      if (submitRes.status === 402 && submitData.requiresPayment) {
+        console.log('💳 Requiere pago - Redirigiendo a pricing');
+        setSubmitting(false);
+        // Redirigir a la página de pricing/pago
+        window.location.href = submitData.redirectTo || '/pricing';
+        return;
+      }
       
       if (submitRes.ok) {
         // Actualizar estado local
@@ -2298,6 +2335,89 @@ IMPORTANTE: Responde con EXACTAMENTE 3 acciones, una por línea, sin numeración
             )}
           </div>
         )}
+
+        {/* Paso 5: Avatar Cuántico */}
+        {currentStep === 5 && (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-purple-900/40 via-blue-900/40 to-purple-900/40 border-2 border-purple-500/50 rounded-xl p-8 text-center">
+              <div className="flex flex-col items-center gap-6">
+                <div className="w-24 h-24 bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 rounded-full flex items-center justify-center animate-pulse">
+                  <Sparkles className="text-white" size={48} />
+                </div>
+                
+                <div className="space-y-3">
+                  <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 uppercase tracking-wider">
+                    ⚡ Tu Identidad Cuántica
+                  </h2>
+                  <p className="text-xl text-white max-w-2xl mx-auto">
+                    {hasAvatar 
+                      ? '¡Ya tienes tu Avatar Cuántico! Puedes enviarlo a revisión o regenerar uno nuevo.' 
+                      : 'Antes de enviar tus objetivos, vamos generar tu Avatar Cuántico que representará tu identidad en la plataforma.'
+                    }
+                  </p>
+                </div>
+
+                {hasAvatar ? (
+                  <div className="flex flex-col items-center gap-4">
+                    {/* Mostrar el avatar generado */}
+                    {avatarUrl && (
+                      <div className="relative group">
+                        <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 rounded-2xl blur-xl opacity-75 group-hover:opacity-100 transition-opacity"></div>
+                        <img 
+                          src={avatarUrl} 
+                          alt="Avatar Cuántico" 
+                          className="relative w-48 h-48 rounded-2xl object-cover border-4 border-purple-500/50 shadow-2xl shadow-purple-500/50"
+                        />
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-2 bg-green-500/20 border border-green-500/50 rounded-lg px-6 py-3">
+                      <CheckCircle2 className="text-green-400" size={24} />
+                      <span className="text-green-300 font-bold">Avatar Cuántico Generado</span>
+                    </div>
+                    <button
+                      onClick={() => setShowAvatarModal(true)}
+                      className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition-all flex items-center gap-2"
+                    >
+                      <Sparkles size={20} />
+                      Regenerar Avatar Cuántico
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowAvatarModal(true)}
+                    className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl font-black uppercase tracking-wider transition-all shadow-lg shadow-purple-500/50 flex items-center gap-3 text-lg"
+                  >
+                    <Sparkles size={24} />
+                    Generar Avatar Cuántico
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Info adicional */}
+            <div className="bg-blue-900/20 border border-blue-500/30 rounded-xl p-6">
+              <h3 className="text-blue-300 font-bold mb-3 flex items-center gap-2">
+                <Brain size={20} />
+                ¿Qué es el Avatar Cuántico?
+              </h3>
+              <ul className="space-y-2 text-gray-300 text-sm">
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-400 mt-1">•</span>
+                  <span>Una representación visual única generada por IA basada en tus metas y objetivos</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-400 mt-1">•</span>
+                  <span>Refleja tu personalidad y el camino que estás tomando</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-400 mt-1">•</span>
+                  <span>Será tu identidad en toda la plataforma y en las competencias</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* NAVIGATION FOOTER */}
@@ -2306,7 +2426,11 @@ IMPORTANTE: Responde con EXACTAMENTE 3 acciones, una por línea, sin numeración
           <div className="max-w-5xl mx-auto flex items-center justify-between">
           <button
             onClick={() => {
-              if (currentStep === 4 && currentMetaIndex > 0) {
+              if (currentStep === 5) {
+                // Si estamos en Paso 5, regresar al Paso 4
+                setCurrentStep(4);
+                setCurrentMetaIndex(metasFlattened.length - 1); // Ir a la última meta
+              } else if (currentStep === 4 && currentMetaIndex > 0) {
                 handlePrevMeta();
               } else if (currentStep === 4) {
                 // Si estamos en Paso 4 y es la primera meta, regresar al Paso 3
@@ -2326,13 +2450,14 @@ IMPORTANTE: Responde con EXACTAMENTE 3 acciones, una por línea, sin numeración
 
           <div className="text-center">
             <p className="text-sm text-gray-400">
-              {currentStep < 4 ? `Paso ${currentStep} de 4` : `Meta ${currentMetaIndex + 1} de ${metasFlattened.length}`}
+              {currentStep < 4 ? `Paso ${currentStep} de 5` : currentStep === 4 ? `Meta ${currentMetaIndex + 1} de ${metasFlattened.length}` : 'Paso 5 de 5'}
             </p>
             <div className="flex gap-2 justify-center mt-2">
               <div className={`w-2 h-2 rounded-full ${validateStep1() ? 'bg-green-500' : 'bg-gray-600'}`} />
               <div className={`w-2 h-2 rounded-full ${validateStep2() ? 'bg-green-500' : 'bg-gray-600'}`} />
               <div className={`w-2 h-2 rounded-full ${validateStep3() ? 'bg-green-500' : 'bg-gray-600'}`} />
               <div className={`w-2 h-2 rounded-full ${validateStep4() ? 'bg-green-500' : 'bg-gray-600'}`} />
+              <div className={`w-2 h-2 rounded-full ${hasAvatar ? 'bg-green-500' : 'bg-gray-600'}`} />
             </div>
           </div>
 
@@ -2357,8 +2482,24 @@ IMPORTANTE: Responde con EXACTAMENTE 3 acciones, una por línea, sin numeración
               Siguiente
               <ChevronRight size={20} />
             </button>
+          ) : currentStep === 4 ? (
+            // En el paso 4, mostrar botón de "Siguiente" para ir al paso 5
+            <button
+              onClick={() => {
+                if (canAdvanceToStep5()) {
+                  setCurrentStep(5);
+                } else {
+                  alert('⚠️ Completa la configuración de todas las acciones antes de continuar.');
+                }
+              }}
+              disabled={!canAdvanceToStep5()}
+              className="px-6 py-3 bg-purple-600 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-purple-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              Siguiente: Avatar Cuántico
+              <ChevronRight size={20} />
+            </button>
           ) : (
-            // En el paso 4, solo mostrar "Enviar" cuando TODAS las metas estén configuradas
+            // En el paso 5, mostrar "Enviar" cuando se tenga avatar
             <div className="flex items-center gap-3">
               {/* Lógica de habilitación del botón:
                   - Debe pasar TODAS las validaciones (canSubmit)
@@ -2416,6 +2557,7 @@ IMPORTANTE: Responde con EXACTAMENTE 3 acciones, una por línea, sin numeración
                         {!validateStep2() && <div>• Paso 2: Objetivos</div>}
                         {!validateStep3() && <div>• Paso 3: Acciones SMART</div>}
                         {!validateStep4() && <div>• Paso 4: Plan de Acción ({metasConfiguradas.length}/{totalAcciones})</div>}
+                        {!hasAvatar && <div>• Paso 5: Avatar Cuántico</div>}
                       </div>
                     )}
                     {allStepsValid && estado !== 'BORRADOR' && !hasChanges && (
@@ -2714,6 +2856,20 @@ IMPORTANTE: Responde con EXACTAMENTE 3 acciones, una por línea, sin numeración
           </div>
         </div>
       )}
+
+      {/* Modal de Avatar Cuántico */}
+      <QuantumIdentityModal
+        isOpen={showAvatarModal}
+        onClose={() => {
+          setShowAvatarModal(false);
+          setHasAvatar(true); // Marcar que ya tiene avatar
+          // Recargar los datos para obtener la nueva imagen
+          loadCarta();
+        }}
+        userName={userEmail || 'Usuario'}
+        userLevel={1}
+        userRank="Novato"
+      />
     </div>
   );
 }

@@ -111,20 +111,23 @@ export async function POST(req: Request) {
         });
       }
       
-      // 🎫 Si tiene LICENCIA ASIGNADA, permitir acceso independientemente de suscripción
+      // 🎫 Si tiene LICENCIA ASIGNADA, permitir envío y activar licencia
       if (licenseAssignment) {
-        console.log('🎫 Usuario tiene licencia asignada - Permitiendo envío sin verificar suscripción');
-        // Continuar con el flujo normal (no hacer return aquí)
+        console.log('🎫 Usuario tiene licencia asignada - Activando licencia al enviar carta');
+        // La licencia se activará después de validar y enviar la carta
       } else {
-        // STANDARD y PREMIUM SIN licencia requieren suscripción activa
+        // STANDARD y PREMIUM SIN licencia requieren pago
+        // Verificar si tiene suscripción activa como fallback
         const tieneAcceso = usuario.suscripcion === 'ACTIVO' || usuario.suscripcion === 'PRUEBA';
         
         if (!tieneAcceso) {
+          console.log('❌ Usuario sin licencia ni suscripción - Requiere pago');
           return NextResponse.json({ 
-            error: 'Suscripción requerida',
-            message: 'Necesitas una suscripción activa o una licencia asignada para enviar tu carta a revisión',
-            requiresSubscription: true
-          }, { status: 403 });
+            error: 'Licencia requerida',
+            message: 'Necesitas adquirir una licencia para enviar tu carta a revisión',
+            requiresPayment: true,
+            redirectTo: '/pricing' // Frontend debe redirigir aquí
+          }, { status: 402 }); // 402 Payment Required
         }
       }
     }
@@ -202,7 +205,7 @@ export async function POST(req: Request) {
       carta: updatedCarta,
       message: mentorId 
         ? '✅ Carta validada y enviada a tu mentor para revisión' 
-        : '✅ Carta validada y enviada a administración para asignación de mentor'
+        : '✅ Carta validada y enviada a mentor para Autorizacion'
     });
 
   } catch (error: any) {

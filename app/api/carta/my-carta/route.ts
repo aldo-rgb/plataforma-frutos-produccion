@@ -56,7 +56,8 @@ export async function GET(req: Request) {
         Usuario: {
           select: {
             email: true,
-            nombre: true
+            nombre: true,
+            profileImage: true
           }
         },
         Meta: {
@@ -81,7 +82,8 @@ export async function GET(req: Request) {
           Usuario: {
             select: {
               email: true,
-              nombre: true
+              nombre: true,
+              profileImage: true
             }
           },
           Meta: {

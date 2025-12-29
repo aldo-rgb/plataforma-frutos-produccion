@@ -34,6 +34,7 @@ export async function POST(
     // Verificar visión y organización
     const vision = await prisma.vision.findUnique({ where: { id: visionId } });
     if (!vision) return NextResponse.json({ success: false, error: 'Visión no encontrada' }, { status: 404 });
+    
     // Verificar que sea el coordinador de la visión
     if (vision.coordinadorId !== session.user.id) {
       return NextResponse.json({ success: false, error: 'No tienes acceso a esta visión' }, { status: 403 });
@@ -47,6 +48,14 @@ export async function POST(
 
     if (!coordinador?.organizationId) {
       return NextResponse.json({ success: false, error: 'No tienes organización asignada' }, { status: 400 });
+    }
+
+    // VALIDACIÓN CRÍTICA: Verificar que la visión pertenece a la organización del coordinador
+    if (vision.organizationId !== coordinador.organizationId) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'No puedes agregar usuarios a una visión de otra organización' 
+      }, { status: 403 });
     }
     
     // Buscar usuarios existentes EN CUALQUIER ORGANIZACIÓN

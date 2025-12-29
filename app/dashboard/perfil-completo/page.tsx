@@ -20,10 +20,12 @@ import {
   Cigarette,
   Loader2,
   CheckCircle2,
-  ArrowLeft
+  ArrowLeft,
+  Sparkles
 } from 'lucide-react';
 import Image from 'next/image';
 import { CondecoracionesGrid } from '@/components/condecoraciones/CondecoracionesBadge';
+import QuantumIdentityModal from '@/components/quantum/QuantumIdentityModal';
 
 interface ConfiguracionData {
   // Datos personales
@@ -103,6 +105,12 @@ export default function ConfiguracionCompletaPage() {
   const [saving, setSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const [profileImage, setProfileImage] = useState<string>('');
+  const [canChangeAvatar, setCanChangeAvatar] = useState(true);
+  const [lastAvatarChange, setLastAvatarChange] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState('');
+  const [visionesHistorial, setVisionesHistorial] = useState<Array<{nombre: string, rol: string, fecha: string}>>([]);
   const [config, setConfig] = useState<ConfiguracionData>({
     nombre: '',
     apellido: '',
@@ -154,13 +162,41 @@ export default function ConfiguracionCompletaPage() {
       const data = await res.json();
       
       if (res.ok && data.success) {
+        // Normalizar todos los valores null a string vacío
+        const normalizedConfig = Object.entries(data.configuracion).reduce((acc, [key, value]) => {
+          acc[key] = value === null ? '' : value;
+          return acc;
+        }, {} as any);
+        
         setConfig(prev => ({
           ...prev,
-          ...data.configuracion,
+          ...normalizedConfig,
           fechaNacimiento: data.configuracion.fechaNacimiento 
             ? new Date(data.configuracion.fechaNacimiento).toISOString().split('T')[0] 
             : ''
         }));
+        
+        // Obtener avatar y verificar si puede cambiarlo
+        const avatarUrl = data.usuario?.profileImage || '';
+        console.log('🖼️ Avatar cargado:', avatarUrl);
+        setProfileImage(avatarUrl);
+        setUserEmail(data.usuario?.email || '');
+        setLastAvatarChange(data.usuario?.lastAvatarChangeDate || null);
+        
+        // Guardar historial de visiones
+        console.log('📊 Visiones historial recibido:', data.visionesHistorial);
+        setVisionesHistorial(data.visionesHistorial || []);
+        
+        // Verificar si ha pasado 1 mes desde el último cambio
+        if (data.usuario?.lastAvatarChangeDate) {
+          const lastChange = new Date(data.usuario.lastAvatarChangeDate);
+          const now = new Date();
+          const diffTime = Math.abs(now.getTime() - lastChange.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          setCanChangeAvatar(diffDays >= 30);
+        } else {
+          setCanChangeAvatar(true);
+        }
       }
     } catch (error) {
       console.error('Error fetching configuración:', error);
@@ -297,6 +333,80 @@ export default function ConfiguracionCompletaPage() {
 
         <div className="space-y-6">
           
+          {/* Avatar Cuántico */}
+          <div className="bg-gradient-to-br from-purple-900/30 via-blue-900/30 to-purple-900/30 border-2 border-purple-500/50 rounded-2xl p-6">
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <Sparkles size={24} className="text-purple-400" />
+              Avatar Cuántico
+            </h2>
+            
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              {/* Avatar Display */}
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 rounded-2xl blur-xl opacity-75 group-hover:opacity-100 transition-opacity"></div>
+                {profileImage ? (
+                  <img 
+                    key={profileImage}
+                    src={profileImage} 
+                    alt="Avatar Cuántico" 
+                    className="relative w-48 h-48 rounded-2xl object-cover border-4 border-purple-500/50 shadow-2xl shadow-purple-500/50"
+                    onError={(e) => {
+                      console.error('❌ Error cargando imagen:', profileImage);
+                      e.currentTarget.style.display = 'none';
+                    }}
+                    onLoad={() => {
+                      console.log('✅ Imagen cargada correctamente:', profileImage);
+                    }}
+                  />
+                ) : (
+                  <div className="relative w-48 h-48 rounded-2xl border-4 border-purple-500/50 bg-slate-800 flex items-center justify-center">
+                    <User size={64} className="text-slate-600" />
+                  </div>
+                )}
+              </div>
+              
+              {/* Avatar Info & Actions */}
+              <div className="flex-1 space-y-4">
+                <div>
+                  <p className="text-slate-300 mb-2">
+                    Tu avatar cuántico es tu identidad visual en la plataforma. Refleja tu personalidad y tus metas.
+                  </p>
+                  {lastAvatarChange && (
+                    <p className="text-sm text-slate-400">
+                      Último cambio: {new Date(lastAvatarChange).toLocaleDateString('es-MX', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
+                    </p>
+                  )}
+                </div>
+                
+                <button
+                  onClick={() => setShowAvatarModal(true)}
+                  disabled={!canChangeAvatar}
+                  className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${
+                    canChangeAvatar 
+                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg shadow-purple-500/30' 
+                      : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                  }`}
+                >
+                  <Sparkles size={20} />
+                  {profileImage ? 'Regenerar Avatar' : 'Generar Avatar'}
+                </button>
+                
+                {!canChangeAvatar && (
+                  <p className="text-sm text-yellow-400 flex items-center gap-2">
+                    <span className="inline-block w-2 h-2 bg-yellow-400 rounded-full"></span>
+                    Solo puedes cambiar tu avatar una vez al mes. Próximo cambio disponible en {
+                      lastAvatarChange ? Math.max(0, 30 - Math.ceil((Date.now() - new Date(lastAvatarChange).getTime()) / (1000 * 60 * 60 * 24))) : 0
+                    } días.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+          
           {/* Datos Personales */}
           <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 rounded-2xl p-6">
             <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
@@ -384,7 +494,7 @@ export default function ConfiguracionCompletaPage() {
           <div className="bg-gradient-to-br from-purple-900/20 to-slate-900/50 border border-purple-700/30 rounded-2xl p-6">
             <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
               <Users size={24} className="text-purple-400" />
-              Información de Tribu
+              Información de Equipo
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -411,15 +521,40 @@ export default function ConfiguracionCompletaPage() {
                 />
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Número de Visión</label>
-                <input
-                  type="text"
-                  value={config.numeroVision}
-                  disabled
-                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-400 cursor-not-allowed"
-                  placeholder="Se actualiza automáticamente"
-                />
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-300 mb-3">Historial de Visiones</label>
+                {visionesHistorial.length > 0 ? (
+                  <div className="bg-slate-900/50 border border-slate-700 rounded-lg p-4 space-y-2">
+                    {visionesHistorial.map((vision, index) => (
+                      <div 
+                        key={index}
+                        className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700/50 hover:border-purple-500/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                            vision.rol === 'Coordinador' ? 'bg-red-500/20 text-red-400' :
+                            vision.rol === 'Mentor' ? 'bg-blue-500/20 text-blue-400' :
+                            vision.rol === 'GameChanger' ? 'bg-purple-500/20 text-purple-400' :
+                            'bg-green-500/20 text-green-400'
+                          }`}>
+                            {vision.rol}
+                          </span>
+                          <span className="text-white font-medium">{vision.nombre}</span>
+                        </div>
+                        <span className="text-slate-400 text-sm">
+                          {new Date(vision.fecha).toLocaleDateString('es-MX', {
+                            year: 'numeric',
+                            month: 'short'
+                          })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-slate-900/50 border border-slate-700 rounded-lg p-4 text-center text-slate-400">
+                    No hay historial de visiones
+                  </div>
+                )}
               </div>
               
               <div>
@@ -812,6 +947,19 @@ export default function ConfiguracionCompletaPage() {
         </div>
 
       </div>
+      
+      {/* Modal de Avatar Cuántico */}
+      <QuantumIdentityModal
+        isOpen={showAvatarModal}
+        onClose={() => {
+          setShowAvatarModal(false);
+          // Recargar configuración para obtener el nuevo avatar
+          fetchConfiguracion();
+        }}
+        userName={userEmail || 'Usuario'}
+        userLevel={1}
+        userRank="Novato"
+      />
     </div>
   );
 }

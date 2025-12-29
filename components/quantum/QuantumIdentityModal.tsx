@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, Zap, Shield, Brain, Target, CheckCircle, 
-  Loader2, Share2, Twitter, Facebook, Linkedin, Copy, X
+  Loader2, Share2, Twitter, Facebook, Linkedin, Copy, X, Camera
 } from 'lucide-react';
+import SelfieAvatarCapture from './SelfieAvatarCapture';
 
 interface Candidate {
   id: string;
@@ -29,54 +30,83 @@ export default function QuantumIdentityModal({
   userLevel,
   userRank 
 }: QuantumIdentityModalProps) {
-  const [stage, setStage] = useState<'analyzing' | 'selection' | 'generating' | 'reveal'>('analyzing');
+  const [stage, setStage] = useState<'gender' | 'analyzing' | 'selection' | 'generating' | 'reveal' | 'error'>('gender');
+  const [gender, setGender] = useState<'male' | 'female' | 'neutral' | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string>('');
   const [identityId, setIdentityId] = useState<number | null>(null);
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [errorTitle, setErrorTitle] = useState<string>('Error');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showSelfieCapture, setShowSelfieCapture] = useState(false);
+  const [useSelfieMode, setUseSelfieMode] = useState(false);
 
   useEffect(() => {
-    if (isOpen && stage === 'analyzing') {
+    if (isOpen && stage === 'analyzing' && !isGenerating && gender) {
       generateIdentityOptions();
     }
-  }, [isOpen]);
+  }, [isOpen, stage, gender]);
+
+  const handleAvatarFromSelfie = (avatarUrl: string) => {
+    setAvatarUrl(avatarUrl);
+    setShowSelfieCapture(false);
+    setStage('reveal');
+  };
 
   const generateIdentityOptions = async () => {
+    if (isGenerating || !gender) return;
+    
+    setIsGenerating(true);
     try {
       const res = await fetch('/api/quantum-identity', {
-        method: 'POST'
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gender })
       });
 
       if (!res.ok) {
-        const error = await res.json();
+        const error = await res.json().catch(() => ({ error: 'Error desconocido' }));
+        
         if (error.requiresCarta) {
-          alert('Necesitas tener tu carta autorizada primero');
-          onClose();
+          setErrorTitle('Carta no creada');
+          setErrorMessage('Necesitas crear tu Carta F.R.U.T.O.S. antes de generar tu Avatar Cuántico. La carta puede estar en cualquier estado (borrador, en revisión, etc.).');
+          setStage('error');
+          setIsGenerating(false);
           return;
         }
-        if (error.hasImage) {
-          alert('Ya tienes una identidad cuántica asignada');
-          onClose();
-          return;
-        }
-        throw new Error('Error generando opciones');
+        
+        // Mostrar el mensaje de error específico del servidor
+        setErrorTitle('Error al generar identidad cuántica');
+        setErrorMessage(error.details || error.error || 'No se pudo generar la identidad. Verifica que tengas una carta autorizada.');
+        setStage('error');
+        setIsGenerating(false);
+        return;
       }
 
       const data = await res.json();
+      
+      if (!data.candidates || data.candidates.length === 0) {
+        throw new Error('No se generaron candidatos de identidad');
+      }
+      
       setCandidates(data.candidates);
       setIdentityId(data.identityId);
 
       // Transición a selección después de la animación
       setTimeout(() => {
         setStage('selection');
+        setIsGenerating(false);
       }, 3000);
 
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error al generar identidad cuántica');
-      onClose();
+    } catch (error: any) {
+      console.error('Error generando identidad:', error);
+      setErrorTitle('Error al generar identidad cuántica');
+      setErrorMessage(error.message || 'No se pudo conectar con el sistema. Verifica tu conexión a internet y que tengas una carta autorizada.');
+      setStage('error');
+      setIsGenerating(false);
     }
   };
 
@@ -87,6 +117,13 @@ export default function QuantumIdentityModal({
   const confirmSelection = async () => {
     if (!selectedCandidate || !identityId) return;
 
+    // Si es modo selfie, abrir la cámara en lugar de generar con IA
+    if (useSelfieMode) {
+      setShowSelfieCapture(true);
+      return;
+    }
+
+    // Modo IA: generar avatar automáticamente
     setStage('generating');
 
     try {
@@ -109,10 +146,11 @@ export default function QuantumIdentityModal({
         setStage('reveal');
       }, 3000);
 
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error al generar avatar');
-      setStage('selection');
+    } catch (error: any) {
+      console.error('Error generando avatar:', error);
+      setErrorTitle('Error al generar avatar');
+      setErrorMessage('No se pudo generar tu avatar. Por favor intenta de nuevo o contacta al soporte si el problema persiste.');
+      setStage('error');
     }
   };
 
@@ -157,6 +195,191 @@ export default function QuantumIdentityModal({
 
   return (
     <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-4">
+      
+      {/* STAGE 0: GENDER SELECTION */}
+      {stage === 'gender' && (
+        <div className="max-w-2xl w-full space-y-8 bg-slate-900/80 backdrop-blur-xl p-8 rounded-3xl border-2 border-purple-500/30">
+          <div className="text-center space-y-4">
+            <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
+              <Sparkles className="text-white" size={40} />
+            </div>
+            <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400 uppercase tracking-wider">
+              Configuración de Avatar
+            </h2>
+            <p className="text-xl text-slate-300">
+              Para generar tu avatar cuántico, necesitamos conocer tu identidad de género
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <button
+              onClick={() => {
+                setGender('male');
+              }}
+              className={`group relative h-80 rounded-2xl border-2 transition-all duration-300 hover:scale-105 overflow-hidden ${
+                gender === 'male' 
+                  ? 'border-blue-500 bg-blue-500/20 ring-4 ring-blue-500/50' 
+                  : 'border-blue-500/30 bg-slate-800/50 hover:bg-blue-500/10 hover:border-blue-500'
+              }`}
+            >
+              {/* Background Image */}
+              <div className="absolute inset-0">
+                <img 
+                  src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=600&h=800&fit=crop&crop=faces" 
+                  alt="Male Avatar" 
+                  className="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/80 to-transparent"></div>
+              </div>
+              
+              {/* Icon Circle */}
+              <div className="relative h-full flex flex-col items-center justify-center space-y-4">
+                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-2xl shadow-blue-500/50 border-4 border-slate-900/50 group-hover:scale-110 transition-transform">
+                  <svg className="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                  </svg>
+                </div>
+                <p className="text-3xl font-bold text-white drop-shadow-lg">Hombre</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => {
+                setGender('female');
+              }}
+              className={`group relative h-80 rounded-2xl border-2 transition-all duration-300 hover:scale-105 overflow-hidden ${
+                gender === 'female' 
+                  ? 'border-pink-500 bg-pink-500/20 ring-4 ring-pink-500/50' 
+                  : 'border-pink-500/30 bg-slate-800/50 hover:bg-pink-500/10 hover:border-pink-500'
+              }`}
+            >
+              {/* Background Image */}
+              <div className="absolute inset-0">
+                <img 
+                  src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=600&h=800&fit=crop&crop=faces" 
+                  alt="Female Avatar" 
+                  className="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/80 to-transparent"></div>
+              </div>
+              
+              {/* Icon Circle */}
+              <div className="relative h-full flex flex-col items-center justify-center space-y-4">
+                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-2xl shadow-pink-500/50 border-4 border-slate-900/50 group-hover:scale-110 transition-transform">
+                  <svg className="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                  </svg>
+                </div>
+                <p className="text-3xl font-bold text-white drop-shadow-lg">Mujer</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => {
+                setGender('neutral');
+              }}
+              className={`group relative h-80 rounded-2xl border-2 transition-all duration-300 hover:scale-105 overflow-hidden ${
+                gender === 'neutral' 
+                  ? 'border-purple-500 bg-purple-500/20 ring-4 ring-purple-500/50' 
+                  : 'border-purple-500/30 bg-slate-800/50 hover:bg-purple-500/10 hover:border-purple-500'
+              }`}
+            >
+              {/* Cyberpunk Background */}
+              <div className="absolute inset-0">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-900/50 via-blue-900/50 to-cyan-900/50"></div>
+                <div className="absolute inset-0 opacity-30" style={{
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                }}></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/80 to-transparent"></div>
+              </div>
+              
+              {/* Icon Circle */}
+              <div className="relative h-full flex flex-col items-center justify-center space-y-4">
+                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 flex items-center justify-center shadow-2xl shadow-purple-500/50 border-4 border-slate-900/50 group-hover:scale-110 transition-transform">
+                  <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <p className="text-3xl font-bold text-white drop-shadow-lg">Prefiero no contestar</p>
+                <p className="text-sm text-slate-300">(Avatar neutral)</p>
+              </div>
+            </button>
+          </div>
+
+          {/* Mensaje de selección de género */}
+          {!gender && (
+            <div className="text-center py-4">
+              <p className="text-lg text-yellow-400 animate-pulse">
+                ⬆️ Selecciona tu género para continuar
+              </p>
+            </div>
+          )}
+
+          {/* Botones de acción cuando hay género seleccionado */}
+          {gender && (
+            <div className="space-y-6">
+              <div className="text-center">
+                <p className="text-green-400 text-lg mb-4">
+                  ✓ Género seleccionado: <span className="font-bold capitalize">{gender === 'neutral' ? 'Prefiero no contestar' : gender === 'male' ? 'Hombre' : 'Mujer'}</span>
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Botón de Avatar con IA */}
+                <button
+                  onClick={() => {
+                    setUseSelfieMode(false);
+                    setStage('analyzing');
+                  }}
+                  className="group relative px-8 py-6 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold rounded-xl transition-all transform hover:scale-105 shadow-lg shadow-purple-500/30"
+                >
+                  <div className="flex flex-col items-center space-y-3">
+                    <Sparkles size={32} className="group-hover:rotate-12 transition-transform" />
+                    <span className="text-xl">Generar Avatar con IA</span>
+                    <span className="text-sm text-purple-200">Avatar único basado en tu identidad cuántica</span>
+                  </div>
+                </button>
+
+                {/* Botón de Selfie */}
+                <button
+                  onClick={() => {
+                    setUseSelfieMode(true);
+                    setStage('analyzing');
+                  }}
+                  className="group relative px-8 py-6 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold rounded-xl transition-all transform hover:scale-105 shadow-lg shadow-cyan-500/30"
+                >
+                  <div className="flex flex-col items-center space-y-3">
+                    <Camera size={32} className="group-hover:rotate-12 transition-transform" />
+                    <span className="text-xl">📸 Crear Avatar con mi Selfie</span>
+                    <span className="text-sm text-cyan-200">Usa tu cámara para un avatar personalizado con IA</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="text-center">
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-white transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Selfie Capture */}
+      {showSelfieCapture && gender && selectedCandidate && (
+        <SelfieAvatarCapture
+          isOpen={showSelfieCapture}
+          onClose={() => setShowSelfieCapture(false)}
+          gender={gender}
+          onAvatarGenerated={handleAvatarFromSelfie}
+          selectedDesignation={selectedCandidate}
+          identityId={identityId || undefined}
+        />
+      )}
       
       {/* STAGE 1: ANALYZING */}
       {stage === 'analyzing' && (
@@ -238,7 +461,7 @@ export default function QuantumIdentityModal({
                   {/* Archetype Badge */}
                   <div className="flex justify-center">
                     <span className={`px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r ${getArchetypeGradient(candidate.archetype)} text-white`}>
-                      {candidate.archetype}
+                      {candidate.archetype === 'CEREBRAL' ? 'CEREBRAL' : candidate.archetype === 'PHYSICAL' ? 'FÍSICO' : 'LÍDER'}
                     </span>
                   </div>
 
@@ -374,6 +597,70 @@ export default function QuantumIdentityModal({
           >
             Continuar
           </button>
+        </div>
+      )}
+
+      {/* STAGE ERROR */}
+      {stage === 'error' && (
+        <div className="max-w-2xl w-full space-y-6">
+          <div className="bg-gradient-to-br from-red-900/40 via-slate-900 to-red-900/40 border-2 border-red-500/50 rounded-2xl p-8 shadow-2xl">
+            {/* Icon de error */}
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <div className="w-24 h-24 bg-gradient-to-br from-red-600 to-red-800 rounded-full flex items-center justify-center">
+                  <X className="text-white" size={48} strokeWidth={3} />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-br from-red-600 to-red-800 rounded-full animate-ping opacity-20"></div>
+              </div>
+            </div>
+
+            {/* T\u00edtulo del error */}
+            <h2 className="text-3xl font-black text-center text-white mb-4 uppercase tracking-wider">
+              {errorTitle}
+            </h2>
+
+            {/* Mensaje del error */}
+            <div className="bg-slate-900/50 border border-red-500/30 rounded-xl p-6 mb-6">
+              <p className="text-slate-300 text-center leading-relaxed">
+                {errorMessage}
+              </p>
+            </div>
+
+            {/* Detalles t\u00e9cnicos */}
+            <div className="bg-slate-950/50 border border-slate-700 rounded-lg p-4 mb-6">
+              <p className="text-xs text-slate-500 font-mono text-center">
+                Si el problema persiste, contacta a soporte@quantummatter.com
+              </p>
+            </div>
+
+            {/* Bot\u00f3n de cerrar */}
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={() => {
+                  setStage('analyzing');
+                  setErrorMessage('');
+                  setErrorTitle('Error');
+                  setIsGenerating(false);
+                  generateIdentityOptions();
+                }}
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg font-bold uppercase tracking-wider transition-all shadow-lg"
+              >
+                Reintentar
+              </button>
+              <button
+                onClick={() => {
+                  setStage('analyzing');
+                  setErrorMessage('');
+                  setErrorTitle('Error');
+                  setIsGenerating(false);
+                  onClose();
+                }}
+                className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold uppercase tracking-wider transition-all"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
