@@ -3,14 +3,14 @@
 ## 📋 Duración y Activación
 
 ### Duración del Ciclo
-- **90 días** (cambio desde 100 días)
-- **~13 semanas** de trabajo intensivo
+- **63 días** (9 semanas)
+- **9 semanas** de trabajo intensivo
 
 ### Momento de Activación
 El ciclo **NO** se crea en el registro. Se crea **AUTOMÁTICAMENTE** cuando:
 1. ✅ El usuario completa su Carta de Frutos en el Wizard
 2. ✅ Un mentor/coordinador **APRUEBA** la carta
-3. 🎯 **En ese momento** inicia el ciclo de 90 días
+3. 🎯 **En ese momento** inicia el ciclo de 63 días
 
 ---
 
@@ -51,8 +51,8 @@ El ciclo **NO** se crea en el registro. Se crea **AUTOMÁTICAMENTE** cuando:
    - Crea ProgramEnrollment
    - cycleType: 'SOLO'
    - cycleStartDate: HOY
-   - cycleEndDate: HOY + 90 días
-   - totalWeeks: 13
+   - cycleEndDate: HOY + 63 días
+   - totalWeeks: 9
    - status: 'ACTIVE'
 ```
 
@@ -65,8 +65,8 @@ userId           INT         -- Usuario del ciclo
 mentorId         INT         -- Mismo ID (ciclo personal)
 cycleType        VARCHAR     -- 'SOLO' o 'VISION'
 cycleStartDate   TIMESTAMP   -- Fecha de aprobación de carta
-cycleEndDate     TIMESTAMP   -- cycleStartDate + 90 días
-totalWeeks       INT         -- 13
+cycleEndDate     TIMESTAMP   -- cycleStartDate + 63 días
+totalWeeks       INT         -- 9
 status           VARCHAR     -- 'ACTIVE', 'COMPLETED', etc.
 ```
 
@@ -80,7 +80,7 @@ status           VARCHAR     -- 'ACTIVE', 'COMPLETED', etc.
 - ✅ No debe tener otro ciclo `ACTIVE`
 
 ### Durante el Ciclo
-- 📅 El usuario tiene 90 días para completar sus metas
+- 📅 El usuario tiene 63 días para completar sus metas
 - 📊 Las tareas se generan automáticamente al aprobar
 - 🎯 Puede ver su progreso en el dashboard
 
@@ -91,15 +91,15 @@ status           VARCHAR     -- 'ACTIVE', 'COMPLETED', etc.
 ### Script Ejecutado
 `scripts/update-ciclos-90-dias.js`
 
-- ✅ 3 ciclos actualizados de 100 → 90 días
+- ✅ 3 ciclos actualizados de 100 → 63 días
 - ✅ Fechas de fin recalculadas
-- ✅ `totalWeeks` actualizado a 13
+- ✅ `totalWeeks` actualizado a 9
 
 ### Usuarios Nuevos
 A partir de ahora:
 - ❌ NO se crea ciclo en registro
 - ✅ Se crea ciclo al aprobar carta
-- 🎯 Duración: 90 días desde aprobación
+- 🎯 Duración: 63 días desde aprobación
 
 ---
 
@@ -133,11 +133,11 @@ A partir de ahora:
   "ciclo": {
     "cycleType": "SOLO",
     "cycleStartDate": "2025-12-23",
-    "cycleEndDate": "2026-03-23",
-    "totalWeeks": 13,
+    "cycleEndDate": "2026-02-24",
+    "totalWeeks": 9,
     "status": "ACTIVE"
   },
-  "estado": "Ciclo activo - 90 días para completar"
+  "estado": "Ciclo activo - 63 días para completar"
 }
 ```
 

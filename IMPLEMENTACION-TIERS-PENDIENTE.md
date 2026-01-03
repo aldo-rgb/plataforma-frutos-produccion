@@ -369,7 +369,7 @@ await prisma.cartaFrutos.update({
   }
 });
 
-// Crear ciclo de 90 días (solo si no existe)
+// Crear ciclo de 63 días (solo si no existe)
 const cicloExistente = await prisma.programEnrollment.findFirst({
   where: { userId: carta.usuarioId, status: 'ACTIVE' }
 });
@@ -377,7 +377,7 @@ const cicloExistente = await prisma.programEnrollment.findFirst({
 if (!cicloExistente) {
   const hoy = new Date();
   const fechaFin = new Date(hoy);
-  fechaFin.setDate(fechaFin.getDate() + 90);
+  fechaFin.setDate(fechaFin.getDate() + 63);
   
   await prisma.programEnrollment.create({
     data: {
@@ -386,7 +386,7 @@ if (!cicloExistente) {
       cycleType: 'SOLO',
       cycleStartDate: hoy,
       cycleEndDate: fechaFin,
-      totalWeeks: 13,
+      totalWeeks: 9,
       status: 'ACTIVE'
     }
   });

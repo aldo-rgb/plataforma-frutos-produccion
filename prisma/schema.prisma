@@ -28,6 +28,175 @@ model Accion {
   TaskInstance      TaskInstance[]
 }
 
+model AdminTask {
+  id                Int              @id @default(autoincrement())
+  type              AdminTaskType
+  titulo            String
+  descripcion       String?
+  pointsReward      Int              @default(0)
+  targetType        TargetType
+  targetId          Int?
+  fechaLimite       DateTime?        @db.Date
+  fechaEvento       DateTime?
+  horaEvento        String?
+  lugar             String?
+  requiereEvidencia Boolean          @default(false)
+  isActive          Boolean          @default(true)
+  createdBy         Int
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime
+  rewardLogic       RewardLogic      @default(STANDARD)
+  raceLimit         Int?
+  strictDeadline    Boolean          @default(false)
+  diaNumero         Int?
+  duracionDias      Int?
+  horaLimiteDiaria  String?
+  isMultiDay        Boolean          @default(false)
+  parentTaskId      Int?
+  Usuario           Usuario          @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  AdminTask         AdminTask?       @relation("AdminTaskToAdminTask", fields: [parentTaskId], references: [id], onDelete: Cascade)
+  other_AdminTask   AdminTask[]      @relation("AdminTaskToAdminTask")
+  TaskSubmission    TaskSubmission[]
+
+  @@index([fechaLimite])
+  @@index([isActive])
+  @@index([isMultiDay])
+  @@index([parentTaskId])
+  @@index([rewardLogic])
+  @@index([targetType])
+  @@index([type])
+}
+
+model AreaConfig {
+  id        Int      @id @default(autoincrement())
+  usuarioId Int
+  areaKey   String
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  Usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, areaKey])
+  @@index([usuarioId])
+}
+
+model ArenaDailyUpdate {
+  id            Int       @id @default(autoincrement())
+  duelId        Int
+  date          DateTime  @db.Date
+  player1HP     Int
+  player2HP     Int
+  player1Damage Int       @default(0)
+  player2Damage Int       @default(0)
+  player1Failed Boolean   @default(false)
+  player2Failed Boolean   @default(false)
+  narration     String?
+  createdAt     DateTime  @default(now())
+  ArenaDuel     ArenaDuel @relation(fields: [duelId], references: [id], onDelete: Cascade)
+
+  @@unique([duelId, date])
+  @@index([duelId])
+}
+
+model ArenaDuel {
+  id                                   Int                @id @default(autoincrement())
+  player1Id                            Int
+  player2Id                            Int
+  status                               DuelStatus         @default(MATCHING)
+  betAmount                            Int                @default(500)
+  escrowTotal                          Int                @default(1000)
+  startDate                            DateTime           @db.Date
+  endDate                              DateTime           @db.Date
+  player1HP                            Int                @default(100)
+  player2HP                            Int                @default(100)
+  player1Completion                    Float              @default(0)
+  player2Completion                    Float              @default(0)
+  winnerId                             Int?
+  prize                                Int?
+  resolvedAt                           DateTime?
+  resolutionType                       ResolutionType?
+  createdAt                            DateTime           @default(now())
+  updatedAt                            DateTime
+  ArenaDailyUpdate                     ArenaDailyUpdate[]
+  Usuario_ArenaDuel_player1IdToUsuario Usuario            @relation("ArenaDuel_player1IdToUsuario", fields: [player1Id], references: [id], onDelete: Cascade)
+  Usuario_ArenaDuel_player2IdToUsuario Usuario            @relation("ArenaDuel_player2IdToUsuario", fields: [player2Id], references: [id], onDelete: Cascade)
+  Usuario_ArenaDuel_winnerIdToUsuario  Usuario?           @relation("ArenaDuel_winnerIdToUsuario", fields: [winnerId], references: [id])
+  ArenaTaunt                           ArenaTaunt[]
+
+  @@index([player1Id])
+  @@index([player2Id])
+  @@index([startDate, endDate])
+  @@index([status])
+}
+
+model ArenaQueue {
+  id        Int         @id @default(autoincrement())
+  usuarioId Int         @unique
+  userLevel String
+  timezone  String      @default("America/Mexico_City")
+  pcBalance Int
+  status    QueueStatus @default(SEARCHING)
+  enteredAt DateTime    @default(now())
+  expiresAt DateTime
+  Usuario   Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([status, userLevel])
+}
+
+model ArenaStats {
+  id            Int       @id @default(autoincrement())
+  usuarioId     Int       @unique
+  totalDuels    Int       @default(0)
+  wins          Int       @default(0)
+  losses        Int       @default(0)
+  ties          Int       @default(0)
+  totalWagered  Int       @default(0)
+  totalWon      Int       @default(0)
+  totalLost     Int       @default(0)
+  netProfit     Int       @default(0)
+  currentStreak Int       @default(0)
+  bestStreak    Int       @default(0)
+  badges        String[]  @default([])
+  lastDuelAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime
+  Usuario       Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+}
+
+model ArenaTaunt {
+  id                                     Int       @id @default(autoincrement())
+  duelId                                 Int
+  senderId                               Int
+  receiverId                             Int
+  tauntType                              TauntType
+  customMessage                          String?
+  read                                   Boolean   @default(false)
+  createdAt                              DateTime  @default(now())
+  ArenaDuel                              ArenaDuel @relation(fields: [duelId], references: [id], onDelete: Cascade)
+  Usuario_ArenaTaunt_receiverIdToUsuario Usuario   @relation("ArenaTaunt_receiverIdToUsuario", fields: [receiverId], references: [id], onDelete: Cascade)
+  Usuario_ArenaTaunt_senderIdToUsuario   Usuario   @relation("ArenaTaunt_senderIdToUsuario", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([duelId])
+  @@index([receiverId, read])
+}
+
+model AvatarGenerationAttempt {
+  id           Int      @id @default(autoincrement())
+  usuarioId    Int
+  sourceImage  String
+  generatedUrl String
+  vibe         String   @default("cyberpunk")
+  gender       String
+  createdAt    DateTime @default(now())
+  Usuario      Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([usuarioId])
+}
+
 model CallAvailability {
   id        Int      @id @default(autoincrement())
   mentorId  Int
@@ -43,145 +212,6 @@ model CallAvailability {
   @@index([dayOfWeek])
   @@index([mentorId])
   @@index([type])
-}
-
-model Organization {
-  id                   Int                 @id @default(autoincrement())
-  name                 String
-  slug                 String              @unique
-  logoUrl              String?
-  brandColor           String              @default("#6366F1")
-  contactEmail         String
-  status               OrganizationStatus  @default(ACTIVE)
-  isGeofenced          Boolean             @default(false)
-  campusLatitude       Float?
-  campusLongitude      Float?
-  geofenceRadius       Int                 @default(100)
-  schoolAdminId        Int                 @unique
-  totalLicenses        Int                 @default(0)
-  activeLicenses       Int                 @default(0)
-  totalStudents        Int                 @default(0)
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
-  premiumLicensePrice  Float               @default(1250.00)
-  standardLicensePrice Float               @default(600.00)
-  renewalOfferDiscount Float               @default(50.00)
-  renewalOfferEnabled  Boolean             @default(true)
-  visionCycleDuration  Int                 @default(6)
-  Licenses             License[]
-  LicenseAssignments   LicenseAssignment[]
-  LicenseOrders        LicenseOrder[]
-  SchoolAdmin          Usuario             @relation("SchoolAdmins", fields: [schoolAdminId], references: [id])
-  SchoolCredits        SchoolCredit[]
-  CommunityMembers     Usuario[]           @relation("CommunityMembers")
-  Users                Usuario[]           @relation("OrganizationUsers")
-  Visiones             Vision[]
-
-  @@index([slug])
-  @@index([status])
-}
-
-model SchoolCredit {
-  id             Int          @id @default(autoincrement())
-  organizationId Int
-  planType       UserTier     @default(STANDARD)
-  totalPurchased Int          @default(0)
-  totalAllocated Int          @default(0)
-  unitPrice      Float        @default(600.00)
-  totalPaid      Float        @default(0.00)
-  expirationDate DateTime?
-  isActive       Boolean      @default(true)
-  notes          String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  Organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@index([organizationId])
-  @@index([planType])
-  @@index([expirationDate])
-}
-
-model LicenseAssignment {
-  id             Int          @id @default(autoincrement())
-  userId         Int
-  organizationId Int
-  visionId       Int?
-  licenseCode    String
-  assignedBy     Int
-  assignedAt     DateTime     @default(now())
-  isActive       Boolean      @default(true)
-  activatedAt    DateTime?    // Cuando el usuario envía su carta
-  expiresAt      DateTime?    // 10 días después de assignedAt si no activa
-  notes          String?
-  AssignedBy     Usuario      @relation("LicenseAssignmentAssignedBy", fields: [assignedBy], references: [id])
-  Organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  User           Usuario      @relation("LicenseAssignmentUser", fields: [userId], references: [id], onDelete: Cascade)
-  Vision         Vision?      @relation(fields: [visionId], references: [id])
-  // License        License      @relation("LicenseToAssignments", fields: [licenseCode], references: [code])
-
-  @@index([userId])
-  @@index([organizationId])
-  @@index([visionId])
-  @@index([licenseCode])
-}
-
-model License {
-  id                 Int                 @id @default(autoincrement())
-  code               String              @unique
-  tierAssigned       UserTier            @default(STANDARD)
-  maxUses            Int                 @default(100)
-  usedCount          Int                 @default(0)
-  expiresAt          DateTime?
-  isActive           Boolean             @default(true)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  autoAssignVision   String?
-  batchName          String?
-  isMasterCode       Boolean             @default(false)
-  organizationId     Int?
-  generatedBy        Int?
-  generationMode     String?             @default("INDIVIDUAL")
-  isRevoked          Boolean             @default(false)
-  revokedAt          DateTime?
-  revokedBy          Int?
-  studentName        String?
-  Organization       Organization?       @relation(fields: [organizationId], references: [id])
-  // LicenseAssignment  LicenseAssignment[] @relation("LicenseToAssignments")
-
-  @@index([code])
-  @@index([organizationId])
-}
-
-model LicenseOrder {
-  id                 String             @id @default(cuid())
-  organizationId     Int
-  requestedBy        Int
-  quantity           Int
-  tier               UserTier           @default(STANDARD)
-  amount             Float
-  paymentMethod      String
-  status             LicenseOrderStatus @default(PENDING)
-  externalPaymentId  String?
-  paymentUrl         String?
-  paidAt             DateTime?
-  paymentData        Json?
-  creditsGenerated   Boolean            @default(false)
-  creditsGeneratedAt DateTime?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
-  Organization       Organization       @relation(fields: [organizationId], references: [id])
-  RequestedByUser    Usuario            @relation(fields: [requestedBy], references: [id])
-
-  @@index([organizationId])
-  @@index([status])
-  @@index([externalPaymentId])
-}
-
-model PaymentSettings {
-  id        Int      @id @default(autoincrement())
-  settings  Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model CallBooking {
@@ -203,48 +233,24 @@ model CallBooking {
   programEnrollmentId                    Int?
   attendanceStatus                       String?            @default("PENDING")
   weekNumber                             Int?
+  packageOrderId                         String?            // 📦 Si pertenece a un paquete
   Usuario_CallBooking_mentorIdToUsuario  Usuario            @relation("CallBooking_mentorIdToUsuario", fields: [mentorId], references: [id], onDelete: Cascade)
   ProgramEnrollment                      ProgramEnrollment? @relation(fields: [programEnrollmentId], references: [id], onDelete: Cascade)
   Usuario_CallBooking_studentIdToUsuario Usuario            @relation("CallBooking_studentIdToUsuario", fields: [studentId], references: [id], onDelete: Cascade)
+  MentorPackageOrder                     MentorPackageOrder? @relation(fields: [packageOrderId], references: [id], onDelete: SetNull)
   Transaction                            Transaction?
+  PayableCall                            PayableCall[]
 
   @@unique([mentorId, scheduledAt])
+  @@index([attendanceStatus])
   @@index([mentorId])
+  @@index([packageOrderId])
+  @@index([programEnrollmentId])
   @@index([recurringGroupId])
   @@index([scheduledAt])
   @@index([status])
   @@index([studentId])
   @@index([type])
-  @@index([programEnrollmentId])
-  @@index([attendanceStatus])
-}
-
-model ProgramEnrollment {
-  id                                          Int           @id @default(autoincrement())
-  userId                                      Int
-  mentorId                                    Int
-  startDate                                   DateTime
-  endDate                                     DateTime
-  cycleType                                   String        @default("SOLO")
-  cycleStartDate                              DateTime      @default(now())
-  cycleEndDate                                DateTime?
-  totalWeeks                                  Int           @default(17)
-  missedCallsCount                            Int           @default(0)
-  maxMissedAllowed                            Int           @default(3)
-  status                                      String        @default("ACTIVE")
-  createdAt                                   DateTime      @default(now())
-  updatedAt                                   DateTime      @updatedAt
-  extraLifeGrantedAt                          DateTime?
-  extraLifeGrantedBy                          String?
-  extraLifeUsed                               Boolean       @default(false)
-  CallBookings                                CallBooking[]
-  Usuario_ProgramEnrollment_mentorIdToUsuario Usuario       @relation("ProgramEnrollment_mentorIdToUsuario", fields: [mentorId], references: [id], onDelete: Cascade)
-  Usuario_ProgramEnrollment_userIdToUsuario   Usuario       @relation("ProgramEnrollment_userIdToUsuario", fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([mentorId])
-  @@index([status])
-  @@index([cycleType])
 }
 
 model CallLog {
@@ -332,6 +338,52 @@ model CartaFrutos {
   Tarea                            Tarea[]
 }
 
+model CheckIn {
+  id            Int      @id @default(autoincrement())
+  usuarioId     Int
+  locationId    Int
+  checkInMethod String
+  latitude      Float
+  longitude     Float
+  distance      Float
+  xpGranted     Int      @default(50)
+  createdAt     DateTime @default(now())
+  Location      Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  Usuario       Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, locationId, createdAt])
+  @@index([createdAt])
+  @@index([locationId])
+  @@index([usuarioId])
+}
+
+model Collection {
+  id                     Int                      @id @default(autoincrement())
+  name                   String
+  description            String
+  type                   CollectionType
+  requiredCount          Int                      @default(7)
+  rewardPC               Int                      @default(300)
+  rewardBadge            String
+  iconUrl                String?
+  isActive               Boolean                  @default(true)
+  createdAt              DateTime                 @default(now())
+  UserCollectionProgress UserCollectionProgress[]
+}
+
+model DisciplineConfig {
+  id          Int      @id @default(autoincrement())
+  mentorId    Int      @unique
+  allowedDays Int[]
+  startHour   String
+  endHour     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  Usuario     Usuario  @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@index([mentorId])
+}
+
 model DisciplineSchedule {
   id          Int      @id @default(autoincrement())
   mentorId    Int      @unique
@@ -367,27 +419,20 @@ model DisciplineSubscription {
   @@index([status])
 }
 
-model MentorAbsenceReport {
-  id                    Int                      @id @default(autoincrement())
-  studentId             Int
-  mentorId              Int
-  subscriptionId        Int?
-  callBookingId         Int?
-  reportedAt            DateTime                 @default(now())
-  scheduledTime         DateTime
-  reason                String?
-  status                AbsenceReportStatus      @default(PENDING)
-  reviewedBy            Int?
-  reviewedAt            DateTime?
-  reviewNotes           String?
-  Student               Usuario                  @relation("AbsenceReportStudent", fields: [studentId], references: [id], onDelete: Cascade)
-  Mentor                Usuario                  @relation("AbsenceReportMentor", fields: [mentorId], references: [id], onDelete: Cascade)
-  ReviewedByUser        Usuario?                 @relation("AbsenceReportReviewer", fields: [reviewedBy], references: [id])
-  
-  @@index([mentorId])
-  @@index([studentId])
-  @@index([status])
-  @@index([reportedAt])
+model DisponibilidadSemanal {
+  id             Int          @id @default(autoincrement())
+  perfilMentorId Int
+  diaSemana      Int
+  horaInicio     String
+  horaFin        String
+  activo         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  PerfilMentor   PerfilMentor @relation(fields: [perfilMentorId], references: [id], onDelete: Cascade)
+
+  @@index([activo])
+  @@index([diaSemana])
+  @@index([perfilMentorId])
 }
 
 model Evidencia {
@@ -404,32 +449,147 @@ model Evidencia {
 }
 
 model EvidenciaAccion {
-  id               Int              @id @default(autoincrement())
-  usuarioId        Int
-  metaId           Int?
-  accionId         Int
-  fechaSubida      DateTime         @default(now())
-  fotoUrl          String
-  descripcion      String?
-  estado           EstadoEvidencia  @default(PENDIENTE)
-  comentarioMentor String?
-  revisadoPorId    Int?
-  fechaRevision    DateTime?
-  highQuality      Boolean          @default(false)
-  qualityScore     Int?
-  rarityBonus      Boolean          @default(false)
-  sharedCount      Int              @default(0)
-  tipoRechazo      TipoRechazo?
-  rechazadaDefinitivamente Boolean  @default(false)
-  puntosGenerados  Int              @default(0)
-  intentosCorreccion Int            @default(0)
-  createdAt        DateTime         @default(now())
+  id                       Int              @id @default(autoincrement())
+  usuarioId                Int
+  metaId                   Int?
+  accionId                 Int
+  fechaSubida              DateTime         @default(now())
+  fotoUrl                  String
+  descripcion              String?
+  estado                   EstadoEvidencia  @default(PENDIENTE)
+  comentarioMentor         String?
+  revisadoPorId            Int?
+  fechaRevision            DateTime?
+  highQuality              Boolean          @default(false)
+  qualityScore             Int?
+  rarityBonus              Boolean          @default(false)
+  sharedCount              Int              @default(0)
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime
+  intentosCorreccion       Int              @default(0)
+  puntosGenerados          Int              @default(0)
+  rechazadaDefinitivamente Boolean          @default(false)
+  tipoRechazo              TipoRechazo?
+  Accion                   Accion           @relation(fields: [accionId], references: [id], onDelete: Cascade)
+  Meta                     Meta?            @relation(fields: [metaId], references: [id])
+  Usuario                  Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  SocialReaction           SocialReaction[]
+  TaskInstance             TaskInstance[]
+}
+
+model ExcepcionDisponibilidad {
+  id             Int          @id @default(autoincrement())
+  perfilMentorId Int
+  fechaInicio    DateTime
+  fechaFin       DateTime
+  motivo         String
+  descripcion    String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  PerfilMentor   PerfilMentor @relation(fields: [perfilMentorId], references: [id], onDelete: Cascade)
+
+  @@index([fechaFin])
+  @@index([fechaInicio])
+  @@index([perfilMentorId])
+}
+
+model License {
+  id               Int           @id @default(autoincrement())
+  code             String        @unique
+  tierAssigned     UserTier      @default(STANDARD)
+  maxUses          Int           @default(100)
+  usedCount        Int           @default(0)
+  expiresAt        DateTime?
+  isActive         Boolean       @default(true)
+  createdAt        DateTime      @default(now())
   updatedAt        DateTime
-  Accion           Accion           @relation(fields: [accionId], references: [id], onDelete: Cascade)
-  Meta             Meta?            @relation(fields: [metaId], references: [id])
-  Usuario          Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  SocialReactions  SocialReaction[]
-  TaskInstance     TaskInstance[]
+  autoAssignVision String?
+  batchName        String?
+  isMasterCode     Boolean       @default(false)
+  organizationId   Int?
+  generatedBy      Int?
+  generationMode   String?       @default("INDIVIDUAL")
+  isRevoked        Boolean       @default(false)
+  revokedAt        DateTime?
+  revokedBy        Int?
+  studentName      String?
+  Organization     Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([code])
+  @@index([organizationId])
+}
+
+model LicenseAssignment {
+  id                                            Int          @id @default(autoincrement())
+  userId                                        Int
+  organizationId                                Int
+  visionId                                      Int?
+  licenseCode                                   String
+  assignedBy                                    Int
+  assignedAt                                    DateTime     @default(now())
+  isActive                                      Boolean      @default(true)
+  notes                                         String?
+  activatedAt                                   DateTime?
+  expiresAt                                     DateTime?
+  Usuario_LicenseAssignment_assignedByToUsuario Usuario      @relation("LicenseAssignment_assignedByToUsuario", fields: [assignedBy], references: [id])
+  Organization                                  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Usuario_LicenseAssignment_userIdToUsuario     Usuario      @relation("LicenseAssignment_userIdToUsuario", fields: [userId], references: [id], onDelete: Cascade)
+  Vision                                        Vision?      @relation(fields: [visionId], references: [id])
+
+  @@index([licenseCode])
+  @@index([organizationId])
+  @@index([userId])
+  @@index([visionId])
+}
+
+model LicenseOrder {
+  id                 String             @id
+  organizationId     Int
+  requestedBy        Int
+  quantity           Int
+  tier               UserTier           @default(STANDARD)
+  amount             Float
+  paymentMethod      String
+  status             LicenseOrderStatus @default(PENDING)
+  externalPaymentId  String?
+  paymentUrl         String?
+  paidAt             DateTime?
+  paymentData        Json?
+  creditsGenerated   Boolean            @default(false)
+  creditsGeneratedAt DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime
+  Organization       Organization       @relation(fields: [organizationId], references: [id])
+  Usuario            Usuario            @relation(fields: [requestedBy], references: [id])
+
+  @@index([externalPaymentId])
+  @@index([organizationId])
+  @@index([status])
+}
+
+model Location {
+  id                      Int                       @id @default(autoincrement())
+  name                    String
+  description             String?
+  latitude                Float
+  longitude               Float
+  radiusMeter             Int                       @default(50)
+  nfcTagId                String?                   @unique
+  qrCodeHash              String                    @unique
+  qrRotationDate          DateTime                  @default(now())
+  isActive                Boolean                   @default(true)
+  address                 String?
+  city                    String?
+  country                 String                    @default("México")
+  imageUrl                String?
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime
+  CheckIn                 CheckIn[]
+  UserServiceContribution UserServiceContribution[]
+
+  @@index([isActive])
+  @@index([nfcTagId])
+  @@index([qrCodeHash])
 }
 
 model MensajeChat {
@@ -439,6 +599,46 @@ model MensajeChat {
   usuarioId Int
   fecha     DateTime @default(now())
   Usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+}
+
+model MentorAbsenceReport {
+  id                                              Int                 @id @default(autoincrement())
+  studentId                                       Int
+  mentorId                                        Int
+  subscriptionId                                  Int?
+  callBookingId                                   Int?
+  reportedAt                                      DateTime            @default(now())
+  scheduledTime                                   DateTime
+  reason                                          String?
+  status                                          AbsenceReportStatus @default(PENDING)
+  reviewedBy                                      Int?
+  reviewedAt                                      DateTime?
+  reviewNotes                                     String?
+  Usuario_MentorAbsenceReport_mentorIdToUsuario   Usuario             @relation("MentorAbsenceReport_mentorIdToUsuario", fields: [mentorId], references: [id], onDelete: Cascade)
+  Usuario_MentorAbsenceReport_reviewedByToUsuario Usuario?            @relation("MentorAbsenceReport_reviewedByToUsuario", fields: [reviewedBy], references: [id])
+  Usuario_MentorAbsenceReport_studentIdToUsuario  Usuario             @relation("MentorAbsenceReport_studentIdToUsuario", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([mentorId])
+  @@index([reportedAt])
+  @@index([status])
+  @@index([studentId])
+}
+
+model MentorAlert {
+  id                                     Int           @id @default(autoincrement())
+  mentorId                               Int
+  usuarioId                              Int
+  taskInstanceId                         Int?
+  type                                   AlertType     @default(RISK_ALERT)
+  message                                String
+  read                                   Boolean       @default(false)
+  createdAt                              DateTime      @default(now())
+  Usuario_MentorAlert_mentorIdToUsuario  Usuario       @relation("MentorAlert_mentorIdToUsuario", fields: [mentorId], references: [id], onDelete: Cascade)
+  TaskInstance                           TaskInstance? @relation(fields: [taskInstanceId], references: [id])
+  Usuario_MentorAlert_usuarioIdToUsuario Usuario       @relation("MentorAlert_usuarioIdToUsuario", fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([mentorId, read])
+  @@index([usuarioId])
 }
 
 model Meta {
@@ -456,6 +656,158 @@ model Meta {
   Accion           Accion[]
   EvidenciaAccion  EvidenciaAccion[]
   CartaFrutos      CartaFrutos       @relation(fields: [cartaId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int
+  type      NotificationType
+  title     String
+  message   String
+  relatedId Int?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  Usuario   Usuario          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([userId, isRead])
+}
+
+model Organization {
+  id                                                    Int                  @id @default(autoincrement())
+  name                                                  String
+  slug                                                  String              @unique
+  logoUrl                                               String?
+  brandColor                                            String              @default("#6366F1")
+  contactEmail                                          String
+  status                                                OrganizationStatus  @default(ACTIVE)
+  isGeofenced                                           Boolean             @default(false)
+  campusLatitude                                        Float?
+  campusLongitude                                       Float?
+  geofenceRadius                                        Int                 @default(100)
+  schoolAdminId                                         Int                 @unique
+  totalLicenses                                         Int                 @default(0)
+  activeLicenses                                        Int                 @default(0)
+  totalStudents                                         Int                 @default(0)
+  createdAt                                             DateTime            @default(now())
+  updatedAt                                             DateTime
+  premiumLicensePrice                                   Float               @default(1250.00)
+  standardLicensePrice                                  Float               @default(600.00)
+  renewalOfferDiscount                                  Float               @default(50.00)
+  renewalOfferEnabled                                   Boolean             @default(true)
+  visionCycleDuration                                   Int                 @default(6)
+  License                                               License[]
+  LicenseAssignment                                     LicenseAssignment[]
+  LicenseOrder                                          LicenseOrder[]
+  Usuario_Organization_schoolAdminIdToUsuario           Usuario             @relation("Organization_schoolAdminIdToUsuario", fields: [schoolAdminId], references: [id])
+  SchoolCredit                                          SchoolCredit[]
+  Usuario_Usuario_communityOrganizationIdToOrganization Usuario[]           @relation("Usuario_communityOrganizationIdToOrganization")
+  Usuario_Usuario_organizationIdToOrganization          Usuario[]           @relation("Usuario_organizationIdToOrganization")
+  Vision                                                Vision[]
+  OrganizationWallet                                    OrganizationWallet?
+  InstitutionalOrder                                    InstitutionalOrder[]
+  MentorPackageOrder                                    MentorPackageOrder[]
+
+  @@index([slug])
+  @@index([status])
+}
+
+model Payment {
+  id              Int           @id @default(autoincrement())
+  subscriptionId  Int?
+  userId          Int
+  organizationId  Int?
+  amount          Float
+  currency        String        @default("MXN")
+  status          PaymentStatus @default(PENDING)
+  paymentMethod   String?
+  transactionId   String?
+  paymentId       String?
+  description     String?
+  metadata        Json?
+  isRenewal       Boolean       @default(false)
+  isSchoolPayment Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime
+  Subscription    Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([userId])
+}
+
+model InstitutionalOrder {
+  id                   Int       @id @default(autoincrement())
+  userId               Int
+  nombreOrganizacion   String
+  emailCoordinador     String
+  logoUrl              String?
+  geofencing           String?
+  cantidadLicencias    Int
+  totalAmount          Float
+  paymentMethod        String
+  paymentSessionId     String?
+  paymentId            String?
+  status               String    @default("PENDING") // PENDING, COMPLETED, FAILED, CANCELLED
+  organizationId       Int?
+  processedAt          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  Usuario              Usuario   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Organization         Organization? @relation(fields: [organizationId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([organizationId])
+}
+
+model PaymentSettings {
+  id        Int      @id @default(autoincrement())
+  settings  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+}
+
+model PerfilCompleto {
+  id                Int       @id @default(autoincrement())
+  usuarioId         Int       @unique
+  apellido          String?
+  fechaNacimiento   DateTime?
+  whatsapp          String?
+  misionTribu       String?
+  logoTribu         String?
+  fraseFavorita     String?
+  numeroVision      String?
+  angelEnrolamiento String?
+  calle             String?
+  numero            String?
+  colonia           String?
+  codigoPostal      String?
+  estadoMunicipio   String?
+  ocupacion         String?
+  tallaCamiseta     String?
+  peso              String?
+  imc               String?
+  estatura          String?
+  fotoTicketPeso    String?
+  fuma              Boolean   @default(false)
+  fumaCantidad      String?
+  quiereSerStaff    Boolean   @default(false)
+  fotoPrimerDia     String?
+  fotoUltimoDiaPL   String?
+  fotoContrato      String?
+  contratoAvanzado  String?
+  coachBasico       String?
+  staffBasico       String?
+  coachAvanzado     String?
+  staffAvanzado     String?
+  gameChangerNombre String?
+  coachPrimerFin    String?
+  coachSegundoFin   String?
+  coachTercerFin    String?
+  condecoraciones   String[]  @default([])
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime
 }
 
 model PerfilMentor {
@@ -483,6 +835,7 @@ model PerfilMentor {
   ratingSum                 Decimal                   @default(0) @db.Decimal(10, 2)
   ratingCount               Int                       @default(0)
   precioBase                Float                     @default(1000.0)
+  precioDisciplina          Float                     @default(90.0)
   enlaceVideoLlamada        String?
   tipoVideoLlamada          String?                   @default("zoom")
   horarioInicio             String?                   @default("09:00")
@@ -498,6 +851,8 @@ model PerfilMentor {
   aiGeneratedBio            Boolean                   @default(false)
   lastAiInterviewAt         DateTime?
   evidenciasHighQuality     Int                       @default(0)
+  maxDisciplineClients      Int?                      @default(10)
+  acceptingNewClients       Boolean                   @default(true)
   lastMetricsUpdate         DateTime?
   mentoradosActivos         Int                       @default(0)
   mentoradosTotales         Int                       @default(0)
@@ -513,65 +868,6 @@ model PerfilMentor {
   SolicitudMentoria         SolicitudMentoria[]
 }
 
-model PerfilCompleto {
-  id                    Int      @id @default(autoincrement())
-  usuarioId             Int      @unique
-  
-  // Datos personales
-  apellido              String?
-  fechaNacimiento       DateTime?
-  whatsapp              String?
-  
-  // Tribu
-  misionTribu           String?
-  logoTribu             String?
-  fraseFavorita         String?
-  numeroVision          String?
-  angelEnrolamiento     String?
-  
-  // Domicilio
-  calle                 String?
-  numero                String?
-  colonia               String?
-  codigoPostal          String?
-  estadoMunicipio       String?
-  
-  // Datos físicos
-  ocupacion             String?
-  tallaCamiseta         String?
-  peso                  String?
-  imc                   String?
-  estatura              String?
-  fotoTicketPeso        String?
-  
-  // Hábitos
-  fuma                  Boolean  @default(false)
-  fumaCantidad          String?
-  quiereSerStaff        Boolean  @default(false)
-  
-  // Fotos y documentos
-  fotoPrimerDia         String?
-  fotoUltimoDiaPL       String?
-  fotoContrato          String?
-  contratoAvanzado      String?
-  
-  // Coaches y Staff
-  coachBasico           String?
-  staffBasico           String?
-  coachAvanzado         String?
-  staffAvanzado         String?
-  gameChangerNombre     String?
-  coachPrimerFin        String?
-  coachSegundoFin       String?
-  coachTercerFin        String?
-  
-  // Condecoraciones (asignadas por coordinador)
-  condecoraciones       String[] @default([])
-  
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-}
-
 model PermisoMenu {
   id        Int      @id @default(autoincrement())
   role      Rol
@@ -583,6 +879,26 @@ model PermisoMenu {
   @@unique([role, menuKey])
   @@index([menuKey])
   @@index([role])
+}
+
+model PhoenixSession {
+  id                     Int           @id @default(autoincrement())
+  usuarioId              Int
+  triggerReason          String?
+  snapshotTasks          Json
+  microTaskId            Int?
+  microTaskType          MicroTaskType
+  microTaskCompleted     Boolean       @default(false)
+  completedAt            DateTime?
+  tasksRescheduled       Int           @default(0)
+  tasksGracefullySkipped Int           @default(0)
+  badgeAwarded           Boolean       @default(false)
+  createdAt              DateTime      @default(now())
+  exitedAt               DateTime?
+  Usuario                Usuario       @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([usuarioId])
 }
 
 model Producto {
@@ -598,6 +914,140 @@ model Producto {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime
   Transaccion  Transaccion[]
+}
+
+model ProgramEnrollment {
+  id                                          Int           @id @default(autoincrement())
+  userId                                      Int
+  mentorId                                    Int
+  startDate                                   DateTime
+  endDate                                     DateTime
+  cycleType                                   String        @default("SOLO")
+  cycleStartDate                              DateTime      @default(now())
+  cycleEndDate                                DateTime?
+  totalWeeks                                  Int           @default(17)
+  missedCallsCount                            Int           @default(0)
+  maxMissedAllowed                            Int           @default(3)
+  status                                      String        @default("ACTIVE")
+  createdAt                                   DateTime      @default(now())
+  updatedAt                                   DateTime
+  extraLifeGrantedAt                          DateTime?
+  extraLifeGrantedBy                          String?
+  extraLifeUsed                               Boolean       @default(false)
+  CallBooking                                 CallBooking[]
+  Usuario_ProgramEnrollment_mentorIdToUsuario Usuario       @relation("ProgramEnrollment_mentorIdToUsuario", fields: [mentorId], references: [id], onDelete: Cascade)
+  Usuario_ProgramEnrollment_userIdToUsuario   Usuario       @relation("ProgramEnrollment_userIdToUsuario", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([cycleType])
+  @@index([mentorId])
+  @@index([status])
+  @@index([userId])
+}
+
+model QuantumIdentity {
+  id             Int       @id @default(autoincrement())
+  userId         Int
+  candidates     Json
+  selectedOption Json?
+  status         String    @default("PENDING_SELECTION")
+  avatarUrl      String?
+  generatedAt    DateTime  @default(now())
+  completedAt    DateTime?
+  gender         String?
+  Usuario        Usuario   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([userId])
+}
+
+model QuantumInsight {
+  id             Int            @id @default(autoincrement())
+  patternId      Int
+  usuarioId      Int
+  title          String
+  message        String
+  actionButton   String?
+  actionUrl      String?
+  iconEmoji      String         @default("🧬")
+  chartData      Json?
+  viewed         Boolean        @default(false)
+  dismissed      Boolean        @default(false)
+  actionTaken    Boolean        @default(false)
+  viewedAt       DateTime?
+  dismissedAt    DateTime?
+  createdAt      DateTime       @default(now())
+  QuantumPattern QuantumPattern @relation(fields: [patternId], references: [id], onDelete: Cascade)
+  Usuario        Usuario        @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([usuarioId, viewed])
+}
+
+model QuantumPattern {
+  id              Int              @id @default(autoincrement())
+  usuarioId       Int
+  patternType     PatternType
+  confidence      Float
+  goldenTimeSlot  TimeSlot?
+  goldenDayOfWeek Int?
+  successRate     Float?
+  keystoneTaskId  Int?
+  affectedTaskId  Int?
+  correlationDiff Float?
+  cursedDay       Int?
+  failureRate     Float?
+  sampleSize      Int              @default(0)
+  lastCalculated  DateTime         @default(now())
+  isActive        Boolean          @default(true)
+  viewedByUser    Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  QuantumInsight  QuantumInsight[]
+  Usuario         Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([confidence])
+  @@index([isActive])
+  @@index([patternType])
+  @@index([usuarioId])
+}
+
+model RenewalOffer {
+  id              Int           @id @default(autoincrement())
+  subscriptionId  Int
+  userId          Int
+  originalPrice   Float
+  offeredPrice    Float
+  discountPercent Float         @default(50.00)
+  status          RenewalStatus @default(OFFERED)
+  offeredAt       DateTime      @default(now())
+  expiresAt       DateTime
+  respondedAt     DateTime?
+  message         String        @default("¡No pierdas tu ritmo! Continúa tu visión con 50% de descuento.")
+  Subscription    Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([status])
+  @@index([userId])
+}
+
+model ReporteAnonimo {
+  id                                           Int               @id @default(autoincrement())
+  solicitudMentoriaId                          Int
+  estudianteId                                 Int
+  mentorId                                     Int
+  mensaje                                      String
+  tipo                                         String            @default("QUEJA_ANONIMA")
+  estado                                       String            @default("PENDIENTE")
+  createdAt                                    DateTime          @default(now())
+  updatedAt                                    DateTime
+  Usuario_ReporteAnonimo_estudianteIdToUsuario Usuario           @relation("ReporteAnonimo_estudianteIdToUsuario", fields: [estudianteId], references: [id], onDelete: Cascade)
+  Usuario_ReporteAnonimo_mentorIdToUsuario     Usuario           @relation("ReporteAnonimo_mentorIdToUsuario", fields: [mentorId], references: [id], onDelete: Cascade)
+  SolicitudMentoria                            SolicitudMentoria @relation(fields: [solicitudMentoriaId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([estado])
+  @@index([estudianteId])
+  @@index([mentorId])
+  @@index([solicitudMentoriaId])
 }
 
 model ResenasMentoria {
@@ -619,6 +1069,66 @@ model ResenasMentoria {
   @@index([perfilMentorId])
 }
 
+model RewardHistory {
+  id         Int         @id @default(autoincrement())
+  usuarioId  Int
+  type       String
+  amount     Int
+  reason     String
+  sourceType String
+  sourceId   Int?
+  rarity     TaskRarity?
+  createdAt  DateTime    @default(now())
+  Usuario    Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([usuarioId])
+}
+
+model SchoolCredit {
+  id             Int          @id @default(autoincrement())
+  organizationId Int
+  planType       UserTier     @default(STANDARD)
+  totalPurchased Int          @default(0)
+  totalAllocated Int          @default(0)
+  unitPrice      Float        @default(600.00)
+  totalPaid      Float        @default(0.00)
+  expirationDate DateTime?
+  isActive       Boolean      @default(true)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  Organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([expirationDate])
+  @@index([organizationId])
+  @@index([planType])
+}
+
+model ServiceLadderProgress {
+  id                        Int       @id @default(autoincrement())
+  usuarioId                 Int       @unique
+  nivel1Count               Int       @default(0)
+  nivel2Count               Int       @default(0)
+  finDeSemanaCount          Int       @default(0)
+  staffNivel1Count          Int       @default(0)
+  staffNivel2Count          Int       @default(0)
+  staffNivel3Count          Int       @default(0)
+  superNovaUnlocked         Boolean   @default(false)
+  superNovaUnlockedAt       DateTime?
+  totalServiceContributions Int       @default(0)
+  visitedLocations          Int[]     @default([])
+  explorerBadgeUnlocked     Boolean   @default(false)
+  ambassadorBadgeUnlocked   Boolean   @default(false)
+  xpMultiplier              Float     @default(1.0)
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime
+  Usuario                   Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([superNovaUnlocked])
+  @@index([usuarioId])
+}
+
 model ServicioMentoria {
   id                Int                  @id @default(autoincrement())
   perfilMentorId    Int
@@ -634,6 +1144,20 @@ model ServicioMentoria {
   SolicitudMentoria SolicitudMentoria[]
 
   @@unique([perfilMentorId, tipo])
+}
+
+model SocialReaction {
+  id              Int             @id @default(autoincrement())
+  usuarioId       Int
+  evidenceId      Int
+  type            ReactionType
+  createdAt       DateTime        @default(now())
+  EvidenciaAccion EvidenciaAccion @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  Usuario         Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, evidenceId])
+  @@index([evidenceId])
+  @@index([type])
 }
 
 model SolicitudMentoria {
@@ -659,32 +1183,6 @@ model SolicitudMentoria {
   Transaccion           Transaccion?            @relation(fields: [transaccionId], references: [id])
 }
 
-model Tarea {
-  id           Int         @id @default(autoincrement())
-  cartaId      Int
-  categoria    String
-  descripcion  String
-  completada   Boolean     @default(false)
-  requiereFoto Boolean     @default(true)
-  evidenciaId  Int?        @unique
-  createdAt    DateTime    @default(now())
-  CartaFrutos  CartaFrutos @relation(fields: [cartaId], references: [id], onDelete: Cascade)
-}
-
-model Transaccion {
-  id                Int                 @id @default(autoincrement())
-  montoPuntos       Int?
-  montoDinero       Float?
-  metodo            TipoPago
-  estado            String              @default("COMPLETADO")
-  usuarioId         Int
-  productoId        Int?
-  fecha             DateTime            @default(now())
-  SolicitudMentoria SolicitudMentoria[]
-  Producto          Producto?           @relation(fields: [productoId], references: [id])
-  Usuario           Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-}
-
 model Subscription {
   id                   Int              @id @default(autoincrement())
   userId               Int
@@ -701,285 +1199,25 @@ model Subscription {
   originalOrganization String?
   renewalCount         Int              @default(0)
   createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
-  Payments             Payment[]
-  RenewalOffers        RenewalOffer[]
+  updatedAt            DateTime
+  Payment              Payment[]
+  RenewalOffer         RenewalOffer[]
 
-  @@index([userId])
-  @@index([status])
   @@index([endDate])
-}
-
-model Payment {
-  id              Int           @id @default(autoincrement())
-  subscriptionId  Int?
-  userId          Int
-  organizationId  Int?
-  amount          Float
-  currency        String        @default("MXN")
-  status          PaymentStatus @default(PENDING)
-  paymentMethod   String?
-  transactionId   String?
-  description     String?
-  isRenewal       Boolean       @default(false)
-  isSchoolPayment Boolean       @default(false)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  Subscription    Subscription? @relation(fields: [subscriptionId], references: [id])
-
+  @@index([status])
   @@index([userId])
-  @@index([status])
-  @@index([organizationId])
 }
 
-model RenewalOffer {
-  id              Int           @id @default(autoincrement())
-  subscriptionId  Int
-  userId          Int
-  originalPrice   Float
-  offeredPrice    Float
-  discountPercent Float         @default(50.00)
-  status          RenewalStatus @default(OFFERED)
-  offeredAt       DateTime      @default(now())
-  expiresAt       DateTime
-  respondedAt     DateTime?
-  message         String        @default("¡No pierdas tu ritmo! Continúa tu visión con 50% de descuento.")
-  Subscription    Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([status])
-  @@index([expiresAt])
-}
-
-model Usuario {
-  id                                                               Int                       @id @default(autoincrement())
-  nombre                                                           String
-  email                                                            String                    @unique
-  password                                                         String?
-  imagen                                                           String?
-  rol                                                              Rol                       @default(PARTICIPANTE)
-  puntosCuanticos                                                  Int                       @default(0)
-  isActive                                                         Boolean                   @default(false)
-  suscripcion                                                      EstadoSuscripcion         @default(INACTIVO)
-  planActual                                                       String?
-  fechaFinSuscripcion                                              DateTime?
-  tier                                                             UserTier                  @default(FREE)
-  subscriptionStatus                                               String                    @default("INACTIVE")
-  licenseCode                                                      String?
-  schoolId                                                         Int?
-  mentorId                                                         Int?
-  coordinadorId                                                    Int?
-  vision                                                           String?
-  sede                                                             String?
-  llamadasPerdidas                                                 Int                       @default(0)
-  createdAt                                                        DateTime                  @default(now())
-  updatedAt                                                        DateTime                  @default(now())
-  gameChangerId                                                    Int?
-  puntosGamificacion                                               Int                       @default(0)
-  experienciaXP                                                    Int                       @default(0)
-  nivelActual                                                      Int                       @default(1)
-  rangoActual                                                      String                    @default("NOVATO_RASTREADOR")
-  completionStreak                                                 Int                       @default(0)
-  lastCompletionDate                                               DateTime?
-  collectionsCompleted                                             String[]                  @default([])
-  missedCallsCount                                                 Int                       @default(0)
-  assignedMentorId                                                 Int?
-  bioFull                                                          String?
-  bioShort                                                         String?
-  experienceYears                                                  Int                       @default(0)
-  jobTitle                                                         String?
-  profileImage                                                     String?
-  lastAvatarChangeDate                                             DateTime?
-  skills                                                           String[]                  @default([])
-  badges                                                           String[]                  @default([])
-  accumulatedMissedCalls                                           Int                       @default(0)
-  mentorStatus                                                     MentorStatus              @default(ACTIVE)
-  isAcceptingNewStudents                                           Boolean                   @default(true)
-  lastStrikeDate                                                   DateTime?
-  timezone                                                         String                    @default("America/Mexico_City")
-  socialVisibility                                                 SocialVisibility          @default(COMMUNITY)
-  organizationId                                                   Int?
-  isPostVisionUser                                                 Boolean                   @default(false)
-  lastRenewalOfferDate                                             DateTime?
-  originalOrganizationId                                           Int?
-  renewalOfferShown                                                Boolean                   @default(false)
-  subscriptionEndDate                                              DateTime?
-  subscriptionPlan                                                 SubscriptionPlan?         @default(NONE)
-  subscriptionStartDate                                            DateTime?
-  telefono                                                         String?
-  requirePasswordChange                                            Boolean                   @default(false)
-  wizardCompleted                                                  Boolean                   @default(false)
-  onboardingOrigin                                                 String?                   @default("ORGANIC_SIGNUP")
-  magicLinkToken                                                   String?                   @unique
-  magicLinkExpiry                                                  DateTime?
-  temporaryPassword                                                String?
-  changeRequestedAt                                                DateTime?
-  changeRequestedBy                                                Int?
-  newOrganizationId                                                Int?
-  newVisionId                                                      Int?
-  pendingOrganizationChange                                        Boolean                   @default(false)
-  previousOrganizationId                                           Int?
-  mentorMarketplaceApproved                                        Boolean                   @default(false)
-  visibleInMentorshipMarketplace                                   Boolean                   @default(true)
-  communityOrganizationId                                          Int?
-  AdminTasksCreated                                                AdminTask[]               @relation("AdminTaskCreator")
-  AreaConfig                                                       AreaConfig[]
-  DuelsAsPlayer1                                                   ArenaDuel[]               @relation("DuelPlayer1")
-  DuelsAsPlayer2                                                   ArenaDuel[]               @relation("DuelPlayer2")
-  DuelsWon                                                         ArenaDuel[]               @relation("DuelWinner")
-  ArenaQueue                                                       ArenaQueue?               @relation("ArenaQueue")
-  ArenaStats                                                       ArenaStats?               @relation("ArenaStats")
-  TauntsReceived                                                   ArenaTaunt[]              @relation("TauntReceiver")
-  TauntsSent                                                       ArenaTaunt[]              @relation("TauntSender")
-  CallAvailability                                                 CallAvailability[]
-  CallBooking_CallBooking_mentorIdToUsuario                        CallBooking[]             @relation("CallBooking_mentorIdToUsuario")
-  CallBooking_CallBooking_studentIdToUsuario                       CallBooking[]             @relation("CallBooking_studentIdToUsuario")
-  CallLog_CallLog_mentorIdToUsuario                                CallLog[]                 @relation("CallLog_mentorIdToUsuario")
-  CallLog_CallLog_studentIdToUsuario                               CallLog[]                 @relation("CallLog_studentIdToUsuario")
-  CartaFrutos                                                      CartaFrutos[]
-  CheckIns                                                         CheckIn[]
-  DisciplineConfig                                                 DisciplineConfig?         @relation("DisciplineConfig")
-  DisciplineSchedule                                               DisciplineSchedule?
-  DisciplineSubscription_DisciplineSubscription_mentorIdToUsuario  DisciplineSubscription[]  @relation("DisciplineSubscription_mentorIdToUsuario")
-  DisciplineSubscription_DisciplineSubscription_studentIdToUsuario DisciplineSubscription?   @relation("DisciplineSubscription_studentIdToUsuario")
-  Evidencia                                                        Evidencia[]
-  EvidenciaAccion                                                  EvidenciaAccion[]
-  LicenseAssignmentsGiven                                          LicenseAssignment[]       @relation("LicenseAssignmentAssignedBy")
-  LicenseAssignments                                               LicenseAssignment[]       @relation("LicenseAssignmentUser")
-  LicenseOrdersRequested                                           LicenseOrder[]
-  MensajeChat                                                      MensajeChat[]
-  MentorAlerts                                                     MentorAlert[]             @relation("MentorAlerts")
-  UserAlerts                                                       MentorAlert[]             @relation("UserAlerts")
-  Notifications                                                    Notification[]
-  ManagedOrganization                                              Organization?             @relation("SchoolAdmins")
-  PerfilMentor                                                     PerfilMentor?
-  PhoenixSessions                                                  PhoenixSession[]
-  ProgramEnrollment_ProgramEnrollment_mentorIdToUsuario            ProgramEnrollment[]       @relation("ProgramEnrollment_mentorIdToUsuario")
-  ProgramEnrollment_ProgramEnrollment_userIdToUsuario              ProgramEnrollment[]       @relation("ProgramEnrollment_userIdToUsuario")
-  QuantumInsights                                                  QuantumInsight[]          @relation("QuantumInsights")
-  QuantumPatterns                                                  QuantumPattern[]          @relation("QuantumPatterns")
-  QuantumIdentities                                                QuantumIdentity[]
-  AvatarGenerationAttempts                                         AvatarGenerationAttempt[]
-  ReporteAnonimo_estudiante                                        ReporteAnonimo[]          @relation("ReporteAnonimo_estudiante")
-  ReporteAnonimo_mentor                                            ReporteAnonimo[]          @relation("ReporteAnonimo_mentor")
-  ResenasMentoria                                                  ResenasMentoria[]
-  RewardHistory                                                    RewardHistory[]
-  ServiceLadderProgress                                            ServiceLadderProgress?
-  SocialReactions                                                  SocialReaction[]
-  SolicitudMentoria                                                SolicitudMentoria[]
-  TaskInstance                                                     TaskInstance[]
-  TaskReviews                                                      TaskSubmission[]          @relation("TaskReviews")
-  TaskSubmissions                                                  TaskSubmission[]          @relation("TaskSubmissions")
-  Transaccion                                                      Transaccion[]
-  UserCollectionProgress                                           UserCollectionProgress[]
-  ServiceReviews                                                   UserServiceContribution[] @relation("ServiceReviews")
-  ServiceContributions                                             UserServiceContribution[]
-  AbsenceReportsAsStudent                                          MentorAbsenceReport[]     @relation("AbsenceReportStudent")
-  AbsenceReportsAsMentor                                           MentorAbsenceReport[]     @relation("AbsenceReportMentor")
-  AbsenceReportsReviewed                                           MentorAbsenceReport[]     @relation("AbsenceReportReviewer")
-  Usuario_Usuario_assignedMentorIdToUsuario                        Usuario?                  @relation("Usuario_assignedMentorIdToUsuario", fields: [assignedMentorId], references: [id], onUpdate: NoAction)
-  other_Usuario_Usuario_assignedMentorIdToUsuario                  Usuario[]                 @relation("Usuario_assignedMentorIdToUsuario")
-  CommunityOrganization                                            Organization?             @relation("CommunityMembers", fields: [communityOrganizationId], references: [id])
-  Usuario_Usuario_coordinadorIdToUsuario                           Usuario?                  @relation("Usuario_coordinadorIdToUsuario", fields: [coordinadorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_Usuario_Usuario_coordinadorIdToUsuario                     Usuario[]                 @relation("Usuario_coordinadorIdToUsuario")
-  Usuario_Usuario_gameChangerIdToUsuario                           Usuario?                  @relation("Usuario_gameChangerIdToUsuario", fields: [gameChangerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  other_Usuario_Usuario_gameChangerIdToUsuario                     Usuario[]                 @relation("Usuario_gameChangerIdToUsuario")
-  Usuario_Usuario_mentorIdToUsuario                                Usuario?                  @relation("Usuario_mentorIdToUsuario", fields: [mentorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_Usuario_Usuario_mentorIdToUsuario                          Usuario[]                 @relation("Usuario_mentorIdToUsuario")
-  Organization                                                     Organization?             @relation("OrganizationUsers", fields: [organizationId], references: [id])
-  VisionesCoordinadas                                              Vision[]                  @relation("VisionCoordinador")
-  GameChangersAsignados                                            VisionGameChanger[]       @relation("AsignadorGameChanger")
-  GameChangerEnVisiones                                            VisionGameChanger[]       @relation("GameChangerEnVision")
-  MentoresAsignados                                                VisionMentor[]            @relation("AsignadorMentor")
-  MentorEnVisiones                                                 VisionMentor[]            @relation("MentorEnVision")
-  ParticipantesAsignados                                           VisionParticipante[]      @relation("AsignadorParticipante")
-  ParticipantesResponsables                                        VisionParticipante[]      @relation("GameChangerResponsable")
-  ParticipanteEnVisiones                                           VisionParticipante[]      @relation("ParticipanteEnVision")
-
-  @@index([communityOrganizationId])
-}
-
-model Transaction {
-  id             Int         @id @default(autoincrement())
-  bookingId      Int         @unique
-  amountTotal    Float
-  platformFee    Float
-  mentorEarnings Float
-  status         String      @default("HELD")
-  releasedAt     DateTime?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  booking        CallBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-
-  @@index([status])
-  @@index([createdAt])
-}
-
-model DisciplineConfig {
-  id          Int      @id @default(autoincrement())
-  mentorId    Int      @unique
-  allowedDays Int[]
-  startHour   String
-  endHour     String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  mentor      Usuario  @relation("DisciplineConfig", fields: [mentorId], references: [id], onDelete: Cascade)
-
-  @@index([mentorId])
-}
-
-model ReporteAnonimo {
-  id                  Int               @id @default(autoincrement())
-  solicitudMentoriaId Int
-  estudianteId        Int
-  mentorId            Int
-  mensaje             String
-  tipo                String            @default("QUEJA_ANONIMA")
-  estado              String            @default("PENDIENTE")
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-  estudiante          Usuario           @relation("ReporteAnonimo_estudiante", fields: [estudianteId], references: [id], onDelete: Cascade)
-  mentor              Usuario           @relation("ReporteAnonimo_mentor", fields: [mentorId], references: [id], onDelete: Cascade)
-  solicitudMentoria   SolicitudMentoria @relation(fields: [solicitudMentoriaId], references: [id], onDelete: Cascade)
-
-  @@index([solicitudMentoriaId])
-  @@index([estudianteId])
-  @@index([mentorId])
-  @@index([estado])
-  @@index([createdAt])
-}
-
-model DisponibilidadSemanal {
-  id             Int          @id @default(autoincrement())
-  perfilMentorId Int
-  diaSemana      Int
-  horaInicio     String
-  horaFin        String
-  activo         Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  PerfilMentor   PerfilMentor @relation(fields: [perfilMentorId], references: [id], onDelete: Cascade)
-
-  @@index([perfilMentorId])
-  @@index([diaSemana])
-  @@index([activo])
-}
-
-model ExcepcionDisponibilidad {
-  id             Int          @id @default(autoincrement())
-  perfilMentorId Int
-  fechaInicio    DateTime
-  fechaFin       DateTime
-  motivo         String
-  descripcion    String?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  PerfilMentor   PerfilMentor @relation(fields: [perfilMentorId], references: [id], onDelete: Cascade)
-
-  @@index([perfilMentorId])
-  @@index([fechaInicio])
-  @@index([fechaFin])
+model Tarea {
+  id           Int         @id @default(autoincrement())
+  cartaId      Int
+  categoria    String
+  descripcion  String
+  completada   Boolean     @default(false)
+  requiereFoto Boolean     @default(true)
+  evidenciaId  Int?        @unique
+  createdAt    DateTime    @default(now())
+  CartaFrutos  CartaFrutos @relation(fields: [cartaId], references: [id], onDelete: Cascade)
 }
 
 model TaskInstance {
@@ -995,7 +1233,7 @@ model TaskInstance {
   evidenceStatus  EvidenceStatus   @default(NONE)
   evidenciaId     Int?
   createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  updatedAt       DateTime
   dayOfWeek       Int?
   timeSlot        TimeSlot?
   streakContext   Int?
@@ -1007,119 +1245,65 @@ model TaskInstance {
   EvidenciaAccion EvidenciaAccion? @relation(fields: [evidenciaId], references: [id])
   Usuario         Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
-  @@index([usuarioId, dueDate])
-  @@index([status])
   @@index([accionId])
-  @@index([evidenceStatus])
   @@index([dayOfWeek])
+  @@index([evidenceStatus])
+  @@index([status])
   @@index([timeSlot])
-}
-
-model MentorAlert {
-  id             Int           @id @default(autoincrement())
-  mentorId       Int
-  usuarioId      Int
-  taskInstanceId Int?
-  type           AlertType     @default(RISK_ALERT)
-  message        String
-  read           Boolean       @default(false)
-  createdAt      DateTime      @default(now())
-  Mentor         Usuario       @relation("MentorAlerts", fields: [mentorId], references: [id], onDelete: Cascade)
-  TaskInstance   TaskInstance? @relation(fields: [taskInstanceId], references: [id])
-  Usuario        Usuario       @relation("UserAlerts", fields: [usuarioId], references: [id], onDelete: Cascade)
-
-  @@index([mentorId, read])
-  @@index([usuarioId])
-}
-
-model AreaConfig {
-  id        Int      @id @default(autoincrement())
-  usuarioId Int
-  areaKey   String
-  enabled   Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  Usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-
-  @@unique([usuarioId, areaKey])
-  @@index([usuarioId])
-}
-
-model AdminTask {
-  id                Int              @id @default(autoincrement())
-  type              AdminTaskType
-  titulo            String
-  descripcion       String?
-  pointsReward      Int              @default(0)
-  targetType        TargetType
-  targetId          Int?
-  fechaLimite       DateTime?        @db.Date
-  fechaEvento       DateTime?
-  horaEvento        String?
-  lugar             String?
-  requiereEvidencia Boolean          @default(false)
-  isActive          Boolean          @default(true)
-  createdBy         Int
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-  rewardLogic       RewardLogic      @default(STANDARD)
-  raceLimit         Int?
-  strictDeadline    Boolean          @default(false)
-  // Multi-Day Mission fields
-  isMultiDay        Boolean          @default(false)
-  duracionDias      Int?
-  horaLimiteDiaria  String?
-  parentTaskId      Int?
-  diaNumero         Int?
-  Creator           Usuario          @relation("AdminTaskCreator", fields: [createdBy], references: [id], onDelete: Cascade)
-  Submissions       TaskSubmission[]
-  ParentTask        AdminTask?       @relation("MultiDayTasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
-  DailyTasks        AdminTask[]      @relation("MultiDayTasks")
-
-  @@index([type])
-  @@index([targetType])
-  @@index([fechaLimite])
-  @@index([isActive])
-  @@index([rewardLogic])
-  @@index([parentTaskId])
-  @@index([isMultiDay])
+  @@index([usuarioId, dueDate])
 }
 
 model TaskSubmission {
-  id                 Int              @id @default(autoincrement())
-  adminTaskId        Int
-  usuarioId          Int
-  status             SubmissionStatus @default(PENDING)
-  evidenciaUrl       String?
-  comentario         String?
-  puntosGanados      Int              @default(0)
-  submittedAt        DateTime         @default(now())
-  reviewedAt         DateTime?
-  reviewedBy         Int?
-  feedbackMentor     String?
-  rewardMetadata     Json?
-  pointsCalculatedAt DateTime?
-  AdminTask          AdminTask        @relation(fields: [adminTaskId], references: [id], onDelete: Cascade)
-  Reviewer           Usuario?         @relation("TaskReviews", fields: [reviewedBy], references: [id])
-  Usuario            Usuario          @relation("TaskSubmissions", fields: [usuarioId], references: [id], onDelete: Cascade)
+  id                                         Int              @id @default(autoincrement())
+  adminTaskId                                Int
+  usuarioId                                  Int
+  status                                     SubmissionStatus @default(PENDING)
+  evidenciaUrl                               String?
+  comentario                                 String?
+  puntosGanados                              Int              @default(0)
+  submittedAt                                DateTime         @default(now())
+  reviewedAt                                 DateTime?
+  reviewedBy                                 Int?
+  feedbackMentor                             String?
+  rewardMetadata                             Json?
+  pointsCalculatedAt                         DateTime?
+  AdminTask                                  AdminTask        @relation(fields: [adminTaskId], references: [id], onDelete: Cascade)
+  Usuario_TaskSubmission_reviewedByToUsuario Usuario?         @relation("TaskSubmission_reviewedByToUsuario", fields: [reviewedBy], references: [id])
+  Usuario_TaskSubmission_usuarioIdToUsuario  Usuario          @relation("TaskSubmission_usuarioIdToUsuario", fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@unique([adminTaskId, usuarioId])
-  @@index([usuarioId])
   @@index([status])
+  @@index([usuarioId])
 }
 
-model Collection {
-  id            Int                      @id @default(autoincrement())
-  name          String
-  description   String
-  type          CollectionType
-  requiredCount Int                      @default(7)
-  rewardPC      Int                      @default(300)
-  rewardBadge   String
-  iconUrl       String?
-  isActive      Boolean                  @default(true)
-  createdAt     DateTime                 @default(now())
-  UserProgress  UserCollectionProgress[]
+model Transaccion {
+  id                Int                 @id @default(autoincrement())
+  montoPuntos       Int?
+  montoDinero       Float?
+  metodo            TipoPago
+  estado            String              @default("COMPLETADO")
+  usuarioId         Int
+  productoId        Int?
+  fecha             DateTime            @default(now())
+  SolicitudMentoria SolicitudMentoria[]
+  Producto          Producto?           @relation(fields: [productoId], references: [id])
+  Usuario           Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+}
+
+model Transaction {
+  id             Int         @id @default(autoincrement())
+  bookingId      Int         @unique
+  amountTotal    Float
+  platformFee    Float
+  mentorEarnings Float
+  status         String      @default("HELD")
+  releasedAt     DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime
+  CallBooking    CallBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([status])
 }
 
 model UserCollectionProgress {
@@ -1137,397 +1321,301 @@ model UserCollectionProgress {
   @@index([usuarioId])
 }
 
-model RewardHistory {
-  id         Int         @id @default(autoincrement())
-  usuarioId  Int
-  type       String
-  amount     Int
-  reason     String
-  sourceType String
-  sourceId   Int?
-  rarity     TaskRarity?
-  createdAt  DateTime    @default(now())
-  Usuario    Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-
-  @@index([usuarioId])
-  @@index([createdAt])
-}
-
-model Location {
-  id                       Int                       @id @default(autoincrement())
-  name                     String
-  description              String?
-  latitude                 Float
-  longitude                Float
-  radiusMeter              Int                       @default(50)
-  nfcTagId                 String?                   @unique
-  qrCodeHash               String                    @unique
-  qrRotationDate           DateTime                  @default(now())
-  isActive                 Boolean                   @default(true)
-  address                  String?
-  city                     String?
-  country                  String                    @default("México")
-  imageUrl                 String?
-  createdAt                DateTime                  @default(now())
-  updatedAt                DateTime                  @updatedAt
-  CheckIns                 CheckIn[]
-  UserServiceContributions UserServiceContribution[]
-
-  @@index([isActive])
-  @@index([qrCodeHash])
-  @@index([nfcTagId])
-}
-
-model CheckIn {
-  id            Int      @id @default(autoincrement())
-  usuarioId     Int
-  locationId    Int
-  checkInMethod String
-  latitude      Float
-  longitude     Float
-  distance      Float
-  xpGranted     Int      @default(50)
-  createdAt     DateTime @default(now())
-  Location      Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  Usuario       Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-
-  @@unique([usuarioId, locationId, createdAt])
-  @@index([usuarioId])
-  @@index([locationId])
-  @@index([createdAt])
-}
-
 model UserServiceContribution {
-  id             Int                   @id @default(autoincrement())
-  usuarioId      Int
-  locationId     Int
-  serviceLevel   ServiceLevel
-  evidenciaUrl   String
-  description    String?
-  status         ServiceApprovalStatus @default(PENDING)
-  pcGranted      Int                   @default(0)
-  submittedAt    DateTime              @default(now())
-  reviewedAt     DateTime?
-  reviewedBy     Int?
-  feedbackMentor String?
-  Location       Location              @relation(fields: [locationId], references: [id], onDelete: Cascade)
-  Reviewer       Usuario?              @relation("ServiceReviews", fields: [reviewedBy], references: [id])
-  Usuario        Usuario               @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  id                                                  Int                   @id @default(autoincrement())
+  usuarioId                                           Int
+  locationId                                          Int
+  serviceLevel                                        ServiceLevel
+  evidenciaUrl                                        String
+  description                                         String?
+  status                                              ServiceApprovalStatus @default(PENDING)
+  pcGranted                                           Int                   @default(0)
+  submittedAt                                         DateTime              @default(now())
+  reviewedAt                                          DateTime?
+  reviewedBy                                          Int?
+  feedbackMentor                                      String?
+  Location                                            Location              @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  Usuario_UserServiceContribution_reviewedByToUsuario Usuario?              @relation("UserServiceContribution_reviewedByToUsuario", fields: [reviewedBy], references: [id])
+  Usuario_UserServiceContribution_usuarioIdToUsuario  Usuario               @relation("UserServiceContribution_usuarioIdToUsuario", fields: [usuarioId], references: [id], onDelete: Cascade)
 
-  @@index([usuarioId])
   @@index([locationId])
-  @@index([status])
   @@index([serviceLevel])
-}
-
-model ServiceLadderProgress {
-  id                        Int       @id @default(autoincrement())
-  usuarioId                 Int       @unique
-  nivel1Count               Int       @default(0)
-  nivel2Count               Int       @default(0)
-  finDeSemanaCount          Int       @default(0)
-  staffNivel1Count          Int       @default(0)
-  staffNivel2Count          Int       @default(0)
-  staffNivel3Count          Int       @default(0)
-  superNovaUnlocked         Boolean   @default(false)
-  superNovaUnlockedAt       DateTime?
-  totalServiceContributions Int       @default(0)
-  visitedLocations          Int[]     @default([])
-  explorerBadgeUnlocked     Boolean   @default(false)
-  ambassadorBadgeUnlocked   Boolean   @default(false)
-  xpMultiplier              Float     @default(1.0)
-  createdAt                 DateTime  @default(now())
-  updatedAt                 DateTime  @updatedAt
-  Usuario                   Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-
+  @@index([status])
   @@index([usuarioId])
-  @@index([superNovaUnlocked])
 }
 
-model SocialReaction {
-  id              Int             @id @default(autoincrement())
-  usuarioId       Int
-  evidenceId      Int
-  type            ReactionType
-  createdAt       DateTime        @default(now())
-  EvidenciaAccion EvidenciaAccion @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
-  Usuario         Usuario         @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+model Usuario {
+  id                                                                  Int                       @id @default(autoincrement())
+  nombre                                                              String
+  email                                                               String                    @unique
+  password                                                            String?
+  imagen                                                              String?
+  rol                                                                 Rol                       @default(PARTICIPANTE)
+  puntosCuanticos                                                     Int                       @default(0)
+  isActive                                                            Boolean                   @default(false)
+  suscripcion                                                         EstadoSuscripcion         @default(INACTIVO)
+  planActual                                                          String?
+  fechaFinSuscripcion                                                 DateTime?
+  tier                                                                UserTier                  @default(FREE)
+  subscriptionStatus                                                  String                    @default("INACTIVE")
+  licenseCode                                                         String?
+  schoolId                                                            Int?
+  mentorId                                                            Int?
+  coordinadorId                                                       Int?
+  vision                                                              String?
+  sede                                                                String?
+  llamadasPerdidas                                                    Int                       @default(0)
+  createdAt                                                           DateTime                  @default(now())
+  updatedAt                                                           DateTime                  @default(now())
+  gameChangerId                                                       Int?
+  puntosGamificacion                                                  Int                       @default(0)
+  experienciaXP                                                       Int                       @default(0)
+  nivelActual                                                         Int                       @default(1)
+  rangoActual                                                         String                    @default("NOVATO_RASTREADOR")
+  completionStreak                                                    Int                       @default(0)
+  lastCompletionDate                                                  DateTime?
+  collectionsCompleted                                                String[]                  @default([])
+  missedCallsCount                                                    Int                       @default(0)
+  assignedMentorId                                                    Int?
+  bioFull                                                             String?
+  bioShort                                                            String?
+  experienceYears                                                     Int                       @default(0)
+  jobTitle                                                            String?
+  profileImage                                                        String?
+  skills                                                              String[]                  @default([])
+  badges                                                              String[]                  @default([])
+  timezone                                                            String                    @default("America/Mexico_City")
+  socialVisibility                                                    SocialVisibility          @default(COMMUNITY)
+  organizationId                                                      Int?
+  isPostVisionUser                                                    Boolean                   @default(false)
+  lastRenewalOfferDate                                                DateTime?
+  originalOrganizationId                                              Int?
+  renewalOfferShown                                                   Boolean                   @default(false)
+  subscriptionEndDate                                                 DateTime?
+  subscriptionPlan                                                    SubscriptionPlan?         @default(NONE)
+  subscriptionStartDate                                               DateTime?
+  telefono                                                            String?
+  requirePasswordChange                                               Boolean                   @default(false)
+  changeRequestedAt                                                   DateTime?
+  changeRequestedBy                                                   Int?
+  newOrganizationId                                                   Int?
+  newVisionId                                                         Int?
+  pendingOrganizationChange                                           Boolean                   @default(false)
+  previousOrganizationId                                              Int?
+  mentorMarketplaceApproved                                           Boolean                   @default(false)
+  visibleInMentorshipMarketplace                                      Boolean                   @default(true)
+  communityOrganizationId                                             Int?
+  magicLinkExpiry                                                     DateTime?
+  magicLinkToken                                                      String?                   @unique
+  onboardingOrigin                                                    String?                   @default("ORGANIC_SIGNUP")
+  temporaryPassword                                                   String?
+  wizardCompleted                                                     Boolean                   @default(false)
+  accumulatedMissedCalls                                              Int                       @default(0)
+  isAcceptingNewStudents                                              Boolean                   @default(true)
+  lastStrikeDate                                                      DateTime?
+  mentorStatus                                                        MentorStatus              @default(ACTIVE)
+  lastAvatarChangeDate                                                DateTime?
+  AdminTask                                                           AdminTask[]
+  AreaConfig                                                          AreaConfig[]
+  ArenaDuel_ArenaDuel_player1IdToUsuario                              ArenaDuel[]               @relation("ArenaDuel_player1IdToUsuario")
+  ArenaDuel_ArenaDuel_player2IdToUsuario                              ArenaDuel[]               @relation("ArenaDuel_player2IdToUsuario")
+  ArenaDuel_ArenaDuel_winnerIdToUsuario                               ArenaDuel[]               @relation("ArenaDuel_winnerIdToUsuario")
+  ArenaQueue                                                          ArenaQueue?
+  ArenaStats                                                          ArenaStats?
+  ArenaTaunt_ArenaTaunt_receiverIdToUsuario                           ArenaTaunt[]              @relation("ArenaTaunt_receiverIdToUsuario")
+  ArenaTaunt_ArenaTaunt_senderIdToUsuario                             ArenaTaunt[]              @relation("ArenaTaunt_senderIdToUsuario")
+  AvatarGenerationAttempt                                             AvatarGenerationAttempt[]
+  CallAvailability                                                    CallAvailability[]
+  CallBooking_CallBooking_mentorIdToUsuario                           CallBooking[]             @relation("CallBooking_mentorIdToUsuario")
+  CallBooking_CallBooking_studentIdToUsuario                          CallBooking[]             @relation("CallBooking_studentIdToUsuario")
+  CallLog_CallLog_mentorIdToUsuario                                   CallLog[]                 @relation("CallLog_mentorIdToUsuario")
+  CallLog_CallLog_studentIdToUsuario                                  CallLog[]                 @relation("CallLog_studentIdToUsuario")
+  CartaFrutos                                                         CartaFrutos[]
+  CheckIn                                                             CheckIn[]
+  DisciplineConfig                                                    DisciplineConfig?
+  DisciplineSchedule                                                  DisciplineSchedule?
+  DisciplineSubscription_DisciplineSubscription_mentorIdToUsuario     DisciplineSubscription[]  @relation("DisciplineSubscription_mentorIdToUsuario")
+  DisciplineSubscription_DisciplineSubscription_studentIdToUsuario    DisciplineSubscription?   @relation("DisciplineSubscription_studentIdToUsuario")
+  Evidencia                                                           Evidencia[]
+  EvidenciaAccion                                                     EvidenciaAccion[]
+  LicenseAssignment_LicenseAssignment_assignedByToUsuario             LicenseAssignment[]       @relation("LicenseAssignment_assignedByToUsuario")
+  LicenseAssignment_LicenseAssignment_userIdToUsuario                 LicenseAssignment[]       @relation("LicenseAssignment_userIdToUsuario")
+  LicenseOrder                                                        LicenseOrder[]
+  MensajeChat                                                         MensajeChat[]
+  MentorAbsenceReport_MentorAbsenceReport_mentorIdToUsuario           MentorAbsenceReport[]     @relation("MentorAbsenceReport_mentorIdToUsuario")
+  MentorAbsenceReport_MentorAbsenceReport_reviewedByToUsuario         MentorAbsenceReport[]     @relation("MentorAbsenceReport_reviewedByToUsuario")
+  MentorAbsenceReport_MentorAbsenceReport_studentIdToUsuario          MentorAbsenceReport[]     @relation("MentorAbsenceReport_studentIdToUsuario")
+  MentorAlert_MentorAlert_mentorIdToUsuario                           MentorAlert[]             @relation("MentorAlert_mentorIdToUsuario")
+  MentorAlert_MentorAlert_usuarioIdToUsuario                          MentorAlert[]             @relation("MentorAlert_usuarioIdToUsuario")
+  Notification                                                        Notification[]
+  Organization_Organization_schoolAdminIdToUsuario                    Organization?             @relation("Organization_schoolAdminIdToUsuario")
+  PerfilMentor                                                        PerfilMentor?
+  PhoenixSession                                                      PhoenixSession[]
+  ProgramEnrollment_ProgramEnrollment_mentorIdToUsuario               ProgramEnrollment[]       @relation("ProgramEnrollment_mentorIdToUsuario")
+  ProgramEnrollment_ProgramEnrollment_userIdToUsuario                 ProgramEnrollment[]       @relation("ProgramEnrollment_userIdToUsuario")
+  QuantumIdentity                                                     QuantumIdentity[]
+  QuantumInsight                                                      QuantumInsight[]
+  QuantumPattern                                                      QuantumPattern[]
+  ReporteAnonimo_ReporteAnonimo_estudianteIdToUsuario                 ReporteAnonimo[]          @relation("ReporteAnonimo_estudianteIdToUsuario")
+  ReporteAnonimo_ReporteAnonimo_mentorIdToUsuario                     ReporteAnonimo[]          @relation("ReporteAnonimo_mentorIdToUsuario")
+  ResenasMentoria                                                     ResenasMentoria[]
+  RewardHistory                                                       RewardHistory[]
+  ServiceLadderProgress                                               ServiceLadderProgress?
+  SocialReaction                                                      SocialReaction[]
+  SolicitudMentoria                                                   SolicitudMentoria[]
+  TaskInstance                                                        TaskInstance[]
+  TaskSubmission_TaskSubmission_reviewedByToUsuario                   TaskSubmission[]          @relation("TaskSubmission_reviewedByToUsuario")
+  TaskSubmission_TaskSubmission_usuarioIdToUsuario                    TaskSubmission[]          @relation("TaskSubmission_usuarioIdToUsuario")
+  Transaccion                                                         Transaccion[]
+  UserCollectionProgress                                              UserCollectionProgress[]
+  UserServiceContribution_UserServiceContribution_reviewedByToUsuario UserServiceContribution[] @relation("UserServiceContribution_reviewedByToUsuario")
+  UserServiceContribution_UserServiceContribution_usuarioIdToUsuario  UserServiceContribution[] @relation("UserServiceContribution_usuarioIdToUsuario")
+  Usuario_Usuario_assignedMentorIdToUsuario                           Usuario?                  @relation("Usuario_assignedMentorIdToUsuario", fields: [assignedMentorId], references: [id], onUpdate: NoAction)
+  other_Usuario_Usuario_assignedMentorIdToUsuario                     Usuario[]                 @relation("Usuario_assignedMentorIdToUsuario")
+  Organization_Usuario_communityOrganizationIdToOrganization          Organization?             @relation("Usuario_communityOrganizationIdToOrganization", fields: [communityOrganizationId], references: [id])
+  Usuario_Usuario_coordinadorIdToUsuario                              Usuario?                  @relation("Usuario_coordinadorIdToUsuario", fields: [coordinadorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_Usuario_Usuario_coordinadorIdToUsuario                        Usuario[]                 @relation("Usuario_coordinadorIdToUsuario")
+  Usuario_Usuario_gameChangerIdToUsuario                              Usuario?                  @relation("Usuario_gameChangerIdToUsuario", fields: [gameChangerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_Usuario_Usuario_gameChangerIdToUsuario                        Usuario[]                 @relation("Usuario_gameChangerIdToUsuario")
+  Usuario_Usuario_mentorIdToUsuario                                   Usuario?                  @relation("Usuario_mentorIdToUsuario", fields: [mentorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_Usuario_Usuario_mentorIdToUsuario                             Usuario[]                 @relation("Usuario_mentorIdToUsuario")
+  Organization_Usuario_organizationIdToOrganization                   Organization?             @relation("Usuario_organizationIdToOrganization", fields: [organizationId], references: [id])
+  Vision                                                              Vision[]
+  VisionGameChanger_VisionGameChanger_asignadoPorIdToUsuario          VisionGameChanger[]       @relation("VisionGameChanger_asignadoPorIdToUsuario")
+  VisionGameChanger_VisionGameChanger_gameChangerIdToUsuario          VisionGameChanger[]       @relation("VisionGameChanger_gameChangerIdToUsuario")
+  VisionMentor_VisionMentor_asignadoPorIdToUsuario                    VisionMentor[]            @relation("VisionMentor_asignadoPorIdToUsuario")
+  VisionMentor_VisionMentor_mentorIdToUsuario                         VisionMentor[]            @relation("VisionMentor_mentorIdToUsuario")
+  VisionParticipante_VisionParticipante_asignadoPorIdToUsuario        VisionParticipante[]      @relation("VisionParticipante_asignadoPorIdToUsuario")
+  VisionParticipante_VisionParticipante_gameChangerIdToUsuario        VisionParticipante[]      @relation("VisionParticipante_gameChangerIdToUsuario")
+  VisionParticipante_VisionParticipante_participanteIdToUsuario       VisionParticipante[]      @relation("VisionParticipante_participanteIdToUsuario")
+  MentorPayout                                                        MentorPayout[]
+  InstitutionalOrder                                                  InstitutionalOrder[]
+  MentorPackageOrder_MentorPackageOrder_usuarioIdToUsuario            MentorPackageOrder[]
+  MentorPackageOrder_MentorPackageOrder_mentorIdToUsuario             MentorPackageOrder[]      @relation("MentorPackages")
+  CommissionLedger_CommissionLedger_mentorIdToUsuario                 CommissionLedger[]        @relation("CommissionMentor")
+  CommissionLedger_CommissionLedger_studentIdToUsuario                CommissionLedger[]        @relation("CommissionStudent")
 
-  @@unique([usuarioId, evidenceId])
-  @@index([evidenceId])
-  @@index([type])
-}
-
-model PhoenixSession {
-  id                     Int           @id @default(autoincrement())
-  usuarioId              Int
-  triggerReason          String?
-  snapshotTasks          Json
-  microTaskId            Int?
-  microTaskType          MicroTaskType
-  microTaskCompleted     Boolean       @default(false)
-  completedAt            DateTime?
-  tasksRescheduled       Int           @default(0)
-  tasksGracefullySkipped Int           @default(0)
-  badgeAwarded           Boolean       @default(false)
-  createdAt              DateTime      @default(now())
-  exitedAt               DateTime?
-  Usuario                Usuario       @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-
-  @@index([usuarioId])
-  @@index([createdAt])
+  @@index([communityOrganizationId])
 }
 
 model Vision {
-  id                              Int                  @id @default(autoincrement())
-  nombre                          String
-  descripcion                     String?
-  coordinadorId                   Int
-  isActive                        Boolean              @default(true)
-  createdAt                       DateTime             @default(now())
-  updatedAt                       DateTime             @updatedAt
-  licensesAllocated               Int                  @default(0)
-  maxParticipantes                Int?
-  organizationId                  Int?
-  endDate                         DateTime?
-  startDate                       DateTime?
-  forceFinanzasArea               Boolean              @default(true)
-  forceRelacionesArea             Boolean              @default(true)
-  forceTalentosArea               Boolean              @default(true)
-  forceSaludArea                  Boolean              @default(true)
-  forcePazMentalArea              Boolean              @default(true)
-  forceOcioArea                   Boolean              @default(true)
-  forceTransformationArea         Boolean              @default(true)
-  transformationGuestsTarget      Int?                 @default(4)
-  forceCommunityServiceArea       Boolean              @default(true)
-  LicenseAssignments              LicenseAssignment[]
-  Coordinador                     Usuario              @relation("VisionCoordinador", fields: [coordinadorId], references: [id], onDelete: Cascade)
-  Organization                    Organization?        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  GameChangers                    VisionGameChanger[]
-  Mentores                        VisionMentor[]       @relation("VisionMentores")
-  Participantes                   VisionParticipante[]
+  id                         Int                  @id @default(autoincrement())
+  nombre                     String
+  descripcion                String?
+  coordinadorId              Int
+  isActive                   Boolean              @default(true)
+  createdAt                  DateTime             @default(now())
+  updatedAt                  DateTime
+  licensesAllocated          Int                  @default(0)
+  maxParticipantes           Int?
+  organizationId             Int?
+  endDate                    DateTime?
+  startDate                  DateTime?
+  forceCommunityServiceArea  Boolean              @default(true)
+  forceTransformationArea    Boolean              @default(true)
+  transformationGuestsTarget Int?                 @default(4)
+  forceFinanzasArea          Boolean              @default(true)
+  forceOcioArea              Boolean              @default(true)
+  forcePazMentalArea         Boolean              @default(true)
+  forceRelacionesArea        Boolean              @default(true)
+  forceSaludArea             Boolean              @default(true)
+  forceTalentosArea          Boolean              @default(true)
+  LicenseAssignment          LicenseAssignment[]
+  Usuario                    Usuario              @relation(fields: [coordinadorId], references: [id], onDelete: Cascade)
+  Organization               Organization?        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  VisionGameChanger          VisionGameChanger[]
+  VisionMentor               VisionMentor[]
+  VisionParticipante         VisionParticipante[]
+  VisionEscrow               VisionEscrow?
+  MentorPackageOrder         MentorPackageOrder[]
 
   @@index([coordinadorId])
-  @@index([organizationId])
   @@index([isActive])
+  @@index([organizationId])
 }
 
 model VisionGameChanger {
-  id            Int      @id @default(autoincrement())
-  visionId      Int
-  gameChangerId Int
-  asignadoPorId Int
-  createdAt     DateTime @default(now())
-  AsignadoPor   Usuario  @relation("AsignadorGameChanger", fields: [asignadoPorId], references: [id], onDelete: Cascade)
-  GameChanger   Usuario  @relation("GameChangerEnVision", fields: [gameChangerId], references: [id], onDelete: Cascade)
-  Vision        Vision   @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  id                                               Int      @id @default(autoincrement())
+  visionId                                         Int
+  gameChangerId                                    Int
+  asignadoPorId                                    Int
+  createdAt                                        DateTime @default(now())
+  Usuario_VisionGameChanger_asignadoPorIdToUsuario Usuario  @relation("VisionGameChanger_asignadoPorIdToUsuario", fields: [asignadoPorId], references: [id], onDelete: Cascade)
+  Usuario_VisionGameChanger_gameChangerIdToUsuario Usuario  @relation("VisionGameChanger_gameChangerIdToUsuario", fields: [gameChangerId], references: [id], onDelete: Cascade)
+  Vision                                           Vision   @relation(fields: [visionId], references: [id], onDelete: Cascade)
 
   @@unique([visionId, gameChangerId])
-  @@index([visionId])
   @@index([gameChangerId])
+  @@index([visionId])
+}
+
+model VisionMentor {
+  id                                          Int      @id @default(autoincrement())
+  visionId                                    Int
+  mentorId                                    Int
+  asignadoPorId                               Int
+  createdAt                                   DateTime @default(now())
+  Usuario_VisionMentor_asignadoPorIdToUsuario Usuario  @relation("VisionMentor_asignadoPorIdToUsuario", fields: [asignadoPorId], references: [id], onDelete: Cascade)
+  Usuario_VisionMentor_mentorIdToUsuario      Usuario  @relation("VisionMentor_mentorIdToUsuario", fields: [mentorId], references: [id], onDelete: Cascade)
+  Vision                                      Vision   @relation(fields: [visionId], references: [id], onDelete: Cascade)
+
+  @@unique([visionId, mentorId])
+  @@index([mentorId])
+  @@index([visionId])
 }
 
 model VisionParticipante {
-  id             Int      @id @default(autoincrement())
-  visionId       Int
-  participanteId Int
-  gameChangerId  Int?
-  asignadoPorId  Int?
-  createdAt      DateTime @default(now())
-  AsignadoPor    Usuario? @relation("AsignadorParticipante", fields: [asignadoPorId], references: [id], onDelete: Cascade)
-  GameChanger    Usuario? @relation("GameChangerResponsable", fields: [gameChangerId], references: [id], onDelete: Cascade)
-  Participante   Usuario  @relation("ParticipanteEnVision", fields: [participanteId], references: [id], onDelete: Cascade)
-  Vision         Vision   @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  id                                                 Int      @id @default(autoincrement())
+  visionId                                           Int
+  participanteId                                     Int
+  gameChangerId                                      Int?
+  asignadoPorId                                      Int?
+  createdAt                                          DateTime @default(now())
+  Usuario_VisionParticipante_asignadoPorIdToUsuario  Usuario? @relation("VisionParticipante_asignadoPorIdToUsuario", fields: [asignadoPorId], references: [id], onDelete: Cascade)
+  Usuario_VisionParticipante_gameChangerIdToUsuario  Usuario? @relation("VisionParticipante_gameChangerIdToUsuario", fields: [gameChangerId], references: [id], onDelete: Cascade)
+  Usuario_VisionParticipante_participanteIdToUsuario Usuario  @relation("VisionParticipante_participanteIdToUsuario", fields: [participanteId], references: [id], onDelete: Cascade)
+  Vision                                             Vision   @relation(fields: [visionId], references: [id], onDelete: Cascade)
 
   @@unique([visionId, participanteId])
 }
 
-model VisionMentor {
-  id            Int      @id @default(autoincrement())
-  visionId      Int
-  mentorId      Int
-  asignadoPorId Int
-  createdAt     DateTime @default(now())
-  AsignadoPor   Usuario  @relation("AsignadorMentor", fields: [asignadoPorId], references: [id], onDelete: Cascade)
-  Mentor        Usuario  @relation("MentorEnVision", fields: [mentorId], references: [id], onDelete: Cascade)
-  Vision        Vision   @relation("VisionMentores", fields: [visionId], references: [id], onDelete: Cascade)
-
-  @@unique([visionId, mentorId])
-  @@index([visionId])
-  @@index([mentorId])
+enum AbsenceReportStatus {
+  PENDING
+  CONFIRMED
+  DISPUTED
+  RESOLVED
+  DISMISSED
 }
 
-model QuantumPattern {
-  id              Int              @id @default(autoincrement())
-  usuarioId       Int
-  patternType     PatternType
-  confidence      Float
-  goldenTimeSlot  TimeSlot?
-  goldenDayOfWeek Int?
-  successRate     Float?
-  keystoneTaskId  Int?
-  affectedTaskId  Int?
-  correlationDiff Float?
-  cursedDay       Int?
-  failureRate     Float?
-  sampleSize      Int              @default(0)
-  lastCalculated  DateTime         @default(now())
-  isActive        Boolean          @default(true)
-  viewedByUser    Boolean          @default(false)
-  createdAt       DateTime         @default(now())
-  Insights        QuantumInsight[]
-  Usuario         Usuario          @relation("QuantumPatterns", fields: [usuarioId], references: [id], onDelete: Cascade)
-
-  @@index([usuarioId])
-  @@index([patternType])
-  @@index([confidence])
-  @@index([isActive])
+enum AdminTaskType {
+  EXTRAORDINARY
+  EVENT
 }
 
-model QuantumInsight {
-  id           Int            @id @default(autoincrement())
-  patternId    Int
-  usuarioId    Int
-  title        String
-  message      String
-  actionButton String?
-  actionUrl    String?
-  iconEmoji    String         @default("🧬")
-  chartData    Json?
-  viewed       Boolean        @default(false)
-  dismissed    Boolean        @default(false)
-  actionTaken  Boolean        @default(false)
-  viewedAt     DateTime?
-  dismissedAt  DateTime?
-  createdAt    DateTime       @default(now())
-  Pattern      QuantumPattern @relation(fields: [patternId], references: [id], onDelete: Cascade)
-  Usuario      Usuario        @relation("QuantumInsights", fields: [usuarioId], references: [id], onDelete: Cascade)
-
-  @@index([usuarioId, viewed])
-  @@index([createdAt])
-}
-
-model ArenaDuel {
-  id                Int                @id @default(autoincrement())
-  player1Id         Int
-  player2Id         Int
-  status            DuelStatus         @default(MATCHING)
-  betAmount         Int                @default(500)
-  escrowTotal       Int                @default(1000)
-  startDate         DateTime           @db.Date
-  endDate           DateTime           @db.Date
-  player1HP         Int                @default(100)
-  player2HP         Int                @default(100)
-  player1Completion Float              @default(0)
-  player2Completion Float              @default(0)
-  winnerId          Int?
-  prize             Int?
-  resolvedAt        DateTime?
-  resolutionType    ResolutionType?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  DailyUpdates      ArenaDailyUpdate[]
-  Player1           Usuario            @relation("DuelPlayer1", fields: [player1Id], references: [id], onDelete: Cascade)
-  Player2           Usuario            @relation("DuelPlayer2", fields: [player2Id], references: [id], onDelete: Cascade)
-  Winner            Usuario?           @relation("DuelWinner", fields: [winnerId], references: [id])
-  Taunts            ArenaTaunt[]
-
-  @@index([status])
-  @@index([startDate, endDate])
-  @@index([player1Id])
-  @@index([player2Id])
-}
-
-model ArenaDailyUpdate {
-  id            Int       @id @default(autoincrement())
-  duelId        Int
-  date          DateTime  @db.Date
-  player1HP     Int
-  player2HP     Int
-  player1Damage Int       @default(0)
-  player2Damage Int       @default(0)
-  player1Failed Boolean   @default(false)
-  player2Failed Boolean   @default(false)
-  narration     String?
-  createdAt     DateTime  @default(now())
-  Duel          ArenaDuel @relation(fields: [duelId], references: [id], onDelete: Cascade)
-
-  @@unique([duelId, date])
-  @@index([duelId])
-}
-
-model ArenaTaunt {
-  id            Int       @id @default(autoincrement())
-  duelId        Int
-  senderId      Int
-  receiverId    Int
-  tauntType     TauntType
-  customMessage String?
-  read          Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  Duel          ArenaDuel @relation(fields: [duelId], references: [id], onDelete: Cascade)
-  Receiver      Usuario   @relation("TauntReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
-  Sender        Usuario   @relation("TauntSender", fields: [senderId], references: [id], onDelete: Cascade)
-
-  @@index([duelId])
-  @@index([receiverId, read])
-}
-
-model ArenaQueue {
-  id        Int         @id @default(autoincrement())
-  usuarioId Int         @unique
-  userLevel String
-  timezone  String      @default("America/Mexico_City")
-  pcBalance Int
-  status    QueueStatus @default(SEARCHING)
-  enteredAt DateTime    @default(now())
-  expiresAt DateTime
-  Usuario   Usuario     @relation("ArenaQueue", fields: [usuarioId], references: [id], onDelete: Cascade)
-
-  @@index([status, userLevel])
-  @@index([expiresAt])
-}
-
-model ArenaStats {
-  id            Int       @id @default(autoincrement())
-  usuarioId     Int       @unique
-  totalDuels    Int       @default(0)
-  wins          Int       @default(0)
-  losses        Int       @default(0)
-  ties          Int       @default(0)
-  totalWagered  Int       @default(0)
-  totalWon      Int       @default(0)
-  totalLost     Int       @default(0)
-  netProfit     Int       @default(0)
-  currentStreak Int       @default(0)
-  bestStreak    Int       @default(0)
-  badges        String[]  @default([])
-  lastDuelAt    DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  Usuario       Usuario   @relation("ArenaStats", fields: [usuarioId], references: [id], onDelete: Cascade)
-
-  @@index([usuarioId])
-}
-
-model Notification {
-  id        Int              @id @default(autoincrement())
-  userId    Int
-  type      NotificationType
-  title     String
-  message   String
-  relatedId Int?
-  isRead    Boolean          @default(false)
-  createdAt DateTime         @default(now())
-  usuario   Usuario          @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, isRead])
-  @@index([createdAt])
+enum AlertType {
+  RISK_ALERT
+  MILESTONE
+  ENCOURAGEMENT
 }
 
 enum CallType {
   DISCIPLINE
   MENTORSHIP
+}
+
+enum CollectionType {
+  DAILY_PERFECT_WEEK
+  AREA_MASTERY
+  STREAK_WARRIOR
+  EVIDENCE_COLLECTOR
+  LEVEL_MILESTONE
+}
+
+enum DuelStatus {
+  MATCHING
+  ACTIVE
+  COMPLETED
+  CANCELLED
 }
 
 enum EstadoCarta {
@@ -1538,12 +1626,6 @@ enum EstadoCarta {
   RECHAZADA
 }
 
-enum EstadoItem {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
 enum EstadoEvidencia {
   PENDIENTE
   APROBADA
@@ -1551,9 +1633,10 @@ enum EstadoEvidencia {
   REQUIERE_CORRECCION
 }
 
-enum TipoRechazo {
-  DEFINITIVO
-  REQUIERE_ACTUALIZACION
+enum EstadoItem {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum EstadoLlamada {
@@ -1577,10 +1660,116 @@ enum EstadoSuscripcion {
   PRUEBA
 }
 
+enum EvidenceStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LicenseOrderStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum MentorStatus {
+  ACTIVE
+  PROBATION
+  SUSPENDED
+  UNDER_REVIEW
+}
+
+enum MentorStyle {
+  HARDCORE
+  EMPATHIC
+  BALANCED
+}
+
+enum MicroTaskType {
+  DRINK_WATER
+  READ_ONE_PAGE
+  BREATHE_TWO_MIN
+  MAKE_BED
+  WALK_5_MIN
+  STRETCH
+  CUSTOM
+}
+
 enum NivelMentor {
   JUNIOR
   SENIOR
   MASTER
+}
+
+enum NotificationType {
+  ORGANIZATION_TRANSFER
+  TASK_SUBMISSION
+  MENTOR_ASSIGNMENT
+  SYSTEM_ALERT
+  OTHER
+  AVATAR_RENEWAL_REMINDER
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  INACTIVE
+  TRIAL
+}
+
+enum PatternType {
+  GOLDEN_HOUR
+  KEYSTONE_HABIT
+  CURSED_DAY
+  STREAK_BOOSTER
+  ENERGY_PATTERN
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum QueueStatus {
+  SEARCHING
+  MATCHED
+  EXPIRED
+  CANCELLED
+}
+
+enum ReactionType {
+  FIRE
+  STRONG
+  GENIUS
+  APPLAUSE
+}
+
+enum RenewalStatus {
+  NOT_OFFERED
+  OFFERED
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+enum ResolutionType {
+  WIN
+  TIE
+  DOUBLE_KO
+}
+
+enum RewardLogic {
+  STANDARD
+  RACE
+  GROUP_ALL
+  GROUP_THRESHOLD
+  STRICT_DEADLINE
 }
 
 enum Rol {
@@ -1594,32 +1783,56 @@ enum Rol {
   SUPER_ADMIN
 }
 
-enum MentorStatus {
-  ACTIVE
-  PROBATION
-  SUSPENDED
-  UNDER_REVIEW
-}
-
-enum AbsenceReportStatus {
+enum ServiceApprovalStatus {
   PENDING
-  CONFIRMED
-  DISPUTED
-  RESOLVED
-  DISMISSED
+  APPROVED
+  REJECTED
 }
 
-enum TipoPago {
-  STRIPE
-  PAYPAL
-  PUNTOS
-  TRANSFERENCIA
+enum ServiceLevel {
+  CONTRIBUCION_NIVEL_1
+  CONTRIBUCION_NIVEL_2
+  SERVICIO_FIN_SEMANA
+  STAFF_NIVEL_1
+  STAFF_NIVEL_2
+  STAFF_NIVEL_3
 }
 
-enum TipoServicioMentoria {
-  SESION_1_1
-  PAQUETE_MENSUAL
-  CONSULTORIA_EXPRESS
+enum SocialVisibility {
+  PRIVATE
+  COMMUNITY
+  PUBLIC
+}
+
+enum SubmissionStatus {
+  PENDING
+  SUBMITTED
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum SubscriptionPlan {
+  NONE
+  MONTHLY_STANDARD
+  ANNUAL_STANDARD
+  MONTHLY_PREMIUM
+  ANNUAL_PREMIUM
+  SCHOOL_LICENSE
+}
+
+enum TargetType {
+  USER
+  GROUP
+  ALL
+}
+
+enum TaskRarity {
+  COMMON
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
 }
 
 enum TaskStatus {
@@ -1629,17 +1842,12 @@ enum TaskStatus {
   SKIPPED_GRACEFULLY
 }
 
-enum EvidenceStatus {
-  NONE
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-enum AlertType {
-  RISK_ALERT
-  MILESTONE
-  ENCOURAGEMENT
+enum TauntType {
+  NO_FALLO
+  ES_TODO
+  BUEN_TRABAJO
+  PRESION
+  VENGANZA
 }
 
 enum TimeSlot {
@@ -1652,127 +1860,22 @@ enum TimeSlot {
   LATE_NIGHT
 }
 
-enum AdminTaskType {
-  EXTRAORDINARY
-  EVENT
+enum TipoPago {
+  STRIPE
+  PAYPAL
+  PUNTOS
+  TRANSFERENCIA
 }
 
-enum RewardLogic {
-  STANDARD
-  RACE
-  GROUP_ALL
-  GROUP_THRESHOLD
-  STRICT_DEADLINE
+enum TipoRechazo {
+  DEFINITIVO
+  REQUIERE_ACTUALIZACION
 }
 
-enum TargetType {
-  USER
-  GROUP
-  ALL
-}
-
-enum SubmissionStatus {
-  PENDING
-  SUBMITTED
-  APPROVED
-  REJECTED
-  EXPIRED
-}
-
-enum TaskRarity {
-  COMMON
-  UNCOMMON
-  RARE
-  EPIC
-  LEGENDARY
-}
-
-enum CollectionType {
-  DAILY_PERFECT_WEEK
-  AREA_MASTERY
-  STREAK_WARRIOR
-  EVIDENCE_COLLECTOR
-  LEVEL_MILESTONE
-}
-
-enum ServiceLevel {
-  CONTRIBUCION_NIVEL_1
-  CONTRIBUCION_NIVEL_2
-  SERVICIO_FIN_SEMANA
-  STAFF_NIVEL_1
-  STAFF_NIVEL_2
-  STAFF_NIVEL_3
-}
-
-enum ServiceApprovalStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-enum SocialVisibility {
-  PRIVATE
-  COMMUNITY
-  PUBLIC
-}
-
-enum ReactionType {
-  FIRE
-  STRONG
-  GENIUS
-  APPLAUSE
-}
-
-enum MicroTaskType {
-  DRINK_WATER
-  READ_ONE_PAGE
-  BREATHE_TWO_MIN
-  MAKE_BED
-  WALK_5_MIN
-  STRETCH
-  CUSTOM
-}
-
-enum PatternType {
-  GOLDEN_HOUR
-  KEYSTONE_HABIT
-  CURSED_DAY
-  STREAK_BOOSTER
-  ENERGY_PATTERN
-}
-
-enum DuelStatus {
-  MATCHING
-  ACTIVE
-  COMPLETED
-  CANCELLED
-}
-
-enum ResolutionType {
-  WIN
-  TIE
-  DOUBLE_KO
-}
-
-enum QueueStatus {
-  SEARCHING
-  MATCHED
-  EXPIRED
-  CANCELLED
-}
-
-enum TauntType {
-  NO_FALLO
-  ES_TODO
-  BUEN_TRABAJO
-  PRESION
-  VENGANZA
-}
-
-enum MentorStyle {
-  HARDCORE
-  EMPATHIC
-  BALANCED
+enum TipoServicioMentoria {
+  SESION_1_1
+  PAQUETE_MENSUAL
+  CONSULTORIA_EXPRESS
 }
 
 enum UserTier {
@@ -1781,81 +1884,282 @@ enum UserTier {
   PREMIUM
 }
 
-enum SubscriptionPlan {
-  NONE
-  MONTHLY_STANDARD
-  ANNUAL_STANDARD
-  MONTHLY_PREMIUM
-  ANNUAL_PREMIUM
-  SCHOOL_LICENSE
+model PricingConfig {
+  id        Int      @id @default(autoincrement())
+  plan      String   // 'free', 'standard', 'premium'
+  currency  String   // 'MXN', 'USD'
+  period    String?  // 'bimestral', 'anual' (null for free)
+  price     Float    
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([plan, currency, period])
 }
 
-enum PaymentStatus {
-  PENDING
-  COMPLETED
-  FAILED
-  REFUNDED
-  CANCELLED
+// 🏦 TICKET 4: Organization Wallet - Billetera de la Organización
+model OrganizationWallet {
+  id                Int                      @id @default(autoincrement())
+  organizationId    Int                      @unique
+  balance           Decimal                  @default(0) @db.Decimal(10, 2)
+  currency          String                   @default("MXN")
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  
+  Organization      Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  WalletTransaction WalletTransaction[]
+
+  @@index([organizationId])
 }
 
-enum RenewalStatus {
-  NOT_OFFERED
-  OFFERED
-  ACCEPTED
-  DECLINED
-  EXPIRED
+// Historial de transacciones de la billetera
+model WalletTransaction {
+  id                 Int                @id @default(autoincrement())
+  walletId           Int
+  amount             Decimal            @db.Decimal(10, 2)
+  type               WalletTxType       // CREDIT (entrada) o DEBIT (salida)
+  source             String             // 'REFUND_DROPOUT', 'REFUND_VISION_CLOSE', 'PAYMENT_CYCLE', 'ADMIN_ADJUSTMENT'
+  description        String
+  visionId           Int?
+  studentId          Int?
+  relatedEntityId    Int?               // ID de la visión, pago, etc.
+  createdAt          DateTime           @default(now())
+  
+  OrganizationWallet OrganizationWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId])
+  @@index([visionId])
+  @@index([createdAt])
 }
 
-enum OrganizationStatus {
-  ACTIVE
-  INACTIVE
-  TRIAL
-}
+// 🧾 TICKET 1: Escrow - Bóveda de Dinero por Visión
+model VisionEscrow {
+  id                    Int              @id @default(autoincrement())
+  visionId              Int              @unique
+  totalDeposited        Decimal          @db.Decimal(10, 2) // Total depositado al inicio
+  totalPaid             Decimal          @default(0) @db.Decimal(10, 2) // Total pagado a mentores
+  remainingBalance      Decimal          @db.Decimal(10, 2) // Saldo restante
+  status                EscrowStatus     @default(ACTIVE)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  closedAt              DateTime?
+  
+  Vision                Vision           @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  MentorPayout          MentorPayout[]
 
-enum LicenseOrderStatus {
-  PENDING
-  PROCESSING
-  COMPLETED
-  FAILED
-  CANCELLED
-  REFUNDED
-}
-
-enum NotificationType {
-  ORGANIZATION_TRANSFER
-  TASK_SUBMISSION
-  MENTOR_ASSIGNMENT
-  SYSTEM_ALERT
-  AVATAR_RENEWAL_REMINDER
-  OTHER
-}
-
-model QuantumIdentity {
-  id              Int       @id @default(autoincrement())
-  userId          Int
-  candidates      Json      // Array de 3 opciones generadas
-  selectedOption  Json?     // La opción que el usuario eligió
-  status          String    @default("PENDING_SELECTION") // PENDING_SELECTION, COMPLETED
-  avatarUrl       String?   // URL del avatar generado
-  gender          String?   // male, female, neutral
-  generatedAt     DateTime  @default(now())
-  completedAt     DateTime?
-  Usuario         Usuario   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
+  @@index([visionId])
   @@index([status])
 }
 
-model AvatarGenerationAttempt {
-  id            Int       @id @default(autoincrement())
-  usuarioId     Int
-  sourceImage   String    // 'selfie' o 'generic' - No guardamos la imagen real
-  generatedUrl  String    // URL del avatar generado
-  vibe          String    @default("cyberpunk") // cyberpunk, mystic, etc
-  gender        String    // male, female, neutral
-  createdAt     DateTime  @default(now())
-  Usuario       Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+// 🧾 TICKET 2: Pagos semanales a mentores
+model MentorPayout {
+  id                  Int              @id @default(autoincrement())
+  escrowId            Int
+  mentorId            Int
+  visionId            Int
+  weekNumber          Int              // Semana del ciclo (1-16)
+  callsCompleted      Int              // Llamadas completadas/pagables
+  ratePerCall         Decimal          @db.Decimal(10, 2) // Tarifa por llamada
+  totalAmount         Decimal          @db.Decimal(10, 2) // Total a pagar
+  status              PayoutStatus     @default(PENDING)
+  generatedAt         DateTime         @default(now())
+  paidAt              DateTime?
+  paymentMethod       String?          // 'STRIPE', 'BANK_TRANSFER', 'MANUAL'
+  transactionRef      String?          // Referencia de pago externo
+  
+  VisionEscrow        VisionEscrow     @relation(fields: [escrowId], references: [id], onDelete: Cascade)
+  Usuario             Usuario          @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  PayableCall         PayableCall[]
+
+  @@index([escrowId])
+  @@index([mentorId])
+  @@index([visionId])
+  @@index([weekNumber])
+  @@index([status])
+}
+
+// Llamadas que cuentan para pago
+model PayableCall {
+  id               Int            @id @default(autoincrement())
+  payoutId         Int
+  callBookingId    Int
+  mentorId         Int
+  studentId        Int
+  visionId         Int
+  weekNumber       Int
+  callDate         DateTime
+  status           String         // 'COMPLETED', 'MISSED_BY_USER'
+  rateApplied      Decimal        @db.Decimal(10, 2)
+  createdAt        DateTime       @default(now())
+  
+  MentorPayout     MentorPayout   @relation(fields: [payoutId], references: [id], onDelete: Cascade)
+  CallBooking      CallBooking    @relation(fields: [callBookingId], references: [id], onDelete: Cascade)
+
+  @@index([payoutId])
+  @@index([callBookingId])
+  @@index([mentorId])
+  @@index([visionId])
+  @@index([weekNumber])
+}
+
+// 🐷 TICKET 3: Sistema de reembolsos por abandono
+model VisionRefund {
+  id                  Int              @id @default(autoincrement())
+  visionId            Int
+  escrowId            Int
+  studentId           Int
+  reason              RefundReason
+  callsScheduled      Int              // Total de llamadas programadas
+  callsCompleted      Int              // Llamadas ya completadas
+  callsCancelled      Int              // Llamadas canceladas (huérfanas)
+  amountRefunded      Decimal          @db.Decimal(10, 2)
+  processedAt         DateTime         @default(now())
+  droppedAt           DateTime?        // Cuando el alumno fue dado de baja
+  
+  @@index([visionId])
+  @@index([escrowId])
+  @@index([studentId])
+}
+
+// Enums para los nuevos modelos
+enum WalletTxType {
+  CREDIT  // Entrada de dinero
+  DEBIT   // Salida de dinero
+}
+
+enum EscrowStatus {
+  ACTIVE    // Ciclo en curso
+  CLOSED    // Ciclo terminado y auditado
+  CANCELLED // Ciclo cancelado
+}
+
+enum PayoutStatus {
+  PENDING     // Esperando generación de reporte
+  GENERATED   // Reporte generado, listo para pago
+  PAID        // Pagado al mentor
+  FAILED      // Fallo en el pago
+  DISPUTED    // En disputa
+}
+
+enum RefundReason {
+  STUDENT_DROPOUT        // Alumno abandonó
+  VISION_CANCELLED       // Visión cancelada
+  ADMIN_ADJUSTMENT       // Ajuste administrativo
+  MENTOR_UNAVAILABLE     // Mentor no disponible
+}
+
+// 💼 Sistema de Paquetes de Mentoría para Participantes
+model MentorPackageOrder {
+  id                  String                @id @default(cuid())
+  usuarioId           Int                   // Participante que compra
+  mentorId            Int                   // Mentor seleccionado
+  visionId            Int                   // Visión asociada
+  organizationId      Int?                  // Organización si aplica
+  cantidad            Int                   // Número de sesiones (18)
+  precioUnitario      Int                   // Precio por sesión
+  precioTotal         Int                   // Precio total del paquete
+  currency            String                @default("MXN")
+  metodoPago          String                // 'stripe', 'paypal', 'mercadopago'
+  status              PackageOrderStatus    @default(PENDING)
+  externalPaymentId   String?               // ID del pago en la pasarela
+  paymentUrl          String?               // URL de checkout
+  paidAt              DateTime?             // Fecha de pago exitoso
+  paymentData         Json?                 // Datos adicionales del pago
+  sessionScheduled    Boolean               @default(false) // Si ya se agendaron las sesiones
+  sessionsScheduledAt DateTime?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  
+  Usuario             Usuario               @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  Mentor              Usuario               @relation("MentorPackages", fields: [mentorId], references: [id], onDelete: Cascade)
+  Vision              Vision                @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  Organization        Organization?         @relation(fields: [organizationId], references: [id])
+  CallBooking         CallBooking[]         // 📦 Sesiones agendadas del paquete
+  PackageSessionCredits PackageSessionCredits? // 💳 Balance de créditos
 
   @@index([usuarioId])
-  @@index([createdAt])
+  @@index([mentorId])
+  @@index([visionId])
+  @@index([status])
+  @@index([externalPaymentId])
+}
+
+// 💳 Sistema de Créditos de Sesiones por Paquete
+model PackageSessionCredits {
+  id              String             @id @default(cuid())
+  packageOrderId  String             @unique // Relación 1:1 con paquete
+  totalSessions   Int                // Total de sesiones compradas (18)
+  usedSessions    Int                @default(0) // Sesiones consumidas
+  remainingSessions Int              // Sesiones disponibles (calculado)
+  expiresAt       DateTime?          // Fecha de expiración (opcional)
+  isActive        Boolean            @default(true) // Si el paquete está activo
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  
+  MentorPackageOrder MentorPackageOrder @relation(fields: [packageOrderId], references: [id], onDelete: Cascade)
+
+  @@index([packageOrderId])
+  @@index([isActive])
+  @@index([expiresAt])
+}
+
+enum PackageOrderStatus {
+  PENDING           // Orden creada, esperando pago
+  PROCESSING        // Procesando pago
+  COMPLETED         // Pago exitoso, paquete activado
+  FAILED            // Pago fallido
+  CANCELLED         // Orden cancelada
+  REFUNDED          // Reembolsado
+}
+
+// 💰 SISTEMA DE COMISIONES - Commission Ledger
+// Registro inmutable de pagos a mentores por servicios completados
+model CommissionLedger {
+  id               String           @id @default(cuid())
+  mentorId         Int              // Quien recibe el dinero
+  sourceType       CommissionSource // Tipo de servicio
+  sourceId         Int              // ID de la sesión/llamada
+  studentId        Int              // Cliente que pagó
+  studentName      String           // Nombre del cliente (snapshot)
+  totalAmount      Decimal          @db.Decimal(10, 2) // Lo que pagó el cliente
+  platformFee      Decimal          @db.Decimal(10, 2) // % que se queda Quantum
+  platformPercent  Int              // Porcentaje congelado al momento
+  payableAmount    Decimal          @db.Decimal(10, 2) // Lo que se paga al mentor
+  currency         String           @default("MXN")
+  status           CommissionStatus @default(PENDING)
+  serviceName      String?          // Descripción del servicio
+  scheduledAt      DateTime         // Fecha original del servicio
+  completedAt      DateTime         @default(now()) // Fecha de completado
+  paidAt           DateTime?        // Fecha de pago real al mentor
+  payoutBatchId    String?          // ID del lote de pago bancario
+  paymentMethod    String?          // stripe, paypal, transfer
+  paymentReference String?          // Referencia bancaria/transaction ID
+  notes            String?          // Notas administrativas
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  Mentor           Usuario          @relation("CommissionMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+  Student          Usuario          @relation("CommissionStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([mentorId])
+  @@index([studentId])
+  @@index([sourceType])
+  @@index([sourceId])
+  @@index([status])
+  @@index([completedAt])
+  @@index([paidAt])
+  @@index([payoutBatchId])
+}
+
+enum CommissionSource {
+  MENTORSHIP_SESSION // Sesión 1:1 de mentoría
+  DISCIPLINE_CALL    // Llamada de disciplina (15 min)
+  PACKAGE_SESSION    // Sesión dentro de paquete de 18
+}
+
+enum CommissionStatus {
+  PENDING    // Por pagar
+  PAID       // Pagado al mentor
+  CANCELLED  // Cancelado (sesión no realizada)
+  DISPUTED   // En disputa
+  REFUNDED   // Reembolsado
 }

@@ -42,7 +42,7 @@ interface Organization {
   standardLicensePrice?: number;
   premiumLicensePrice?: number;
   renewalOfferDiscount?: number;
-  SchoolAdmin: {
+  Usuario_Organization_schoolAdminIdToUsuario: {
     nombre: string;
     email: string;
   } | null;
@@ -140,9 +140,9 @@ export default function OrganizationDetailPage() {
             <div>
               <h1 className="text-4xl font-bold text-white mb-2">{organization.name}</h1>
               <p className="text-slate-400">{organization.contactEmail}</p>
-              {organization.SchoolAdmin && (
-                <p className="text-sm text-slate-500 mt-1">
-                  Director: {organization.SchoolAdmin.nombre} ({organization.SchoolAdmin.email})
+              {organization.Usuario_Organization_schoolAdminIdToUsuario && (
+                <p className="text-slate-300">
+                  Director: {organization.Usuario_Organization_schoolAdminIdToUsuario.nombre} ({organization.Usuario_Organization_schoolAdminIdToUsuario.email})
                 </p>
               )}
             </div>

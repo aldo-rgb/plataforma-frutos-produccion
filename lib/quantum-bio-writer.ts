@@ -256,7 +256,7 @@ export async function regenerateBio(
   const toneInstructions = {
     more_authoritative: 'Haz la bio MÁS DIRECTA, con más autoridad. Usa verbos de acción fuertes. Elimina cualquier suavidad.',
     more_empathic: 'Haz la bio MÁS CÁLIDA y empática. Enfócate en el acompañamiento y la comprensión.',
-    more_inspiring: 'Haz la bio MÁS INSPIRADORA. Cuenta una historia de transformación personal. Incluye desafíos superados.',
+    more_inspiring: 'Haz la bio MÁS INSPIRADORA. Cuenta una historia de transformación cuántica. Incluye desafíos superados.',
   };
 
   const prompt = `Basándote en esta entrevista, genera un perfil de mentor profesional:

@@ -1120,7 +1120,7 @@ export default function VisionDetailPage() {
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-semibold transition-colors"
             >
               <Users size={16} />
-              Agregar Team
+              Agregar Game Changer
             </button>
             <button
               onClick={() => setShowAddModal(true)}

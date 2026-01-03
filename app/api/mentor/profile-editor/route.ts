@@ -38,11 +38,14 @@ export async function GET(request: Request) {
             logros: true,
             experienciaAnios: true,
             precioBase: true,
+            precioDisciplina: true,
             disponible: true,
             comisionMentor: true,
             comisionPlataforma: true,
             enlaceVideoLlamada: true,
-            tipoVideoLlamada: true
+            tipoVideoLlamada: true,
+            maxDisciplineClients: true,
+            acceptingNewClients: true
           }
         }
       }
@@ -121,6 +124,9 @@ export async function PUT(request: Request) {
       if (perfilMentorData.precioBase !== undefined) {
         perfilMentorData.precioBase = Number(perfilMentorData.precioBase);
       }
+      if (perfilMentorData.precioDisciplina !== undefined) {
+        perfilMentorData.precioDisciplina = Number(perfilMentorData.precioDisciplina);
+      }
 
       // Verificar si existe el perfil de mentor
       const perfilExiste = await prisma.perfilMentor.findUnique({
@@ -141,9 +147,12 @@ export async function PUT(request: Request) {
             logros: perfilMentorData.logros,
             experienciaAnios: perfilMentorData.experienciaAnios,
             precioBase: perfilMentorData.precioBase,
+            precioDisciplina: perfilMentorData.precioDisciplina,
             disponible: perfilMentorData.disponible,
             enlaceVideoLlamada: perfilMentorData.enlaceVideoLlamada,
             tipoVideoLlamada: perfilMentorData.tipoVideoLlamada,
+            maxDisciplineClients: perfilMentorData.maxDisciplineClients !== undefined ? Number(perfilMentorData.maxDisciplineClients) : undefined,
+            acceptingNewClients: perfilMentorData.acceptingNewClients,
             updatedAt: new Date()
           }
         });
@@ -200,11 +209,14 @@ export async function PUT(request: Request) {
             logros: perfilMentorData.logros || [],
             experienciaAnios: perfilMentorData.experienciaAnios || 0,
             precioBase: perfilMentorData.precioBase || 1000,
+            precioDisciplina: perfilMentorData.precioDisciplina || 90,
             disponible: perfilMentorData.disponible !== undefined ? perfilMentorData.disponible : true,
             comisionMentor: perfilMentorData.comisionMentor || 70,
             comisionPlataforma: perfilMentorData.comisionPlataforma || 30,
             enlaceVideoLlamada: perfilMentorData.enlaceVideoLlamada,
-            tipoVideoLlamada: perfilMentorData.tipoVideoLlamada
+            tipoVideoLlamada: perfilMentorData.tipoVideoLlamada,
+            maxDisciplineClients: perfilMentorData.maxDisciplineClients !== undefined ? Number(perfilMentorData.maxDisciplineClients) : 10,
+            acceptingNewClients: perfilMentorData.acceptingNewClients !== undefined ? perfilMentorData.acceptingNewClients : true
           }
         });
 

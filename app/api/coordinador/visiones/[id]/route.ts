@@ -31,7 +31,7 @@ export async function GET(
     const vision = await prisma.vision.findUnique({
       where: { id: visionId },
       include: {
-        Coordinador: {
+        Usuario: {
           select: {
             id: true,
             nombre: true,
@@ -40,8 +40,9 @@ export async function GET(
         },
         _count: {
           select: {
-            Participantes: true,
-            GameChangers: true,
+            VisionParticipante: true,
+            VisionGameChanger: true,
+            VisionMentor: true,
           },
         },
       },
@@ -66,7 +67,7 @@ export async function GET(
     const participantes = await prisma.visionParticipante.findMany({
       where: { visionId },
       include: {
-        Participante: {
+        Usuario_VisionParticipante_participanteIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -104,7 +105,7 @@ export async function GET(
             }
           },
         },
-        GameChanger: {
+        Usuario_VisionParticipante_gameChangerIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -122,7 +123,7 @@ export async function GET(
     const gameChangers = await prisma.visionGameChanger.findMany({
       where: { visionId },
       include: {
-        GameChanger: {
+        Usuario_VisionGameChanger_gameChangerIdToUsuario: {
           select: {
             id: true,
             nombre: true,

@@ -36,7 +36,7 @@ export async function GET(
     const mentoresAsignados = await prisma.visionMentor.findMany({
       where: { visionId },
       include: {
-        Mentor: {
+        Usuario_VisionMentor_mentorIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -66,16 +66,17 @@ export async function GET(
 
     // Filtrar solo mentores asignados que tengan horarios de disciplina válidos (05:00-08:00)
     const mentoresAsignadosConHorarios = mentoresAsignados.filter((vm: any) => {
-      return vm.Mentor.CallAvailability.some((ca: any) => 
+      return vm.Usuario_VisionMentor_mentorIdToUsuario.CallAvailability.some((ca: any) => 
         esHorarioDisciplinaValido(ca.startTime, ca.endTime)
       );
     });
 
-    // Obtener todos los mentores activos (sin importar organización)
+    // Obtener solo líderes activos de la misma organización que la visión
     const mentoresDisponibles = await prisma.usuario.findMany({
       where: {
-        rol: 'MENTOR',
-        isActive: true
+        rol: 'LIDER',
+        isActive: true,
+        organizationId: vision.organizationId
       },
       select: {
         id: true,
@@ -105,7 +106,7 @@ export async function GET(
       mentoresAsignados: mentoresAsignadosConHorarios.map((vm: any) => ({
         id: vm.id,
         mentorId: vm.mentorId,
-        mentor: vm.Mentor,
+        mentor: vm.Usuario_VisionMentor_mentorIdToUsuario,
         tieneHorarios: true, // Siempre true porque ya filtramos
         createdAt: vm.createdAt
       })),

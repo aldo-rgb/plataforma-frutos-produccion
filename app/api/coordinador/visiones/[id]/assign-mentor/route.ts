@@ -96,13 +96,6 @@ export async function POST(
     // Verificar licencia (ya sea directo o a través de LicenseAssignments)
     const hasLicense = usuario.licenseCode || (usuario.LicenseAssignments && usuario.LicenseAssignments.length > 0);
     
-    if (!hasLicense) {
-      return NextResponse.json(
-        { error: 'El usuario debe tener una licencia asignada antes de poder asignar un mentor' },
-        { status: 400 }
-      );
-    }
-
     // Verificar si el usuario ya tenía un mentor asignado (cambio de mentor)
     const hadPreviousMentor = usuario.assignedMentorId !== null;
     let cancelledCalls = 0;

@@ -19,6 +19,10 @@ interface GlobalProgressHeroProps {
   completedMetas?: number;
   areas?: string[];
   areaProgress?: AreaProgress[];
+  cycleStartDate?: Date | null;
+  cycleEndDate?: Date | null;
+  totalWeeks?: number | null;
+  totalCalls?: number | null;
 }
 
 export default function GlobalProgressHero({ 
@@ -27,13 +31,17 @@ export default function GlobalProgressHero({
   totalMetas = 6,
   completedMetas = 3,
   areas = ['Finanzas', 'Relaciones', 'Talentos', 'Paz Mental', 'Ocio', 'Salud'],
-  areaProgress = []
+  areaProgress = [],
+  cycleStartDate = null,
+  cycleEndDate = null,
+  totalWeeks = null,
+  totalCalls = null
 }: GlobalProgressHeroProps) {
   const router = useRouter();
 
   return (
     <div 
-      onClick={() => router.push('/dashboard/carta')}
+      onClick={() => router.push('/dashboard/progreso-frutos')}
       className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 border border-slate-800 p-8 shadow-2xl cursor-pointer group hover:border-purple-500/50 transition-all duration-300"
     >
       {/* Decoración de fondo animada */}
@@ -43,13 +51,40 @@ export default function GlobalProgressHero({
       <div className="relative z-10">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <div>
+          <div className="flex-1">
             <h2 className="text-2xl md:text-3xl font-bold text-slate-100 mb-1">
-              Nivel de Maestría F.R.U.T.O.S.
+              Progreso de tus objetivos
             </h2>
-            <p className="text-slate-400 text-sm md:text-base">
+            <p className="text-slate-400 text-sm md:text-base mb-2">
               {label}
             </p>
+            {cycleStartDate && cycleEndDate && (
+              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                <div className="flex items-center gap-1">
+                  <span className="font-medium text-slate-400">📅 Inicio:</span>
+                  <span>{new Date(cycleStartDate).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                </div>
+                <div className="h-3 w-px bg-slate-700" />
+                <div className="flex items-center gap-1">
+                  <span className="font-medium text-slate-400">🎯 Final:</span>
+                  <span>{new Date(cycleEndDate).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                </div>
+                {totalWeeks && totalCalls && (
+                  <>
+                    <div className="h-3 w-px bg-slate-700" />
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium text-slate-400">⏱️</span>
+                      <span>{totalWeeks} semanas</span>
+                    </div>
+                    <div className="h-3 w-px bg-slate-700" />
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium text-slate-400">📞</span>
+                      <span>{totalCalls} llamadas</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2 text-purple-400 group-hover:text-purple-300 transition-colors">
             <span className="text-sm font-medium hidden md:inline">Ver Detalles</span>

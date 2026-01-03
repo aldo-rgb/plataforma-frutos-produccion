@@ -18,6 +18,7 @@ interface ConfiguradorAccionIterativoProps {
   totalMetas: number;
   areaName: string;
   areaEmoji: string;
+  visionEndDate?: string | null;
   initialConfig?: FrequencyConfig;
   suggestedConfig?: {
     frequency?: 'DAILY' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY' | 'UNIQUE';
@@ -37,6 +38,7 @@ export default function ConfiguradorAccionIterativo({
   totalMetas,
   areaName,
   areaEmoji,
+  visionEndDate,
   initialConfig,
   suggestedConfig,
   onSave,
@@ -48,8 +50,13 @@ export default function ConfiguradorAccionIterativo({
     metaDescription,
     suggestedConfig,
     metaIndex,
-    totalMetas
+    totalMetas,
+    visionEndDate
   });
+
+  // Convertir visionEndDate al formato correcto para el input date (YYYY-MM-DD)
+  const maxDate = visionEndDate ? new Date(visionEndDate).toISOString().split('T')[0] : undefined;
+  console.log('📅 Fecha máxima permitida:', maxDate);
 
   // Mapear UNIQUE a ONE_TIME
   const mapFrequency = (freq?: string): FrequencyConfig['type'] | null => {
@@ -182,6 +189,9 @@ export default function ConfiguradorAccionIterativo({
     setGuardando(false);
     setGuardado(true);
     
+    // Scroll to top para mostrar el objetivo
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
     // Esperar un poco antes de continuar para mostrar el checkmark
     await new Promise(resolve => setTimeout(resolve, 600));
     onNext();
@@ -199,9 +209,6 @@ export default function ConfiguradorAccionIterativo({
               <span className="bg-purple-600/30 text-purple-300 text-xs font-bold px-3 py-1 rounded-full">
                 Meta {metaIndex} de {totalMetas}
               </span>
-            </div>
-            <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-3 mb-3">
-              <p className="text-sm text-gray-300 italic leading-relaxed">"{metaDescription}"</p>
             </div>
             <p className="text-sm text-purple-300">
               💡 Define con qué frecuencia trabajarás esta meta
@@ -509,17 +516,63 @@ export default function ConfiguradorAccionIterativo({
             <h3 className="text-white font-bold">Paso 2: ¿Para cuándo debe estar completada?</h3>
           </div>
 
-          <div className="bg-[#252836] p-5 rounded-xl border border-gray-700">
-            <label className="text-gray-300 text-sm font-medium block mb-3">
-              📆 Fecha límite:
+          <div className="bg-gradient-to-br from-blue-900/20 to-purple-900/20 p-6 rounded-xl border border-blue-500/30">
+            <label className="text-blue-300 text-xl font-bold block mb-4 flex items-center gap-2">
+              <span className="text-3xl">📆</span>
+              Fecha límite:
             </label>
-            <input
-              type="date"
-              value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
-              className="w-full bg-gray-800 text-white px-4 py-3 rounded-lg border border-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
-              min={new Date().toISOString().split('T')[0]}
-            />
+            
+            {/* Input de fecha con calendario más grande */}
+            <div className="relative">
+              <input
+                type="date"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+                className="w-full bg-slate-800 text-white text-2xl font-bold px-8 py-6 rounded-xl border-2 border-slate-700 hover:border-blue-500 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 outline-none transition-all cursor-pointer
+                [&::-webkit-calendar-picker-indicator]:cursor-pointer
+                [&::-webkit-calendar-picker-indicator]:w-12
+                [&::-webkit-calendar-picker-indicator]:h-12
+                [&::-webkit-calendar-picker-indicator]:opacity-100
+                [&::-webkit-calendar-picker-indicator]:hover:opacity-80
+                [&::-webkit-calendar-picker-indicator]:bg-blue-500
+                [&::-webkit-calendar-picker-indicator]:rounded-lg
+                [&::-webkit-calendar-picker-indicator]:p-2
+                [&::-webkit-calendar-picker-indicator]:filter
+                [&::-webkit-calendar-picker-indicator]:invert
+                [&::-webkit-calendar-picker-indicator]:scale-150"
+                min={new Date().toISOString().split('T')[0]}
+                max={maxDate}
+              />
+              {maxDate && (
+                <p className="text-yellow-300 text-xs mt-2 flex items-center gap-1">
+                  <span>⚠️</span>
+                  <span>La fecha límite no puede ser posterior al fin de la visión: {new Date(maxDate + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                </p>
+              )}
+            </div>
+
+            {/* Vista previa de la fecha seleccionada */}
+            {deadline && (
+              <div className="mt-6 bg-blue-500/10 border border-blue-500/30 rounded-lg p-5 animate-in slide-in-from-bottom-2">
+                <div className="flex items-center gap-4">
+                  <div className="text-4xl">✅</div>
+                  <div className="flex-1">
+                    <p className="text-blue-300 font-bold text-base mb-2">Fecha límite establecida:</p>
+                    <p className="text-white font-bold text-xl">
+                      {new Date(deadline + 'T00:00:00').toLocaleDateString('es-ES', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
+                    <p className="text-blue-200 text-sm mt-2">
+                      📍 Faltan {Math.ceil((new Date(deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} días
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

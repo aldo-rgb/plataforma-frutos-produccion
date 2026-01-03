@@ -15,24 +15,36 @@ export async function POST(req: Request) {
       where: { email: session.user.email }
     });
 
-    if (!mentor || mentor.rol !== 'MENTOR') {
+    if (!mentor || (mentor.rol !== 'MENTOR' && mentor.rol !== 'LIDER')) {
       return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
     }
 
     const { bookingId, present } = await req.json();
 
-    // 1. Obtener info de la cita y del programa asociado
+    console.log('📞 Procesando asistencia:', { bookingId, present, mentorId: mentor.id });
+
+    // 1. Obtener info de la cita
     const booking: any = await prisma.callBooking.findUnique({
       where: { id: bookingId },
       include: { 
         ProgramEnrollment: true,
         Usuario_CallBooking_studentIdToUsuario: {
-          select: { nombre: true }
+          select: { nombre: true, email: true, id: true }
         }
       } as any
     });
 
+    console.log('📋 Booking encontrado:', booking ? {
+      id: booking.id,
+      studentId: booking.studentId,
+      mentorId: booking.mentorId,
+      type: booking.type,
+      hasProgramEnrollment: !!booking.ProgramEnrollment,
+      programEnrollmentId: booking.programEnrollmentId
+    } : 'NULL');
+
     if (!booking) {
+      console.error('❌ Booking no encontrado:', bookingId);
       return NextResponse.json({ error: 'Cita no encontrada' }, { status: 404 });
     }
 

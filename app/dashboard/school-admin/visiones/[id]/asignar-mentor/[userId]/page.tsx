@@ -335,6 +335,12 @@ export default function AsignarMentorPage() {
             <div className="p-6 space-y-3">
               {mentoresAsignados.map((mentorAsignado) => {
                 const mentor = mentorAsignado.mentor;
+                
+                // Skip if mentor data is missing
+                if (!mentor) {
+                  return null;
+                }
+                
                 const isSelected = usuario.assignedMentorId === mentor.id;
                 
                 return (

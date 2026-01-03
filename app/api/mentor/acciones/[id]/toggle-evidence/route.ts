@@ -22,7 +22,7 @@ export async function PATCH(
       select: { rol: true }
     });
 
-    if (!usuario || usuario.rol !== 'MENTOR') {
+    if (!usuario || (usuario.rol !== 'MENTOR' && usuario.rol !== 'LIDER')) {
       return NextResponse.json(
         { error: 'Solo los mentores pueden configurar evidencias' },
         { status: 403 }

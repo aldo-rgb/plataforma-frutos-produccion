@@ -41,7 +41,7 @@ export default function VisionesCoordinadorPage() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
-    } else if (session?.user?.rol !== 'COORDINADOR') {
+    } else if (session?.user?.rol !== 'COORDINADOR' && session?.user?.rol !== 'SCHOOL_ADMIN') {
       router.push('/dashboard');
     } else {
       fetchVisiones();
@@ -51,14 +51,24 @@ export default function VisionesCoordinadorPage() {
   const fetchVisiones = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Fetching visiones para coordinador...');
       const res = await fetch('/api/coordinador/visiones');
       const data = await res.json();
 
+      console.log('📦 Respuesta del servidor:', {
+        success: data.success,
+        visionesCount: data.visiones?.length || 0,
+        visiones: data.visiones
+      });
+
       if (data.success) {
         setVisiones(data.visiones);
+        console.log('✅ Visiones cargadas:', data.visiones.length);
+      } else {
+        console.error('❌ Error en la respuesta:', data);
       }
     } catch (error) {
-      console.error('Error fetching visiones:', error);
+      console.error('❌ Error fetching visiones:', error);
     } finally {
       setLoading(false);
     }

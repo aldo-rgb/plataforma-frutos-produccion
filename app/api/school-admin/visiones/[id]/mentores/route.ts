@@ -36,13 +36,14 @@ export async function GET(
     const mentoresAsignados = await prisma.visionMentor.findMany({
       where: { visionId },
       include: {
-        Mentor: {
+        Usuario_VisionMentor_mentorIdToUsuario: {
           select: {
             id: true,
             nombre: true,
             email: true,
             imagen: true,
             isActive: true,
+            rol: true,
             PerfilMentor: true,
             CallAvailability: {
               where: {
@@ -66,13 +67,13 @@ export async function GET(
 
     // Filtrar solo mentores asignados que tengan horarios de disciplina válidos (05:00-08:00)
     const mentoresAsignadosConHorarios = mentoresAsignados.filter((vm: any) => {
-      return vm.Mentor.CallAvailability.some((ca: any) => 
+      return vm.Usuario_VisionMentor_mentorIdToUsuario.CallAvailability.some((ca: any) => 
         esHorarioDisciplinaValido(ca.startTime, ca.endTime)
       );
     });
 
-    // Obtener todos los mentores activos (sin importar organización)
-    const mentoresDisponibles = await prisma.usuario.findMany({
+    // Obtener mentores activos (sin importar organización)
+    const mentoresActivos = await prisma.usuario.findMany({
       where: {
         rol: 'MENTOR',
         isActive: true
@@ -83,7 +84,18 @@ export async function GET(
         email: true,
         imagen: true,
         isActive: true,
-        PerfilMentor: true,
+        rol: true,
+        accumulatedMissedCalls: true,
+        PerfilMentor: {
+          select: {
+            id: true,
+            precioDisciplina: true,
+            precioBase: true,
+            calificacionPromedio: true,
+            totalResenas: true,
+            nivel: true,
+          }
+        },
         CallAvailability: {
           where: {
             type: 'DISCIPLINE',
@@ -94,8 +106,46 @@ export async function GET(
       orderBy: { nombre: 'asc' }
     });
 
-    // Filtrar solo mentores con horarios de disciplina válidos en el rango 05:00-08:00
-    const mentoresConHorarios = mentoresDisponibles.filter((m: any) => {
+    // Obtener líderes activos de la misma organización
+    const lideresActivos = await prisma.usuario.findMany({
+      where: {
+        rol: 'LIDER',
+        isActive: true,
+        organizationId: vision.organizationId
+      },
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        imagen: true,
+        isActive: true,
+        rol: true,
+        accumulatedMissedCalls: true,
+        PerfilMentor: {
+          select: {
+            id: true,
+            precioDisciplina: true,
+            precioBase: true,
+            calificacionPromedio: true,
+            totalResenas: true,
+            nivel: true,
+          }
+        },
+        CallAvailability: {
+          where: {
+            type: 'DISCIPLINE',
+            isActive: true
+          }
+        }
+      },
+      orderBy: { nombre: 'asc' }
+    });
+
+    // Combinar mentores y líderes
+    const todosDisponibles = [...mentoresActivos, ...lideresActivos];
+
+    // Filtrar solo usuarios con horarios de disciplina válidos en el rango 05:00-08:00
+    const mentoresConHorarios = todosDisponibles.filter((m: any) => {
       return m.CallAvailability.some((ca: any) => 
         esHorarioDisciplinaValido(ca.startTime, ca.endTime)
       );
@@ -107,7 +157,11 @@ export async function GET(
         mentorId: vm.mentorId,
         mentor: vm.Mentor,
         tieneHorarios: true, // Siempre true porque ya filtramos
-        createdAt: vm.createdAt
+        createdAt: vm.createdAt,
+        Usuario_VisionMentor_mentorIdToUsuario: {
+          ...vm.Mentor,
+          rol: vm.Mentor?.rol // Incluir rol del mentor
+        }
       })),
       mentoresDisponibles: mentoresConHorarios.map(m => ({
         id: m.id,
@@ -115,8 +169,10 @@ export async function GET(
         email: m.email,
         imagen: m.imagen,
         isActive: m.isActive,
-        perfilMentor: m.PerfilMentor,
-        tieneHorarios: true // Siempre true porque ya filtramos
+        accumulatedMissedCalls: m.accumulatedMissedCalls || 0,
+        PerfilMentor: m.PerfilMentor,
+        tieneHorarios: true, // Siempre true porque ya filtramos
+        rol: m.rol // Incluir rol para identificar LIDERs
       }))
     });
 
@@ -147,11 +203,11 @@ export async function POST(
       );
     }
 
-    // Verificar que el mentor existe, está activo y es de la organización
+    // Verificar que el mentor existe, está activo y tiene rol MENTOR o LIDER
     const mentor = await prisma.usuario.findFirst({
       where: {
         id: mentorId,
-        rol: 'MENTOR',
+        rol: { in: ['MENTOR', 'LIDER'] },
         isActive: true
       },
       include: {
@@ -166,7 +222,7 @@ export async function POST(
 
     if (!mentor) {
       return NextResponse.json(
-        { error: 'Mentor no encontrado o no está activo' },
+        { error: 'Usuario no encontrado, no está activo o no tiene permisos de mentor' },
         { status: 404 }
       );
     }
@@ -222,7 +278,7 @@ export async function POST(
         asignadoPorId
       },
       include: {
-        Mentor: {
+        Usuario_VisionMentor_mentorIdToUsuario: {
           select: {
             id: true,
             nombre: true,

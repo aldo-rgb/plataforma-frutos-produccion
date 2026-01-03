@@ -20,7 +20,7 @@ export async function POST() {
     }
 
     // Verificar que sea MENTOR
-    if (session.user.rol !== 'MENTOR') {
+    if (session.user.rol !== 'MENTOR' && session.user.rol !== 'LIDER') {
       return NextResponse.json(
         { error: 'Solo mentores pueden usar esta función' },
         { status: 403 }

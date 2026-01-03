@@ -13,7 +13,7 @@ interface SelfieAvatarCaptureProps {
     designation: string;
     rationale: string;
     visual_tags: string[];
-    archetype: 'CEREBRAL' | 'PHYSICAL' | 'LEADER';
+    archetype: 'DIRECTOR' | 'ARCHITECT' | 'CURATOR' | 'MODELER' | 'OVERSEER' | 'STRATEGIST' | 'ENGINEER' | 'ANALYST' | 'ARCHIVIST' | 'SENTINEL' | 'OBSERVER' | 'INTERFACE';
   };
   identityId?: number;
 }

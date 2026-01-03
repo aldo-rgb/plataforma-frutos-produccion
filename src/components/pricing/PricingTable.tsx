@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Check, Sparkles, Zap } from 'lucide-react';
-import { PRICING_TIERS } from '@/types/pricing';
+import { PRICING_TIERS } from '@/src/types/pricing';
 
 interface PricingTableProps {
   onSelectPlan?: (plan: 'ANNUAL_STANDARD' | 'ANNUAL_PREMIUM' | 'MONTHLY_STANDARD' | 'MONTHLY_PREMIUM') => void;

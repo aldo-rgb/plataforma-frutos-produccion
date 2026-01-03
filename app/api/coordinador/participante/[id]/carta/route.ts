@@ -60,7 +60,7 @@ export async function GET(
             email: true
           }
         },
-        ProgramEnrollment_ProgramEnrollment_userIdToUsuario: {
+        VisionParticipante_ParticipanteEnVision: {
           include: {
             Vision: {
               select: {
@@ -70,7 +70,7 @@ export async function GET(
                 forceTransformationArea: true,
                 forceCommunityServiceArea: true,
                 organizationId: true,
-                estado: true
+                isActive: true
               }
             }
           }
@@ -86,7 +86,7 @@ export async function GET(
     }
 
     // Verificar acceso del coordinador
-    const hasAccess = participante.ProgramEnrollment_ProgramEnrollment_userIdToUsuario.some(
+    const hasAccess = participante.VisionParticipante_ParticipanteEnVision.some(
       (enrollment: any) => 
         enrollment.Vision.coordinadorId === coordinador.id ||
         (coordinador.organizationId && enrollment.Vision.organizationId === coordinador.organizationId)
@@ -122,7 +122,7 @@ export async function GET(
     }
 
     // Obtener configuración de la visión (si hay enrollment activo)
-    const activeEnrollment = participante.ProgramEnrollment_ProgramEnrollment_userIdToUsuario.find((e: any) => e.Vision.estado === 'ACTIVA');
+    const activeEnrollment = participante.VisionParticipante_ParticipanteEnVision.find((e: any) => e.Vision.isActive);
     const visionConfig = activeEnrollment?.Vision || null;
 
     return NextResponse.json({

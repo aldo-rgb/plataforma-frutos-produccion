@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       where: { id: session.user.id }
     });
 
-    if (!mentor || mentor.rol !== 'MENTOR') {
+    if (!mentor || (mentor.rol !== 'MENTOR' && mentor.rol !== 'LIDER')) {
       return NextResponse.json({ error: 'Usuario no es mentor' }, { status: 403 });
     }
 

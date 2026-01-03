@@ -28,9 +28,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // Obtener historial de reportes si es mentor
+    // Obtener historial de reportes si es mentor o líder
     let reports = [];
-    if (user.rol === 'MENTOR') {
+    if (user.rol === 'MENTOR' || user.rol === 'LIDER') {
       reports = await prisma.mentorAbsenceReport.findMany({
         where: { mentorId: user.id },
         include: {

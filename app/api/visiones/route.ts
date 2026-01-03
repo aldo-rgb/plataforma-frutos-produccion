@@ -6,8 +6,11 @@ import { prisma } from '@/lib/prisma';
 /**
  * GET /api/visiones
  * Obtiene lista de todas las visiones
+ * Query params:
+ *  - activeOnly: boolean - Solo visiones activas
+ *  - detailed: boolean - Incluir información detallada
  */
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     
@@ -15,24 +18,48 @@ export async function GET() {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
-    console.log('👁️ Cargando visiones...');
+    const { searchParams } = new URL(request.url);
+    const activeOnly = searchParams.get('activeOnly') === 'true';
+    const detailed = searchParams.get('detailed') === 'true';
 
-    // Obtener todas las visiones con conteo de participantes
+    console.log('👁️ Cargando visiones...', { activeOnly, detailed });
+
+    // Construir la consulta según los parámetros
+    const whereClause: any = {};
+    if (activeOnly) {
+      whereClause.isActive = true;
+    }
+
+    // Obtener todas las visiones con información completa
     const visiones = await prisma.vision.findMany({
       select: {
         id: true,
         nombre: true,
         descripcion: true,
         isActive: true,
+        startDate: true,
+        endDate: true,
+        maxParticipantes: true,
+        licensesAllocated: true,
+        organizationId: true,
+        coordinadorId: true,
+        createdAt: true,
+        Coordinador: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true
+          }
+        },
         _count: {
           select: {
-            Participantes: true
+            Participantes: true,
+            Mentores: true,
+            GameChangers: true
           }
         }
       },
-      where: {
-        isActive: true
-      },
+      where: whereClause,
       orderBy: {
         nombre: 'asc'
       }
@@ -40,13 +67,22 @@ export async function GET() {
 
     console.log(`✅ ${visiones.length} visiones encontradas`);
 
+    // Si solo necesita info básica (para selectores)
+    if (!detailed) {
+      return NextResponse.json({
+        success: true,
+        visiones: visiones.map(vision => ({
+          id: vision.id,
+          nombre: vision.nombre,
+          totalParticipantes: vision._count.Participantes
+        }))
+      });
+    }
+
+    // Devolver información completa
     return NextResponse.json({
       success: true,
-      visiones: visiones.map(vision => ({
-        id: vision.id,
-        nombre: vision.nombre,
-        totalParticipantes: vision._count.Participantes
-      }))
+      visiones
     });
 
   } catch (error) {

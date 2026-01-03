@@ -1,7 +1,7 @@
 /**
- * Script de Actualización: Cambiar ciclos de 100 a 90 días
+ * Script de Actualización: Cambiar ciclos de 100 a 63 días
  * 
- * Este script actualiza los ciclos existentes para que duren 90 días en lugar de 100
+ * Este script actualiza los ciclos existentes para que duren 63 días en lugar de 100
  */
 
 const { PrismaClient } = require('@prisma/client');
@@ -44,15 +44,15 @@ async function actualizarDuracionCiclos() {
       try {
         const usuario = ciclo.Usuario_ProgramEnrollment_userIdToUsuario;
         
-        // Recalcular fecha de fin: startDate + 90 días
-        const nuevaFechaFin = addDays(ciclo.cycleStartDate, 90);
+        // Recalcular fecha de fin: startDate + 63 días
+        const nuevaFechaFin = addDays(ciclo.cycleStartDate, 63);
 
         await prisma.programEnrollment.update({
           where: { id: ciclo.id },
           data: {
             cycleEndDate: nuevaFechaFin,
             endDate: nuevaFechaFin, // Legacy field
-            totalWeeks: 13 // ~90 días = 13 semanas
+            totalWeeks: 9 // ~63 días = 9 semanas
           }
         });
 
@@ -70,7 +70,7 @@ async function actualizarDuracionCiclos() {
     console.log(`   ✅ Ciclos actualizados: ${actualizados}`);
     console.log(`   ❌ Errores: ${errores}`);
     console.log(`   📊 Total procesados: ${ciclosActivos.length}`);
-    console.log(`\n🎯 Todos los ciclos ahora duran 90 días`);
+    console.log(`\n🎯 Todos los ciclos ahora duran 63 días`);
 
   } catch (error) {
     console.error('❌ Error en el proceso de actualización:', error);

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 
 /**
  * GET /api/quantum-ia/recommendation
@@ -20,7 +20,7 @@ export async function GET() {
     const usuario = await prisma.usuario.findUnique({
       where: { id: userId },
       include: {
-        Carta: {
+        CartaFrutos: {
           include: {
             Meta: true
           }
@@ -69,15 +69,15 @@ export async function GET() {
     });
 
     // Verificar estado de la carta
-    const cartaEstado = usuario.Carta?.[0]?.estado;
-    const tieneMetas = usuario.Carta?.[0]?.Meta?.length || 0;
+    const cartaEstado = usuario.CartaFrutos?.[0]?.estado;
+    const tieneMetas = usuario.CartaFrutos?.[0]?.Meta?.length || 0;
 
     // Generar recomendación basada en prioridades
     let message = '';
     let emoji = '💡';
 
     // Prioridad 1: Carta sin crear o en borrador
-    if (!usuario.Carta || usuario.Carta.length === 0) {
+    if (!usuario.CartaFrutos || usuario.CartaFrutos.length === 0) {
       message = 'Crea tu Carta F.R.U.T.O.S. para comenzar a ganar puntos y definir tus objetivos ✨';
       emoji = '🎯';
     } else if (cartaEstado === 'BORRADOR' || tieneMetas === 0) {

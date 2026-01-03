@@ -39,15 +39,18 @@ export async function GET() {
         organizationId: usuario.organizationId
       },
       include: {
-        _count: {
+        Usuario: {
           select: {
-            Participantes: true,
-            GameChangers: true
+            id: true,
+            nombre: true,
+            email: true
           }
         },
-        Organization: {
+        _count: {
           select: {
-            name: true
+            VisionParticipante: true,
+            VisionGameChanger: true,
+            VisionMentor: true
           }
         }
       },
@@ -60,18 +63,17 @@ export async function GET() {
     console.log('📋 Detalle de visiones:', visiones.map(v => ({
       id: v.id,
       nombre: v.nombre,
+      isActive: v.isActive,
       organizationId: v.organizationId,
-      organization: v.Organization?.name,
-      participantes: v._count.Participantes + v._count.GameChangers
+      coordinador: v.Usuario?.nombre,
+      participantes: v._count.VisionParticipante,
+      mentores: v._count.VisionMentor,
+      gamechangers: v._count.VisionGameChanger
     })));
 
     return NextResponse.json({
       success: true,
-      visiones: visiones.map(v => ({
-        id: v.id,
-        nombre: v.nombre,
-        totalParticipantes: v._count.Participantes + v._count.GameChangers
-      }))
+      visiones
     });
   } catch (error) {
     console.error('❌ Error fetching director visiones:', error);

@@ -28,7 +28,7 @@ export async function evaluarCalidadEvidencia(
 ): Promise<QualityEvaluation> {
   
   try {
-    const systemPrompt = `Eres QUANTUM, el Curador del Archivo Eterno. Tu misión es evaluar la CALIDAD de Artefactos de Verdad (evidencias fotográficas de transformación personal).
+    const systemPrompt = `Eres QUANTUM, el Curador del Archivo Eterno. Tu misión es evaluar la CALIDAD de Artefactos de Verdad (evidencias fotográficas de transformación cuantica).
 
 ## TU FILOSOFÍA
 "Lo que no se captura con VERDAD, no merece ser preservado para la eternidad."

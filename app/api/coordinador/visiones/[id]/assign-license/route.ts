@@ -92,10 +92,25 @@ export async function POST(
     // Verificar que el participante no tiene ya una licencia
     const participante = await prisma.usuario.findUnique({
       where: { id: participanteId },
-      select: { licenseCode: true, tier: true },
+      select: { 
+        licenseCode: true, 
+        tier: true,
+        LicenseAssignments: {
+          where: {
+            isActive: true
+          }
+        }
+      },
     });
 
-    if (participante?.licenseCode) {
+    if (!participante) {
+      return NextResponse.json(
+        { success: false, error: 'El participante no existe' },
+        { status: 404 }
+      );
+    }
+
+    if (participante?.licenseCode || (participante?.LicenseAssignments && participante.LicenseAssignments.length > 0)) {
       return NextResponse.json(
         { success: false, error: 'El participante ya tiene una licencia asignada' },
         { status: 400 }
@@ -154,49 +169,54 @@ export async function POST(
 
     // Realizar la transacción: asignar licencia y actualizar créditos
     const result = await prisma.$transaction(async (tx) => {
-      // Actualizar participante con licencia y tier PREMIUM
-      const updatedParticipante = await tx.usuario.update({
-        where: { id: participanteId },
-        data: {
-          licenseCode,
-          tier: 'PREMIUM',
-        },
-      });
-
-      // Incrementar totalAllocated en SchoolCredit
-      await tx.schoolCredit.update({
-        where: { id: schoolCredit.id },
-        data: {
-          totalAllocated: {
-            increment: 1,
+      try {
+        // Actualizar participante con licencia y tier PREMIUM
+        const updatedParticipante = await tx.usuario.update({
+          where: { id: participanteId },
+          data: {
+            licenseCode,
+            tier: 'PREMIUM',
           },
-        },
-      });
+        });
 
-      // Incrementar licensesAllocated en Vision
-      await tx.vision.update({
-        where: { id: visionId },
-        data: {
-          licensesAllocated: {
-            increment: 1,
+        // Incrementar totalAllocated en SchoolCredit
+        await tx.schoolCredit.update({
+          where: { id: schoolCredit.id },
+          data: {
+            totalAllocated: {
+              increment: 1,
+            },
           },
-        },
-      });
+        });
 
-      // Crear registro de asignación de licencia (opcional, para auditoría)
-      await tx.licenseAssignment.create({
-        data: {
-          userId: participanteId,
-          organizationId: coordinador.organizationId,
-          visionId,
-          licenseCode,
-          assignedBy: session.user.id,
-          assignedAt: new Date(),
-          expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10 días para activar
-        },
-      });
+        // Incrementar licensesAllocated en Vision
+        await tx.vision.update({
+          where: { id: visionId },
+          data: {
+            licensesAllocated: {
+              increment: 1,
+            },
+          },
+        });
 
-      return updatedParticipante;
+        // Crear registro de asignación de licencia (opcional, para auditoría)
+        await tx.licenseAssignment.create({
+          data: {
+            userId: participanteId,
+            organizationId: coordinador.organizationId!,
+            visionId,
+            licenseCode,
+            assignedBy: session.user.id,
+            assignedAt: new Date(),
+            expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10 días para activar
+          },
+        });
+
+        return updatedParticipante;
+      } catch (txError) {
+        console.error('Error en transacción de asignación:', txError);
+        throw txError;
+      }
     });
 
     return NextResponse.json({
@@ -207,8 +227,16 @@ export async function POST(
     });
   } catch (error) {
     console.error('Error assigning license:', error);
+    
+    // Proveer más detalles del error
+    const errorMessage = error instanceof Error ? error.message : 'Error al asignar licencia';
+    
     return NextResponse.json(
-      { success: false, error: 'Error al asignar licencia' },
+      { 
+        success: false, 
+        error: 'Error al asignar licencia',
+        details: errorMessage 
+      },
       { status: 500 }
     );
   }

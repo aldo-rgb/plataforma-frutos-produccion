@@ -28,80 +28,30 @@ export async function GET(request: Request) {
     const startDate = startOfDay(targetDate);
     const endDate = endOfDay(addDays(targetDate, 7));
 
-    // Buscar subscripciones de disciplinas del usuario
-    const userSubscriptions = await prisma.disciplineSubscription.findMany({
-      where: { studentId: user.id },
-      select: { id: true }
-    });
-
-    const subscriptionIds = userSubscriptions.map(sub => sub.id);
-    console.log(`📞 Subscripciones de disciplina encontradas: ${subscriptionIds.length}`);
-
-    // Buscar llamadas programadas (tanto de disciplina como de visiones/programas)
+    // Buscar llamadas programadas
     const upcomingCalls = await prisma.callBooking.findMany({
       where: {
-        OR: [
-          // Llamadas de programas intensivos
-          {
-            programEnrollment: {
-              usuarioId: user.id,
-              status: 'ACTIVE'
-            }
-          },
-          // Llamadas de disciplinas
-          ...(subscriptionIds.length > 0 ? [{
-            subscriptionId: {
-              in: subscriptionIds
-            }
-          }] : [])
-        ],
-        scheduledDate: {
+        studentId: user.id,
+        scheduledAt: {
           gte: startDate,
           lte: endDate
         },
         status: {
-          in: ['SCHEDULED', 'CONFIRMED']
+          in: ['PENDING', 'CONFIRMED']
         }
       },
       include: {
-        programEnrollment: {
-          include: {
-            vision: {
-              select: {
-                id: true,
-                nombre: true
-              }
-            },
-            mentor: {
-              select: {
-                id: true,
-                nombre: true,
-                imagen: true
-              }
-            }
-          }
-        },
-        subscription: {
-          include: {
-            discipline: {
-              select: {
-                id: true,
-                name: true,
-                icon: true
-              }
-            },
-            mentor: {
-              select: {
-                id: true,
-                nombre: true,
-                imagen: true
-              }
-            }
+        ProgramEnrollment: true,
+        Usuario_CallBooking_mentorIdToUsuario: {
+          select: {
+            id: true,
+            nombre: true,
+            profileImage: true
           }
         }
       },
       orderBy: {
-        scheduledDate: 'asc'
+        scheduledAt: 'asc'
       }
     });
 
@@ -109,29 +59,22 @@ export async function GET(request: Request) {
 
     // Formatear respuesta
     const formattedCalls = upcomingCalls.map((call: any) => {
-      const isDiscipline = !!call.subscriptionId;
-      const isVision = !!call.programEnrollmentId;
-
+      const scheduledDate = new Date(call.scheduledAt);
+      
       return {
         id: call.id,
-        type: isDiscipline ? 'DISCIPLINE' : 'VISION',
-        scheduledDate: call.scheduledDate,
-        scheduledTime: call.scheduledTime,
+        type: call.type || 'DISCIPLINE',
+        scheduledDate: scheduledDate.toISOString().split('T')[0],
+        scheduledTime: scheduledDate.toISOString().split('T')[1].substring(0, 5),
         status: call.status,
-        meetingUrl: call.meetingUrl,
-        discipline: isDiscipline ? {
-          id: call.subscription?.discipline.id,
-          name: call.subscription?.discipline.name,
-          icon: call.subscription?.discipline.icon
-        } : null,
-        vision: isVision ? {
-          id: call.programEnrollment?.vision?.id,
-          name: call.programEnrollment?.vision?.nombre
-        } : null,
-        mentor: isDiscipline 
-          ? call.subscription?.mentor 
-          : call.programEnrollment?.mentor,
-        weekNumber: call.weekNumber
+        meetingLink: call.meetingLink,
+        mentor: {
+          id: call.Usuario_CallBooking_mentorIdToUsuario.id,
+          nombre: call.Usuario_CallBooking_mentorIdToUsuario.nombre,
+          imagen: call.Usuario_CallBooking_mentorIdToUsuario.profileImage
+        },
+        weekNumber: call.weekNumber,
+        duration: call.duration
       };
     });
 

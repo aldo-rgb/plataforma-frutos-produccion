@@ -51,7 +51,7 @@ async function migrarUsuariosSinCiclo() {
     for (const usuario of usuariosSinCiclo) {
       try {
         const hoy = new Date();
-        const fechaFin = addDays(hoy, 90);
+        const fechaFin = addDays(hoy, 63);
 
         await prisma.programEnrollment.create({
           data: {
@@ -62,7 +62,7 @@ async function migrarUsuariosSinCiclo() {
             cycleEndDate: fechaFin,
             startDate: hoy, // Para compatibilidad con campos legacy
             endDate: fechaFin,
-            totalWeeks: 13, // ~90 días = 13 semanas
+            totalWeeks: 9, // ~63 días = 9 semanas
             status: 'ACTIVE'
           }
         });

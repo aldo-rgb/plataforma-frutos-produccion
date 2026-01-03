@@ -1,4 +1,4 @@
-import prisma from './prisma';
+import { prisma } from './prisma';
 
 /**
  * Sistema de Notificaciones para Carta F.R.U.T.O.S.
@@ -128,7 +128,7 @@ export async function notifyCartaSubmitted(userId: number, mentorId?: number) {
         <p>Tu Carta F.R.U.T.O.S. ha sido enviada correctamente.</p>
         <p>Tu mentor la revisará pronto y recibirás notificación cuando esté lista.</p>
         <p style="color: #666; font-size: 14px; margin-top: 20px;">
-          💡 Consejo: Mientras esperas, familiarízate con el calendario y prepárate para los 100 días de transformación.
+          💡 Consejo: Mientras esperas, familiarízate con el calendario y prepárate para los 63 días de transformación.
         </p>
       `
     );
@@ -508,5 +508,115 @@ export async function sendPhoenixSOSNotifications(payload: PhoenixSOSPayload) {
   } catch (error) {
     console.error('❌ Error sending Phoenix SOS notifications:', error);
     throw error; // Re-throw para que el endpoint maneje el error
+  }
+}
+
+// ============================================
+// LÍDER SOLICITA APROBACIÓN (Líder → Director)
+// ============================================
+
+export async function notifyLiderSolicitaAprobacion(
+  liderId: number,
+  directorId: number,
+  organizacionNombre: string
+) {
+  try {
+    const lider = await prisma.usuario.findUnique({
+      where: { id: liderId },
+      select: {
+        nombre: true,
+        email: true,
+        profileImage: true,
+        PerfilMentor: {
+          select: {
+            biografia: true,
+            especialidad: true,
+            experienciaAnios: true
+          }
+        }
+      }
+    });
+
+    const director = await prisma.usuario.findUnique({
+      where: { id: directorId },
+      select: { nombre: true, email: true }
+    });
+
+    if (!lider || !director) {
+      throw new Error('Líder o director no encontrado');
+    }
+
+    // Enviar email al director
+    await sendEmail(
+      director.email,
+      '🔔 Nuevo Mentor Solicita Aprobación',
+      `
+        <h2>¡Hola ${director.nombre}!</h2>
+        <p><strong>${lider.nombre}</strong> ha completado su perfil de líder y solicita tu aprobación.</p>
+        
+        <div style="background: #f3f4f6; padding: 20px; border-radius: 12px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #7e22ce;">📋 Información del Líder</h3>
+          <p><strong>Nombre:</strong> ${lider.nombre}</p>
+          <p><strong>Email:</strong> ${lider.email}</p>
+          <p><strong>Organización:</strong> ${organizacionNombre}</p>
+          ${lider.PerfilMentor?.biografia ? `<p><strong>Bio:</strong> ${lider.PerfilMentor.biografia.substring(0, 150)}...</p>` : ''}
+          ${lider.PerfilMentor?.especialidad ? `<p><strong>Especialidad:</strong> ${lider.PerfilMentor.especialidad}</p>` : ''}
+        </div>
+
+        <p>Como director de ${organizacionNombre}, debes revisar y aprobar este perfil antes de que el líder pueda comenzar a gestionar mentorados.</p>
+
+        <a href="${process.env.NEXT_PUBLIC_URL}/dashboard/school-admin/lideres" style="display: inline-block; padding: 14px 28px; background: linear-gradient(135deg, #7e22ce 0%, #5b21b6 100%); color: white; text-decoration: none; border-radius: 10px; font-weight: bold; font-size: 16px; margin-top: 16px;">
+          Revisar y Aprobar Líder
+        </a>
+
+        <p style="margin-top: 32px; color: #666; font-size: 14px;">
+          💡 <strong>Recuerda:</strong> Los líderes son mentores internos de tu organización. No aparecen en el marketplace y solo pueden gestionar llamadas de disciplina.
+        </p>
+      `
+    );
+
+    // Enviar notificación push al director
+    await sendPushNotification(
+      directorId,
+      'Nuevo Mentor Solicita Aprobación',
+      `${lider.nombre} completó su perfil y solicita tu aprobación`
+    );
+
+    // Enviar confirmación al líder
+    await sendEmail(
+      lider.email,
+      '✅ Solicitud de Aprobación Enviada',
+      `
+        <h2>¡Perfecto, ${lider.nombre}!</h2>
+        <p>Tu solicitud de aprobación como líder ha sido enviada al director de <strong>${organizacionNombre}</strong>.</p>
+        
+        <div style="background: linear-gradient(135deg, #7e22ce 0%, #5b21b6 100%); padding: 24px; border-radius: 12px; color: white; margin: 24px 0;">
+          <h3 style="margin: 0 0 12px 0; font-size: 24px;">⏳ En Revisión</h3>
+          <p style="margin: 0; font-size: 16px;">Tu perfil está siendo revisado por el director. Recibirás una notificación cuando sea aprobado.</p>
+        </div>
+
+        <p><strong>¿Qué sigue?</strong></p>
+        <ul style="line-height: 1.8;">
+          <li>El director revisará tu perfil y experiencia</li>
+          <li>Una vez aprobado, podrás comenzar a gestionar mentorados</li>
+          <li>Podrás agendar llamadas de disciplina y dar seguimiento</li>
+          <li>Tendrás acceso al panel completo de líder</li>
+        </ul>
+
+        <a href="${process.env.NEXT_PUBLIC_URL}/dashboard/lider" style="display: inline-block; padding: 12px 24px; background: #9333ea; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 16px;">
+          Ir a Mi Dashboard
+        </a>
+
+        <p style="margin-top: 32px; color: #666; font-size: 14px;">
+          💪 Mientras esperas, familiarízate con las herramientas del panel de líder.
+        </p>
+      `
+    );
+
+    console.log(`✅ Notificación de aprobación enviada: Líder ${lider.nombre} → Director ${director.nombre}`);
+
+  } catch (error) {
+    console.error('❌ Error sending líder approval notification:', error);
+    throw error;
   }
 }

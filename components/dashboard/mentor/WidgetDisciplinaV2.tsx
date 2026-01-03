@@ -44,12 +44,20 @@ interface StrikeAlert {
   maxStrikes: number;
 }
 
+interface ConfirmModal {
+  show: boolean;
+  bookingId: number | null;
+  participanteId: number | null;
+  participanteNombre: string;
+}
+
 export default function WidgetDisciplinaV2() {
   const [participantes, setParticipantes] = useState<Participante[]>([]);
   const [loading, setLoading] = useState(true);
   const [procesando, setProcesando] = useState<number | null>(null);
   const [now, setNow] = useState(new Date());
   const [strikeAlert, setStrikeAlert] = useState<StrikeAlert>({ show: false, type: 'success', totalStrikes: 0, maxStrikes: 3 });
+  const [confirmModal, setConfirmModal] = useState<ConfirmModal>({ show: false, bookingId: null, participanteId: null, participanteNombre: '' });
 
   useEffect(() => {
     cargarParticipantes();
@@ -79,16 +87,27 @@ export default function WidgetDisciplinaV2() {
   };
 
   const registrarStrike = async (bookingId: number, participanteId: number) => {
-    if (!confirm('¿Estás seguro de registrar una falta? Esto agregará un strike al estudiante.')) {
-      return;
-    }
+    // Encontrar el nombre del participante
+    const participante = participantes.find(p => p.id === participanteId);
+    
+    setConfirmModal({
+      show: true,
+      bookingId,
+      participanteId,
+      participanteNombre: participante?.nombre || 'el estudiante'
+    });
+  };
 
-    setProcesando(bookingId);
+  const confirmarStrike = async () => {
+    if (!confirmModal.bookingId) return;
+
+    setProcesando(confirmModal.bookingId);
+    setConfirmModal({ show: false, bookingId: null, participanteId: null, participanteNombre: '' });
 
     try {
       const res = await fetch('/api/mentor/disciplina/strike', {
         method: 'POST',
-        body: JSON.stringify({ bookingId }),
+        body: JSON.stringify({ bookingId: confirmModal.bookingId }),
         headers: { 'Content-Type': 'application/json' }
       });
 
@@ -488,6 +507,72 @@ export default function WidgetDisciplinaV2() {
                 }`}
               >
                 Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE CONFIRMACIÓN DE STRIKE */}
+      {confirmModal.show && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-gradient-to-br from-[#1a1d2d] to-[#0f111a] border border-red-500/30 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="p-6 bg-gradient-to-r from-red-600/20 to-orange-600/20 border-b border-red-500/30">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-red-500/20 rounded-xl border border-red-500/30">
+                  <AlertTriangle className="w-6 h-6 text-red-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white mb-1">
+                    Registrar Falta
+                  </h3>
+                  <p className="text-sm text-gray-400">
+                    Esta acción agregará un strike al estudiante
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+                <p className="text-white font-medium mb-2">
+                  ¿Estás seguro de registrar una falta para{' '}
+                  <span className="text-red-400 font-bold">{confirmModal.participanteNombre}</span>?
+                </p>
+                <p className="text-sm text-gray-400">
+                  Este strike quedará registrado permanentemente en el historial del estudiante y podría resultar en su suspensión del programa si alcanza el límite máximo.
+                </p>
+              </div>
+
+              <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4">
+                <p className="text-sm text-orange-300 font-medium flex items-center gap-2">
+                  <Flame size={16} />
+                  Consecuencias:
+                </p>
+                <ul className="text-xs text-gray-400 space-y-1 mt-2 ml-6">
+                  <li>• El estudiante será notificado automáticamente</li>
+                  <li>• Se incrementará su contador de faltas</li>
+                  <li>• Puede resultar en suspensión si alcanza el máximo</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-800 flex gap-3">
+              <button
+                onClick={() => setConfirmModal({ show: false, bookingId: null, participanteId: null, participanteNombre: '' })}
+                className="flex-1 py-3 rounded-xl font-medium text-gray-300 bg-gray-800 hover:bg-gray-700 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarStrike}
+                disabled={procesando !== null}
+                className="flex-1 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-500/20"
+              >
+                {procesando !== null ? 'Registrando...' : 'Confirmar Strike'}
               </button>
             </div>
           </div>

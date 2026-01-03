@@ -19,17 +19,17 @@ export async function GET(
     const organization = await prisma.organization.findUnique({
       where: { id: organizationId },
       include: {
-        SchoolAdmin: {
+        Usuario_Organization_schoolAdminIdToUsuario: {
           select: {
             id: true,
             nombre: true,
             email: true
           }
         },
-        Licenses: {
+        License: {
           orderBy: { createdAt: 'desc' }
         },
-        Users: {
+        Usuario_Usuario_organizationIdToOrganization: {
           select: {
             id: true,
             nombre: true,
@@ -118,7 +118,7 @@ export async function PATCH(
         ...(renewalOfferDiscount !== undefined && { renewalOfferDiscount: parseFloat(renewalOfferDiscount) })
       },
       include: {
-        SchoolAdmin: {
+        Usuario_Organization_schoolAdminIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -149,9 +149,12 @@ export async function PATCH(
           data: { schoolAdminId: existingAdmin.id }
         });
       } else {
-        // Crear nuevo admin
+        // Crear nuevo admin con licencia administrativa
         const bcrypt = require('bcryptjs');
         const tempPassword = await bcrypt.hash('admin123', 10);
+        
+        // Generar código de licencia administrativa para director (no consume créditos)
+        const adminLicenseCode = `DIRECTOR-ADMIN-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
         
         const newAdmin = await prisma.usuario.create({
           data: {
@@ -163,9 +166,22 @@ export async function PATCH(
             isActive: true,
             subscriptionStatus: 'ACTIVE',
             organizationId: organizationId,
-            requirePasswordChange: true // Forzar cambio de contraseña en primer login
+            requirePasswordChange: true, // Forzar cambio de contraseña en primer login
+            // Asignar licencia administrativa (no consume créditos de la organización)
+            LicenseAssignments: {
+              create: {
+                licenseCode: adminLicenseCode,
+                isActive: true,
+                organizationId: organizationId,
+                assignedBy: session.user.id,
+                assignedAt: new Date(),
+                // Esta licencia no tiene visionId porque es administrativa
+              }
+            }
           }
         });
+
+        console.log(`✅ School Admin creado con licencia administrativa: ${adminLicenseCode}`);
 
         await prisma.organization.update({
           where: { id: organizationId },

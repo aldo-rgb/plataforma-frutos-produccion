@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
         isActive: true,
       },
       include: {
-        Coordinador: {
+        Usuario: {
           select: {
             id: true,
             nombre: true,
@@ -54,8 +54,9 @@ export async function GET(req: NextRequest) {
         },
         _count: {
           select: {
-            Participantes: true,
-            GameChangers: true,
+            VisionParticipante: true,
+            VisionGameChanger: true,
+            VisionMentor: true,
           },
         },
       },

@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verificar que sea mentor
-    if (session.user.rol !== 'MENTOR') {
+    if (session.user.rol !== 'MENTOR' && session.user.rol !== 'LIDER') {
       return NextResponse.json(
         { error: 'Solo los mentores pueden acceder a esta información' },
         { status: 403 }

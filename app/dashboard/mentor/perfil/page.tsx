@@ -1,9 +1,10 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { User, Briefcase, FileText, Link as LinkIcon, Save, Loader2, CheckCircle2, XCircle, MapPin, DollarSign } from 'lucide-react';
+import { Camera, User, Briefcase, FileText, Link as LinkIcon, Save, Loader2, CheckCircle2, XCircle, MapPin, DollarSign } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 const QuantumBioWriter = dynamic(() => import('@/components/mentor/QuantumBioWriter'), { ssr: false });
+const MentorAvatarSelfie = dynamic(() => import('@/components/mentor/MentorAvatarSelfie'), { ssr: false });
 
 export default function MentorProfileEditorPage() {
   const [loading, setLoading] = useState(false);
@@ -12,6 +13,7 @@ export default function MentorProfileEditorPage() {
   const [showError, setShowError] = useState(false);
   const [showQuantumBio, setShowQuantumBio] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [showAvatarSelfie, setShowAvatarSelfie] = useState(false);
   
   // Validación de campos obligatorios
   const isFormValid = () => {
@@ -44,6 +46,7 @@ export default function MentorProfileEditorPage() {
       
       // Sección 7: Nivel y Pricing
       formData.precioBase > 0 &&
+      formData.precioDisciplina > 0 &&
       
       // Sección 8: Enlaces
       formData.enlaceVideoLlamada.trim() !== ''
@@ -85,11 +88,14 @@ export default function MentorProfileEditorPage() {
     logrosInput: '', // Campo temporal
     experienciaAnios: 0,
     precioBase: 1000,
+    precioDisciplina: 90,
     disponible: true,
     comisionMentor: 70,
     comisionPlataforma: 30,
     enlaceVideoLlamada: '',
-    tipoVideoLlamada: 'zoom' as 'zoom' | 'meet' | 'teams'
+    tipoVideoLlamada: 'zoom' as 'zoom' | 'meet' | 'teams',
+    maxDisciplineClients: 10,
+    acceptingNewClients: true
   });
 
   // Cargar datos iniciales
@@ -120,11 +126,14 @@ export default function MentorProfileEditorPage() {
             logrosInput: data.logros ? data.logros.join(', ') : '',
             experienciaAnios: data.experienciaAnios || 0,
             precioBase: data.precioBase || 1000,
+            precioDisciplina: data.precioDisciplina || 90,
             disponible: data.disponible !== undefined ? data.disponible : true,
             comisionMentor: data.comisionMentor || 70,
             comisionPlataforma: data.comisionPlataforma || 30,
             enlaceVideoLlamada: data.enlaceVideoLlamada || '',
-            tipoVideoLlamada: data.tipoVideoLlamada || 'zoom'
+            tipoVideoLlamada: data.tipoVideoLlamada || 'zoom',
+            maxDisciplineClients: data.maxDisciplineClients !== undefined ? data.maxDisciplineClients : 10,
+            acceptingNewClients: data.acceptingNewClients !== undefined ? data.acceptingNewClients : true
           });
         }
       } catch (error) {
@@ -224,9 +233,12 @@ export default function MentorProfileEditorPage() {
         logros: formData.logrosInput.split(',').map(s => s.trim()).filter(s => s),
         experienciaAnios: Number(formData.experienciaAnios),
         precioBase: Number(formData.precioBase),
+        precioDisciplina: Number(formData.precioDisciplina),
         disponible: formData.disponible,
         enlaceVideoLlamada: formData.enlaceVideoLlamada,
-        tipoVideoLlamada: formData.tipoVideoLlamada
+        tipoVideoLlamada: formData.tipoVideoLlamada,
+        maxDisciplineClients: Number(formData.maxDisciplineClients),
+        acceptingNewClients: formData.acceptingNewClients
       }
     };
 
@@ -329,7 +341,7 @@ export default function MentorProfileEditorPage() {
             <div className="text-3xl">🎙️</div>
             <div>
               <h3 className="text-lg font-bold text-white">Tu perfil es lo mas importante</h3>
-              <p className="text-sm text-gray-400">Permite que QUANTUM te guiefrutos.com y genera tu perfil completo en 2 minutos</p>
+              <p className="text-sm text-gray-400">Permite que QUANTUM te guie y genera tu perfil completo en 2 minutos</p>
             </div>
           </div>
           <button 
@@ -419,27 +431,37 @@ export default function MentorProfileEditorPage() {
                       onChange={handleImageUpload}
                       className="hidden"
                     />
-                    <label
-                      htmlFor="imageUpload"
-                      className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all ${
-                        uploadingImage
-                          ? 'bg-slate-700 cursor-not-allowed'
-                          : 'bg-purple-600 hover:bg-purple-700'
-                      } text-white font-medium`}
-                    >
-                      {uploadingImage ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Subiendo...
-                        </>
-                      ) : (
-                        <>
-                          <User className="w-4 h-4" />
-                          Subir Imagen
-                        </>
-                      )}
-                    </label>
-                    <p className="text-xs text-slate-400 mt-2">JPG, PNG o GIF (máx. 5MB)</p>
+                    <div className="grid grid-cols-2 gap-4 mb-3">
+                      <label
+                        htmlFor="imageUpload"
+                        className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg cursor-pointer transition-all ${
+                          uploadingImage
+                            ? 'bg-slate-700 cursor-not-allowed'
+                            : 'bg-purple-600 hover:bg-purple-700'
+                        } text-white font-medium text-center`}
+                      >
+                        {uploadingImage ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Subiendo...
+                          </>
+                        ) : (
+                          <>
+                            <User className="w-4 h-4" />
+                            Subir Imagen
+                          </>
+                        )}
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowAvatarSelfie(true)}
+                        className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all font-medium"
+                      >
+                        <Camera className="w-4 h-4" />
+                        Avatar con IA
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-400">JPG, PNG o GIF (máx. 5MB)</p>
                   </div>
                   
                   {/* Sugerencia de foto profesional */}
@@ -688,7 +710,7 @@ export default function MentorProfileEditorPage() {
             </div>
             <div>
               <label className="block text-slate-300 font-medium mb-2 text-sm">
-                Precio Base por Sesión (MXN)
+                Precio Base por Sesión de Mentoría (MXN)
               </label>
               <input 
                 type="number" 
@@ -698,6 +720,25 @@ export default function MentorProfileEditorPage() {
                 className="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all" 
                 placeholder="1000" 
               />
+              <p className="text-xs text-slate-400 mt-1">
+                Precio para sesiones de mentoría individual
+              </p>
+            </div>
+            <div>
+              <label className="block text-slate-300 font-medium mb-2 text-sm">
+                Precio por Llamada de Disciplina (MXN)
+              </label>
+              <input 
+                type="number" 
+                name="precioDisciplina" 
+                value={formData.precioDisciplina} 
+                onChange={handleChange} 
+                className="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all" 
+                placeholder="90" 
+              />
+              <p className="text-xs text-slate-400 mt-1">
+                Precio para llamadas del Club de las 5 AM (05:00-08:00)
+              </p>
             </div>
 
             {/* Configuración de Videollamada */}
@@ -780,6 +821,72 @@ export default function MentorProfileEditorPage() {
               </label>
             </div>
           </div>
+          
+          {/* Nueva sección: Configuración de Disponibilidad */}
+          <div className="mt-6 p-5 bg-gradient-to-br from-slate-900 to-slate-950 rounded-xl border border-slate-700">
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <User className="text-cyan-400" /> Gestión de Clientes
+            </h3>
+            <p className="text-sm text-slate-400 mb-4">
+              Controla cuántos usuarios pueden contratar tus llamadas de disciplina y tu visibilidad para nuevos clientes.
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Límite de clientes de disciplina */}
+              <div>
+                <label className="block text-slate-300 font-medium mb-2 text-sm">
+                  Límite de Clientes (Llamadas de Disciplina)
+                </label>
+                <input 
+                  type="number" 
+                  name="maxDisciplineClients" 
+                  value={formData.maxDisciplineClients} 
+                  onChange={(e) => setFormData({ ...formData, maxDisciplineClients: Number(e.target.value) })} 
+                  min="1"
+                  max="50"
+                  className="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all" 
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Máximo de usuarios que pueden contratarte para llamadas de disciplina simultáneamente
+                </p>
+              </div>
+
+              {/* Aceptar nuevos clientes */}
+              <div>
+                <label className="block text-slate-300 font-medium mb-3 text-sm">
+                  Disponibilidad para Nuevos Clientes
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer p-3 bg-slate-900 rounded-lg border border-slate-600 hover:border-purple-500 transition-all">
+                  <input 
+                    type="checkbox" 
+                    name="acceptingNewClients" 
+                    checked={formData.acceptingNewClients} 
+                    onChange={(e) => setFormData({ ...formData, acceptingNewClients: e.target.checked })} 
+                    className="w-5 h-5 text-purple-600 bg-slate-900 border-slate-600 rounded focus:ring-2 focus:ring-purple-500" 
+                  />
+                  <div>
+                    <span className="text-white font-medium">Acepto nuevos clientes</span>
+                    <p className="text-xs text-slate-500">
+                      {formData.acceptingNewClients 
+                        ? 'Tu perfil es visible para usuarios buscando mentores' 
+                        : 'Tu perfil está oculto para nuevos usuarios'}
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Indicador visual del estado */}
+            <div className="mt-4 p-3 rounded-lg border bg-slate-950">
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${formData.acceptingNewClients ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                <span className={`text-sm font-medium ${formData.acceptingNewClients ? 'text-green-400' : 'text-red-400'}`}>
+                  {formData.acceptingNewClients ? '🟢 Perfil Visible - Aceptando Nuevos Clientes' : '🔴 Perfil Oculto - No Aceptando Nuevos Clientes'}
+                </span>
+              </div>
+            </div>
+          </div>
+
           <div className="mt-4 p-4 bg-slate-900 rounded-lg border border-slate-700">
             <p className="text-sm text-slate-400">
               <strong className="text-white">Nota:</strong> Las comisiones se calculan automáticamente según tu nivel de mentor. 
@@ -844,7 +951,9 @@ export default function MentorProfileEditorPage() {
                 precioBase: Number(updatedFormData.precioBase),
                 disponible: updatedFormData.disponible,
                 enlaceVideoLlamada: updatedFormData.enlaceVideoLlamada,
-                tipoVideoLlamada: updatedFormData.tipoVideoLlamada
+                tipoVideoLlamada: updatedFormData.tipoVideoLlamada,
+                maxDisciplineClients: Number(updatedFormData.maxDisciplineClients),
+                acceptingNewClients: updatedFormData.acceptingNewClients
               }
             };
 
@@ -872,6 +981,17 @@ export default function MentorProfileEditorPage() {
           }
         }}
       />
+
+      {showAvatarSelfie && (
+        <MentorAvatarSelfie
+          isOpen={showAvatarSelfie}
+          onClose={() => setShowAvatarSelfie(false)}
+          onAvatarGenerated={(url) => {
+            setFormData(prev => ({ ...prev, profileImage: url }));
+            setShowAvatarSelfie(false);
+          }}
+        />
+      )}
     </div>
   );
 }

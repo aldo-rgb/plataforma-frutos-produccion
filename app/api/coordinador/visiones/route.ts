@@ -15,9 +15,18 @@ export async function GET() {
       where: { email: session.user.email }
     });
 
-    if (!usuario || usuario.rol !== 'COORDINADOR') {
+    // Permitir tanto COORDINADOR como SCHOOL_ADMIN que actúan como coordinadores
+    if (!usuario || (usuario.rol !== 'COORDINADOR' && usuario.rol !== 'SCHOOL_ADMIN')) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
+
+    console.log('🔍 Buscando visiones para coordinador:', {
+      usuarioId: usuario.id,
+      coordinadorId: usuario.id,
+      email: usuario.email,
+      nombre: usuario.nombre,
+      rol: usuario.rol
+    });
 
     // Obtener visiones donde el coordinador es el coordinador asignado
     const visiones = await prisma.vision.findMany({
@@ -27,8 +36,8 @@ export async function GET() {
       include: {
         _count: {
           select: {
-            Participantes: true,
-            GameChangers: true
+            VisionParticipante: true,
+            VisionGameChanger: true
           }
         }
       },
@@ -36,6 +45,15 @@ export async function GET() {
         createdAt: 'desc'
       }
     });
+
+    console.log('✅ Visiones encontradas:', visiones.length);
+    if (visiones.length > 0) {
+      console.log('📋 Lista de visiones:', visiones.map(v => ({
+        id: v.id,
+        nombre: v.nombre,
+        coordinadorId: v.coordinadorId
+      })));
+    }
 
     return NextResponse.json({
       success: true,

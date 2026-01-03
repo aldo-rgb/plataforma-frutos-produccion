@@ -40,7 +40,7 @@ export async function GET(req: Request) {
         contactEmail: true,
         logoUrl: true,
         brandColor: true,
-        Users: {
+        Usuario_Usuario_organizationIdToOrganization: {
           where: {
             isActive: true,
             rol: { in: ['PARTICIPANTE', 'MENTOR', 'COORDINADOR', 'GAMECHANGER'] }
@@ -97,6 +97,31 @@ export async function GET(req: Request) {
       }
     });
 
+    // Contar licencias disponibles (no asignadas) desde la tabla License
+    const allLicenses = await prisma.license.findMany({
+      where: {
+        organizationId: fullUser.organizationId,
+        isActive: true,
+      },
+      select: {
+        code: true
+      }
+    });
+
+    // Obtener códigos de licencias ya asignadas
+    const assignedCodes = await prisma.licenseAssignment.findMany({
+      where: {
+        organizationId: fullUser.organizationId,
+        isActive: true,
+      },
+      select: {
+        licenseCode: true
+      }
+    });
+
+    const assignedCodesSet = new Set(assignedCodes.map(a => a.licenseCode));
+    const availableLicenses = allLicenses.filter(l => !assignedCodesSet.has(l.code)).length;
+
     // Contar solo las licencias ACTIVADAS (con activatedAt no nulo)
     const activatedLicenses = await prisma.licenseAssignment.count({
       where: {
@@ -112,17 +137,18 @@ export async function GET(req: Request) {
 
     const totalPurchased = schoolCredits._sum.totalPurchased || 0;
     const totalActivated = activatedLicenses;
-    const availableCredits = totalPurchased - totalActivated;
+    const availableCredits = totalPurchased - totalActivated + availableLicenses;
 
     // 4. Calcular distribución de tiers
-    const tierDistribution = organization.Users.reduce((acc: Record<string, number>, user: any) => {
+    const users = organization.Usuario_Usuario_organizationIdToOrganization;
+    const tierDistribution = users.reduce((acc: Record<string, number>, user: any) => {
       const tier = user.tier || 'BASIC';
       acc[tier] = (acc[tier] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
     // 5. Top 5 estudiantes por XP (incluyendo GAMECHANGER)
-    const topStudents = organization.Users
+    const topStudents = users
       .filter((u: any) => u.rol === 'PARTICIPANTE' || u.rol === 'GAMECHANGER')
       .sort((a: any, b: any) => (b.experienciaXP || 0) - (a.experienciaXP || 0))
       .slice(0, 5)
@@ -135,8 +161,8 @@ export async function GET(req: Request) {
 
     // 6. Estadísticas generales
     const totalStudents = totalActivated; // Número de licencias activadas
-    const totalMentors = organization.Users.filter((u: any) => u.rol === 'MENTOR').length;
-    const totalUsers = organization.Users.length;
+    const totalMentors = users.filter((u: any) => u.rol === 'MENTOR').length;
+    const totalUsers = users.length;
     
     // 6.1 Contador de COMUNIDAD: Todos los usuarios que han mencionado esta organización (incluyendo individuales)
     const totalCommunityMembers = await prisma.usuario.count({
@@ -170,6 +196,76 @@ export async function GET(req: Request) {
       take: 5
     });
 
+    // 9. Obtener líderes pendientes de aprobación
+    const pendingLeaderApprovals = await prisma.usuario.count({
+      where: {
+        organizationId: fullUser.organizationId,
+        rol: 'LIDER',
+        mentorMarketplaceApproved: false,
+        PerfilMentor: {
+          biografia: { 
+            not: null 
+          }
+        }
+      }
+    });
+
+    // 10. Calcular costos totales de mentores en todas las visiones activas
+    const visionesActivas = await prisma.vision.findMany({
+      where: {
+        organizationId: fullUser.organizationId,
+        isActive: true,
+        startDate: { not: null },
+        endDate: { not: null },
+      },
+      include: {
+        VisionMentor: {
+          include: {
+            Usuario_VisionMentor_mentorIdToUsuario: {
+              select: {
+                id: true,
+                nombre: true,
+                rol: true,
+                PerfilMentor: {
+                  select: {
+                    precioDisciplina: true,
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    let costoTotalMentores = 0;
+    let totalLlamadasDisciplina = 0;
+    let totalMentoresActivos = 0;
+
+    visionesActivas.forEach(vision => {
+      if (vision.startDate && vision.endDate) {
+        const start = new Date(vision.startDate);
+        const end = new Date(vision.endDate);
+        const diffTime = Math.abs(end.getTime() - start.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const semanas = Math.floor(diffDays / 7);
+        const llamadasDisciplina = semanas * 2;
+
+        vision.VisionMentor.forEach(visionMentor => {
+          const usuario = visionMentor.Usuario_VisionMentor_mentorIdToUsuario;
+          const esLider = usuario?.rol === 'COORDINADOR' || usuario?.rol === 'SCHOOL_ADMIN';
+          
+          if (!esLider && usuario?.PerfilMentor?.precioDisciplina) {
+            const precioDisciplina = usuario.PerfilMentor.precioDisciplina;
+            const costoMentor = llamadasDisciplina * precioDisciplina;
+            costoTotalMentores += costoMentor;
+            totalLlamadasDisciplina += llamadasDisciplina;
+            totalMentoresActivos++;
+          }
+        });
+      }
+    });
+
     return NextResponse.json({
       success: true,
       organization: {
@@ -188,12 +284,19 @@ export async function GET(req: Request) {
         totalPurchased,
         totalActivated,
       },
+      mentorCosts: {
+        costoTotalMentores,
+        totalLlamadasDisciplina,
+        totalMentoresActivos,
+        visionesActivas: visionesActivas.length,
+      },
       pendingOrders,
+      pendingLeaderApprovals,
       completedOrders,
       pendingPayment,
       tierDistribution,
       topStudents,
-      users: organization.Users,
+      users: users,
     });
 
   } catch (error) {

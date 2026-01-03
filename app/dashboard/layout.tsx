@@ -2,15 +2,11 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from "../../lib/auth";
 import { redirect } from 'next/navigation';
 import { prisma } from "../../lib/prisma";
-import { Sidebar, Topbar, SecurityGate } from "../../components/dashboard";
-import SocketWrapper from "../../components/SocketWrapper";
+import { SecurityGate } from "../../components/dashboard";
 import DashboardProviders from "../../components/DashboardProviders";
-import TimezoneWrapper from "../../components/dashboard/TimezoneWrapper";
 import { ToastProvider } from "../../components/ui/ToastProvider";
 import { PhoenixProvider } from "../../contexts/PhoenixContext";
-import { PhoenixWrapper } from "../../components/phoenix/PhoenixWrapper";
-import { QuantumNotificationBanner } from "../../components/notifications/QuantumNotificationBanner";
-import { QuantumIdentityWrapper } from "../../components/quantum/QuantumIdentityWrapper";
+import { DashboardClientLayout } from "../../components/dashboard/DashboardClientLayout";
 
 export default async function DashboardLayout({
   children,
@@ -24,13 +20,18 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  // Validar que el email exista en la sesión
+  if (!session.user.email) {
+    redirect('/auth/signin');
+  }
+
   // 2. Obtener Datos Frescos de la BD (Capa de Datos Real)
   // Usamos el email de la sesión para buscar al usuario completo en PostgreSQL
   const usuarioReal = await prisma.usuario.findUnique({
     where: { email: session.user.email },
     include: {
       PerfilMentor: true, // Traemos datos del mentor si los necesitamos
-      Organization: {
+      Organization_Usuario_organizationIdToOrganization: {
         select: {
           id: true,
           name: true,
@@ -57,12 +58,12 @@ export default async function DashboardLayout({
       ratingSum: usuarioReal.PerfilMentor.ratingSum?.toString() || null,
       precioBase: usuarioReal.PerfilMentor.precioBase?.toString() || null,
     } : null,
-    organization: usuarioReal.Organization || null
+    organization: usuarioReal.Organization_Usuario_organizationIdToOrganization || null
   };
 
   // 3. Lógica del "Candado de Seguridad" (Simplificada)
   // Aquí verificamos si debe ser redirigido a pagar.
-  const esStaff = ["ADMIN", "MENTOR", "COORDINADOR"].includes(usuarioReal.rol);
+  const esStaff = ["ADMIN", "MENTOR", "COORDINADOR", "LIDER"].includes(usuarioReal.rol);
   const esActivo = usuarioReal.suscripcion === "ACTIVO";
 
   /* NOTA: Para activar el candado real sin bucles infinitos, 
@@ -75,40 +76,11 @@ export default async function DashboardLayout({
     <DashboardProviders session={session}>
       <ToastProvider>
         <PhoenixProvider>
-          <PhoenixWrapper>
-            <div className="flex h-screen bg-slate-950 text-slate-100 overflow-hidden">
-              
-              {/* Detector de zona horaria */}
-              <TimezoneWrapper initialTimezone={usuarioSerializado.timezone || 'America/Mexico_City'} />
-              
-              {/* PASO CRUCIAL:
-                Pasamos el "usuarioSerializado" como prop al Sidebar.
-                Esto elimina la necesidad de los Mocks dentro del componente.
-              */}
-              <Sidebar usuario={usuarioSerializado} />
-
-              <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
-                {/* También pasamos datos al Topbar (Nombre, Avatar, Puntos) */}
-                <Topbar usuario={usuarioSerializado} />
-
-                {/* Banner de Notificación Quantum */}
-                <QuantumNotificationBanner />
-
-                {/* Modal de Identidad Cuántica */}
-                <QuantumIdentityWrapper />
-
-                <main className="w-full flex-grow p-6">
-                  {/* Envolvemos el contenido con el Guardián */}
-                  <SecurityGate rol={usuarioSerializado.rol} suscripcion={usuarioSerializado.suscripcion}>
-                    {children}
-                  </SecurityGate>
-                </main>
-              </div>
-
-              {/* Componentes de Socket.IO */}
-              <SocketWrapper />
-            </div>
-          </PhoenixWrapper>
+          <DashboardClientLayout usuario={usuarioSerializado}>
+            <SecurityGate rol={usuarioSerializado.rol} suscripcion={usuarioSerializado.suscripcion}>
+              {children}
+            </SecurityGate>
+          </DashboardClientLayout>
         </PhoenixProvider>
       </ToastProvider>
     </DashboardProviders>

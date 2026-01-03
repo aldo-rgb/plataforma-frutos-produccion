@@ -44,12 +44,15 @@ export default function VisionesSchoolAdminPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [availableCredits, setAvailableCredits] = useState(0);
+  const [coordinadores, setCoordinadores] = useState<Array<{ id: number; nombre: string; email: string }>>([]);
+  const [loadingCoordinadores, setLoadingCoordinadores] = useState(false);
 
   // Form states
   const [formData, setFormData] = useState({
     nombre: '',
     descripcion: '',
     maxParticipantes: 30,
+    coordinadorId: '',
     startDate: '',
     endDate: '',
     forceFinanzasArea: true,
@@ -71,6 +74,7 @@ export default function VisionesSchoolAdminPage() {
     } else {
       fetchVisiones();
       fetchCredits();
+      fetchCoordinadores();
     }
   }, [status, session]);
 
@@ -102,6 +106,21 @@ export default function VisionesSchoolAdminPage() {
     }
   };
 
+  const fetchCoordinadores = async () => {
+    try {
+      setLoadingCoordinadores(true);
+      const res = await fetch('/api/school-admin/coordinadores');
+      const data = await res.json();
+      if (data.success) {
+        setCoordinadores(data.coordinadores || []);
+      }
+    } catch (error) {
+      console.error('Error fetching coordinadores:', error);
+    } finally {
+      setLoadingCoordinadores(false);
+    }
+  };
+
   const handleCreateVision = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -120,6 +139,7 @@ export default function VisionesSchoolAdminPage() {
           nombre: '', 
           descripcion: '', 
           maxParticipantes: 30,
+          coordinadorId: '',
           startDate: '',
           endDate: '',
           forceFinanzasArea: true,
@@ -176,7 +196,10 @@ export default function VisionesSchoolAdminPage() {
             </div>
           </div>
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => {
+              setShowCreateModal(true);
+              fetchCoordinadores();
+            }}
             className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors"
           >
             <Plus size={20} />
@@ -357,6 +380,41 @@ export default function VisionesSchoolAdminPage() {
                   className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-purple-500"
                   placeholder="Descripción de la visión..."
                 />
+              </div>
+
+              {/* Selector de Coordinador */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Coordinador Asignado *
+                </label>
+                {loadingCoordinadores ? (
+                  <div className="flex items-center justify-center py-4 bg-slate-800 border border-slate-700 rounded-lg">
+                    <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
+                    <span className="ml-2 text-slate-400">Cargando coordinadores...</span>
+                  </div>
+                ) : coordinadores.length === 0 ? (
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                    <p className="text-yellow-400 text-sm">
+                      ⚠️ No hay coordinadores disponibles en tu organización. Necesitas crear usuarios con rol COORDINADOR primero.
+                    </p>
+                  </div>
+                ) : (
+                  <select
+                    required
+                    value={formData.coordinadorId}
+                    onChange={(e) =>
+                      setFormData({ ...formData, coordinadorId: e.target.value })
+                    }
+                    className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                  >
+                    <option value="">Selecciona un coordinador...</option>
+                    {coordinadores.map((coord) => (
+                      <option key={coord.id} value={coord.id}>
+                        {coord.nombre} ({coord.email})
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               <div>

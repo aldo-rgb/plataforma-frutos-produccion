@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
       nombre, 
       descripcion, 
       maxParticipantes,
+      coordinadorId,
       startDate,
       endDate,
       forceFinanzasArea,
@@ -63,6 +64,45 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!coordinadorId) {
+      return NextResponse.json(
+        { success: false, error: 'Debes asignar un coordinador a la visión' },
+        { status: 400 }
+      );
+    }
+
+    // Validar que el coordinador existe y pertenece a la misma organización
+    const coordinador = await prisma.usuario.findUnique({
+      where: { id: parseInt(coordinadorId) },
+      select: {
+        id: true,
+        rol: true,
+        organizationId: true,
+        nombre: true
+      }
+    });
+
+    if (!coordinador) {
+      return NextResponse.json(
+        { success: false, error: 'El coordinador seleccionado no existe' },
+        { status: 400 }
+      );
+    }
+
+    if (coordinador.organizationId !== user.organizationId) {
+      return NextResponse.json(
+        { success: false, error: 'El coordinador debe pertenecer a tu organización' },
+        { status: 400 }
+      );
+    }
+
+    if (coordinador.rol !== 'COORDINADOR' && coordinador.rol !== 'SCHOOL_ADMIN') {
+      return NextResponse.json(
+        { success: false, error: 'El usuario seleccionado no tiene rol de coordinador' },
+        { status: 400 }
+      );
+    }
+
     // Validar que si se activa el área de transformación, tenga un target válido
     if (forceTransformationArea && (!transformationGuestsTarget || transformationGuestsTarget < 1)) {
       return NextResponse.json(
@@ -79,7 +119,7 @@ export async function POST(req: NextRequest) {
         maxParticipantes,
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
-        coordinadorId: user.id,
+        coordinadorId: parseInt(coordinadorId),
         organizationId: user.organizationId,
         isActive: true,
         forceFinanzasArea: forceFinanzasArea ?? undefined,
@@ -91,13 +131,18 @@ export async function POST(req: NextRequest) {
         forceTransformationArea: forceTransformationArea ?? undefined,
         transformationGuestsTarget: forceTransformationArea ? transformationGuestsTarget : null,
         forceCommunityServiceArea: forceCommunityServiceArea ?? undefined,
+        updatedAt: new Date()
       },
     });
+
+    console.log(`✅ Visión "${vision.nombre}" creada exitosamente`);
+    console.log(`   Coordinador asignado: ${coordinador.nombre} (ID: ${coordinador.id})`);
+    console.log(`   Organización: ${user.organizationId}`);
 
     return NextResponse.json({
       success: true,
       vision,
-      message: 'Visión creada exitosamente',
+      message: `Visión creada exitosamente y asignada a ${coordinador.nombre}`,
     });
   } catch (error) {
     console.error('Error creating vision:', error);

@@ -87,6 +87,20 @@ export async function POST(
         select: { id: true, email: true, nombre: true, telefono: true }
       });
       created.push(user);
+
+      // Crear licencia estándar en estado Pendiente
+      await prisma.licenseAssignment.create({
+        data: {
+          userId: user.id,
+          organizationId: coordinador.organizationId!,
+          visionId: visionId,
+          assignedBy: session.user.id,
+          assignedAt: new Date(),
+          licenseCode: `QNT-GC-${user.id}-${Date.now()}`,
+          isActive: false, // Pendiente de activación
+          notes: 'Licencia estándar automática - Game Changer - Pendiente de activación'
+        }
+      });
       
       // Enviar WhatsApp con Magic Link si tiene teléfono
       if (user.telefono) {

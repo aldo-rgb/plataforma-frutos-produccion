@@ -90,7 +90,7 @@ export function Sidebar({ usuario }: SidebarProps) {
   };
 
   // Lógica de bloqueo visual basada en TIER
-  const esStaff = ['ADMINISTRADOR', 'COORDINADOR', 'MENTOR', 'GAMECHANGER'].includes(usuario.rol);
+  const esStaff = ['ADMINISTRADOR', 'COORDINADOR', 'MENTOR', 'GAMECHANGER', 'LIDER'].includes(usuario.rol);
   const userTier = usuario.tier || 'FREE';
   
   // NOTA: Usuarios PARTICIPANTES ya NO están bloqueados por falta de visión
@@ -149,7 +149,7 @@ export function Sidebar({ usuario }: SidebarProps) {
   };
 
   return (
-    <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col">
+    <aside className="hidden lg:flex w-64 bg-slate-900 border-r border-slate-800 flex-col">
       {/* Logo */}
       <div className="p-6 flex items-center gap-3 border-b border-slate-800">
         {usuario.organization?.logoUrl ? (
@@ -480,6 +480,85 @@ export function Sidebar({ usuario }: SidebarProps) {
               href="/dashboard/mentor/perfil" 
               className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
                 pathname === '/dashboard/mentor/perfil'
+                  ? 'bg-emerald-600 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <User size={18} className="text-emerald-400" />
+              <span>Editar Mi Perfil</span>
+            </Link>
+          </div>
+        )}
+
+        {/* Panel de Líder */}
+        {usuario.rol === 'LIDER' && (
+          <div className="pt-6 mt-6 border-t border-slate-800">
+            <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">Panel de Mentor</p>
+            
+            <Link 
+              href="/dashboard/mentor/revisiones" 
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/mentor/revisiones'
+                  ? 'bg-purple-600 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <ClipboardCheck size={18} className="text-purple-400" />
+              <span>Revisar Cartas</span>
+            </Link>
+
+            <Link 
+              href="/dashboard/mentor/validacion" 
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/mentor/validacion'
+                  ? 'bg-cyan-600 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <CheckCircle2 size={18} className="text-cyan-400" />
+              <span>Validar Evidencias</span>
+            </Link>
+
+            <Link 
+              href="/dashboard/mentor/participantes" 
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/mentor/participantes'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <Users size={18} className="text-blue-400" />
+              <span>Mis Participantes</span>
+            </Link>
+
+            <Link 
+              href="/dashboard/mentor/calendario" 
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/mentor/calendario'
+                  ? 'bg-green-600 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <CalendarCheck size={18} className="text-green-400" />
+              <span>Calendario</span>
+            </Link>
+
+            <Link 
+              href="/dashboard/mentor/horarios" 
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/mentor/horarios'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <Calendar size={18} className="text-indigo-400" />
+              <span>Horarios llamadas</span>
+            </Link>
+
+            <Link 
+              href="/dashboard/lider/perfil" 
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/lider/perfil'
                   ? 'bg-emerald-600 text-white'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}

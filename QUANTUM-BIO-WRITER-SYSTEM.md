@@ -446,7 +446,7 @@ Estilo: HARDCORE
 
 **Output**:
 ```
-Tagline: "Guía de transformación personal y equilibrio profundo"
+Tagline: "Guía de transformación cuantica y equilibrio profundo"
 
 Promesa: "Trabajarás conmigo para sanar el agotamiento y construir 
 una vida alineada con tus valores, sin sacrificar tu bienestar."

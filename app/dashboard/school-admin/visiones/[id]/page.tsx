@@ -6,6 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useToast, ToastContainer } from '@/components/Toast';
 import {
   ArrowLeft,
+  ArrowRight,
   Users,
   UserPlus,
   Trash2,
@@ -21,9 +22,11 @@ import {
   Eye,
   Download,
   Calendar,
-  Clock
+  Clock,
+  QrCode
 } from 'lucide-react';
 import Link from 'next/link';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 interface Vision {
   id: number;
@@ -49,13 +52,12 @@ interface Participante {
   id: number;
   participanteId: number;
   gameChangerId: number | null;
-  Participante: {
+  Usuario_VisionParticipante_participanteIdToUsuario: {
     id: number;
     nombre: string;
     email: string;
     telefono: string | null;
     tier: string;
-    licenseCode: string | null;
     assignedMentorId: number | null;
     Usuario_Usuario_assignedMentorIdToUsuario: {
       id: number;
@@ -63,7 +65,11 @@ interface Participante {
       email: string;
       imagen: string | null;
     } | null;
-    LicenseAssignments: {
+    CartaFrutos: {
+      id: number;
+      estado: string;
+    }[];
+    LicenseAssignment_LicenseAssignment_userIdToUsuario: {
       id: number;
       licenseCode: string;
       activatedAt: Date | null;
@@ -71,7 +77,7 @@ interface Participante {
       expiresAt: Date | null;
     }[];
   };
-  GameChanger: {
+  Usuario_VisionParticipante_gameChangerIdToUsuario: {
     id: number;
     nombre: string;
     email: string;
@@ -83,13 +89,12 @@ interface Participante {
 interface GameChanger {
   id: number;
   gameChangerId: number;
-  GameChanger: {
+  Usuario_VisionGameChanger_gameChangerIdToUsuario: {
     id: number;
     nombre: string;
     email: string;
     telefono: string | null;
     tier: string;
-    licenseCode: string | null;
     assignedMentorId: number | null;
     Usuario_Usuario_assignedMentorIdToUsuario: {
       id: number;
@@ -97,7 +102,7 @@ interface GameChanger {
       email: string;
       imagen: string | null;
     } | null;
-    LicenseAssignments: {
+    LicenseAssignment_LicenseAssignment_userIdToUsuario: {
       id: number;
       licenseCode: string;
       activatedAt: Date | null;
@@ -121,9 +126,28 @@ interface Mentor {
 interface MentorAsignado {
   id: number;
   mentorId: number;
-  mentor: Mentor;
-  tieneHorarios: boolean;
+  precioDisciplina: number;
+  precioBase: number;
+  esLider: boolean;
+  costoTotal: number;
+  Usuario_VisionMentor_mentorIdToUsuario: {
+    id: number;
+    nombre: string;
+    email: string;
+    imagen: string | null;
+    rol: string;
+    PerfilMentor: {
+      precioDisciplina: number;
+      precioBase: number;
+    } | null;
+  };
   createdAt: string;
+}
+
+interface CicloInfo {
+  semanas: number;
+  llamadasDisciplina: number;
+  diasTotales: number;
 }
 
 export default function VisionDetailPage() {
@@ -136,6 +160,7 @@ export default function VisionDetailPage() {
   const [participantes, setParticipantes] = useState<Participante[]>([]);
   const [gameChangers, setGameChangers] = useState<GameChanger[]>([]);
   const [mentoresAsignados, setMentoresAsignados] = useState<MentorAsignado[]>([]);
+  const [cicloInfo, setCicloInfo] = useState<CicloInfo | null>(null);
   const [mentoresDisponibles, setMentoresDisponibles] = useState<Mentor[]>([]);
   const [showAddMentorModal, setShowAddMentorModal] = useState(false);
   const [availableCredits, setAvailableCredits] = useState(0);
@@ -193,6 +218,13 @@ export default function VisionDetailPage() {
   } | null>(null);
   const [newPhone, setNewPhone] = useState('');
   const [savingPhone, setSavingPhone] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [generatingQR, setGeneratingQR] = useState(false);
+  const [showMentoresPrivadosModal, setShowMentoresPrivadosModal] = useState(false);
+  const [lideres, setLideres] = useState<any[]>([]);
+  const [loadingLideres, setLoadingLideres] = useState(false);
+  const [asignandoMentor, setAsignandoMentor] = useState<number | null>(null);
   const { showToast, toasts } = useToast();
 
   useEffect(() => {
@@ -218,6 +250,8 @@ export default function VisionDetailPage() {
         setVision(data.vision);
         setParticipantes(data.participantes);
         setGameChangers(data.gameChangers || []);
+        setMentoresAsignados(data.mentoresAsignados || []);
+        setCicloInfo(data.cicloInfo || null);
         
         // Cargar configuración de áreas
         setAreasConfig({
@@ -234,7 +268,7 @@ export default function VisionDetailPage() {
 
         // Verificar si hay participantes con cartas activas
         const hasActiveParticipants = data.participantes?.some((p: any) => 
-          p.Participante?.CartaFrutos?.some((c: any) => c.estado !== 'BORRADOR')
+          p.Usuario_VisionParticipante_participanteIdToUsuario?.CartaFrutos?.some((c: any) => c.estado !== 'BORRADOR')
         );
         setAreasConfigLocked(hasActiveParticipants || false);
       }
@@ -268,6 +302,69 @@ export default function VisionDetailPage() {
       }
     } catch (error) {
       console.error('Error fetching mentores:', error);
+    }
+  };
+
+  const fetchLideres = async () => {
+    if (!session?.user) return;
+
+    setLoadingLideres(true);
+    try {
+      const response = await fetch('/api/school-admin/lideres');
+
+      if (!response.ok) throw new Error('Error al cargar líderes');
+
+      const data = await response.json();
+      
+      // Filtrar solo líderes con horarios configurados
+      const lideresConHorarios = (data.lideres || []).filter((lider: any) => 
+        lider.perfilCompleto && lider.tieneHorarios
+      );
+      
+      setLideres(lideresConHorarios);
+    } catch (error) {
+      console.error('Error al cargar líderes:', error);
+      showToast({
+        message: 'Error al cargar los líderes disponibles',
+        type: 'error'
+      });
+    } finally {
+      setLoadingLideres(false);
+    }
+  };
+
+  const asignarMentorPrivado = async (mentorId: number) => {
+    setAsignandoMentor(mentorId);
+    try {
+      const response = await fetch(
+        `/api/school-admin/visiones/${visionId}/asignar-mentor`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mentorId }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Error al asignar mentor');
+      }
+
+      showToast({
+        message: 'Mentor privado asignado exitosamente',
+        type: 'success'
+      });
+      setShowMentoresPrivadosModal(false);
+      fetchVisionDetails();
+      fetchMentores();
+    } catch (error: any) {
+      console.error('Error:', error);
+      showToast({
+        message: error.message || 'Error al asignar mentor',
+        type: 'error'
+      });
+    } finally {
+      setAsignandoMentor(null);
     }
   };
 
@@ -353,8 +450,8 @@ export default function VisionDetailPage() {
 
   const handleSelectAll = () => {
     const allUsersWithoutLicense = [
-      ...participantes.filter(p => !p.Participante.licenseCode).map(p => p.Participante.id),
-      ...gameChangers.filter(gc => !gc.GameChanger.licenseCode).map(gc => gc.GameChanger.id)
+      ...participantes.filter(p => !p.Usuario_VisionParticipante_participanteIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode).map(p => p.Usuario_VisionParticipante_participanteIdToUsuario.id),
+      ...gameChangers.filter(gc => !gc.Usuario_VisionGameChanger_gameChangerIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode).map(gc => gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.id)
     ];
     
     if (selectedUsers.size === allUsersWithoutLicense.length) {
@@ -982,17 +1079,25 @@ export default function VisionDetailPage() {
     }
   };
 
-  const participantesWithLicense = participantes.filter(p => p.Participante.licenseCode);
-  const participantesWithoutLicense = participantes.filter(p => !p.Participante.licenseCode);
-  const gameChangersWithLicense = gameChangers.filter(gc => gc.GameChanger.licenseCode);
-  const gameChangersWithoutLicense = gameChangers.filter(gc => !gc.GameChanger.licenseCode);
+  const participantesWithLicense = participantes.filter(p => 
+    p.Usuario_VisionParticipante_participanteIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode
+  );
+  const participantesWithoutLicense = participantes.filter(p => 
+    !p.Usuario_VisionParticipante_participanteIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode
+  );
+  const gameChangersWithLicense = gameChangers.filter(gc => 
+    gc.Usuario_VisionGameChanger_gameChangerIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode
+  );
+  const gameChangersWithoutLicense = gameChangers.filter(gc => 
+    !gc.Usuario_VisionGameChanger_gameChangerIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode
+  );
   const totalWithLicense = participantesWithLicense.length + gameChangersWithLicense.length;
   const totalWithoutLicense = participantesWithoutLicense.length + gameChangersWithoutLicense.length;
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+        <LoadingSpinner message="Cargando Visión..." size="lg" />
       </div>
     );
   }
@@ -1037,9 +1142,7 @@ export default function VisionDetailPage() {
                         <span className="text-sm text-white font-semibold">
                           {(() => {
                             try {
-                              const dateStr = typeof vision.startDate === 'string' 
-                                ? vision.startDate 
-                                : vision.startDate?.toISOString();
+                              const dateStr = vision.startDate;
                               if (!dateStr) return 'No definida';
                               const date = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
                               return date.toLocaleDateString('es-MX', {
@@ -1063,9 +1166,7 @@ export default function VisionDetailPage() {
                         <span className="text-sm text-white font-semibold">
                           {(() => {
                             try {
-                              const dateStr = typeof vision.endDate === 'string' 
-                                ? vision.endDate 
-                                : vision.endDate?.toISOString();
+                              const dateStr = vision.endDate;
                               if (!dateStr) return 'No definida';
                               const date = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
                               return date.toLocaleDateString('es-MX', {
@@ -1090,47 +1191,63 @@ export default function VisionDetailPage() {
                   <span className="text-sm text-slate-500">({vision.Coordinador.email})</span>
                 </div>
               )}
-            </div>
           </div>
-          <div className="flex items-center gap-2">
+        </div>
+        
+        {/* Botones de Acción - Organizado por grupos */}
+        <div className="flex flex-col gap-3">
+          {/* Fila 1: Configuración y Gestión */}
+          <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => setShowEditAreasModal(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-purple-500/30"
             >
-              <Edit size={16} />
+              <Edit size={18} />
               Configurar Áreas
             </button>
             <button
               onClick={() => setShowExtendDateModal(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-emerald-500/30"
             >
-              <Calendar size={16} />
+              <Calendar size={18} />
               Extender Fecha
             </button>
             <button
               onClick={() => setShowRandomAssignModal(true)}
               disabled={randomAssigning || (participantes.length === 0 && gameChangers.length === 0)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-indigo-500/30"
             >
-              <Users size={16} />
+              <Users size={18} />
               {randomAssigning ? 'Asignando...' : 'Asignación Aleatoria'}
+            </button>
+          </div>
+          
+          {/* Fila 2: Agregar Participantes */}
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setShowQRModal(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-pink-500/30"
+            >
+              <QrCode size={18} />
+              Generar QR
             </button>
             <button
               onClick={() => setShowAddTeamModal(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-semibold transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-cyan-500/30"
             >
-              <Users size={16} />
-              Agregar Team
+              <Users size={18} />
+              Agregar Game Changer
             </button>
             <button
               onClick={() => setShowAddModal(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-purple-500/30"
             >
-              <UserPlus size={16} />
+              <UserPlus size={18} />
               Agregar Participante
             </button>
           </div>
         </div>
+      </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
@@ -1190,6 +1307,116 @@ export default function VisionDetailPage() {
           </div>
         </div>
 
+        {/* Gestión de Mentores */}
+        <div className="mb-8 bg-slate-900/50 backdrop-blur border border-emerald-500/30 rounded-xl overflow-hidden">
+          <div className="p-8">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="bg-gradient-to-br from-emerald-500 to-cyan-500 rounded-xl p-4">
+                  <Users className="text-white" size={32} />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                    Gestión de Mentores
+                  </h2>
+                  <p className="text-slate-400 text-sm mt-1">
+                    Asigna y administra los mentores para esta visión
+                  </p>
+                </div>
+              </div>
+              {cicloInfo && mentoresAsignados.length > 0 && (
+                <div className="text-right bg-slate-800/50 rounded-xl p-4 border border-emerald-500/20">
+                  <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Costo Total del Ciclo</p>
+                  <p className="text-3xl font-bold text-emerald-400">
+                    ${mentoresAsignados.reduce((sum, m) => sum + m.costoTotal, 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">{mentoresAsignados.length} mentor(es) asignado(s)</p>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-slate-800/30 rounded-xl p-6 border border-slate-700">
+              <div className="flex items-start gap-4">
+                <div className="bg-cyan-500/10 p-3 rounded-lg shrink-0">
+                  <UserPlus className="text-cyan-400 w-6 h-6" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white font-semibold mb-2">Administra mentores de forma detallada</h3>
+                  <p className="text-slate-400 text-sm mb-4">
+                    Accede a la página de asignación de mentores para gestionar mentores profesionales y privados, 
+                    ver disponibilidad de espacios, calcular costos del ciclo y más.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={() => router.push(`/dashboard/school-admin/visiones/asignacion/${visionId}`)}
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl"
+                    >
+                      <Users size={20} />
+                      Mentores Certificados
+                      <ArrowRight size={20} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMentoresPrivadosModal(true);
+                        fetchLideres();
+                      }}
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl"
+                    >
+                      <UserPlus size={20} />
+                      Asignar Mentores Privados
+                      <ArrowRight size={20} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {mentoresAsignados.length > 0 && (
+              <div className="mt-6 bg-slate-800/20 rounded-xl p-4 border border-slate-700/50">
+                <p className="text-sm text-slate-400 mb-3 font-medium">Vista rápida de mentores asignados:</p>
+                <div className="flex flex-wrap gap-3">
+                  {mentoresAsignados.slice(0, 5).map((mentor) => {
+                    const usuario = mentor.Usuario_VisionMentor_mentorIdToUsuario;
+                    const esLider = usuario?.rol === 'LIDER';
+                    
+                    if (!usuario || !usuario.nombre) return null;
+                    
+                    return (
+                      <div key={mentor.id} className="flex items-center gap-2 bg-slate-800/50 rounded-lg px-3 py-2 border border-slate-600/30">
+                        {usuario.imagen ? (
+                          <img 
+                            src={usuario.imagen} 
+                            alt={usuario.nombre}
+                            className="w-8 h-8 rounded-full object-cover border-2 border-emerald-500/30"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center text-white text-xs font-bold">
+                            {usuario.nombre?.charAt(0)?.toUpperCase() || 'M'}
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-white text-sm font-medium">{usuario.nombre}</p>
+                          <p className="text-xs text-slate-500">
+                            {esLider ? '👑 Privado' : '🎓 Mentor'}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {mentoresAsignados.length > 5 && (
+                    <div className="flex items-center gap-2 bg-slate-800/50 rounded-lg px-3 py-2 border border-slate-600/30">
+                      <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-400 text-xs font-bold">
+                        +{mentoresAsignados.length - 5}
+                      </div>
+                      <p className="text-slate-400 text-sm">más</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Participantes List */}
         <div className="bg-slate-900/50 backdrop-blur border border-slate-700 rounded-xl overflow-hidden">
           <div className="p-6 border-b border-slate-700 flex items-center justify-between">
@@ -1240,7 +1467,7 @@ export default function VisionDetailPage() {
                     <th className="px-6 py-4 text-center text-xs font-semibold text-slate-400 uppercase w-12">
                       <input
                         type="checkbox"
-                        checked={selectedUsers.size > 0 && selectedUsers.size === participantes.filter(p => !p.Participante.licenseCode).length + gameChangers.filter(gc => !gc.GameChanger.licenseCode).length}
+                        checked={selectedUsers.size > 0 && selectedUsers.size === participantes.filter(p => !p.Usuario_VisionParticipante_participanteIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode).length + gameChangers.filter(gc => !gc.Usuario_VisionGameChanger_gameChangerIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode).length}
                         onChange={handleSelectAll}
                         className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-cyan-600 focus:ring-2 focus:ring-cyan-500"
                       />
@@ -1272,54 +1499,54 @@ export default function VisionDetailPage() {
                   {participantes.map((p) => (
                     <tr key={p.id} className="hover:bg-slate-800/30 transition-colors">
                       <td className="px-6 py-4 text-center">
-                        {!p.Participante.licenseCode && (
+                        {!p.Usuario_VisionParticipante_participanteIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode && (
                           <input
                             type="checkbox"
-                            checked={selectedUsers.has(p.Participante.id)}
-                            onChange={() => handleToggleUser(p.Participante.id)}
+                            checked={selectedUsers.has(p.Usuario_VisionParticipante_participanteIdToUsuario.id)}
+                            onChange={() => handleToggleUser(p.Usuario_VisionParticipante_participanteIdToUsuario.id)}
                             className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-cyan-600 focus:ring-2 focus:ring-cyan-500"
                           />
                         )}
                       </td>
                       <td className="px-6 py-4">
                         <div>
-                          <p className="font-semibold text-white">{p.Participante.nombre}</p>
-                          <p className="text-xs text-slate-500">{p.Participante.email}</p>
-                          {p.Participante.telefono && (
+                          <p className="font-semibold text-white">{p.Usuario_VisionParticipante_participanteIdToUsuario.nombre}</p>
+                          <p className="text-xs text-slate-500">{p.Usuario_VisionParticipante_participanteIdToUsuario.email}</p>
+                          {p.Usuario_VisionParticipante_participanteIdToUsuario.telefono && (
                             <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
                               </svg>
-                              {p.Participante.telefono}
+                              {p.Usuario_VisionParticipante_participanteIdToUsuario.telefono}
                             </p>
                           )}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          p.Participante.tier === 'PREMIUM'
+                          p.Usuario_VisionParticipante_participanteIdToUsuario.tier === 'PREMIUM'
                             ? 'bg-purple-900/20 text-purple-400 border border-purple-600'
                             : 'bg-cyan-900/20 text-cyan-400 border border-cyan-600'
                         }`}>
-                          {p.Participante.tier || 'FREE'}
+                          {p.Usuario_VisionParticipante_participanteIdToUsuario.tier || 'FREE'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {p.Participante.Usuario_Usuario_assignedMentorIdToUsuario ? (
+                        {p.Usuario_VisionParticipante_participanteIdToUsuario.Usuario_Usuario_assignedMentorIdToUsuario ? (
                           <div className="flex flex-col items-center gap-1">
                             <span className="text-xs text-slate-400">
-                              {p.Participante.Usuario_Usuario_assignedMentorIdToUsuario.nombre}
+                              {p.Usuario_VisionParticipante_participanteIdToUsuario.Usuario_Usuario_assignedMentorIdToUsuario.nombre}
                             </span>
                             <div className="flex items-center gap-1">
                               <button
-                                onClick={() => handleOpenAssignMentorModal(p.Participante.id, 'PARTICIPANTE', p.Participante.nombre, !!p.Participante.licenseCode, true)}
+                                onClick={() => handleOpenAssignMentorModal(p.Usuario_VisionParticipante_participanteIdToUsuario.id, 'PARTICIPANTE', p.Usuario_VisionParticipante_participanteIdToUsuario.nombre, !!p.Usuario_VisionParticipante_participanteIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode, true)}
                                 className="inline-flex items-center gap-1 px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded transition-colors"
                               >
                                 <Users size={12} />
                                 Cambiar
                               </button>
                               <button
-                                onClick={() => handleRemoverMentorDeUsuario(p.Participante.id, 'PARTICIPANTE', p.Participante.nombre)}
+                                onClick={() => handleRemoverMentorDeUsuario(p.Usuario_VisionParticipante_participanteIdToUsuario.id, 'PARTICIPANTE', p.Usuario_VisionParticipante_participanteIdToUsuario.nombre)}
                                 className="p-1 hover:bg-red-600/20 text-red-400 rounded transition-colors"
                                 title="Remover mentor"
                               >
@@ -1329,7 +1556,7 @@ export default function VisionDetailPage() {
                           </div>
                         ) : (
                           <button
-                            onClick={() => handleOpenAssignMentorModal(p.Participante.id, 'PARTICIPANTE', p.Participante.nombre, !!p.Participante.licenseCode)}
+                            onClick={() => handleOpenAssignMentorModal(p.Usuario_VisionParticipante_participanteIdToUsuario.id, 'PARTICIPANTE', p.Usuario_VisionParticipante_participanteIdToUsuario.nombre, !!p.Usuario_VisionParticipante_participanteIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode)}
                             className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
                           >
                             <Users size={14} />
@@ -1338,10 +1565,10 @@ export default function VisionDetailPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {p.GameChanger ? (
+                        {p.Usuario_VisionParticipante_gameChangerIdToUsuario ? (
                           <div className="flex flex-col items-center gap-1">
                             <span className="text-xs text-cyan-400 font-medium">
-                              {p.GameChanger.nombre}
+                              {p.Usuario_VisionParticipante_gameChangerIdToUsuario.nombre}
                             </span>
                             <div className="flex items-center gap-1">
                               <button
@@ -1355,7 +1582,7 @@ export default function VisionDetailPage() {
                                 Cambiar
                               </button>
                               <button
-                                onClick={() => handleAssignGameChanger(p.Participante.id, null)}
+                                onClick={() => handleAssignGameChanger(p.Usuario_VisionParticipante_participanteIdToUsuario.id, null)}
                                 className="p-1 hover:bg-red-600/20 text-red-400 rounded transition-colors"
                                 title="Remover game changer"
                               >
@@ -1377,8 +1604,8 @@ export default function VisionDetailPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {p.Participante.LicenseAssignments?.[0]?.licenseCode ? (
-                          p.Participante.LicenseAssignments[0].activatedAt ? (
+                        {p.Usuario_VisionParticipante_participanteIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode ? (
+                          p.Usuario_VisionParticipante_participanteIdToUsuario.LicenseAssignment_LicenseAssignment_userIdToUsuario[0].activatedAt ? (
                             <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-900/20 text-green-400 border border-green-600 rounded-full text-xs font-medium">
                               <CheckCircle size={14} />
                               Activa
@@ -1397,13 +1624,13 @@ export default function VisionDetailPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {p.Participante.LicenseAssignments?.[0]?.licenseCode ? (
+                        {p.Usuario_VisionParticipante_participanteIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode ? (
                           <div className="flex items-center justify-center gap-2">
                             <code className="px-3 py-1.5 bg-gradient-to-r from-emerald-900/30 to-cyan-900/30 border border-emerald-500/30 rounded-lg text-sm text-emerald-300 font-mono font-semibold tracking-wide">
-                              {p.Participante.LicenseAssignments[0].licenseCode}
+                              {p.Usuario_VisionParticipante_participanteIdToUsuario.LicenseAssignment_LicenseAssignment_userIdToUsuario[0].licenseCode}
                             </code>
                             <button
-                              onClick={() => copyToClipboard(p.Participante.LicenseAssignments[0].licenseCode)}
+                              onClick={() => copyToClipboard(p.Usuario_VisionParticipante_participanteIdToUsuario.LicenseAssignment_LicenseAssignment_userIdToUsuario[0].licenseCode)}
                               className="p-1.5 hover:bg-emerald-600/20 text-emerald-400 hover:text-emerald-300 rounded-lg transition-all"
                               title="Copiar código"
                             >
@@ -1417,7 +1644,7 @@ export default function VisionDetailPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
                           <button
-                            onClick={() => handleOpenEditPhone(p.Participante.id, p.Participante.nombre, p.Participante.telefono)}
+                            onClick={() => handleOpenEditPhone(p.Usuario_VisionParticipante_participanteIdToUsuario.id, p.Usuario_VisionParticipante_participanteIdToUsuario.nombre, p.Usuario_VisionParticipante_participanteIdToUsuario.telefono)}
                             className="p-2 hover:bg-blue-600/20 text-blue-400 rounded-lg transition-colors"
                             title="Editar teléfono"
                           >
@@ -1425,7 +1652,7 @@ export default function VisionDetailPage() {
                               <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
                             </svg>
                           </button>
-                          {!p.Participante.LicenseAssignments?.[0]?.licenseCode && (
+                          {!p.Usuario_VisionParticipante_participanteIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode && (
                             <button
                               onClick={() => {
                                 setSelectedParticipante(p);
@@ -1507,54 +1734,54 @@ export default function VisionDetailPage() {
                   {gameChangers.map((gc) => (
                     <tr key={gc.id} className="hover:bg-slate-800/30 transition-colors">
                       <td className="px-6 py-4 text-center">
-                        {!gc.GameChanger.licenseCode && (
+                        {!gc.Usuario_VisionGameChanger_gameChangerIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode && (
                           <input
                             type="checkbox"
-                            checked={selectedUsers.has(gc.GameChanger.id)}
-                            onChange={() => handleToggleUser(gc.GameChanger.id)}
+                            checked={selectedUsers.has(gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.id)}
+                            onChange={() => handleToggleUser(gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.id)}
                             className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-cyan-600 focus:ring-2 focus:ring-cyan-500"
                           />
                         )}
                       </td>
                       <td className="px-6 py-4">
                         <div>
-                          <p className="font-semibold text-white">{gc.GameChanger.nombre}</p>
-                          <p className="text-xs text-slate-500">{gc.GameChanger.email}</p>
-                          {gc.GameChanger.telefono && (
+                          <p className="font-semibold text-white">{gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.nombre}</p>
+                          <p className="text-xs text-slate-500">{gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.email}</p>
+                          {gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.telefono && (
                             <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
                               </svg>
-                              {gc.GameChanger.telefono}
+                              {gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.telefono}
                             </p>
                           )}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          gc.GameChanger.tier === 'PREMIUM'
+                          gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.tier === 'PREMIUM'
                             ? 'bg-purple-900/20 text-purple-400 border border-purple-600'
                             : 'bg-cyan-900/20 text-cyan-400 border border-cyan-600'
                         }`}>
-                          {gc.GameChanger.tier || 'FREE'}
+                          {gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.tier || 'FREE'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {gc.GameChanger.Usuario_Usuario_assignedMentorIdToUsuario ? (
+                        {gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.Usuario_Usuario_assignedMentorIdToUsuario ? (
                           <div className="flex flex-col items-center gap-1">
                             <span className="text-xs text-slate-400">
-                              {gc.GameChanger.Usuario_Usuario_assignedMentorIdToUsuario.nombre}
+                              {gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.Usuario_Usuario_assignedMentorIdToUsuario.nombre}
                             </span>
                             <div className="flex items-center gap-1">
                               <button
-                                onClick={() => handleOpenAssignMentorModal(gc.GameChanger.id, 'GAMECHANGER', gc.GameChanger.nombre, !!gc.GameChanger.licenseCode, true)}
+                                onClick={() => handleOpenAssignMentorModal(gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.id, 'GAMECHANGER', gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.nombre, !!gc.Usuario_VisionGameChanger_gameChangerIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode, true)}
                                 className="inline-flex items-center gap-1 px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded transition-colors"
                               >
                                 <Users size={12} />
                                 Cambiar
                               </button>
                               <button
-                                onClick={() => handleRemoverMentorDeUsuario(gc.GameChanger.id, 'GAMECHANGER', gc.GameChanger.nombre)}
+                                onClick={() => handleRemoverMentorDeUsuario(gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.id, 'GAMECHANGER', gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.nombre)}
                                 className="p-1 hover:bg-red-600/20 text-red-400 rounded transition-colors"
                                 title="Remover mentor"
                               >
@@ -1564,7 +1791,7 @@ export default function VisionDetailPage() {
                           </div>
                         ) : (
                           <button
-                            onClick={() => handleOpenAssignMentorModal(gc.GameChanger.id, 'GAMECHANGER', gc.GameChanger.nombre, !!gc.GameChanger.licenseCode)}
+                            onClick={() => handleOpenAssignMentorModal(gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.id, 'GAMECHANGER', gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.nombre, !!gc.Usuario_VisionGameChanger_gameChangerIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode)}
                             className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
                           >
                             <Users size={14} />
@@ -1573,8 +1800,8 @@ export default function VisionDetailPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {gc.GameChanger.LicenseAssignments?.[0]?.licenseCode ? (
-                          gc.GameChanger.LicenseAssignments[0].activatedAt ? (
+                        {gc.Usuario_VisionGameChanger_gameChangerIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode ? (
+                          gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.LicenseAssignment_LicenseAssignment_userIdToUsuario[0].activatedAt ? (
                             <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-900/20 text-green-400 border border-green-600 rounded-full text-xs font-medium">
                               <CheckCircle size={14} />
                               Activa
@@ -1593,13 +1820,13 @@ export default function VisionDetailPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {gc.GameChanger.LicenseAssignments?.[0]?.licenseCode ? (
+                        {gc.Usuario_VisionGameChanger_gameChangerIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode ? (
                           <div className="flex items-center justify-center gap-2">
                             <code className="px-3 py-1.5 bg-gradient-to-r from-emerald-900/30 to-cyan-900/30 border border-emerald-500/30 rounded-lg text-sm text-emerald-300 font-mono font-semibold tracking-wide">
-                              {gc.GameChanger.LicenseAssignments[0].licenseCode}
+                              {gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.LicenseAssignment_LicenseAssignment_userIdToUsuario[0].licenseCode}
                             </code>
                             <button
-                              onClick={() => copyToClipboard(gc.GameChanger.LicenseAssignments[0].licenseCode)}
+                              onClick={() => copyToClipboard(gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.LicenseAssignment_LicenseAssignment_userIdToUsuario[0].licenseCode)}
                               className="p-1.5 hover:bg-emerald-600/20 text-emerald-400 hover:text-emerald-300 rounded-lg transition-all"
                               title="Copiar código"
                             >
@@ -1613,7 +1840,7 @@ export default function VisionDetailPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
                           <button
-                            onClick={() => handleOpenEditPhone(gc.GameChanger.id, gc.GameChanger.nombre, gc.GameChanger.telefono)}
+                            onClick={() => handleOpenEditPhone(gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.id, gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.nombre, gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.telefono)}
                             className="p-2 hover:bg-blue-600/20 text-blue-400 rounded-lg transition-colors"
                             title="Editar teléfono"
                           >
@@ -1621,7 +1848,7 @@ export default function VisionDetailPage() {
                               <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
                             </svg>
                           </button>
-                          {!gc.GameChanger.LicenseAssignments?.[0]?.licenseCode && (
+                          {!gc.Usuario_VisionGameChanger_gameChangerIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode && (
                             <button
                               onClick={() => {
                                 setSelectedGameChanger(gc);
@@ -1637,125 +1864,6 @@ export default function VisionDetailPage() {
                             onClick={() => handleRemoveParticipante(gc.id)}
                             className="p-2 hover:bg-red-600/20 text-red-400 rounded-lg transition-colors"
                             title="Eliminar"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Mentores de Disciplina List */}
-        <div className="bg-slate-900/50 backdrop-blur border border-slate-700 rounded-xl overflow-hidden">
-          <div className="p-6 border-b border-slate-700 flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-white">Mentores de Disciplina</h2>
-              <p className="text-sm text-slate-400 mt-1">
-                Solo estos mentores podrán ser seleccionados para llamadas de disciplina
-              </p>
-            </div>
-            <button
-              onClick={() => setShowAddMentorModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition-colors"
-            >
-              <UserPlus size={18} />
-              Asignar Mentor
-            </button>
-          </div>
-
-          {mentoresAsignados.length === 0 ? (
-            <div className="p-12 text-center">
-              <Users className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-              <p className="text-slate-400 text-lg mb-2">No hay mentores asignados</p>
-              <p className="text-slate-500 text-sm mb-6">
-                Asigna mentores para que los participantes puedan agendar llamadas de disciplina
-              </p>
-              <button
-                onClick={() => setShowAddMentorModal(true)}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition-colors"
-              >
-                <UserPlus size={20} />
-                Asignar Primer Mentor
-              </button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-slate-800/50 border-b border-slate-700">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-400 uppercase">
-                      Mentor
-                    </th>
-                    <th className="px-6 py-4 text-center text-xs font-semibold text-slate-400 uppercase">
-                      Estado
-                    </th>
-                    <th className="px-6 py-4 text-center text-xs font-semibold text-slate-400 uppercase">
-                      Horarios
-                    </th>
-                    <th className="px-6 py-4 text-center text-xs font-semibold text-slate-400 uppercase">
-                      Acciones
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-700">
-                  {mentoresAsignados.map((ma) => (
-                    <tr key={ma.id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          {ma.mentor.imagen ? (
-                            <img
-                              src={ma.mentor.imagen}
-                              alt={ma.mentor.nombre}
-                              className="w-10 h-10 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-semibold">
-                              {ma.mentor.nombre.charAt(0)}
-                            </div>
-                          )}
-                          <div>
-                            <p className="font-semibold text-white">{ma.mentor.nombre}</p>
-                            <p className="text-xs text-slate-500">{ma.mentor.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        {ma.mentor.isActive ? (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-900/20 text-green-400 border border-green-600 rounded-full text-xs font-medium">
-                            <CheckCircle size={14} />
-                            Activo
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-900/20 text-gray-400 border border-gray-600 rounded-full text-xs font-medium">
-                            <XCircle size={14} />
-                            Inactivo
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        {ma.tieneHorarios ? (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-900/20 text-blue-400 border border-blue-600 rounded-full text-xs font-medium">
-                            <CheckCircle size={14} />
-                            Configurado
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-900/20 text-amber-400 border border-amber-600 rounded-full text-xs font-medium">
-                            <AlertCircle size={14} />
-                            Sin horarios
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleRemoverMentor(ma.mentorId)}
-                            className="p-2 hover:bg-red-600/20 text-red-400 rounded-lg transition-colors"
-                            title="Remover mentor"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -1934,10 +2042,10 @@ export default function VisionDetailPage() {
                 {selectedParticipante ? 'Participante:' : 'Game Changer:'}
               </p>
               <p className="font-semibold text-white">
-                {selectedParticipante?.Participante.nombre || selectedGameChanger?.GameChanger.nombre}
+                {selectedParticipante?.Usuario_VisionParticipante_participanteIdToUsuario.nombre || selectedGameChanger?.Usuario_VisionGameChanger_gameChangerIdToUsuario.nombre}
               </p>
               <p className="text-sm text-slate-400">
-                {selectedParticipante?.Participante.email || selectedGameChanger?.GameChanger.email}
+                {selectedParticipante?.Usuario_VisionParticipante_participanteIdToUsuario.email || selectedGameChanger?.Usuario_VisionGameChanger_gameChangerIdToUsuario.email}
               </p>
             </div>
 
@@ -2623,23 +2731,23 @@ export default function VisionDetailPage() {
             </h2>
             
             <p className="text-slate-300 text-center mb-6">
-              Selecciona un Game Changer para <strong>{selectedParticipanteForGC.Participante.nombre}</strong>
+              Selecciona un Game Changer para <strong>{selectedParticipanteForGC.Usuario_VisionParticipante_participanteIdToUsuario.nombre}</strong>
             </p>
 
             <div className="space-y-2 max-h-96 overflow-y-auto mb-6">
               {gameChangers.map((gc) => (
                 <button
-                  key={gc.GameChanger.id}
-                  onClick={() => handleAssignGameChanger(selectedParticipanteForGC.Participante.id, gc.GameChanger.id)}
+                  key={gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.id}
+                  onClick={() => handleAssignGameChanger(selectedParticipanteForGC.Usuario_VisionParticipante_participanteIdToUsuario.id, gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.id)}
                   disabled={assigningGameChanger}
                   className="w-full p-4 bg-slate-800/50 hover:bg-cyan-600/20 border border-slate-700 hover:border-cyan-500/50 rounded-lg transition-all text-left disabled:opacity-50"
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-white font-semibold">{gc.GameChanger.nombre}</p>
-                      <p className="text-xs text-slate-400">{gc.GameChanger.email}</p>
+                      <p className="text-white font-semibold">{gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.nombre}</p>
+                      <p className="text-xs text-slate-400">{gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.email}</p>
                     </div>
-                    {selectedParticipanteForGC.gameChangerId === gc.GameChanger.id && (
+                    {selectedParticipanteForGC.gameChangerId === gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.id && (
                       <CheckCircle className="text-green-400" size={20} />
                     )}
                   </div>
@@ -2796,6 +2904,364 @@ export default function VisionDetailPage() {
                     <span>Guardar</span>
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación de Remoción de Mentor */}
+      {showMentorChangeModal && mentorChangeData && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-red-500/30 rounded-2xl p-8 max-w-2xl w-full shadow-2xl">
+            <div className="flex items-center justify-center w-16 h-16 bg-red-600/20 rounded-full mx-auto mb-6">
+              <AlertCircle className="text-red-400" size={32} />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-white text-center mb-3">
+              ⚠️ Confirmar Remoción de Mentor
+            </h2>
+            
+            <p className="text-slate-300 text-center mb-6">
+              Estás a punto de remover el mentor asignado a <strong className="text-white">{mentorChangeData.userName}</strong>
+            </p>
+
+            {/* Banner de advertencia sobre impacto */}
+            <div className="mb-6 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-2 border-amber-500/30 rounded-xl p-5 backdrop-blur-sm">
+              <div className="flex items-start gap-4">
+                <div className="bg-amber-500/20 p-3 rounded-lg shrink-0">
+                  <AlertCircle className="text-amber-400 w-6 h-6" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-amber-400 mb-2">
+                    Impacto en Llamadas de Mentoría
+                  </h3>
+                  <div className="text-slate-300 space-y-2 text-sm leading-relaxed">
+                    <p><strong className="text-white">Al remover este mentor:</strong></p>
+                    <ul className="list-disc list-inside space-y-1.5 ml-2 text-slate-300">
+                      <li>
+                        <strong className="text-amber-400">Todas las llamadas agendadas</strong> entre el mentor y el participante serán <strong className="text-red-400">canceladas automáticamente</strong>
+                      </li>
+                      <li>
+                        El <strong className="text-cyan-400">participante recibirá una notificación</strong> informándole del cambio
+                      </li>
+                      <li>
+                        El participante deberá <strong className="text-purple-400">reagendar sus sesiones de mentoría</strong> con el nuevo mentor asignado
+                      </li>
+                      <li>
+                        Se recomienda <strong className="text-emerald-400">comunicar este cambio con anticipación</strong> para minimizar interrupciones
+                      </li>
+                    </ul>
+
+                    {mentorChangeData.scheduledCalls > 0 && (
+                      <div className="mt-4 p-3 bg-red-900/30 border border-red-500/30 rounded-lg">
+                        <p className="text-red-300 font-semibold flex items-center gap-2">
+                          <span className="text-xl">📅</span>
+                          <span>
+                            Este mentor tiene <strong className="text-red-400">{mentorChangeData.scheduledCalls} llamada(s) programada(s)</strong> que serán canceladas
+                          </span>
+                        </p>
+                        <p className="text-red-400 text-xs mt-2">
+                          Semanas restantes del ciclo: <strong>{mentorChangeData.remainingWeeks}</strong>
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="mt-4 p-3 bg-slate-900/50 border border-slate-700 rounded-lg">
+                      <p className="text-xs text-slate-400 flex items-start gap-2">
+                        <span className="text-cyan-400 shrink-0">💡</span>
+                        <span>
+                          <strong className="text-white">Sugerencia:</strong> Asegúrate de tener un nuevo mentor listo para asignar inmediatamente después de esta remoción.
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowMentorChangeModal(false);
+                  setMentorChangeData(null);
+                }}
+                className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  if (mentorChangeData) {
+                    await confirmRemoveMentor(mentorChangeData.userId, mentorChangeData.userType);
+                  }
+                }}
+                className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+              >
+                <Trash2 size={18} />
+                <span>Confirmar Remoción</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de QR Code */}
+      {showQRModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-pink-500/30 rounded-2xl p-8 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-center w-16 h-16 bg-pink-600/20 rounded-full mx-auto mb-6">
+              <QrCode className="text-pink-400" size={32} />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-white text-center mb-3">
+              QR de Registro Automático
+            </h2>
+            
+            <p className="text-slate-300 text-center mb-6">
+              Genera un código QR para que los usuarios se registren automáticamente en <strong>{vision?.nombre}</strong>
+            </p>
+
+            {/* Info Box */}
+            <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/30 rounded-xl p-5 mb-6">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="text-blue-400 shrink-0 mt-0.5" size={20} />
+                <div className="text-sm text-blue-200">
+                  <p className="font-semibold mb-2">¿Cómo funciona?</p>
+                  <ul className="space-y-1 list-disc list-inside text-blue-300/90">
+                    <li>Los usuarios escanean el QR o acceden al link</li>
+                    <li>Se registran con correo, contraseña y teléfono (WhatsApp)</li>
+                    <li>Se asignan automáticamente a esta visión</li>
+                    <li>Reciben una licencia en estado "Pendiente"</li>
+                    <li>El límite de registros está relacionado con las licencias disponibles</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                <p className="text-slate-400 text-sm mb-1">Registros actuales</p>
+                <p className="text-2xl font-bold text-white">{vision?._count?.Participantes || 0}</p>
+              </div>
+              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                <p className="text-slate-400 text-sm mb-1">Límite de visión</p>
+                <p className="text-2xl font-bold text-pink-400">{vision?.maxParticipantes || 'Sin límite'}</p>
+              </div>
+            </div>
+
+            {qrCodeUrl && (
+              <div className="mb-6">
+                <div className="bg-white p-6 rounded-xl mb-4 flex items-center justify-center">
+                  <img src={qrCodeUrl} alt="QR Code" className="w-64 h-64" />
+                </div>
+                
+                <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 mb-4">
+                  <p className="text-slate-400 text-sm mb-2">Link de registro:</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={`${window.location.origin}/registro/${vision?.id}`}
+                      readOnly
+                      className="flex-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded text-white text-sm"
+                    />
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/registro/${vision?.id}`);
+                        showToast({ message: 'Link copiado', type: 'success' });
+                      }}
+                      className="p-2 bg-pink-600 hover:bg-pink-700 text-white rounded transition-colors"
+                    >
+                      <Copy size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = qrCodeUrl;
+                    link.download = `qr-registro-${vision?.nombre?.replace(/\s+/g, '-')}.png`;
+                    link.click();
+                  }}
+                  className="w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  <Download size={18} />
+                  <span>Descargar QR</span>
+                </button>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowQRModal(false);
+                  setQrCodeUrl('');
+                }}
+                disabled={generatingQR}
+                className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 text-white rounded-lg font-semibold transition-colors"
+              >
+                Cerrar
+              </button>
+              {!qrCodeUrl && (
+                <button
+                  onClick={async () => {
+                    try {
+                      setGeneratingQR(true);
+                      const res = await fetch(`/api/visiones/${visionId}/generate-qr`, {
+                        method: 'POST',
+                      });
+                      const data = await res.json();
+                      
+                      if (data.success) {
+                        setQrCodeUrl(data.qrCodeUrl);
+                        showToast({ message: 'QR generado exitosamente', type: 'success' });
+                      } else {
+                        showToast({ message: data.error || 'Error al generar QR', type: 'error' });
+                      }
+                    } catch (error) {
+                      showToast({ message: 'Error al generar QR', type: 'error' });
+                    } finally {
+                      setGeneratingQR(false);
+                    }
+                  }}
+                  disabled={generatingQR}
+                  className="flex-1 px-4 py-3 bg-pink-600 hover:bg-pink-700 disabled:bg-slate-700 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  {generatingQR ? (
+                    <>
+                      <Loader2 className="animate-spin" size={18} />
+                      <span>Generando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <QrCode size={18} />
+                      <span>Generar QR</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Asignar Mentores Privados */}
+      {showMentoresPrivadosModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-900 border border-purple-500/30 rounded-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl p-3">
+                  <UserPlus className="text-white" size={28} />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Asignar Mentores Privados</h2>
+                  <p className="text-slate-400 text-sm mt-1">
+                    Selecciona líderes de tu organización para asignarlos como mentores
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowMentoresPrivadosModal(false)}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <XCircle size={24} />
+              </button>
+            </div>
+
+            {loadingLideres ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="animate-spin text-purple-400" size={48} />
+              </div>
+            ) : lideres.length === 0 ? (
+              <div className="text-center py-12">
+                <UserPlus className="mx-auto text-slate-600 mb-4" size={64} />
+                <p className="text-slate-400 text-lg mb-2">No hay mentores privados disponibles</p>
+                <p className="text-slate-500 text-sm">
+                  Agrega usuarios con rol Mentor/Lider en tu organización para poder asignarlos como mentores privados
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {lideres.map((lider) => {
+                  const yaAsignado = mentoresAsignados.some(
+                    m => m.mentorId === lider.id
+                  );
+                  const estaAsignando = asignandoMentor === lider.id;
+
+                  return (
+                    <div
+                      key={lider.id}
+                      className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 flex items-center justify-between hover:border-purple-500/30 transition-all"
+                    >
+                      <div className="flex items-center gap-4">
+                        {lider.profileImage ? (
+                          <img
+                            src={lider.profileImage}
+                            alt={lider.nombre}
+                            className="w-12 h-12 rounded-full object-cover border-2 border-purple-500/30"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-lg font-bold">
+                            {lider.nombre?.charAt(0)?.toUpperCase() || 'L'}
+                          </div>
+                        )}
+                        <div>
+                          <h3 className="text-white font-semibold flex items-center gap-2">
+                            {lider.nombre}
+                            <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-1 rounded">
+                              👑 LÍDER
+                            </span>
+                          </h3>
+                          <p className="text-slate-400 text-sm">{lider.email}</p>
+                          {lider.totalMentorados > 0 && (
+                            <p className="text-xs text-slate-500 mt-1">
+                              {lider.totalMentorados} participante(s) activo(s)
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        {yaAsignado ? (
+                          <span className="px-4 py-2 bg-emerald-500/20 text-emerald-300 rounded-lg text-sm font-medium flex items-center gap-2">
+                            <CheckCircle size={16} />
+                            Ya asignado
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => asignarMentorPrivado(lider.id)}
+                            disabled={estaAsignando}
+                            className="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-slate-600 disabled:to-slate-600 text-white rounded-lg font-semibold transition-all flex items-center gap-2"
+                          >
+                            {estaAsignando ? (
+                              <>
+                                <Loader2 className="animate-spin" size={16} />
+                                Asignando...
+                              </>
+                            ) : (
+                              <>
+                                <UserPlus size={16} />
+                                Asignar
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="mt-6 pt-6 border-t border-slate-700 flex justify-end">
+              <button
+                onClick={() => setShowMentoresPrivadosModal(false)}
+                className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-colors"
+              >
+                Cerrar
               </button>
             </div>
           </div>

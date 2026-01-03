@@ -19,6 +19,8 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
+    console.log('✅ Coordinador:', coordinador.id, coordinador.nombre);
+
     // Obtener visiones del coordinador
     let visionesWhere: any = {};
     
@@ -27,6 +29,8 @@ export async function GET() {
     } else {
       visionesWhere.coordinadorId = coordinador.id;
     }
+
+    console.log('🔍 Buscando visiones con:', visionesWhere);
 
     const visiones = await prisma.vision.findMany({
       where: visionesWhere,
@@ -39,6 +43,7 @@ export async function GET() {
                 nombre: true,
                 email: true,
                 rol: true,
+                profileImage: true,
                 puntosGamificacion: true,
                 puntosCuanticos: true,
                 experienciaXP: true,
@@ -51,6 +56,11 @@ export async function GET() {
                     autorizadoMentor: true,
                     fechaCreacion: true
                   }
+                },
+                PerfilCompleto: {
+                  select: {
+                    condecoraciones: true
+                  }
                 }
               }
             }
@@ -58,6 +68,9 @@ export async function GET() {
         }
       }
     });
+
+    console.log('✅ Visiones encontradas:', visiones.length);
+    visiones.forEach(v => console.log('  -', v.nombre, ':', v.Participantes.length, 'participantes'));
 
     // Organizar por visión y calcular ranking
     const visionesConParticipantes = visiones.map(vision => {
@@ -69,6 +82,8 @@ export async function GET() {
           id: p.id,
           nombre: p.nombre,
           email: p.email,
+          profileImageUrl: p.profileImage,
+          condecoraciones: p.PerfilCompleto?.condecoraciones || [],
           puntosCultivo: p.puntosGamificacion || 0,
           puntosQuantum: p.puntosCuanticos || 0,
           xp: p.experienciaXP || 0,

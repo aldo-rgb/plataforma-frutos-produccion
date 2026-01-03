@@ -150,7 +150,7 @@ async function generarTextoMotivacional(
   evidenciasTotales: number
 ): Promise<string> {
   try {
-    const prompt = `Genera un texto motivacional épico y corto (máximo 100 palabras) para un video Time Capsule de transformación personal.
+    const prompt = `Genera un texto motivacional épico y corto (máximo 100 palabras) para un video Time Capsule de transformación cuántica.
 
 Contexto:
 - Usuario: ${nombre}
@@ -175,7 +175,7 @@ Responde SOLO con el texto, sin comillas ni formato adicional.`;
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: 'Eres un coach inspirador que escribe textos motivacionales para videos de transformación personal.' },
+          { role: 'system', content: 'Eres un coach inspirador que escribe textos motivacionales para videos de transformación cuantica.' },
           { role: 'user', content: prompt }
         ],
         max_tokens: 200,

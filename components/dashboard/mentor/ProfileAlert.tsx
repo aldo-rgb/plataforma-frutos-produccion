@@ -29,6 +29,9 @@ export default function ProfileAlert({ user }: ProfileAlertProps) {
   if (!user.PerfilMentor?.especialidad) camposFaltantes.push('Especialidad');
   if (!user.skills || user.skills.length === 0) camposFaltantes.push('Habilidades');
 
+  // Determinar la URL del perfil según el rol del usuario
+  const perfilUrl = user.rol === 'LIDER' ? '/dashboard/lider/perfil' : '/dashboard/mentor/perfil';
+
   // CASO 1: Perfil completo Y activo = NO MOSTRAR NADA ✅
   if (camposFaltantes.length === 0 && user.isActive) {
     return null;
@@ -105,7 +108,7 @@ export default function ProfileAlert({ user }: ProfileAlertProps) {
 
         {/* Botón de acción */}
         <Link 
-          href="/dashboard/mentor/perfil"
+          href={perfilUrl}
           className="inline-flex items-center gap-2 bg-orange-600 hover:bg-orange-500 text-white font-bold py-2.5 px-5 rounded-lg transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
         >
           <span>Completar Perfil Ahora</span>

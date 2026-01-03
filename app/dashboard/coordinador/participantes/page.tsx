@@ -10,6 +10,7 @@ interface Participante {
   id: number;
   nombre: string;
   email: string;
+  profileImageUrl?: string | null;
   puntosCultivo: number;
   puntosQuantum: number;
   xp: number;
@@ -20,6 +21,7 @@ interface Participante {
   cartaEstado?: string;
   cartaAutorizada?: boolean;
   mentoringStartDate?: string;
+  condecoraciones?: string[];
 }
 
 interface VisionConParticipantes {
@@ -150,14 +152,53 @@ export default function MisParticipantesPage() {
                       >
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center gap-4">
-                            <div className="flex items-center justify-center w-10 h-10 bg-slate-800 rounded-lg">
-                              <span className="text-lg font-bold text-cyan-400">#{index + 1}</span>
+                            {/* Foto de perfil */}
+                            <div className="relative">
+                              {participante.profileImageUrl ? (
+                                <img
+                                  src={participante.profileImageUrl}
+                                  alt={participante.nombre}
+                                  className="w-16 h-16 rounded-full object-cover border-2 border-cyan-500/50"
+                                />
+                              ) : (
+                                <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center">
+                                  <span className="text-2xl font-bold text-white">
+                                    {participante.nombre.charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                              )}
+                              {/* Badge de ranking */}
+                              <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-slate-900 border-2 border-cyan-500 rounded-full flex items-center justify-center">
+                                <span className="text-xs font-bold text-cyan-400">#{index + 1}</span>
+                              </div>
                             </div>
+                            
                             <div>
                               <h4 className="text-lg font-bold text-white mb-1">
                                 {participante.nombre}
                               </h4>
                               <p className="text-sm text-slate-400">{participante.email}</p>
+                              
+                              {/* Condecoraciones */}
+                              {participante.condecoraciones && participante.condecoraciones.length > 0 && (
+                                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                  {participante.condecoraciones.slice(0, 3).map((cond, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="px-2 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded-lg"
+                                      title={cond}
+                                    >
+                                      <Award size={14} className="inline-block text-yellow-400 mr-1" />
+                                      <span className="text-xs font-bold text-yellow-400">{cond}</span>
+                                    </div>
+                                  ))}
+                                  {participante.condecoraciones.length > 3 && (
+                                    <div className="flex items-center justify-center px-2 py-1 bg-slate-800 rounded-lg border border-slate-600">
+                                      <span className="text-xs font-bold text-slate-400">+{participante.condecoraciones.length - 3}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           </div>
                           

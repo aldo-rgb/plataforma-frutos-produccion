@@ -36,6 +36,7 @@ export default function AltaUsuariosPage() {
       { value: 'COORDINADOR', label: 'Coordinador' },
       { value: 'GAMECHANGER', label: 'Game Changer' },
       { value: 'MENTOR', label: 'Mentor' },
+      { value: 'LIDER', label: 'Líder' },
       { value: 'PARTICIPANTE', label: 'Participante' },
     ];
   };

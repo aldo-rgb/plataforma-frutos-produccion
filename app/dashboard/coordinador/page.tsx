@@ -9,6 +9,7 @@ import {
   FileText, CheckCircle, Shield, Clock
 } from 'lucide-react';
 import Link from 'next/link';
+import VisionesWidget from '@/components/dashboard/VisionesWidget';
 
 interface DashboardData {
   overview: {
@@ -52,6 +53,8 @@ export default function CoordinadorDashboard() {
   const [loading, setLoading] = useState(true);
   const [consejoQuantum, setConsejoQuantum] = useState<any>(null);
   const [loadingConsejo, setLoadingConsejo] = useState(true);
+  const [visiones, setVisiones] = useState<any[]>([]);
+  const [loadingVisiones, setLoadingVisiones] = useState(true);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -62,6 +65,7 @@ export default function CoordinadorDashboard() {
       fetchDashboardData();
       fetchActionStats();
       fetchConsejoQuantum();
+      fetchVisiones();
     }
   }, [status, session]);
 
@@ -103,6 +107,20 @@ export default function CoordinadorDashboard() {
       console.error('Error fetching consejo quantum:', error);
     } finally {
       setLoadingConsejo(false);
+    }
+  };
+
+  const fetchVisiones = async () => {
+    try {
+      const res = await fetch('/api/coordinador/visiones');
+      const result = await res.json();
+      if (res.ok && result.success) {
+        setVisiones(result.visiones || []);
+      }
+    } catch (error) {
+      console.error('Error fetching visiones:', error);
+    } finally {
+      setLoadingVisiones(false);
     }
   };
 
@@ -176,7 +194,16 @@ export default function CoordinadorDashboard() {
           />
         </div>
 
-        {/* Widgets de Acción - 2x3 Grid */}
+        {/* Widget de Visiones */}
+        <div className="mt-8">
+          <VisionesWidget 
+            visiones={visiones} 
+            userRole="COORDINADOR" 
+            loading={loadingVisiones}
+          />
+        </div>
+
+        {/* Widgets de Acción - 2x3 Grid */}}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           
           {/* Widget 1: Cartas Pendientes */}

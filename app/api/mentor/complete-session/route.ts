@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { checkAndAwardBadges } from '@/lib/badgeSystem';
+import { onMentorshipSessionCompleted, onDisciplineCallCompleted } from '@/lib/commissionCalculator';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
     }
 
     // Verificar que sea mentor
-    if (session.user.rol !== 'MENTOR') {
+    if (session.user.rol !== 'MENTOR' && session.user.rol !== 'LIDER') {
       return NextResponse.json({ error: 'Solo mentores pueden completar sesiones' }, { status: 403 });
     }
 
@@ -110,7 +111,32 @@ export async function POST(request: Request) {
     });
 
     // 3. AUTOMATIZACIONES (Fire and forget - no bloqueamos la respuesta)
-    // Actualizar insignias en segundo plano
+    
+    // 3a. Registrar en Commission Ledger
+    if (result.booking.type === 'MENTORSHIP' && result.paymentReleased) {
+      onMentorshipSessionCompleted(
+        result.booking.id,
+        session.user.id,
+        result.booking.studentId,
+        Number(result.booking.Transaction?.totalAmount || result.amountReleased),
+        result.booking.scheduledAt
+      ).catch((error) => {
+        console.error('❌ Error registrando en Commission Ledger:', error);
+      });
+    } else if (result.booking.type === 'DISCIPLINE') {
+      // Registrar llamada de disciplina
+      onDisciplineCallCompleted(
+        result.booking.id,
+        session.user.id,
+        result.booking.studentId,
+        90, // Precio fijo por llamada de disciplina
+        result.booking.scheduledAt
+      ).catch((error) => {
+        console.error('❌ Error registrando llamada en Commission Ledger:', error);
+      });
+    }
+    
+    // 3b. Actualizar insignias en segundo plano
     checkAndAwardBadges(session.user.id)
       .then((badges) => {
         if (badges && badges.length > 0) {

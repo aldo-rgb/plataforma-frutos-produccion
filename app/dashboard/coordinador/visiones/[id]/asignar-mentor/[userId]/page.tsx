@@ -116,8 +116,10 @@ export default function AsignarMentorPage() {
   const handleAsignarMentor = async (mentorId: number) => {
     if (!usuario) return;
 
-    // Validar que el usuario tenga licencia
-    if (!usuario.licenseCode) {
+    // Validar que el usuario tenga licencia (verificar tanto licenseCode como LicenseAssignments)
+    const hasLicense = usuario.licenseCode || (usuario.LicenseAssignments && usuario.LicenseAssignments.length > 0);
+    
+    if (!hasLicense) {
       showToast({
         message: 'El usuario debe tener una licencia asignada antes de poder asignar un mentor',
         type: 'error',

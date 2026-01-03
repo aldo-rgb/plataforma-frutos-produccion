@@ -96,6 +96,7 @@ export default function ProgramEnrollPage() {
   const [error, setError] = useState<string | null>(null);
   const [enrollmentInfo, setEnrollmentInfo] = useState<EnrollmentInfo | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [userTier, setUserTier] = useState<string>('FREE');
 
   // Slots seleccionados
   const [slot1, setSlot1] = useState<Slot>({ dayOfWeek: -1, time: '' });
@@ -129,6 +130,8 @@ export default function ProgramEnrollPage() {
         const enrollData = await enrollResponse.json();
         console.log('📊 Enrollment data recibido:', enrollData);
         setEnrollmentInfo(enrollData);
+        setUserTier(enrollData.userTier || 'FREE');
+        setUserTier(enrollData.userTier || 'FREE');
         
         // Caso 1: Tiene enrollment completo con sesiones agendadas
         if (enrollData.hasEnrollment) {
@@ -205,11 +208,12 @@ export default function ProgramEnrollPage() {
         const enrollmentData = await enrollmentResponse.json();
         console.log('📊 Datos de enrollment:', {
           hasEnrollment: enrollmentData.hasEnrollment,
+          hasLoboSolitario: enrollmentData.hasLoboSolitario,
           hasMentor: !!enrollmentData.mentor,
           mentorData: enrollmentData.mentor
         });
         
-        // Si tiene enrollment y mentor asignado en el enrollment
+        // CASO 1: Tiene enrollment con mentor asignado
         if (enrollmentData.hasEnrollment && enrollmentData.mentor) {
           console.log('✅ Mentor encontrado en enrollment:', enrollmentData.mentor);
           setMentorAsignado(enrollmentData.mentor);
@@ -235,6 +239,39 @@ export default function ProgramEnrollPage() {
             }
           }
           
+          setIsLoading(false);
+          return;
+        }
+        
+        // CASO 2: Tiene Lobo Solitario con mentor asignado
+        if (enrollmentData.hasLoboSolitario && enrollmentData.mentor) {
+          console.log('✅ Mentor encontrado en Lobo Solitario:', enrollmentData.mentor);
+          setMentorAsignado(enrollmentData.mentor);
+          
+          // Si necesita agendar horarios, cargar los slots disponibles
+          if (enrollmentData.needsScheduling) {
+            console.log('📅 Usuario de Lobo Solitario necesita agendar horarios');
+            const slotsResponse = await fetch(`/api/mentor/slots-disponibles?mentorId=${enrollmentData.mentor.id}`);
+            if (slotsResponse.ok) {
+              const slotsData = await slotsResponse.json();
+              setSlotsDisponibles(slotsData.slotsDisponibles || {});
+              
+              // Preseleccionar horarios si hay disponibles
+              const diasDisponibles = Object.keys(slotsData.slotsDisponibles).map(Number).sort();
+              if (diasDisponibles.length >= 2) {
+                const dia1 = diasDisponibles[0];
+                const dia2 = diasDisponibles[1];
+                const horarios1 = slotsData.slotsDisponibles[dia1];
+                const horarios2 = slotsData.slotsDisponibles[dia2];
+                
+                if (horarios1?.length > 0 && horarios2?.length > 0) {
+                  setSlot1({ dayOfWeek: dia1, time: horarios1[0] });
+                  setSlot2({ dayOfWeek: dia2, time: horarios2[0] });
+                }
+              }
+            }
+          }
+          setEnrollmentInfo(enrollmentData);
           setIsLoading(false);
           return;
         }
@@ -490,6 +527,15 @@ export default function ProgramEnrollPage() {
     );
   }
 
+  // Calcular semanas y sesiones según la visión
+  // Por defecto: 9 semanas / 18 sesiones para todos
+  // Solo cambia si hay una visión con fechas específicas
+  const totalWeeksDisplay = enrollmentInfo?.stats?.totalWeeks || 9;
+  const totalSessionsDisplay = totalWeeksDisplay * 2;
+  const programName = enrollmentInfo?.vision 
+    ? enrollmentInfo.vision.nombre 
+    : 'Programa de Seguimiento (Lobo Solitario)';
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
       <div className="max-w-4xl mx-auto">
@@ -499,19 +545,15 @@ export default function ProgramEnrollPage() {
             <Calendar className="text-purple-400" size={32} />
           </div>
           <h1 className="text-4xl font-bold text-white mb-2">
-            {enrollmentInfo?.vision ? 
-              `${enrollmentInfo.vision.nombre}` 
-              : `Programa Intensivo ${enrollmentInfo?.stats?.totalWeeks || 8} Semanas`}
+            {programName}
           </h1>
-          {enrollmentInfo?.vision && enrollmentInfo.stats?.totalWeeks && (
-            <p className="text-purple-300 text-lg font-semibold mb-2">
-              {enrollmentInfo.stats.totalWeeks} Semanas · {enrollmentInfo.stats.totalWeeks * 2} Sesiones
-            </p>
-          )}
+          <p className="text-purple-300 text-lg font-semibold mb-2">
+            {totalWeeksDisplay} Semanas · {totalSessionsDisplay} Sesiones
+          </p>
           <p className="text-slate-400">
-            {enrollmentInfo?.vision ? 
-              `Inscríbete al programa de ${enrollmentInfo.stats?.totalWeeks || 8} semanas con llamadas semanales programadas` 
-              : 'Inscríbete al programa de disciplina con llamadas semanales programadas'}
+            {enrollmentInfo?.vision 
+              ? 'Inscríbete al programa de disciplina con llamadas semanales programadas'
+              : 'Ciclo de 63 días (9 semanas) con llamadas semanales - Modalidad Lobo Solitario'}
           </p>
           {enrollmentInfo?.vision && enrollmentInfo.vision.endDate && (
             <p className="text-purple-400 text-sm mt-2">
@@ -577,7 +619,7 @@ export default function ProgramEnrollPage() {
                   </li>
                   <li className="flex items-start gap-2 text-slate-300 text-sm">
                     <CheckCircle2 className="text-green-400 mt-0.5 flex-shrink-0" size={16} />
-                    {enrollmentInfo?.stats ? `${enrollmentInfo.stats.totalWeeks * 2} sesiones programadas` : '34 sesiones programadas'}
+                    18 sesiones programadas (9 semanas)
                   </li>
                   <li className="flex items-start gap-2 text-slate-300 text-sm">
                     <CheckCircle2 className="text-green-400 mt-0.5 flex-shrink-0" size={16} />
@@ -745,12 +787,12 @@ export default function ProgramEnrollPage() {
             <h3 className="text-white font-bold mb-1">
               {enrollmentInfo?.stats ? 
                 `${enrollmentInfo.stats.remainingSessions || enrollmentInfo.stats.totalSessions} Sesiones ${enrollmentInfo.stats.remainingSessions ? 'Restantes' : ''}` 
-                : `${(enrollmentInfo?.stats?.totalWeeks || 8) * 2} Sesiones`}
+                : `${totalSessionsDisplay} Sesiones`}
             </h3>
             <p className="text-slate-500 text-sm">
               {enrollmentInfo?.stats ? 
                 `${enrollmentInfo.stats.remainingWeeks || enrollmentInfo.stats.totalWeeks} de ${enrollmentInfo.stats.totalWeeks} semanas · 2 llamadas/semana` 
-                : `${enrollmentInfo?.stats?.totalWeeks || 8} semanas · 2 llamadas/semana`}
+                : `${totalWeeksDisplay} semanas · 2 llamadas/semana`}
             </p>
             {enrollmentInfo?.vision && (
               <p className="text-purple-400 text-xs mt-2 font-semibold">
@@ -771,7 +813,7 @@ export default function ProgramEnrollPage() {
             <p className="text-slate-500 text-sm">
               {enrollmentInfo?.stats ? 
                 `${enrollmentInfo.stats.missedCalls || 0} llamadas perdidas` 
-                : 'Llamadas que puedes perder'}
+                : 'Llamadas que puedes elegir no tomar'}
             </p>
           </div>
 
@@ -841,13 +883,27 @@ export default function ProgramEnrollPage() {
                 </ul>
               </div>
 
-              <a 
-                href="/dashboard/suscripcion" 
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2"
-              >
-                <Zap size={20} />
-                <span>Ver Planes</span>
-              </a>
+              <div className="grid grid-cols-2 gap-3">
+                <a 
+                  href="/dashboard/suscripcion" 
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-lg flex items-center justify-center gap-2 text-sm"
+                >
+                  <CreditCard size={18} />
+                  <span>Ver Licencias</span>
+                </a>
+                
+                <button
+                  onClick={() => {
+                    // Redirigir a selección de mentor con visionId si existe
+                    const visionId = enrollmentInfo?.vision?.id || 1;
+                    window.location.href = `/dashboard/participante/seleccionar-mentor/${visionId}`;
+                  }}
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-lg flex items-center justify-center gap-2 text-sm"
+                >
+                  <Users size={18} />
+                  <span>Seleccionar Mentor</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -856,7 +912,7 @@ export default function ProgramEnrollPage() {
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-6">
           <h2 className="text-xl font-bold text-white mb-4">Selecciona tus Horarios Semanales</h2>
           <p className="text-slate-400 text-sm mb-6">
-            Elige 2 días diferentes con horarios fijos para tus {enrollmentInfo?.stats ? `${enrollmentInfo.stats.totalWeeks * 2}` : '34'} sesiones programadas
+            Elige 2 días diferentes con horarios fijos para tus sesiones programadas
           </p>
 
           {/* Selector Visual de Horarios */}

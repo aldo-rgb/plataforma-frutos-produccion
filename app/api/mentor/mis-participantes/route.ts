@@ -22,7 +22,7 @@ export async function GET() {
     }
 
     // Verificar que sea mentor
-    if (mentor.rol !== 'MENTOR' && mentor.rol !== 'COORDINADOR' && mentor.rol !== 'GAMECHANGER') {
+    if (mentor.rol !== 'MENTOR' && mentor.rol !== 'LIDER' && mentor.rol !== 'COORDINADOR' && mentor.rol !== 'GAMECHANGER') {
       return NextResponse.json({ error: 'No tienes permisos de mentor' }, { status: 403 });
     }
 

@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       where: { id: Number(session.user.id) }
     });
 
-    if (user?.rol !== 'MENTOR' && user?.rol !== 'ADMINISTRADOR') {
+    if (user?.rol !== 'MENTOR' && user?.rol !== 'LIDER' && user?.rol !== 'ADMINISTRADOR') {
       return NextResponse.json({ 
         error: 'Solo los mentores pueden configurar disponibilidad de disciplina' 
       }, { status: 403 });

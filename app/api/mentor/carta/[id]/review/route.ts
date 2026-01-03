@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { generateTasksForLetter } from '@/lib/taskGenerator';
 
 /**
  * POST /api/mentor/carta/[id]/review
@@ -121,23 +122,18 @@ export async function POST(
 
     console.log('✅ Estado de carta actualizado:', { newEstado, allApproved });
 
-    // Si todo fue aprobado, generar tareas automáticamente
+    // 🚀 GENERAR TAREAS SI LA CARTA ES APROBADA
     if (allApproved) {
       try {
-        console.log('🔄 Generando tareas para usuario:', usuario.id);
-        // Llamar al endpoint de generar tareas
-        const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-        const taskResponse = await fetch(`${baseUrl}/api/generar-tareas`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ usuarioId: usuario.id })
-        });
+        console.log(`🚀 Carta #${cartaId} aprobada - Generando tareas automáticamente...`);
+        const taskResult = await generateTasksForLetter(cartaId);
         
-        if (taskResponse.ok) {
-          console.log('✅ Tareas generadas exitosamente');
+        if (taskResult.success) {
+          console.log(`✅ ${taskResult.tasksCreated} tareas generadas exitosamente para Usuario #${usuario.id}`);
+          console.log(`📅 Ciclo: ${taskResult.cycleStart} → ${taskResult.cycleEnd}`);
         } else {
-          const errorData = await taskResponse.json();
-          console.error('⚠️ Error en generación de tareas:', errorData);
+          console.error(`❌ Error generando tareas:`, taskResult.errors);
+          // No fallar la revisión si falla la generación de tareas
         }
       } catch (error) {
         console.error('❌ Error generando tareas:', error);

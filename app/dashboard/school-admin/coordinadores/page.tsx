@@ -12,7 +12,7 @@ interface Coordinador {
   createdAt: string;
   totalVisiones: number;
   totalParticipantes: number;
-  VisionesCoordinadas: Array<{
+  Vision: Array<{
     id: number;
     nombre: string;
   }>;
@@ -269,9 +269,9 @@ export default function CoordinadoresPage() {
                       </div>
                     </div>
 
-                    {coord.VisionesCoordinadas.length > 0 && (
+                    {coord.Vision.length > 0 && (
                       <div className="flex flex-wrap gap-3">
-                        {coord.VisionesCoordinadas.map(vision => (
+                        {coord.Vision.map(vision => (
                           <span
                             key={vision.id}
                             className="px-4 py-2 bg-gradient-to-r from-purple-500/30 to-pink-500/30 text-purple-200 text-sm font-bold rounded-xl border-2 border-purple-500/40 shadow-lg shadow-purple-500/20 hover:scale-105 transition-transform"

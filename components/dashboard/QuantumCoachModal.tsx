@@ -129,23 +129,55 @@ export default function QuantumCoachModal({
         // Buscar declaración propuesta: "Yo soy..."
         const propuestaMatch = lastAssistantMessage.content.match(/["']?(Yo soy[^"'\n?]+)["']?/i);
         if (propuestaMatch) {
-          // Determinar qué área estamos trabajando
-          const areasYaCompletas = Object.keys(declaracionesActuales).filter(k => declaracionesActuales[k]);
-          const indiceAreaActual = areasYaCompletas.length;
+          const declaracionPropuesta = propuestaMatch[1].trim();
           
-          console.log(`✅ Áreas completadas hasta ahora (${areasYaCompletas.length}):`, areasYaCompletas);
-          console.log(`📍 Índice área actual: ${indiceAreaActual} de ${areasActivas.length}`);
+          // Detectar el área mencionada en el mensaje del asistente
+          let areaDetectada = null;
+          const mensajeAsistente = lastAssistantMessage.content.toLowerCase();
           
-          if (indiceAreaActual < areasActivas.length) {
-            const areaActual = areasActivas[indiceAreaActual];
+          // Mapeo de palabras clave a áreas
+          const areaKeywords: Record<string, string[]> = {
+            'finanzas': ['finanza', 'dinero', 'económico', 'abundancia', 'riqueza'],
+            'relaciones': ['relación', 'relaciones', 'amor', 'pareja', 'vínculo', 'conexión'],
+            'talentos': ['talento', 'habilidad', 'creatividad', 'arte', 'don'],
+            'salud': ['salud', 'físico', 'cuerpo', 'energía', 'vital', 'bienestar físico'],
+            'pazMental': ['paz mental', 'mente', 'mental', 'tranquilidad', 'serenidad', 'calma'],
+            'ocio': ['ocio', 'diversión', 'descanso', 'juego', 'recreación', 'tiempo libre'],
+            'servicioTrans': ['servicio transformacional', 'transformación', 'impacto', 'liderazgo'],
+            'servicioComun': ['servicio comunitario', 'comunidad', 'voluntariado', 'social']
+          };
+          
+          // Buscar qué área se menciona
+          for (const area of areasActivas) {
+            const keywords = areaKeywords[area.key] || [area.name.toLowerCase()];
+            const areaEncontrada = keywords.some(keyword => mensajeAsistente.includes(keyword));
+            
+            if (areaEncontrada && !declaracionesActuales[area.key]) {
+              areaDetectada = area;
+              break;
+            }
+          }
+          
+          // Si no se detectó área específica, usar el siguiente en secuencia
+          if (!areaDetectada) {
+            const areasYaCompletas = Object.keys(declaracionesActuales).filter(k => declaracionesActuales[k]);
+            const indiceAreaActual = areasYaCompletas.length;
+            
+            if (indiceAreaActual < areasActivas.length) {
+              areaDetectada = areasActivas[indiceAreaActual];
+            }
+          }
+          
+          if (areaDetectada) {
             declaracionesParaEnviar = {
               ...declaracionesActuales,
-              [areaActual.key]: propuestaMatch[1].trim()
+              [areaDetectada.key]: declaracionPropuesta
             };
             
             // Actualizar el estado inmediatamente
             setDeclaracionesActuales(declaracionesParaEnviar);
-            console.log(`✅ Pre-registrando declaración para ${areaActual.key} (${areaActual.name}):`, propuestaMatch[1].trim());
+            console.log(`✅ Pre-registrando declaración para ${areaDetectada.key} (${areaDetectada.name}):`, declaracionPropuesta);
+            console.log(`📊 Estado actualizado:`, declaracionesParaEnviar);
           }
         }
       }

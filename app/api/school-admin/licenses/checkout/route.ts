@@ -86,6 +86,24 @@ export async function POST(req: NextRequest) {
     }
 
     // Procesar según el método de pago
+    console.log('💳 Método de pago seleccionado:', paymentMethod);
+    
+    // Preservar paymentData original (funciona tanto para string como objeto)
+    let existingPaymentData: any = {};
+    try {
+      if (order.paymentData) {
+        if (typeof order.paymentData === 'string') {
+          existingPaymentData = JSON.parse(order.paymentData);
+        } else {
+          existingPaymentData = order.paymentData;
+        }
+      }
+      console.log('📦 PaymentData existente:', existingPaymentData);
+    } catch (error) {
+      console.error('⚠️ Error parseando paymentData, usando objeto vacío:', error);
+      existingPaymentData = {};
+    }
+    
     if (paymentMethod === 'transfer') {
       console.log('💸 Procesando pago por transferencia...');
       
@@ -95,7 +113,9 @@ export async function POST(req: NextRequest) {
         where: { id: orderId },
         data: {
           status: 'PROCESSING', // Cambiar a PROCESSING en lugar de PENDING
+          paymentMethod: 'transfer',
           paymentData: {
+            ...existingPaymentData, // Preservar datos originales (como VISION_MENTOR_PAYMENT)
             method: 'transfer',
             proofUrl: proofUrl || null, // URL del comprobante
             uploadedAt: new Date().toISOString(),
@@ -136,6 +156,7 @@ export async function POST(req: NextRequest) {
           paymentMethod: 'stripe',
           paidAt: new Date(),
           paymentData: {
+            ...existingPaymentData, // Preservar datos originales
             method: 'stripe',
             status: 'completed',
             paidAt: new Date().toISOString(),
@@ -146,6 +167,21 @@ export async function POST(req: NextRequest) {
 
       console.log('✅ Orden marcada como COMPLETED con Stripe');
 
+      // Verificar si es un pago de visión (mentorías) o de licencias
+      const isVisionPayment = existingPaymentData?.type === 'VISION_MENTOR_PAYMENT';
+      
+      if (isVisionPayment) {
+        console.log('🎯 Pago de VISIÓN detectado - No se generan créditos de licencias');
+        
+        return NextResponse.json({
+          success: true,
+          order: updatedOrder,
+          paymentType: 'vision',
+          message: 'Pago de mentorías procesado exitosamente',
+        });
+      }
+
+      // Si NO es pago de visión, generar créditos de licencias
       // Actualizar o crear los créditos de licencia
       console.log(`🎫 Agregando ${order.quantity} créditos para organización ${order.organizationId}...`);
       
@@ -197,72 +233,104 @@ export async function POST(req: NextRequest) {
     } else if (paymentMethod === 'paypal') {
       console.log('💳 Procesando pago con PayPal (simulación)...');
       
-      // Para PayPal simulado, marcamos como COMPLETED y generamos créditos
-      const updatedOrder = await prisma.licenseOrder.update({
-        where: { id: orderId },
-        data: {
-          status: 'COMPLETED',
-          paymentMethod: 'paypal',
-          paidAt: new Date(),
-          paymentData: {
-            method: 'paypal',
-            status: 'completed',
-            paidAt: new Date().toISOString(),
-            transactionId: `PAYPAL-${orderId.slice(0, 8)}-${Date.now()}`,
-          },
-        },
-      });
-
-      console.log('✅ Orden marcada como COMPLETED con PayPal');
-
-      // Actualizar o crear los créditos de licencia
-      console.log(`🎫 Agregando ${order.quantity} créditos para organización ${order.organizationId}...`);
-      
-      // Buscar crédito existente o crear uno nuevo
-      const existingCredit = await prisma.schoolCredit.findFirst({
-        where: {
-          organizationId: order.organizationId,
-          isActive: true,
-        },
-      });
-
-      let creditRecord;
-      if (existingCredit) {
-        // Actualizar crédito existente
-        creditRecord = await prisma.schoolCredit.update({
-          where: { id: existingCredit.id },
+      try {
+        // Para PayPal simulado, marcamos como COMPLETED y generamos créditos
+        const updatedOrder = await prisma.licenseOrder.update({
+          where: { id: orderId },
           data: {
-            totalPurchased: existingCredit.totalPurchased + order.quantity,
-            totalPaid: existingCredit.totalPaid + order.amount,
-            expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Extender 1 año
+            status: 'COMPLETED',
+            paymentMethod: 'paypal',
+            paidAt: new Date(),
+            paymentData: existingPaymentData
+              ? {
+                  ...(typeof existingPaymentData === 'object' ? existingPaymentData : JSON.parse(existingPaymentData as string)),
+                  method: 'paypal',
+                  status: 'completed',
+                  paidAt: new Date().toISOString(),
+                  transactionId: `PAYPAL-${orderId.slice(0, 8)}-${Date.now()}`,
+                }
+              : {
+                  method: 'paypal',
+                  status: 'completed',
+                  paidAt: new Date().toISOString(),
+                  transactionId: `PAYPAL-${orderId.slice(0, 8)}-${Date.now()}`,
+                },
           },
         });
-      } else {
-        // Crear nuevo registro de crédito
-        creditRecord = await prisma.schoolCredit.create({
-          data: {
+
+        console.log('✅ Orden marcada como COMPLETED con PayPal');
+
+        // Verificar si es un pago de visión (mentorías) o de licencias
+        const isVisionPaymentPaypal = existingPaymentData?.type === 'VISION_MENTOR_PAYMENT';
+        
+        if (isVisionPaymentPaypal) {
+          console.log('🎯 Pago de VISIÓN detectado - No se generan créditos de licencias');
+          
+          return NextResponse.json({
+            success: true,
+            order: updatedOrder,
+            paymentType: 'vision',
+            message: 'Pago de mentorías procesado exitosamente con PayPal',
+          });
+        }
+
+        // Si NO es pago de visión, generar créditos de licencias
+        // Actualizar o crear los créditos de licencia
+        console.log(`🎫 Agregando ${order.quantity} créditos para organización ${order.organizationId}...`);
+        
+        // Buscar crédito existente o crear uno nuevo
+        const existingCredit = await prisma.schoolCredit.findFirst({
+          where: {
             organizationId: order.organizationId,
-            planType: order.tier as any,
-            totalPurchased: order.quantity,
-            totalAllocated: 0,
-            unitPrice: order.amount / order.quantity,
-            totalPaid: order.amount,
-            expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 año
             isActive: true,
-            notes: `Pago con PayPal - Orden ${orderId}`,
           },
         });
+
+        let creditRecord;
+        if (existingCredit) {
+          // Actualizar crédito existente
+          creditRecord = await prisma.schoolCredit.update({
+            where: { id: existingCredit.id },
+            data: {
+              totalPurchased: existingCredit.totalPurchased + order.quantity,
+              totalPaid: existingCredit.totalPaid + order.amount,
+              expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Extender 1 año
+            },
+          });
+        } else {
+          // Crear nuevo registro de crédito
+          creditRecord = await prisma.schoolCredit.create({
+            data: {
+              organizationId: order.organizationId,
+              planType: order.tier as any,
+              totalPurchased: order.quantity,
+              totalAllocated: 0,
+              unitPrice: order.amount / order.quantity,
+              totalPaid: order.amount,
+              expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 año
+              isActive: true,
+              notes: `Pago con PayPal - Orden ${orderId}`,
+            },
+          });
+        }
+
+        console.log(`✅ Créditos actualizados: ${creditRecord.totalPurchased} total`);
+
+        return NextResponse.json({
+          success: true,
+          order: updatedOrder,
+          creditsGenerated: order.quantity,
+          totalCredits: creditRecord.totalPurchased,
+          message: 'Pago procesado exitosamente con PayPal',
+        });
+      } catch (error: any) {
+        console.error('❌ Error en PayPal:', error);
+        return NextResponse.json({
+          success: false,
+          error: 'Error al procesar pago con PayPal',
+          details: error.message
+        }, { status: 500 });
       }
-
-      console.log(`✅ Créditos actualizados: ${creditRecord.totalPurchased} total`);
-
-      return NextResponse.json({
-        success: true,
-        order: updatedOrder,
-        creditsGenerated: order.quantity,
-        totalCredits: creditRecord.totalPurchased,
-        message: 'Pago procesado exitosamente con PayPal',
-      });
     } else if (paymentMethod === 'mercadopago') {
       console.log('💳 Procesando pago con Mercado Pago (simulación)...');
       
@@ -274,6 +342,7 @@ export async function POST(req: NextRequest) {
           paymentMethod: 'mercadopago',
           paidAt: new Date(),
           paymentData: {
+            ...existingPaymentData, // Preservar datos originales
             method: 'mercadopago',
             status: 'completed',
             paidAt: new Date().toISOString(),
@@ -284,6 +353,21 @@ export async function POST(req: NextRequest) {
 
       console.log('✅ Orden marcada como COMPLETED con Mercado Pago');
 
+      // Verificar si es un pago de visión (mentorías) o de licencias
+      const isVisionPaymentMP = existingPaymentData?.type === 'VISION_MENTOR_PAYMENT';
+      
+      if (isVisionPaymentMP) {
+        console.log('🎯 Pago de VISIÓN detectado - No se generan créditos de licencias');
+        
+        return NextResponse.json({
+          success: true,
+          order: updatedOrder,
+          paymentType: 'vision',
+          message: 'Pago de mentorías procesado exitosamente con Mercado Pago',
+        });
+      }
+
+      // Si NO es pago de visión, generar créditos de licencias
       // Actualizar o crear los créditos de licencia
       console.log(`🎫 Agregando ${order.quantity} créditos para organización ${order.organizationId}...`);
       

@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import PricingTable from '@/components/pricing/PricingTable';
-import RenewalOfferModal from '@/components/pricing/RenewalOfferModal';
+import PricingTable from '@/src/components/pricing/PricingTable';
+import RenewalOfferModal from '@/src/components/pricing/RenewalOfferModal';
 import { useSession } from 'next-auth/react';
 
 export default function PricingPage() {

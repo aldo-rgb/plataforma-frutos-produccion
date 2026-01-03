@@ -11,9 +11,15 @@ export async function GET() {
     }
 
     // Obtener todos los perfiles de mentores disponibles con sus servicios
+    // EXCLUIR líderes (rol LIDER) - solo mostrar mentores reales
     const mentores = await prisma.perfilMentor.findMany({
       where: {
         disponible: true,
+        acceptingNewClients: true, // Solo mentores aceptando nuevos clientes
+        Usuario: {
+          rol: 'MENTOR', // Solo mentores, NO incluir líderes
+          isActive: true // Solo usuarios activos
+        }
       },
       include: {
         Usuario: {
@@ -23,6 +29,7 @@ export async function GET() {
             imagen: true,
             email: true,
             badges: true,
+            rol: true // Incluir rol para verificación adicional
           },
         },
         ServicioMentoria: {

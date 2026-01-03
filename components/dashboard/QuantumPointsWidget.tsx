@@ -1,14 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Zap, Bot } from 'lucide-react';
+import { Zap, Bot, User } from 'lucide-react';
 import Link from 'next/link';
 
 interface QuantumPointsWidgetProps {
   puntosCuanticos: number;
+  usuario?: {
+    nombre: string;
+    profileImage?: string | null;
+  };
 }
 
-export default function QuantumPointsWidget({ puntosCuanticos }: QuantumPointsWidgetProps) {
+export default function QuantumPointsWidget({ puntosCuanticos, usuario }: QuantumPointsWidgetProps) {
   const [iaRecommendation, setIaRecommendation] = useState<{
     message: string;
     emoji: string;
@@ -16,6 +20,7 @@ export default function QuantumPointsWidget({ puntosCuanticos }: QuantumPointsWi
     message: 'Completa tus tareas de hoy para ganar más puntos 🚀',
     emoji: '💡'
   });
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     const fetchIARecommendation = async () => {
@@ -43,8 +48,25 @@ export default function QuantumPointsWidget({ puntosCuanticos }: QuantumPointsWi
         <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 via-amber-500/5 to-orange-500/5"></div>
         <div className="relative">
           <div className="flex items-start justify-between mb-3">
-            <div className="p-3 bg-amber-500/10 rounded-xl group-hover:bg-amber-500/20 transition-colors">
-              <Zap className="w-6 h-6 text-amber-500" />
+            <div className="flex items-center gap-3">
+              {/* Avatar del Usuario */}
+              <div className="relative w-10 h-10 flex-shrink-0">
+                {usuario?.profileImage && !imageError ? (
+                  <img
+                    src={usuario.profileImage}
+                    alt={usuario.nombre}
+                    onError={() => setImageError(true)}
+                    className="w-10 h-10 rounded-full object-cover border-2 border-amber-500/30"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/20 border-2 border-amber-500/30 flex items-center justify-center">
+                    <User className="w-5 h-5 text-amber-500" />
+                  </div>
+                )}
+              </div>
+              <div className="p-3 bg-amber-500/10 rounded-xl group-hover:bg-amber-500/20 transition-colors">
+                <Zap className="w-6 h-6 text-amber-500" />
+              </div>
             </div>
             <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Puntos Cuánticos</span>
           </div>

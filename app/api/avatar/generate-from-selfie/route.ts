@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
 
     const selectedVibe = vibePrompts[vibe] || vibePrompts.cyberpunk;
 
-    // Si hay designación, construir prompt personalizado
+    // Si hay designación, construir prompt personalizado según el Consejo Quantum Matter
     let promptToUse = selectedVibe.positive;
     let negativePromptToUse = selectedVibe.negative;
 
@@ -116,20 +116,115 @@ export async function POST(request: NextRequest) {
         neutral: 'androgynous person'
       };
 
-      // Mapeo de arquetipos a descripciones visuales
-      const archetypeDescriptions: Record<string, string> = {
-        CEREBRAL: 'intellectual appearance, data visualization elements, neural interface technology, cerebral focused design, analytical expression',
-        PHYSICAL: 'athletic build, dynamic pose, movement-focused gear, agile appearance, physical strength emphasis',
-        LEADER: 'commanding presence, leadership aura, strategic equipment, tactical gear, authoritative stance'
+      // Nuevos arquetipos del sistema de niveles
+      const roleDescriptions: Record<string, string> = {
+        'SCOUT': `Futuristic Scout`,
+        'ARCHIVIST': `Data Archivist`,
+        'HUNTER': `Quantum Bounty Hunter`,
+        'ARCHITECT': `Reality Architect`,
+        'BIOHACKER': `Cybernetic Bio-Hacker`,
+        'SENTINEL': `Vault Sentinel`,
+        'WEAVER': `Quantum Network Weaver`,
+        'ALCHEMIST': `Matter Alchemist`,
+        'VOYAGER': `Deep Space Voyager`,
+        'APEX': `Grandmaster Apex Legend`,
+        // Mantener compatibilidad con arquetipos antiguos
+        'DIRECTOR': `Grandmaster Apex Legend`,
+        'CURATOR': `Data Archivist`,
+        'MODELER': `Reality Architect`,
+        'OVERSEER': `Vault Sentinel`,
+        'STRATEGIST': `Quantum Bounty Hunter`,
+        'ENGINEER': `Reality Architect`,
+        'ANALYST': `Data Archivist`,
+        'OBSERVER': `Futuristic Scout`,
+        'INTERFACE': `Quantum Network Weaver`
       };
 
-      // Construir prompt con la designación
-      const visualTagsStr = visualTags.join(', ');
-      const archetypeDesc = archetypeDescriptions[archetype] || '';
+      const characterRole = roleDescriptions[archetype] || roleDescriptions['SCOUT'];
       
-      promptToUse = `A photo of a img ${genderPrompts[gender]}, embodying the ${designation} designation, ${archetypeDesc}, ${visualTagsStr}, cyberpunk aesthetic, neon lights, futuristic environment, high-tech suit, dramatic lighting with blue and purple neon glow, unreal engine 5 render, 8k quality, professional digital art, sharp focus, cinematic composition, from waist up`;
+      // Outfits futuristas por arquetipo
+      const outfits: Record<string, string> = {
+        'SCOUT': 'advanced tactical exploration suit in matte grey and cyan with integrated hexagonal mesh patterns, sleek shoulder guards, and luminescent circuit traces running down the arms',
+        'ARCHIVIST': 'sophisticated long coat with structured shoulders, multiple glowing data-ports embedded in the chest, electric blue circuitry lines elegantly flowing down the sleeves, high-tech collar with holographic displays',
+        'HUNTER': 'sleek aerodynamic stealth bodysuit with dark purple reinforced armor plates on chest and shoulders, integrated hooded cowl with subtle tech lining, form-fitting but protective design',
+        'ARCHITECT': 'elegant futuristic formal suit with sharp angular shoulders, geometric crystalline tie, structured blazer with glowing seams, high-collar design with embedded interface panels',
+        'BIOHACKER': 'pristine white and neon-green laboratory tactical suit with reinforced vest panels, integrated medical diagnostic displays on the forearms, tight biomechanical skinsuit underneath with visible tech-veins',
+        'SENTINEL': 'heavy-duty tactical armor suit with metallic chrome finish, hexagonal armor plates covering shoulders and chest, stylish yet tank-like protection with glowing energy conduits',
+        'WEAVER': 'flowing quantum robes made of fiber-optic smart fabric that shifts colors dynamically, elegant draping with embedded light nodes, high-tech ceremonial appearance',
+        'ALCHEMIST': 'vintage-futuristic alchemist coat with brass and gold accents, leather apron overlay with tech-inscriptions, underneath a sleek black bodysuit with energy channels',
+        'VOYAGER': 'sleek deep-space explorer suit with astronaut-inspired design (helmet off), reflective glass panels on shoulders, blue-tinted protective plating, streamlined for zero-gravity',
+        'APEX': 'divine ceremonial armor made of pure white luminescent material with solid gold geometric plates forming sacred patterns, regal and transcendent design radiating authority'
+      };
+
+      const outfit = outfits[archetype] || outfits['SCOUT'];
       
-      console.log('🎭 Prompt personalizado con designación:', designation);
+      // Accesorios específicos por arquetipo
+      const accessories: Record<string, string> = {
+        'SCOUT': 'holding a floating holographic compass that projects a map',
+        'ARCHIVIST': 'holding a glowing crystallized data-shard, examining it closely',
+        'HUNTER': 'equipped with a wrist-mounted scanner emitting a red laser grid',
+        'ARCHITECT': 'manipulating floating 3D wireframe blueprints of a hexagon structure with their hands',
+        'BIOHACKER': 'visible bioluminescent tattoos on the neck and a smart-injector device in hand',
+        'SENTINEL': 'a hexagonal energy shield projected from the forearm',
+        'WEAVER': 'surrounded by floating nodes of light connected by thin energy threads',
+        'ALCHEMIST': 'holding a flask where liquid energy is turning into a solid gold crystal',
+        'VOYAGER': 'looking at a floating hologram of a distant galaxy',
+        'APEX': 'a crown of floating hexagonal crystals hovering above their head'
+      };
+
+      const accessory = accessories[archetype] || accessories['SCOUT'];
+      
+      // Colores según arquetipo
+      const accentColors: Record<string, string> = {
+        'SCOUT': 'cyan',
+        'ARCHIVIST': 'electric blue',
+        'HUNTER': 'dark purple and red',
+        'ARCHITECT': 'white and gold',
+        'BIOHACKER': 'neon green',
+        'SENTINEL': 'metallic silver',
+        'WEAVER': 'rainbow spectrum',
+        'ALCHEMIST': 'brass and gold',
+        'VOYAGER': 'deep blue and silver',
+        'APEX': 'white and gold'
+      };
+
+      const accentColor = accentColors[archetype] || 'cyan';
+      
+      // Prompt estilo Cinematic Concept Art
+      promptToUse = `A cinematic, highly detailed concept art portrait of ${characterRole}, based on the facial features of a img ${genderPrompts[gender]}.
+
+Corporate role: ${designation}
+
+CRITICAL - Preserve identity: Keep the exact facial structure, nose shape, eye shape, jawline, skin tone, beard style, hair style, and overall facial proportions from the input image. The face must remain identical and seamlessly integrated into the sci-fi art style, not just a photo paste-up.
+
+BODY ADJUSTMENT: The person appears fit and athletic, with a slightly slimmer silhouette suggesting good physical conditioning. Natural, healthy appearance without exaggeration.
+
+OUTFIT & STYLE: They are wearing ${outfit}.
+
+ACCESSORY: ${accessory}.
+
+THE LOOK: The character has a determined, intense expression. The face is seamlessly integrated into the sci-fi art style with realistic skin texture, subsurface scattering, and proper lighting interaction.
+
+AESTHETIC: The style is "Organic Sci-Fi" meets "High-Tech Luxury". Elegant, mysterious, and clean. Not dirty or military.
+
+LIGHTING & ATMOSPHERE: Dramatic neon side-lighting (rim light) in ${accentColor} tones, casting realistic shadows and highlights on the skin with subsurface scattering. The background is a dark, blurred futuristic data interface with floating particles and hexagonal bokeh.
+
+QUALITY BOOSTERS: Masterpiece, 8k resolution, sharp focus, Unreal Engine 5 render, highly polished, intricate details, trending on ArtStation, cinematic concept art quality, photorealistic with artistic enhancement.
+
+STRICT RULES:
+✅ PRESERVE: Exact facial features, skin tone, face shape, eye shape, nose, mouth, hair, beard
+✅ INTEGRATE: Face seamlessly into the art style with proper lighting and texture
+✅ CHANGE: Only clothing, accessories, background, lighting style, sci-fi elements
+❌ NEVER: Weapons, face alterations, aggressive poses, military armor, dirty aesthetic, photo paste effect`;
+      
+      negativePromptToUse = 'changing face shape, different person, altered facial features, photo collage, cut and paste, poorly integrated face, flat lighting, weapons, guns, swords, knives, military uniform, dirty, grungy, post-apocalyptic, aggressive pose, angry expression, armor plates, battle damage, violent, cartoon, anime, illustration, painting, drawing, ugly, deformed, disfigured, bad anatomy, bad proportions, extra limbs, cloned face, malformed limbs, missing arms, missing legs, fused fingers, too many fingers, long neck, watermark, signature, text, logo, blurry face, low quality, amateur';
+      
+      console.log('🎭 Prompt Cinematic Concept Art para PhotoMaker');
+      console.log('🏢 Designación:', designation);
+      console.log('🏢 Arquetipo:', archetype);
+      console.log('👔 Outfit:', outfit.substring(0, 50) + '...');
+      console.log('⚡ Accesorio:', accessory.substring(0, 50) + '...');
+      console.log('🎨 Color acento:', accentColor);
     }
 
     console.log('🎨 Generando con Replicate...');
@@ -139,7 +234,7 @@ export async function POST(request: NextRequest) {
     // IMPORTANTE: Usamos el método de predictions para obtener URLs directamente
     // PhotoMaker retorna ReadableStream con replicate.run(), necesitamos polling
     
-    // Crear predicción en Replicate
+    // Crear predicción en Replicate con parámetros optimizados para preservación facial
     const prediction = await replicate.predictions.create({
       version: "ddfc2b08d209f9fa8c1eca692712918bd449f695dabb4a958da31802a9570fe4",
       input: {
@@ -147,9 +242,10 @@ export async function POST(request: NextRequest) {
         prompt: promptToUse,
         negative_prompt: negativePromptToUse,
         num_outputs: 1,
-        guidance_scale: 7.5,
-        num_inference_steps: 30,
+        guidance_scale: 5.0, // Reducido de 7.5 a 5.0 para mejor preservación facial
+        num_inference_steps: 50, // Aumentado de 30 a 50 para mejor calidad
         scheduler: "DPMSolverMultistep",
+        style_strength_ratio: 15, // Control de cuánto estilo aplicar (menor = más parecido al original)
       }
     });
 

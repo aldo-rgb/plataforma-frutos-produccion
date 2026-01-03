@@ -69,12 +69,13 @@ export async function generateTasksForLetter(cartaId: number): Promise<TaskGener
     });
 
     if (existingTasks > 0) {
-      console.log(`⚠️ Ya existen ${existingTasks} tareas generadas para esta carta`);
-      return {
-        success: false,
-        tasksCreated: 0,
-        errors: [`Ya existen ${existingTasks} tareas generadas previamente`]
-      };
+      console.log(`⚠️ Ya existen ${existingTasks} tareas generadas para esta carta - Permitiendo regeneración`);
+      // No retornar error - permitir regeneración
+      // return {
+      //   success: false,
+      //   tasksCreated: 0,
+      //   errors: [`Ya existen ${existingTasks} tareas generadas previamente`]
+      // };
     }
 
     // 3. Aplanar todas las acciones de todas las áreas
@@ -138,14 +139,20 @@ export async function generateTasksForLetter(cartaId: number): Promise<TaskGener
       let cursorDate = new Date(startDate);
       let taskNumber = 0;
 
-      // ONE_TIME: solo una tarea al inicio del ciclo
+      // ONE_TIME: solo una tarea en fecha específica o al inicio del ciclo
       if (action.frequency === 'ONE_TIME') {
         taskNumber++;
+        
+        // Usar specificDate si existe, sino usar startDate
+        const taskDate = action.specificDate 
+          ? new Date(action.specificDate)
+          : new Date(startDate);
+        
         tasksToCreate.push({
           usuarioId: carta.usuarioId,
           accionId: action.id,
-          dueDate: new Date(startDate),
-          originalDueDate: new Date(startDate),
+          dueDate: taskDate,
+          originalDueDate: taskDate,
           status: 'PENDING',
           evidenceStatus: action.requiereEvidencia ? 'NONE' : undefined,
           postponeCount: 0,
@@ -153,7 +160,7 @@ export async function generateTasksForLetter(cartaId: number): Promise<TaskGener
           updatedAt: new Date()
         });
 
-        console.log(`  ✓ Tarea ONE_TIME: ${action.texto} - ${format(startDate, 'yyyy-MM-dd (EEE)')}`);
+        console.log(`  ✓ Tarea ONE_TIME: ${action.texto} - ${format(taskDate, 'yyyy-MM-dd (EEE)')}`);
         console.log(`  📊 ${action.texto}: 1 tarea generada`);
         continue; // Saltar el loop de días
       }
@@ -164,6 +171,7 @@ export async function generateTasksForLetter(cartaId: number): Promise<TaskGener
 
         if (shouldCreate) {
           taskNumber++;
+          
           tasksToCreate.push({
             usuarioId: carta.usuarioId,
             accionId: action.id,
@@ -188,22 +196,27 @@ export async function generateTasksForLetter(cartaId: number): Promise<TaskGener
     // 5. Inserción masiva en la base de datos
     console.log(`💾 Insertando ${tasksToCreate.length} tareas en la base de datos...`);
     
+    // CRÍTICO: Convertir fechas a strings ISO para que Prisma las parsee correctamente
+    // Si enviamos Date objects, el driver de PostgreSQL los normaliza incorrectamente
+    const tasksToInsert = tasksToCreate.map(task => ({
+      ...task,
+      dueDate: task.dueDate.toISOString(),
+      originalDueDate: task.originalDueDate.toISOString(),
+      createdAt: task.createdAt.toISOString(),
+      updatedAt: task.updatedAt.toISOString()
+    }));
+    
     const result = await prisma.taskInstance.createMany({
-      data: tasksToCreate,
+      data: tasksToInsert,
       skipDuplicates: true
     });
 
     console.log(`✅ Generación completada: ${result.count} tareas creadas`);
 
-    // 6. Actualizar carta con fechas de ciclo y marcar como generada
+    // 6. Actualizar carta con fecha de actualización
     await prisma.cartaFrutos.update({
       where: { id: cartaId },
       data: { 
-        approvedAt: new Date(),
-        cycleStartDate: cycleDates.startDate,
-        cycleEndDate: cycleDates.endDate,
-        tasksGenerated: true,
-        tasksGeneratedAt: new Date(),
         fechaActualizacion: new Date()
       }
     });

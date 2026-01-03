@@ -22,8 +22,8 @@ export async function GET(req: Request) {
       select: { rol: true }
     });
 
-    if (!mentor || !['MENTOR', 'ADMIN', 'STAFF'].includes(mentor.rol)) {
-      return NextResponse.json({ error: 'Acceso denegado. Solo mentores.' }, { status: 403 });
+    if (!mentor || !['MENTOR', 'LIDER', 'ADMIN', 'STAFF'].includes(mentor.rol)) {
+      return NextResponse.json({ error: 'Acceso denegado. Solo mentores y líderes.' }, { status: 403 });
     }
 
     console.log('🔍 Buscando cartas para mentor ID:', mentorId);

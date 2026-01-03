@@ -23,32 +23,14 @@ export async function GET(req: Request) {
         id: true,
         email: true,
         nombre: true,
-        ParticipanteEnVisiones: {
-          include: {
-            Vision: {
-              select: {
-                id: true,
-                nombre: true,
-                startDate: true,
-                endDate: true,
-                forceFinanzasArea: true,
-                forceRelacionesArea: true,
-                forceTalentosArea: true,
-                forceSaludArea: true,
-                forcePazMentalArea: true,
-                forceOcioArea: true,
-                forceTransformationArea: true,
-                transformationGuestsTarget: true,
-                forceCommunityServiceArea: true
-              }
-            }
-          },
-          take: 1
-        }
+        rol: true,
+        profileImage: true
       }
     });
 
-    const visionConfig = usuario?.ParticipanteEnVisiones?.[0]?.Vision || null;
+    if (!usuario) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
 
     const carta = await prisma.cartaFrutos.findFirst({
       where: { usuarioId: userId },
@@ -96,15 +78,13 @@ export async function GET(req: Request) {
 
       return NextResponse.json({ 
         carta: newCarta, 
-        isNew: true,
-        visionConfig 
+        isNew: true
       });
     }
 
     return NextResponse.json({ 
       carta, 
-      isNew: false,
-      visionConfig 
+      isNew: false
     });
 
   } catch (error: any) {

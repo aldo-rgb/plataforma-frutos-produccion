@@ -19,14 +19,14 @@ interface Organization {
   activeLicenses: number;
   totalStudents: number;
   createdAt: string;
-  SchoolAdmin: {
+  Usuario_Organization_schoolAdminIdToUsuario: {
     id: number;
     nombre: string;
     email: string;
   } | null;
   _count: {
-    Licenses: number;
-    Users: number;
+    License: number;
+    Usuario_Usuario_organizationIdToOrganization: number;
   };
 }
 
@@ -272,10 +272,10 @@ export default function SchoolsManagementPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        {org.SchoolAdmin ? (
+                        {org.Usuario_Organization_schoolAdminIdToUsuario ? (
                           <div>
-                            <p className="text-white text-sm">{org.SchoolAdmin.nombre}</p>
-                            <p className="text-slate-400 text-xs">{org.SchoolAdmin.email}</p>
+                            <p className="text-white text-sm">{org.Usuario_Organization_schoolAdminIdToUsuario.nombre}</p>
+                            <p className="text-slate-400 text-xs">{org.Usuario_Organization_schoolAdminIdToUsuario.email}</p>
                           </div>
                         ) : (
                           <p className="text-slate-500 text-sm">Sin asignar</p>

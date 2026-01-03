@@ -24,6 +24,8 @@ export default function RankingWidget() {
     topUsers: Array<{ id: number; nombre: string; puntos: number; position: number; avatar?: string | null; xp: number }>;
     userRank: { position: number; total: number } | null;
     currentUserId: number | null;
+    isLoboSolitario?: boolean;
+    userData?: { nombre: string; puntos: number; xp: number; avatar?: string | null };
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -67,6 +69,74 @@ export default function RankingWidget() {
         </div>
         <div className="text-3xl font-bold text-slate-100">
           -- <span className="text-lg text-slate-500 font-normal">Global</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Vista especial para Lobos Solitarios
+  if (rankingData.isLoboSolitario && rankingData.userData) {
+    const userData = rankingData.userData;
+    return (
+      <div className="bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900 border border-purple-500/30 rounded-2xl overflow-hidden shadow-xl">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 px-4 py-3 border-b border-purple-500/30">
+          <div className="flex items-center justify-between">
+            <h3 className="text-slate-200 font-bold text-sm uppercase tracking-wider flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-purple-400" />
+              Tu Progreso Personal
+            </h3>
+            <span className="text-xs text-purple-400 font-bold">🐺 LOBO SOLITARIO</span>
+          </div>
+        </div>
+
+        {/* Contenido */}
+        <div className="p-6">
+          {/* Avatar y nombre */}
+          <div className="flex items-center gap-4 mb-6">
+            <div className="flex-shrink-0">
+              {userData.avatar ? (
+                <img 
+                  src={userData.avatar} 
+                  alt={userData.nombre}
+                  className="w-16 h-16 rounded-full object-cover border-2 border-purple-500/50 shadow-lg"
+                />
+              ) : (
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl border-2 border-purple-500/50 shadow-lg ${getRandomAvatarColor(rankingData.currentUserId || 0)}`}>
+                  {userData.nombre.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+            <div className="flex-1">
+              <p className="text-lg font-bold text-white mb-1">{userData.nombre}</p>
+              <p className="text-xs text-purple-300 font-medium">Eres tu propio mentor</p>
+            </div>
+          </div>
+
+          {/* Estadísticas */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-slate-950/50 border border-purple-500/20 rounded-xl p-3">
+              <p className="text-xs text-slate-400 mb-1 uppercase tracking-wider">Puntos Cuánticos</p>
+              <p className="text-2xl font-black text-purple-400">{userData.puntos.toLocaleString()}</p>
+              <p className="text-[10px] text-slate-500 mt-1">PC acumulados</p>
+            </div>
+            <div className="bg-slate-950/50 border border-blue-500/20 rounded-xl p-3">
+              <p className="text-xs text-slate-400 mb-1 uppercase tracking-wider">Experiencia</p>
+              <p className="text-2xl font-black text-blue-400">{userData.xp.toLocaleString()}</p>
+              <p className="text-[10px] text-slate-500 mt-1">XP ganados</p>
+            </div>
+          </div>
+
+          {/* Mensaje motivacional */}
+          <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border border-purple-500/30 rounded-xl p-4 text-center">
+            <p className="text-sm text-purple-200 font-medium mb-2">
+              🎯 Tu camino es único
+            </p>
+            <p className="text-xs text-slate-400">
+              No compites con otros, compites contigo mismo. 
+              Cada día es una oportunidad de superarte.
+            </p>
+          </div>
         </div>
       </div>
     );

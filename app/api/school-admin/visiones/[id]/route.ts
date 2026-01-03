@@ -31,7 +31,7 @@ export async function GET(
     const vision = await prisma.vision.findUnique({
       where: { id: visionId },
       include: {
-        Coordinador: {
+        Usuario: {
           select: {
             id: true,
             nombre: true,
@@ -40,8 +40,9 @@ export async function GET(
         },
         _count: {
           select: {
-            Participantes: true,
-            GameChangers: true,
+            VisionParticipante: true,
+            VisionGameChanger: true,
+            VisionMentor: true,
           },
         },
       },
@@ -71,7 +72,7 @@ export async function GET(
     const participantes = await prisma.visionParticipante.findMany({
       where: { visionId },
       include: {
-        Participante: {
+        Usuario_VisionParticipante_participanteIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -93,7 +94,7 @@ export async function GET(
                 estado: true,
               },
             },
-            LicenseAssignments: {
+            LicenseAssignment_LicenseAssignment_userIdToUsuario: {
               where: {
                 visionId: visionId,
                 isActive: true
@@ -109,7 +110,7 @@ export async function GET(
             }
           },
         },
-        GameChanger: {
+        Usuario_VisionParticipante_gameChangerIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -127,7 +128,7 @@ export async function GET(
     const gameChangers = await prisma.visionGameChanger.findMany({
       where: { visionId },
       include: {
-        GameChanger: {
+        Usuario_VisionGameChanger_gameChangerIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -143,7 +144,7 @@ export async function GET(
                 imagen: true,
               },
             },
-            LicenseAssignments: {
+            LicenseAssignment_LicenseAssignment_userIdToUsuario: {
               where: {
                 visionId: visionId,
                 isActive: true
@@ -165,6 +166,69 @@ export async function GET(
       },
     });
 
+    // Obtener mentores asignados a esta visión con sus costos
+    const mentoresAsignados = await prisma.visionMentor.findMany({
+      where: { visionId },
+      include: {
+        Usuario_VisionMentor_mentorIdToUsuario: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+            imagen: true,
+            rol: true,
+            PerfilMentor: {
+              select: {
+                precioDisciplina: true,
+                precioBase: true,
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    // Calcular semanas y costos del ciclo
+    let cicloInfo = null;
+    if (vision.startDate && vision.endDate) {
+      const start = new Date(vision.startDate);
+      const end = new Date(vision.endDate);
+      const diffTime = Math.abs(end.getTime() - start.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const semanas = Math.floor(diffDays / 7);
+      const llamadasDisciplina = semanas * 2; // 2 llamadas por semana
+
+      cicloInfo = {
+        semanas,
+        llamadasDisciplina,
+        diasTotales: diffDays
+      };
+    }
+
+    // Enriquecer mentores con cálculos de costo
+    const mentoresConCostos = mentoresAsignados.map(mentor => {
+      const usuario = mentor.Usuario_VisionMentor_mentorIdToUsuario;
+      const precioDisciplina = usuario?.PerfilMentor?.precioDisciplina || 0;
+      const precioBase = usuario?.PerfilMentor?.precioBase || 0;
+      const esLider = usuario?.rol === 'LIDER' || usuario?.rol === 'COORDINADOR' || usuario?.rol === 'SCHOOL_ADMIN';
+      
+      let costoTotal = 0;
+      if (!esLider && cicloInfo) {
+        costoTotal = cicloInfo.llamadasDisciplina * precioDisciplina;
+      }
+
+      return {
+        ...mentor,
+        precioDisciplina,
+        precioBase,
+        esLider,
+        costoTotal: esLider ? 0 : costoTotal
+      };
+    });
+
     return NextResponse.json({
       success: true,
       vision: {
@@ -174,6 +238,8 @@ export async function GET(
       },
       participantes,
       gameChangers,
+      mentoresAsignados: mentoresConCostos,
+      cicloInfo,
     });
   } catch (error) {
     console.error('Error fetching vision details:', error);

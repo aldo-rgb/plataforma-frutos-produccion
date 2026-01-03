@@ -3,10 +3,67 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai';
+import { createClient } from '@supabase/supabase-js';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+// Inicializar cliente de Supabase
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+/**
+ * Descarga una imagen desde una URL y la sube a Supabase Storage
+ */
+async function downloadAndUploadToSupabase(imageUrl: string, userId: number): Promise<string> {
+  try {
+    console.log('📥 Descargando imagen de:', imageUrl);
+    
+    // Descargar la imagen
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`Error descargando imagen: ${response.statusText}`);
+    }
+    
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    // Generar nombre único para el archivo
+    const timestamp = Date.now();
+    const fileName = `${userId}-quantum-${timestamp}.png`;
+    const filePath = `profile-images/${fileName}`;
+    
+    console.log('📤 Subiendo a Supabase Storage:', filePath);
+    
+    // Subir a Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('mentor-assets')
+      .upload(filePath, buffer, {
+        contentType: 'image/png',
+        upsert: true,
+      });
+    
+    if (error) {
+      console.error('❌ Error subiendo a Supabase:', error);
+      throw new Error(`Error subiendo a Supabase: ${error.message}`);
+    }
+    
+    // Obtener URL pública
+    const { data: { publicUrl } } = supabase.storage
+      .from('mentor-assets')
+      .getPublicUrl(filePath);
+    
+    console.log('✅ Imagen subida exitosamente a Supabase:', publicUrl);
+    
+    return publicUrl;
+  } catch (error) {
+    console.error('❌ Error en downloadAndUploadToSupabase:', error);
+    throw error;
+  }
+}
 
 /**
  * POST /api/quantum-identity/generate
@@ -38,9 +95,15 @@ export async function POST(request: NextRequest) {
 
     const usuario = await prisma.usuario.findUnique({
       where: { email: session.user.email },
-      include: {
+      select: {
+        id: true,
+        nombre: true,
+        nivelActual: true,
+        puntosCuanticos: true,
+        experienciaXP: true,
+        rangoActual: true,
+        profileImage: true,
         CartaFrutos: {
-          // Aceptar cualquier estado excepto RECHAZADA
           where: { 
             estado: {
               not: 'RECHAZADA'
@@ -62,29 +125,20 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Usuario encontrado:', usuario.id, usuario.nombre);
 
-    // Verificar que tenga una carta (en cualquier estado excepto rechazada)
-    const carta = usuario.CartaFrutos[0];
-    if (!carta) {
-      console.log('⚠️ Usuario sin carta');
-      return NextResponse.json({ 
-        error: 'Necesitas crear tu Carta F.R.U.T.O.S. primero',
-        requiresCarta: true 
-      }, { status: 400 });
-    }
-
-    console.log('✅ Carta encontrada:', carta.id, 'Estado:', carta.estado);
-
     // Permitir regenerar avatar si ya existe (solo registramos en log)
     if (usuario.profileImage) {
       console.log('ℹ️ Usuario ya tiene profileImage, pero permitiendo regeneración:', usuario.profileImage);
     }
 
-    // Obtener todas las metas del usuario
-    const metas = carta.Meta;
+    // Obtener metas si existen (opcional para el avatar)
+    const carta = usuario.CartaFrutos[0];
+    const metas = carta?.Meta || [];
     console.log(`📊 Metas encontradas: ${metas.length}`);
 
-    // Construir contexto para la IA
-    const metasText = metas.map(m => `- ${m.metaPrincipal} (${m.categoria})`).join('\n');
+    // Construir contexto para la IA (usar metas si existen, sino contexto genérico)
+    const metasText = metas.length > 0 
+      ? metas.map(m => `- ${m.metaPrincipal} (${m.categoria})`).join('\n')
+      : '- Desarrollo personal y profesional\n- Crecimiento en múltiples áreas de vida';
     const userContext = `
 USUARIO: ${usuario.nombre}
 NIVEL: ${usuario.nivelActual}
@@ -104,43 +158,53 @@ ${metasText}
       messages: [
         {
           role: 'system',
-          content: `Actúas como la IA Central del Sistema Operativo 'Quantum Matter'. Tu tono es militar-futurista y analítico.
+          content: `Actúas como la IA Central del 'Consejo Quantum Matter', un sistema corporativo de élite.
 
-Basado en las metas del usuario, genera 3 Designaciones Operativas (Apodos de Élite) distintas entre sí.
+Basado en las metas del usuario, selecciona 3 ROLES del Consejo Quantum Matter (12 roles disponibles) que mejor se alineen con su perfil.
+
+CONSEJO QUANTUM MATTER (12 ROLES DISPONIBLES):
+1. The Quantum Director - Autoridad máxima, visión estratégica
+2. The Systems Architect - Diseñador del sistema, estructura y orden
+3. The Data Curator - Guardián de información, integridad de datos
+4. The Quantum Modeler - Simulación y predicción de futuros
+5. The Ethics Overseer - Balance ético y límites responsables
+6. The Risk Strategist - Evaluación de impacto y prevención
+7. The Quantum Engineer - Implementación técnica y ejecución
+8. The Signal Analyst - Detección de anomalías y alertas
+9. The Knowledge Archivist - Memoria del sistema, continuidad
+10. The Integrity Sentinel - Seguridad y estabilidad del sistema
+11. The Observer - Conciencia cuántica del sistema
+12. The Executive Interface - Avatar del usuario en el sistema
 
 REGLAS ESTRICTAS:
-1. Los nombres deben ser en ESPAÑOL (estilo militar sci-fi traducido al español)
-2. Deben sonar a rangos de ciencia ficción o especialidades tácticas en español (Ej: 'VANGUARDIA CINÉTICA', 'ARQUITECTO DE REDES', 'OPERADOR ALFA', 'ESTRATEGA NÚCLEO', 'CAZADOR VELOZ', 'ANALISTA CIFRADO')
-3. NO repitas términos entre las 3 opciones (Si una es 'Arquitecto', las otras no pueden ser 'Ingeniero')
-4. Para cada opción, incluye una breve justificación de 1 línea en español
-5. Cada designación debe tener visual_tags que describan arquetipos visuales diferentes:
-   - Uno más cerebral/intelectual (azules, visores tech, data streams)
-   - Uno más físico/acción (verdes, armadura ligera, velocidad)
-   - Uno más líder/estratega (dorados, traje táctico, comando)
+1. Selecciona 3 roles DIFERENTES del Consejo basados en las metas del usuario
+2. Cada rol debe tener una justificación de 1 línea que conecte con las metas
+3. Los roles deben ser complementarios y diversos entre sí
+4. Mantén los nombres en INGLÉS (son designaciones oficiales del Consejo)
 
 RESPONDE ÚNICAMENTE CON UN JSON en este formato exacto:
 {
   "candidates": [
     {
       "id": "opt_1",
-      "designation": "ARQUITECTO NEURAL",
-      "rationale": "Enfoque detectado en aprendizaje profundo y sistemas.",
-      "visual_tags": ["intellect_blue", "data_stream", "tech_visor", "cerebral"],
-      "archetype": "CEREBRAL"
+      "designation": "The Quantum Director",
+      "rationale": "Visión estratégica detectada en metas de liderazgo y planificación.",
+      "visual_tags": ["authority", "executive", "dark_suit", "quantum_pattern"],
+      "archetype": "DIRECTOR"
     },
     {
       "id": "opt_2",
-      "designation": "VANGUARDIA LÓGICA",
-      "rationale": "Alta prioridad en ejecución rápida y resolución de problemas.",
-      "visual_tags": ["speed_green", "light_armor", "hud_display", "athletic"],
-      "archetype": "PHYSICAL"
+      "designation": "The Data Curator",
+      "rationale": "Enfoque en organización y control de información detectado.",
+      "visual_tags": ["analyst", "data_nodes", "monochrome", "precise"],
+      "archetype": "CURATOR"
     },
     {
       "id": "opt_3",
-      "designation": "ESTRATEGA CENTRAL",
-      "rationale": "Equilibrio entre planificación financiera y salud mental.",
-      "visual_tags": ["leadership_gold", "tactical_suit", "minimalist", "commander"],
-      "archetype": "LEADER"
+      "designation": "The Risk Strategist",
+      "rationale": "Prioridad en evaluación de riesgos y prevención.",
+      "visual_tags": ["strategist", "risk_graphs", "amber_accent", "tactical"],
+      "archetype": "STRATEGIST"
     }
   ]
 }`
@@ -243,12 +307,12 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Opción no válida' }, { status: 400 });
     }
 
-    // Generar prompt para DALL-E basado en la designación seleccionada y arquetipo
+    // Generar prompt para DALL-E basado en el rol del Consejo seleccionado
     const archetype = selectedCandidate.archetype;
     const designation = selectedCandidate.designation;
     const gender = identity.gender || 'neutral';
     
-    // Mapeo de género a términos descriptivos
+    // Mapeo de género a términos descriptivos corporativos
     const genderTerms: Record<string, string> = {
       'male': 'male',
       'female': 'female',
@@ -257,27 +321,66 @@ export async function PUT(request: NextRequest) {
     
     const genderDescriptor = genderTerms[gender];
     
-    // Mapeo de arquetipos a descripciones de personajes
-    const archetypeDescriptions: Record<string, string> = {
-      'CEREBRAL': `${genderDescriptor} character with glowing blue optical visor covering their eyes, wearing a hooded tactical jacket with circuit patterns, holding a transparent data tablet with holographic displays`,
-      'PHYSICAL': `athletic ${genderDescriptor} character with light armor plating, wearing a tactical vest with glowing green energy cells, equipped with advanced movement gear and speed-enhancing technology`,
-      'LEADER': `commanding ${genderDescriptor} character with a sleek armored suit featuring golden accents, wearing a tactical helmet with holographic map interface projected from wrist gauntlet`
+    // Mapeo de roles del Consejo Quantum Matter a descripciones corporativas
+    const roleDescriptions: Record<string, string> = {
+      'DIRECTOR': `senior executive with calm expression, wearing a minimalist dark suit with subtle quantum-pattern lining, standing before a softly glowing abstract data structure`,
+      
+      'ARCHITECT': `androgynous systems architect with precise posture, wearing a tailored tech-blazer, thin holographic interface projected subtly from a wrist device`,
+      
+      'CURATOR': `focused analyst with neutral expression, dressed in layered monochrome attire, surrounded by softly floating data nodes`,
+      
+      'MODELER': `reserved scientist with minimalist glasses, wearing a clean lab-style jacket over corporate attire, abstract probability waves faintly visible behind them`,
+      
+      'OVERSEER': `composed figure with authoritative presence, wearing a high-collar dark suit, standing before symmetrical geometric forms`,
+      
+      'STRATEGIST': `sharp-eyed strategist in a tailored suit, subtle red or amber accent indicating risk thresholds, abstract graphs behind`,
+      
+      'ENGINEER': `precise engineer with calm focus, wearing dark utilitarian attire with minimal illuminated seams, holding a compact modular device`,
+      
+      'ANALYST': `analyst with subtle headset, neutral expression, thin waveforms and signal traces softly glowing in the background`,
+      
+      'ARCHIVIST': `elegant archivist with timeless appearance, holding a thin transparent archive slab with faint inscriptions`,
+      
+      'SENTINEL': `silent authoritative figure in structured dark attire, standing before a clean, symmetrical interface`,
+      
+      'OBSERVER': `minimalist figure partially silhouetted, facial features calm and undefined, subtle light patterns suggesting awareness`,
+      
+      'INTERFACE': `faceless executive silhouette rendered in abstract light geometry, blending seamlessly into the interface`
     };
 
-    const characterDescription = archetypeDescriptions[archetype] || archetypeDescriptions['CEREBRAL'];
+    const characterDescription = roleDescriptions[archetype] || roleDescriptions['DIRECTOR'];
 
-    const dallePrompt = `A stylized portrait of a futuristic cyberpunk ${genderDescriptor} character, used as an avatar.
+    const dallePrompt = `A professional corporate portrait of a ${genderDescriptor} executive in a futuristic tech company setting.
 
-The character is a ${characterDescription}.
+The subject is a ${characterDescription}.
 
-Role designation: ${designation}
+Corporate role: ${designation}
 
-The art style is detailed sci-fi concept art, digital painting, with a heavy focus on advanced technology integrated with tactical clothing.
+Art style: Clean, professional corporate photography with subtle sci-fi elements. Minimalist and sophisticated aesthetic. Modern tech company executive portrait.
 
-Lighting is dramatic, with neon light sources (blues, purples, electric oranges) reflecting off metallic and synthetic materials. The background is a blurred, futuristic cityscape at night or a glowing data interface. The composition is a portrait from waist up, facing forward with a confident or determined expression. Show only from the waist up, upper body shot. High resolution, sharp focus, professional digital art quality.`;
+Lighting: Soft professional lighting with subtle technological glow from interfaces. Clean shadows. Corporate environment.
 
-    console.log('🎨 Generando avatar con DALL-E...');
-    console.log('Prompt:', dallePrompt);
+Background: Blurred modern office environment with abstract data visualizations or clean geometric patterns. Professional depth of field.
+
+Composition: Professional headshot to upper body, facing forward with calm, confident expression. Corporate posture. High resolution, sharp focus on face.
+
+STRICT RULES - NO:
+❌ Weapons of any kind
+❌ Visible cybernetic implants
+❌ Excessive neon colors
+❌ Aggressive postures or expressions
+❌ Armor or military gear
+
+REQUIRED - YES:
+✅ Calm, professional demeanor
+✅ Sober, sophisticated colors (blacks, grays, dark blues)
+✅ Subtle technology integration
+✅ Silent authority and confidence
+✅ Corporate executive appearance`;
+
+    console.log('🎨 Generando avatar corporativo con DALL-E...');
+    console.log('Rol del Consejo:', designation);
+    console.log('Arquetipo:', archetype);
 
     // Generar avatar con DALL-E
     const imageResponse = await openai.images.generate({
@@ -288,17 +391,29 @@ Lighting is dramatic, with neon light sources (blues, purples, electric oranges)
       quality: "hd"
     });
 
-    const avatarUrl = imageResponse.data[0].url;
+    const temporaryAvatarUrl = imageResponse.data[0].url;
+    console.log('✅ Avatar generado por DALL-E (temporal):', temporaryAvatarUrl);
 
-    // Actualizar usuario con la designación y avatar
+    // Descargar y subir a Supabase para tener URL permanente
+    console.log('🔄 Descargando y subiendo a Supabase Storage...');
+    const permanentAvatarUrl = await downloadAndUploadToSupabase(temporaryAvatarUrl!, usuario.id);
+    console.log('✅ Avatar guardado permanentemente:', permanentAvatarUrl);
+
+    // Actualizar usuario con la designación y avatar permanente
+    console.log('💾 Actualizando usuario con avatar permanente...');
+    console.log('Usuario ID:', usuario.id);
+    console.log('Avatar URL:', permanentAvatarUrl);
+    
     await prisma.usuario.update({
       where: { id: usuario.id },
       data: {
-        profileImage: avatarUrl,
+        profileImage: permanentAvatarUrl,
         lastAvatarChangeDate: new Date()
         // Podemos guardar la designación en un campo custom si existe
       }
     });
+
+    console.log('✅ Usuario actualizado exitosamente con profileImage');
 
     // Actualizar el registro de identidad
     await prisma.quantumIdentity.update({
@@ -306,15 +421,17 @@ Lighting is dramatic, with neon light sources (blues, purples, electric oranges)
       data: {
         selectedOption: selectedCandidate,
         status: 'COMPLETED',
-        avatarUrl: avatarUrl,
+        avatarUrl: permanentAvatarUrl,
         completedAt: new Date()
       }
     });
 
+    console.log('✅ QuantumIdentity actualizada a COMPLETED');
+
     return NextResponse.json({
       success: true,
       designation: selectedCandidate.designation,
-      avatarUrl: avatarUrl,
+      avatarUrl: permanentAvatarUrl,
       message: `IDENTIDAD CONFIRMADA. BIENVENIDO, ${selectedCandidate.designation}.`
     });
 

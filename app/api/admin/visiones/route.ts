@@ -26,16 +26,16 @@ export async function GET() {
     const visiones = await prisma.vision.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
-        Coordinador: {
+        Usuario: {
           select: {
             id: true,
             nombre: true,
             email: true
           }
         },
-        GameChangers: {
+        VisionGameChanger: {
           include: {
-            GameChanger: {
+            Usuario_VisionGameChanger_gameChangerIdToUsuario: {
               select: {
                 id: true,
                 nombre: true,
@@ -44,16 +44,16 @@ export async function GET() {
             }
           }
         },
-        Participantes: {
+        VisionParticipante: {
           include: {
-            Participante: {
+            Usuario_VisionParticipante_participanteIdToUsuario: {
               select: {
                 id: true,
                 nombre: true,
                 email: true
               }
             },
-            GameChanger: {
+            Usuario_VisionParticipante_gameChangerIdToUsuario: {
               select: {
                 id: true,
                 nombre: true
@@ -63,8 +63,8 @@ export async function GET() {
         },
         _count: {
           select: { 
-            GameChangers: true,
-            Participantes: true
+            VisionGameChanger: true,
+            VisionParticipante: true
           }
         }
       }

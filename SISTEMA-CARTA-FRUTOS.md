@@ -2,7 +2,7 @@
 
 ## 🎯 Visión General
 
-El sistema **Carta F.R.U.T.O.S.** es el corazón de la plataforma. Permite a los usuarios definir su identidad, metas y acciones en 8 áreas de vida, con revisión granular del mentor y generación automática de tareas para 100 días.
+El sistema **Carta F.R.U.T.O.S.** es el corazón de la plataforma. Permite a los usuarios definir su identidad, metas y acciones en 8 áreas de vida, con revisión granular del mentor y generación automática de tareas para 63 días.
 
 ---
 
@@ -92,7 +92,7 @@ El sistema **Carta F.R.U.T.O.S.** es el corazón de la plataforma. Permite a los
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    USUARIO (100 DÍAS)                           │
+│                    USUARIO (63 DÍAS)                           │
 │                                                                 │
 │  ✅ Tareas aparecen en calendario                               │
 │  📸 Sube evidencias fotográficas                                │
@@ -176,10 +176,10 @@ El sistema **Carta F.R.U.T.O.S.** es el corazón de la plataforma. Permite a los
 
 **Cálculo de tareas**:
 ```typescript
-DIARIA: 100 días × 7 días = ~100 tareas
-SEMANAL: 100 días × días seleccionados / 7 = variable
-QUINCENAL: 100 días / 14 = ~7 tareas
-MENSUAL: 100 días / 30 = ~3 tareas
+DIARIA: 63 días × 7 días = ~63 tareas
+SEMANAL: 63 días × días seleccionados / 7 = variable
+QUINCENAL: 63 días / 14 = ~4 tareas
+MENSUAL: 63 días / 30 = ~2 tareas
 ```
 
 ---
@@ -398,7 +398,7 @@ interface AreaReview {
 1. Obtener carta con todas las Metas y Acciones
 2. Verificar que no existan tareas ya generadas (prevent duplicates)
 3. Flatten: Extraer todas las acciones de las 8 áreas
-4. Loop 100 días:
+4. Loop 63 días:
    for (date = startDate; date <= endDate; date++) {
      for (action of actions) {
        if (shouldCreateTaskOnDate(action, date)) {
@@ -625,7 +625,7 @@ model AreaFeedback {
 ## 📊 Métricas del Sistema
 
 **Tareas esperadas por frecuencia**:
-- **DIARIA**: ~100 tareas (todas los días)
+- **DIARIA**: ~63 tareas (todas los días)
 - **SEMANAL (3 días)**: ~43 tareas (3/7 × 100)
 - **QUINCENAL**: ~7 tareas (cada 14 días)
 - **MENSUAL**: ~3 tareas (cada 30 días)
@@ -646,7 +646,7 @@ model AreaFeedback {
 2. **Metas SMART**:
    - ✅ **S**pecific: Claridad absoluta
    - ✅ **M**easurable: Con números/indicadores
-   - ✅ **A**chievable: Realista en 100 días
+   - ✅ **A**chievable: Realista en 63 días
    - ✅ **R**elevant: Conectada con identidad
    - ✅ **T**ime-bound: Plazo definido
 

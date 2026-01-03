@@ -25,7 +25,7 @@ export async function GET() {
         subscriptionPlan: true,
         planActual: true,
         organizationId: true,
-        Organization: {
+        Organization_Usuario_organizationIdToOrganization: {
           select: {
             id: true,
             name: true,
@@ -33,7 +33,7 @@ export async function GET() {
             brandColor: true
           }
         },
-        ParticipanteEnVisiones: {
+        VisionParticipante_VisionParticipante_participanteIdToUsuario: {
           where: {
             Vision: {
               isActive: true
@@ -56,15 +56,63 @@ export async function GET() {
     }
 
     // Determinar si tiene visión activa (membresía institucional)
-    const tieneVision = usuario.ParticipanteEnVisiones.length > 0;
-    const organization = usuario.Organization;
+    const tieneVision = usuario.VisionParticipante_VisionParticipante_participanteIdToUsuario.length > 0;
+    const organization = usuario.Organization_Usuario_organizationIdToOrganization;
     const esMiembroInstitucional = tieneVision && organization;
+
+    // Verificar si tiene paquete de Lobo Solitario activo
+    const packageCredits = await prisma.packageSessionCredits.findFirst({
+      where: {
+        MentorPackageOrder: {
+          usuarioId: usuario.id,
+          status: 'COMPLETED'
+        },
+        remainingSessions: {
+          gt: 0
+        },
+        isActive: true,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } }
+        ]
+      },
+      include: {
+        MentorPackageOrder: {
+          select: {
+            paymentData: true,
+            paidAt: true
+          }
+        }
+      }
+    });
 
     // Si es miembro institucional, la escuela pagó su plan (mínimo STANDARD)
     let plan = usuario.tier || 'FREE';
     let activo = false;
+    let loboSolitario = false;
+    let loboSolitarioInfo = null;
 
-    if (esMiembroInstitucional) {
+    if (packageCredits) {
+      // Usuario con Lobo Solitario activo
+      const paymentData = packageCredits.MentorPackageOrder.paymentData as any;
+      const planType = paymentData?.plan || 'STANDARD';
+      const frecuencia = paymentData?.frecuencia || 'ANUAL';
+      
+      plan = planType;
+      activo = true;
+      loboSolitario = true;
+      loboSolitarioInfo = {
+        totalSessions: packageCredits.totalSessions,
+        remainingSessions: packageCredits.remainingSessions,
+        usedSessions: packageCredits.usedSessions,
+        expiresAt: packageCredits.expiresAt,
+        planType: planType,
+        frecuencia: frecuencia,
+        paidAt: packageCredits.MentorPackageOrder.paidAt
+      };
+      
+      console.log('✅ Usuario tiene Lobo Solitario activo:', { plan, loboSolitarioInfo });
+    } else if (esMiembroInstitucional) {
       // Usuario de escuela: tiene plan STANDARD (GOLD) pagado por la institución
       // Las licencias escolares siempre son STANDARD, no importa el tier del usuario
       plan = 'GOLD'; // GOLD = STANDARD para licencias escolares
@@ -97,6 +145,8 @@ export async function GET() {
       endDate: usuario.subscriptionEndDate,
       subscriptionPlan: usuario.subscriptionPlan,
       paidBySchool: isPaidBySchool,
+      loboSolitario,
+      loboSolitarioInfo,
       // Siempre retornar organización si existe (para mostrar membresía institucional)
       organization: organization ? {
         id: organization.id,

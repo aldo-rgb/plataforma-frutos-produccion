@@ -1,6 +1,6 @@
 # 🎯 Plataforma Impacto Cuántico
 
-Sistema de gestión de alto rendimiento personal basado en el método F.R.U.T.O.S. (Finanzas, Relaciones, Utilización de Talentos, Ocio, Salud, Servicio a la Comunidad y Transformación Personal, Enrolamiento).
+Sistema de gestión de alto rendimiento personal basado en el método F.R.U.T.O.S. (Finanzas, Relaciones, Utilización de Talentos, Ocio, Salud, Servicio a la Comunidad y Transformación Cuántica, Enrolamiento).
 
 ## ✨ Características Principales
 
@@ -170,7 +170,7 @@ Este proyecto es privado y confidencial.
 
 ## 🙏 Créditos
 
-Desarrollado para el programa **Impacto Cuántico** de transformación personal.
+Desarrollado para el programa **Impacto Cuántico** de transformación cuantica.
 
 ---
 

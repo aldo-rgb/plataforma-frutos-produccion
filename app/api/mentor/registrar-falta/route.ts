@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     }
 
     // Verificar que sea mentor o coordinador
-    if (session.user.rol !== 'MENTOR' && session.user.rol !== 'COORDINADOR') {
+    if (session.user.rol !== 'MENTOR' && session.user.rol !== 'LIDER' && session.user.rol !== 'COORDINADOR') {
       return NextResponse.json({ error: 'Solo mentores pueden registrar faltas' }, { status: 403 });
     }
 

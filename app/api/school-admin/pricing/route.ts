@@ -27,9 +27,11 @@ export async function GET(req: NextRequest) {
     // Verificar que el usuario tiene acceso a esta organización
     const user = await prisma.usuario.findUnique({
       where: { id: session.user.id },
-      include: {
-        Organization_Organization_directorIdToUsuario: true,
-      },
+      select: {
+        id: true,
+        rol: true,
+        organizationId: true
+      }
     });
 
     if (!user || user.rol !== 'SCHOOL_ADMIN') {

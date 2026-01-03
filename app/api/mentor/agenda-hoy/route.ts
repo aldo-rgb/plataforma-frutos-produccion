@@ -17,7 +17,7 @@ export async function GET() {
       select: { rol: true }
     });
 
-    if (usuario?.rol !== 'MENTOR') {
+    if (usuario?.rol !== 'MENTOR' && usuario?.rol !== 'LIDER') {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 

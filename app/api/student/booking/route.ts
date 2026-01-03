@@ -4,6 +4,7 @@ import { startOfWeek, endOfWeek } from 'date-fns';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Prisma } from '@prisma/client';
+import { validateSessionCredits, consumeSessionCredit } from '@/lib/packageSessionManager';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { date, time, mentorId, type } = body; // 🔥 NUEVO: recibimos el tipo
+    const { date, time, mentorId, type, usePackageCredit } = body; // 🔥 NUEVO: usePackageCredit
     
     const studentId = session.user.id;
 
@@ -34,6 +35,26 @@ export async function POST(request: Request) {
     const scheduledAt = new Date(`${date}T${time}:00`);
 
     console.log(`📞 Intento de reserva: Estudiante ${studentId}, Mentor ${mentorId}, Fecha: ${scheduledAt}`);
+    console.log(`💳 Usar crédito de paquete: ${usePackageCredit ? 'Sí' : 'No'}`);
+
+    // 💳 VALIDAR CRÉDITOS DE PAQUETE SI SE REQUIERE
+    let packageOrderId: string | undefined;
+    if (usePackageCredit && callType === 'MENTORSHIP') {
+      const validation = await validateSessionCredits(studentId, Number(mentorId));
+      
+      if (!validation.hasCredits) {
+        return NextResponse.json(
+          { 
+            error: validation.message,
+            code: 'NO_PACKAGE_CREDITS'
+          },
+          { status: 403 }
+        );
+      }
+
+      packageOrderId = validation.packageOrderId;
+      console.log(`💳 Créditos validados. Paquete: ${packageOrderId}, Restantes: ${validation.remainingSessions}`);
+    }
     
     // 🎯 VALIDACIÓN CRÍTICA: Para DISCIPLINE, verificar que el mentor esté asignado a la visión
     if (callType === 'DISCIPLINE') {
@@ -111,13 +132,14 @@ export async function POST(request: Request) {
         }
       }
 
-      // B. OBTENER DATOS FINANCIEROS DEL MENTOR (Solo para MENTORSHIP)
+      // B. OBTENER DATOS FINANCIEROS DEL MENTOR (Solo para MENTORSHIP sin paquete)
       let price = 0;
       let commission = 0;
       let platformShare = 0;
       let mentorShare = 0;
 
-      if (callType === 'MENTORSHIP') {
+      if (callType === 'MENTORSHIP' && !packageOrderId) {
+        // Solo calcular precio si NO es con paquete
         const mentorProfile = await tx.perfilMentor.findUnique({
           where: { usuarioId: Number(mentorId) },
           select: { 
@@ -145,12 +167,13 @@ export async function POST(request: Request) {
           scheduledAt,
           duration: callType === 'DISCIPLINE' ? 15 : 60, // 🔥 15 min o 1 hora
           status: 'PENDING',
-          type: callType as any // 🔥 Guardar el tipo
+          type: callType as any, // 🔥 Guardar el tipo
+          packageOrderId // 📦 Vincular con paquete si aplica
         }
       });
 
-      // D. REGISTRAR TRANSACCIÓN FINANCIERA (Solo para MENTORSHIP)
-      if (callType === 'MENTORSHIP') {
+      // D. REGISTRAR TRANSACCIÓN FINANCIERA (Solo para MENTORSHIP sin paquete)
+      if (callType === 'MENTORSHIP' && !packageOrderId) {
         await tx.transaction.create({
           data: {
             bookingId: newBooking.id,
@@ -162,6 +185,12 @@ export async function POST(request: Request) {
         });
 
         console.log(`💳 Transacción registrada: Booking ID ${newBooking.id}, Total: $${price}`);
+      }
+
+      // E. CONSUMIR CRÉDITO DE PAQUETE SI APLICA
+      if (packageOrderId) {
+        await consumeSessionCredit(packageOrderId);
+        console.log(`📦 Crédito consumido del paquete ${packageOrderId}`);
       }
 
       console.log(`✅ Reserva creada exitosamente: ID ${newBooking.id}`);

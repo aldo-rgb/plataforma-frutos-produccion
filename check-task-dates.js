@@ -2,51 +2,56 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function checkTaskDates() {
-  console.log('\n🔍 Verificando fechas de tareas del usuario 27...\n');
-  
-  const tasks = await prisma.taskInstance.findMany({
-    where: { usuarioId: 27 },
-    select: {
-      id: true,
-      dueDate: true,
-      status: true,
-      Accion: {
-        select: {
-          texto: true,
-          Meta: {
-            select: {
-              categoria: true
-            }
-          }
-        }
-      }
-    },
-    orderBy: { dueDate: 'asc' }
-  });
-
-  console.log(`📊 Total tareas: ${tasks.length}\n`);
-
-  // Agrupar por mes
-  const porMes = {};
-  tasks.forEach(task => {
-    const fecha = new Date(task.dueDate);
-    const mes = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
-    if (!porMes[mes]) porMes[mes] = [];
-    porMes[mes].push(task);
-  });
-
-  console.log('📅 Tareas por mes:');
-  Object.keys(porMes).sort().forEach(mes => {
-    console.log(`\n${mes}: ${porMes[mes].length} tareas`);
-    porMes[mes].slice(0, 5).forEach(t => {
-      console.log(`  - ${t.dueDate.toISOString().split('T')[0]} | ${t.status} | ${t.Accion.Meta.categoria} | ${t.Accion.texto.substring(0, 50)}`);
+  try {
+    const userId = 2; // Carlos
+    
+    // Obtener todas las tareas
+    const tasks = await prisma.taskInstance.findMany({
+      where: { usuarioId: userId },
+      select: {
+        id: true,
+        dueDate: true,
+        status: true
+      },
+      orderBy: { dueDate: 'desc' },
+      take: 20
     });
-    if (porMes[mes].length > 5) {
-      console.log(`  ... y ${porMes[mes].length - 5} más`);
+    
+    console.log('\n📅 ÚLTIMAS 20 TAREAS DE CARLOS:\n');
+    
+    if (tasks.length === 0) {
+      console.log('❌ No hay tareas para este usuario');
+      return;
     }
-  });
-
-  await prisma.$disconnect();
+    
+    tasks.forEach((t, idx) => {
+      const isPast = new Date(t.dueDate) < new Date();
+      const emoji = isPast ? '⏪' : '⏩';
+      console.log(`${emoji} ${idx + 1}. ${t.dueDate.toISOString().split('T')[0]} | ${t.status} | ID: ${t.id}`);
+    });
+    
+    // Rango de fechas
+    const allTasks = await prisma.taskInstance.findMany({
+      where: { usuarioId: userId },
+      select: { dueDate: true },
+      orderBy: { dueDate: 'asc' }
+    });
+    
+    if (allTasks.length > 0) {
+      const firstDate = allTasks[0].dueDate;
+      const lastDate = allTasks[allTasks.length - 1].dueDate;
+      
+      console.log(`\n📊 RANGO DE FECHAS:`);
+      console.log(`   Primera tarea: ${firstDate.toISOString().split('T')[0]}`);
+      console.log(`   Última tarea: ${lastDate.toISOString().split('T')[0]}`);
+      console.log(`   Total de tareas: ${allTasks.length}`);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error:', error);
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
-checkTaskDates().catch(console.error);
+checkTaskDates();

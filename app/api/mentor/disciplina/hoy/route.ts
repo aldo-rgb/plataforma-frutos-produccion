@@ -16,7 +16,7 @@ export async function GET() {
       where: { email: session.user.email }
     });
 
-    if (!mentor || mentor.rol !== 'MENTOR') {
+    if (!mentor || (mentor.rol !== 'MENTOR' && mentor.rol !== 'LIDER')) {
       return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
     }
 

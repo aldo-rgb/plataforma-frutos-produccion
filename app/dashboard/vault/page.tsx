@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Camera, Filter, Sparkles, Award, TrendingUp, Image as ImageIcon, Info, X, Video } from 'lucide-react';
+import { Camera, Filter, Sparkles, Award, TrendingUp, Image as ImageIcon, Info, X, Video, User, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import TimeCapsuleVideoModal from '@/components/vault/TimeCapsuleVideoModal';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 interface Evidencia {
   id: number;
@@ -19,17 +20,30 @@ interface Evidencia {
   qualityScore?: number;
 }
 
+interface Avatar {
+  id: number;
+  generatedUrl: string;
+  vibe: string;
+  gender: string;
+  createdAt: string;
+  sourceImage: string;
+}
+
 export default function TheVaultPage() {
   const [evidencias, setEvidencias] = useState<Evidencia[]>([]);
+  const [avatares, setAvatares] = useState<Avatar[]>([]);
   const [filtroArea, setFiltroArea] = useState<string>('TODAS');
   const [filtroRareza, setFiltroRareza] = useState<string>('TODAS');
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<Evidencia | null>(null);
+  const [selectedAvatar, setSelectedAvatar] = useState<Avatar | null>(null);
   const [showRarityGuide, setShowRarityGuide] = useState(false);
   const [showTimeCapsule, setShowTimeCapsule] = useState(false);
+  const [activeTab, setActiveTab] = useState<'evidencias' | 'avatares'>('evidencias');
 
   useEffect(() => {
     fetchEvidencias();
+    fetchAvatares();
   }, []);
 
   const fetchEvidencias = async () => {
@@ -44,6 +58,36 @@ export default function TheVaultPage() {
       console.error('Error al cargar evidencias:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAvatares = async () => {
+    try {
+      const response = await fetch('/api/avatars/vault');
+      const data = await response.json();
+      
+      if (data.success && data.avatares) {
+        setAvatares(data.avatares);
+      }
+    } catch (error) {
+      console.error('Error al cargar avatares:', error);
+    }
+  };
+
+  const deleteAvatar = async (avatarId: number) => {
+    if (!confirm('¿Estás seguro de eliminar este avatar?')) return;
+
+    try {
+      const response = await fetch(`/api/avatars/vault?id=${avatarId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        setAvatares(prev => prev.filter(a => a.id !== avatarId));
+        setSelectedAvatar(null);
+      }
+    } catch (error) {
+      console.error('Error eliminando avatar:', error);
     }
   };
 
@@ -104,7 +148,35 @@ export default function TheVaultPage() {
 
       {/* STATS BAR */}
       <div className="max-w-7xl mx-auto px-6 py-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* TABS */}
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={() => setActiveTab('evidencias')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
+              activeTab === 'evidencias'
+                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
+                : 'bg-black/30 border border-purple-500/30 text-gray-400 hover:text-white'
+            }`}
+          >
+            <ImageIcon className="w-5 h-5" />
+            <span>Artefactos ({evidencias.length})</span>
+          </button>
+          
+          <button
+            onClick={() => setActiveTab('avatares')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
+              activeTab === 'avatares'
+                ? 'bg-gradient-to-r from-cyan-600 to-purple-600 text-white'
+                : 'bg-black/30 border border-purple-500/30 text-gray-400 hover:text-white'
+            }`}
+          >
+            <User className="w-5 h-5" />
+            <span>Avatares ({avatares.length})</span>
+          </button>
+        </div>
+
+        {activeTab === 'evidencias' && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-gradient-to-br from-purple-900/50 to-purple-800/30 border border-purple-500/30 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
               <ImageIcon className="w-5 h-5 text-purple-400" />
@@ -148,10 +220,12 @@ export default function TheVaultPage() {
             </p>
           </div>
         </div>
+        )}
       </div>
 
       {/* FILTROS */}
-      <div className="max-w-7xl mx-auto px-6 mb-6">
+      {activeTab === 'evidencias' && (
+        <div className="max-w-7xl mx-auto px-6 mb-6">
         <div className="flex flex-wrap gap-4 items-center justify-between">
           <div className="flex flex-wrap gap-4">
             <div className="flex items-center gap-2">
@@ -207,24 +281,26 @@ export default function TheVaultPage() {
             </button>
           </div>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* GRID DE EVIDENCIAS */}
-      {loading ? (
-        <div className="max-w-7xl mx-auto px-6 py-20 text-center">
-          <div className="animate-spin w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p className="text-gray-400">Cargando tu Bóveda...</p>
-        </div>
-      ) : evidenciasFiltradas.length === 0 ? (
-        <div className="max-w-7xl mx-auto px-6 py-20 text-center">
-          <ImageIcon className="w-20 h-20 text-gray-600 mx-auto mb-4" />
-          <p className="text-xl text-gray-400 mb-2">Tu Bóveda está vacía</p>
-          <p className="text-gray-500">Comienza a capturar Artefactos de Verdad para llenar tu archivo.</p>
-        </div>
-      ) : (
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {evidenciasFiltradas.map((evidencia) => (
+      {activeTab === 'evidencias' && (
+        <>
+          {loading ? (
+            <div className="max-w-7xl mx-auto px-6 py-20 text-center">
+              <LoadingSpinner message="Cargando tu Bóveda..." size="lg" />
+            </div>
+          ) : evidenciasFiltradas.length === 0 ? (
+            <div className="max-w-7xl mx-auto px-6 py-20 text-center">
+              <ImageIcon className="w-20 h-20 text-gray-600 mx-auto mb-4" />
+              <p className="text-xl text-gray-400 mb-2">Tu Bóveda está vacía</p>
+              <p className="text-gray-500">Comienza a capturar Artefactos de Verdad para llenar tu archivo.</p>
+            </div>
+          ) : (
+            <div className="max-w-7xl mx-auto px-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {evidenciasFiltradas.map((evidencia) => (
               <div
                 key={evidencia.id}
                 onClick={() => setSelectedImage(evidencia)}
@@ -253,6 +329,138 @@ export default function TheVaultPage() {
                 )}
               </div>
             ))}
+          </div>
+        </div>
+          )}
+        </>
+      )}
+
+      {/* GRID DE AVATARES */}
+      {activeTab === 'avatares' && (
+        <>
+          {loading ? (
+            <div className="max-w-7xl mx-auto px-6 py-20 text-center">
+              <LoadingSpinner message="Cargando tus avatares..." size="lg" />
+            </div>
+          ) : avatares.length === 0 ? (
+            <div className="max-w-7xl mx-auto px-6 py-20 text-center">
+              <User className="w-20 h-20 text-gray-600 mx-auto mb-4" />
+              <p className="text-xl text-gray-400 mb-2">No tienes avatares guardados</p>
+              <p className="text-gray-500 mb-6">Crea tu primer avatar con IA desde tu perfil</p>
+              <a
+                href="/dashboard/mentor/perfil"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-lg transition-all font-semibold"
+              >
+                <User className="w-5 h-5" />
+                <span>Crear Avatar</span>
+              </a>
+            </div>
+          ) : (
+            <div className="max-w-7xl mx-auto px-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {avatares.map((avatar) => (
+                  <div
+                    key={avatar.id}
+                    className="relative group"
+                  >
+                    <div
+                      onClick={() => setSelectedAvatar(avatar)}
+                      className="relative aspect-square rounded-lg overflow-hidden border-2 border-purple-500/30 cursor-pointer transition-all hover:scale-105 hover:border-purple-500"
+                    >
+                      <Image
+                        src={avatar.generatedUrl}
+                        alt={`Avatar ${avatar.vibe}`}
+                        fill
+                        className="object-cover"
+                      />
+                      
+                      {/* Overlay con info */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute bottom-0 left-0 right-0 p-3">
+                          <p className="text-xs text-gray-300 mb-1">
+                            {new Date(avatar.createdAt).toLocaleDateString('es-ES', { 
+                              day: 'numeric', 
+                              month: 'short', 
+                              year: 'numeric' 
+                            })}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs px-2 py-1 bg-purple-500/50 rounded">
+                              {avatar.vibe}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Botón eliminar */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteAvatar(avatar.id);
+                      }}
+                      className="absolute top-2 right-2 p-2 bg-red-500/80 hover:bg-red-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Eliminar avatar"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* MODAL DE AVATAR AMPLIADO */}
+      {selectedAvatar && (
+        <div 
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedAvatar(null)}
+        >
+          <div className="relative max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setSelectedAvatar(null)}
+              className="absolute -top-12 right-0 text-white text-xl hover:text-purple-400"
+            >
+              ✕ Cerrar
+            </button>
+            
+            <div className="rounded-lg overflow-hidden border-4 border-purple-500">
+              <div className="relative w-full" style={{ paddingBottom: '100%' }}>
+                <Image
+                  src={selectedAvatar.generatedUrl}
+                  alt={`Avatar ${selectedAvatar.vibe}`}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              
+              <div className="bg-black/80 p-6">
+                <h3 className="text-2xl font-bold mb-4">Avatar {selectedAvatar.vibe}</h3>
+                <div className="space-y-2 text-gray-300">
+                  <p>
+                    <span className="text-gray-400">Creado:</span>{' '}
+                    {new Date(selectedAvatar.createdAt).toLocaleDateString('es-ES', { 
+                      day: 'numeric', 
+                      month: 'long', 
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                  <p>
+                    <span className="text-gray-400">Estilo:</span>{' '}
+                    <span className="px-3 py-1 bg-purple-500/50 rounded text-sm">{selectedAvatar.vibe}</span>
+                  </p>
+                  {selectedAvatar.gender && (
+                    <p>
+                      <span className="text-gray-400">Género:</span> {selectedAvatar.gender}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

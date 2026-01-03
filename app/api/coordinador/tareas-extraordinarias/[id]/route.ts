@@ -130,15 +130,6 @@ export async function PATCH(
         ? 'Tarea aprobada. El participante ha recuperado su vida extra.' 
         : 'Tarea rechazada.'
     });
-        }
-      });
-    }
-
-    return NextResponse.json({
-      success: true,
-      submission: updatedSubmission,
-      message: aprobado ? 'Tarea aprobada y vida extra otorgada' : 'Tarea rechazada'
-    });
 
   } catch (error: any) {
     console.error('❌ Error revisando tarea:', error);

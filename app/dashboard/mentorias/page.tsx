@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calendar, Clock, Star, Award, Briefcase, X, Check, AlertCircle, Info } from 'lucide-react';
+import { Calendar, Clock, Star, Award, Briefcase, X, Check, AlertCircle, Info, Users } from 'lucide-react';
 import { generarSlotsHorarios, esDiaDisponible, formatearHora12, obtenerNombreDia, POLITICA_SESION, type TimeSlot } from '@/utils/horarios';
+import ModalPerfilMentor from '@/components/mentorias/ModalPerfilMentor';
 
 interface Mentor {
   id: number;
@@ -48,6 +49,8 @@ export default function MentoriasPage() {
   const [mentorSeleccionado, setMentorSeleccionado] = useState<Mentor | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [modoHeroe, setModoHeroe] = useState(false); // Modo un solo mentor
+  const [showPerfilModal, setShowPerfilModal] = useState(false);
+  const [mentorPerfilId, setMentorPerfilId] = useState<number | null>(null);
   
   // Estado del formulario de solicitud
   const [servicioSeleccionado, setServicioSeleccionado] = useState<Servicio | null>(null);
@@ -732,13 +735,26 @@ export default function MentoriasPage() {
                 </div>
 
                 {/* Botón llamativo */}
-                <button
-                  onClick={() => abrirModal(mentor)}
-                  className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-purple-500/50"
-                >
-                  <Calendar size={18} />
-                  Ver Perfil Completo
-                </button>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => abrirModal(mentor)}
+                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-purple-500/50"
+                  >
+                    <Calendar size={18} />
+                    Agendar Sesion
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      setMentorPerfilId(mentor.usuarioId);
+                      setShowPerfilModal(true);
+                    }}
+                    className="w-full bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white font-medium py-2 rounded-lg transition-all flex items-center justify-center gap-2 border border-slate-600 hover:border-purple-500/30"
+                  >
+                    <Users size={16} />
+                    Ver Perfil Completo
+                  </button>
+                </div>
               </div>
             </div>
           );
@@ -975,6 +991,25 @@ export default function MentoriasPage() {
             </p>
           </div>
         </div>
+      )}
+
+      {/* Modal de Perfil de Mentor */}
+      {mentorPerfilId && (
+        <ModalPerfilMentor
+          mentorId={mentorPerfilId}
+          isOpen={showPerfilModal}
+          onClose={() => {
+            setShowPerfilModal(false);
+            setMentorPerfilId(null);
+          }}
+          onAgendarSesion={(perfil) => {
+            // Convertir el perfil a formato Mentor y abrir modal de agendar
+            const mentorData = mentores.find(m => m.usuarioId === perfil.usuarioId);
+            if (mentorData) {
+              abrirModal(mentorData);
+            }
+          }}
+        />
       )}
 
     </div>

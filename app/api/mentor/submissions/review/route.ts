@@ -46,7 +46,7 @@ export async function POST(req: Request) {
       where: { id: mentorId }
     });
 
-    if (!mentor || mentor.rol !== 'MENTOR') {
+    if (!mentor || (mentor.rol !== 'MENTOR' && mentor.rol !== 'LIDER')) {
       return NextResponse.json(
         { error: 'Solo los mentores pueden revisar evidencias' },
         { status: 403 }

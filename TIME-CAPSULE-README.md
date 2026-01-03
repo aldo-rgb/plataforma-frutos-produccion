@@ -107,7 +107,7 @@ El **Time Capsule** es una funcionalidad épica que genera automáticamente un v
 **Prompt para GPT-4o-mini:**
 ```
 Genera un texto motivacional épico y corto (máximo 100 palabras) 
-para un video Time Capsule de transformación personal.
+para un video Time Capsule de transformación cuantica.
 
 Contexto:
 - Usuario: [nombre]

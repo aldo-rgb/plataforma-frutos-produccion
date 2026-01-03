@@ -30,16 +30,16 @@ export default function IntensiveProgramInvite({
         </div>
         
         <h3 className="text-xl font-bold text-white mb-2">
-          🚀 Únete al Programa Intensivo
+          🚀 Únete al Programa de Seguimiento
         </h3>
         <p className="text-slate-300 text-sm mb-4">
-          Acelera tu transformación con llamadas semanales de disciplina y mentoría grupal.
+          Acelera tu transformación con llamadas semanales de seguimiento y mentoría.
         </p>
         
         <div className="space-y-2 mb-4">
           <div className="flex items-center gap-2 text-sm text-slate-300">
             <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-            <span>{totalCalls} llamadas de disciplina ({totalWeeks} semanas)</span>
+            <span>18 llamadas de seguimiento (9 semanas)</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-slate-300">
             <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />

@@ -23,7 +23,7 @@ interface Organization {
   standardLicensePrice: number;
   premiumLicensePrice: number;
   renewalOfferDiscount: number;
-  SchoolAdmin: {
+  Usuario_Organization_schoolAdminIdToUsuario: {
     id: number;
     nombre: string;
     email: string;
@@ -71,7 +71,7 @@ export default function EditOrganizationPage() {
         setFormData({
           name: org.name,
           contactEmail: org.contactEmail,
-          schoolAdminEmail: org.SchoolAdmin?.email || '',
+          schoolAdminEmail: org.Usuario_Organization_schoolAdminIdToUsuario?.email || '',
           brandColor: org.brandColor || '#6366F1',
           logoUrl: org.logoUrl || '',
           isGeofenced: org.isGeofenced || false,

@@ -576,16 +576,21 @@ export default function NuevaTareaAdminPage() {
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, targetType: 'ALL', targetId: null })}
+                  disabled={getUserRole() === 'COORDINADOR'}
                   className={`p-3 rounded-xl border-2 transition-all ${
                     formData.targetType === 'ALL'
                       ? 'bg-indigo-900/30 border-indigo-500'
                       : 'bg-slate-800/50 border-slate-700 hover:border-indigo-500/50'
-                  }`}
+                  } ${getUserRole() === 'COORDINADOR' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  title={getUserRole() === 'COORDINADOR' ? 'Los coordinadores no pueden crear tareas para todos los usuarios' : ''}
                 >
                   <Globe className={`w-6 h-6 mx-auto mb-1 ${
                     formData.targetType === 'ALL' ? 'text-indigo-400' : 'text-slate-400'
                   }`} />
                   <p className="text-white text-sm font-medium">Todos</p>
+                  {getUserRole() === 'COORDINADOR' && (
+                    <p className="text-xs text-red-400 mt-1">No disponible</p>
+                  )}
                 </button>
 
                 <button

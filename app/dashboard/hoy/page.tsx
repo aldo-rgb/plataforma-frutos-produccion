@@ -72,7 +72,8 @@ interface UpcomingCall {
 
 export default function TodayPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]); // Tareas de HOY
+  const [tareasRetrasadas, setTareasRetrasadas] = useState<Task[]>([]); // Tareas de días anteriores
   const [upcomingCalls, setUpcomingCalls] = useState<UpcomingCall[]>([]);
   const [stats, setStats] = useState<Stats>({
     total: 0,
@@ -142,7 +143,9 @@ export default function TodayPage() {
         console.log('✅ Tareas después del filtro:', allTasks.length);
         console.log('📋 Tareas filtradas:', allTasks);
         
+        // Separar tareas de HOY y tareas RETRASADAS (de días anteriores)
         setTasks(allTasks);
+        setTareasRetrasadas(data.tareasRetrasadas || []); // Tareas con dueDate anterior a hoy
         
         // Usar el breakdown del backend que ya tiene el conteo correcto
         const retrasadasCarta = data.breakdown?.retrasadasCarta || 0;
@@ -532,15 +535,15 @@ export default function TodayPage() {
               </>
             )}
 
-            {/* Separar tareas retrasadas */}
-            {tasks.some(t => t.tipo === 'CARTA' && t.status === 'PENDING' && (t.postponeCount || 0) > 0) && (
+            {/* Separar tareas retrasadas - SOLO MOSTRAR LAS DE DÍAS ANTERIORES */}
+            {tareasRetrasadas.length > 0 && (
               <>
                 <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-red-400 font-bold mt-6 mb-3">
                   <TrendingUp size={14} className="rotate-180" />
-                  Tareas Retrasadas
+                  Tareas Retrasadas (Días Anteriores)
                 </div>
-                {tasks
-                  .filter(t => t.tipo === 'CARTA' && t.status === 'PENDING' && (t.postponeCount || 0) > 0)
+                {tareasRetrasadas
+                  .filter(t => t.status === 'PENDING')
                   .map(task => (
                     <SmartTask 
                       key={task.id} 
@@ -552,14 +555,14 @@ export default function TodayPage() {
               </>
             )}
 
-            {/* Tareas pendientes normales */}
-            {tasks.some(t => t.tipo === 'CARTA' && t.status === 'PENDING' && (t.postponeCount || 0) === 0) && (
+            {/* Tareas pendientes normales - TODAS LAS DE HOY */}
+            {tasks.some(t => t.tipo === 'CARTA' && t.status === 'PENDING') && (
               <>
                 <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-gray-500 font-bold mt-6 mb-3">
-                  Pendientes
+                  Pendientes de Hoy
                 </div>
                 {tasks
-                  .filter(t => t.tipo === 'CARTA' && t.status === 'PENDING' && (t.postponeCount || 0) === 0)
+                  .filter(t => t.tipo === 'CARTA' && t.status === 'PENDING')
                   .map(task => (
                     <SmartTask 
                       key={task.id} 

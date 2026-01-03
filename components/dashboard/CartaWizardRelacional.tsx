@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Check, Sparkles, AlertCircle, Loader2, CheckCircle2, Brain, Atom, Settings, Send } from 'lucide-react';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import QuantumIdentityModal from '@/components/quantum/QuantumIdentityModal';
 import { validateYoSoy } from '@/lib/validaciones-carta';
 import { extractSmartInfo, generateClosingMessage, type ExtractedInfo } from '@/lib/smart-extractor';
@@ -57,6 +58,7 @@ export default function CartaWizardRelacional() {
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [hasAvatar, setHasAvatar] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string>('');
+  const [loadingAvatar, setLoadingAvatar] = useState(false);
   const [errorModal, setErrorModal] = useState<{ show: boolean; title: string; message: string }>({ 
     show: false, 
     title: '', 
@@ -385,17 +387,20 @@ export default function CartaWizardRelacional() {
     let transformationTargetValue: number | null = null;
     
     try {
-      // PRIMERO: Obtener datos del usuario actual
-      const res = await fetch('/api/carta/my-carta');
+      // PRIMERO: Obtener datos del usuario actual (con cache-buster para datos frescos)
+      const res = await fetch(`/api/carta/my-carta?t=${Date.now()}`, {
+        cache: 'no-store'
+      });
       const data = await res.json();
       
       console.log('📥 Data from API:', data);
+      console.log('🖼️ ProfileImage from API:', data.carta?.Usuario?.profileImage);
       
       // Verificar si el usuario tiene avatar cuántico
       if (data.carta?.Usuario?.profileImage) {
         setHasAvatar(true);
         setAvatarUrl(data.carta.Usuario.profileImage);
-        console.log('✅ Usuario tiene avatar cuántico');
+        console.log('✅ Usuario tiene avatar cuántico:', data.carta.Usuario.profileImage);
       } else {
         setHasAvatar(false);
         setAvatarUrl('');
@@ -436,28 +441,26 @@ export default function CartaWizardRelacional() {
       const areasFiltradas = AREAS.filter(area => {
         const config = areasHabilitadas.find((c: any) => c.areaKey === area.key);
         
-        // Si hay configuración explícita, SOLO usar esa
-        if (config) {
+        // Si pertenece a Vision y hay configuración explícita, usar esa configuración
+        if (perteneceGrupo && config !== undefined) {
           const isEnabled = config.enabled === true;
-          console.log(`${isEnabled ? '✅' : '⛔'} Área ${area.name} (${area.key}): ${config.enabled ? 'HABILITADA' : 'DESHABILITADA'}`);
+          console.log(`${isEnabled ? '✅' : '⛔'} Área ${area.name} (${area.key}): ${config.enabled ? 'HABILITADA' : 'DESHABILITADA'} (Vision config)`);
           return isEnabled;
         }
         
-        // Si NO hay configuración explícita Y NO pertenece a Vision:
-        // Solo habilitar áreas básicas (excluir servicios)
+        // Si pertenece a Vision pero NO hay configuración para esta área, deshabilitarla
+        if (perteneceGrupo && config === undefined) {
+          console.log(`⛔ Área ${area.name} (${area.key}): DESHABILITADA (Vision no la configuró)`);
+          return false;
+        }
+        
+        // Usuario individual (no Vision): habilitar áreas básicas, excluir servicios
         if (!perteneceGrupo && (area.key === 'servicioTrans' || area.key === 'servicioComun')) {
-          console.log(`⛔ Área ${area.name} (${area.key}): DESHABILITADA (no pertenece a Vision)`);
+          console.log(`⛔ Área ${area.name} (${area.key}): DESHABILITADA (usuario individual, área de servicio)`);
           return false;
         }
         
-        // Si NO hay configuración explícita PERO pertenece a Vision:
-        // NO habilitar por defecto - Vision debe definir explícitamente
-        if (perteneceGrupo) {
-          console.log(`⛔ Área ${area.name} (${area.key}): DESHABILITADA (Vision no la configuró explícitamente)`);
-          return false;
-        }
-        
-        // Usuario individual sin Vision: habilitar áreas básicas por defecto
+        // Usuario individual: habilitar áreas básicas
         console.log(`✅ Área ${area.name} (${area.key}): HABILITADA (usuario individual, área básica)`);
         return true;
       });
@@ -983,84 +986,76 @@ export default function CartaWizardRelacional() {
     });
     setHasChanges(true);
     
+    // Remover la sugerencia seleccionada de la lista actual
+    const currentSuggestions = actionSuggestionsByObjetivo[objetoId] || [];
+    const remainingSuggestions = currentSuggestions.filter(s => s !== suggestion);
+    
+    // Actualizar inmediatamente con las sugerencias restantes
+    setActionSuggestionsByObjetivo(prev => ({
+      ...prev,
+      [objetoId]: remainingSuggestions
+    }));
+    
     // Mostrar notificación
     showToast('✅ Acción agregada exitosamente');
     
-    // Generar 3 nuevas sugerencias para reemplazar todas
-    const currentSuggestions = actionSuggestionsByObjetivo[objetoId] || [];
-    // Usar updatedMetas que incluye la acción recién agregada
-    const accionesExistentes = updatedMetas.map(a => a.description);
-    const todasLasSugerenciasPrevias = [...currentSuggestions, ...accionesExistentes];
-    
-    // Solicitar 3 nuevas sugerencias
+    // Generar UNA nueva sugerencia para mantener siempre 3
     try {
       const objetivo = getObjetivosFlattened().find(obj => obj.objetivo.id === objetoId);
       if (objetivo) {
-        const response = await fetch('/api/chat-ia', {
+        const accionesExistentes = updatedMetas.map(a => a.description);
+        const todasLasAccionesAEvitar = [...remainingSuggestions, ...accionesExistentes];
+        
+        const response = await fetch('/api/quantum/sugerir-acciones', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            prompt: `Genera EXACTAMENTE 3 acciones SMART diferentes, específicas y medibles para el objetivo: "${objetivo.objetivo.description}" en el área de ${objetivo.areaName}. 
-            
-Evita estas acciones ya sugeridas o agregadas:
-${todasLasSugerenciasPrevias.map(s => `- ${s}`).join('\n')}
-
-Cada acción debe:
-- Ser específica y medible
-- Incluir números o cantidades cuando sea posible
-- Ser realizable en 3 meses
-- Evitar lenguaje especulativo ("tratar", "intentar")
-- Ser completamente diferente a las anteriores
-
-IMPORTANTE: Responde con EXACTAMENTE 3 acciones, una por línea, sin numeración, sin viñetas, sin texto adicional.`
+            objetivo: objetivo.objetivo.description,
+            areaName: objetivo.areaName,
+            accionesExistentes: todasLasAccionesAEvitar,
+            cantidad: 1
           })
         });
 
         if (response.ok) {
           const data = await response.json();
-          const respuesta = data.respuesta?.trim() || '';
+          console.log('📦 Respuesta del servidor:', data);
           
-          // Parsear las 3 sugerencias (líneas no vacías)
-          const nuevasSugerencias = respuesta
-            .split('\n')
-            .map(s => s.trim())
-            .filter(s => s.length > 15)
-            .slice(0, 3);
-          
-          if (nuevasSugerencias.length >= 3) {
-            setActionSuggestionsByObjetivo(prev => ({
-              ...prev,
-              [objetoId]: nuevasSugerencias
-            }));
-            console.log(`✨ 3 nuevas sugerencias generadas para objetivo ${objetoId}`);
-          } else if (nuevasSugerencias.length > 0) {
-            // Si generó menos de 3, mantener las que generó
-            setActionSuggestionsByObjetivo(prev => ({
-              ...prev,
-              [objetoId]: nuevasSugerencias
-            }));
-            console.log(`⚠️ Solo se generaron ${nuevasSugerencias.length} sugerencias`);
+          // El endpoint devuelve { acciones: [...] }
+          if (data.acciones && Array.isArray(data.acciones) && data.acciones.length > 0) {
+            let nuevaAccion = data.acciones[0].trim();
+            
+            // Limpiar cualquier formato (numeración, viñetas, etc.)
+            nuevaAccion = nuevaAccion
+              .replace(/^[\d\.\-\*\+]+\s*/, '') // Remover numeración al inicio
+              .replace(/^["'\`]+|["'\`]+$/g, '') // Remover comillas
+              .trim();
+            
+            console.log('🔍 Nueva acción generada:', nuevaAccion);
+            console.log('📏 Longitud:', nuevaAccion.length);
+            
+            if (nuevaAccion.length > 15) {
+              setActionSuggestionsByObjetivo(prev => {
+                const currentSuggestions = prev[objetoId] || [];
+                const updatedSuggestions = [...currentSuggestions, nuevaAccion].slice(-3);
+                console.log(`✅ Actualizando sugerencias. Total: ${updatedSuggestions.length}`);
+                return {
+                  ...prev,
+                  [objetoId]: updatedSuggestions
+                };
+              });
+            } else {
+              console.warn('⚠️ Acción generada muy corta, no se agregará');
+            }
           } else {
-            // Si no se generaron sugerencias, limpiar
-            setActionSuggestionsByObjetivo(prev => ({
-              ...prev,
-              [objetoId]: []
-            }));
+            console.warn('⚠️ No se recibieron acciones en la respuesta');
           }
         } else {
-          console.error('Error en respuesta de API');
-          setActionSuggestionsByObjetivo(prev => ({
-            ...prev,
-            [objetoId]: []
-          }));
+          console.error('❌ Error en respuesta de API, status:', response.status);
         }
       }
     } catch (error) {
-      console.error('Error generando nuevas sugerencias:', error);
-      setActionSuggestionsByObjetivo(prev => ({
-        ...prev,
-        [objetoId]: []
-      }));
+      console.error('❌ Error generando nueva sugerencia:', error);
     }
   };
 
@@ -1097,6 +1092,24 @@ IMPORTANTE: Responde con EXACTAMENTE 3 acciones, una por línea, sin numeración
   };
 
   const handleNextObjetivo = () => {
+    // Validar que el objetivo actual tenga al menos una acción
+    const currentObjetivoId = objetivosFlattened[currentObjetivoIndexStep3]?.objetivo.id;
+    const accionesActuales = metasPorArea[currentObjetivoId] || [];
+    
+    // Permitir avanzar solo si hay al menos una acción válida
+    // EXCEPCIÓN: Área de Servicio Transformacional genera acciones automáticamente
+    const currentAreaKey = objetivosFlattened[currentObjetivoIndexStep3]?.areaKey;
+    const esServicioTransformacional = currentAreaKey === 'servicioTrans';
+    
+    if (!esServicioTransformacional && accionesActuales.length === 0) {
+      setErrorModal({
+        show: true,
+        title: '⚠️ Acción requerida',
+        message: 'Debes agregar al menos una acción SMART para este objetivo antes de continuar.'
+      });
+      return;
+    }
+    
     if (currentObjetivoIndexStep3 < objetivosFlattened.length - 1) {
       setCurrentObjetivoIndexStep3(currentObjetivoIndexStep3 + 1);
     } else {
@@ -1359,10 +1372,10 @@ IMPORTANTE: Responde con EXACTAMENTE 3 acciones, una por línea, sin numeración
       
       // ⚠️ Verificar si requiere pago (402 Payment Required)
       if (submitRes.status === 402 && submitData.requiresPayment) {
-        console.log('💳 Requiere pago - Redirigiendo a pricing');
+        console.log('💳 Requiere pago - Redirigiendo a suscripción');
         setSubmitting(false);
-        // Redirigir a la página de pricing/pago
-        window.location.href = submitData.redirectTo || '/pricing';
+        // Redirigir a la página de suscripción
+        window.location.href = submitData.redirectTo || '/dashboard/suscripcion';
         return;
       }
       
@@ -1404,12 +1417,25 @@ IMPORTANTE: Responde con EXACTAMENTE 3 acciones, una por línea, sin numeración
           window.location.href = '/dashboard/suscripcion';
         }, 2500);
       } else {
-        // eslint-disable-next-line no-console
-        console.error('❌ Error del servidor:', submitData);
+        // Error del servidor - mostrar detalles para debugging
+        console.error('❌ Error del servidor:', {
+          status: submitRes.status,
+          statusText: submitRes.statusText,
+          data: submitData
+        });
+        
+        // Construir mensaje de error más específico
+        let errorMessage = submitData.message || submitData.error || 'Hubo un problema al enviar tu carta.';
+        
+        // Si hay detalles adicionales, agregarlos
+        if (submitData.details) {
+          errorMessage += `\n\nDetalles: ${submitData.details}`;
+        }
+        
         setErrorModal({
           show: true,
           title: '❌ Error al enviar',
-          message: submitData.message || submitData.error || 'Hubo un problema al enviar tu carta. Por favor intenta nuevamente.'
+          message: errorMessage
         });
       }
     } catch (error: any) {
@@ -1427,8 +1453,8 @@ IMPORTANTE: Responde con EXACTAMENTE 3 acciones, una por línea, sin numeración
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+      <div className="flex items-center justify-center min-h-screen bg-[#0f1015]">
+        <LoadingSpinner message="Cargando Carta de Frutos..." size="lg" />
       </div>
     );
   }
@@ -2249,6 +2275,7 @@ IMPORTANTE: Responde con EXACTAMENTE 3 acciones, una por línea, sin numeración
                       totalMetas={currentMetaData.total}
                       areaName={currentMetaData.areaName}
                       areaEmoji={currentMetaData.areaEmoji}
+                      visionEndDate={visionEndDate}
                       initialConfig={(() => {
                         const config = metasConfiguradas.find(mc => mc.metaId === currentMetaData.meta.id)?.config;
                         console.log('🔍 Buscando config para:', currentMetaData.meta.id);
@@ -2339,80 +2366,89 @@ IMPORTANTE: Responde con EXACTAMENTE 3 acciones, una por línea, sin numeración
         {/* Paso 5: Avatar Cuántico */}
         {currentStep === 5 && (
           <div className="space-y-6">
-            <div className="bg-gradient-to-r from-purple-900/40 via-blue-900/40 to-purple-900/40 border-2 border-purple-500/50 rounded-xl p-8 text-center">
-              <div className="flex flex-col items-center gap-6">
-                <div className="w-24 h-24 bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 rounded-full flex items-center justify-center animate-pulse">
-                  <Sparkles className="text-white" size={48} />
+            {loadingAvatar ? (
+              <div className="bg-gradient-to-r from-purple-900/40 via-blue-900/40 to-purple-900/40 border-2 border-purple-500/50 rounded-xl p-12 text-center">
+                <div className="flex flex-col items-center gap-6">
+                  <Loader2 className="w-16 h-16 text-purple-400 animate-spin" />
+                  <p className="text-xl text-white">Cargando tu Avatar Cuántico...</p>
                 </div>
-                
-                <div className="space-y-3">
-                  <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 uppercase tracking-wider">
-                    ⚡ Tu Identidad Cuántica
-                  </h2>
-                  <p className="text-xl text-white max-w-2xl mx-auto">
-                    {hasAvatar 
-                      ? '¡Ya tienes tu Avatar Cuántico! Puedes enviarlo a revisión o regenerar uno nuevo.' 
-                      : 'Antes de enviar tus objetivos, vamos generar tu Avatar Cuántico que representará tu identidad en la plataforma.'
-                    }
-                  </p>
-                </div>
+              </div>
+            ) : (
+              <div className="bg-gradient-to-r from-purple-900/40 via-blue-900/40 to-purple-900/40 border-2 border-purple-500/50 rounded-xl p-8 text-center">
+                <div className="flex flex-col items-center gap-6">
+                  <div className="w-24 h-24 bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 rounded-full flex items-center justify-center animate-pulse">
+                    <Sparkles className="text-white" size={48} />
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 uppercase tracking-wider">
+                      ⚡ Tu Rol en el Consejo Quantum Matter
+                    </h2>
+                    <p className="text-xl text-white max-w-2xl mx-auto">
+                      {hasAvatar 
+                        ? '¡Ya tienes tu Perfil Ejecutivo! Puedes enviarlo a revisión o regenerar uno nuevo.' 
+                        : 'Antes de enviar tus objetivos, vamos a configurar tu Rol en el Consejo Quantum Matter que representará tu identidad corporativa en la plataforma.'
+                      }
+                    </p>
+                  </div>
 
-                {hasAvatar ? (
-                  <div className="flex flex-col items-center gap-4">
-                    {/* Mostrar el avatar generado */}
-                    {avatarUrl && (
-                      <div className="relative group">
-                        <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 rounded-2xl blur-xl opacity-75 group-hover:opacity-100 transition-opacity"></div>
-                        <img 
-                          src={avatarUrl} 
-                          alt="Avatar Cuántico" 
-                          className="relative w-48 h-48 rounded-2xl object-cover border-4 border-purple-500/50 shadow-2xl shadow-purple-500/50"
-                        />
+                  {hasAvatar ? (
+                    <div className="flex flex-col items-center gap-4">
+                      {/* Mostrar el avatar generado */}
+                      {avatarUrl && (
+                        <div className="relative group">
+                          <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 rounded-2xl blur-xl opacity-75 group-hover:opacity-100 transition-opacity"></div>
+                          <img 
+                            src={avatarUrl} 
+                            alt="Perfil Ejecutivo del Consejo" 
+                            className="relative w-48 h-48 rounded-2xl object-cover border-4 border-purple-500/50 shadow-2xl shadow-purple-500/50"
+                          />
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-2 bg-green-500/20 border border-green-500/50 rounded-lg px-6 py-3">
+                        <CheckCircle2 className="text-green-400" size={24} />
+                        <span className="text-green-300 font-bold">Perfil Ejecutivo Generado</span>
                       </div>
-                    )}
-                    
-                    <div className="flex items-center gap-2 bg-green-500/20 border border-green-500/50 rounded-lg px-6 py-3">
-                      <CheckCircle2 className="text-green-400" size={24} />
-                      <span className="text-green-300 font-bold">Avatar Cuántico Generado</span>
+                      <button
+                        onClick={() => setShowAvatarModal(true)}
+                        className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition-all flex items-center gap-2"
+                      >
+                        <Sparkles size={20} />
+                        Regenerar Perfil del Consejo
+                      </button>
                     </div>
+                  ) : (
                     <button
                       onClick={() => setShowAvatarModal(true)}
-                      className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition-all flex items-center gap-2"
+                      className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl font-black uppercase tracking-wider transition-all shadow-lg shadow-purple-500/50 flex items-center gap-3 text-lg"
                     >
-                      <Sparkles size={20} />
-                      Regenerar Avatar Cuántico
+                      <Sparkles size={24} />
+                      Configurar Rol en el Consejo
                     </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setShowAvatarModal(true)}
-                    className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl font-black uppercase tracking-wider transition-all shadow-lg shadow-purple-500/50 flex items-center gap-3 text-lg"
-                  >
-                    <Sparkles size={24} />
-                    Generar Avatar Cuántico
-                  </button>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Info adicional */}
             <div className="bg-blue-900/20 border border-blue-500/30 rounded-xl p-6">
               <h3 className="text-blue-300 font-bold mb-3 flex items-center gap-2">
                 <Brain size={20} />
-                ¿Qué es el Avatar Cuántico?
+                ¿Qué es el Perfil del Consejo Quantum Matter?
               </h3>
               <ul className="space-y-2 text-gray-300 text-sm">
                 <li className="flex items-start gap-2">
                   <span className="text-purple-400 mt-1">•</span>
-                  <span>Una representación visual única generada por IA basada en tus metas y objetivos</span>
+                  <span>Una representación visual única generada por IA basada en tus metas y objetivos corporativos</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-purple-400 mt-1">•</span>
-                  <span>Refleja tu personalidad y el camino que estás tomando</span>
+                  <span>Refleja tu rol ejecutivo y el camino que estás tomando en el Consejo</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-purple-400 mt-1">•</span>
-                  <span>Será tu identidad en toda la plataforma y en las competencias</span>
+                  <span>Será tu identidad profesional en toda la plataforma y en las competencias</span>
                 </li>
               </ul>
             </div>
@@ -2539,7 +2575,7 @@ IMPORTANTE: Responde con EXACTAMENTE 3 acciones, una por línea, sin numeración
                       {submitting ? (
                         <>
                           <Loader2 size={20} className="animate-spin" />
-                           Activando Licencia espere un momento...
+                           Consultando Licencia espere un momento...
                         </>
                       ) : (
                         <>
@@ -2860,15 +2896,42 @@ IMPORTANTE: Responde con EXACTAMENTE 3 acciones, una por línea, sin numeración
       {/* Modal de Avatar Cuántico */}
       <QuantumIdentityModal
         isOpen={showAvatarModal}
-        onClose={() => {
+        onClose={async () => {
+          console.log('🔄 Modal cerrado, recargando datos del avatar...');
           setShowAvatarModal(false);
-          setHasAvatar(true); // Marcar que ya tiene avatar
-          // Recargar los datos para obtener la nueva imagen
-          loadCarta();
+          setLoadingAvatar(true);
+          
+          // Pequeña espera para asegurar que la BD se actualizó
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          try {
+            // Obtener directamente el avatar del usuario
+            const res = await fetch(`/api/carta/my-carta?nocache=${Date.now()}`);
+            if (res.ok) {
+              const data = await res.json();
+              console.log('📥 Datos después de crear avatar:', data);
+              
+              if (data.carta?.Usuario?.profileImage) {
+                setHasAvatar(true);
+                setAvatarUrl(data.carta.Usuario.profileImage);
+                console.log('✅ Avatar actualizado:', data.carta.Usuario.profileImage);
+              } else {
+                console.warn('⚠️ No se encontró profileImage en la respuesta');
+              }
+            }
+            
+            // Recargar el resto de los datos
+            await loadCarta();
+          } catch (error) {
+            console.error('❌ Error recargando avatar:', error);
+          } finally {
+            setLoadingAvatar(false);
+          }
         }}
         userName={userEmail || 'Usuario'}
         userLevel={1}
         userRank="Novato"
+        skipReload={true} // NO recargar la página, mantener el estado del wizard
       />
     </div>
   );

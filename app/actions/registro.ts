@@ -37,6 +37,7 @@ export async function registrarUsuario(formData: FormData) {
         email,
         password: hashedPassword,
         rol: "PARTICIPANTE",   // Rol por defecto
+        isActive: true, // Usuario activo al registrarse
         suscripcion: "INACTIVO", // Importante: Nace inactivo para forzar el pago
         puntosCuanticos: 0,
         communityOrganizationId, // Guardar asociación opcional con organización

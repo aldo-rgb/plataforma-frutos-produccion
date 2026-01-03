@@ -365,7 +365,7 @@ export default function ZonaEjecucionDiaria() {
                   <h3 className="text-white font-bold text-lg">Revisa tu Progreso</h3>
                 </div>
                 <p className="text-slate-300 text-sm mb-4">
-                  Ve a tu <strong className="text-purple-400">Carta F.R.U.T.O.S.</strong> para ver tus metas y generar nuevas tareas
+                  Ve a tus <strong className="text-purple-400">Objetivos</strong> para ver tus metas programadas.
                 </p>
                 <a
                   href="/dashboard/carta"

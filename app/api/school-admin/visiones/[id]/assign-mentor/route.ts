@@ -84,13 +84,6 @@ export async function POST(
       );
     }
 
-    if (!usuario.licenseCode) {
-      return NextResponse.json(
-        { error: 'El usuario debe tener una licencia asignada antes de poder asignar un mentor' },
-        { status: 400 }
-      );
-    }
-
     // Verificar si el usuario ya tenía un mentor asignado (cambio de mentor)
     const hadPreviousMentor = usuario.assignedMentorId !== null;
     let cancelledCalls = 0;

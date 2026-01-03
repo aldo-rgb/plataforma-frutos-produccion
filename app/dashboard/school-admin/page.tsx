@@ -51,6 +51,13 @@ interface DashboardData {
   }[];
   availableCredits: number;
   pendingPayment: boolean;
+  pendingLeaderApprovals?: number; // NUEVO - Líderes pendientes de aprobación
+  mentorCosts?: {
+    costoTotalMentores: number;
+    totalLlamadasDisciplina: number;
+    totalMentoresActivos: number;
+    visionesActivas: number;
+  };
 }
 
 export default function SchoolAdminDashboard() {
@@ -66,6 +73,8 @@ export default function SchoolAdminDashboard() {
   } | null>(null);
   const [consejoQuantum, setConsejoQuantum] = useState<any>(null);
   const [loadingConsejo, setLoadingConsejo] = useState(true);
+  const [visiones, setVisiones] = useState<any[]>([]);
+  const [loadingVisiones, setLoadingVisiones] = useState(true);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -76,6 +85,7 @@ export default function SchoolAdminDashboard() {
       fetchDashboardData();
       checkPaymentStatus();
       fetchConsejoQuantum();
+      fetchVisiones();
     }
   }, [status, session]);
 
@@ -151,6 +161,7 @@ export default function SchoolAdminDashboard() {
           pendingOrders: result.pendingOrders,
           availableCredits: result.stats.availableCredits,
           pendingPayment: result.pendingPayment,
+          mentorCosts: result.mentorCosts,
         };
         
         setData(transformedData);
@@ -184,6 +195,20 @@ export default function SchoolAdminDashboard() {
       console.error('Error fetching consejo quantum:', error);
     } finally {
       setLoadingConsejo(false);
+    }
+  };
+
+  const fetchVisiones = async () => {
+    try {
+      const res = await fetch('/api/director/visiones');
+      const result = await res.json();
+      if (res.ok && result.success) {
+        setVisiones(result.visiones || []);
+      }
+    } catch (error) {
+      console.error('Error fetching visiones:', error);
+    } finally {
+      setLoadingVisiones(false);
     }
   };
 
@@ -320,6 +345,37 @@ export default function SchoolAdminDashboard() {
           );
         })()}
 
+        {/* Banner de Alerta - Líderes Pendientes de Aprobación */}
+        {data.pendingLeaderApprovals && data.pendingLeaderApprovals > 0 && (
+          <div className="bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-cyan-500/20 border-2 border-cyan-500/50 rounded-2xl p-5 shadow-2xl animate-pulse backdrop-blur-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-cyan-400 rounded-full animate-ping opacity-75"></div>
+                  <div className="relative flex items-center justify-center w-12 h-12 bg-cyan-500 rounded-full">
+                    <UserCheck className="text-white" size={24} />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <span className="animate-pulse">🔔</span>
+                    {data.pendingLeaderApprovals} Líder(es) Pendiente(s) de Autorización
+                  </h3>
+                  <p className="text-sm text-cyan-200 mt-1">
+                    Revisa y autoriza los perfiles para activar líderes en tu organización
+                  </p>
+                </div>
+              </div>
+              <Link href="/dashboard/school-admin/lideres">
+                <button className="px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-cyan-500/50 flex items-center gap-2">
+                  <UserCheck size={20} />
+                  <span>Revisar Perfiles</span>
+                </button>
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Widget de Pago Pendiente - COMPACTO - Solo para órdenes PENDING */}
         {data.pendingPayment && data.pendingOrders && data.pendingOrders.filter((o: any) => o.status === 'PENDING').length > 0 && (
           <div className="relative overflow-hidden bg-gradient-to-br from-purple-900/50 via-pink-900/30 to-slate-900 border-2 border-purple-500/50 rounded-2xl p-6 shadow-2xl">
@@ -435,6 +491,148 @@ export default function SchoolAdminDashboard() {
             })()}
             color={data.pendingOrders.length > 0 ? 'blue' : 'yellow'}
           />
+        </div>
+
+        {/* Tarjeta de Costos de Mentores */}
+        {data.mentorCosts && data.mentorCosts.totalMentoresActivos > 0 && (
+          <div className="mt-6 bg-gradient-to-br from-emerald-900/30 to-cyan-900/30 border border-emerald-500/30 rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <DollarSign className="text-emerald-400" size={24} />
+                Costos de Mentores - Ciclos Activos
+              </h3>
+              <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full">
+                {data.mentorCosts.visionesActivas} {data.mentorCosts.visionesActivas === 1 ? 'Visión' : 'Visiones'}
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
+                <p className="text-xs text-slate-400 uppercase font-semibold mb-2">Mentores Activos</p>
+                <p className="text-3xl font-bold text-white">{data.mentorCosts.totalMentoresActivos}</p>
+                <p className="text-xs text-emerald-400 mt-1">🎓 Mentores pagados</p>
+              </div>
+              
+              <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
+                <p className="text-xs text-slate-400 uppercase font-semibold mb-2">Llamadas Totales</p>
+                <p className="text-3xl font-bold text-white">{data.mentorCosts.totalLlamadasDisciplina}</p>
+                <p className="text-xs text-cyan-400 mt-1">📞 2 llamadas/semana</p>
+              </div>
+              
+              <div className="bg-slate-900/50 rounded-xl p-4 border border-emerald-700/50">
+                <p className="text-xs text-slate-400 uppercase font-semibold mb-2">Costo Total</p>
+                <p className="text-3xl font-bold text-emerald-400">
+                  ${data.mentorCosts.costoTotalMentores.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">MXN - Todos los ciclos</p>
+              </div>
+            </div>
+            
+            <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+              <p className="text-xs text-blue-300 flex items-center gap-2">
+                <AlertTriangle size={14} />
+                Este es el costo total de mentores en todas las visiones activas. Los líderes (coordinadores/directores) no tienen costo asociado.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* WIDGET DE VISIONES ACTIVAS */}
+        <div className="bg-slate-900 border border-white/10 rounded-3xl p-6 mt-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-black text-white italic uppercase flex items-center gap-2">
+              <Target className="text-purple-400" /> Visiones Activas
+            </h2>
+            <span className="text-xs font-bold text-slate-500 uppercase">
+              {visiones.length} {visiones.length === 1 ? 'Visión' : 'Visiones'}
+            </span>
+          </div>
+
+          {loadingVisiones ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto"></div>
+            </div>
+          ) : visiones.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              <Target className="mx-auto mb-2 opacity-30" size={48} />
+              <p className="text-sm">No hay visiones activas en este momento</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {visiones.map((vision: any) => {
+                const participantesCount = vision._count?.VisionParticipante || 0;
+                const mentoresCount = vision._count?.VisionMentor || 0;
+                const gameChangersCount = vision._count?.VisionGameChanger || 0;
+                const licensesUsage = vision.maxParticipantes 
+                  ? Math.round((participantesCount / vision.maxParticipantes) * 100) 
+                  : 0;
+
+                return (
+                  <div 
+                    key={vision.id} 
+                    className="bg-slate-950 border border-white/5 rounded-xl p-5 hover:border-purple-500/30 transition-all hover:shadow-lg hover:shadow-purple-500/10"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h3 className="font-bold text-white text-sm mb-1 line-clamp-1">{vision.nombre}</h3>
+                        {vision.descripcion && (
+                          <p className="text-xs text-slate-500 line-clamp-2">{vision.descripcion}</p>
+                        )}
+                      </div>
+                      {vision.isActive && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-500/10 text-green-400 text-[10px] font-bold uppercase border border-green-500/20">
+                          <Zap size={10} /> Activa
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500">Participantes</span>
+                        <span className="font-bold text-white">
+                          {participantesCount}
+                          {vision.maxParticipantes && (
+                            <span className="text-slate-500 font-normal"> / {vision.maxParticipantes}</span>
+                          )}
+                        </span>
+                      </div>
+
+                      {vision.maxParticipantes && (
+                        <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full ${
+                              licensesUsage >= 90 ? 'bg-red-500' : 
+                              licensesUsage >= 70 ? 'bg-yellow-500' : 
+                              'bg-green-500'
+                            }`}
+                            style={{ width: `${Math.min(licensesUsage, 100)}%` }}
+                          ></div>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
+                        <div className="text-center">
+                          <p className="text-[10px] text-slate-500 uppercase">Mentores</p>
+                          <p className="text-lg font-bold text-cyan-400">{mentoresCount}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[10px] text-slate-500 uppercase">Game Changers</p>
+                          <p className="text-lg font-bold text-green-400">{gameChangersCount}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {vision.Usuario && (
+                      <div className="pt-3 border-t border-white/5">
+                        <p className="text-[10px] text-slate-500 uppercase mb-1">Coordinador</p>
+                        <p className="text-xs font-medium text-white">{vision.Usuario.nombre}</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -751,6 +949,27 @@ export default function SchoolAdminDashboard() {
                 </div>
                 <p className="text-xs text-slate-400">
                   Crea coordinadores y asígnalos a tus visiones
+                </p>
+              </div>
+            </Link>
+
+            <Link href="/dashboard/school-admin/lideres" className="block mt-6">
+              <div className="bg-gradient-to-br from-purple-900/50 to-slate-900 border-2 border-purple-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-purple-500/20 group-hover:bg-purple-500/30 rounded-xl transition-colors">
+                    <Shield size={24} className="text-purple-300" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm uppercase">
+                      Gestionar Mentores
+                    </h3>
+                    <p className="text-xs text-purple-300">
+                      Mentores internos
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Crea líderes (mentores privados) y asígnalos a tus visiones
                 </p>
               </div>
             </Link>

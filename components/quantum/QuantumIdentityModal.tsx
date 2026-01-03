@@ -12,7 +12,7 @@ interface Candidate {
   designation: string;
   rationale: string;
   visual_tags: string[];
-  archetype: 'CEREBRAL' | 'PHYSICAL' | 'LEADER';
+  archetype: 'DIRECTOR' | 'ARCHITECT' | 'CURATOR' | 'MODELER' | 'OVERSEER' | 'STRATEGIST' | 'ENGINEER' | 'ANALYST' | 'ARCHIVIST' | 'SENTINEL' | 'OBSERVER' | 'INTERFACE';
 }
 
 interface QuantumIdentityModalProps {
@@ -21,6 +21,7 @@ interface QuantumIdentityModalProps {
   userName: string;
   userLevel: number;
   userRank: string;
+  skipReload?: boolean; // Si es true, no recarga la página al cerrar
 }
 
 export default function QuantumIdentityModal({ 
@@ -28,7 +29,8 @@ export default function QuantumIdentityModal({
   onClose, 
   userName, 
   userLevel,
-  userRank 
+  userRank,
+  skipReload = false
 }: QuantumIdentityModalProps) {
   const [stage, setStage] = useState<'gender' | 'analyzing' | 'selection' | 'generating' | 'reveal' | 'error'>('gender');
   const [gender, setGender] = useState<'male' | 'female' | 'neutral' | null>(null);
@@ -44,6 +46,12 @@ export default function QuantumIdentityModal({
   const [showSelfieCapture, setShowSelfieCapture] = useState(false);
   const [useSelfieMode, setUseSelfieMode] = useState(false);
 
+  // Funci\u00f3n para limpiar el cooldown cuando el avatar se guarda exitosamente
+  const clearCooldown = () => {
+    localStorage.removeItem('quantum_identity_cooldown');
+    console.log('\u2705 Cooldown limpiado - avatar guardado exitosamente');
+  };
+
   useEffect(() => {
     if (isOpen && stage === 'analyzing' && !isGenerating && gender) {
       generateIdentityOptions();
@@ -54,6 +62,8 @@ export default function QuantumIdentityModal({
     setAvatarUrl(avatarUrl);
     setShowSelfieCapture(false);
     setStage('reveal');
+    // Limpiar cooldown ya que el avatar se guardó exitosamente
+    clearCooldown();
   };
 
   const generateIdentityOptions = async () => {
@@ -71,10 +81,16 @@ export default function QuantumIdentityModal({
         const error = await res.json().catch(() => ({ error: 'Error desconocido' }));
         
         if (error.requiresCarta) {
-          setErrorTitle('Carta no creada');
+          setErrorTitle('CARTA NO CREADA');
           setErrorMessage('Necesitas crear tu Carta F.R.U.T.O.S. antes de generar tu Avatar Cuántico. La carta puede estar en cualquier estado (borrador, en revisión, etc.).');
           setStage('error');
           setIsGenerating(false);
+          
+          // Redirigir a crear carta después de 3 segundos si cierran el modal
+          setTimeout(() => {
+            onClose();
+            window.location.href = '/dashboard/carta';
+          }, 3000);
           return;
         }
         
@@ -136,10 +152,22 @@ export default function QuantumIdentityModal({
         })
       });
 
-      if (!res.ok) throw new Error('Error generando avatar');
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: 'Error desconocido' }));
+        throw new Error(error.error || 'Error generando avatar');
+      }
 
       const data = await res.json();
+      
+      // Verificar que tenemos un avatar URL válido
+      if (!data.avatarUrl) {
+        throw new Error('No se recibió URL del avatar');
+      }
+      
       setAvatarUrl(data.avatarUrl);
+      
+      // Limpiar cooldown ya que el avatar se guardó exitosamente
+      clearCooldown();
 
       // Transición a reveal
       setTimeout(() => {
@@ -156,24 +184,42 @@ export default function QuantumIdentityModal({
 
   const getArchetypeIcon = (archetype: string) => {
     switch (archetype) {
-      case 'CEREBRAL': return <Brain className="text-blue-400" size={40} />;
-      case 'PHYSICAL': return <Zap className="text-green-400" size={40} />;
-      case 'LEADER': return <Shield className="text-yellow-400" size={40} />;
+      case 'DIRECTOR': return <Shield className="text-purple-400" size={40} />;
+      case 'ARCHITECT': return <Target className="text-blue-400" size={40} />;
+      case 'CURATOR': return <Brain className="text-cyan-400" size={40} />;
+      case 'MODELER': return <Sparkles className="text-indigo-400" size={40} />;
+      case 'OVERSEER': return <Shield className="text-gray-400" size={40} />;
+      case 'STRATEGIST': return <Target className="text-amber-400" size={40} />;
+      case 'ENGINEER': return <Zap className="text-teal-400" size={40} />;
+      case 'ANALYST': return <Brain className="text-green-400" size={40} />;
+      case 'ARCHIVIST': return <Brain className="text-slate-400" size={40} />;
+      case 'SENTINEL': return <Shield className="text-red-400" size={40} />;
+      case 'OBSERVER': return <Sparkles className="text-purple-400" size={40} />;
+      case 'INTERFACE': return <Target className="text-pink-400" size={40} />;
       default: return <Target className="text-purple-400" size={40} />;
     }
   };
 
   const getArchetypeGradient = (archetype: string) => {
     switch (archetype) {
-      case 'CEREBRAL': return 'from-blue-600 to-cyan-600';
-      case 'PHYSICAL': return 'from-green-600 to-emerald-600';
-      case 'LEADER': return 'from-yellow-600 to-orange-600';
+      case 'DIRECTOR': return 'from-purple-600 to-indigo-600';
+      case 'ARCHITECT': return 'from-blue-600 to-cyan-600';
+      case 'CURATOR': return 'from-cyan-600 to-teal-600';
+      case 'MODELER': return 'from-indigo-600 to-purple-600';
+      case 'OVERSEER': return 'from-gray-600 to-slate-600';
+      case 'STRATEGIST': return 'from-amber-600 to-orange-600';
+      case 'ENGINEER': return 'from-teal-600 to-emerald-600';
+      case 'ANALYST': return 'from-green-600 to-lime-600';
+      case 'ARCHIVIST': return 'from-slate-600 to-gray-600';
+      case 'SENTINEL': return 'from-red-600 to-rose-600';
+      case 'OBSERVER': return 'from-purple-600 to-pink-600';
+      case 'INTERFACE': return 'from-pink-600 to-fuchsia-600';
       default: return 'from-purple-600 to-pink-600';
     }
   };
 
   const shareToTwitter = () => {
-    const text = `🚀 Mi designación cuántica: ${selectedCandidate?.designation}\n\n${selectedCandidate?.rationale}\n\n#QuantumMatter #Frutos`;
+    const text = `🏢 Mi rol en el Consejo Quantum Matter: ${selectedCandidate?.designation}\n\n${selectedCandidate?.rationale}\n\n#QuantumMatter #Frutos #ConsejoCuantico`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
   };
 
@@ -186,7 +232,7 @@ export default function QuantumIdentityModal({
   };
 
   const copyToClipboard = () => {
-    const text = `Mi designación cuántica: ${selectedCandidate?.designation}\n${selectedCandidate?.rationale}`;
+    const text = `Mi rol en el Consejo Quantum Matter: ${selectedCandidate?.designation}\n${selectedCandidate?.rationale}`;
     navigator.clipboard.writeText(text);
     alert('¡Copiado al portapapeles!');
   };
@@ -204,10 +250,10 @@ export default function QuantumIdentityModal({
               <Sparkles className="text-white" size={40} />
             </div>
             <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400 uppercase tracking-wider">
-              Configuración de Avatar
+              Consejo Quantum Matter
             </h2>
             <p className="text-xl text-slate-300">
-              Para generar tu avatar cuántico, necesitamos conocer tu identidad de género
+              Configuración de tu Perfil Ejecutivo en el Consejo
             </p>
           </div>
 
@@ -335,8 +381,8 @@ export default function QuantumIdentityModal({
                 >
                   <div className="flex flex-col items-center space-y-3">
                     <Sparkles size={32} className="group-hover:rotate-12 transition-transform" />
-                    <span className="text-xl">Generar Avatar con IA</span>
-                    <span className="text-sm text-purple-200">Avatar único basado en tu identidad cuántica</span>
+                    <span className="text-xl">Generar Perfil Ejecutivo con IA</span>
+                    <span className="text-sm text-purple-200">Retrato corporativo profesional del Consejo</span>
                   </div>
                 </button>
 
@@ -392,9 +438,9 @@ export default function QuantumIdentityModal({
             </div>
           </div>
           <h2 className="text-3xl font-black text-white uppercase tracking-wider">
-            CALCULANDO RUTAS DE EVOLUCIÓN...
+            ANALIZANDO PERFIL EJECUTIVO...
           </h2>
-          <p className="text-slate-400">Analizando tus metas y objetivos...</p>
+          <p className="text-slate-400">El Consejo está evaluando tus capacidades...</p>
           <div className="flex items-center justify-center gap-2">
             <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
             <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
@@ -410,13 +456,13 @@ export default function QuantumIdentityModal({
           {/* Header */}
           <div className="text-center space-y-4">
             <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 uppercase tracking-wider">
-              RUTAS DE IDENTIDAD DETECTADAS
+              ROLES DEL CONSEJO DISPONIBLES
             </h2>
             <p className="text-xl text-slate-300">
-              El sistema ha encontrado 3 caminos compatibles con tus ambiciones.
+              El Consejo Quantum Matter ha identificado 3 roles compatibles con tu perfil.
             </p>
             <p className="text-lg text-purple-400 font-semibold">
-              Elige tu Designación Operativa.
+              Selecciona tu Posición en el Consejo.
             </p>
           </div>
 
@@ -431,7 +477,7 @@ export default function QuantumIdentityModal({
                 className={`
                   relative p-6 rounded-2xl border-2 transition-all duration-300 transform
                   ${selectedCandidate?.id === candidate.id
-                    ? `border-${candidate.archetype === 'CEREBRAL' ? 'blue' : candidate.archetype === 'PHYSICAL' ? 'green' : 'yellow'}-500 bg-gradient-to-br ${getArchetypeGradient(candidate.archetype)}/20 scale-105 shadow-2xl`
+                    ? `border-purple-500 bg-gradient-to-br ${getArchetypeGradient(candidate.archetype)}/20 scale-105 shadow-2xl`
                     : 'border-slate-700 bg-slate-900/50 hover:scale-105 hover:border-slate-500'
                   }
                   ${hoveredCard === candidate.id ? 'shadow-2xl shadow-purple-500/50' : ''}
@@ -461,7 +507,7 @@ export default function QuantumIdentityModal({
                   {/* Archetype Badge */}
                   <div className="flex justify-center">
                     <span className={`px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r ${getArchetypeGradient(candidate.archetype)} text-white`}>
-                      {candidate.archetype === 'CEREBRAL' ? 'CEREBRAL' : candidate.archetype === 'PHYSICAL' ? 'FÍSICO' : 'LÍDER'}
+                      {candidate.archetype}
                     </span>
                   </div>
 
@@ -495,7 +541,7 @@ export default function QuantumIdentityModal({
                 }
               `}
             >
-              Confirmar Identidad
+              Confirmar Rol en el Consejo
             </button>
           </div>
         </div>
@@ -512,12 +558,12 @@ export default function QuantumIdentityModal({
             </div>
           </div>
           <h2 className="text-3xl font-black text-white uppercase tracking-wider">
-            COMPILANDO IDENTIDAD...
+            GENERANDO PERFIL EJECUTIVO...
           </h2>
           <p className="text-xl text-purple-400">
             {selectedCandidate?.designation}
           </p>
-          <p className="text-slate-400">Generando tu avatar cuántico...</p>
+          <p className="text-slate-400">Creando tu retrato corporativo del Consejo...</p>
         </div>
       )}
 
@@ -538,10 +584,10 @@ export default function QuantumIdentityModal({
           {/* Identity Confirmed */}
           <div className="space-y-4">
             <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-400 uppercase tracking-wider animate-in slide-in-from-bottom duration-500">
-              IDENTIDAD CONFIRMADA
+              ROL CONFIRMADO
             </h2>
             <p className="text-3xl font-bold text-white uppercase tracking-widest">
-              BIENVENIDO, {selectedCandidate?.designation}
+              BIENVENIDO AL CONSEJO, {selectedCandidate?.designation}
             </p>
             <p className="text-slate-400 text-lg">
               {selectedCandidate?.rationale}
@@ -552,7 +598,7 @@ export default function QuantumIdentityModal({
           <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 space-y-4">
             <h3 className="text-lg font-bold text-white flex items-center justify-center gap-2">
               <Share2 size={20} />
-              Comparte tu Identidad Cuántica
+              Comparte tu Rol en el Consejo
             </h3>
             
             <div className="flex items-center justify-center gap-4">
@@ -590,8 +636,16 @@ export default function QuantumIdentityModal({
           {/* Close Button */}
           <button
             onClick={() => {
+              // El cooldown ya fue limpiado cuando se guardó el avatar exitosamente
+              // Cerrar modal normalmente - el usuario ya tiene su profileImage en BD
               onClose();
-              window.location.reload(); // Recargar para mostrar el nuevo avatar
+              
+              // Solo recargar si no estamos en modo skipReload (ej: dentro del wizard)
+              if (!skipReload) {
+                setTimeout(() => {
+                  window.location.reload();
+                }, 1000);
+              }
             }}
             className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg font-black uppercase tracking-wider transition-all shadow-lg shadow-purple-500/50"
           >

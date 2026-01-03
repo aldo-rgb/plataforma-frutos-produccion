@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   BarChart3, Users, PhoneOff, Zap, AlertTriangle, 
-  Clock, TrendingUp, ShieldCheck, UserPlus, Gamepad2, CreditCard
+  Clock, TrendingUp, ShieldCheck, UserPlus, Gamepad2, CreditCard, Target
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -61,13 +61,46 @@ const PERFORMANCE_GAMECHANGERS = [
 
 export default function AdminPerformancePage() {
   const [mentoresInactivos, setMentoresInactivos] = useState(0);
+  const [lideresActivos, setLideresActivos] = useState(0);
   const [pendingPayments, setPendingPayments] = useState<any[]>([]);
+  const [visionesActivas, setVisionesActivas] = useState<any[]>([]);
+  const [mentoresReales, setMentoresReales] = useState<any[]>([]);
+  const [gameChangersReales, setGameChangersReales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     cargarMentoresInactivos();
     cargarPagosPendientes();
+    cargarLideresActivos();
+    cargarVisionesActivas();
+    cargarMentoresReales();
+    cargarGameChangersReales();
   }, []);
+
+  useEffect(() => {
+    console.log('🔍 Estado de mentoresReales actualizado:', mentoresReales);
+    console.log('📏 Longitud:', mentoresReales.length);
+  }, [mentoresReales]);
+
+  useEffect(() => {
+    console.log('🔍 Estado de gameChangersReales actualizado:', gameChangersReales);
+    console.log('📏 Longitud:', gameChangersReales.length);
+  }, [gameChangersReales]);
+
+  const cargarLideresActivos = async () => {
+    try {
+      const res = await fetch('/api/usuarios');
+      const data = await res.json();
+      if (data.usuarios) {
+        const lideres = data.usuarios.filter((u: any) => 
+          u.rol === 'LIDER' && u.isActive && u.mentorMarketplaceApproved
+        ).length;
+        setLideresActivos(lideres);
+      }
+    } catch (error) {
+      console.error('Error al cargar líderes activos:', error);
+    }
+  };
 
   const cargarMentoresInactivos = async () => {
     try {
@@ -95,6 +128,54 @@ export default function AdminPerformancePage() {
       }
     } catch (error) {
       console.error('Error al cargar pagos pendientes:', error);
+    }
+  };
+
+  const cargarVisionesActivas = async () => {
+    try {
+      const res = await fetch('/api/admin/visiones');
+      const data = await res.json();
+      if (data.visiones) {
+        // Filtrar solo las activas para mostrar en el dashboard
+        const activas = data.visiones.filter((v: any) => v.isActive);
+        setVisionesActivas(activas);
+      }
+    } catch (error) {
+      console.error('Error al cargar visiones activas:', error);
+    }
+  };
+
+  const cargarMentoresReales = async () => {
+    try {
+      console.log('🔄 Cargando mentores reales...');
+      const res = await fetch('/api/admin/mentores/performance');
+      const data = await res.json();
+      console.log('📊 Respuesta de mentores:', data);
+      if (data.success && data.mentores) {
+        console.log(`✅ ${data.mentores.length} mentores cargados:`, data.mentores);
+        setMentoresReales(data.mentores);
+      } else {
+        console.warn('⚠️ No se recibieron mentores válidos:', data);
+      }
+    } catch (error) {
+      console.error('❌ Error al cargar mentores:', error);
+    }
+  };
+
+  const cargarGameChangersReales = async () => {
+    try {
+      console.log('🔄 Cargando game changers reales...');
+      const res = await fetch('/api/admin/gamechangers/performance');
+      const data = await res.json();
+      console.log('📊 Respuesta de game changers:', data);
+      if (data.success && data.gameChangers) {
+        console.log(`✅ ${data.gameChangers.length} game changers cargados:`, data.gameChangers);
+        setGameChangersReales(data.gameChangers);
+      } else {
+        console.warn('⚠️ No se recibieron game changers válidos:', data);
+      }
+    } catch (error) {
+      console.error('❌ Error al cargar game changers:', error);
     }
   };
 
@@ -160,8 +241,8 @@ export default function AdminPerformancePage() {
         <KpiCard 
           icon={<Users className="text-cyan-400" />} 
           label="Líderes Activos" 
-          value="142" 
-          trend="+12 esta semana" 
+          value={loading ? '...' : lideresActivos.toString()} 
+          trend={lideresActivos > 0 ? `${lideresActivos} líderes aprobados` : 'Sin líderes activos'} 
           color="cyan"
         />
         <Link href="/dashboard/admin/mentores" className="block">
@@ -190,6 +271,115 @@ export default function AdminPerformancePage() {
         />
       </div>
 
+      {/* WIDGET DE VISIONES ACTIVAS */}
+      <div className="bg-slate-900 border border-white/10 rounded-3xl p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-black text-white italic uppercase flex items-center gap-2">
+            <Target className="text-purple-400" /> Visiones Activas
+          </h2>
+          <span className="text-xs font-bold text-slate-500 uppercase">
+            {visionesActivas.length} {visionesActivas.length === 1 ? 'Visión' : 'Visiones'}
+          </span>
+        </div>
+
+        {visionesActivas.length === 0 ? (
+          <div className="text-center py-8 text-slate-500">
+            <Target className="mx-auto mb-2 opacity-30" size={48} />
+            <p className="text-sm">No hay visiones activas en este momento</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {visionesActivas.map((vision: any) => {
+              const participantesCount = vision._count?.Participantes || 0;
+              const mentoresCount = vision._count?.Mentores || 0;
+              const gameChangersCount = vision._count?.GameChangers || 0;
+              const licensesUsage = vision.maxParticipantes 
+                ? Math.round((participantesCount / vision.maxParticipantes) * 100) 
+                : 0;
+
+              return (
+                <div 
+                  key={vision.id} 
+                  className="bg-slate-950 border border-white/5 rounded-xl p-5 hover:border-purple-500/30 transition-all hover:shadow-lg hover:shadow-purple-500/10"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <h3 className="font-bold text-white text-sm mb-1 line-clamp-1">{vision.nombre}</h3>
+                      {vision.descripcion && (
+                        <p className="text-xs text-slate-500 line-clamp-2">{vision.descripcion}</p>
+                      )}
+                    </div>
+                    {vision.isActive && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-500/10 text-green-400 text-[10px] font-bold uppercase border border-green-500/20">
+                        <Zap size={10} /> Activa
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500">Participantes</span>
+                      <span className="font-bold text-white">
+                        {participantesCount}
+                        {vision.maxParticipantes && (
+                          <span className="text-slate-500 font-normal"> / {vision.maxParticipantes}</span>
+                        )}
+                      </span>
+                    </div>
+
+                    {vision.maxParticipantes && (
+                      <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full ${
+                            licensesUsage >= 90 ? 'bg-red-500' : 
+                            licensesUsage >= 70 ? 'bg-yellow-500' : 
+                            'bg-green-500'
+                          }`}
+                          style={{ width: `${Math.min(licensesUsage, 100)}%` }}
+                        ></div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
+                      <div className="text-center">
+                        <p className="text-[10px] text-slate-500 uppercase">Mentores</p>
+                        <p className="text-lg font-bold text-cyan-400">{mentoresCount}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] text-slate-500 uppercase">Game Changers</p>
+                        <p className="text-lg font-bold text-green-400">{gameChangersCount}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {vision.Coordinador && (
+                    <div className="pt-3 border-t border-white/5">
+                      <p className="text-[10px] text-slate-500 uppercase mb-1">Coordinador</p>
+                      <p className="text-xs font-medium text-white">{vision.Coordinador.nombre}</p>
+                    </div>
+                  )}
+
+                  {(vision.startDate || vision.endDate) && (
+                    <div className="pt-3 border-t border-white/5 mt-3">
+                      <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                        <Clock size={10} />
+                        {vision.startDate && (
+                          <span>{new Date(vision.startDate).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })}</span>
+                        )}
+                        {vision.startDate && vision.endDate && <span>→</span>}
+                        {vision.endDate && (
+                          <span>{new Date(vision.endDate).toLocaleDateString('es-ES', { month: 'short', day: 'numeric' })}</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* COLUMNA IZQUIERDA: EVALUACIÓN DE MENTORES */}
@@ -212,12 +402,12 @@ export default function AdminPerformancePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {PERFORMANCE_MENTORES.map((mentor) => (
+                {(mentoresReales.length > 0 ? mentoresReales : PERFORMANCE_MENTORES).map((mentor) => (
                   <tr key={mentor.id} className="hover:bg-white/5 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className="font-bold text-white">{mentor.nombre}</span>
-                        <span className="text-[10px] text-slate-500">{mentor.asignados} Líderes</span>
+                        <span className="text-[10px] text-slate-500">{mentor.asignados} Mentorados</span>
                       </div>
                     </td>
                     
@@ -273,7 +463,7 @@ export default function AdminPerformancePage() {
           </h2>
 
           <div className="bg-slate-900 border border-white/10 rounded-3xl p-6 space-y-6">
-            {PERFORMANCE_GAMECHANGERS.map((gc) => {
+            {(gameChangersReales.length > 0 ? gameChangersReales : PERFORMANCE_GAMECHANGERS).map((gc) => {
               const porcentaje = (gc.logrados / gc.metaEnrolamiento) * 100;
               return (
                 <div key={gc.id} className="relative">

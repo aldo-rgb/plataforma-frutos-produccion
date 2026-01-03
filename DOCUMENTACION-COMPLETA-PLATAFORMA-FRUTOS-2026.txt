@@ -1,0 +1,905 @@
+================================================================================
+DOCUMENTACIÓN COMPLETA DE LA PLATAFORMA FRUTOS - ENERO 2026
+================================================================================
+
+CONTEXTO DE LA CONVERSACIÓN
+================================================================================
+
+Estás continuando una conversación técnica con el desarrollador Aldo sobre la 
+**Plataforma Frutos**, una aplicación de mentoría y desarrollo personal. El 
+desarrollador tiene un estilo directo, pide soluciones específicas en formato 
+"buscar y reemplazar exacto", y prefiere que no crees archivos markdown de 
+documentación a menos que lo solicite explícitamente.
+
+**Tono de comunicación esperado:**
+- Conciso y directo
+- Enfocado en soluciones inmediatas
+- Uso de emojis para claridad (✅, ❌, 🔍, etc.)
+- Respuestas en español
+- Formato "buscar y reemplazar" para cambios de código
+
+================================================================================
+1. ARQUITECTURA TÉCNICA
+================================================================================
+
+Stack Tecnológico
+--------------------------------------------------------------------------------
+- Framework: Next.js 15.0.3 (App Router)
+- Lenguaje: TypeScript
+- Base de datos: PostgreSQL
+- ORM: Prisma 5.22.0
+- Autenticación: NextAuth.js
+- Estilos: Tailwind CSS
+- UI: Componentes React con Lucide Icons
+- Deployment: (no especificado, presumiblemente Vercel)
+
+Estructura del Proyecto
+--------------------------------------------------------------------------------
+plataforma-frutos-FINAL/
+├── app/
+│   ├── api/                    # API Routes
+│   │   ├── auth/              # Autenticación
+│   │   ├── carta/             # Gestión de Carta FRUTOS
+│   │   ├── lobo-solitario/    # Sistema Lobo Solitario
+│   │   ├── mentor/            # Gestión de mentores
+│   │   ├── program/           # Enrollments y programas
+│   │   ├── user/              # Perfil de usuario
+│   │   └── quantum-ia/        # Sistema IA (con errores)
+│   ├── dashboard/             # Dashboard principal
+│   │   ├── lobo-solitario/   # Módulo Lobo Solitario
+│   │   ├── program/          # Módulo de programas
+│   │   └── suscripcion/      # Gestión de suscripciones
+│   └── login/                # Página de login
+├── components/               # Componentes React
+├── lib/                     # Utilidades y configuración
+├── prisma/
+│   └── schema.prisma       # Esquema de base de datos
+└── [múltiples scripts .js] # Scripts de verificación/migración
+
+================================================================================
+2. MODELOS DE BASE DE DATOS PRINCIPALES
+================================================================================
+
+Usuario
+--------------------------------------------------------------------------------
+model Usuario {
+  id                      Int       @id @default(autoincrement())
+  nombre                  String
+  email                   String    @unique
+  password               String
+  rol                    UserRole  @default(PARTICIPANTE)
+  tier                   SubscriptionTier @default(FREE)
+  profileImage           String?
+  assignedMentorId       Int?
+  organizationId         Int?
+  
+  // Relaciones importantes
+  PerfilMentor           PerfilMentor?
+  CartaFrutos            CartaFrutos[]
+  ProgramEnrollment_userIdToUsuario ProgramEnrollment[] 
+    @relation("ProgramEnrollment_userIdToUsuario")
+  MentorPackageOrder_usuarioIdToUsuario MentorPackageOrder[] 
+    @relation("MentorPackageOrder_usuarioIdToUsuario")
+}
+
+enum UserRole {
+  ADMIN
+  PARTICIPANTE
+  MENTOR
+  COORDINADOR
+  DIRECTOR
+  GAME_CHANGER
+}
+
+enum SubscriptionTier {
+  FREE
+  STANDARD
+  PREMIUM
+}
+
+ProgramEnrollment (Programas con Visión)
+--------------------------------------------------------------------------------
+model ProgramEnrollment {
+  id                Int       @id @default(autoincrement())
+  userId            Int
+  mentorId          Int
+  cycleType         String    // INTENSIVE_17_WEEKS, SOLO, etc.
+  cycleStartDate    DateTime?
+  cycleEndDate      DateTime?
+  totalWeeks        Int?
+  status            EnrollmentStatus @default(ACTIVE)
+  missedCallsCount  Int       @default(0)
+  maxMissedAllowed  Int       @default(3)
+  
+  // Relaciones
+  Usuario_userIdToUsuario Usuario 
+    @relation("ProgramEnrollment_userIdToUsuario", fields: [userId], 
+    references: [id])
+  Usuario_mentorIdToUsuario Usuario 
+    @relation("ProgramEnrollment_mentorIdToUsuario", fields: [mentorId], 
+    references: [id])
+  CallBooking       CallBooking[]
+}
+
+PackageSessionCredits (Lobo Solitario)
+--------------------------------------------------------------------------------
+model PackageSessionCredits {
+  id                 Int       @id @default(autoincrement())
+  packageOrderId     Int       @unique
+  totalSessions      Int       // 18 (BIMESTRAL) o 108 (ANUAL)
+  usedSessions       Int       @default(0)
+  remainingSessions  Int
+  expiresAt          DateTime?
+  isActive           Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  
+  MentorPackageOrder MentorPackageOrder @relation(fields: [packageOrderId], 
+    references: [id])
+}
+
+MentorPackageOrder (Órdenes Lobo Solitario)
+--------------------------------------------------------------------------------
+model MentorPackageOrder {
+  id                    Int       @id @default(autoincrement())
+  usuarioId             Int
+  mentorId              Int
+  planType              PlanType  // STANDARD, PREMIUM
+  frecuencia            String    // BIMESTRAL, ANUAL
+  totalAmount           Decimal
+  status                PackageOrderStatus @default(PENDING)
+  paymentData           Json?
+  paidAt                DateTime?
+  createdAt             DateTime  @default(now())
+  
+  Usuario_usuarioIdToUsuario Usuario 
+    @relation("MentorPackageOrder_usuarioIdToUsuario", fields: [usuarioId], 
+    references: [id])
+  Usuario_mentorIdToUsuario Usuario 
+    @relation("MentorPackageOrder_mentorIdToUsuario", fields: [mentorId], 
+    references: [id])
+  PackageSessionCredits PackageSessionCredits?
+}
+
+enum PackageOrderStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum PlanType {
+  STANDARD
+  PREMIUM
+}
+
+CallBooking (Sesiones Agendadas)
+--------------------------------------------------------------------------------
+model CallBooking {
+  id                    Int       @id @default(autoincrement())
+  programEnrollmentId   Int?      // NULL para Lobo Solitario
+  studentId             Int
+  mentorId              Int
+  scheduledAt           DateTime
+  status                CallStatus @default(PENDING)
+  meetingUrl            String?
+  completedAt           DateTime?
+  
+  ProgramEnrollment     ProgramEnrollment? @relation(fields: 
+    [programEnrollmentId], references: [id])
+  Usuario_studentIdToUsuario Usuario @relation("CallBooking_studentIdToUsuario", 
+    fields: [studentId], references: [id])
+  Usuario_mentorIdToUsuario Usuario @relation("CallBooking_mentorIdToUsuario", 
+    fields: [mentorId], references: [id])
+}
+
+enum CallStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  MISSED
+  CANCELLED
+}
+
+CartaFrutos (Sistema de Metas)
+--------------------------------------------------------------------------------
+model CartaFrutos {
+  id                  Int       @id @default(autoincrement())
+  usuarioId           Int
+  estado              EstadoCarta @default(BORRADOR)
+  
+  // 8 Áreas FRUTOS
+  finanzasMeta        Int       @default(0)
+  finanzasAvance      Int       @default(0)
+  relacionesMeta      Int       @default(0)
+  relacionesAvance    Int       @default(0)
+  talentosMeta        Int       @default(0)
+  talentosAvance      Int       @default(0)
+  pazMentalMeta       Int       @default(0)
+  pazMentalAvance     Int       @default(0)
+  ocioMeta            Int       @default(0)
+  ocioAvance          Int       @default(0)
+  saludMeta           Int       @default(0)
+  saludAvance         Int       @default(0)
+  servicioTransMeta   Int       @default(0)
+  servicioTransAvance Int       @default(0)
+  servicioComunMeta   Int       @default(0)
+  servicioComunAvance Int       @default(0)
+  
+  // Declaraciones de poder por área
+  finanzasDeclaracion String?
+  relacionesDeclaracion String?
+  talentosDeclaracion String?
+  pazMentalDeclaracion String?
+  ocioDeclaracion String?
+  saludDeclaracion String?
+  servicioTransDeclaracion String?
+  servicioComunDeclaracion String?
+  
+  Usuario             Usuario   @relation(fields: [usuarioId], references: [id])
+  Meta                Meta[]
+}
+
+enum EstadoCarta {
+  BORRADOR
+  EN_REVISION
+  APROBADA
+  RECHAZADA
+}
+
+================================================================================
+3. SISTEMAS PRINCIPALES IMPLEMENTADOS
+================================================================================
+
+3.1 SISTEMA LOBO SOLITARIO (Completado ✅)
+--------------------------------------------------------------------------------
+
+**Descripción:** Programa individual de 63 días (9 semanas) sin visión 
+organizacional.
+
+**Características:**
+- **Planes disponibles:**
+  - STANDARD Bimestral: 18 sesiones, $1,499 MXN
+  - STANDARD Anual: 108 sesiones, $14,999 MXN
+  - PREMIUM Bimestral: 18 sesiones, $2,499 MXN
+  - PREMIUM Anual: 108 sesiones, $19,999 MXN
+
+**Flujo implementado:**
+1. Usuario va a `/dashboard/lobo-solitario/seleccionar-mentor`
+2. Selecciona mentor de lista disponible
+3. Sistema verifica si ya tiene paquete activo (prevención de duplicados ✅)
+4. Usuario selecciona plan (STANDARD/PREMIUM) y frecuencia (BIMESTRAL/ANUAL)
+5. Integración con Stripe para pago
+6. Tras pago exitoso, crea `MentorPackageOrder` con status COMPLETED
+7. Crea `PackageSessionCredits` con sesiones correspondientes
+8. Redirecciona a `/dashboard/program/enroll?action=select-mentor`
+9. Usuario agenda sus 2 sesiones semanales fijas
+
+**Archivos clave:**
+/app/dashboard/lobo-solitario/seleccionar-mentor/page.tsx
+/app/api/lobo-solitario/crear-paquete/route.ts
+/app/api/lobo-solitario/verificar-paquete-activo/route.ts
+/app/api/lobo-solitario/create-checkout-session/route.ts
+
+**Estado actual:**
+- ✅ Prevención de compras duplicadas (backend + frontend)
+- ✅ Detección de Lobo Solitario en dashboard
+- ✅ Cálculo correcto de 9 semanas
+- ✅ Integración con sistema de pagos
+- ✅ Página de suscripción muestra info completa
+
+3.2 SISTEMA DE ENROLLMENT (Parcialmente implementado ⚠️)
+--------------------------------------------------------------------------------
+
+**Descripción:** Sistema para agendar sesiones semanales (2 por semana).
+
+**Problema CRÍTICO resuelto en esta conversación:**
+- El usuario 59 (Jorge Campos) tenía 7 órdenes completadas de Lobo Solitario 
+  pero el sistema mostraba "No tienes un programa activo"
+- **Causa:** Dashboard solo verificaba `ProgramEnrollment`
+- **Solución implementada:**
+  
+  const hasDisciplineProgram = 
+    disciplineSubscription?.status === 'ACTIVE' || 
+    !!programEnrollment || 
+    !!packageCredits ||  // 🆕 AGREGADO
+    false;
+
+**Flujo actual:**
+1. Usuario llega a `/dashboard/program/enroll`
+2. Frontend llama a `/api/program/enroll` (GET)
+3. API verifica:
+   - Si tiene `ProgramEnrollment` ACTIVE → devuelve enrollment data
+   - Si NO tiene enrollment → verifica `PackageSessionCredits` activos
+   - Si tiene Lobo Solitario → devuelve mentor y `needsScheduling: true/false`
+4. Si `needsScheduling === true`:
+   - Carga slots disponibles del mentor
+   - Usuario selecciona 2 horarios semanales diferentes
+   - Frontend llama a `/api/program/enroll` (POST) con 
+     `{mentorId, slot1, slot2}`
+   - API crea `CallBooking` para todas las semanas del programa
+
+**Archivos clave:**
+/app/dashboard/program/enroll/page.tsx
+/app/api/program/enroll/route.ts
+
+**PROBLEMA DETECTADO EN ÚLTIMA INTERACCIÓN:**
+Error: Cannot read properties of undefined (reading 'count')
+at count (app/api/program/enroll/route.ts:101:71)
+
+**SOLUCIÓN APLICADA:**
+El código intentaba usar `prisma.mentorScheduleSlot.count()` pero esa tabla 
+no existe.
+
+**BUSCAR:**
+const scheduledSessionsCount = await prisma.mentorScheduleSlot.count({
+  where: {
+    userId: session.user.id,
+    mentorId: packageCredits.MentorPackageOrder.mentorId
+  }
+});
+
+**REEMPLAZAR CON:**
+const scheduledSessionsCount = await prisma.callBooking.count({
+  where: {
+    studentId: session.user.id,
+    mentorId: packageCredits.MentorPackageOrder.mentorId,
+    programEnrollmentId: null, // Sesiones de Lobo Solitario no tienen enrollment
+    status: {
+      in: ['PENDING', 'CONFIRMED']
+    }
+  }
+});
+
+**Estado actual del enrollment:**
+- ✅ Detección de Lobo Solitario
+- ✅ API devuelve `needsScheduling` correctamente
+- ✅ Frontend carga slots disponibles
+- ⚠️ Usuario reporta que "no puede agendar horarios" (error no especificado)
+
+3.3 SISTEMA DE DASHBOARD (Actualizado ✅)
+--------------------------------------------------------------------------------
+
+**Widget de Progreso/Enrollment:**
+
+El dashboard tiene 3 estados para el widget superior derecho:
+
+**Estado 1: Usuario con programa Y enrollment data**
+// Muestra:
+- Strikes: X/3 (coloreado según cantidad)
+- Próxima Sesión: fecha y hora
+- Barra de progreso: Semana X de Y
+- Link: "Ver Detalles" → /dashboard/program/enroll
+
+**Estado 2: Usuario con carta aprobada SIN programa**
+// Muestra:
+- Invitación al programa intensivo
+- Componente: <IntensiveProgramInvite />
+
+**Estado 3: Usuario SIN programa (sin enrollment)**
+// Muestra:
+- Título: "Inscríbete"
+- Descripción: "Agenda tus sesiones semanales..."
+- Botón: "Agendar Sesiones" → /dashboard/program/enroll
+
+**Archivo:**
+/app/dashboard/page.tsx
+Línea ~520-590
+
+3.4 SISTEMA DE SUSCRIPCIONES (Actualizado ✅)
+--------------------------------------------------------------------------------
+
+**Descripción:** Página que muestra el plan actual del usuario.
+
+**Implementado:**
+- ✅ Detección de Lobo Solitario desde `/api/user/current-plan`
+- ✅ Muestra plan type (STANDARD/PREMIUM)
+- ✅ Muestra status (Activo/Inactivo)
+- ✅ Muestra tipo de membresía (Individual - Lobo Solitario)
+- ✅ Muestra sesiones restantes (X de Y)
+- ✅ Muestra frecuencia (Anual/Bimestral)
+- ✅ Muestra fecha de expiración
+
+**Archivos:**
+/app/dashboard/suscripcion/page.tsx
+/app/api/user/current-plan/route.ts
+
+================================================================================
+4. SISTEMAS PENDIENTES O CON ERRORES
+================================================================================
+
+4.1 Sistema Quantum IA (CON ERRORES ❌)
+--------------------------------------------------------------------------------
+
+**Error detectado:**
+Error en /api/quantum-ia/recommendation:
+Unknown argument `scheduledDate` en TaskInstance
+Campo correcto: dueDate (no scheduledDate)
+
+**Archivos afectados:**
+/app/api/quantum-ia/recommendation/route.ts
+
+**Acción requerida:** Cambiar todas las referencias de `scheduledDate` a 
+`dueDate` en queries de TaskInstance.
+
+4.2 Sistema de Perfil de Usuario (CON ERRORES ❌)
+--------------------------------------------------------------------------------
+
+**Error detectado:**
+Error en /api/user/profile:
+Unknown field `Organization` for select statement on model `Usuario`
+
+**Causa:** El campo `Organization` no existe en el modelo Usuario, las 
+relaciones correctas son:
+Organization_Usuario_organizationIdToOrganization
+Organization_Usuario_communityOrganizationIdToOrganization
+
+**Archivo afectado:**
+/app/api/user/profile/route.ts
+Línea ~22
+
+4.3 Sistema de Phoenix (SIN REVISAR ⚠️)
+--------------------------------------------------------------------------------
+
+Existe un endpoint `/api/phoenix/status` que se llama desde el dashboard pero 
+no se ha revisado su estado.
+
+================================================================================
+5. LÓGICA DE NEGOCIO CRÍTICA
+================================================================================
+
+5.1 Diferencia entre Programas
+--------------------------------------------------------------------------------
+
+Tipo                 | Tabla                  | Duración      | Mentor | Visión
+--------------------------------------------------------------------------------
+Lobo Solitario      | PackageSessionCredits  | 63 días       | Sí     | No
+                    |                        | (9 semanas)   |        |
+Programa Intensivo  | ProgramEnrollment      | Variable      | Sí     | Sí
+                    |                        | (17, 26 sem)  |        |
+Programa SOLO       | ProgramEnrollment      | 8 semanas     | No/Sí  | Sí
+
+Lobo Solitario: Programa individual sin organización
+Programa Intensivo: Programa con visión organizacional
+Programa SOLO: Programa individual dentro de visión
+
+5.2 Sistema de Strikes
+--------------------------------------------------------------------------------
+
+- **Máximo:** 3 strikes
+- **Acumulación:** Cada sesión con status `MISSED` incrementa `missedCallsCount`
+- **Storage:** Campo `missedCallsCount` en `ProgramEnrollment`
+- **Display:** Dashboard muestra color según strikes:
+  - 0 strikes: Verde
+  - 1 strike: Amarillo
+  - 2-3 strikes: Rojo
+
+5.3 Prevención de Compras Duplicadas (Lobo Solitario)
+--------------------------------------------------------------------------------
+
+**Validaciones implementadas:**
+
+1. **Validación en API de crear-paquete:**
+
+// Verificar si ya tiene créditos activos
+const existingCredits = await prisma.packageSessionCredits.findFirst({
+  where: {
+    MentorPackageOrder: {
+      usuarioId: session.user.id,
+      status: 'COMPLETED'
+    },
+    remainingSessions: { gt: 0 },
+    isActive: true
+  }
+});
+
+if (existingCredits) {
+  return NextResponse.json({ 
+    error: 'Ya tienes un paquete activo' 
+  }, { status: 400 });
+}
+
+// Verificar órdenes pendientes recientes
+const pendingOrder = await prisma.mentorPackageOrder.findFirst({
+  where: {
+    usuarioId: session.user.id,
+    status: 'PENDING',
+    createdAt: { gte: new Date(Date.now() - 30 * 60 * 1000) }
+  }
+});
+
+if (pendingOrder) {
+  return NextResponse.json({ 
+    error: 'Ya tienes una orden pendiente' 
+  }, { status: 400 });
+}
+
+2. **Validación en Frontend:**
+
+// Componente verifica paquete activo al montar
+const verificarPaqueteActivo = async () => {
+  const response = await fetch('/api/lobo-solitario/verificar-paquete-activo');
+  const data = await response.json();
+  
+  if (data.hasActivePackage) {
+    setHasActivePackage(true);
+    setActivePackageInfo(data.package);
+  }
+};
+
+5.4 Cálculo de Duración de Programas
+--------------------------------------------------------------------------------
+
+// Lobo Solitario
+if (packageCredits) {
+  totalWeeks = 9;
+  totalCalls = packageCredits.totalSessions; // 18 o 108
+}
+
+// Programa con fechas explícitas
+else if (enrollment.cycleStartDate && enrollment.cycleEndDate) {
+  const diffInDays = Math.ceil(
+    (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+  );
+  totalWeeks = Math.ceil(diffInDays / 7);
+  totalCalls = totalWeeks * 2;
+}
+
+// Por tipo de ciclo
+else {
+  switch(enrollment.cycleType) {
+    case 'INTENSIVE_17_WEEKS': 
+      totalWeeks = 17; totalCalls = 34; break;
+    case 'INTENSIVE_6_MONTHS': 
+      totalWeeks = 26; totalCalls = 52; break;
+    case 'SOLO': 
+      totalWeeks = 8; totalCalls = 16; break;
+    default: 
+      totalWeeks = 8; totalCalls = 16;
+  }
+}
+
+================================================================================
+6. SCRIPTS DE VERIFICACIÓN CREADOS
+================================================================================
+
+Durante esta conversación se crearon múltiples scripts `.js` para debugging:
+
+check-user59-detailed.js          # Verifica datos completos del usuario 59
+check-user59-all-data.js          # Datos de enrollment y packages
+check-user59-payment-status.js    # Estado de pagos del usuario 59
+check-api-enroll-user59.js        # Simula respuesta del API de enrollment
+monitor-user59-payment.js         # Monitor de cambios en tiempo real
+reactivate-user59.js              # Script para reactivar usuario (no usado)
+
+**Usuario de prueba:**
+- ID: 59
+- Nombre: Jorge Campos
+- Email: jorge@frutos.com
+- Estado: 7 órdenes COMPLETED, 486 sesiones disponibles
+- Mentor ID: 8
+
+================================================================================
+7. ENDPOINTS API PRINCIPALES
+================================================================================
+
+Autenticación
+--------------------------------------------------------------------------------
+POST /api/auth/[...nextauth]    # NextAuth endpoints
+
+Lobo Solitario
+--------------------------------------------------------------------------------
+GET  /api/lobo-solitario/verificar-paquete-activo
+POST /api/lobo-solitario/crear-paquete
+POST /api/lobo-solitario/create-checkout-session
+GET  /api/lobo-solitario/mentores-disponibles
+
+Programa y Enrollment
+--------------------------------------------------------------------------------
+GET  /api/program/enroll         # Obtener info de enrollment
+POST /api/program/enroll         # Crear enrollment con sesiones
+POST /api/program/reagendar      # Reagendar sesiones existentes
+
+Usuario
+--------------------------------------------------------------------------------
+GET /api/user/profile            # Perfil del usuario (CON ERROR)
+GET /api/user/current-plan       # Plan actual de suscripción
+
+Mentor
+--------------------------------------------------------------------------------
+GET /api/mentor/slots-disponibles?mentorId=X
+
+Carta FRUTOS
+--------------------------------------------------------------------------------
+GET  /api/carta/my-carta         # Obtener carta del usuario
+POST /api/carta/create           # Crear nueva carta
+PUT  /api/carta/update           # Actualizar carta
+
+================================================================================
+8. PROBLEMAS CONOCIDOS Y SOLUCIONES
+================================================================================
+
+Problema 1: Usuario con Lobo Solitario no reconocido (RESUELTO ✅)
+--------------------------------------------------------------------------------
+
+**Síntoma:** "No tienes un programa activo" a pesar de tener paquetes pagados.
+
+**Causa:** Dashboard solo verificaba `ProgramEnrollment`.
+
+**Solución:** Agregar verificación de `PackageSessionCredits` en:
+- /app/dashboard/page.tsx línea ~120
+- /app/api/program/enroll/route.ts línea ~65
+
+Problema 2: Error en mentorScheduleSlot (RESUELTO ✅)
+--------------------------------------------------------------------------------
+
+**Síntoma:** `Cannot read properties of undefined (reading 'count')`
+
+**Causa:** Tabla `MentorScheduleSlot` no existe en el schema.
+
+**Solución:** Cambiar a usar `CallBooking` para verificar sesiones agendadas.
+
+Problema 3: Usuario no puede agendar horarios (EN INVESTIGACIÓN ⚠️)
+--------------------------------------------------------------------------------
+
+**Síntoma:** Usuario reporta "no me deja agendar los horarios" (sin más 
+detalles).
+
+**Estado:** 
+- API devuelve `needsScheduling: true` correctamente
+- Frontend carga slots disponibles
+- Se necesita más información del error específico del usuario
+
+**Siguiente paso:** Revisar logs del navegador cuando el usuario intente 
+agendar.
+
+Problema 4: Múltiples errores de API no relacionados
+--------------------------------------------------------------------------------
+
+**APIs con errores actualmente:**
+- /api/user/profile - Campo Organization inválido
+- /api/quantum-ia/recommendation - Campo scheduledDate vs dueDate
+
+**Acción:** Estos errores no bloquean el flujo de Lobo Solitario pero deben 
+corregirse.
+
+================================================================================
+9. PRÓXIMOS PASOS RECOMENDADOS
+================================================================================
+
+Prioridad ALTA 🔴
+--------------------------------------------------------------------------------
+
+1. **Investigar por qué el usuario no puede agendar horarios**
+   - Revisar errores en consola del navegador
+   - Verificar que el formulario de slots funcione correctamente
+   - Confirmar que el POST a `/api/program/enroll` se ejecute
+
+2. **Corregir error en `/api/user/profile`**
+   Archivo: /app/api/user/profile/route.ts
+   Línea: ~22-45
+   Cambiar: Organization (campo que no existe)
+   Por: Organization_Usuario_organizationIdToOrganization
+
+3. **Corregir error en `/api/quantum-ia/recommendation`**
+   Archivo: /app/api/quantum-ia/recommendation/route.ts
+   Buscar: scheduledDate
+   Reemplazar con: dueDate
+
+Prioridad MEDIA 🟡
+--------------------------------------------------------------------------------
+
+4. **Validar flujo completo de agendamiento**
+   - Crear sesiones de prueba con un usuario de Lobo Solitario
+   - Verificar que se creen correctamente los `CallBooking`
+   - Confirmar que aparezcan en el dashboard
+
+5. **Implementar sistema de reagendamiento para Lobo Solitario**
+   - Actualmente existe `/api/program/reagendar` solo para ProgramEnrollment
+   - Crear endpoint para reagendar sesiones de Lobo Solitario
+
+6. **Dashboard: Manejo de sesiones sin enrollment**
+   - Verificar que el widget muestre correctamente próxima sesión de Lobo 
+     Solitario
+   - Asegurar que los strikes se calculen también para Lobo Solitario
+
+Prioridad BAJA 🟢
+--------------------------------------------------------------------------------
+
+7. **Documentar convenciones de código**
+8. **Agregar tests automatizados**
+9. **Optimizar queries de Prisma con `select` específicos**
+
+================================================================================
+10. CONVENCIONES Y PATRONES DE CÓDIGO
+================================================================================
+
+Manejo de errores en API Routes
+--------------------------------------------------------------------------------
+try {
+  // Lógica
+  return NextResponse.json({ data });
+} catch (error) {
+  console.error('Error en NOMBRE_FUNCION:', error);
+  return NextResponse.json(
+    { error: 'Mensaje descriptivo' },
+    { status: 500 }
+  );
+}
+
+Logging para debugging
+--------------------------------------------------------------------------------
+console.log('🔍 Cargando información...');
+console.log('✅ Success:', data);
+console.log('❌ Error:', error);
+console.log('⚠️ Warning:', warning);
+console.log('📊 Data:', data);
+
+Formato de respuestas API
+--------------------------------------------------------------------------------
+// Éxito
+return NextResponse.json({
+  success: true,
+  data: { ... }
+});
+
+// Error
+return NextResponse.json({
+  error: 'Mensaje descriptivo',
+  details: errorObject  // opcional
+}, { status: 400 });
+
+================================================================================
+11. DATOS DE PRUEBA
+================================================================================
+
+Usuario de Prueba Principal
+--------------------------------------------------------------------------------
+ID: 59
+Nombre: Jorge Campos
+Email: jorge@frutos.com
+Rol: PARTICIPANTE
+Tier: STANDARD
+
+PackageSessionCredits:
+- Total: 486 sesiones (7 paquetes)
+- Usadas: 0
+- Restantes: 486
+- Mentor ID: 8
+- Plan: STANDARD ANUAL
+
+MentorPackageOrders: 7 órdenes con status COMPLETED
+ProgramEnrollment: Ninguno
+
+Mentor de Prueba
+--------------------------------------------------------------------------------
+ID: 8
+Nombre: Mentor
+(Otros datos no especificados en conversación)
+
+================================================================================
+12. COMANDOS ÚTILES
+================================================================================
+
+# Limpiar caché de Next.js
+rm -rf .next && npm run dev
+
+# Regenerar Prisma Client
+npx prisma generate
+
+# Ver logs de Prisma (agregar en .env)
+DATABASE_URL="..."
+PRISMA_QUERY_LOG=true
+
+# Ejecutar script de verificación
+node check-user59-detailed.js
+
+# Build de producción
+npm run build
+
+================================================================================
+13. VARIABLES DE ENTORNO ESPERADAS
+================================================================================
+
+DATABASE_URL="postgresql://..."
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="..."
+STRIPE_SECRET_KEY="sk_test_..."
+STRIPE_PUBLISHABLE_KEY="pk_test_..."
+
+================================================================================
+14. FLUJO DE DESARROLLO RECOMENDADO
+================================================================================
+
+Cuando el desarrollador pida cambios:
+
+1. **Leer el pedido completo** antes de responder
+2. **Confirmar entendimiento** si es ambiguo
+3. **Dar respuesta en formato "Buscar y Reemplazar":**
+
+   BUSCAR EN: /ruta/del/archivo.tsx
+   LÍNEA DE ARRIBA: código exacto de la línea anterior
+   
+   BUSCAR:
+   [código exacto a buscar]
+   
+   REEMPLAZAR CON:
+   [código nuevo exacto]
+   
+   LÍNEA DE ABAJO: código exacto de la línea siguiente
+
+4. **Explicar brevemente** qué hace el cambio
+5. **NO crear archivos markdown** de documentación a menos que lo pida
+
+================================================================================
+15. ÚLTIMO ESTADO DE LA CONVERSACIÓN
+================================================================================
+
+**Contexto:** Estábamos corrigiendo errores en el sistema de enrollment para 
+Lobo Solitario.
+
+**Último cambio aplicado:**
+Archivo: /app/api/program/enroll/route.ts
+Cambio: Reemplazar prisma.mentorScheduleSlot.count() por 
+        prisma.callBooking.count()
+Motivo: La tabla MentorScheduleSlot no existe
+
+**Último reporte del usuario:**
+"algo esta mal en tu logica, porque al ponerlo como que ya tiene program 
+enroll ya no me deja agendar los horarios"
+
+**Respuesta dada:**
+Se corrigió la lógica para que la API devuelva `needsScheduling: true` cuando 
+el usuario de Lobo Solitario no tiene sesiones agendadas, permitiendo así que 
+el frontend cargue los slots disponibles.
+
+**Estado del servidor:**
+Servidor reiniciado en http://localhost:3000
+Warning de caché (no crítico) presente
+
+**Siguiente acción esperada:**
+Usuario pruebe nuevamente el agendamiento de sesiones y reporte si funciona o 
+si hay un nuevo error.
+
+================================================================================
+16. CONTEXTO DE USUARIO 59
+================================================================================
+
+Este usuario fue el caso de prueba principal durante toda la sesión:
+
+**Cronología:**
+1. Usuario reportó: "No tienes un programa activo" a pesar de haber pagado
+2. Se crearon scripts de verificación → Encontramos 7 órdenes completadas
+3. Se detectó que dashboard no verificaba PackageSessionCredits
+4. Se implementó verificación de Lobo Solitario en dashboard ✅
+5. Se implementó prevención de compras duplicadas ✅
+6. Usuario reportó: "sin mentor asignado" en enrollment
+7. Se corrigió API para devolver mentor de PackageSessionCredits ✅
+8. Usuario solicitó: ver suscripción en /dashboard/suscripcion
+9. Se implementó display de info de Lobo Solitario ✅
+10. Usuario reportó: "no me deja agendar horarios"
+11. Se corrigió error de mentorScheduleSlot → callBooking ✅
+12. **ÚLTIMO:** Usuario debe probar agendamiento nuevamente
+
+================================================================================
+NOTAS FINALES
+================================================================================
+
+- Esta documentación refleja el estado al 2 de enero de 2026
+- Hay múltiples scripts `.js` en el root que fueron creados para debugging
+- El proyecto tiene nombres de archivos en español pero código mayormente en 
+  inglés
+- Algunos endpoints tienen errores que no afectan el flujo principal de Lobo 
+  Solitario
+- El desarrollador prefiere soluciones directas sin explicaciones largas
+- La base de datos tiene relaciones complejas con múltiples nombres 
+  autogenerados por Prisma
+
+================================================================================
+FIN DE LA DOCUMENTACIÓN
+================================================================================
+
+Esta documentación debe permitirte continuar exactamente donde quedamos, con 
+todo el contexto de lo que se ha hecho, los problemas resueltos, y los que 
+quedan pendientes.

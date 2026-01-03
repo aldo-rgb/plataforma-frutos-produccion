@@ -21,7 +21,8 @@ import {
   Eye,
   Download,
   Calendar,
-  Clock
+  Clock,
+  QrCode
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -193,6 +194,9 @@ export default function VisionDetailPage() {
   } | null>(null);
   const [newPhone, setNewPhone] = useState('');
   const [savingPhone, setSavingPhone] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [generatingQR, setGeneratingQR] = useState(false);
   const { showToast, toasts } = useToast();
 
   useEffect(() => {
@@ -1090,49 +1094,63 @@ export default function VisionDetailPage() {
                   <span className="text-sm text-slate-500">({vision.Coordinador.email})</span>
                 </div>
               )}
-            </div>
           </div>
-          <div className="flex items-center gap-2">
+        </div>
+        
+        {/* Botones de Acción - Organizado por grupos */}
+        <div className="flex flex-col gap-3">
+          {/* Fila 1: Configuración y Gestión */}
+          <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => setShowEditAreasModal(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-purple-500/30"
             >
-              <Edit size={16} />
+              <Edit size={18} />
               Configurar Áreas
             </button>
             <button
               onClick={() => setShowExtendDateModal(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-emerald-500/30"
             >
-              <Calendar size={16} />
+              <Calendar size={18} />
               Extender Fecha
             </button>
             <button
               onClick={() => setShowRandomAssignModal(true)}
               disabled={randomAssigning || (participantes.length === 0 && gameChangers.length === 0)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-indigo-500/30"
             >
-              <Users size={16} />
+              <Users size={18} />
               {randomAssigning ? 'Asignando...' : 'Asignación Aleatoria'}
+            </button>
+          </div>
+          
+          {/* Fila 2: Agregar Participantes */}
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setShowQRModal(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-pink-500/30"
+            >
+              <QrCode size={18} />
+              Generar QR
             </button>
             <button
               onClick={() => setShowAddTeamModal(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-semibold transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-cyan-500/30"
             >
-              <Users size={16} />
-              Agregar Team
+              <Users size={18} />
+              Agregar Game Changer
             </button>
             <button
               onClick={() => setShowAddModal(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-purple-500/30"
             >
-              <UserPlus size={16} />
+              <UserPlus size={18} />
               Agregar Participante
             </button>
           </div>
         </div>
-
-        {/* Stats Cards */}
+      </div>        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
           <div className="bg-slate-900/50 backdrop-blur border border-purple-500/30 rounded-xl p-6">
             <div className="flex items-center justify-between mb-2">
@@ -2734,6 +2752,70 @@ export default function VisionDetailPage() {
         </div>
       )}
 
+      {/* Modal de Cambio/Remoción de Mentor */}
+      {showMentorChangeModal && mentorChangeData && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-amber-500/30 rounded-2xl p-8 max-w-lg w-full shadow-2xl">
+            <div className="flex items-center justify-center w-16 h-16 bg-amber-600/20 rounded-full mx-auto mb-6">
+              <AlertCircle className="text-amber-400" size={32} />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-white text-center mb-3">
+              {mentorChangeData.action === 'remove' ? 'Remover Mentor' : 'Cambiar Mentor'}
+            </h2>
+            
+            <p className="text-slate-300 text-center mb-6">
+              <strong>{mentorChangeData.userName}</strong> tiene <strong>{mentorChangeData.scheduledCalls}</strong> llamada(s) 
+              de disciplina programada(s) con su mentor actual.
+            </p>
+
+            {mentorChangeData.remainingWeeks > 0 && (
+              <div className="bg-amber-900/20 border border-amber-600/30 rounded-lg p-4 mb-6">
+                <p className="text-amber-300 text-sm">
+                  <strong>Importante:</strong> Le quedan {mentorChangeData.remainingWeeks} semana(s) en su ciclo de disciplina. 
+                  {mentorChangeData.action === 'remove' 
+                    ? ' Al remover el mentor, deberá asignar uno nuevo antes de que pueda reagendar sus llamadas.'
+                    : ' Las llamadas serán canceladas y el usuario deberá reagendarlas con su nuevo mentor.'}
+                </p>
+              </div>
+            )}
+
+            <p className="text-slate-400 text-sm text-center mb-6">
+              {mentorChangeData.action === 'remove'
+                ? '¿Deseas continuar con la remoción del mentor? Se cancelarán todas las llamadas programadas y se notificará al usuario.'
+                : '¿Deseas continuar con el cambio de mentor? Se cancelarán las llamadas actuales y podrás asignar un nuevo mentor.'}
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowMentorChangeModal(false);
+                  setMentorChangeData(null);
+                }}
+                className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  if (mentorChangeData.action === 'remove') {
+                    await confirmRemoveMentor(mentorChangeData.userId, mentorChangeData.userType);
+                  } else {
+                    // Cambio de mentor - redirigir a la página de asignación
+                    setShowMentorChangeModal(false);
+                    router.push(`/dashboard/coordinador/visiones/${visionId}/asignar-mentor/${mentorChangeData.userId}`);
+                  }
+                }}
+                className="flex-1 px-4 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+              >
+                <CheckCircle size={18} />
+                <span>Continuar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de Edición de Teléfono */}
       {showEditPhoneModal && editPhoneData && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -2797,6 +2879,147 @@ export default function VisionDetailPage() {
                   </>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de QR Code */}
+      {showQRModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-pink-500/30 rounded-2xl p-8 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-center w-16 h-16 bg-pink-600/20 rounded-full mx-auto mb-6">
+              <QrCode className="text-pink-400" size={32} />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-white text-center mb-3">
+              QR de Registro Automático
+            </h2>
+            
+            <p className="text-slate-300 text-center mb-6">
+              Genera un código QR para que los usuarios se registren automáticamente en <strong>{vision?.nombre}</strong>
+            </p>
+
+            {/* Info Box */}
+            <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/30 rounded-xl p-5 mb-6">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="text-blue-400 shrink-0 mt-0.5" size={20} />
+                <div className="text-sm text-blue-200">
+                  <p className="font-semibold mb-2">¿Cómo funciona?</p>
+                  <ul className="space-y-1 list-disc list-inside text-blue-300/90">
+                    <li>Los usuarios escanean el QR o acceden al link</li>
+                    <li>Se registran con correo, contraseña y teléfono (WhatsApp)</li>
+                    <li>Se asignan automáticamente a esta visión</li>
+                    <li>Reciben una licencia en estado "Pendiente"</li>
+                    <li>El límite de registros está relacionado con las licencias disponibles</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                <p className="text-slate-400 text-sm mb-1">Registros actuales</p>
+                <p className="text-2xl font-bold text-white">{vision?._count?.Participantes || 0}</p>
+              </div>
+              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                <p className="text-slate-400 text-sm mb-1">Límite de visión</p>
+                <p className="text-2xl font-bold text-pink-400">{vision?.maxParticipantes || 'Sin límite'}</p>
+              </div>
+            </div>
+
+            {qrCodeUrl && (
+              <div className="mb-6">
+                <div className="bg-white p-6 rounded-xl mb-4 flex items-center justify-center">
+                  <img src={qrCodeUrl} alt="QR Code" className="w-64 h-64" />
+                </div>
+                
+                <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 mb-4">
+                  <p className="text-slate-400 text-sm mb-2">Link de registro:</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={`${window.location.origin}/registro/${vision?.id}`}
+                      readOnly
+                      className="flex-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded text-white text-sm"
+                    />
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/registro/${vision?.id}`);
+                        showToast({ message: 'Link copiado', type: 'success' });
+                      }}
+                      className="p-2 bg-pink-600 hover:bg-pink-700 text-white rounded transition-colors"
+                    >
+                      <Copy size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = qrCodeUrl;
+                    link.download = `qr-registro-${vision?.nombre?.replace(/\s+/g, '-')}.png`;
+                    link.click();
+                  }}
+                  className="w-full px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  <Download size={18} />
+                  <span>Descargar QR</span>
+                </button>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowQRModal(false);
+                  setQrCodeUrl('');
+                }}
+                disabled={generatingQR}
+                className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 text-white rounded-lg font-semibold transition-colors"
+              >
+                Cerrar
+              </button>
+              {!qrCodeUrl && (
+                <button
+                  onClick={async () => {
+                    try {
+                      setGeneratingQR(true);
+                      const res = await fetch(`/api/visiones/${visionId}/generate-qr`, {
+                        method: 'POST',
+                      });
+                      const data = await res.json();
+                      
+                      if (data.success) {
+                        setQrCodeUrl(data.qrCodeUrl);
+                        showToast({ message: 'QR generado exitosamente', type: 'success' });
+                      } else {
+                        showToast({ message: data.error || 'Error al generar QR', type: 'error' });
+                      }
+                    } catch (error) {
+                      showToast({ message: 'Error al generar QR', type: 'error' });
+                    } finally {
+                      setGeneratingQR(false);
+                    }
+                  }}
+                  disabled={generatingQR}
+                  className="flex-1 px-4 py-3 bg-pink-600 hover:bg-pink-700 disabled:bg-slate-700 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  {generatingQR ? (
+                    <>
+                      <Loader2 className="animate-spin" size={18} />
+                      <span>Generando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <QrCode size={18} />
+                      <span>Generar QR</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>

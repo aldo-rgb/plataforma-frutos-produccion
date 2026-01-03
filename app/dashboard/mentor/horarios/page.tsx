@@ -11,8 +11,8 @@ export default async function HorariosPage() {
     redirect('/login');
   }
   
-  // Validar que sea MENTOR o COORDINADOR
-  if (!['MENTOR', 'COORDINADOR', 'ADMINISTRADOR'].includes(session.user.rol)) {
+  // Validar que sea MENTOR, LIDER, COORDINADOR o ADMINISTRADOR
+  if (!['MENTOR', 'LIDER', 'COORDINADOR', 'ADMINISTRADOR'].includes(session.user.rol)) {
     redirect('/dashboard');
   }
 
@@ -30,7 +30,7 @@ export default async function HorariosPage() {
             Solo puedes seleccionar horarios entre <span className="text-orange-400 font-bold">05:00 - 08:00</span>.
           </p>
           <div className="mt-3 p-4 bg-orange-900/20 border border-orange-500/30 rounded-lg text-sm text-orange-200">
-            💡 <strong>Nota:</strong> Estos horarios se bloquearán automáticamente en tu calendario de disponibilidad general para evitar conflictos con mentorías pagadas.
+            💡 <strong>Nota:</strong> Estos horarios se bloquearán automáticamente en tu calendario de disponibilidad general para evitar conflictos con mentorías.
           </div>
         </div>
 

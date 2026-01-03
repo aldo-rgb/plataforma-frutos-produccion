@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
     const organizations = await prisma.organization.findMany({
       include: {
-        SchoolAdmin: {
+        Usuario_Organization_schoolAdminIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -21,8 +21,8 @@ export async function GET(req: NextRequest) {
         },
         _count: {
           select: {
-            Licenses: true,
-            Users: true
+            License: true,
+            Usuario_Usuario_organizationIdToOrganization: true
           }
         }
       },
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
           nombre: `Coordinador de ${name}`,
           password: tempPassword,
           rol: 'COORDINADOR',
-          tier: 'PREMIUM',
+          tier: 'STANDARD',
           isActive: true,
           subscriptionStatus: 'ACTIVE',
           requirePasswordChange: true // Forzar cambio de contraseña en primer login
@@ -133,16 +133,16 @@ export async function POST(req: NextRequest) {
     const existingSchoolAdmin = await prisma.usuario.findUnique({
       where: { email: schoolAdminEmail },
       include: {
-        ManagedOrganization: true // Verificar si ya es admin de otra org
+        Organization_Organization_schoolAdminIdToUsuario: true // Verificar si ya es admin de otra org
       }
     });
 
     if (existingSchoolAdmin) {
       // Verificar si ya es school admin de otra organización
-      if (existingSchoolAdmin.ManagedOrganization) {
+      if (existingSchoolAdmin.Organization_Organization_schoolAdminIdToUsuario) {
         return NextResponse.json(
           { 
-            error: `El usuario ${schoolAdminEmail} ya es School Admin de otra organización (${existingSchoolAdmin.ManagedOrganization.name}). Un School Admin solo puede administrar una organización a la vez.` 
+            error: `El usuario ${schoolAdminEmail} ya es School Admin de otra organización (${existingSchoolAdmin.Organization_Organization_schoolAdminIdToUsuario.name}). Un School Admin solo puede administrar una organización a la vez.` 
           },
           { status: 400 }
         );
@@ -171,13 +171,15 @@ export async function POST(req: NextRequest) {
           nombre: `School Admin de ${name}`,
           password: tempPassword,
           rol: 'SCHOOL_ADMIN',
-          tier: 'PREMIUM',
+          tier: 'STANDARD',
           isActive: true,
           subscriptionStatus: 'ACTIVE',
-          requirePasswordChange: true // Forzar cambio de contraseña en primer login
+          requirePasswordChange: true, // Forzar cambio de contraseña en primer login
         }
       });
       schoolAdminId = newSchoolAdmin.id;
+      
+      console.log(`✅ School Admin creado: ${schoolAdminEmail}`);
     }
 
     // 🏫 PASO 3: Crear la organización con ambos roles asignados
@@ -196,7 +198,8 @@ export async function POST(req: NextRequest) {
         schoolAdminId: schoolAdminId, // ✅ School Admin
         standardLicensePrice: standardLicensePrice ? parseFloat(standardLicensePrice) : 600.00,
         premiumLicensePrice: premiumLicensePrice ? parseFloat(premiumLicensePrice) : 1250.00,
-        renewalOfferDiscount: renewalOfferDiscount ? parseFloat(renewalOfferDiscount) : 50.00
+        renewalOfferDiscount: renewalOfferDiscount ? parseFloat(renewalOfferDiscount) : 50.00,
+        updatedAt: new Date()
       }
     });
 
@@ -210,6 +213,8 @@ export async function POST(req: NextRequest) {
       where: { id: schoolAdminId },
       data: { organizationId: organization.id }
     });
+
+    console.log(`✅ Organización creada: ${organization.name} (ID: ${organization.id})`);
 
     return NextResponse.json({
       success: true,

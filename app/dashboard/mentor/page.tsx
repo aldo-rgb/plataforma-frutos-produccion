@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Calendar, CheckCircle, Clock, AlertTriangle, FileText, Phone } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, AlertTriangle, FileText, Phone, DollarSign } from 'lucide-react';
 import ProfileAlert from '@/components/dashboard/mentor/ProfileAlert';
 import AgendaDelDia from '@/components/dashboard/mentor/AgendaDelDia';
 import NotificacionSesionesPendientes from '@/components/dashboard/mentor/NotificacionSesionesPendientes';
@@ -10,6 +10,7 @@ import RevisionEvidenciasWidget from '@/components/dashboard/RevisionEvidenciasW
 import AlertasProcrastinacion from '@/components/dashboard/mentor/AlertasProcrastinacion';
 import MentorStrikesWidget from '@/components/dashboard/mentor/MentorStrikesWidget';
 import MentorAccountabilityWidget from '@/components/dashboard/mentor/MentorAccountabilityWidget';
+import MentorCommissionWidget from '@/components/dashboard/mentor/MentorCommissionWidget';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -76,7 +77,7 @@ export default async function MentorDashboard() {
   const submissionsPendientes = await prisma.taskSubmission.count({
     where: {
       status: 'SUBMITTED',
-      Usuario: {
+      Usuario_TaskSubmission_usuarioIdToUsuario: {
         OR: [
           { mentorId: mentorId },
           { assignedMentorId: mentorId }
@@ -174,6 +175,9 @@ export default async function MentorDashboard() {
         <Link href="/dashboard/mentor/cartas" className="pb-3 hover:text-slate-300 transition-colors flex items-center gap-2 whitespace-nowrap">
           <FileText className="w-4 h-4" /> Cartas F.R.U.T.O.S.
         </Link>
+        <Link href="/dashboard/mentor/comisiones" className="pb-3 hover:text-slate-300 transition-colors flex items-center gap-2 whitespace-nowrap">
+          <DollarSign className="w-4 h-4" /> Mis Comisiones
+        </Link>
       </div>
 
       {/* --- GRID PRINCIPAL --- */}
@@ -195,6 +199,9 @@ export default async function MentorDashboard() {
 
         {/* COLUMNA DERECHA (1/3) */}
         <div className="space-y-6">
+          {/* WIDGET DE COMISIONES */}
+          <MentorCommissionWidget />
+          
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-2xl border border-slate-700">
             <div className="flex items-center gap-2 mb-4">
                <span className="p-2 bg-orange-900/30 text-orange-500 rounded-lg">

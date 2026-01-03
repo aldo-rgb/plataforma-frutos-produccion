@@ -23,9 +23,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    if (session.user.rol !== 'MENTOR' && session.user.rol !== 'COORDINADOR') {
+    if (session.user.rol !== 'MENTOR' && session.user.rol !== 'LIDER' && session.user.rol !== 'COORDINADOR') {
       return NextResponse.json({ 
-        error: 'Solo mentores pueden configurar horarios' 
+        error: 'Solo mentores y líderes pueden configurar horarios' 
       }, { status: 403 });
     }
 
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
     const finalMentorId = mentorId || session.user.id;
 
-    if (session.user.rol === 'MENTOR' && finalMentorId !== session.user.id) {
+    if ((session.user.rol === 'MENTOR' || session.user.rol === 'LIDER') && finalMentorId !== session.user.id) {
       return NextResponse.json({ 
         error: 'No puedes editar el horario de otro mentor' 
       }, { status: 403 });
@@ -175,7 +175,7 @@ export async function GET(request: Request) {
     }
 
     if (
-      session.user.rol === 'MENTOR' && 
+      (session.user.rol === 'MENTOR' || session.user.rol === 'LIDER') && 
       finalMentorId !== session.user.id
     ) {
       return NextResponse.json({ 

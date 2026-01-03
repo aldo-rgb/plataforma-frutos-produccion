@@ -33,7 +33,7 @@ export async function PUT(
     }
 
     // Verificar permisos
-    if (mentor.rol !== 'MENTOR' && mentor.rol !== 'COORDINADOR' && mentor.rol !== 'GAMECHANGER') {
+    if (mentor.rol !== 'MENTOR' && mentor.rol !== 'LIDER' && mentor.rol !== 'COORDINADOR' && mentor.rol !== 'GAMECHANGER') {
       return NextResponse.json({ error: 'No tienes permisos de mentor' }, { status: 403 });
     }
 
@@ -79,10 +79,10 @@ export async function PUT(
       }
     });
 
-    // Crear ciclo de 90 días si no existe
+    // Crear ciclo de 63 días si no existe
     if (!cicloExistente) {
       const hoy = new Date();
-      const fechaFin = addDays(hoy, 90);
+      const fechaFin = addDays(hoy, 63);
       
       await prisma.programEnrollment.create({
         data: {
@@ -93,12 +93,12 @@ export async function PUT(
           cycleEndDate: fechaFin,
           startDate: hoy, // Legacy field
           endDate: fechaFin, // Legacy field
-          totalWeeks: 13, // ~90 días = 13 semanas
+          totalWeeks: 9, // ~63 días = 9 semanas
           status: 'ACTIVE'
         }
       });
       
-      console.log(`🎯 Ciclo de 90 días creado para ${carta.Usuario.nombre}`);
+      console.log(`🎯 Ciclo de 63 días creado para ${carta.Usuario.nombre}`);
     } else {
       console.log(`ℹ️  ${carta.Usuario.nombre} ya tiene un ciclo activo`);
     }

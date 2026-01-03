@@ -20,6 +20,24 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    // Obtener información del usuario incluyendo tier y mentor asignado
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: session.user.id },
+      select: { 
+        tier: true, 
+        rol: true,
+        assignedMentorId: true,
+        Usuario_Usuario_assignedMentorIdToUsuario: {
+          select: {
+            id: true,
+            nombre: true,
+            profileImage: true,
+            imagen: true
+          }
+        }
+      }
+    });
+
     // Obtener enrollment activo
     const enrollment = await prisma.programEnrollment.findFirst({
       where: {
@@ -37,16 +55,84 @@ export async function GET() {
         },
         _count: {
           select: {
-            CallBookings: true
+            CallBooking: true
           }
         }
       }
     });
 
     if (!enrollment) {
+      // 🆕 Si no tiene enrollment, verificar si tiene paquete de Lobo Solitario activo
+      const packageCredits = await prisma.packageSessionCredits.findFirst({
+        where: {
+          MentorPackageOrder: {
+            usuarioId: session.user.id,
+            status: 'COMPLETED'
+          },
+          remainingSessions: {
+            gt: 0
+          },
+          isActive: true,
+          OR: [
+            { expiresAt: null },
+            { expiresAt: { gt: new Date() } }
+          ]
+        },
+        include: {
+          MentorPackageOrder: {
+            select: {
+              mentorId: true,
+              Mentor: {
+                select: {
+                  id: true,
+                  nombre: true,
+                  profileImage: true,
+                  imagen: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (packageCredits && packageCredits.MentorPackageOrder.Mentor) {
+        // Usuario tiene Lobo Solitario activo
+        // Verificar si ya tiene sesiones agendadas (CallBooking sin programEnrollmentId)
+        const scheduledSessionsCount = await prisma.callBooking.count({
+          where: {
+            studentId: session.user.id,
+            mentorId: packageCredits.MentorPackageOrder.mentorId,
+            programEnrollmentId: null, // Sesiones de Lobo Solitario no tienen enrollment
+            status: {
+              in: ['PENDING', 'CONFIRMED']
+            }
+          }
+        });
+
+        const needsScheduling = scheduledSessionsCount === 0;
+        
+        return NextResponse.json({
+          hasEnrollment: false,
+          hasLoboSolitario: true,
+          needsScheduling: needsScheduling,
+          message: needsScheduling ? 'Necesitas agendar tus sesiones semanales' : 'Programa Lobo Solitario activo',
+          userTier: usuario?.tier || 'FREE',
+          userRole: usuario?.rol,
+          mentor: packageCredits.MentorPackageOrder.Mentor,
+          packageInfo: {
+            totalSessions: packageCredits.totalSessions,
+            remainingSessions: packageCredits.remainingSessions,
+            usedSessions: packageCredits.usedSessions,
+            expiresAt: packageCredits.expiresAt
+          }
+        });
+      }
+      
       return NextResponse.json({ 
         hasEnrollment: false,
-        message: 'No tienes un programa activo'
+        message: 'No tienes un programa activo',
+        userTier: usuario?.tier || 'FREE',
+        userRole: usuario?.rol
       });
     }
 
@@ -85,7 +171,9 @@ export async function GET() {
     // significa que el mentor fue cambiado y necesita reagendar las sesiones faltantes
     if (totalActiveSessions < expectedTotalSessions) {
       // Obtener información del mentor para mostrar en frontend
-      const mentor = enrollment.Usuario_ProgramEnrollment_mentorIdToUsuario;
+      // Primero intentar del enrollment, si no existe usar el assignedMentor del usuario
+      const mentor = enrollment.Usuario_ProgramEnrollment_mentorIdToUsuario || 
+                     usuario?.Usuario_Usuario_assignedMentorIdToUsuario;
 
       // Buscar visión del usuario
       const visionParticipante = await prisma.visionParticipante.findFirst({
@@ -115,6 +203,8 @@ export async function GET() {
           : `Tienes ${totalActiveSessions} de ${expectedTotalSessions} sesiones agendadas. Completa tu agenda.`,
         enrollmentId: enrollment.id,
         vision: visionParticipante?.Vision || null,
+        userTier: usuario?.tier || 'FREE',
+        userRole: usuario?.rol,
         mentor: mentor ? {
           id: mentor.id,
           nombre: mentor.nombre,
@@ -165,7 +255,9 @@ export async function GET() {
     });
 
     // Obtener información del mentor
-    const mentor = enrollment.Usuario_ProgramEnrollment_mentorIdToUsuario;
+    // Primero intentar del enrollment, si no existe usar el assignedMentor del usuario
+    const mentor = enrollment.Usuario_ProgramEnrollment_mentorIdToUsuario || 
+                   usuario?.Usuario_Usuario_assignedMentorIdToUsuario;
 
     return NextResponse.json({
       hasEnrollment: true,
@@ -177,6 +269,8 @@ export async function GET() {
         status: enrollment.status
       },
       vision: visionParticipante?.Vision || null,
+      userTier: usuario?.tier || 'FREE',
+      userRole: usuario?.rol,
       mentor: mentor ? {
         id: mentor.id,
         nombre: mentor.nombre,
@@ -222,15 +316,7 @@ export async function POST(request: Request) {
     const activeLicense = await prisma.licenseAssignment.findFirst({
       where: {
         userId: session.user.id,
-        status: 'ACTIVE'
-      },
-      include: {
-        License: {
-          select: {
-            planType: true,
-            expirationDate: true
-          }
-        }
+        isActive: true
       }
     });
 
@@ -241,8 +327,8 @@ export async function POST(request: Request) {
     }
 
     // Verificar que la licencia no haya expirado
-    if (activeLicense.License?.expirationDate) {
-      const expirationDate = new Date(activeLicense.License.expirationDate);
+    if (activeLicense.expiresAt) {
+      const expirationDate = new Date(activeLicense.expiresAt);
       const now = new Date();
       
       if (expirationDate < now) {
@@ -254,8 +340,8 @@ export async function POST(request: Request) {
 
     console.log('✅ Usuario tiene licencia activa:', {
       userId: session.user.id,
-      planType: activeLicense.License?.planType,
-      expirationDate: activeLicense.License?.expirationDate
+      licenseCode: activeLicense.licenseCode,
+      expiresAt: activeLicense.expiresAt
     });
 
     // ===== VALIDACIÓN 2: DATOS REQUERIDOS =====

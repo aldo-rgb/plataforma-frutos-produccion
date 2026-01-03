@@ -24,7 +24,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    if (usuario.rol !== 'MENTOR') {
+    if (usuario.rol !== 'MENTOR' && usuario.rol !== 'LIDER') {
       return NextResponse.json({ error: 'Solo mentores pueden acceder' }, { status: 403 });
     }
 

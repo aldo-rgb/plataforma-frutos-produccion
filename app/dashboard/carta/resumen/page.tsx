@@ -787,7 +787,7 @@ export default function CartaResumenPage() {
                   ✅ Felicitaciones!!! Tus Objetivos han sido aprobados, Gestiona tu Tareas en HOY.
                 </p>
                 <p className="text-gray-400 text-xs mt-1">
-                  Tu carta ha sido aprobada por tu mentor. No se pueden realizar cambios en este momento.
+                  Tu carta ha sido aprobada. No se pueden realizar cambios en este momento.
                 </p>
               </div>
             </div>

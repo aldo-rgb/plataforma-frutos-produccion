@@ -16,7 +16,7 @@ export async function GET() {
 
     const userId = parseInt(session.user.id);
 
-    // Obtener el usuario actual con su visión activa
+    // Obtener el usuario actual con su visión activa y paquetes
     const currentUser = await prisma.usuario.findUnique({
       where: { id: userId },
       include: {
@@ -29,6 +29,15 @@ export async function GET() {
           include: {
             Vision: true
           }
+        },
+        MentorPackageOrder_MentorPackageOrder_usuarioIdToUsuario: {
+          where: {
+            status: 'COMPLETED'
+          },
+          select: {
+            id: true,
+            metadata: true
+          }
         }
       }
     });
@@ -37,15 +46,36 @@ export async function GET() {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // Obtener la visión activa del usuario
+    // Verificar si es Lobo Solitario (sin visión pero con paquete completado)
     const activeVision = currentUser.ParticipanteEnVisiones[0]?.Vision;
+    const hasLoboPackage = currentUser.MentorPackageOrder_MentorPackageOrder_usuarioIdToUsuario.some(
+      (order: any) => order.metadata?.tipoCliente === 'LOBO_SOLITARIO'
+    );
     
     if (!activeVision) {
-      // Si no tiene visión activa, devolver datos vacíos
+      // Si no tiene visión activa, verificar si es Lobo Solitario
+      if (hasLoboPackage) {
+        // Lobo Solitario: mostrar mensaje personalizado
+        return NextResponse.json({
+          topUsers: [],
+          userRank: null,
+          currentUserId: userId,
+          isLoboSolitario: true,
+          userData: {
+            nombre: currentUser.nombre,
+            puntos: currentUser.puntosCuanticos || 0,
+            xp: currentUser.experienciaXP || 0,
+            avatar: currentUser.profileImage
+          }
+        });
+      }
+      
+      // Usuario sin visión y sin paquete: devolver datos vacíos
       return NextResponse.json({
         topUsers: [],
         userRank: null,
-        currentUserId: userId
+        currentUserId: userId,
+        isLoboSolitario: false
       });
     }
 

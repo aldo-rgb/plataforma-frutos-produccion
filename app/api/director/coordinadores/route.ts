@@ -42,16 +42,16 @@ export async function GET(request: Request) {
         email: true,
         isActive: true,
         createdAt: true,
-        VisionesCoordinadas: {
+        Vision: {
           select: {
             id: true,
             nombre: true,
-            Participantes: {
+            VisionParticipante: {
               select: {
                 participanteId: true
               }
             },
-            GameChangers: {
+            VisionGameChanger: {
               select: {
                 gameChangerId: true
               }
@@ -67,9 +67,9 @@ export async function GET(request: Request) {
     // Procesar datos
     const coordinadoresConInfo = coordinadores.map(coord => ({
       ...coord,
-      totalVisiones: coord.VisionesCoordinadas.length,
-      totalParticipantes: coord.VisionesCoordinadas.reduce((acc, v) => 
-        acc + v.Participantes.length + v.GameChangers.length, 0
+      totalVisiones: coord.Vision.length,
+      totalParticipantes: coord.Vision.reduce((acc, v) => 
+        acc + v.VisionParticipante.length + v.VisionGameChanger.length, 0
       )
     }));
 
@@ -143,6 +143,9 @@ export async function POST(request: Request) {
     const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Generar código de licencia especial para coordinador (no consume créditos)
+    const adminLicenseCode = `COORD-ADMIN-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
     const coordinador = await prisma.usuario.create({
       data: {
         nombre,
@@ -150,7 +153,18 @@ export async function POST(request: Request) {
         password: hashedPassword,
         rol: 'COORDINADOR',
         organizationId: director.organizationId,
-        isActive: true
+        isActive: true,
+        // Asignar licencia administrativa directamente (no consume créditos de la organización)
+        LicenseAssignment_LicenseAssignment_userIdToUsuario: {
+          create: {
+            licenseCode: adminLicenseCode,
+            isActive: true,
+            organizationId: director.organizationId,
+            assignedBy: directorId,
+            assignedAt: new Date(),
+            // Esta licencia no tiene visionId porque es administrativa
+          }
+        }
       },
       select: {
         id: true,
@@ -158,14 +172,22 @@ export async function POST(request: Request) {
         email: true,
         rol: true,
         isActive: true,
-        createdAt: true
+        createdAt: true,
+        LicenseAssignment_LicenseAssignment_userIdToUsuario: {
+          select: {
+            licenseCode: true,
+            isActive: true
+          }
+        }
       }
     });
+
+    console.log(`✅ Coordinador creado con licencia administrativa: ${adminLicenseCode}`);
 
     return NextResponse.json({
       success: true,
       coordinador,
-      message: 'Coordinador creado exitosamente'
+      message: 'Coordinador creado exitosamente con licencia administrativa'
     });
 
   } catch (error: any) {

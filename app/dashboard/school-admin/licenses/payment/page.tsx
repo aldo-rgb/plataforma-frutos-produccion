@@ -23,7 +23,7 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(true);
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [organization, setOrganization] = useState<any>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'transfer' | 'stripe' | 'paypal' | 'mercadopago'>('transfer');
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal' | 'mercadopago'>('stripe');
   const [processing, setProcessing] = useState(false);
   const [proofImage, setProofImage] = useState<File | null>(null);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
@@ -393,7 +393,21 @@ export default function PaymentPage() {
                   </div>
                   <div>
                     <p className="text-slate-400 text-xs mb-1">Tipo</p>
-                    <p className="text-purple-300 font-semibold">{order.tier}</p>
+                    <p className="text-purple-300 font-semibold">
+                      {order.paymentData && typeof order.paymentData === 'string' 
+                        ? (() => {
+                            try {
+                              const data = JSON.parse(order.paymentData);
+                              return data.type === 'VISION_MENTOR_PAYMENT' ? 'Mentorías' : order.tier;
+                            } catch {
+                              return order.tier;
+                            }
+                          })()
+                        : order.paymentData?.type === 'VISION_MENTOR_PAYMENT' 
+                          ? 'Mentorías' 
+                          : order.tier
+                      }
+                    </p>
                   </div>
                   <div>
                     <p className="text-slate-400 text-xs mb-1">Precio unitario</p>
@@ -430,35 +444,7 @@ export default function PaymentPage() {
             Método de Pago
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Transferencia */}
-            <button
-              onClick={() => setPaymentMethod('transfer')}
-              className={`p-6 rounded-xl border-2 transition-all text-left ${
-                paymentMethod === 'transfer'
-                  ? 'border-purple-500 bg-purple-500/10'
-                  : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
-              }`}
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <div
-                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                    paymentMethod === 'transfer'
-                      ? 'border-purple-500 bg-purple-500'
-                      : 'border-slate-600'
-                  }`}
-                >
-                  {paymentMethod === 'transfer' && (
-                    <CheckCircle size={16} className="text-white" />
-                  )}
-                </div>
-                <h3 className="text-white font-bold">Transferencia Bancaria</h3>
-              </div>
-              <p className="text-slate-400 text-sm">
-                Recibe las instrucciones de pago por transferencia
-              </p>
-            </button>
-
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Stripe */}
             <button
               onClick={() => setPaymentMethod('stripe')}
@@ -569,148 +555,10 @@ export default function PaymentPage() {
           </div>
         </div>
 
-        {/* Bank Transfer Information - Shows when transfer is selected */}
-        {paymentMethod === 'transfer' && (
-          <div className="bg-gradient-to-br from-blue-900/20 to-purple-900/20 backdrop-blur border border-blue-500/30 rounded-2xl p-6 mb-6">
-            <div className="flex items-start gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                <Building className="text-blue-400" size={24} />
-              </div>
-              <div>
-                <h3 className="text-white font-bold text-lg mb-1">Datos para Transferencia Bancaria</h3>
-                <p className="text-slate-400 text-sm">
-                  Realiza tu transferencia a la siguiente cuenta bancaria
-                </p>
-              </div>
-            </div>
-
-            <div className="bg-slate-900/50 rounded-xl p-6 border border-slate-700 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <p className="text-slate-400 text-sm">Banco</p>
-                  <p className="text-white font-semibold text-lg">BBVA</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-slate-400 text-sm">Beneficiario</p>
-                  <p className="text-white font-semibold">Frutos del Espíritu A.C.</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-slate-400 text-sm">Número de Cuenta</p>
-                  <p className="text-white font-mono text-lg">0123456789</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-slate-400 text-sm">CLABE Interbancaria</p>
-                  <p className="text-white font-mono text-lg">012345678901234567</p>
-                </div>
-              </div>
-
-              <div className="border-t border-slate-700 pt-4 mt-4">
-                <div className="flex justify-between items-center">
-                  <p className="text-slate-400">Monto a transferir</p>
-                  <p className="text-3xl font-bold text-blue-400">
-                    ${pendingOrders[0]?.amount.toLocaleString()} MXN
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mt-4">
-                <div className="flex gap-3">
-                  <svg className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"></path>
-                  </svg>
-                  <div className="text-sm text-yellow-200">
-                    <p className="font-semibold mb-1">Importante:</p>
-                    <p>Después de realizar la transferencia, sube tu comprobante de pago en la sección de abajo para que podamos verificar y activar tus licencias.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Upload Proof Section - Only for Transfer */}
-        {paymentMethod === 'transfer' && (
-          <div className="bg-slate-900/50 backdrop-blur border border-yellow-500/30 rounded-2xl p-6 mb-6">
-            <div className="flex items-start gap-3 mb-4">
-              <Upload className="text-yellow-400 mt-1" size={24} />
-              <div>
-                <h3 className="text-white font-bold mb-1">Comprobante de Pago</h3>
-                <p className="text-slate-400 text-sm">
-                  Sube una foto o captura de pantalla de tu comprobante de transferencia bancaria
-                </p>
-              </div>
-            </div>
-
-            {!proofPreview ? (
-              <div className="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center hover:border-purple-500 transition-colors">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleProofUpload}
-                  className="hidden"
-                  id="proof-upload"
-                />
-                <label
-                  htmlFor="proof-upload"
-                  className="cursor-pointer flex flex-col items-center gap-3"
-                >
-                  <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center">
-                    <Upload className="text-slate-400" size={24} />
-                  </div>
-                  <div>
-                    <p className="text-white font-semibold mb-1">
-                      Click para subir comprobante
-                    </p>
-                    <p className="text-slate-500 text-sm">
-                      PNG, JPG o PDF (máx. 5MB)
-                    </p>
-                  </div>
-                </label>
-              </div>
-            ) : (
-              <div className="relative border-2 border-green-500/30 rounded-xl p-4 bg-green-500/5">
-                <button
-                  onClick={removeProof}
-                  className="absolute top-2 right-2 w-8 h-8 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center transition-colors"
-                >
-                  <X size={16} className="text-white" />
-                </button>
-                <div className="flex items-start gap-4">
-                  <div className="w-32 h-32 rounded-lg overflow-hidden border border-slate-700">
-                    <img
-                      src={proofPreview}
-                      alt="Comprobante"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle className="text-green-400" size={20} />
-                      <p className="text-white font-semibold">Comprobante cargado</p>
-                    </div>
-                    <p className="text-slate-400 text-sm">
-                      {proofImage?.name}
-                    </p>
-                    <p className="text-slate-500 text-xs mt-1">
-                      {((proofImage?.size || 0) / 1024).toFixed(2)} KB
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="mt-4 bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-3">
-              <p className="text-yellow-200 text-sm">
-                <strong>⚠️ Importante:</strong> Asegúrate de que el comprobante sea legible y muestre claramente el monto, fecha y referencia de la transferencia.
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* Action Button */}
         <button
           onClick={() => handleProceedToPayment(pendingOrders[0].id)}
-          disabled={processing || uploadingProof || (paymentMethod === 'transfer' && !proofImage)}
+          disabled={processing || uploadingProof}
           className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all flex items-center justify-center gap-3 shadow-lg shadow-purple-500/50"
         >
           {uploadingProof ? (

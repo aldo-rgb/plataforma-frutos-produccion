@@ -1,7 +1,8 @@
 'use client';
 
-import { Zap, Globe } from 'lucide-react';
+import { Zap, Globe, Menu } from 'lucide-react';
 import { PhoenixButton } from '../phoenix/PhoenixButton';
+import { useState } from 'react';
 
 interface TopbarProps {
   usuario: {
@@ -19,12 +20,24 @@ interface TopbarProps {
       brandColor: string | null;
     } | null;
   };
+  onMenuClick?: () => void;
 }
 
-export function Topbar({ usuario }: TopbarProps) {
+export function Topbar({ usuario, onMenuClick }: TopbarProps) {
   return (
     <header className="h-16 border-b border-slate-800 flex items-center justify-between px-4 md:px-8 bg-slate-900/50 backdrop-blur-sm">
-      <div className="flex-1" />
+      {/* Botón de menú móvil (solo visible cuando el sidebar está oculto) */}
+      {onMenuClick && (
+        <button
+          onClick={onMenuClick}
+          className="lg:hidden p-2 rounded-lg hover:bg-slate-800 transition-colors"
+          aria-label="Abrir menú"
+        >
+          <Menu size={24} className="text-slate-300" />
+        </button>
+      )}
+
+      <div className="flex-1 lg:flex-initial" />
       
       <div className="flex items-center gap-6">
         {/* Phoenix SOS Button */}

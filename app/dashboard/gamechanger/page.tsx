@@ -69,7 +69,7 @@ export default async function GameChangerDashboardPage() {
       mentorId: true,
       _count: {
         select: {
-          CallBookings: true
+          CallBooking: true
         }
       }
     },
@@ -78,7 +78,7 @@ export default async function GameChangerDashboardPage() {
     }
   });
 
-  const programEnrollment = allEnrollments.find(e => e._count.CallBookings > 0) || 
+  const programEnrollment = allEnrollments.find(e => e._count.CallBooking > 0) || 
                            allEnrollments.find(e => e.mentorId !== usuario.id && e.cycleType !== 'SOLO') ||
                            allEnrollments[0];
 
@@ -280,7 +280,7 @@ export default async function GameChangerDashboardPage() {
       {isAuthorized && (
         <GlobalProgressHero 
           percent={progressPercent}
-          label="Estado total de avance de tus metas F.R.U.T.O.S."
+          label="Estado total de avance de tus metas"
           totalMetas={totalAreas}
           completedMetas={areasCompletadas}
           areas={areasActivas.map(area => area.label)}

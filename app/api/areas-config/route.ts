@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
     const targetUser = await prisma.usuario.findUnique({
       where: { id: userId },
       select: { 
-        ParticipanteEnVisiones: {
+        VisionParticipante_VisionParticipante_participanteIdToUsuario: {
           include: {
             Vision: {
               select: {
@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    const visionParticipante = targetUser?.ParticipanteEnVisiones?.[0];
+    const visionParticipante = targetUser?.VisionParticipante_VisionParticipante_participanteIdToUsuario?.[0];
     const perteneceAGrupo = !!visionParticipante;
     const visionConfig = visionParticipante?.Vision;
 
@@ -205,13 +205,13 @@ export async function POST(req: NextRequest) {
     const currentUserVision = await prisma.usuario.findUnique({
       where: { id: currentUser.id },
       select: {
-        ParticipanteEnVisiones: {
+        VisionParticipante_VisionParticipante_participanteIdToUsuario: {
           select: { id: true },
           take: 1
         }
       }
     });
-    const perteneceAGrupo = !!(currentUserVision?.ParticipanteEnVisiones && currentUserVision.ParticipanteEnVisiones.length > 0);
+    const perteneceAGrupo = !!(currentUserVision?.VisionParticipante_VisionParticipante_participanteIdToUsuario && currentUserVision.VisionParticipante_VisionParticipante_participanteIdToUsuario.length > 0);
     
     if (targetUserId) {
       // Solo admin/coordinador pueden modificar otros usuarios
@@ -233,14 +233,14 @@ export async function POST(req: NextRequest) {
     const targetUser = await prisma.usuario.findUnique({
       where: { id: userId },
       select: { 
-        ParticipanteEnVisiones: {
+        VisionParticipante_VisionParticipante_participanteIdToUsuario: {
           select: { id: true },
           take: 1
         }
       }
     });
 
-    const targetPerteneceAGrupo = !!(targetUser?.ParticipanteEnVisiones && targetUser.ParticipanteEnVisiones.length > 0);
+    const targetPerteneceAGrupo = !!(targetUser?.VisionParticipante_VisionParticipante_participanteIdToUsuario && targetUser.VisionParticipante_VisionParticipante_participanteIdToUsuario.length > 0);
 
     // Validar mínimo de áreas habilitadas según tipo de usuario
     const enabledCount = areas.filter((a: any) => a.enabled).length;

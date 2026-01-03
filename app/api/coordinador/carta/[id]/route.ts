@@ -51,21 +51,23 @@ export async function GET(
             email: true
           }
         },
-        ParticipanteEnVisiones: {
+        VisionParticipante_ParticipanteEnVision: {
           include: {
             Vision: {
               select: {
                 id: true,
                 nombre: true,
+                coordinadorId: true,
+                organizationId: true,
                 forceTransformationArea: true,
-                forceCommunityServiceArea: true
+                forceCommunityServiceArea: true,
+                isActive: true
               }
             }
           },
           orderBy: {
             createdAt: 'desc'
-          },
-          take: 1
+          }
         }
       }
     });
@@ -75,16 +77,17 @@ export async function GET(
     }
 
     // Verificar que el coordinador tiene acceso a esta carta
-    const tieneAcceso = coordinador.organizationId 
-      ? usuario.organizationId === coordinador.organizationId
-      : usuario.coordinadorId === coordinador.id;
+    const tieneAcceso = usuario.VisionParticipante_ParticipanteEnVision.some((vp: any) => 
+      vp.Vision.coordinadorId === coordinador.id ||
+      (coordinador.organizationId && vp.Vision.organizationId === coordinador.organizationId)
+    );
 
     if (!tieneAcceso) {
       return NextResponse.json({ error: 'No tienes acceso a esta carta' }, { status: 403 });
     }
 
     // Obtener la visión activa
-    const visionActiva = usuario.ParticipanteEnVisiones?.[0]?.Vision || null;
+    const visionActiva = usuario.VisionParticipante_ParticipanteEnVision.find((vp: any) => vp.Vision.isActive)?.Vision || null;
 
     // Agrupar metas por categoría
     const metasPorCategoria: Record<string, any[]> = {};

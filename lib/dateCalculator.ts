@@ -5,7 +5,7 @@ import { prisma } from './prisma';
  * Motor de Cálculo de Fechas para Ciclos Híbridos
  * 
  * REGLAS DE NEGOCIO:
- * 1. Usuario SOLO (sin visión) → 90 días desde aprobación de carta
+ * 1. Usuario SOLO (sin visión) → 63 días desde aprobación de carta
  * 2. Usuario VISIÓN (en grupo) → Hasta Vision.endDate
  * 3. Si el usuario entra tarde a visión → Genera solo días restantes
  * 4. El ciclo se crea SOLO cuando la carta es aprobada
@@ -43,12 +43,21 @@ export async function calculateCycleDates(
     throw new Error(`Usuario con ID ${userId} no encontrado`);
   }
 
-  // Crear fecha en UTC medianoche para evitar problemas de timezone
+  // Crear fecha en hora LOCAL del servidor (México) a medianoche
+  // Para compensar el UTC-6 de México, creamos la fecha a las 12:00 PM (mediodía)
+  // Así cuando se almacene en UTC será 18:00 UTC del MISMO DÍA
+  // y al mostrarse en México será 12:00 PM (mediodía) del MISMO DÍA
   const baseDate = customStartDate || new Date();
-  const year = baseDate.getFullYear();
-  const month = baseDate.getMonth();
-  const day = baseDate.getDate();
-  const startDate = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+  let startDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), 12, 0, 0, 0);
+  
+  // 🚨 VALIDACIÓN CRÍTICA: NUNCA usar fechas pasadas
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  if (startDate < today) {
+    console.warn(`⚠️ ADVERTENCIA: Se intentó usar fecha pasada ${startDate.toISOString().split('T')[0]} para ciclo. Usando HOY en su lugar.`);
+    startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12, 0, 0, 0);
+  }
   
   let endDate: Date;
   let cycleType: 'SOLO' | 'VISION';
@@ -63,13 +72,13 @@ export async function calculateCycleDates(
   }
   
   // =============================================
-  // MODO SOLO (90 DÍAS)
+  // MODO SOLO (63 DÍAS)
   // =============================================
   cycleType = 'SOLO';
-  endDate = addDays(startDate, 90);
+  endDate = addDays(startDate, 63);
 
   console.log(`📅 Usuario #${userId} en MODO SOLO`);
-  console.log(`   Ciclo personal: 90 días (hasta ${endDate.toISOString().split('T')[0]})`);
+  console.log(`   Ciclo personal: 63 días (hasta ${endDate.toISOString().split('T')[0]})`);
 
   const totalDays = differenceInDays(endDate, startDate) + 1; // +1 para incluir el día final
 
@@ -96,22 +105,15 @@ export async function canStartNewCycle(userId: number): Promise<{
   // Buscar inscripción activa
   const activeEnrollment = await prisma.programEnrollment.findFirst({
     where: {
-      usuarioId: userId,
+      userId: userId,
       status: 'ACTIVE'
-    },
-    include: {
-      Vision: {
-        select: { name: true, endDate: true }
-      }
     }
   });
 
   if (activeEnrollment) {
     return {
       canStart: false,
-      reason: activeEnrollment.Vision
-        ? `Ya tienes un ciclo activo en la visión "${activeEnrollment.Vision.name}" hasta ${new Date(activeEnrollment.cycleEndDate).toLocaleDateString()}`
-        : `Ya tienes un ciclo personal activo hasta ${new Date(activeEnrollment.cycleEndDate).toLocaleDateString()}`,
+      reason: `Ya tienes un ciclo activo hasta ${new Date(activeEnrollment.cycleEndDate || activeEnrollment.endDate).toLocaleDateString()}`,
       activeEnrollment
     };
   }
@@ -126,14 +128,27 @@ export async function canStartNewCycle(userId: number): Promise<{
  * @returns Enrollment creado
  */
 export async function createEnrollment(userId: number, cycleDates: CycleDates) {
+  // Obtener mentor del usuario
+  const user = await prisma.usuario.findUnique({
+    where: { id: userId },
+    select: { assignedMentorId: true }
+  });
+
+  if (!user?.assignedMentorId) {
+    throw new Error(`Usuario ${userId} no tiene mentor asignado`);
+  }
+
   return await prisma.programEnrollment.create({
     data: {
-      usuarioId: userId,
+      userId: userId,
+      mentorId: user.assignedMentorId,
+      startDate: cycleDates.startDate,
+      endDate: cycleDates.endDate,
       cycleType: cycleDates.cycleType,
       cycleStartDate: cycleDates.startDate,
       cycleEndDate: cycleDates.endDate,
       status: 'ACTIVE',
-      visionId: cycleDates.visionId
+      updatedAt: new Date()
     }
   });
 }
