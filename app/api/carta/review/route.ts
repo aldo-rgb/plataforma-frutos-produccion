@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { notifyChangesRequested, notifyCartaApproved } from '@/lib/notifications';
 import { calculateCartaStatusAfterReview, type EstadoItem } from '@/lib/carta-approval-logic';
 import { generateTasksForLetter } from '@/lib/taskGenerator';
+import { regenerateModifiedTasks } from '@/lib/taskRegenerator';
 
 /**
  * POST /api/carta/review
@@ -106,6 +107,7 @@ export async function POST(req: Request) {
     }
 
     // === CALCULATE FINAL CARTA STATUS ===
+    const previousStatus = carta.estado;
     const newCartaStatus = calculateCartaStatusAfterReview(allStatuses);
 
     // Update carta status
@@ -115,9 +117,22 @@ export async function POST(req: Request) {
         estado: newCartaStatus,
         autorizadoMentor: newCartaStatus === 'APROBADA',
         autorizadoPorId: reviewerId,
+        approvedAt: newCartaStatus === 'APROBADA' ? new Date() : carta.approvedAt,
         fechaActualizacion: new Date()
       }
     });
+
+    // Si la carta pasa de CAMBIOS_REQUERIDOS a APROBADA, regenerar tareas modificadas
+    if (previousStatus === 'CAMBIOS_REQUERIDOS' && newCartaStatus === 'APROBADA') {
+      console.log('🔄 Carta re-aprobada - Regenerando tareas modificadas');
+      const regenResult = await regenerateModifiedTasks(cartaId);
+      
+      if (regenResult.success) {
+        console.log(`✅ Regeneración exitosa: ${regenResult.actionsRegenerated} acciones, ${regenResult.tasksCreated} tareas creadas`);
+      } else {
+        console.log('⚠️ Error en regeneración, continuando con aprobación');
+      }
+    }
 
     // Notify user if changes requested
     if (newCartaStatus === 'CAMBIOS_REQUERIDOS') {

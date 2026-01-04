@@ -40,6 +40,16 @@ interface EnrollmentInfo {
     missedCalls: number;
     maxMissedAllowed: number;
   };
+  scheduledPattern?: {
+    slot1: {
+      dayOfWeek: number;
+      time: string;
+    };
+    slot2: {
+      dayOfWeek: number;
+      time: string;
+    };
+  };
 }
 
 interface MentorDisponible {
@@ -251,25 +261,44 @@ export default function ProgramEnrollPage() {
           // Si necesita agendar horarios, cargar los slots disponibles
           if (enrollmentData.needsScheduling) {
             console.log('📅 Usuario de Lobo Solitario necesita agendar horarios');
+            console.log('🔍 Cargando slots del mentor ID:', enrollmentData.mentor.id);
+            
             const slotsResponse = await fetch(`/api/mentor/slots-disponibles?mentorId=${enrollmentData.mentor.id}`);
+            console.log('📡 Response status:', slotsResponse.status);
+            
             if (slotsResponse.ok) {
               const slotsData = await slotsResponse.json();
+              console.log('📊 Slots data recibido:', slotsData);
+              console.log('📅 Slots disponibles:', slotsData.slotsDisponibles);
+              
               setSlotsDisponibles(slotsData.slotsDisponibles || {});
               
               // Preseleccionar horarios si hay disponibles
-              const diasDisponibles = Object.keys(slotsData.slotsDisponibles).map(Number).sort();
+              const diasDisponibles = Object.keys(slotsData.slotsDisponibles || {}).map(Number).sort();
+              console.log('📆 Días disponibles:', diasDisponibles);
+              
               if (diasDisponibles.length >= 2) {
                 const dia1 = diasDisponibles[0];
                 const dia2 = diasDisponibles[1];
                 const horarios1 = slotsData.slotsDisponibles[dia1];
                 const horarios2 = slotsData.slotsDisponibles[dia2];
                 
+                console.log(`📍 Día 1 (${dia1}):`, horarios1);
+                console.log(`📍 Día 2 (${dia2}):`, horarios2);
+                
                 if (horarios1?.length > 0 && horarios2?.length > 0) {
                   setSlot1({ dayOfWeek: dia1, time: horarios1[0] });
                   setSlot2({ dayOfWeek: dia2, time: horarios2[0] });
                 }
+              } else {
+                console.log('⚠️ Menos de 2 días disponibles');
               }
+            } else {
+              const errorText = await slotsResponse.text();
+              console.error('❌ Error al cargar slots:', errorText);
             }
+          } else {
+            console.log('⚠️ needsScheduling es false, no se cargan slots');
           }
           setEnrollmentInfo(enrollmentData);
           setIsLoading(false);
@@ -449,6 +478,16 @@ export default function ProgramEnrollPage() {
     setError(null);
 
     try {
+      // Calcular totalWeeks correctamente
+      const totalWeeks = enrollmentInfo?.stats?.totalWeeks || 9;
+      
+      console.log('📤 Enviando datos de enrollment:', {
+        mentorId: mentorAsignado.id,
+        slot1,
+        slot2,
+        totalWeeks
+      });
+
       const response = await fetch('/api/program/enroll', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -456,7 +495,7 @@ export default function ProgramEnrollPage() {
           mentorId: mentorAsignado.id,
           slot1,
           slot2,
-          totalWeeks: enrollmentInfo?.stats?.totalWeeks || 8
+          totalWeeks
         })
       });
 
@@ -883,26 +922,14 @@ export default function ProgramEnrollPage() {
                 </ul>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="flex justify-center">
                 <a 
                   href="/dashboard/suscripcion" 
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-lg flex items-center justify-center gap-2 text-sm"
+                  className="w-full max-w-md bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-lg flex items-center justify-center gap-2 text-sm"
                 >
                   <CreditCard size={18} />
                   <span>Ver Licencias</span>
                 </a>
-                
-                <button
-                  onClick={() => {
-                    // Redirigir a selección de mentor con visionId si existe
-                    const visionId = enrollmentInfo?.vision?.id || 1;
-                    window.location.href = `/dashboard/participante/seleccionar-mentor/${visionId}`;
-                  }}
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 px-4 rounded-lg transition-all shadow-lg flex items-center justify-center gap-2 text-sm"
-                >
-                  <Users size={18} />
-                  <span>Seleccionar Mentor</span>
-                </button>
               </div>
             </div>
           )}
@@ -910,12 +937,57 @@ export default function ProgramEnrollPage() {
 
         {/* Selección de Horarios */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 mb-6">
-          <h2 className="text-xl font-bold text-white mb-4">Selecciona tus Horarios Semanales</h2>
+          <h2 className="text-xl font-bold text-white mb-4">
+            {enrollmentInfo?.scheduledPattern ? 'Tus Horarios Semanales' : 'Selecciona tus Horarios Semanales'}
+          </h2>
           <p className="text-slate-400 text-sm mb-6">
-            Elige 2 días diferentes con horarios fijos para tus sesiones programadas
+            {enrollmentInfo?.scheduledPattern 
+              ? 'Estos son los horarios fijos para tus sesiones semanales'
+              : 'Elige 2 días diferentes con horarios fijos para tus sesiones programadas'}
           </p>
 
-          {/* Selector Visual de Horarios */}
+          {/* Mostrar horarios ya agendados */}
+          {enrollmentInfo?.scheduledPattern && (
+            <div className="space-y-4">
+              <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/30 rounded-lg p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
+                    <Calendar className="text-blue-400" size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-bold">Primera Sesión Semanal</h3>
+                    <p className="text-slate-400 text-sm">
+                      {DIAS_SEMANA[enrollmentInfo.scheduledPattern.slot1.dayOfWeek]} a las {enrollmentInfo.scheduledPattern.slot1.time}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border border-purple-500/30 rounded-lg p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
+                    <Calendar className="text-purple-400" size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-bold">Segunda Sesión Semanal</h3>
+                    <p className="text-slate-400 text-sm">
+                      {DIAS_SEMANA[enrollmentInfo.scheduledPattern.slot2.dayOfWeek]} a las {enrollmentInfo.scheduledPattern.slot2.time}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 flex items-center gap-3">
+                <CheckCircle2 className="text-green-400" size={24} />
+                <p className="text-green-300 text-sm">
+                  Tus sesiones están agendadas. Mantén estos horarios fijos cada semana durante todo tu programa.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Selector Visual de Horarios - Solo si NO tiene horarios agendados */}
+          {!enrollmentInfo?.scheduledPattern && (
           <div className="space-y-8">
             {/* Slot 1 */}
             <div className="space-y-4">
@@ -1054,19 +1126,20 @@ export default function ProgramEnrollPage() {
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Warning si son el mismo día */}
-          {slot1.dayOfWeek !== -1 && slot2.dayOfWeek !== -1 && slot1.dayOfWeek === slot2.dayOfWeek && (
-            <div className="mt-6 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 flex items-start gap-2">
-              <AlertTriangle className="text-yellow-400 mt-0.5" size={20} />
-              <div>
-                <p className="text-yellow-300 font-semibold text-sm">Días duplicados</p>
-                <p className="text-yellow-400/80 text-xs mt-1">
-                  Debes seleccionar días diferentes para cada sesión semanal
-                </p>
+            {/* Warning si son el mismo día */}
+            {slot1.dayOfWeek !== -1 && slot2.dayOfWeek !== -1 && slot1.dayOfWeek === slot2.dayOfWeek && (
+              <div className="mt-6 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 flex items-start gap-2">
+                <AlertTriangle className="text-yellow-400 mt-0.5" size={20} />
+                <div>
+                  <p className="text-yellow-300 font-semibold text-sm">Días duplicados</p>
+                  <p className="text-yellow-400/80 text-xs mt-1">
+                    Debes seleccionar días diferentes para cada sesión semanal
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
+          </div>
           )}
         </div>
 
@@ -1167,7 +1240,7 @@ export default function ProgramEnrollPage() {
         </button>
 
         <p className="text-center text-slate-500 text-xs mt-4">
-          Al inscribirte, aceptas comprometerte a asistir a las {enrollmentInfo?.stats ? `${enrollmentInfo.stats.totalWeeks * 2}` : '34'} sesiones programadas
+          Al inscribirte, aceptas comprometerte a asistir a las sesiones programadas
         </p>
       </div>
     </div>

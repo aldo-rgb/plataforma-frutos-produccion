@@ -277,38 +277,30 @@ export async function GET(request: NextRequest) {
     }
     
     // Segundo: Determinar redirección según estado de carta
-    let redirectUrl = '/dashboard';
-    const cartaExistente = orden.Usuario.CartaFrutos?.[0]; // Última carta del usuario
-
-    if (cartaExistente && cartaExistente.estado === 'APROBADA') {
-      // CASO 1: Carta APROBADA → regresarla a EN_REVISION y redirigir a /resumen
+    const carta = orden.Usuario.CartaFrutos?.[0];
+    
+    // 📄 LÓGICA DE CARTA: Si tiene carta APROBADA (auto-aprobada gratis), regresarla a EN_REVISION
+    if (carta && carta.estado === 'APROBADA') {
       try {
         await prisma.cartaFrutos.update({
-          where: { id: cartaExistente.id },
-          data: {
+          where: { id: carta.id },
+          data: { 
             estado: 'EN_REVISION',
-            assignedMentorId: orden.mentorId,
-            updatedAt: new Date(),
+            fechaActualizacion: new Date(),
           },
         });
-        console.log(`📄 Carta ${cartaExistente.id} regresada a EN_REVISION y asignada a mentor ${orden.mentorId}`);
-        
-        // Redirigir a /resumen con parámetro para mostrar botón de reenvío
-        redirectUrl = `/dashboard/carta/resumen?carta-actualizada=true&ready-to-submit=true`;
+        console.log(`📝 Carta del usuario cambiada de APROBADA → EN_REVISION para revisión del mentor`);
       } catch (error) {
-        console.error('Error al actualizar carta:', error);
-        redirectUrl = `/dashboard?success=paquete-comprado&error-carta=true`;
+        console.error('Error al actualizar estado de carta:', error);
       }
-    } else if (!cartaExistente || cartaExistente.estado === 'BORRADOR' || cartaExistente.estado === 'EN_REVISION') {
-      // CASO 2: No tiene carta o está en proceso → redirigir al wizard V2
-      redirectUrl = `/dashboard/carta/wizard-v2?lobo-solitario=true&mentor=${orden.mentorId}`;
-      console.log(`📝 Usuario sin carta aprobada → redirigir a wizard V2`);
-    } else {
-      // Carta en otro estado (rechazada, etc.) → ir a dashboard
-      redirectUrl = `/dashboard?success=paquete-comprado&mentor=${encodeURIComponent(orden.Mentor.nombre)}`;
     }
-
-    console.log(`🎯 Proceso de lobo solitario completado. Redirigiendo a: ${redirectUrl}`);
+    
+    // ✅ Redirigir directamente a agendar sesiones
+    // El usuario acaba de comprar su paquete de Lobo Solitario y debe agendar sus sesiones
+    let redirectUrl = '/dashboard/program/enroll?action=select-mentor';
+    
+    console.log(`🎯 Pago de Lobo Solitario completado exitosamente`);
+    console.log(`📅 Redirigiendo a agendar sesiones: ${redirectUrl}`);
     
     return NextResponse.redirect(new URL(redirectUrl, request.url));
   } catch (error: any) {

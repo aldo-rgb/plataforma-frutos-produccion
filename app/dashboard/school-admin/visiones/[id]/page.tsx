@@ -337,18 +337,23 @@ export default function VisionDetailPage() {
     setAsignandoMentor(mentorId);
     try {
       const response = await fetch(
-        `/api/school-admin/visiones/${visionId}/asignar-mentor`,
+        `/api/school-admin/visiones/${visionId}/mentores`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mentorId }),
+          body: JSON.stringify({ 
+            mentorId,
+            asignadoPorId: session?.user?.id
+          }),
         }
       );
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Error al asignar mentor');
+        throw new Error(error.error || error.message || 'Error al asignar mentor');
       }
+
+      const data = await response.json();
 
       showToast({
         message: 'Mentor privado asignado exitosamente',
@@ -1324,15 +1329,6 @@ export default function VisionDetailPage() {
                   </p>
                 </div>
               </div>
-              {cicloInfo && mentoresAsignados.length > 0 && (
-                <div className="text-right bg-slate-800/50 rounded-xl p-4 border border-emerald-500/20">
-                  <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Costo Total del Ciclo</p>
-                  <p className="text-3xl font-bold text-emerald-400">
-                    ${mentoresAsignados.reduce((sum, m) => sum + m.costoTotal, 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1">{mentoresAsignados.length} mentor(es) asignado(s)</p>
-                </div>
-              )}
             </div>
 
             <div className="bg-slate-800/30 rounded-xl p-6 border border-slate-700">
@@ -1352,7 +1348,7 @@ export default function VisionDetailPage() {
                       className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl"
                     >
                       <Users size={20} />
-                      Mentores Certificados
+                      Contratar Mentores Calificados
                       <ArrowRight size={20} />
                     </button>
                     <button
@@ -1378,26 +1374,33 @@ export default function VisionDetailPage() {
                   {mentoresAsignados.slice(0, 5).map((mentor) => {
                     const usuario = mentor.Usuario_VisionMentor_mentorIdToUsuario;
                     const esLider = usuario?.rol === 'LIDER';
+                    const esContratado = (mentor as any).esContratado || false;
                     
                     if (!usuario || !usuario.nombre) return null;
                     
                     return (
-                      <div key={mentor.id} className="flex items-center gap-2 bg-slate-800/50 rounded-lg px-3 py-2 border border-slate-600/30">
+                      <div key={`${mentor.id}-${mentor.mentorId}`} className="flex items-center gap-2 bg-slate-800/50 rounded-lg px-3 py-2 border border-slate-600/30">
                         {usuario.imagen ? (
                           <img 
                             src={usuario.imagen} 
                             alt={usuario.nombre}
-                            className="w-8 h-8 rounded-full object-cover border-2 border-emerald-500/30"
+                            className={`w-8 h-8 rounded-full object-cover border-2 ${
+                              esContratado ? 'border-cyan-500/50' : 'border-emerald-500/30'
+                            }`}
                           />
                         ) : (
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center text-white text-xs font-bold">
+                          <div className={`w-8 h-8 rounded-full ${
+                            esContratado 
+                              ? 'bg-gradient-to-br from-cyan-500 to-blue-500' 
+                              : 'bg-gradient-to-br from-emerald-500 to-cyan-500'
+                          } flex items-center justify-center text-white text-xs font-bold`}>
                             {usuario.nombre?.charAt(0)?.toUpperCase() || 'M'}
                           </div>
                         )}
                         <div>
                           <p className="text-white text-sm font-medium">{usuario.nombre}</p>
                           <p className="text-xs text-slate-500">
-                            {esLider ? '👑 Privado' : '🎓 Mentor'}
+                            {esLider ? '👑 Privado' : esContratado ? '💼 Contratado' : '🎓 Mentor'}
                           </p>
                         </div>
                       </div>

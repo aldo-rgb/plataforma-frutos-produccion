@@ -201,17 +201,33 @@ export async function POST(req: NextRequest) {
     // Determinar qué usuario modificar y verificar si pertenece a visión
     let userId = currentUser.id;
     
-    // Verificar si el usuario actual pertenece a una visión
+    // Verificar si el usuario actual pertenece a una visión ACTIVA
     const currentUserVision = await prisma.usuario.findUnique({
       where: { id: currentUser.id },
       select: {
         VisionParticipante_VisionParticipante_participanteIdToUsuario: {
-          select: { id: true },
+          where: {
+            Vision: {
+              isActive: true
+            }
+          },
+          select: { 
+            id: true,
+            Vision: {
+              select: { nombre: true }
+            }
+          },
           take: 1
         }
       }
     });
-    const perteneceAGrupo = !!(currentUserVision?.VisionParticipante_VisionParticipante_participanteIdToUsuario && currentUserVision.VisionParticipante_VisionParticipante_participanteIdToUsuario.length > 0);
+    
+    const visionActiva = currentUserVision?.VisionParticipante_VisionParticipante_participanteIdToUsuario?.[0];
+    const perteneceAGrupo = !!visionActiva;
+    
+    console.log('🔍 POST /api/areas-config - Usuario:', currentUser.id);
+    console.log('📋 Visión activa encontrada:', visionActiva ? visionActiva.Vision.nombre : 'Ninguna');
+    console.log('🎯 Pertenece a grupo:', perteneceAGrupo);
     
     if (targetUserId) {
       // Solo admin/coordinador pueden modificar otros usuarios
@@ -223,10 +239,12 @@ export async function POST(req: NextRequest) {
       // Usuarios SIN grupo pueden modificar sus propias áreas
       // Usuarios CON grupo NO pueden modificar (solo admin/coordinador)
       if (perteneceAGrupo) {
+        console.log('❌ Usuario pertenece a grupo, no puede modificar sus áreas');
         return NextResponse.json({ 
           error: 'Los usuarios de grupo deben solicitar cambios a su coordinador' 
         }, { status: 403 });
       }
+      console.log('✅ Usuario es lobo solitario, puede modificar sus áreas');
     }
 
     // Obtener info del usuario target para validación
@@ -234,17 +252,23 @@ export async function POST(req: NextRequest) {
       where: { id: userId },
       select: { 
         VisionParticipante_VisionParticipante_participanteIdToUsuario: {
+          where: {
+            Vision: {
+              isActive: true
+            }
+          },
           select: { id: true },
           take: 1
         }
       }
     });
 
-    const targetPerteneceAGrupo = !!(targetUser?.VisionParticipante_VisionParticipante_participanteIdToUsuario && targetUser.VisionParticipante_VisionParticipante_participanteIdToUsuario.length > 0);
+    const targetVisionActiva = targetUser?.VisionParticipante_VisionParticipante_participanteIdToUsuario?.[0];
+    const targetPerteneceAGrupo = !!targetVisionActiva;
 
     // Validar mínimo de áreas habilitadas según tipo de usuario
     const enabledCount = areas.filter((a: any) => a.enabled).length;
-    const minAreas = targetPerteneceAGrupo ? 1 : 4;
+    const minAreas = targetPerteneceAGrupo ? 1 : 1; // Cambiar a 1 mínimo para todos
     
     if (enabledCount < minAreas) {
       return NextResponse.json({ 

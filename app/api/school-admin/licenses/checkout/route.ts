@@ -171,7 +171,60 @@ export async function POST(req: NextRequest) {
       const isVisionPayment = existingPaymentData?.type === 'VISION_MENTOR_PAYMENT';
       
       if (isVisionPayment) {
-        console.log('🎯 Pago de VISIÓN detectado - No se generan créditos de licencias');
+        console.log('🎯 Pago de VISIÓN detectado - Creando MentorPackageOrder y VisionMentor');
+        
+        const visionId = existingPaymentData.visionId;
+        const mentorAssignments = existingPaymentData.mentorAssignments || [];
+        
+        // Crear MentorPackageOrder y VisionMentor para cada mentor
+        for (const assignment of mentorAssignments) {
+          const { mentorId, studentCount, ratePerCall } = assignment;
+          const totalSessions = studentCount * 18; // 18 llamadas por estudiante
+          const totalCost = totalSessions * ratePerCall;
+          
+          // Crear MentorPackageOrder
+          const packageOrder = await prisma.mentorPackageOrder.create({
+            data: {
+              usuarioId: updatedOrder.requestedBy, // Director que compró
+              mentorId: mentorId,
+              visionId: visionId,
+              organizationId: updatedOrder.organizationId,
+              cantidad: totalSessions,
+              precioUnitario: ratePerCall,
+              precioTotal: totalCost,
+              currency: 'MXN',
+              metodoPago: 'stripe',
+              status: 'COMPLETED',
+              externalPaymentId: `STRIPE-${orderId}`,
+              paidAt: new Date(),
+            },
+          });
+          
+          console.log(`📦 MentorPackageOrder creado: ${packageOrder.id} para mentor ${mentorId}`);
+          
+          // Verificar si ya existe VisionMentor para evitar duplicados
+          const existingVisionMentor = await prisma.visionMentor.findFirst({
+            where: {
+              visionId: visionId,
+              mentorId: mentorId,
+            },
+          });
+          
+          if (!existingVisionMentor) {
+            // Crear VisionMentor para asignar el mentor a la visión
+            await prisma.visionMentor.create({
+              data: {
+                visionId: visionId,
+                mentorId: mentorId,
+                assignedById: updatedOrder.requestedBy,
+              },
+            });
+            
+            console.log(`✅ VisionMentor creado para mentor ${mentorId} en visión ${visionId}`);
+          } else {
+            console.log(`ℹ️  VisionMentor ya existe para mentor ${mentorId} en visión ${visionId}`);
+          }
+        }
         
         return NextResponse.json({
           success: true,
@@ -264,7 +317,53 @@ export async function POST(req: NextRequest) {
         const isVisionPaymentPaypal = existingPaymentData?.type === 'VISION_MENTOR_PAYMENT';
         
         if (isVisionPaymentPaypal) {
-          console.log('🎯 Pago de VISIÓN detectado - No se generan créditos de licencias');
+          console.log('🎯 Pago de VISIÓN detectado - Creando MentorPackageOrder y VisionMentor');
+          
+          const visionId = existingPaymentData.visionId;
+          const mentorAssignments = existingPaymentData.mentorAssignments || [];
+          
+          // Crear MentorPackageOrder y VisionMentor para cada mentor
+          for (const assignment of mentorAssignments) {
+            const { mentorId, studentCount, ratePerCall } = assignment;
+            const totalSessions = studentCount * 18;
+            const totalCost = totalSessions * ratePerCall;
+            
+            // Crear MentorPackageOrder
+            const packageOrder = await prisma.mentorPackageOrder.create({
+              data: {
+                usuarioId: updatedOrder.requestedBy,
+                mentorId: mentorId,
+                visionId: visionId,
+                organizationId: updatedOrder.organizationId,
+                cantidad: totalSessions,
+                precioUnitario: ratePerCall,
+                precioTotal: totalCost,
+                currency: 'MXN',
+                metodoPago: 'paypal',
+                status: 'COMPLETED',
+                externalPaymentId: `PAYPAL-${orderId}`,
+                paidAt: new Date(),
+              },
+            });
+            
+            console.log(`📦 MentorPackageOrder creado: ${packageOrder.id} para mentor ${mentorId}`);
+            
+            // Verificar si ya existe VisionMentor
+            const existingVisionMentor = await prisma.visionMentor.findFirst({
+              where: { visionId: visionId, mentorId: mentorId },
+            });
+            
+            if (!existingVisionMentor) {
+              await prisma.visionMentor.create({
+                data: {
+                  visionId: visionId,
+                  mentorId: mentorId,
+                  assignedById: updatedOrder.requestedBy,
+                },
+              });
+              console.log(`✅ VisionMentor creado para mentor ${mentorId}`);
+            }
+          }
           
           return NextResponse.json({
             success: true,
@@ -357,7 +456,53 @@ export async function POST(req: NextRequest) {
       const isVisionPaymentMP = existingPaymentData?.type === 'VISION_MENTOR_PAYMENT';
       
       if (isVisionPaymentMP) {
-        console.log('🎯 Pago de VISIÓN detectado - No se generan créditos de licencias');
+        console.log('🎯 Pago de VISIÓN detectado - Creando MentorPackageOrder y VisionMentor');
+        
+        const visionId = existingPaymentData.visionId;
+        const mentorAssignments = existingPaymentData.mentorAssignments || [];
+        
+        // Crear MentorPackageOrder y VisionMentor para cada mentor
+        for (const assignment of mentorAssignments) {
+          const { mentorId, studentCount, ratePerCall } = assignment;
+          const totalSessions = studentCount * 18;
+          const totalCost = totalSessions * ratePerCall;
+          
+          // Crear MentorPackageOrder
+          const packageOrder = await prisma.mentorPackageOrder.create({
+            data: {
+              usuarioId: updatedOrder.requestedBy,
+              mentorId: mentorId,
+              visionId: visionId,
+              organizationId: updatedOrder.organizationId,
+              cantidad: totalSessions,
+              precioUnitario: ratePerCall,
+              precioTotal: totalCost,
+              currency: 'MXN',
+              metodoPago: 'mercadopago',
+              status: 'COMPLETED',
+              externalPaymentId: `MP-${orderId}`,
+              paidAt: new Date(),
+            },
+          });
+          
+          console.log(`📦 MentorPackageOrder creado: ${packageOrder.id} para mentor ${mentorId}`);
+          
+          // Verificar si ya existe VisionMentor
+          const existingVisionMentor = await prisma.visionMentor.findFirst({
+            where: { visionId: visionId, mentorId: mentorId },
+          });
+          
+          if (!existingVisionMentor) {
+            await prisma.visionMentor.create({
+              data: {
+                visionId: visionId,
+                mentorId: mentorId,
+                assignedById: updatedOrder.requestedBy,
+              },
+            });
+            console.log(`✅ VisionMentor creado para mentor ${mentorId}`);
+          }
+        }
         
         return NextResponse.json({
           success: true,

@@ -127,7 +127,7 @@ export default function ProgramStatusWidget() {
           <div className="bg-purple-500/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <Calendar className="w-8 h-8 text-purple-400" />
           </div>
-          <h3 className="text-2xl font-bold text-white mb-3">Programa Intensivo</h3>
+          <h3 className="text-2xl font-bold text-white mb-3">Programa de Seguimiento</h3>
           <p className="text-slate-300 mb-6 max-w-md mx-auto">
             Únete al programa de disciplina con llamadas semanales programadas. 
             Sistema de oportunidades y seguimiento completo.

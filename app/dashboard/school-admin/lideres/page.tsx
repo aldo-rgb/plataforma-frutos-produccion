@@ -17,6 +17,8 @@ interface Lider {
   totalVisiones: number;
   organizationId: number | null;
   perfilCompleto?: boolean;
+  profileApprovalStatus?: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED';
+  profileSubmittedAt?: string;
   VisionesAsignadas: Array<{
     id: number;
     nombre: string;
@@ -137,6 +139,48 @@ export default function LideresPage() {
     } catch (error) {
       console.error('Error aprobando líder:', error);
       showNotification('error', 'Error al aprobar líder');
+    }
+  };
+
+  const aprobarPerfilLider = async (liderId: number) => {
+    try {
+      const res = await fetch(`/api/school-admin/lideres/${liderId}/aprobar-perfil`, {
+        method: 'PATCH'
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        showNotification('success', 'Perfil aprobado exitosamente');
+        cargarDatos();
+      } else {
+        showNotification('error', data.error || 'Error al aprobar perfil');
+      }
+    } catch (error) {
+      console.error('Error aprobando perfil:', error);
+      showNotification('error', 'Error al aprobar perfil');
+    }
+  };
+
+  const rechazarPerfilLider = async (liderId: number, feedback: string) => {
+    try {
+      const res = await fetch(`/api/school-admin/lideres/${liderId}/aprobar-perfil`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feedback })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        showNotification('success', 'Perfil rechazado, se notificó al líder');
+        cargarDatos();
+      } else {
+        showNotification('error', data.error || 'Error al rechazar perfil');
+      }
+    } catch (error) {
+      console.error('Error rechazando perfil:', error);
+      showNotification('error', 'Error al rechazar perfil');
     }
   };
 
@@ -294,35 +338,59 @@ export default function LideresPage() {
                         <h3 className="text-xl font-bold text-white group-hover:text-purple-300 transition-colors">{lider.nombre}</h3>
                         <p className="text-sm text-slate-400">{lider.email}</p>
                       </div>
-                      <div className="flex gap-2 items-start">
-                        {lider.mentorMarketplaceApproved ? (
+                      <div className="flex gap-2 items-start flex-wrap">
+                        {/* Estado de aprobación del perfil */}
+                        {lider.profileApprovalStatus === 'PENDING' ? (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => aprobarPerfilLider(lider.id)}
+                              className="px-4 py-2 bg-green-500/30 text-green-300 text-xs font-black rounded-xl border-2 border-green-500/50 shadow-lg shadow-green-500/20 hover:bg-green-500/50 transition-all hover:scale-105"
+                            >
+                              ✓ APROBAR PERFIL
+                            </button>
+                            <button
+                              onClick={() => {
+                                const feedback = prompt('Razón del rechazo (opcional):');
+                                if (feedback !== null) rechazarPerfilLider(lider.id, feedback);
+                              }}
+                              className="px-4 py-2 bg-red-500/30 text-red-300 text-xs font-black rounded-xl border-2 border-red-500/50 shadow-lg shadow-red-500/20 hover:bg-red-500/50 transition-all hover:scale-105"
+                            >
+                              ✗ RECHAZAR
+                            </button>
+                          </div>
+                        ) : lider.profileApprovalStatus === 'APPROVED' ? (
                           <span className="px-4 py-2 bg-emerald-500/30 text-emerald-300 text-xs font-black rounded-xl border-2 border-emerald-500/50 shadow-lg shadow-emerald-500/20">
-                            ✓ APROBADO
+                            ✓ PERFIL APROBADO
+                          </span>
+                        ) : lider.profileApprovalStatus === 'REJECTED' ? (
+                          <span className="px-4 py-2 bg-red-500/30 text-red-300 text-xs font-black rounded-xl border-2 border-red-500/50 shadow-lg shadow-red-500/20">
+                            ✗ PERFIL RECHAZADO
+                          </span>
+                        ) : !lider.perfilCompleto ? (
+                          <span className="px-4 py-2 bg-orange-500/30 text-orange-300 text-xs font-black rounded-xl border-2 border-orange-500/50 shadow-lg shadow-orange-500/20">
+                            ⚠️ PERFIL INCOMPLETO
                           </span>
                         ) : (
-                          <>
-                            {!lider.perfilCompleto ? (
-                              <div className="flex flex-col gap-1.5">
-                                <span className="px-4 py-2 bg-red-500/30 text-red-300 text-xs font-black rounded-xl border-2 border-red-500/50 shadow-lg shadow-red-500/20">
-                                  ⚠️ PERFIL INCOMPLETO
-                                </span>
-                                <Link
-                                  href={`/dashboard/mentor-profile/${lider.id}`}
-                                  className="text-[10px] text-blue-400 hover:text-blue-300 underline text-center transition-colors"
-                                >
-                                  Ver perfil →
-                                </Link>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => aprobarLider(lider.id)}
-                                className="px-4 py-2 bg-yellow-500/30 text-yellow-300 text-xs font-black rounded-xl border-2 border-yellow-500/50 shadow-lg shadow-yellow-500/20 hover:bg-yellow-500/50 transition-all hover:scale-105"
-                              >
-                                ⏳ APROBAR
-                              </button>
-                            )}
-                          </>
+                          <span className="px-4 py-2 bg-gray-500/30 text-gray-300 text-xs font-black rounded-xl border-2 border-gray-500/50 shadow-lg shadow-gray-500/20">
+                            📝 NO ENVIADO
+                          </span>
                         )}
+
+                        {/* Estado de marketplace (separado) */}
+                        {lider.mentorMarketplaceApproved ? (
+                          <span className="px-4 py-2 bg-purple-500/30 text-purple-300 text-xs font-black rounded-xl border-2 border-purple-500/50 shadow-lg shadow-purple-500/20">
+                            🏪 MARKETPLACE
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => aprobarLider(lider.id)}
+                            className="px-4 py-2 bg-purple-500/30 text-purple-300 text-xs font-black rounded-xl border-2 border-purple-500/50 shadow-lg shadow-purple-500/20 hover:bg-purple-500/50 transition-all hover:scale-105"
+                            disabled={lider.profileApprovalStatus !== 'APPROVED'}
+                          >
+                            🏪 APROBAR
+                          </button>
+                        )}
+
                         {lider.isActive ? (
                           <span className="px-4 py-2 bg-green-500/30 text-green-300 text-xs font-black rounded-xl border-2 border-green-500/50 shadow-lg shadow-green-500/20">
                             🟢 ACTIVO

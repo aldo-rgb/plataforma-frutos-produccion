@@ -19,13 +19,8 @@ export async function POST() {
       );
     }
 
-    // Verificar que sea MENTOR
-    if (session.user.rol !== 'MENTOR' && session.user.rol !== 'LIDER') {
-      return NextResponse.json(
-        { error: 'Solo mentores pueden usar esta función' },
-        { status: 403 }
-      );
-    }
+    // Permitir acceso a cualquier usuario autenticado
+    // (útil para crear perfiles antes de que la sesión se actualice)
 
     return NextResponse.json({
       success: true,

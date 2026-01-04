@@ -6,10 +6,12 @@ import { es } from 'date-fns/locale';
 import SmartTask from '@/components/dashboard/SmartTask';
 import SpecialMissionTask from '@/components/dashboard/SpecialMissionTask';
 import EvidenceModal from '@/components/dashboard/EvidenceModal';
+import PersonalTaskModal from '@/components/dashboard/PersonalTaskModal';
+import PersonalTaskCard from '@/components/dashboard/PersonalTaskCard';
 import DashboardCalendarHeader from '@/components/dashboard/DashboardCalendarHeader';
 import UserLevelBadge from '@/components/dashboard/UserLevelBadge';
 import UpcomingCallCard from '@/components/dashboard/UpcomingCallCard';
-import { ChevronLeft, ChevronRight, Calendar, Sparkles, TrendingUp, Check, Zap, Phone } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Sparkles, TrendingUp, Check, Zap, Phone, Plus } from 'lucide-react';
 
 interface Task {
   id: string | number; // Puede ser number (carta) o string (admin)
@@ -70,10 +72,22 @@ interface UpcomingCall {
   weekNumber?: number;
 }
 
+interface PersonalTask {
+  id: number;
+  titulo: string;
+  descripcion: string | null;
+  dueDate: Date;
+  status: 'PENDING' | 'COMPLETED';
+  completedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export default function TodayPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [tasks, setTasks] = useState<Task[]>([]); // Tareas de HOY
   const [tareasRetrasadas, setTareasRetrasadas] = useState<Task[]>([]); // Tareas de días anteriores
+  const [personalTasks, setPersonalTasks] = useState<PersonalTask[]>([]); // Tareas personales
   const [upcomingCalls, setUpcomingCalls] = useState<UpcomingCall[]>([]);
   const [stats, setStats] = useState<Stats>({
     total: 0,
@@ -89,11 +103,31 @@ export default function TodayPage() {
     isOpen: boolean;
     task: Task | null;
   }>({ isOpen: false, task: null });
+  const [personalTaskModal, setPersonalTaskModal] = useState(false);
 
   useEffect(() => {
     fetchTasks();
     fetchUpcomingCalls();
+    fetchPersonalTasks();
   }, [selectedDate]);
+
+  const fetchPersonalTasks = async () => {
+    try {
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const response = await fetch(`/api/personal-tasks?date=${dateStr}`);
+      
+      if (!response.ok) {
+        console.error('Error fetching personal tasks:', response.status);
+        return;
+      }
+      
+      const data = await response.json();
+      console.log('📝 Tareas personales:', data.personalTasks);
+      setPersonalTasks(data.personalTasks || []);
+    } catch (error) {
+      console.error('Error fetching personal tasks:', error);
+    }
+  };
 
   const fetchTasks = async () => {
     setLoading(true);
@@ -221,7 +255,10 @@ export default function TodayPage() {
         evidenceUrl: task.evidenciaUrl,
         evidenceStatus: task.evidenceStatus as any,
         feedbackMentor: task.feedbackMentor,
-        tipo: 'CARTA'
+        tipo: 'CARTA',
+        // Agregar estos campos para que handleUploadEvidence pueda encontrar la tarea
+        taskId: task.taskId,
+        submissionId: task.submissionId
       };
     } else {
       // Tareas extraordinarias y eventos (misiones especiales)
@@ -242,7 +279,10 @@ export default function TodayPage() {
         tipo: task.tipo,
         deadline: task.deadline,
         horaLimite: task.horaLimite,
-        pointsReward: task.pointsReward
+        pointsReward: task.pointsReward,
+        // Agregar estos campos para que handleUploadEvidence pueda encontrar la tarea
+        taskId: task.taskId,
+        submissionId: task.submissionId
       };
     }
   };
@@ -280,20 +320,57 @@ export default function TodayPage() {
   };
 
   const handleUploadEvidence = (taskId: number, accionId: number, metaId: number) => {
+    console.log('🔍 handleUploadEvidence llamado con:', { taskId, accionId, metaId });
+    
+    // Buscar la tarea original usando taskId o submissionId
     const task = tasks.find(t => {
-      if (t.tipo === 'CARTA') {
-        return t.taskId === taskId;
-      } else {
-        return t.submissionId === taskId;
+      // Para tareas de carta, comparar con taskId
+      if (t.taskId && t.taskId === taskId) {
+        return true;
       }
+      // Para tareas extraordinarias/eventos, comparar con submissionId
+      if (t.submissionId && t.submissionId === taskId) {
+        return true;
+      }
+      return false;
     });
     
-    if (task) {
-      setEvidenceModal({
-        isOpen: true,
-        task: task
-      });
+    console.log('🔍 Tarea encontrada:', task);
+    
+    if (!task) {
+      console.error('❌ No se encontró la tarea');
+      console.error('❌ taskId buscado:', taskId);
+      console.error('❌ Tasks disponibles:', tasks.map(t => ({
+        id: t.id,
+        taskId: t.taskId,
+        submissionId: t.submissionId,
+        tipo: t.tipo,
+        texto: t.texto
+      })));
+      alert('No se pudo encontrar la tarea. Por favor recarga la página.');
+      return;
     }
+    
+    // Adaptar la tarea al formato que espera el modal
+    const modalTask = {
+      id: task.taskId || task.submissionId || 0,
+      taskId: task.taskId,
+      submissionId: task.submissionId,
+      accionId: task.accionId || accionId || 0,
+      metaId: task.metaId || metaId || 0,
+      title: task.texto,
+      areaType: task.area,
+      tipo: task.tipo, // Importante: incluir el tipo para saber qué endpoint usar
+      evidenceUrl: task.evidenciaUrl || null,
+      evidenceStatus: task.evidenceStatus as 'NONE' | 'PENDING' | 'APPROVED' | 'REJECTED' || 'NONE'
+    };
+    
+    console.log('✅ Abriendo modal con:', modalTask);
+    
+    setEvidenceModal({
+      isOpen: true,
+      task: modalTask as any
+    });
   };
 
   const handleSubmitEvidence = async (file: File, description: string) => {
@@ -431,11 +508,20 @@ export default function TodayPage() {
       {/* HEADER ESTILO THINGS */}
       <div className="border-b border-gray-800 bg-[#0f111a] sticky top-0 z-30">
         <div className="max-w-4xl mx-auto px-6 py-4">
-          <DashboardCalendarHeader
-            selectedDate={selectedDate}
-            onDateSelect={setSelectedDate}
-            stats={stats}
-          />
+          <div className="flex items-center justify-between mb-4">
+            <DashboardCalendarHeader
+              selectedDate={selectedDate}
+              onDateSelect={setSelectedDate}
+              stats={stats}
+            />
+            <button
+              onClick={() => setPersonalTaskModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 rounded-lg font-medium transition-all shadow-md hover:shadow-lg"
+            >
+              <Plus size={18} />
+              Nueva Tarea Personal
+            </button>
+          </div>
         </div>
       </div>
 
@@ -555,14 +641,53 @@ export default function TodayPage() {
               </>
             )}
 
-            {/* Tareas pendientes normales - TODAS LAS DE HOY */}
-            {tasks.some(t => t.tipo === 'CARTA' && t.status === 'PENDING') && (
+            {/* Tareas pendientes normales - SOLO SIN EVIDENCIA */}
+            {tasks.some(t => t.tipo === 'CARTA' && t.status === 'PENDING' && t.evidenceStatus !== 'PENDING') && (
               <>
                 <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-gray-500 font-bold mt-6 mb-3">
                   Pendientes de Hoy
                 </div>
                 {tasks
-                  .filter(t => t.tipo === 'CARTA' && t.status === 'PENDING')
+                  .filter(t => t.tipo === 'CARTA' && t.status === 'PENDING' && t.evidenceStatus !== 'PENDING')
+                  .map(task => (
+                    <SmartTask 
+                      key={task.id} 
+                      task={adaptTaskForSmartTask(task)} 
+                      onUpdate={handleTaskUpdate}
+                      onUploadEvidence={handleUploadEvidence}
+                    />
+                  ))}
+              </>
+            )}
+
+            {/* Tareas Personales */}
+            {personalTasks.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-purple-400 font-bold mt-6 mb-3">
+                  <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                  Tareas Personales
+                </div>
+                <div className="space-y-3">
+                  {personalTasks.map(task => (
+                    <PersonalTaskCard 
+                      key={task.id} 
+                      task={task}
+                      onTaskUpdated={fetchPersonalTasks}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Tareas en revisión (con evidencia pendiente) */}
+            {tasks.some(t => t.tipo === 'CARTA' && t.evidenceStatus === 'PENDING') && (
+              <>
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-blue-400 font-bold mt-6 mb-3">
+                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                  En Revisión por Mentor
+                </div>
+                {tasks
+                  .filter(t => t.tipo === 'CARTA' && t.evidenceStatus === 'PENDING')
                   .map(task => (
                     <SmartTask 
                       key={task.id} 
@@ -603,6 +728,14 @@ export default function TodayPage() {
         onClose={() => setEvidenceModal({ isOpen: false, task: null })}
         task={evidenceModal.task}
         onSubmit={handleSubmitEvidence}
+      />
+
+      {/* Modal de Tarea Personal */}
+      <PersonalTaskModal
+        isOpen={personalTaskModal}
+        onClose={() => setPersonalTaskModal(false)}
+        onTaskCreated={fetchPersonalTasks}
+        initialDate={format(selectedDate, 'yyyy-MM-dd')}
       />
     </div>
   );

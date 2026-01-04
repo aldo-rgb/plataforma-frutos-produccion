@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { User, Shield, Bell } from 'lucide-react';
+import { User, Shield, Bell, GraduationCap } from 'lucide-react';
 import { PrivacySettings } from '@/components/social/PrivacySettings';
 import Link from 'next/link';
 
@@ -57,7 +57,7 @@ export default function ConfiguracionPage() {
         </div>
 
         {/* Content */}
-        <div className="bg-slate-900 rounded-xl border border-slate-800 p-6">
+        <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 mb-6">
           {activeTab === 'privacy' && (
             <div>
               <PrivacySettings />
@@ -70,6 +70,30 @@ export default function ConfiguracionPage() {
               <p className="text-slate-400">Configuración de notificaciones próximamente</p>
             </div>
           )}
+        </div>
+
+        {/* Configuración Avanzada */}
+        <div className="bg-gradient-to-br from-purple-900/20 to-indigo-900/20 rounded-xl border border-purple-500/30 p-6">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-purple-500/20 rounded-lg">
+              <GraduationCap className="w-6 h-6 text-purple-400" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-white mb-1">Configuración Avanzada</h3>
+              <p className="text-sm text-slate-400 mb-4">Solo para mentores y entrenadores</p>
+              <p className="text-slate-300 mb-4">
+                ¿Tienes certificado de entrenador en transformacion cuántica y te gustaría convertirte en mentor para guiar a otros en su camino de transformación? 
+                Aplica ahora y comparte tu experiencia con la comunidad.
+              </p>
+              <Link
+                href="/dashboard/solicitar-mentor"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-lg transition-all shadow-lg shadow-purple-500/20"
+              >
+                <GraduationCap className="w-5 h-5" />
+                Solicitar ser Mentor
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>

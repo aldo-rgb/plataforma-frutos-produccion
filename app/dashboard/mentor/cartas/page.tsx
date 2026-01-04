@@ -18,6 +18,10 @@ interface CartaPendiente {
       id: number;
       name: string;
       endDate: string;
+      organization: {
+        id: number;
+        name: string;
+      } | null;
     } | null;
   };
   areas: Array<{
@@ -209,9 +213,16 @@ export default function CartasListPage() {
 
               {/* Vision Badge */}
               {carta.usuario.vision ? (
-                <span className="inline-block mb-3 px-3 py-1 bg-purple-900/30 border border-purple-600 text-purple-300 text-sm rounded-full">
-                  🌟 {carta.usuario.vision.name}
-                </span>
+                <div className="mb-3 space-y-2">
+                  <span className="inline-block px-3 py-1 bg-purple-900/30 border border-purple-600 text-purple-300 text-sm rounded-full">
+                    🌟 {carta.usuario.vision.name}
+                  </span>
+                  {carta.usuario.vision.organization && (
+                    <span className="inline-block ml-2 px-3 py-1 bg-blue-900/30 border border-blue-600 text-blue-300 text-sm rounded-full">
+                      🏢 {carta.usuario.vision.organization.name}
+                    </span>
+                  )}
+                </div>
               ) : (
                 <span className="inline-block mb-3 px-3 py-1 bg-gray-900/30 border border-gray-600 text-gray-300 text-sm rounded-full">
                   🐺 Ciclo Personal

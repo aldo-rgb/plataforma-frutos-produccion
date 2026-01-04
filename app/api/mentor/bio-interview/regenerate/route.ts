@@ -20,12 +20,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (session.user.rol !== 'MENTOR' && session.user.rol !== 'LIDER') {
-      return NextResponse.json(
-        { error: 'Solo mentores pueden usar esta función' },
-        { status: 403 }
-      );
-    }
+    // Permitir acceso a cualquier usuario autenticado
 
     const { context, tone } = await request.json();
     
@@ -49,10 +44,23 @@ export async function POST(request: Request) {
     // Regenerar bio
     const result = await regenerateBio(interviewContext, tone);
     
-    // Actualizar en BD
-    await prisma.perfilMentor.update({
+    // Actualizar en BD usando upsert (crear o actualizar)
+    await prisma.perfilMentor.upsert({
       where: { usuarioId: session.user.id },
-      data: {
+      create: {
+        usuarioId: session.user.id,
+        especialidad: result.expertiseTags[0] || 'Mentoría General', // Campo requerido
+        heroJourneyBio: result.heroJourneyBio,
+        promiseStatement: result.promiseStatement,
+        tagline: result.tagline,
+        methodologyStyle: result.detectedStyle,
+        expertiseTags: result.expertiseTags,
+        aiGeneratedBio: true,
+        lastAiInterviewAt: new Date(),
+        biografiaCompleta: result.heroJourneyBio,
+        biografia: result.promiseStatement,
+      },
+      update: {
         heroJourneyBio: result.heroJourneyBio,
         promiseStatement: result.promiseStatement,
         tagline: result.tagline,

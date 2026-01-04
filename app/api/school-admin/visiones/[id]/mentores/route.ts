@@ -32,7 +32,45 @@ export async function GET(
       );
     }
 
-    // Obtener mentores asignados a esta visión
+    // 💳 Obtener mentores CONTRATADOS (con paquetes pagados COMPLETED)
+    const paquetesCompletados = await prisma.mentorPackageOrder.findMany({
+      where: {
+        visionId,
+        status: 'COMPLETED'
+      },
+      include: {
+        Mentor: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+            imagen: true,
+            isActive: true,
+            rol: true,
+            PerfilMentor: {
+              select: {
+                id: true,
+                precioDisciplina: true,
+                precioBase: true,
+                calificacionPromedio: true,
+                totalResenas: true,
+                nivel: true,
+                maxDisciplineClients: true,
+              }
+            },
+            CallAvailability: {
+              where: {
+                type: 'DISCIPLINE',
+                isActive: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Obtener mentores asignados a esta visión (que ya están en VisionMentor)
     const mentoresAsignados = await prisma.visionMentor.findMany({
       where: { visionId },
       include: {
@@ -72,10 +110,72 @@ export async function GET(
       );
     });
 
-    // Obtener mentores activos (sin importar organización)
-    const mentoresActivos = await prisma.usuario.findMany({
+    // 💼 Extraer mentores únicos de los paquetes completados
+    const mentoresContratadosMap = new Map();
+    paquetesCompletados.forEach(paquete => {
+      if (!mentoresContratadosMap.has(paquete.mentorId)) {
+        mentoresContratadosMap.set(paquete.mentorId, {
+          ...paquete.Mentor,
+          paquetesComprados: 1,
+          totalLlamadas: paquete.cantidad
+        });
+      } else {
+        const existing = mentoresContratadosMap.get(paquete.mentorId);
+        existing.paquetesComprados += 1;
+        existing.totalLlamadas += paquete.cantidad;
+      }
+    });
+
+    console.log('📦 Paquetes completados encontrados:', paquetesCompletados.length);
+    console.log('👥 Mentores únicos en paquetes:', mentoresContratadosMap.size);
+
+    // Convertir a array - NO FILTRAR por horarios para mentores contratados (ya pagados)
+    const mentoresContratados = Array.from(mentoresContratadosMap.values());
+    
+    console.log('✅ Mentores contratados (sin filtrar horarios):', mentoresContratados.length);
+
+    // 📊 Calcular espacios disponibles para cada mentor CONTRATADO
+    const mentoresConEspacios = await Promise.all(
+      mentoresContratados.map(async (mentor: any) => {
+        // El PerfilMentor ya está incluido en la consulta
+        const maxClients = mentor.PerfilMentor?.maxDisciplineClients || 10;
+
+        // Contar clientes actuales (enrollments activos)
+        const currentClientsCount = await prisma.programEnrollment.count({
+          where: {
+            mentorId: mentor.id,
+            status: 'ACTIVE',
+          },
+        });
+
+        const availableSlots = Math.max(0, maxClients - currentClientsCount);
+
+        console.log(`📊 Mentor Contratado ${mentor.nombre}:`, {
+          maxClients,
+          currentClients: currentClientsCount,
+          availableSlots,
+          percentage: maxClients > 0 ? Math.round((currentClientsCount / maxClients) * 100) : 0,
+          paquetesComprados: mentor.paquetesComprados,
+          totalLlamadasCompradas: mentor.totalLlamadas
+        });
+
+        return {
+          ...mentor,
+          availabilityInfo: {
+            maxClients,
+            currentClients: currentClientsCount,
+            availableSlots,
+            percentage: maxClients > 0 ? Math.round((currentClientsCount / maxClients) * 100) : 0,
+          },
+        };
+      })
+    );
+
+    // 👤 Obtener mentores PRIVADOS (LIDER) de la organización
+    const mentoresPrivados = await prisma.usuario.findMany({
       where: {
-        rol: 'MENTOR',
+        organizationId: vision.organizationId,
+        rol: 'LIDER',
         isActive: true
       },
       select: {
@@ -94,6 +194,7 @@ export async function GET(
             calificacionPromedio: true,
             totalResenas: true,
             nivel: true,
+            maxDisciplineClients: true,
           }
         },
         CallAvailability: {
@@ -102,68 +203,71 @@ export async function GET(
             isActive: true
           }
         }
-      },
-      orderBy: { nombre: 'asc' }
+      }
     });
 
-    // Obtener líderes activos de la misma organización
-    const lideresActivos = await prisma.usuario.findMany({
-      where: {
-        rol: 'LIDER',
-        isActive: true,
-        organizationId: vision.organizationId
-      },
-      select: {
-        id: true,
-        nombre: true,
-        email: true,
-        imagen: true,
-        isActive: true,
-        rol: true,
-        accumulatedMissedCalls: true,
-        PerfilMentor: {
-          select: {
-            id: true,
-            precioDisciplina: true,
-            precioBase: true,
-            calificacionPromedio: true,
-            totalResenas: true,
-            nivel: true,
-          }
-        },
-        CallAvailability: {
-          where: {
-            type: 'DISCIPLINE',
-            isActive: true
-          }
-        }
-      },
-      orderBy: { nombre: 'asc' }
+    console.log('👤 Mentores PRIVADOS (LIDER) encontrados:', mentoresPrivados.length);
+    mentoresPrivados.forEach(m => {
+      console.log(`  - ${m.nombre} (${m.email}): ${m.CallAvailability.length} horarios DISCIPLINE`);
     });
 
-    // Combinar mentores y líderes
-    const todosDisponibles = [...mentoresActivos, ...lideresActivos];
-
-    // Filtrar solo usuarios con horarios de disciplina válidos en el rango 05:00-08:00
-    const mentoresConHorarios = todosDisponibles.filter((m: any) => {
-      return m.CallAvailability.some((ca: any) => 
+    // Filtrar mentores privados que tengan horarios válidos
+    const mentoresPrivadosConHorarios = mentoresPrivados.filter((m: any) => {
+      const tieneHorarios = m.CallAvailability && m.CallAvailability.length > 0;
+      const tieneHorariosValidos = tieneHorarios && m.CallAvailability.some((ca: any) => 
         esHorarioDisciplinaValido(ca.startTime, ca.endTime)
       );
+      console.log(`  🔍 Filtrando ${m.nombre}: tieneHorarios=${tieneHorarios}, tieneHorariosValidos=${tieneHorariosValidos}`);
+      return tieneHorariosValidos;
     });
+
+    console.log('✅ Mentores PRIVADOS con horarios válidos:', mentoresPrivadosConHorarios.length);
+
+    // Calcular espacios disponibles para mentores privados
+    const mentoresPrivadosConEspacios = await Promise.all(
+      mentoresPrivadosConHorarios.map(async (mentor: any) => {
+        const maxClients = mentor.PerfilMentor?.maxDisciplineClients || 10;
+        const currentClientsCount = await prisma.programEnrollment.count({
+          where: {
+            mentorId: mentor.id,
+            status: 'ACTIVE',
+          },
+        });
+
+        const availableSlots = Math.max(0, maxClients - currentClientsCount);
+
+        return {
+          ...mentor,
+          availabilityInfo: {
+            maxClients,
+            currentClients: currentClientsCount,
+            availableSlots,
+            percentage: maxClients > 0 ? Math.round((currentClientsCount / maxClients) * 100) : 0,
+          },
+        };
+      })
+    );
+
+    // Combinar mentores contratados y privados (sin duplicados)
+    const mentoresContratadosIds = new Set(mentoresConEspacios.map(m => m.id));
+    const mentoresPrivadosUnicos = mentoresPrivadosConEspacios.filter(
+      m => !mentoresContratadosIds.has(m.id)
+    );
+    const todosMentoresDisponibles = [...mentoresConEspacios, ...mentoresPrivadosUnicos];
 
     return NextResponse.json({
       mentoresAsignados: mentoresAsignadosConHorarios.map((vm: any) => ({
         id: vm.id,
         mentorId: vm.mentorId,
-        mentor: vm.Mentor,
+        mentor: vm.Usuario_VisionMentor_mentorIdToUsuario,
         tieneHorarios: true, // Siempre true porque ya filtramos
         createdAt: vm.createdAt,
         Usuario_VisionMentor_mentorIdToUsuario: {
-          ...vm.Mentor,
-          rol: vm.Mentor?.rol // Incluir rol del mentor
+          ...vm.Usuario_VisionMentor_mentorIdToUsuario,
+          rol: vm.Usuario_VisionMentor_mentorIdToUsuario?.rol // Incluir rol del mentor
         }
       })),
-      mentoresDisponibles: mentoresConHorarios.map(m => ({
+      mentoresDisponibles: todosMentoresDisponibles.map(m => ({
         id: m.id,
         nombre: m.nombre,
         email: m.email,
@@ -172,7 +276,8 @@ export async function GET(
         accumulatedMissedCalls: m.accumulatedMissedCalls || 0,
         PerfilMentor: m.PerfilMentor,
         tieneHorarios: true, // Siempre true porque ya filtramos
-        rol: m.rol // Incluir rol para identificar LIDERs
+        rol: m.rol, // Incluir rol para identificar LIDERs
+        availabilityInfo: m.availabilityInfo, // ⭐ Información de espacios disponibles
       }))
     });
 

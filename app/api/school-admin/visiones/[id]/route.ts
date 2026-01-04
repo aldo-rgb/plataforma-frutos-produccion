@@ -177,6 +177,7 @@ export async function GET(
             email: true,
             imagen: true,
             rol: true,
+            organizationId: true,
             PerfilMentor: {
               select: {
                 precioDisciplina: true,
@@ -190,6 +191,24 @@ export async function GET(
         createdAt: 'desc'
       }
     });
+
+    // Verificar cuáles tienen paquetes contratados
+    const mentoresIds = mentoresAsignados.map(m => m.mentorId);
+    const paquetesContratados = await prisma.mentorPackageOrder.findMany({
+      where: {
+        mentorId: { in: mentoresIds },
+        organizationId: user.organizationId,
+        status: 'COMPLETED'
+      },
+      select: {
+        mentorId: true
+      }
+    });
+
+    const mentoresConPaquete = new Set(paquetesContratados.map(p => p.mentorId));
+
+    console.log('👥 Mentores asignados a la visión:', mentoresAsignados.length);
+    console.log('📦 Mentores con paquetes contratados:', mentoresConPaquete.size);
 
     // Calcular semanas y costos del ciclo
     let cicloInfo = null;
@@ -208,12 +227,13 @@ export async function GET(
       };
     }
 
-    // Enriquecer mentores con cálculos de costo
+    // Enriquecer mentores con cálculos de costo y tipo
     const mentoresConCostos = mentoresAsignados.map(mentor => {
       const usuario = mentor.Usuario_VisionMentor_mentorIdToUsuario;
       const precioDisciplina = usuario?.PerfilMentor?.precioDisciplina || 0;
       const precioBase = usuario?.PerfilMentor?.precioBase || 0;
-      const esLider = usuario?.rol === 'LIDER' || usuario?.rol === 'COORDINADOR' || usuario?.rol === 'SCHOOL_ADMIN';
+      const esLider = usuario?.rol === 'LIDER' && usuario?.organizationId === user.organizationId;
+      const esMentorContratado = usuario?.rol === 'MENTOR' && mentoresConPaquete.has(mentor.mentorId);
       
       let costoTotal = 0;
       if (!esLider && cicloInfo) {
@@ -225,6 +245,7 @@ export async function GET(
         precioDisciplina,
         precioBase,
         esLider,
+        esContratado: esMentorContratado,
         costoTotal: esLider ? 0 : costoTotal
       };
     });

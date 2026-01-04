@@ -45,7 +45,9 @@ export async function GET(request: Request) {
             enlaceVideoLlamada: true,
             tipoVideoLlamada: true,
             maxDisciplineClients: true,
-            acceptingNewClients: true
+            acceptingNewClients: true,
+            profileApprovalStatus: true,
+            profileSubmittedAt: true
           }
         }
       }

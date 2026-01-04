@@ -190,9 +190,23 @@ export default function AdminMentoresPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-slate-400 text-sm">Total Mentores</p>
-              <p className="text-3xl font-bold text-white">{mentores.length}</p>
+              <p className="text-3xl font-bold text-white">
+                {mentores.filter(m => m.tipoPerfil === 'MENTOR_ACTIVO').length}
+              </p>
             </div>
             <Users className="text-purple-400" size={32} />
+          </div>
+        </div>
+
+        <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-yellow-400 text-sm">Solicitudes Pendientes</p>
+              <p className="text-3xl font-bold text-yellow-400">
+                {mentores.filter(m => m.tipoPerfil === 'SOLICITUD_PENDIENTE').length}
+              </p>
+            </div>
+            <Users className="text-yellow-400" size={32} />
           </div>
         </div>
 
@@ -201,7 +215,7 @@ export default function AdminMentoresPage() {
             <div>
               <p className="text-slate-400 text-sm">Activos</p>
               <p className="text-3xl font-bold text-green-400">
-                {mentores.filter((m) => m.usuario.isActive).length}
+                {mentores.filter((m) => m.usuario.isActive && m.tipoPerfil === 'MENTOR_ACTIVO').length}
               </p>
             </div>
             <Eye className="text-green-400" size={32} />
@@ -281,19 +295,36 @@ export default function AdminMentoresPage() {
                   mentores.map((mentor) => (
                     <tr
                       key={mentor.id}
-                      className="hover:bg-slate-700/30 transition-colors"
+                      className={`hover:bg-slate-700/30 transition-colors ${
+                        mentor.tipoPerfil === 'SOLICITUD_PENDIENTE' 
+                          ? 'bg-yellow-900/10 border-l-4 border-yellow-500' 
+                          : ''
+                      }`}
                     >
                       {/* Mentor (Foto + Nombre) */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
+                          {mentor.tipoPerfil === 'SOLICITUD_PENDIENTE' && (
+                            <div className="absolute -ml-3">
+                              <span className="flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+                              </span>
+                            </div>
+                          )}
                           <img
                             src={mentor.usuario.profileImage || mentor.usuario.imagen || '/default-avatar.png'}
                             alt={mentor.usuario.nombre}
                             className="w-12 h-12 rounded-full object-cover border-2 border-slate-600"
                           />
                           <div>
-                            <p className="text-white font-semibold">
+                            <p className="text-white font-semibold flex items-center gap-2">
                               {mentor.usuario.nombre}
+                              {mentor.tipoPerfil === 'SOLICITUD_PENDIENTE' && (
+                                <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full border border-yellow-500/30">
+                                  SOLICITUD PENDIENTE
+                                </span>
+                              )}
                             </p>
                             <p className="text-slate-400 text-sm">
                               {mentor.titulo || 'Sin título'}
@@ -392,16 +423,40 @@ export default function AdminMentoresPage() {
                         </div>
                       </td>
 
-                      {/* Acción: Ver Perfil */}
+                      {/* Acción: Ver Perfil o Aprobar/Rechazar */}
                       <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <a
-                          href={`/dashboard/admin/mentores/${mentor.id}`}
-                          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all font-semibold"
-                          title="Ver perfil completo"
-                        >
-                          <Eye size={16} />
-                          Ver Perfil
-                        </a>
+                        {mentor.tipoPerfil === 'SOLICITUD_PENDIENTE' ? (
+                          <div className="flex items-center gap-2 justify-center">
+                            {mentor.applicationId ? (
+                              <a
+                                href={`/dashboard/admin/mentor-applications?id=${mentor.applicationId}`}
+                                className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-all font-semibold"
+                                title="Revisar y aprobar solicitud con pago"
+                              >
+                                <Eye size={16} />
+                                Revisar Solicitud
+                              </a>
+                            ) : (
+                              <a
+                                href={`/dashboard/admin/mentores/${mentor.id}`}
+                                className="inline-flex items-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg transition-all font-semibold"
+                                title="Activar mentor creado directamente"
+                              >
+                                <Eye size={16} />
+                                Activar Mentor
+                              </a>
+                            )}
+                          </div>
+                        ) : (
+                          <a
+                            href={`/dashboard/admin/mentores/${mentor.id}`}
+                            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all font-semibold"
+                            title="Ver perfil completo"
+                          >
+                            <Eye size={16} />
+                            Ver Perfil
+                          </a>
+                        )}
                       </td>
                     </tr>
                   ))

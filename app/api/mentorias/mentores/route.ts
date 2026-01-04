@@ -12,10 +12,15 @@ export async function GET() {
 
     // Obtener todos los perfiles de mentores disponibles con sus servicios
     // EXCLUIR líderes (rol LIDER) - solo mostrar mentores reales
+    // SOLO mentores con membresía activa y no expirada
     const mentores = await prisma.perfilMentor.findMany({
       where: {
         disponible: true,
         acceptingNewClients: true, // Solo mentores aceptando nuevos clientes
+        membershipActive: true, // NUEVO: Solo mentores con membresía activa
+        membershipExpiryDate: {
+          gte: new Date() // NUEVO: Membresía no expirada
+        },
         Usuario: {
           rol: 'MENTOR', // Solo mentores, NO incluir líderes
           isActive: true // Solo usuarios activos

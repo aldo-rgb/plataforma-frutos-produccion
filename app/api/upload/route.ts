@@ -28,10 +28,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Validar tipo de archivo
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const allowedTypes = [
+      'image/jpeg', 
+      'image/jpg', 
+      'image/png', 
+      'image/gif', 
+      'image/webp',
+      'application/pdf' // Agregar soporte para PDFs
+    ];
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
-        { success: false, error: 'Tipo de archivo no permitido. Solo imágenes.' },
+        { success: false, error: 'Tipo de archivo no permitido. Solo imágenes y PDFs.' },
         { status: 400 }
       );
     }

@@ -73,7 +73,7 @@ model AreaConfig {
   areaKey   String
   enabled   Boolean  @default(true)
   createdAt DateTime @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
   Usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@unique([usuarioId, areaKey])
@@ -306,6 +306,7 @@ model CartaFrutos {
   autorizadoMentor                 Boolean     @default(false)
   autorizadoCoord                  Boolean     @default(false)
   autorizadoPorId                  Int?
+  approvedAt                       DateTime?
   fechaActualizacion               DateTime
   fechaCreacion                    DateTime    @default(now())
   finanzasDeclaracion              String?
@@ -427,7 +428,7 @@ model DisponibilidadSemanal {
   horaFin        String
   activo         Boolean      @default(true)
   createdAt      DateTime     @default(now())
-  updatedAt      DateTime
+  updatedAt      DateTime     @updatedAt
   PerfilMentor   PerfilMentor @relation(fields: [perfilMentorId], references: [id], onDelete: Cascade)
 
   @@index([activo])
@@ -485,7 +486,7 @@ model ExcepcionDisponibilidad {
   motivo         String
   descripcion    String?
   createdAt      DateTime     @default(now())
-  updatedAt      DateTime
+  updatedAt      DateTime     @updatedAt
   PerfilMentor   PerfilMentor @relation(fields: [perfilMentorId], references: [id], onDelete: Cascade)
 
   @@index([fechaFin])
@@ -707,6 +708,7 @@ model Organization {
   OrganizationWallet                                    OrganizationWallet?
   InstitutionalOrder                                    InstitutionalOrder[]
   MentorPackageOrder                                    MentorPackageOrder[]
+  RefundRequest                                         RefundRequest[]      @relation("RefundRequestOrganization")
 
   @@index([slug])
   @@index([status])
@@ -860,12 +862,30 @@ model PerfilMentor {
   promedioXPPorMentorado    Float                     @default(0)
   puntosTotales             Int                       @default(0)
   xpTotalMentorados         Int                       @default(0)
+  
+  // Sistema de Membresía Anual
+  membershipActive          Boolean                   @default(false)
+  membershipStartDate       DateTime?
+  membershipExpiryDate      DateTime?
+  membershipApprovedAt      DateTime?
+  membershipApprovedBy      Int?
+  autoRenewalEnabled        Boolean                   @default(true)
+  stripeSubscriptionId      String?
+  stripeCustomerId          String?
+  lastRenewalAttempt        DateTime?
+  renewalFailureReason      String?
+  
+  // Estado de aprobación de perfil para LIDER
+  profileApprovalStatus     ProfileApprovalStatus     @default(DRAFT)
+  profileSubmittedAt        DateTime?
+  
   DisponibilidadSemanal     DisponibilidadSemanal[]
   ExcepcionDisponibilidad   ExcepcionDisponibilidad[]
   Usuario                   Usuario                   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   ResenasMentoria           ResenasMentoria[]
   ServicioMentoria          ServicioMentoria[]
   SolicitudMentoria         SolicitudMentoria[]
+  MentorMembershipRenewal   MentorMembershipRenewal[]
 }
 
 model PermisoMenu {
@@ -1276,6 +1296,23 @@ model TaskSubmission {
   @@index([usuarioId])
 }
 
+model PersonalTask {
+  id          Int        @id @default(autoincrement())
+  usuarioId   Int
+  titulo      String
+  descripcion String?
+  dueDate     DateTime   @db.Date
+  status      TaskStatus @default(PENDING)
+  completedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  Usuario     Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@index([status])
+  @@index([dueDate])
+}
+
 model Transaccion {
   id                Int                 @id @default(autoincrement())
   montoPuntos       Int?
@@ -1450,6 +1487,7 @@ model Usuario {
   Notification                                                        Notification[]
   Organization_Organization_schoolAdminIdToUsuario                    Organization?             @relation("Organization_schoolAdminIdToUsuario")
   PerfilMentor                                                        PerfilMentor?
+  PersonalTask                                                        PersonalTask[]
   PhoenixSession                                                      PhoenixSession[]
   ProgramEnrollment_ProgramEnrollment_mentorIdToUsuario               ProgramEnrollment[]       @relation("ProgramEnrollment_mentorIdToUsuario")
   ProgramEnrollment_ProgramEnrollment_userIdToUsuario                 ProgramEnrollment[]       @relation("ProgramEnrollment_userIdToUsuario")
@@ -1494,6 +1532,12 @@ model Usuario {
   MentorPackageOrder_MentorPackageOrder_mentorIdToUsuario             MentorPackageOrder[]      @relation("MentorPackages")
   CommissionLedger_CommissionLedger_mentorIdToUsuario                 CommissionLedger[]        @relation("CommissionMentor")
   CommissionLedger_CommissionLedger_studentIdToUsuario                CommissionLedger[]        @relation("CommissionStudent")
+  MentorApplication                                                   MentorApplication?
+  ApplicationsReviewed                                                MentorApplication[]       @relation("ApplicationReviewer")
+  MentorPayrollItem                                                   MentorPayrollItem[]       @relation("MentorPayrollItems")
+  RefundRequest_RefundRequestStudent                                  RefundRequest[]           @relation("RefundRequestStudent")
+  RefundRequest_RefundRequestRequestedBy                              RefundRequest[]           @relation("RefundRequestRequestedBy")
+  RefundRequest_RefundRequestProcessedBy                              RefundRequest[]           @relation("RefundRequestProcessedBy")
 
   @@index([communityOrganizationId])
 }
@@ -1528,6 +1572,7 @@ model Vision {
   VisionParticipante         VisionParticipante[]
   VisionEscrow               VisionEscrow?
   MentorPackageOrder         MentorPackageOrder[]
+  RefundRequest              RefundRequest[]      @relation("RefundRequestVision")
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -2150,6 +2195,67 @@ model CommissionLedger {
   @@index([payoutBatchId])
 }
 
+model MentorApplication {
+  id                       Int                    @id @default(autoincrement())
+  usuarioId                Int                    @unique
+  status                   ApplicationStatus      @default(PENDING)
+  
+  // Información Básica
+  titulo                   String
+  especialidad             String
+  especialidadesSecundarias String[]              @default([])
+  experienciaAnios         Int
+  
+  // Biografías
+  biografiaCorta           String?
+  biografiaCompleta        String
+  
+  // Metodología y Enfoque
+  tagline                  String?
+  promiseStatement         String?
+  methodologyStyle         MentorStyle?          @default(BALANCED)
+  idealClientDescription   String?
+  
+  // Disponibilidad
+  horarioInicio            String?               @default("09:00")
+  horarioFin               String?               @default("18:00")
+  diasDisponibles          String[]              @default([])
+  
+  // Experiencia y Logros
+  logros                   String[]              @default([])
+  expertiseTags            String[]              @default([])
+  
+  // Video de presentación
+  videoIntroUrl            String?
+  
+  // Documentos de soporte
+  documentosUrls           String[]              @default([])
+  
+  // Pago
+  paymentIntentId          String?
+  paymentStatus            String?               @default("PENDING")
+  amountPaid               Float?
+  
+  // Revisión
+  reviewedBy               Int?
+  reviewedAt               DateTime?
+  rejectionReason          String?
+  
+  // Timestamps
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
+  
+  Usuario                  Usuario               @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  ReviewedByUser           Usuario?              @relation("ApplicationReviewer", fields: [reviewedBy], references: [id])
+}
+
+enum ApplicationStatus {
+  DRAFT      // Borrador (no pagado)
+  PENDING    // Pendiente de revisión (pagado)
+  APPROVED   // Aprobado - usuario convertido a mentor
+  REJECTED   // Rechazado
+}
+
 enum CommissionSource {
   MENTORSHIP_SESSION // Sesión 1:1 de mentoría
   DISCIPLINE_CALL    // Llamada de disciplina (15 min)
@@ -2162,4 +2268,127 @@ enum CommissionStatus {
   CANCELLED  // Cancelado (sesión no realizada)
   DISPUTED   // En disputa
   REFUNDED   // Reembolsado
+}
+
+model MentorMembershipRenewal {
+  id                    Int          @id @default(autoincrement())
+  mentorId              Int
+  renewalDate           DateTime
+  expiryDate            DateTime
+  amount                Float
+  stripePaymentIntentId String?
+  status                String       @default("ACTIVE") // ACTIVE, EXPIRED, CANCELLED
+  autoRenewed           Boolean      @default(false)
+  createdAt             DateTime     @default(now())
+  
+  PerfilMentor          PerfilMentor @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  
+  @@index([mentorId])
+  @@index([expiryDate])
+  @@index([status])
+}
+
+// 💰 Sistema de Pagos Semanales a Mentores
+model WeeklyPayrollPeriod {
+  id                Int                    @id @default(autoincrement())
+  weekStartDate     DateTime               // Lunes 00:00
+  weekEndDate       DateTime               // Domingo 23:59
+  status            PayrollStatus          @default(PENDING)
+  totalAmount       Decimal                @default(0) @db.Decimal(10, 2)
+  totalCalls        Int                    @default(0)
+  processedAt       DateTime?
+  processedBy       Int?
+  notes             String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  
+  MentorPayrollItem MentorPayrollItem[]
+  
+  @@index([weekStartDate])
+  @@index([status])
+}
+
+model MentorPayrollItem {
+  id              Int                  @id @default(autoincrement())
+  payrollPeriodId Int
+  mentorId        Int
+  callsCompleted  Int                  @default(0)
+  callsMissedByUser Int                @default(0) // Mentor estuvo, alumno faltó (SE COBRA)
+  ratePerCall     Decimal              @db.Decimal(10, 2)
+  totalAmount     Decimal              @db.Decimal(10, 2)
+  status          PayrollItemStatus    @default(PENDING)
+  paidAt          DateTime?
+  paymentMethod   String?              // 'TRANSFER', 'STRIPE_CONNECT', 'CASH'
+  paymentReference String?             // Número de transferencia, etc.
+  notes           String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  
+  PayrollPeriod   WeeklyPayrollPeriod  @relation(fields: [payrollPeriodId], references: [id], onDelete: Cascade)
+  Mentor          Usuario              @relation("MentorPayrollItems", fields: [mentorId], references: [id], onDelete: Cascade)
+  
+  @@index([payrollPeriodId])
+  @@index([mentorId])
+  @@index([status])
+}
+
+// 💸 Reembolsos por deserción de estudiantes
+model RefundRequest {
+  id              Int              @id @default(autoincrement())
+  organizationId  Int
+  visionId        Int
+  studentId       Int
+  requestedBy     Int
+  studentName     String
+  dropoutWeek     Int              // Semana en la que desertó
+  totalCallsPaid  Int              // Total de llamadas pagadas
+  callsCompleted  Int              // Llamadas que sí se hicieron
+  callsToRefund   Int              // Llamadas a reembolsar
+  amountPaid      Decimal          @db.Decimal(10, 2)
+  amountToRefund  Decimal          @db.Decimal(10, 2)
+  status          RefundStatus     @default(PENDING)
+  processedAt     DateTime?
+  processedBy     Int?
+  notes           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  
+  Organization    Organization     @relation("RefundRequestOrganization", fields: [organizationId], references: [id])
+  Vision          Vision           @relation("RefundRequestVision", fields: [visionId], references: [id])
+  Student         Usuario          @relation("RefundRequestStudent", fields: [studentId], references: [id])
+  RequestedBy     Usuario          @relation("RefundRequestRequestedBy", fields: [requestedBy], references: [id])
+  ProcessedBy     Usuario?         @relation("RefundRequestProcessedBy", fields: [processedBy], references: [id])
+  
+  @@index([organizationId])
+  @@index([visionId])
+  @@index([status])
+}
+
+enum PayrollStatus {
+  PENDING    // En espera de procesamiento
+  PROCESSING // Procesando pagos
+  COMPLETED  // Completado
+  CANCELLED  // Cancelado
+}
+
+enum PayrollItemStatus {
+  PENDING    // Por pagar
+  PAID       // Pagado
+  CANCELLED  // Cancelado
+  DISPUTED   // En disputa
+}
+
+enum RefundStatus {
+  PENDING    // Pendiente de aprobación
+  APPROVED   // Aprobado, procesando
+  COMPLETED  // Reembolsado a wallet
+  REJECTED   // Rechazado
+  CANCELLED  // Cancelado
+}
+
+enum ProfileApprovalStatus {
+  DRAFT       // Borrador, no enviado
+  PENDING     // En revisión
+  APPROVED    // Aprobado
+  REJECTED    // Rechazado
 }

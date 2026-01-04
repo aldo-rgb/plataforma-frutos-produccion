@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { 
   LayoutDashboard, Trophy, Target, BarChart3, User, LogOut, 
   UserPlus, DollarSign, Package, Shield, 
-  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings
+  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { MENU_ITEMS } from '@/config/menuPermissions';
@@ -753,6 +753,52 @@ export function Sidebar({ usuario }: SidebarProps) {
                 <span>Gestión de Permisos</span>
               </Link>
             )}
+          </div>
+        )}
+
+        {/* REPORTES Y CONTROL - Solo Admin */}
+        {(usuario.rol === 'ADMIN' || usuario.rol === 'ADMINISTRADOR') && (
+          <div className="pt-6 mt-6 border-t border-slate-800">
+            <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">📊 Reportes y Control</p>
+            
+            {/* Resumen Financiero */}
+            <Link 
+              href="/dashboard/admin/reports/financial" 
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/admin/reports/financial'
+                  ? 'bg-gradient-to-r from-emerald-600 to-cyan-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-emerald-900/20'
+              }`}
+            >
+              <TrendingUp size={18} className="text-emerald-400" />
+              <span>Resumen Financiero</span>
+            </Link>
+
+            {/* Control de Reservas */}
+            <Link 
+              href="/dashboard/admin/reports/bookings" 
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/admin/reports/bookings'
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-blue-900/20'
+              }`}
+            >
+              <Calendar size={18} className="text-blue-400" />
+              <span>Control de Reservas</span>
+            </Link>
+
+            {/* Paquetes y Mentores */}
+            <Link 
+              href="/dashboard/admin/reports/packages" 
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/admin/reports/packages'
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-purple-900/20'
+              }`}
+            >
+              <Briefcase size={18} className="text-purple-400" />
+              <span>Paquetes y Mentores</span>
+            </Link>
           </div>
         )}
       </nav>

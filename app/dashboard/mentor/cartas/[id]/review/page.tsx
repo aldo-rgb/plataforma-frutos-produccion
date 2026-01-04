@@ -104,6 +104,12 @@ export default function CartaReviewPage() {
     status: 'PENDING' | 'APPROVED' | 'REJECTED';
     mentorFeedback: string;
   }>>({});
+  
+  // Estado inicial para detectar cambios
+  const [initialMetasReview, setInitialMetasReview] = useState<Record<number, {
+    status: 'PENDING' | 'APPROVED' | 'REJECTED';
+    mentorFeedback: string;
+  }>>({});
 
   // Modal de feedback
   const [feedbackModal, setFeedbackModal] = useState<{
@@ -146,6 +152,7 @@ export default function CartaReviewPage() {
         };
       });
       setMetasReview(initialReview);
+      setInitialMetasReview(initialReview); // Guardar estado inicial
 
       // Expandir todas las áreas por defecto
       const allAreas = new Set<string>(data.metas.map((m: Meta) => m.categoria));
@@ -392,6 +399,22 @@ export default function CartaReviewPage() {
   const metasAprobadas = Object.values(metasReview).filter(r => r.status === 'APPROVED').length;
   const metasRechazadas = Object.values(metasReview).filter(r => r.status === 'REJECTED').length;
   const metasPendientes = totalMetas - metasAprobadas - metasRechazadas;
+  
+  // Detectar si el mentor ha hecho cambios desde que abrió la página
+  const hasChanges = Object.keys(metasReview).some(metaId => {
+    const current = metasReview[parseInt(metaId)];
+    const initial = initialMetasReview[parseInt(metaId)];
+    
+    if (!initial) return true; // Nueva meta
+    
+    return current.status !== initial.status || 
+           current.mentorFeedback !== initial.mentorFeedback;
+  });
+  
+  // El botón debe estar deshabilitado si:
+  // 1. Hay metas pendientes (sin revisar), O
+  // 2. No se han hecho cambios desde que se cargó la página
+  const isSubmitDisabled = metasPendientes > 0 || !hasChanges || submitting;
 
   if (loading) {
     return (
@@ -674,14 +697,19 @@ export default function CartaReviewPage() {
                     ({metasPendientes} pendientes)
                   </span>
                 )}
+                {!hasChanges && metasPendientes === 0 && (
+                  <span className="text-orange-400 ml-2">
+                    (Sin cambios nuevos)
+                  </span>
+                )}
               </p>
             </div>
 
             <button
               onClick={handleSubmitReview}
-              disabled={metasPendientes > 0 || submitting}
+              disabled={isSubmitDisabled}
               className={`px-8 py-4 rounded-xl font-bold text-lg transition-all flex items-center gap-3 ${
-                metasPendientes > 0 || submitting
+                isSubmitDisabled
                   ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
                   : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white shadow-lg shadow-purple-500/50'
               }`}

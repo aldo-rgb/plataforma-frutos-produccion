@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { procesarPagoSimulado } from '../../actions/pagos';
-import { CreditCard, Building2, User, Check, Calculator, ShieldCheck, X, Globe, Smartphone, CheckCircle2, Loader2, ArrowRight, Zap, Star, Users, Crown, TrendingUp } from 'lucide-react';
+import { CreditCard, Building2, User, Check, Calculator, ShieldCheck, X, Globe, Smartphone, CheckCircle2, Loader2, ArrowRight, Zap, Star, Users, Crown, TrendingUp, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import TheTetherModal from '@/components/modals/TheTetherModal';
+import PendingOrdersWidget from '@/components/lobo-solitario/PendingOrdersWidget';
 
 export default function SuscripcionPage() {
   const router = useRouter();
@@ -30,6 +31,11 @@ export default function SuscripcionPage() {
   const [schoolInfo, setSchoolInfo] = useState<any>(null);
   const [loboSolitario, setLoboSolitario] = useState(false);
   const [loboSolitarioInfo, setLoboSolitarioInfo] = useState<any>(null);
+  
+  // Estado para cambio de mentor (Lobo Solitario)
+  const [mentorFaltas, setMentorFaltas] = useState<any>(null);
+  const [cargandoFaltas, setCargandoFaltas] = useState(false);
+  const [solicitandoCambio, setSolicitandoCambio] = useState(false);
   
   // ESTADO DEL MODAL THE TETHER
   const [showTetherModal, setShowTetherModal] = useState(false);
@@ -67,6 +73,11 @@ export default function SuscripcionPage() {
           setSchoolInfo(data.organization || null);
           setLoboSolitario(data.loboSolitario || false);
           setLoboSolitarioInfo(data.loboSolitarioInfo || null);
+          
+          // Si es Lobo Solitario, verificar faltas del mentor
+          if (data.loboSolitario) {
+            verificarFaltasMentor();
+          }
         }
       } catch (error) {
         console.error('Error cargando plan:', error);
@@ -144,6 +155,53 @@ export default function SuscripcionPage() {
   };
 
   const [numParticipantes, setNumParticipantes] = useState(50);
+
+  // Función para verificar faltas del mentor
+  const verificarFaltasMentor = async () => {
+    setCargandoFaltas(true);
+    try {
+      const res = await fetch('/api/lobo-solitario/verificar-faltas-mentor');
+      if (res.ok) {
+        const data = await res.json();
+        setMentorFaltas(data);
+        console.log('📊 Faltas del mentor:', data);
+      }
+    } catch (error) {
+      console.error('Error verificando faltas:', error);
+    } finally {
+      setCargandoFaltas(false);
+    }
+  };
+
+  // Función para solicitar cambio de mentor
+  const solicitarCambioMentor = async () => {
+    if (!confirm('¿Estás seguro de que deseas cambiar de mentor? Se cancelarán todas tus sesiones pendientes y deberás reagendar con un nuevo mentor.')) {
+      return;
+    }
+
+    setSolicitandoCambio(true);
+    try {
+      const res = await fetch('/api/lobo-solitario/solicitar-cambio-mentor', { 
+        method: 'POST' 
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        alert(`✅ ${data.message}\n\nSesiones canceladas: ${data.canceledSessions}`);
+        
+        // Redirigir a seleccionar nuevo mentor
+        router.push('/dashboard/lobo-solitario/seleccionar-mentor?cambio=true');
+      } else {
+        const error = await res.json();
+        alert(`❌ ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error solicitando cambio:', error);
+      alert('Error al procesar la solicitud. Intenta nuevamente.');
+    } finally {
+      setSolicitandoCambio(false);
+    }
+  };
 
   // CÁLCULO DINÁMICO
   const calcularTotal = () => {
@@ -484,6 +542,80 @@ export default function SuscripcionPage() {
             )}
           </div>
         </div>
+
+        {/* BANNER DE CAMBIO DE MENTOR - Solo para Lobo Solitario */}
+        {loboSolitario && mentorFaltas && (
+          <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50">
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <Users className="w-5 h-5 text-orange-400" />
+              Gestión de Mentor
+            </h3>
+            
+            {mentorFaltas.mentor && (
+              <div className="flex items-center gap-4 mb-4 p-3 bg-slate-800/30 rounded-lg">
+                {mentorFaltas.mentor.profileImage && (
+                  <img 
+                    src={mentorFaltas.mentor.profileImage} 
+                    alt={mentorFaltas.mentor.nombre}
+                    className="w-12 h-12 rounded-full object-cover border-2 border-slate-600"
+                  />
+                )}
+                <div>
+                  <p className="text-white font-semibold">{mentorFaltas.mentor.nombre}</p>
+                  <p className="text-slate-400 text-xs">Tu mentor actual</p>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-3 text-sm mb-4">
+              <div className="flex justify-between items-center p-3 bg-slate-800/30 rounded-lg">
+                <span className="text-slate-400">Faltas registradas</span>
+                <span className={`font-semibold ${mentorFaltas.totalFaltas >= 2 ? 'text-red-400' : 'text-yellow-400'}`}>
+                  {mentorFaltas.totalFaltas} falta{mentorFaltas.totalFaltas !== 1 ? 's' : ''}
+                </span>
+              </div>
+            </div>
+
+            {mentorFaltas.puedesCambiarMentor ? (
+              <div>
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="text-red-400 mt-0.5 flex-shrink-0" size={20} />
+                    <div>
+                      <p className="text-red-300 font-semibold text-sm">Puedes solicitar cambio de mentor</p>
+                      <p className="text-red-400/80 text-xs mt-1">
+                        Tu mentor ha faltado {mentorFaltas.totalFaltas} veces. Tienes derecho a cambiar de mentor y reagendar tus sesiones restantes.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={solicitarCambioMentor}
+                  disabled={solicitandoCambio}
+                  className="w-full bg-gradient-to-r from-red-500 to-orange-600 text-white py-3 rounded-xl font-bold hover:from-red-600 hover:to-orange-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {solicitandoCambio ? (
+                    <>
+                      <Loader2 className="animate-spin" size={18} />
+                      Procesando...
+                    </>
+                  ) : (
+                    <>
+                      <Users size={18} />
+                      Solicitar Cambio de Mentor
+                    </>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                <p className="text-slate-400 text-xs text-center">
+                  Se requieren al menos 2 faltas confirmadas para solicitar cambio de mentor.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   }
@@ -551,6 +683,9 @@ export default function SuscripcionPage() {
           )}
         </div>
       )}
+
+      {/* WIDGET DE ÓRDENES PENDIENTES */}
+      <PendingOrdersWidget />
 
       {/* BANNER ESPECIAL - Usuario con visión pero sin plan de pago activo */}
       {(!planActual || planActual === 'FREE') && schoolInfo && (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Upload, X, ImageIcon, Check, AlertCircle, Sparkles } from 'lucide-react';
 
 interface EvidenceModalProps {
@@ -30,12 +30,25 @@ export default function EvidenceModal({ isOpen, onClose, onSubmit, task }: Evide
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Inicializar con evidencia existente cuando se abre el modal
-  useState(() => {
+  useEffect(() => {
+    console.log('🔍 Modal abierto con task:', task);
+    console.log('🔍 evidenceUrl:', task?.evidenceUrl);
+    console.log('🔍 evidenceStatus:', task?.evidenceStatus);
+    
     if (isOpen && task?.evidenceUrl) {
       setPreviewUrl(task.evidenceUrl);
       setIsEditingExisting(true);
+    } else if (!isOpen) {
+      // Limpiar cuando se cierra
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      setDescription('');
+      setError(null);
+      setUploadSuccess(false);
+      setIsSubmitting(false);
+      setIsEditingExisting(false);
     }
-  });
+  }, [isOpen, task?.evidenceUrl]);
 
   const handleFileSelect = (file: File) => {
     setError(null);
@@ -378,7 +391,9 @@ export default function EvidenceModal({ isOpen, onClose, onSubmit, task }: Evide
                   <span>Subiendo...</span>
                 </span>
               ) : (
-                isEditingExisting ? 'Cambiar evidencia' : 'Enviar evidencia'
+                isEditingExisting 
+                  ? (task.evidenceStatus === 'PENDING' ? '🔄 Reenviar evidencia a revisión' : 'Cambiar y reenviar evidencia')
+                  : 'Enviar evidencia'
               )}
             </button>
           )}

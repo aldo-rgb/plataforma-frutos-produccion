@@ -18,6 +18,9 @@ export default function MentorProfileEditorPage() {
   const [aprobacionEnviada, setAprobacionEnviada] = useState(false);
   const [showAprobacionExito, setShowAprobacionExito] = useState(false);
   const [showAprobacionError, setShowAprobacionError] = useState(false);
+  const [errorAprobacionMsg, setErrorAprobacionMsg] = useState('');
+  const [camposFaltantesAprobacion, setCamposFaltantesAprobacion] = useState<string[]>([]);
+  const [profileApprovalStatus, setProfileApprovalStatus] = useState<'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED'>('DRAFT');
   
   // Validación de campos obligatorios (solo campos editables)
   const isFormValid = () => {
@@ -138,6 +141,10 @@ export default function MentorProfileEditorPage() {
             enlaceVideoLlamada: data.enlaceVideoLlamada || '',
             tipoVideoLlamada: data.tipoVideoLlamada || 'zoom'
           });
+          setProfileApprovalStatus(data.profileApprovalStatus || 'DRAFT');
+          if (data.profileApprovalStatus === 'PENDING') {
+            setAprobacionEnviada(true);
+          }
         }
       } catch (error) {
         console.error('Error cargando perfil:', error);
@@ -271,6 +278,8 @@ export default function MentorProfileEditorPage() {
     setSolicitandoAprobacion(true);
     setShowAprobacionExito(false);
     setShowAprobacionError(false);
+    setErrorAprobacionMsg('');
+    setCamposFaltantesAprobacion([]);
 
     try {
       const res = await fetch('/api/lider/perfil/solicitar-aprobacion', {
@@ -282,16 +291,30 @@ export default function MentorProfileEditorPage() {
 
       if (res.ok && data.success) {
         setAprobacionEnviada(true);
+        setProfileApprovalStatus('PENDING');
         setShowAprobacionExito(true);
         setTimeout(() => setShowAprobacionExito(false), 5000);
       } else {
+        console.error('❌ Error al solicitar aprobación:', data);
+        setErrorAprobacionMsg(data.error || 'Error al solicitar aprobación');
+        if (data.camposFaltantes && data.camposFaltantes.length > 0) {
+          setCamposFaltantesAprobacion(data.camposFaltantes);
+        }
         setShowAprobacionError(true);
-        setTimeout(() => setShowAprobacionError(false), 5000);
+        setTimeout(() => {
+          setShowAprobacionError(false);
+          setErrorAprobacionMsg('');
+          setCamposFaltantesAprobacion([]);
+        }, 8000);
       }
     } catch (error) {
       console.error('Error al solicitar aprobación:', error);
+      setErrorAprobacionMsg('Error de conexión. Intenta nuevamente.');
       setShowAprobacionError(true);
-      setTimeout(() => setShowAprobacionError(false), 5000);
+      setTimeout(() => {
+        setShowAprobacionError(false);
+        setErrorAprobacionMsg('');
+      }, 5000);
     } finally {
       setSolicitandoAprobacion(false);
     }
@@ -357,14 +380,29 @@ export default function MentorProfileEditorPage() {
 
       {/* Notificación de Aprobación - Error */}
       {showAprobacionError && (
-        <div className="fixed top-24 right-4 z-50 animate-in slide-in-from-top-5 duration-300">
-          <div className="bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-5 rounded-xl shadow-2xl flex items-center gap-3 min-w-[360px]">
-            <div className="bg-white/20 p-2.5 rounded-lg">
-              <XCircle className="w-7 h-7" />
-            </div>
-            <div>
-              <p className="font-bold text-lg">Error al Solicitar</p>
-              <p className="text-sm text-red-50">Completa todos los campos requeridos</p>
+        <div className="fixed top-24 right-4 z-50 animate-in slide-in-from-top-5 duration-300 max-w-md">
+          <div className="bg-gradient-to-br from-red-500/95 via-red-600/95 to-red-700/95 text-white px-6 py-5 rounded-2xl shadow-2xl backdrop-blur-sm border border-red-400/30">
+            <div className="flex items-start gap-4">
+              <div className="bg-white/20 p-2.5 rounded-lg shrink-0">
+                <XCircle className="w-7 h-7" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-lg mb-1">Error al Solicitar Aprobación</p>
+                <p className="text-sm text-red-50 mb-3">{errorAprobacionMsg}</p>
+                {camposFaltantesAprobacion.length > 0 && (
+                  <div className="bg-red-900/30 rounded-lg p-3 mt-2 border border-red-400/20">
+                    <p className="text-xs font-semibold text-red-100 mb-2">📋 Campos requeridos:</p>
+                    <ul className="space-y-1">
+                      {camposFaltantesAprobacion.map((campo, idx) => (
+                        <li key={idx} className="text-xs text-red-50 flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 bg-red-300 rounded-full"></span>
+                          {campo}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -395,18 +433,29 @@ export default function MentorProfileEditorPage() {
           </button>
           <button
             onClick={solicitarAprobacion}
-            disabled={initialLoading || solicitandoAprobacion || aprobacionEnviada || !isFormValid()}
-            className="flex items-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-3 px-6 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-green-500/30"
+            disabled={initialLoading || solicitandoAprobacion || profileApprovalStatus === 'PENDING' || profileApprovalStatus === 'APPROVED' || !isFormValid()}
+            className={`flex items-center gap-2 font-bold py-3 px-6 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg ${
+              profileApprovalStatus === 'PENDING' 
+                ? 'bg-gradient-to-r from-yellow-600 to-amber-600 shadow-yellow-500/30' 
+                : profileApprovalStatus === 'APPROVED'
+                ? 'bg-gradient-to-r from-green-600 to-emerald-600 shadow-green-500/30'
+                : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-green-500/30'
+            } text-white`}
           >
             {solicitandoAprobacion ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
                 Enviando...
               </>
-            ) : aprobacionEnviada ? (
+            ) : profileApprovalStatus === 'PENDING' ? (
+              <>
+                <Loader2 className="w-5 h-5" />
+                🔍 En Revisión
+              </>
+            ) : profileApprovalStatus === 'APPROVED' ? (
               <>
                 <CheckCircle2 className="w-5 h-5" />
-                ✅ Solicitud Enviada
+                ✅ Perfil Aprobado
               </>
             ) : (
               <>

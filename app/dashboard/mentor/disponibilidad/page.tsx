@@ -166,65 +166,50 @@ export default function DisponibilidadMentorPage() {
     try {
       const horasDelDia = horariosSeleccionados[diaSeleccionado] || [];
 
-      // Primero eliminar bloques existentes del día
-      const bloquesDelDia = bloques.filter(b => b.diaSemana === diaSeleccionado);
-      for (const bloque of bloquesDelDia) {
-        await fetch(`/api/mentor/disponibilidad/semanal?id=${bloque.id}`, {
-          method: 'DELETE'
-        });
-      }
-
-      // Si no hay horas seleccionadas, solo mostrar mensaje y salir
-      if (horasDelDia.length === 0) {
-        mostrarMensaje('success', `✅ ${DIAS_SEMANA[diaSeleccionado]} marcado como no disponible`);
-        cargarDatos();
-        setProcesando(false);
-        return;
-      }
-
       // Agrupar horas consecutivas en bloques
-      const horasOrdenadas = [...horasDelDia].sort();
       const bloquesNuevos: { horaInicio: string; horaFin: string }[] = [];
-      let bloqueActual = { horaInicio: horasOrdenadas[0], horaFin: '' };
+      
+      if (horasDelDia.length > 0) {
+        const horasOrdenadas = [...horasDelDia].sort();
+        let bloqueActual = { horaInicio: horasOrdenadas[0], horaFin: '' };
 
-      for (let i = 0; i < horasOrdenadas.length; i++) {
-        const horaActual = parseInt(horasOrdenadas[i].split(':')[0]);
-        const horaSiguiente = i < horasOrdenadas.length - 1 ? parseInt(horasOrdenadas[i + 1].split(':')[0]) : null;
+        for (let i = 0; i < horasOrdenadas.length; i++) {
+          const horaActual = parseInt(horasOrdenadas[i].split(':')[0]);
+          const horaSiguiente = i < horasOrdenadas.length - 1 ? parseInt(horasOrdenadas[i + 1].split(':')[0]) : null;
 
-        if (horaSiguiente === null || horaSiguiente !== horaActual + 1) {
-          // Fin del bloque
-          bloqueActual.horaFin = `${String(horaActual + 1).padStart(2, '0')}:00`;
-          bloquesNuevos.push(bloqueActual);
-          if (horaSiguiente !== null) {
-            bloqueActual = { horaInicio: horasOrdenadas[i + 1], horaFin: '' };
+          if (horaSiguiente === null || horaSiguiente !== horaActual + 1) {
+            // Fin del bloque
+            bloqueActual.horaFin = `${String(horaActual + 1).padStart(2, '0')}:00`;
+            bloquesNuevos.push(bloqueActual);
+            if (horaSiguiente !== null) {
+              bloqueActual = { horaInicio: horasOrdenadas[i + 1], horaFin: '' };
+            }
           }
         }
       }
 
-      // Crear los nuevos bloques
-      for (const bloque of bloquesNuevos) {
-        const res = await fetch('/api/mentor/disponibilidad/semanal', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            diaSemana: diaSeleccionado,
-            horaInicio: bloque.horaInicio,
-            horaFin: bloque.horaFin
-          })
-        });
+      // Usar el endpoint optimizado que actualiza todo el día de una vez
+      const res = await fetch('/api/mentor/disponibilidad/semanal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dia: diaSeleccionado,
+          bloques: bloquesNuevos
+        })
+      });
 
-        const data = await res.json();
-        if (!res.ok && res.status === 409) {
-          // Hay conflictos
-          mostrarMensaje('error', data.error);
-          setProcesando(false);
-          return;
-        }
+      const data = await res.json();
+      
+      if (!res.ok) {
+        mostrarMensaje('error', data.error || 'Error al guardar horario');
+        setProcesando(false);
+        return;
       }
 
       mostrarMensaje('success', `✅ Horario de ${DIAS_SEMANA[diaSeleccionado]} actualizado correctamente`);
-      cargarDatos();
+      await cargarDatos();
     } catch (error) {
+      console.error('Error guardando día:', error);
       mostrarMensaje('error', 'Error de conexión');
     } finally {
       setProcesando(false);

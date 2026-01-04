@@ -30,6 +30,7 @@ export async function GET(
             nombre: true,
             email: true,
             imagen: true,
+            profileImage: true,
           },
         },
       },
@@ -72,7 +73,7 @@ export async function GET(
       usuario: {
         nombre: perfilMentor.Usuario.nombre,
         email: perfilMentor.Usuario.email,
-        imagen: perfilMentor.Usuario.imagen || '',
+        imagen: perfilMentor.Usuario.profileImage || perfilMentor.Usuario.imagen || '',
       },
     };
 

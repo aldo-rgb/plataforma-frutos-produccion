@@ -104,13 +104,11 @@ export default function AdminPerformancePage() {
 
   const cargarMentoresInactivos = async () => {
     try {
-      const res = await fetch('/api/usuarios');
+      const res = await fetch('/api/admin/mentores');
       const data = await res.json();
-      if (data.usuarios) {
-        const inactivos = data.usuarios.filter((u: any) => 
-          u.rol === 'MENTOR' && !u.isActive && !u.firstActivatedAt
-        ).length;
-        setMentoresInactivos(inactivos);
+      if (data.success && data.stats) {
+        // Contar solicitudes pendientes de MentorApplication
+        setMentoresInactivos(data.stats.solicitudesPendientes || 0);
       }
     } catch (error) {
       console.error('Error al cargar mentores inactivos:', error);

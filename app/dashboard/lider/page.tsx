@@ -35,7 +35,8 @@ export default async function LiderDashboard() {
         select: {
           biografiaCorta: true,
           especialidad: true,
-          biografia: true
+          biografia: true,
+          profileApprovalStatus: true
         }
       }
     }
@@ -45,10 +46,7 @@ export default async function LiderDashboard() {
   if (!user) return <div className="p-8 text-white">No se encontró el usuario líder.</div>;
 
   // Verificar si el perfil está pendiente de aprobación
-  const perfilEnRevision = user.PerfilMentor && 
-    user.PerfilMentor.biografia && 
-    user.PerfilMentor.biografia.length >= 50 && 
-    !user.mentorMarketplaceApproved;
+  const perfilEnRevision = user.PerfilMentor?.profileApprovalStatus === 'PENDING';
 
   // 3. CALCULAR PENDIENTES TOTALES DEL LÍDER
   const liderId = user.id;

@@ -35,7 +35,8 @@ export async function POST(req: NextRequest) {
     const lider = await prisma.usuario.findUnique({
       where: { id: liderId },
       include: {
-        Organization: true
+        Organization_Usuario_organizationIdToOrganization: true,
+        PerfilMentor: true
       }
     });
 
@@ -46,36 +47,61 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!lider.organizationId || !lider.Organization) {
+    if (!lider.organizationId || !lider.Organization_Usuario_organizationIdToOrganization) {
       return NextResponse.json(
         { error: 'El líder no pertenece a ninguna organización' },
         { status: 400 }
       );
     }
 
-    // Obtener el perfil del líder
-    const perfil = await prisma.perfilMentor.findUnique({
-      where: { usuarioId: liderId }
-    });
+    const organization = lider.Organization_Usuario_organizationIdToOrganization;
 
     // Verificar que el líder tenga un perfil de mentor
-    if (!perfil) {
+    if (!lider.PerfilMentor) {
       return NextResponse.json(
         { error: 'Debes completar tu perfil antes de solicitar aprobación' },
         { status: 400 }
       );
     }
 
-    // Verificar campos mínimos del perfil
+    const perfil = lider.PerfilMentor;
+
+    // Verificar campos mínimos del perfil para LIDER
+    // Los líderes solo necesitan: biografía, título profesional (jobTitle en Usuario) y título de mentor (titulo en PerfilMentor)
+    const camposFaltantes: string[] = [];
+    
     if (!perfil.biografia || perfil.biografia.length < 50) {
+      camposFaltantes.push('Biografía (mínimo 50 caracteres)');
+    }
+    
+    if (!lider.jobTitle || lider.jobTitle.trim() === '') {
+      camposFaltantes.push('Título Profesional (Cargo)');
+    }
+    
+    if (!perfil.titulo || perfil.titulo.trim() === '') {
+      camposFaltantes.push('Título de Mentor');
+    }
+    
+    if (camposFaltantes.length > 0) {
       return NextResponse.json(
-        { error: 'Tu biografía debe tener al menos 50 caracteres' },
+        { 
+          error: 'Completa todos los campos requeridos',
+          camposFaltantes 
+        },
         { status: 400 }
       );
     }
 
     // Obtener el director de la organización (schoolAdmin)
-    const directorId = lider.Organization.schoolAdminId;
+    const directorId = organization?.schoolAdminId;
+    
+    if (!directorId) {
+      return NextResponse.json(
+        { error: 'Tu organización no tiene un director asignado. Contacta al administrador.' },
+        { status: 400 }
+      );
+    }
+
     const director = await prisma.usuario.findUnique({
       where: { id: directorId },
       select: { id: true, nombre: true, email: true, rol: true }
@@ -88,29 +114,48 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Actualizar estado del perfil a PENDING
+    await prisma.perfilMentor.update({
+      where: { usuarioId: liderId },
+      data: {
+        profileApprovalStatus: 'PENDING',
+        profileSubmittedAt: new Date()
+      }
+    });
+
+    console.log(`✅ Perfil actualizado a PENDING para líder ${liderId}`);
+
     // Crear notificación para el director
     await prisma.mentorAlert.create({
       data: {
         mentorId: directorId,
-        usuarioId: liderId, // Campo requerido en el schema
+        usuarioId: liderId,
         type: 'MILESTONE',
-        message: `${lider.nombre} (Líder) de ${lider.Organization.name} solicita aprobación de su perfil de mentor`,
+        message: `${lider.nombre} (Líder) de ${organization.name} solicita aprobación de su perfil de mentor`,
         read: false
       }
     });
 
-    // Enviar notificaciones por email y push
-    await notifyLiderSolicitaAprobacion(
-      lider.id,
-      directorId,
-      lider.Organization.name
-    );
+    console.log(`✅ Notificación creada para director ${directorId}`);
 
-    console.log(`✅ Solicitud de aprobación enviada: Líder ${lider.nombre} → Director ${director.nombre}`);
+    // Enviar notificaciones por email y push (no bloqueante)
+    try {
+      await notifyLiderSolicitaAprobacion(
+        lider.id,
+        directorId,
+        organization.name
+      );
+      console.log(`✅ Notificaciones enviadas por email/push`);
+    } catch (notifyError) {
+      console.error('⚠️ Error al enviar notificaciones email/push:', notifyError);
+      // No bloqueamos la respuesta si falla el envío de notificaciones
+    }
+
+    console.log(`✅ Solicitud de aprobación completada: Líder ${lider.nombre} → Director ${director.nombre}`);
 
     return NextResponse.json({
       success: true,
-      message: 'Solicitud de aprobación enviada al director',
+      message: 'Solicitud de aprobación enviada correctamente',
       director: {
         id: director.id,
         nombre: director.nombre,
@@ -119,9 +164,12 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error al solicitar aprobación de perfil:', error);
+    console.error('❌ Error al solicitar aprobación de perfil:', error);
     return NextResponse.json(
-      { error: 'Error al procesar la solicitud' },
+      { 
+        error: 'Error al procesar la solicitud',
+        details: error instanceof Error ? error.message : 'Error desconocido'
+      },
       { status: 500 }
     );
   }

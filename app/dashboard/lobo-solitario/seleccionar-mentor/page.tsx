@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { Users, Star, Zap, Loader2, ArrowLeft, Check, Package } from 'lucide-react';
 import Image from 'next/image';
 import ModalPerfilMentor from '@/components/mentorias/ModalPerfilMentor';
+import PendingPaymentModal from '@/components/lobo-solitario/PendingPaymentModal';
 
 interface Mentor {
   id: number;
@@ -30,6 +31,7 @@ export default function SeleccionarMentorLoboPage() {
   // Obtener plan y frecuencia de los query params
   const plan = searchParams.get('plan') as 'STANDARD' | 'PREMIUM' | null;
   const frecuencia = searchParams.get('frecuencia') as 'BIMESTRAL' | 'ANUAL' | null;
+  const esCambioMentor = searchParams.get('cambio') === 'true';
   
   const [mentores, setMentores] = useState<Mentor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,20 +40,25 @@ export default function SeleccionarMentorLoboPage() {
   const [showPerfilModal, setShowPerfilModal] = useState(false);
   const [mentorPerfilId, setMentorPerfilId] = useState<number | null>(null);
   const [activePackage, setActivePackage] = useState<any>(null);
+  const [showPendingPaymentModal, setShowPendingPaymentModal] = useState(false);
+  const [pendingPaymentData, setPendingPaymentData] = useState<any>(null);
 
   // Calcular sesiones según el plan y frecuencia
   const cantidadSesiones = frecuencia === 'ANUAL' ? 108 : 18;
   const nombrePlan = plan === 'PREMIUM' ? 'Premium' : 'Standard';
 
   useEffect(() => {
-    if (!plan || !frecuencia) {
+    // Si es cambio de mentor, no requerimos plan/frecuencia (ya los tiene)
+    if (!esCambioMentor && (!plan || !frecuencia)) {
       router.push('/dashboard/suscripcion');
       return;
     }
-    verificarPaqueteActivo();
+    if (!esCambioMentor) {
+      verificarPaqueteActivo();
+    }
     cargarMentores();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plan, frecuencia]);
+  }, [plan, frecuencia, esCambioMentor]);
 
   const verificarPaqueteActivo = async () => {
     try {
@@ -82,11 +89,34 @@ export default function SeleccionarMentorLoboPage() {
   };
 
   const handleSeleccionarMentor = async () => {
-    if (!selectedMentor || !plan || !frecuencia) return;
+    if (!selectedMentor) return;
 
     setProcesando(true);
     try {
-      // Crear orden de paquete para lobo solitario
+      // Si es cambio de mentor, asignar nuevo mentor y reagendar
+      if (esCambioMentor) {
+        // Asignar nuevo mentor al usuario
+        const assignRes = await fetch('/api/user/assign-mentor', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mentorId: selectedMentor }),
+        });
+
+        if (!assignRes.ok) {
+          alert('Error al asignar nuevo mentor');
+          setProcesando(false);
+          return;
+        }
+
+        // Redirigir a reagendar sesiones
+        alert('✅ Nuevo mentor asignado. Ahora agenda tus sesiones restantes.');
+        router.push('/dashboard/program/enroll');
+        return;
+      }
+
+      // Flujo normal: crear orden de paquete para lobo solitario
+      if (!plan || !frecuencia) return;
+
       const res = await fetch('/api/lobo-solitario/crear-paquete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -104,21 +134,29 @@ export default function SeleccionarMentorLoboPage() {
         // Redirigir a procesar pago
         router.push(`/dashboard/lobo-solitario/procesar-pago?ordenId=${data.ordenId}`);
       } else {
-        // Mostrar mensaje de error específico
-        const errorMsg = data.details?.message || data.error || 'Error al crear el paquete';
-        
-        if (data.details) {
-          // Si tiene detalles, mostrar información completa
+        // Mostrar modal de pago pendiente si es ese el error
+        if (data.error === 'Ya tienes una orden de pago pendiente' && data.details) {
+          setPendingPaymentData({
+            ordenId: data.details.ordenId,
+            remainingSessions: data.details.remainingSessions,
+            planType: data.details.planType,
+            frecuencia: data.details.frecuencia,
+            mentor: data.details.mentor,
+            expiresAt: data.details.expiresAt
+          });
+          setShowPendingPaymentModal(true);
+        } else if (data.details) {
+          // Si tiene otros detalles, mostrar información completa
           const details = data.details;
           alert(
-            `${errorMsg}\n\n` +
+            `${data.error || 'Error'}\n\n` +
             `Sesiones restantes: ${details.remainingSessions}/${details.totalSessions}\n` +
             `Plan: ${details.planType} ${details.frecuencia}\n` +
             `Mentor: ${details.mentor}\n` +
             (details.expiresAt ? `Expira: ${new Date(details.expiresAt).toLocaleDateString('es-MX')}` : '')
           );
         } else {
-          alert(errorMsg);
+          alert(data.error || 'Error al crear el paquete');
         }
         setProcesando(false);
       }
@@ -153,15 +191,39 @@ export default function SeleccionarMentorLoboPage() {
         </button>
         
         <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
-          Selecciona tu Mentor Personal
+          {esCambioMentor ? 'Selecciona tu Nuevo Mentor' : 'Selecciona tu Mentor Personal'}
         </h1>
         <p className="text-slate-400">
-          Elige al mentor que te acompañará en tu transformación
+          {esCambioMentor 
+            ? 'Elige al nuevo mentor que te acompañará en el resto de tu programa' 
+            : 'Elige al mentor que te acompañará en tu transformación'}
         </p>
       </div>
 
+      {/* Alerta de cambio de mentor */}
+      {esCambioMentor && (
+        <div className="bg-blue-900/30 border border-blue-500/50 rounded-xl p-6 mb-8">
+          <div className="flex items-start gap-3">
+            <div className="bg-blue-500/20 p-2 rounded-lg">
+              <Users className="text-blue-400" size={24} />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold text-blue-400 mb-2">
+                Cambio de Mentor Aprobado
+              </h3>
+              <p className="text-slate-300 text-sm mb-3">
+                Tu solicitud de cambio de mentor ha sido aprobada. Selecciona un nuevo mentor para continuar con tus sesiones restantes.
+              </p>
+              <p className="text-slate-400 text-xs">
+                Después de seleccionar tu nuevo mentor, podrás agendar las sesiones pendientes de tu ciclo actual.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Alerta de paquete activo */}
-      {activePackage && (
+      {!esCambioMentor && activePackage && (
         <div className="bg-yellow-900/30 border border-yellow-500/50 rounded-xl p-6 mb-8">
           <div className="flex items-start gap-3">
             <div className="bg-yellow-500/20 p-2 rounded-lg">
@@ -208,20 +270,6 @@ export default function SeleccionarMentorLoboPage() {
           </div>
         </div>
       )}
-
-      {/* Info del paquete */}
-      <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border border-purple-500/30 rounded-xl p-6 mb-8">
-          <ArrowLeft size={20} />
-          Volver
-        </button>
-        
-        <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
-          Selecciona tu Mentor Personal
-        </h1>
-        <p className="text-slate-400">
-          Elige al mentor que te acompañará en tu transformación
-        </p>
-      </div>
 
       {/* Info del paquete */}
       <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 border border-purple-500/30 rounded-xl p-6 mb-8">
@@ -382,12 +430,12 @@ export default function SeleccionarMentorLoboPage() {
       )}
 
       {/* Botón continuar */}
-      {selectedMentor && !activePackage && (
+      {selectedMentor && (!activePackage || esCambioMentor) && (
         <div className="fixed bottom-0 left-0 right-0 bg-slate-900/95 border-t border-slate-700 p-4 backdrop-blur-sm">
           <div className="max-w-7xl mx-auto flex justify-end">
             <button
               onClick={handleSeleccionarMentor}
-              disabled={procesando || !!activePackage}
+              disabled={procesando || (!esCambioMentor && !!activePackage)}
               className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {procesando ? (
@@ -397,7 +445,7 @@ export default function SeleccionarMentorLoboPage() {
                 </>
               ) : (
                 <>
-                  Continuar al Pago
+                  {esCambioMentor ? 'Confirmar Nuevo Mentor' : 'Continuar al Pago'}
                   <Zap size={20} />
                 </>
               )}
@@ -417,6 +465,21 @@ export default function SeleccionarMentorLoboPage() {
           }}
         />
       )}
+
+      {/* Modal de Pago Pendiente */}
+      <PendingPaymentModal
+        isOpen={showPendingPaymentModal}
+        onClose={() => {
+          setShowPendingPaymentModal(false);
+          setPendingPaymentData(null);
+        }}
+        ordenId={pendingPaymentData?.ordenId}
+        remainingSessions={pendingPaymentData?.remainingSessions}
+        planType={pendingPaymentData?.planType}
+        frecuencia={pendingPaymentData?.frecuencia}
+        mentor={pendingPaymentData?.mentor}
+        expiresAt={pendingPaymentData?.expiresAt}
+      />
     </div>
   );
 }

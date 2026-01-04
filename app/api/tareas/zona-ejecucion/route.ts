@@ -114,7 +114,7 @@ export async function GET(req: Request) {
             Meta: true
           }
         },
-        EvidenciaAccion: true // Incluir evidencia para obtener feedback del mentor
+        EvidenciaAccion: true // Incluir evidencia relacionada por evidenciaId
       },
       orderBy: {
         dueDate: 'asc'
@@ -144,7 +144,7 @@ export async function GET(req: Request) {
             Meta: true
           }
         },
-        EvidenciaAccion: true // Incluir evidencia para obtener feedback del mentor
+        EvidenciaAccion: true // Incluir evidencia relacionada por evidenciaId
       },
       orderBy: {
         dueDate: 'asc'
@@ -340,8 +340,8 @@ export async function GET(req: Request) {
       fechaProgramada: task.dueDate.toISOString(),
       status: task.status,
       evidenceStatus: task.evidenceStatus,
-      evidenciaUrl: task.evidenceUrl,
-      feedbackMentor: task.EvidenciaAccion?.feedbackMentor || null, // Agregar feedback del mentor
+      evidenciaUrl: task.EvidenciaAccion?.fotoUrl || null,
+      feedbackMentor: task.EvidenciaAccion?.comentarioMentor || null,
       pointsReward: 0,
       requiereEvidencia: true
     });
@@ -384,6 +384,15 @@ export async function GET(req: Request) {
       ...tareasExtraordinariasRetrasadas.map(formatAdminTask),
       ...tareasCartaRetrasadas.map(formatTaskInstance)
     ];
+
+    // Debug: Log de tareas con evidencia PENDING
+    const tareasConEvidencia = tareasHoy.filter(t => t.evidenceStatus === 'PENDING');
+    console.log('🔍 DEBUG Tareas con evidencia PENDING:', tareasConEvidencia.map(t => ({
+      id: t.id,
+      texto: t.texto.substring(0, 50),
+      evidenceStatus: t.evidenceStatus,
+      evidenciaUrl: t.evidenciaUrl
+    })));
 
     console.log('✅ Tareas procesadas:', {
       eventosHoy: eventosHoy.length,

@@ -441,27 +441,30 @@ export default function CartaWizardRelacional() {
       const areasFiltradas = AREAS.filter(area => {
         const config = areasHabilitadas.find((c: any) => c.areaKey === area.key);
         
-        // Si pertenece a Vision y hay configuración explícita, usar esa configuración
-        if (perteneceGrupo && config !== undefined) {
+        // Si hay configuración explícita para esta área, usarla (aplica para Vision y Lobo Solitario)
+        if (config !== undefined) {
           const isEnabled = config.enabled === true;
-          console.log(`${isEnabled ? '✅' : '⛔'} Área ${area.name} (${area.key}): ${config.enabled ? 'HABILITADA' : 'DESHABILITADA'} (Vision config)`);
+          const tipo = perteneceGrupo ? 'Vision' : 'Lobo Solitario';
+          console.log(`${isEnabled ? '✅' : '⛔'} Área ${area.name} (${area.key}): ${config.enabled ? 'HABILITADA' : 'DESHABILITADA'} (${tipo} config)`);
           return isEnabled;
         }
         
-        // Si pertenece a Vision pero NO hay configuración para esta área, deshabilitarla
-        if (perteneceGrupo && config === undefined) {
+        // Si NO hay configuración explícita:
+        
+        // Usuario Vision sin configuración de esta área: deshabilitarla
+        if (perteneceGrupo) {
           console.log(`⛔ Área ${area.name} (${area.key}): DESHABILITADA (Vision no la configuró)`);
           return false;
         }
         
-        // Usuario individual (no Vision): habilitar áreas básicas, excluir servicios
-        if (!perteneceGrupo && (area.key === 'servicioTrans' || area.key === 'servicioComun')) {
-          console.log(`⛔ Área ${area.name} (${area.key}): DESHABILITADA (usuario individual, área de servicio)`);
+        // Lobo Solitario sin configuración: excluir servicios, habilitar áreas básicas
+        if (area.key === 'servicioTrans' || area.key === 'servicioComun') {
+          console.log(`⛔ Área ${area.name} (${area.key}): DESHABILITADA (Lobo Solitario sin config, área de servicio)`);
           return false;
         }
         
-        // Usuario individual: habilitar áreas básicas
-        console.log(`✅ Área ${area.name} (${area.key}): HABILITADA (usuario individual, área básica)`);
+        // Lobo Solitario sin configuración: habilitar áreas básicas por defecto
+        console.log(`✅ Área ${area.name} (${area.key}): HABILITADA (Lobo Solitario sin config, área básica default)`);
         return true;
       });
       
@@ -1454,7 +1457,7 @@ export default function CartaWizardRelacional() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#0f1015]">
-        <LoadingSpinner message="Cargando Carta de Frutos..." size="lg" />
+        <LoadingSpinner message="Cargando Objetivos." size="lg" />
       </div>
     );
   }
@@ -1489,7 +1492,7 @@ export default function CartaWizardRelacional() {
             <div>
               <h1 className="text-2xl font-bold text-white flex items-center gap-2">
                 <Sparkles className="text-purple-400" />
-                F.R.U.T.O.S. 2.0
+                WIZARD 2.0
               </h1>
               <p className="text-sm text-gray-400">Múltiples acciones por área · Configuración individual</p>
             </div>

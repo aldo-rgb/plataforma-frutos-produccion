@@ -59,12 +59,12 @@ export default function AreaConfigurator({ userId, onClose }: AreaConfiguratorPr
         a.areaKey === areaKey ? { ...a, enabled: !a.enabled } : a
       );
       
-      // Validar mínimo de áreas según tipo de usuario
-      const minAreas = perteneceAGrupo ? 1 : 4;
+      // Validar mínimo de 1 área para todos los usuarios
+      const minAreas = 1;
       const enabledCount = updated.filter(a => a.enabled).length;
       
       if (enabledCount < minAreas) {
-        setError(`Debes mantener al menos ${minAreas} área${minAreas > 1 ? 's' : ''} habilitada${minAreas > 1 ? 's' : ''}`);
+        setError('Debes mantener al menos 1 área habilitada');
         return prev;
       }
       
@@ -74,11 +74,11 @@ export default function AreaConfigurator({ userId, onClose }: AreaConfiguratorPr
   };
 
   const handleSave = async () => {
-    const minAreas = perteneceAGrupo ? 1 : 4;
+    const minAreas = 1;
     const enabledCount = areas.filter(a => a.enabled).length;
     
     if (enabledCount < minAreas) {
-      setError(`Debes mantener al menos ${minAreas} área${minAreas > 1 ? 's' : ''} habilitada${minAreas > 1 ? 's' : ''}`);
+      setError('Debes mantener al menos 1 área habilitada');
       return;
     }
 
@@ -163,9 +163,7 @@ export default function AreaConfigurator({ userId, onClose }: AreaConfiguratorPr
             <div className="text-sm text-blue-200">
               <p className="font-bold mb-1">Áreas seleccionadas: {enabledCount} de {areas.length}</p>
               <p>
-                {perteneceAGrupo
-                  ? 'Como administrador/coordinador, puedes personalizar las áreas que este usuario debe completar.'
-                  : 'Selecciona las áreas que deseas trabajar. Debes mantener al menos una área activa.'}
+                Selecciona las áreas que deseas trabajar. Debes mantener al menos una área activa.
               </p>
             </div>
           </div>

@@ -48,6 +48,15 @@ export async function GET() {
         profileImage: true,
         mentorMarketplaceApproved: true,
         organizationId: true,
+        PerfilMentor: {
+          select: {
+            profileApprovalStatus: true,
+            profileSubmittedAt: true,
+            especialidad: true,
+            biografia: true,
+            biografiaCompleta: true
+          }
+        },
         // Contar mentorados asignados
         _count: {
           select: {
@@ -78,24 +87,14 @@ export async function GET() {
           distinct: ['visionId']
         });
 
-        // Verificar si tiene perfil de mentor completo
-        const perfilMentor = await prisma.perfilMentor.findUnique({
-          where: { usuarioId: lider.id },
-          select: {
-            especialidad: true,
-            biografiaCorta: true,
-            biografiaCompleta: true,
-            enlaceVideoLlamada: true,
-            biografia: true
-          }
-        });
+        // Verificar si tiene perfil de mentor completo desde el query principal
+        const perfilMentor = lider.PerfilMentor;
 
         const perfilCompleto = perfilMentor && 
           perfilMentor.especialidad && 
           perfilMentor.especialidad.trim() !== '' &&
-          (perfilMentor.biografiaCorta || perfilMentor.biografiaCompleta || perfilMentor.biografia) &&
-          perfilMentor.enlaceVideoLlamada && 
-          perfilMentor.enlaceVideoLlamada.trim() !== '';
+          perfilMentor.biografia &&
+          perfilMentor.biografia.trim() !== '';
 
         // Verificar si tiene horarios de llamadas configurados
         const horarios = await prisma.callAvailability.findMany({
@@ -114,6 +113,8 @@ export async function GET() {
           totalVisiones: visiones.length,
           perfilCompleto,
           tieneHorarios,
+          profileApprovalStatus: perfilMentor?.profileApprovalStatus || 'DRAFT',
+          profileSubmittedAt: perfilMentor?.profileSubmittedAt,
           VisionesAsignadas: visiones.map((v: any) => ({
             id: v.Vision.id,
             nombre: v.Vision.nombre

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Camera, Loader2, Clock, CheckCircle, AlertCircle, Upload, X, Zap, Calendar } from 'lucide-react';
+import { Camera, Loader2, Clock, CheckCircle, AlertCircle, Upload, X, Zap, Calendar, Eye } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastProvider';
 
 interface Tarea {
@@ -40,6 +40,7 @@ export default function ZonaEjecucionDiaria() {
   const [data, setData] = useState<ZonaEjecucionData | null>(null);
   const [uploadingTaskId, setUploadingTaskId] = useState<string | null>(null); // Changed to string
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showViewEvidenceModal, setShowViewEvidenceModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Tarea | null>(null);
   const [uploadForm, setUploadForm] = useState({
     file: null as File | null,
@@ -118,10 +119,26 @@ export default function ZonaEjecucionDiaria() {
     setUploadForm({ file: null, comentario: '' });
   };
 
+  const openViewEvidenceModal = (tarea: Tarea) => {
+    console.log('🔍 DEBUG Ver Evidencia - Tarea seleccionada:', {
+      id: tarea.id,
+      texto: tarea.texto,
+      evidenceStatus: tarea.evidenceStatus,
+      evidenciaUrl: tarea.evidenciaUrl
+    });
+    setSelectedTask(tarea);
+    setShowViewEvidenceModal(true);
+  };
+
   const closeUploadModal = () => {
     setShowUploadModal(false);
     setSelectedTask(null);
     setUploadForm({ file: null, comentario: '' });
+  };
+
+  const closeViewEvidenceModal = () => {
+    setShowViewEvidenceModal(false);
+    setSelectedTask(null);
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -220,6 +237,19 @@ export default function ZonaEjecucionDiaria() {
     // Si está completada o aprobada, no mostrar botón
     if (tarea.status === 'COMPLETED' || tarea.evidenceStatus === 'APPROVED') {
       return null;
+    }
+
+    // Si tiene evidencia pendiente de revisión (PENDING)
+    if (tarea.evidenceStatus === 'PENDING') {
+      return (
+        <button
+          onClick={() => openViewEvidenceModal(tarea)}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-lg transition-all shadow-lg shadow-blue-500/20"
+        >
+          <Eye className="w-4 h-4" />
+          Ver Evidencia
+        </button>
+      );
     }
 
     // Si tiene evidencia en revisión (SUBMITTED)
@@ -355,7 +385,7 @@ export default function ZonaEjecucionDiaria() {
                 🎉 ¡Todo listo para hoy!
               </p>
               <p className="text-slate-500 text-sm mt-2 mb-6">
-                No tienes tareas pendientes. Disfruta tu día o revisa tus metas en la Carta F.R.U.T.O.S.
+                No tienes tareas pendientes. Disfruta tu día o revisa tus metas programadas en HOY 
               </p>
               
               {/* Botón para ir a la carta */}
@@ -388,6 +418,12 @@ export default function ZonaEjecucionDiaria() {
                 if (isExpired) {
                   return 'opacity-70 grayscale bg-gradient-to-r from-gray-900/60 to-gray-800/40 border-2 border-red-900/50';
                 }
+                
+                // Amarillo si tiene evidencia pendiente de revisión
+                if (tarea.evidenceStatus === 'PENDING') {
+                  return 'bg-gradient-to-r from-yellow-900/40 to-yellow-800/20 border-2 border-yellow-500/70 shadow-lg shadow-yellow-500/30';
+                }
+                
                 if (tarea.tipo === 'EVENTO') {
                   return 'bg-gradient-to-r from-purple-900/40 to-purple-800/20 border-2 border-purple-500/70 shadow-lg shadow-purple-500/30';
                 } else if (tarea.tipo === 'EXTRAORDINARIA') {
@@ -666,6 +702,72 @@ export default function ZonaEjecucionDiaria() {
                   {uploadingTaskId ? 'Enviando...' : 'Enviar'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ver Evidencia */}
+      {showViewEvidenceModal && selectedTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-slate-900 rounded-xl border border-slate-800 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 space-y-4">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-white">
+                  📸 Evidencia Subida
+                </h3>
+                <button
+                  onClick={closeViewEvidenceModal}
+                  className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
+
+              {/* Task Info */}
+              <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+                <p className="text-sm text-slate-400 mb-1">Tarea</p>
+                <p className="text-white font-medium">{selectedTask.texto}</p>
+                <p className="text-sm text-indigo-400 mt-1">{selectedTask.area}</p>
+              </div>
+
+              {/* Evidence Image */}
+              {selectedTask.evidenciaUrl ? (
+                <div className="relative rounded-lg overflow-hidden border border-slate-700 bg-slate-800">
+                  <img
+                    src={selectedTask.evidenciaUrl}
+                    alt="Evidencia"
+                    className="w-full h-auto object-contain max-h-[500px]"
+                    onError={(e) => {
+                      console.error('❌ Error cargando imagen:', selectedTask.evidenciaUrl);
+                      e.currentTarget.src = '/placeholder-image.png';
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="p-8 bg-slate-800/50 rounded-lg border border-slate-700 text-center">
+                  <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-2" />
+                  <p className="text-slate-400">No se encontró la evidencia</p>
+                  <p className="text-xs text-slate-500 mt-1">URL: {selectedTask.evidenciaUrl || 'null'}</p>
+                </div>
+              )}
+
+              {/* Status Badge */}
+              <div className="flex items-center justify-center gap-2 p-3 bg-amber-900/20 border border-amber-700/30 rounded-lg">
+                <Clock className="w-5 h-5 text-amber-400" />
+                <span className="text-amber-300 font-medium">
+                  Evidencia pendiente de revisión por tu mentor
+                </span>
+              </div>
+
+              {/* Close Button */}
+              <button
+                onClick={closeViewEvidenceModal}
+                className="w-full px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Cerrar
+              </button>
             </div>
           </div>
         </div>

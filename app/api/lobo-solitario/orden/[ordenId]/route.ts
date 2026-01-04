@@ -34,6 +34,7 @@ export async function GET(
             id: true,
             nombre: true,
             imagen: true,
+            profileImage: true,
             PerfilMentor: {
               select: {
                 titulo: true,
@@ -74,7 +75,7 @@ export async function GET(
         frecuencia: (orden.paymentData as any)?.frecuencia || 'BIMESTRAL',
         mentor: {
           nombre: orden.Mentor.nombre,
-          imagen: orden.Mentor.imagen,
+          imagen: orden.Mentor.profileImage || orden.Mentor.imagen || null,
           titulo: orden.Mentor.PerfilMentor?.titulo || 'Mentor',
           especialidad: orden.Mentor.PerfilMentor?.especialidad || '',
         },

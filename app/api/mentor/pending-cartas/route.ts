@@ -44,7 +44,17 @@ export async function GET(req: Request) {
           select: {
             id: true,
             nombre: true,
-            email: true
+            email: true,
+            telefono: true,
+            VisionParticipante_VisionParticipante_participanteIdToUsuario: {
+              include: {
+                Vision: {
+                  include: {
+                    Organization: true
+                  }
+                }
+              }
+            }
           }
         },
         Meta: {
@@ -66,25 +76,38 @@ export async function GET(req: Request) {
     })));
 
     // Formatear respuesta
-    const formatted = pendingCartas.map(carta => ({
-      id: carta.id,
-      estado: carta.estado,
-      submittedAt: carta.fechaActualizacion,
-      usuario: {
-        id: carta.Usuario.id,
-        nombre: carta.Usuario.nombre,
-        email: carta.Usuario.email,
-        telefono: null,
-        vision: null
-      },
-      areas: carta.Meta.map(meta => ({
-        type: meta.categoria,
-        identity: meta.declaracionPoder,
-        meta: meta.metaPrincipal,
-        hasActions: meta.Accion.length > 0
-      })),
-      completeness: calculateCompleteness(carta)
-    }));
+    const formatted = pendingCartas.map(carta => {
+      // Obtener la visión del participante (si existe)
+      const visionParticipante = carta.Usuario.VisionParticipante_VisionParticipante_participanteIdToUsuario?.[0];
+      
+      return {
+        id: carta.id,
+        estado: carta.estado,
+        submittedAt: carta.fechaActualizacion,
+        usuario: {
+          id: carta.Usuario.id,
+          nombre: carta.Usuario.nombre,
+          email: carta.Usuario.email,
+          telefono: carta.Usuario.telefono,
+          vision: visionParticipante ? {
+            id: visionParticipante.Vision.id,
+            name: visionParticipante.Vision.nombre,
+            endDate: visionParticipante.Vision.endDate,
+            organization: visionParticipante.Vision.Organization ? {
+              id: visionParticipante.Vision.Organization.id,
+              name: visionParticipante.Vision.Organization.nombre
+            } : null
+          } : null
+        },
+        areas: carta.Meta.map(meta => ({
+          type: meta.categoria,
+          identity: meta.declaracionPoder,
+          meta: meta.metaPrincipal,
+          hasActions: meta.Accion.length > 0
+        })),
+        completeness: calculateCompleteness(carta)
+      };
+    });
 
     return NextResponse.json({
       cartas: formatted,

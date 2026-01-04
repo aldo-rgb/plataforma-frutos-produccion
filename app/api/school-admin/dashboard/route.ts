@@ -94,6 +94,7 @@ export async function GET(req: Request) {
       },
       _sum: {
         totalPurchased: true,
+        totalAllocated: true,
       }
     });
 
@@ -135,9 +136,15 @@ export async function GET(req: Request) {
       }
     });
 
-    const totalPurchased = schoolCredits._sum.totalPurchased || 0;
+    // Variables para estadísticas
     const totalActivated = activatedLicenses;
-    const availableCredits = totalPurchased - totalActivated + availableLicenses;
+    const totalPurchased = schoolCredits._sum.totalPurchased || 0; // Total de llamadas compradas
+    const totalAllocated = schoolCredits._sum.totalAllocated || 0; // Llamadas bloqueadas
+    const callsAvailable = totalPurchased - totalAllocated; // Llamadas disponibles
+    
+    // 📊 Licencias disponibles = licencias no asignadas de la organización
+    // NO incluir SchoolCredit (llamadas de mentoría) porque son sistemas separados
+    const availableCredits = availableLicenses;
 
     // 4. Calcular distribución de tiers
     const users = organization.Usuario_Usuario_organizationIdToOrganization;
@@ -196,16 +203,13 @@ export async function GET(req: Request) {
       take: 5
     });
 
-    // 9. Obtener líderes pendientes de aprobación
+    // 9. Obtener líderes con perfil pendiente de aprobación
     const pendingLeaderApprovals = await prisma.usuario.count({
       where: {
         organizationId: fullUser.organizationId,
         rol: 'LIDER',
-        mentorMarketplaceApproved: false,
         PerfilMentor: {
-          biografia: { 
-            not: null 
-          }
+          profileApprovalStatus: 'PENDING'
         }
       }
     });
@@ -280,9 +284,11 @@ export async function GET(req: Request) {
         totalMentors,
         totalUsers,
         totalCommunityMembers, // NUEVO: Contador de comunidad total
-        availableCredits,
-        totalPurchased,
-        totalActivated,
+        availableCredits, // 📜 Licencias disponibles para usuarios
+        totalPurchased, // 📞 Total de llamadas compradas (SchoolCredit)
+        totalActivated, // 👥 Licencias activadas
+        totalAllocated, // 🔒 Llamadas bloqueadas/asignadas a mentores
+        callsAvailable, // 💰 Llamadas disponibles = totalPurchased - totalAllocated
       },
       mentorCosts: {
         costoTotalMentores,

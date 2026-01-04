@@ -163,24 +163,30 @@ export default function QuantumBioWriter({ isOpen, onClose, onComplete }: Props)
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4"
         onClick={onClose}
       >
         <motion.div
           initial={{ scale: 0.9, y: 20 }}
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.9, y: 20 }}
-          className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-indigo-500/30 shadow-2xl"
+          className="bg-slate-950 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-indigo-500/20 shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-t-3xl">
+          <div className="sticky top-0 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-6 rounded-t-3xl border-b border-indigo-500/30">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="text-4xl">🎙️</div>
+                <div className="w-12 h-12 flex items-center justify-center">
+                  <img 
+                    src="/quantum-logo.svg" 
+                    alt="Quantum Logo" 
+                    className="w-10 h-10 object-contain"
+                  />
+                </div>
                 <div>
                   <h2 className="text-2xl font-bold text-white">QUANTUM Bio-Writer</h2>
-                  <p className="text-indigo-200 text-sm">Creador de perfil con autoridad</p>
+                  <p className="text-indigo-400 text-sm">Creador de perfil con autoridad</p>
                 </div>
               </div>
               <button
@@ -213,18 +219,24 @@ export default function QuantumBioWriter({ isOpen, onClose, onComplete }: Props)
                       className={`h-2 flex-1 rounded-full transition-all ${
                         context.currentStep >= step
                           ? 'bg-gradient-to-r from-indigo-500 to-purple-500'
-                          : 'bg-slate-700'
+                          : 'bg-slate-900'
                       }`}
                     />
                   ))}
                 </div>
 
                 {/* Question */}
-                <div className="bg-slate-800/50 rounded-xl p-6 mb-6">
+                <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-6 mb-6">
                   <div className="flex items-start gap-4">
-                    <div className="text-3xl">🤖</div>
+                    <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
+                      <img 
+                        src="/quantum-logo.svg" 
+                        alt="Quantum" 
+                        className="w-8 h-8 object-contain"
+                      />
+                    </div>
                     <div className="flex-1">
-                      <p className="text-white text-lg whitespace-pre-line">{currentQuestion}</p>
+                      <p className="text-gray-200 text-lg whitespace-pre-line">{currentQuestion}</p>
                     </div>
                   </div>
                 </div>
@@ -234,7 +246,7 @@ export default function QuantumBioWriter({ isOpen, onClose, onComplete }: Props)
                   value={userAnswer}
                   onChange={(e) => setUserAnswer(e.target.value)}
                   placeholder="Escribe tu respuesta aquí..."
-                  className="w-full h-32 px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  className="w-full h-32 px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 resize-none"
                   disabled={isLoading}
                 />
 
@@ -249,7 +261,7 @@ export default function QuantumBioWriter({ isOpen, onClose, onComplete }: Props)
                   </button>
                   <button
                     onClick={() => { reset(); onClose(); }}
-                    className="px-6 py-3 bg-slate-700 text-white font-medium rounded-xl hover:bg-slate-600 transition-colors"
+                    className="px-6 py-3 bg-slate-900 text-gray-300 font-medium rounded-xl hover:bg-slate-800 transition-colors border border-slate-800"
                   >
                     Cancelar
                   </button>
@@ -260,61 +272,67 @@ export default function QuantumBioWriter({ isOpen, onClose, onComplete }: Props)
             {/* Result Preview */}
             {result && (
               <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
-                <div className="text-center mb-6 sticky top-0 bg-slate-900 pb-4 z-10">
-                  <div className="text-5xl mb-4">🎉</div>
+                <div className="text-center mb-6 sticky top-0 bg-slate-950 pb-4 z-10">
+                  <div className="w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                    <img 
+                      src="/quantum-logo.svg" 
+                      alt="Success" 
+                      className="w-14 h-14 object-contain"
+                    />
+                  </div>
                   <h3 className="text-2xl font-bold text-white mb-2">
                     ¡Tu perfil COMPLETO está listo!
                   </h3>
-                  <p className="text-gray-400">
+                  <p className="text-gray-500">
                     QUANTUM ha generado TODO tu perfil profesional
                   </p>
                 </div>
 
                 {/* Títulos Profesionales */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gradient-to-br from-purple-600/20 to-indigo-600/20 border border-purple-500/30 rounded-xl p-4">
-                    <p className="text-xs text-purple-300 font-medium mb-1">TÍTULO PROFESIONAL</p>
-                    <p className="text-white font-bold">{result.jobTitle}</p>
+                  <div className="bg-purple-950/50 border border-purple-900/50 rounded-xl p-4">
+                    <p className="text-xs text-purple-400 font-medium mb-1">TÍTULO PROFESIONAL</p>
+                    <p className="text-gray-200 font-bold">{result.jobTitle}</p>
                   </div>
-                  <div className="bg-gradient-to-br from-indigo-600/20 to-blue-600/20 border border-indigo-500/30 rounded-xl p-4">
-                    <p className="text-xs text-indigo-300 font-medium mb-1">TÍTULO DE MENTOR</p>
-                    <p className="text-white font-bold">{result.mentorTitle}</p>
+                  <div className="bg-indigo-950/50 border border-indigo-900/50 rounded-xl p-4">
+                    <p className="text-xs text-indigo-400 font-medium mb-1">TÍTULO DE MENTOR</p>
+                    <p className="text-gray-200 font-bold">{result.mentorTitle}</p>
                   </div>
                 </div>
 
                 {/* Tagline */}
-                <div className="bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/30 rounded-xl p-4">
-                  <p className="text-xs text-indigo-300 font-medium mb-1">TAGLINE DE IMPACTO</p>
-                  <p className="text-white text-xl font-bold">{result.tagline}</p>
+                <div className="bg-indigo-950/50 border border-indigo-900/50 rounded-xl p-4">
+                  <p className="text-xs text-indigo-400 font-medium mb-1">TAGLINE DE IMPACTO</p>
+                  <p className="text-gray-200 text-xl font-bold">{result.tagline}</p>
                 </div>
 
                 {/* Promise */}
-                <div className="bg-slate-800/50 rounded-xl p-4">
-                  <p className="text-xs text-gray-400 font-medium mb-2">MI PROMESA (20-30 palabras)</p>
-                  <p className="text-white text-lg">{result.promiseStatement}</p>
+                <div className="bg-slate-950/80 border border-slate-900 rounded-xl p-4">
+                  <p className="text-xs text-gray-500 font-medium mb-2">MI PROMESA (20-30 palabras)</p>
+                  <p className="text-gray-200 text-lg">{result.promiseStatement}</p>
                 </div>
 
                 {/* Bio */}
-                <div className="bg-slate-800/50 rounded-xl p-4">
-                  <p className="text-xs text-gray-400 font-medium mb-2">BIOGRAFÍA COMPLETA (100-150 palabras)</p>
+                <div className="bg-slate-950/80 border border-slate-900 rounded-xl p-4">
+                  <p className="text-xs text-gray-500 font-medium mb-2">BIOGRAFÍA COMPLETA (100-150 palabras)</p>
                   <p className="text-gray-300 leading-relaxed">{result.heroJourneyBio}</p>
                 </div>
 
                 {/* Visión */}
-                <div className="bg-gradient-to-br from-emerald-600/20 to-teal-600/20 border border-emerald-500/30 rounded-xl p-4">
-                  <p className="text-xs text-emerald-300 font-medium mb-2">VISIÓN PERSONAL</p>
-                  <p className="text-white">{result.vision}</p>
+                <div className="bg-emerald-950/50 border border-emerald-900/50 rounded-xl p-4">
+                  <p className="text-xs text-emerald-400 font-medium mb-2">VISIÓN PERSONAL</p>
+                  <p className="text-gray-200">{result.vision}</p>
                 </div>
 
                 {/* Especialidad Principal */}
-                <div className="bg-slate-800/50 rounded-xl p-4">
-                  <p className="text-xs text-gray-400 font-medium mb-2">ESPECIALIDAD PRINCIPAL</p>
-                  <p className="text-white font-semibold text-lg">{result.mainSpecialty}</p>
+                <div className="bg-slate-950/80 border border-slate-900 rounded-xl p-4">
+                  <p className="text-xs text-gray-500 font-medium mb-2">ESPECIALIDAD PRINCIPAL</p>
+                  <p className="text-gray-200 font-semibold text-lg">{result.mainSpecialty}</p>
                 </div>
 
                 {/* Especialidades Secundarias */}
-                <div className="bg-slate-800/50 rounded-xl p-4">
-                  <p className="text-xs text-gray-400 font-medium mb-3">ESPECIALIDADES SECUNDARIAS</p>
+                <div className="bg-slate-950/80 border border-slate-900 rounded-xl p-4">
+                  <p className="text-xs text-gray-500 font-medium mb-3">ESPECIALIDADES SECUNDARIAS</p>
                   <div className="flex flex-wrap gap-2">
                     {result.secondarySpecialties.map((spec, i) => (
                       <span
@@ -328,8 +346,8 @@ export default function QuantumBioWriter({ isOpen, onClose, onComplete }: Props)
                 </div>
 
                 {/* Habilidades Clave */}
-                <div className="bg-slate-800/50 rounded-xl p-4">
-                  <p className="text-xs text-gray-400 font-medium mb-3">HABILIDADES CLAVE</p>
+                <div className="bg-slate-950/80 border border-slate-900 rounded-xl p-4">
+                  <p className="text-xs text-gray-500 font-medium mb-3">HABILIDADES CLAVE</p>
                   <div className="flex flex-wrap gap-2">
                     {result.keySkills.map((skill, i) => (
                       <span
@@ -343,12 +361,12 @@ export default function QuantumBioWriter({ isOpen, onClose, onComplete }: Props)
                 </div>
 
                 {/* Logros */}
-                <div className="bg-slate-800/50 rounded-xl p-4">
-                  <p className="text-xs text-gray-400 font-medium mb-3">LOGROS PRINCIPALES</p>
+                <div className="bg-slate-950/80 border border-slate-900 rounded-xl p-4">
+                  <p className="text-xs text-gray-500 font-medium mb-3">LOGROS PRINCIPALES</p>
                   <ul className="space-y-2">
                     {result.achievements.map((achievement, i) => (
                       <li key={i} className="flex items-start gap-2 text-gray-300">
-                        <span className="text-green-400 mt-1">✓</span>
+                        <span className="text-emerald-500 mt-1">✓</span>
                         <span>{achievement}</span>
                       </li>
                     ))}
@@ -356,8 +374,8 @@ export default function QuantumBioWriter({ isOpen, onClose, onComplete }: Props)
                 </div>
 
                 {/* Tags de Expertise */}
-                <div className="bg-slate-800/50 rounded-xl p-4">
-                  <p className="text-xs text-gray-400 font-medium mb-3">TAGS DE EXPERTISE</p>
+                <div className="bg-slate-950/80 border border-slate-900 rounded-xl p-4">
+                  <p className="text-xs text-gray-500 font-medium mb-3">TAGS DE EXPERTISE</p>
                   <div className="flex flex-wrap gap-2">
                     {result.expertiseTags.map((tag, i) => (
                       <span
@@ -372,13 +390,13 @@ export default function QuantumBioWriter({ isOpen, onClose, onComplete }: Props)
 
                 {/* Style Badge */}
                 <div className="flex items-center justify-center gap-2 text-sm">
-                  <span className="text-gray-400">Estilo detectado:</span>
+                  <span className="text-gray-500">Estilo detectado:</span>
                   <span className={`px-3 py-1 rounded-full font-bold ${
                     result.detectedStyle === 'HARDCORE'
-                      ? 'bg-red-500/20 text-red-300'
+                      ? 'bg-red-950/50 text-red-400 border border-red-900/50'
                       : result.detectedStyle === 'EMPATHIC'
-                      ? 'bg-green-500/20 text-green-300'
-                      : 'bg-blue-500/20 text-blue-300'
+                      ? 'bg-emerald-950/50 text-emerald-400 border border-emerald-900/50'
+                      : 'bg-blue-950/50 text-blue-400 border border-blue-900/50'
                   }`}>
                     {result.detectedStyle === 'HARDCORE' ? '💪 Hardcore' : 
                      result.detectedStyle === 'EMPATHIC' ? '🤝 Empático' : 
@@ -387,30 +405,43 @@ export default function QuantumBioWriter({ isOpen, onClose, onComplete }: Props)
                 </div>
 
                 {/* Regenerate Options */}
-                <div className="border-t border-slate-700 pt-6">
-                  <p className="text-sm text-gray-400 mb-3">¿Quieres cambiar el tono?</p>
+                <div className="border-t border-slate-900 pt-6">
+                  <p className="text-sm text-gray-500 mb-3">¿Quieres cambiar el tono?</p>
                   <div className="grid grid-cols-3 gap-2 mb-6">
                     <button
                       onClick={() => regenerateBio('more_authoritative')}
                       disabled={isLoading}
-                      className="px-4 py-2 bg-slate-700 text-white text-sm rounded-lg hover:bg-slate-600 transition-colors disabled:opacity-50"
+                      className="px-4 py-2 bg-slate-900 text-gray-300 text-sm rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50 border border-slate-800"
                     >
                       💪 Más autoritario
                     </button>
                     <button
                       onClick={() => regenerateBio('more_empathic')}
                       disabled={isLoading}
-                      className="px-4 py-2 bg-slate-700 text-white text-sm rounded-lg hover:bg-slate-600 transition-colors disabled:opacity-50"
+                      className="px-4 py-2 bg-slate-900 text-gray-300 text-sm rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50 border border-slate-800"
                     >
                       🤝 Más empático
                     </button>
                     <button
                       onClick={() => regenerateBio('more_inspiring')}
                       disabled={isLoading}
-                      className="px-4 py-2 bg-slate-700 text-white text-sm rounded-lg hover:bg-slate-600 transition-colors disabled:opacity-50"
+                      className="px-4 py-2 bg-slate-900 text-gray-300 text-sm rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50 border border-slate-800"
                     >
                       ✨ Más inspirador
                     </button>
+                  </div>
+                </div>
+
+                {/* Info Box */}
+                <div className="bg-blue-950/30 border border-blue-900/50 rounded-xl p-4 flex items-start gap-3">
+                  <div className="text-blue-400 text-xl mt-0.5">ℹ️</div>
+                  <div className="flex-1">
+                    <p className="text-blue-300 text-sm font-medium mb-1">
+                      Podrás editar toda esta información
+                    </p>
+                    <p className="text-blue-400/70 text-xs">
+                      Esta información se agregará a tu perfil como punto de partida. Podrás modificarla y ajustarla antes de publicar tu perfil.
+                    </p>
                   </div>
                 </div>
 
@@ -424,7 +455,7 @@ export default function QuantumBioWriter({ isOpen, onClose, onComplete }: Props)
                   </button>
                   <button
                     onClick={reset}
-                    className="px-6 py-4 bg-slate-700 text-white font-medium rounded-xl hover:bg-slate-600 transition-colors"
+                    className="px-6 py-4 bg-slate-900 text-gray-300 font-medium rounded-xl hover:bg-slate-800 transition-colors border border-slate-800"
                   >
                     🔄 Empezar de nuevo
                   </button>

@@ -18,9 +18,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log('🔍 Buscando mentores disponibles...');
+    console.log('🔍 Buscando mentores disponibles con horarios de llamadas activos...');
 
-    // Buscar mentores activos con perfil y aceptando nuevos clientes
+    // Buscar mentores activos con perfil, aceptando nuevos clientes y con horarios de llamadas configurados
     const mentores = await prisma.usuario.findMany({
       where: {
         rol: 'MENTOR',
@@ -29,11 +29,17 @@ export async function GET(request: NextRequest) {
           disponible: true,
           acceptingNewClients: true,
         },
+        CallAvailability: {
+          some: {
+            isActive: true, // Solo horarios activos de llamadas
+          },
+        },
       },
       select: {
         id: true,
         nombre: true,
         imagen: true,
+        profileImage: true,
         PerfilMentor: {
           select: {
             id: true,
@@ -61,7 +67,7 @@ export async function GET(request: NextRequest) {
           id: mentor.id,
           perfilMentorId: perfil.id,
           nombre: mentor.nombre,
-          imagen: mentor.imagen || null,
+          imagen: mentor.profileImage || mentor.imagen || null,
           titulo: perfil.titulo || 'Mentor Frutos del Espíritu',
           especialidad: perfil.especialidad || 'Desarrollo Personal',
           biografia: perfil.biografia || 'Mentor experimentado comprometido con tu transformación personal.',

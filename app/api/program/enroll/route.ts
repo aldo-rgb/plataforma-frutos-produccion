@@ -98,7 +98,7 @@ export async function GET() {
       if (packageCredits && packageCredits.MentorPackageOrder.Mentor) {
         // Usuario tiene Lobo Solitario activo
         // Verificar si ya tiene sesiones agendadas (CallBooking sin programEnrollmentId)
-        const scheduledSessionsCount = await prisma.callBooking.count({
+        const scheduledSessions = await prisma.callBooking.findMany({
           where: {
             studentId: session.user.id,
             mentorId: packageCredits.MentorPackageOrder.mentorId,
@@ -106,19 +106,47 @@ export async function GET() {
             status: {
               in: ['PENDING', 'CONFIRMED']
             }
-          }
+          },
+          orderBy: {
+            scheduledAt: 'asc'
+          },
+          take: 2 // Solo las primeras 2 para identificar el patrón semanal
         });
 
-        const needsScheduling = scheduledSessionsCount === 0;
+        const needsScheduling = scheduledSessions.length === 0;
+        
+        // Si ya tiene sesiones, extraer el patrón de días/horas
+        let scheduledPattern = null;
+        if (scheduledSessions.length >= 2) {
+          scheduledPattern = {
+            slot1: {
+              dayOfWeek: scheduledSessions[0].scheduledAt.getDay(),
+              time: scheduledSessions[0].scheduledAt.toTimeString().slice(0, 5)
+            },
+            slot2: {
+              dayOfWeek: scheduledSessions[1].scheduledAt.getDay(),
+              time: scheduledSessions[1].scheduledAt.toTimeString().slice(0, 5)
+            }
+          };
+        }
         
         return NextResponse.json({
           hasEnrollment: false,
           hasLoboSolitario: true,
           needsScheduling: needsScheduling,
+          scheduledPattern: scheduledPattern,
           message: needsScheduling ? 'Necesitas agendar tus sesiones semanales' : 'Programa Lobo Solitario activo',
           userTier: usuario?.tier || 'FREE',
           userRole: usuario?.rol,
           mentor: packageCredits.MentorPackageOrder.Mentor,
+          stats: {
+            totalWeeks: 9, // Lobo Solitario = 9 semanas (63 días)
+            totalSessions: 18, // 9 semanas × 2 sesiones/semana
+            remainingSessions: packageCredits.remainingSessions,
+            completedSessions: packageCredits.usedSessions,
+            maxMissedAllowed: 3,
+            missedCalls: 0
+          },
           packageInfo: {
             totalSessions: packageCredits.totalSessions,
             remainingSessions: packageCredits.remainingSessions,
@@ -311,8 +339,16 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { mentorId, slot1, slot2, totalWeeks = 8 } = body;
 
-    // ===== VALIDACIÓN 1: LICENCIA ACTIVA =====
-    // Verificar que el usuario tenga una licencia activa
+    console.log('📥 POST /api/program/enroll - Datos recibidos:', {
+      userId: session.user.id,
+      mentorId,
+      slot1,
+      slot2,
+      totalWeeks
+    });
+
+    // ===== VALIDACIÓN 1: LICENCIA O PAQUETE ACTIVO =====
+    // Verificar que el usuario tenga una licencia activa O un paquete de Lobo Solitario
     const activeLicense = await prisma.licenseAssignment.findFirst({
       where: {
         userId: session.user.id,
@@ -320,14 +356,33 @@ export async function POST(request: Request) {
       }
     });
 
-    if (!activeLicense) {
+    // Verificar si tiene paquete de Lobo Solitario activo
+    const activePackage = await prisma.packageSessionCredits.findFirst({
+      where: {
+        MentorPackageOrder: {
+          usuarioId: session.user.id,
+          status: 'COMPLETED'
+        },
+        remainingSessions: {
+          gt: 0
+        },
+        isActive: true,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } }
+        ]
+      }
+    });
+
+    // Si no tiene licencia NI paquete activo, rechazar
+    if (!activeLicense && !activePackage) {
       return NextResponse.json({ 
         error: 'No tienes una licencia activa. Contacta a tu coordinador para obtener acceso al programa.' 
       }, { status: 403 });
     }
 
-    // Verificar que la licencia no haya expirado
-    if (activeLicense.expiresAt) {
+    // Si tiene licencia, verificar que no haya expirado
+    if (activeLicense && activeLicense.expiresAt) {
       const expirationDate = new Date(activeLicense.expiresAt);
       const now = new Date();
       
@@ -338,11 +393,20 @@ export async function POST(request: Request) {
       }
     }
 
-    console.log('✅ Usuario tiene licencia activa:', {
-      userId: session.user.id,
-      licenseCode: activeLicense.licenseCode,
-      expiresAt: activeLicense.expiresAt
-    });
+    // Log apropiado según el tipo de acceso
+    if (activeLicense) {
+      console.log('✅ Usuario tiene licencia activa:', {
+        userId: session.user.id,
+        licenseCode: activeLicense.licenseCode,
+        expiresAt: activeLicense.expiresAt
+      });
+    } else if (activePackage) {
+      console.log('✅ Usuario tiene paquete Lobo Solitario activo:', {
+        userId: session.user.id,
+        remainingSessions: activePackage.remainingSessions,
+        totalSessions: activePackage.totalSessions
+      });
+    }
 
     // ===== VALIDACIÓN 2: DATOS REQUERIDOS =====
     // Validaciones
@@ -424,44 +488,50 @@ export async function POST(request: Request) {
     const startDate = new Date();
     const endDate = addWeeks(startDate, totalWeeks);
 
+    // Determinar si es Lobo Solitario (tiene paquete pero no licencia)
+    const isLoboSolitario = !activeLicense && activePackage;
+
     // Usar transacción para garantizar consistencia
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Crear o reutilizar el enrollment
-      let enrollment;
+      let enrollment = null;
       
-      if (enrollmentToUse) {
-        // Reagendando: reutilizar enrollment existente y actualizar mentor si cambió
-        console.log('🔄 Reutilizando enrollment existente para reagendar:', enrollmentToUse.id);
-        enrollment = await tx.programEnrollment.update({
-          where: { id: enrollmentToUse.id },
-          data: {
-            mentorId: Number(mentorId),
-            // Mantener las fechas originales del ciclo
-            startDate: enrollmentToUse.startDate || startDate,
-            endDate: enrollmentToUse.endDate || endDate,
-            totalWeeks: enrollmentToUse.totalWeeks || totalWeeks
-          }
-        });
+      // Solo crear/reutilizar enrollment si NO es Lobo Solitario
+      if (!isLoboSolitario) {
+        if (enrollmentToUse) {
+          // Reagendando: reutilizar enrollment existente y actualizar mentor si cambió
+          console.log('🔄 Reutilizando enrollment existente para reagendar:', enrollmentToUse.id);
+          enrollment = await tx.programEnrollment.update({
+            where: { id: enrollmentToUse.id },
+            data: {
+              mentorId: Number(mentorId),
+              // Mantener las fechas originales del ciclo
+              startDate: enrollmentToUse.startDate || startDate,
+              endDate: enrollmentToUse.endDate || endDate,
+              totalWeeks: enrollmentToUse.totalWeeks || totalWeeks
+            }
+          });
+        } else {
+          // Nuevo enrollment
+          console.log('✨ Creando nuevo enrollment');
+          enrollment = await tx.programEnrollment.create({
+            data: {
+              userId: session.user.id,
+              mentorId: Number(mentorId),
+              startDate,
+              endDate,
+              totalWeeks,
+              missedCallsCount: 0,
+              maxMissedAllowed: 3,
+              status: 'ACTIVE'
+            }
+          });
+        }
+        console.log(`✅ Program Enrollment creado: ID=${enrollment.id}`);
       } else {
-        // Nuevo enrollment
-        console.log('✨ Creando nuevo enrollment');
-        enrollment = await tx.programEnrollment.create({
-          data: {
-            userId: session.user.id,
-            mentorId: Number(mentorId),
-            startDate,
-            endDate,
-            totalWeeks,
-            missedCallsCount: 0,
-            maxMissedAllowed: 3,
-            status: 'ACTIVE'
-          }
-        });
+        console.log('📦 Lobo Solitario: No se crea ProgramEnrollment');
       }
 
-      console.log(`✅ Program Enrollment creado: ID=${enrollment.id}`);
-
-      // 2. Generar las 34 sesiones (2 por semana x 17 semanas)
+      // 2. Generar las sesiones (2 por semana x N semanas)
       const bookings: any[] = [];
       const usedTimes = new Set<string>(); // Track para evitar duplicados
 
@@ -484,7 +554,7 @@ export async function POST(request: Request) {
           studentId: session.user.id,
           scheduledAt: slot1DateTime,
           weekNumber: week + 1,
-          programEnrollmentId: enrollment.id,
+          programEnrollmentId: enrollment?.id || null,
           type: 'DISCIPLINE',
           status: 'PENDING',
           attendanceStatus: 'PENDING',
@@ -509,7 +579,7 @@ export async function POST(request: Request) {
           studentId: session.user.id,
           scheduledAt: slot2DateTime,
           weekNumber: week + 1,
-          programEnrollmentId: enrollment.id,
+          programEnrollmentId: enrollment?.id || null,
           type: 'DISCIPLINE',
           status: 'PENDING',
           attendanceStatus: 'PENDING',
@@ -522,12 +592,14 @@ export async function POST(request: Request) {
         data: bookings
       });
 
-      console.log(`✅ ${bookings.length} sesiones creadas para programa ${enrollment.id}`);
+      console.log(`✅ ${bookings.length} sesiones creadas${enrollment ? ` para programa ${enrollment.id}` : ' para Lobo Solitario'}`);
 
       // 4. Obtener la próxima sesión
       const nextSession = await tx.callBooking.findFirst({
         where: {
-          programEnrollmentId: enrollment.id,
+          studentId: session.user.id,
+          mentorId: Number(mentorId),
+          programEnrollmentId: enrollment?.id || null,
           scheduledAt: { gte: new Date() }
         },
         orderBy: { scheduledAt: 'asc' }

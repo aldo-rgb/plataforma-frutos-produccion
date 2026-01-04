@@ -82,8 +82,13 @@ export default function SmartTask({ task, onUpdate, onUploadEvidence }: SmartTas
 
   const areaColor = areaColors[task.areaType] || { bg: 'bg-gray-500/10', text: 'text-gray-400', border: 'border-gray-500/30' };
 
+  // Determinar el color de fondo basado en el estado de evidencia
+  const backgroundClass = task.evidenceStatus === 'PENDING' 
+    ? 'bg-gradient-to-r from-yellow-900/20 to-yellow-800/10 border-yellow-600/50' 
+    : 'bg-[#1a1d2d] border-gray-800';
+
   return (
-    <div className="relative bg-[#1a1d2d] rounded-xl border border-gray-800 p-4 mb-3 transition-all hover:border-gray-600">
+    <div className={`relative rounded-xl border p-4 mb-3 transition-all hover:border-gray-600 ${backgroundClass}`}>
       
       <div className="flex items-start gap-4">
 
@@ -174,20 +179,30 @@ export default function SmartTask({ task, onUpdate, onUploadEvidence }: SmartTas
              </div>
           )}
 
-          {/* F. BOTÓN DE SUBIR EVIDENCIA */}
-          {task.status !== 'COMPLETED' && task.evidenceStatus !== 'PENDING' && (
+          {/* F. BOTÓN DE SUBIR/VER EVIDENCIA */}
+          {task.status !== 'COMPLETED' && (
             <div className="mt-3">
-              <button
-                onClick={handleCircleClick}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                  task.evidenceStatus === 'REJECTED'
-                    ? 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white shadow-xl shadow-red-500/50 animate-pulse border-2 border-red-400'
-                    : 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg'
-                }`}
-              >
-                <Upload size={16} />
-                {task.evidenceStatus === 'REJECTED' ? '🔄 Reenviar Evidencia Corregida' : 'Subir Evidencia'}
-              </button>
+              {task.evidenceStatus === 'PENDING' ? (
+                <button
+                  onClick={() => onUploadEvidence(task.id, task.accionId, task.metaId)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all bg-blue-600 hover:bg-blue-500 text-white shadow-lg"
+                >
+                  <ImageIcon size={16} />
+                  Ver Evidencia
+                </button>
+              ) : (
+                <button
+                  onClick={handleCircleClick}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                    task.evidenceStatus === 'REJECTED'
+                      ? 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white shadow-xl shadow-red-500/50 animate-pulse border-2 border-red-400'
+                      : 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg'
+                  }`}
+                >
+                  <Upload size={16} />
+                  {task.evidenceStatus === 'REJECTED' ? '🔄 Reenviar Evidencia Corregida' : 'Subir Evidencia'}
+                </button>
+              )}
             </div>
           )}
 

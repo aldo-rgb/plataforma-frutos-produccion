@@ -296,9 +296,10 @@ export default function AsignacionMentoresPage() {
 
   // 🎯 TICKET 1: Cálculo de Presupuesto
   const calculateBudget = (): BudgetCalculation => {
+    // Paquete de mentoría: 18 llamadas por estudiante
+    const totalCallsPerStudent = 18;
     const weeksPerStudent = cicloInfo?.semanas || 16;
     const callsPerWeek = 2;
-    const totalCallsPerStudent = weeksPerStudent * callsPerWeek;
     
     // Calculate total across all mentors with assigned students
     let grandTotal = 0;
@@ -485,7 +486,7 @@ export default function AsignacionMentoresPage() {
                     <div>
                       <label className="block text-sm text-slate-300 mb-3">
                         <UserPlus className="w-4 h-4 inline mr-2 text-[#7B2CBF]" />
-                        Mentores Certificados
+                        Contratar Mentores Calificados
                       </label>
                       <button
                         onClick={() => setShowMentorCatalog(true)}
@@ -871,16 +872,26 @@ export default function AsignacionMentoresPage() {
             {/* Body con grid de mentores */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {mentoresDisponibles.filter(m => m.rol !== 'LIDER').length === 0 ? (
+                {mentoresDisponibles.length === 0 ? (
                   <div className="col-span-full text-center py-12 text-slate-400">
                     <Info className="w-12 h-12 mx-auto mb-3 opacity-50" />
                     <p className="text-lg">No hay mentores disponibles</p>
                   </div>
                 ) : (
-                  mentoresDisponibles.filter(m => m.rol !== 'LIDER').map((mentor) => {
+                  mentoresDisponibles.map((mentor) => {
                     const tarifaDisciplina = mentor.PerfilMentor?.precioDisciplina || 90;
                     const currentStudents = selectedMentorStudents[mentor.id] || 0;
-                    const maxForThisMentor = MAX_STUDENTS_PER_MENTOR;
+                    
+                    // Información de disponibilidad del mentor
+                    const availabilityInfo = (mentor as any).availabilityInfo || {
+                      maxClients: 10,
+                      currentClients: 0,
+                      availableSlots: 10,
+                      percentage: 0,
+                    };
+                    
+                    // El máximo de alumnos es el menor entre MAX_STUDENTS_PER_MENTOR y los espacios disponibles
+                    const maxForThisMentor = Math.min(MAX_STUDENTS_PER_MENTOR, availabilityInfo.availableSlots);
                     
                     // Datos reales de confiabilidad del mentor
                     const strikes = mentor.accumulatedMissedCalls || 0;
@@ -1008,6 +1019,36 @@ export default function AsignacionMentoresPage() {
                               </span>
                               <span className="text-slate-400 text-sm">/ sesión</span>
                             </div>
+                          </div>
+
+                          {/* 🆕 Indicador de espacios disponibles */}
+                          <div className="mb-4 p-3 bg-slate-900/50 border border-slate-700 rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-slate-400 text-xs">Espacios disponibles</p>
+                              <span className={`text-xs font-bold ${
+                                availabilityInfo.availableSlots === 0 ? 'text-red-400' :
+                                availabilityInfo.availableSlots <= 2 ? 'text-yellow-400' :
+                                'text-[#00FF94]'
+                              }`}>
+                                {availabilityInfo.availableSlots} de {availabilityInfo.maxClients}
+                              </span>
+                            </div>
+                            <div className="h-2 bg-slate-700/50 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full transition-all ${
+                                  availabilityInfo.percentage >= 90 ? 'bg-red-500' :
+                                  availabilityInfo.percentage >= 70 ? 'bg-yellow-500' :
+                                  'bg-[#00FF94]'
+                                }`}
+                                style={{ width: `${availabilityInfo.percentage}%` }}
+                              />
+                            </div>
+                            {availabilityInfo.availableSlots === 0 && (
+                              <p className="text-xs text-red-400 mt-2 flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3" />
+                                Sin espacios disponibles
+                              </p>
+                            )}
                           </div>
 
                           {/* Control de alumnos */}

@@ -20,12 +20,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (session.user.rol !== 'MENTOR' && session.user.rol !== 'LIDER') {
-      return NextResponse.json(
-        { error: 'Solo mentores pueden usar esta función' },
-        { status: 403 }
-      );
-    }
+    // Permitir acceso a cualquier usuario autenticado
 
     const { context, answer } = await request.json();
     
@@ -42,10 +37,12 @@ export async function POST(request: Request) {
     const result = await processInterviewStep(interviewContext, answer);
     
     if (result.isComplete && result.result) {
-      // Guardar en la base de datos
-      await prisma.perfilMentor.update({
+      // Guardar en la base de datos usando upsert (crear o actualizar)
+      await prisma.perfilMentor.upsert({
         where: { usuarioId: session.user.id },
-        data: {
+        create: {
+          usuarioId: session.user.id,
+          especialidad: result.result.expertiseTags[0] || 'Mentoría General', // Campo requerido
           heroJourneyBio: result.result.heroJourneyBio,
           promiseStatement: result.result.promiseStatement,
           tagline: result.result.tagline,
@@ -53,7 +50,17 @@ export async function POST(request: Request) {
           expertiseTags: result.result.expertiseTags,
           aiGeneratedBio: true,
           lastAiInterviewAt: new Date(),
-          // También actualizar campos legacy
+          biografiaCompleta: result.result.heroJourneyBio,
+          biografia: result.result.promiseStatement,
+        },
+        update: {
+          heroJourneyBio: result.result.heroJourneyBio,
+          promiseStatement: result.result.promiseStatement,
+          tagline: result.result.tagline,
+          methodologyStyle: result.result.detectedStyle,
+          expertiseTags: result.result.expertiseTags,
+          aiGeneratedBio: true,
+          lastAiInterviewAt: new Date(),
           biografiaCompleta: result.result.heroJourneyBio,
           biografia: result.result.promiseStatement,
         },

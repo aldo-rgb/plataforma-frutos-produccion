@@ -14,6 +14,7 @@ export default function MentorProfileEditorPage() {
   const [showQuantumBio, setShowQuantumBio] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showAvatarSelfie, setShowAvatarSelfie] = useState(false);
+  const [initialData, setInitialData] = useState<any>(null);
   
   // Validación de campos obligatorios
   const isFormValid = () => {
@@ -51,6 +52,41 @@ export default function MentorProfileEditorPage() {
       // Sección 8: Enlaces
       formData.enlaceVideoLlamada.trim() !== ''
     );
+  };
+
+  // Detectar si hay cambios
+  const hasChanges = () => {
+    if (!initialData) return true; // Si no hay datos iniciales, permitir guardar
+    
+    // Comparar cada campo importante
+    const changed = 
+      formData.nombre !== initialData.nombre ||
+      formData.jobTitle !== initialData.jobTitle ||
+      formData.profileImage !== initialData.profileImage ||
+      formData.experienceYears !== initialData.experienceYears ||
+      formData.skillsInput !== initialData.skillsInput ||
+      formData.vision !== initialData.vision ||
+      formData.sede !== initialData.sede ||
+      formData.nivel !== initialData.nivel ||
+      formData.titulo !== initialData.titulo ||
+      formData.especialidad !== initialData.especialidad ||
+      formData.especialidadesSecundariasInput !== initialData.especialidadesSecundariasInput ||
+      formData.biografia !== initialData.biografia ||
+      formData.biografiaCorta !== initialData.biografiaCorta ||
+      formData.biografiaCompleta !== initialData.biografiaCompleta ||
+      formData.logrosInput !== initialData.logrosInput ||
+      formData.experienciaAnios !== initialData.experienciaAnios ||
+      formData.precioBase !== initialData.precioBase ||
+      formData.precioDisciplina !== initialData.precioDisciplina ||
+      formData.disponible !== initialData.disponible ||
+      formData.comisionMentor !== initialData.comisionMentor ||
+      formData.comisionPlataforma !== initialData.comisionPlataforma ||
+      formData.enlaceVideoLlamada !== initialData.enlaceVideoLlamada ||
+      formData.tipoVideoLlamada !== initialData.tipoVideoLlamada ||
+      formData.maxDisciplineClients !== initialData.maxDisciplineClients ||
+      formData.acceptingNewClients !== initialData.acceptingNewClients;
+    
+    return changed;
   };
   // Función para calcular comisiones según nivel
   const calcularComisiones = (nivel: 'JUNIOR' | 'SENIOR' | 'MASTER') => {
@@ -105,7 +141,7 @@ export default function MentorProfileEditorPage() {
         const res = await fetch(`/api/mentor/profile-editor`);
         const data = await res.json();
         if (res.ok && data) {
-          setFormData({
+          const loadedData = {
             // Datos de Usuario
             nombre: data.nombre || '',
             jobTitle: data.jobTitle || '',
@@ -122,6 +158,7 @@ export default function MentorProfileEditorPage() {
             especialidadesSecundariasInput: data.especialidadesSecundarias ? data.especialidadesSecundarias.join(', ') : '',
             biografia: data.biografia || '',
             biografiaCorta: data.biografiaCorta || '',
+            // Solo prellenar biografiaCompleta que viene de la solicitud
             biografiaCompleta: data.biografiaCompleta || '',
             logrosInput: data.logros ? data.logros.join(', ') : '',
             experienciaAnios: data.experienciaAnios || 0,
@@ -134,7 +171,9 @@ export default function MentorProfileEditorPage() {
             tipoVideoLlamada: data.tipoVideoLlamada || 'zoom',
             maxDisciplineClients: data.maxDisciplineClients !== undefined ? data.maxDisciplineClients : 10,
             acceptingNewClients: data.acceptingNewClients !== undefined ? data.acceptingNewClients : true
-          });
+          };
+          setFormData(loadedData);
+          setInitialData(loadedData); // Guardar datos iniciales para comparación
         }
       } catch (error) {
         console.error('Error cargando perfil:', error);
@@ -253,6 +292,7 @@ export default function MentorProfileEditorPage() {
 
       if (res.ok) {
         setShowSuccess(true);
+        setInitialData(formData); // Actualizar datos iniciales después de guardar
         setTimeout(() => setShowSuccess(false), 5000);
       } else {
         setShowError(true);
@@ -317,7 +357,7 @@ export default function MentorProfileEditorPage() {
         </div>
         <button
           onClick={handleSave}
-          disabled={loading || !isFormValid()}
+          disabled={loading || !isFormValid() || !hasChanges()}
           className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? (
@@ -338,7 +378,13 @@ export default function MentorProfileEditorPage() {
         {/* QUANTUM BIO-WRITER - BANNER SUPERIOR */}
         <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-4 rounded-xl border border-indigo-500/30 flex items-center justify-between shadow-lg">
           <div className="flex items-center gap-3">
-            <div className="text-3xl">🎙️</div>
+            <div className="w-12 h-12 flex items-center justify-center">
+              <img 
+                src="/quantum-logo.svg" 
+                alt="Quantum Logo" 
+                className="w-10 h-10 object-contain"
+              />
+            </div>
             <div>
               <h3 className="text-lg font-bold text-white">Tu perfil es lo mas importante</h3>
               <p className="text-sm text-gray-400">Permite que QUANTUM te guie y genera tu perfil completo en 2 minutos</p>
@@ -722,22 +768,6 @@ export default function MentorProfileEditorPage() {
               />
               <p className="text-xs text-slate-400 mt-1">
                 Precio para sesiones de mentoría individual
-              </p>
-            </div>
-            <div>
-              <label className="block text-slate-300 font-medium mb-2 text-sm">
-                Precio por Llamada de Disciplina (MXN)
-              </label>
-              <input 
-                type="number" 
-                name="precioDisciplina" 
-                value={formData.precioDisciplina} 
-                onChange={handleChange} 
-                className="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all" 
-                placeholder="90" 
-              />
-              <p className="text-xs text-slate-400 mt-1">
-                Precio para llamadas del Club de las 5 AM (05:00-08:00)
               </p>
             </div>
 

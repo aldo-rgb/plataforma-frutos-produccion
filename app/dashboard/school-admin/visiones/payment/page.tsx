@@ -113,6 +113,11 @@ export default function VisionPaymentPage() {
     setProcessing(true);
 
     try {
+      console.log('🔄 Procesando pago:', {
+        orderId: order.id,
+        paymentMethod,
+      });
+
       const res = await fetch('/api/school-admin/visiones/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -122,16 +127,21 @@ export default function VisionPaymentPage() {
         }),
       });
 
+      console.log('📡 Respuesta del servidor:', res.status, res.statusText);
+
       const result = await res.json();
+      console.log('📦 Resultado:', result);
 
       if (result.success) {
+        console.log('✅ Pago exitoso, redirigiendo...');
         // Redirigir a página de éxito
         router.push('/dashboard/school-admin/visiones?payment=success');
       } else {
-        alert(`Error: ${result.error || 'Error al procesar el pago'}`);
+        console.error('❌ Error en el pago:', result.error, result.details);
+        alert(`Error: ${result.error || 'Error al procesar el pago'}\n${result.details || ''}`);
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('💥 Error al procesar pago:', error);
       alert('Error al procesar el pago. Por favor intenta nuevamente.');
     } finally {
       setProcessing(false);

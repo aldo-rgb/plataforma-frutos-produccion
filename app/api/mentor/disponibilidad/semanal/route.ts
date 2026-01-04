@@ -63,9 +63,11 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
+    console.log('📥 Body recibido:', JSON.stringify(body, null, 2));
     
     // Nuevo formato: { dia: number, bloques: [{horaInicio, horaFin}] }
     if (body.dia !== undefined && body.bloques !== undefined) {
+      console.log('✅ Usando formato de actualización completa del día');
       return await actualizarDiaCompleto(session, body);
     }
     
@@ -157,55 +159,65 @@ export async function POST(request: Request) {
  * Función auxiliar para actualizar todos los bloques de un día específico
  */
 async function actualizarDiaCompleto(session: any, body: { dia: number; bloques: Array<{horaInicio: string, horaFin: string}> }) {
-  const { dia, bloques } = body;
-  
-  const perfilMentor = await prisma.perfilMentor.findUnique({
-    where: { usuarioId: session.user.id },
-    select: { id: true }
-  });
-
-  if (!perfilMentor) {
-    return NextResponse.json({ 
-      error: 'No tienes un perfil de mentor activo' 
-    }, { status: 403 });
-  }
-
-  // Eliminar todos los bloques existentes para ese día
-  await prisma.disponibilidadSemanal.deleteMany({
-    where: {
-      perfilMentorId: perfilMentor.id,
-      diaSemana: dia
-    }
-  });
-
-  // Crear los nuevos bloques
-  if (bloques.length > 0) {
-    await prisma.disponibilidadSemanal.createMany({
-      data: bloques.map(bloque => ({
-        perfilMentorId: perfilMentor.id,
-        diaSemana: dia,
-        horaInicio: bloque.horaInicio,
-        horaFin: bloque.horaFin,
-        activo: true
-      }))
+  try {
+    const { dia, bloques } = body;
+    console.log(`🔄 Actualizando día ${dia} con ${bloques.length} bloques`);
+    
+    const perfilMentor = await prisma.perfilMentor.findUnique({
+      where: { usuarioId: session.user.id },
+      select: { id: true }
     });
-  }
 
-  // Obtener los bloques actualizados
-  const disponibilidadActualizada = await prisma.disponibilidadSemanal.findMany({
-    where: {
-      perfilMentorId: perfilMentor.id,
-      diaSemana: dia
-    },
-    orderBy: {
-      horaInicio: 'asc'
+    if (!perfilMentor) {
+      console.error('❌ Perfil de mentor no encontrado');
+      return NextResponse.json({ 
+        error: 'No tienes un perfil de mentor activo' 
+      }, { status: 403 });
     }
-  });
 
-  return NextResponse.json({ 
-    success: true, 
-    disponibilidad: disponibilidadActualizada 
-  });
+    console.log(`🗑️ Eliminando bloques existentes para día ${dia}...`);
+    // Eliminar todos los bloques existentes para ese día
+    await prisma.disponibilidadSemanal.deleteMany({
+      where: {
+        perfilMentorId: perfilMentor.id,
+        diaSemana: dia
+      }
+    });
+
+    // Crear los nuevos bloques
+    if (bloques.length > 0) {
+      console.log(`➕ Creando ${bloques.length} nuevos bloques...`);
+      await prisma.disponibilidadSemanal.createMany({
+        data: bloques.map(bloque => ({
+          perfilMentorId: perfilMentor.id,
+          diaSemana: dia,
+          horaInicio: bloque.horaInicio,
+          horaFin: bloque.horaFin,
+          activo: true
+        }))
+      });
+    }
+
+    // Obtener los bloques actualizados
+    const disponibilidadActualizada = await prisma.disponibilidadSemanal.findMany({
+      where: {
+        perfilMentorId: perfilMentor.id,
+        diaSemana: dia
+      },
+      orderBy: {
+        horaInicio: 'asc'
+      }
+    });
+
+    console.log(`✅ Día actualizado exitosamente. Bloques actuales: ${disponibilidadActualizada.length}`);
+    return NextResponse.json({ 
+      success: true, 
+      disponibilidad: disponibilidadActualizada 
+    });
+  } catch (error) {
+    console.error('❌ Error en actualizarDiaCompleto:', error);
+    throw error;
+  }
 }
 
 /**

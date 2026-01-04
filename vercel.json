@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/avatar-reminder",
       "schedule": "0 10 1 * *"
+    },
+    {
+      "path": "/api/cron/check-expired-memberships",
+      "schedule": "0 0 * * *"
     }
   ]
 }

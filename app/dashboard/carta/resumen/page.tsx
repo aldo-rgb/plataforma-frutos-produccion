@@ -530,24 +530,48 @@ export default function CartaResumenPage() {
     }
 
     try {
-      const savedDraft = localStorage.getItem('carta-wizard-draft');
-      if (!savedDraft) {
-        toast.error('No se encontró el borrador');
-        closeEditObjetivo();
-        return;
+      console.log('📤 Enviando actualización:', {
+        areaId: editingObjetivo.areaId,
+        declaracion: objetivoForm.trim()
+      });
+
+      const response = await fetch('/api/carta/update-declaracion', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          areaId: editingObjetivo.areaId,
+          declaracion: objetivoForm.trim()
+        })
+      });
+
+      console.log('📥 Status de respuesta:', response.status);
+      console.log('📥 Headers:', Object.fromEntries(response.headers.entries()));
+
+      let data;
+      try {
+        const text = await response.text();
+        console.log('📥 Texto de respuesta:', text);
+        data = text ? JSON.parse(text) : {};
+      } catch (parseError) {
+        console.error('❌ Error parseando respuesta:', parseError);
+        throw new Error('Respuesta inválida del servidor');
       }
 
-      const draft = JSON.parse(savedDraft);
-      if (draft.identidades) {
-        draft.identidades[editingObjetivo.areaId] = objetivoForm.trim();
-        localStorage.setItem('carta-wizard-draft', JSON.stringify(draft));
-        setHasChanges(true);
-        await loadCarta();
-        closeEditObjetivo();
+      console.log('📥 Datos parseados:', data);
+
+      if (!response.ok) {
+        console.error('❌ Error del servidor:', data);
+        throw new Error(data.error || data.details || 'Error al actualizar');
       }
+
+      toast.success('Declaración actualizada correctamente');
+      setHasChanges(true);
+      closeEditObjetivo();
+      // Recargar la carta para mostrar los cambios
+      await loadCarta();
     } catch (error) {
-      console.error('Error al guardar objetivo:', error);
-      alert('Error al guardar el objetivo');
+      console.error('❌ Error al guardar objetivo:', error);
+      toast.error(error instanceof Error ? error.message : 'Error al guardar el objetivo');
     }
   };
 
@@ -806,13 +830,20 @@ export default function CartaResumenPage() {
                     Las metas marcadas con <span className="text-red-400 font-bold">borde rojo</span> fueron rechazadas y necesitan ser corregidas. 
                     Las metas con <span className="text-green-400 font-bold">borde verde</span> ya están aprobadas y están bloqueadas.
                   </p>
-                  <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3">
+                  <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3 mb-3">
                     <p className="text-red-200 text-sm font-semibold mb-2">📝 Instrucciones:</p>
                     <ul className="text-gray-300 text-sm space-y-1 list-disc list-inside">
                       <li>Lee el comentario del mentor en cada meta rechazada</li>
                       <li>Edita <strong>solo</strong> las metas marcadas en rojo (las verdes están bloqueadas)</li>
                       <li>Una vez corregidas, reenvía tu carta para una nueva revisión</li>
                     </ul>
+                  </div>
+                  <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-3">
+                    <p className="text-amber-200 text-sm font-semibold mb-2">⚠️ Importante:</p>
+                    <p className="text-gray-300 text-sm">
+                      Los cambios que realices después de la revisión de tu mentor <strong>afectarán los objetivos que declaraste previamente</strong>. 
+                      Cualquier modificación será tomada en cuenta para tu nueva evaluación.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -821,15 +852,24 @@ export default function CartaResumenPage() {
 
           {/* Alerta de En Revisión */}
           {cartaData?.estado === 'EN_REVISION' && (
-            <div className="bg-blue-500/10 border-2 border-blue-500/30 rounded-xl p-4 flex items-center gap-3 mb-6">
-              <Loader2 className="text-blue-400 animate-spin" size={20} />
-              <div className="flex-1">
-                <p className="text-blue-400 font-bold text-sm">
-                  ⏳ Tu carta está en revisión
-                </p>
-                <p className="text-gray-300 text-xs mt-1">
-                  Tu mentor está revisando tu carta. Mientras tanto, puedes seguir editando y mejorando tus metas.
-                </p>
+            <div className="bg-blue-500/10 border-2 border-blue-500/30 rounded-xl p-5 mb-6">
+              <div className="flex items-start gap-4">
+                <Loader2 className="text-blue-400 animate-spin flex-shrink-0 mt-1" size={24} />
+                <div className="flex-1">
+                  <p className="text-blue-300 font-bold text-lg mb-2">
+                    ⏳ Tu carta está en revisión
+                  </p>
+                  <p className="text-gray-300 text-sm mb-3">
+                    Tu mentor está revisando tu carta. Mientras tanto, puedes seguir editando y mejorando tus metas.
+                  </p>
+                  <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3">
+                    <p className="text-blue-200 text-sm font-semibold mb-2">⚠️ Importante:</p>
+                    <p className="text-gray-300 text-sm">
+                      Los cambios que realices después de la revisión de tu mentor <strong>afectarán los objetivos que declaraste previamente</strong>. 
+                      Cualquier modificación será tomada en cuenta para tu nueva evaluación.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           )}

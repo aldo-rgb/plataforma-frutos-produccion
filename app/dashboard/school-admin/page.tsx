@@ -7,7 +7,7 @@ import {
   Users, TrendingUp, Target, Ticket, Award, BarChart3, Download,
   AlertTriangle, CheckCircle, XCircle, Plus, X, CreditCard, Clock,
   DollarSign, ShoppingCart, Building2, UserCheck, Activity, Zap,
-  Shield, BookOpen, GraduationCap, Star
+  Shield, BookOpen, GraduationCap, Star, Phone
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -50,6 +50,9 @@ interface DashboardData {
     status: string;
   }[];
   availableCredits: number;
+  callsAvailable?: number; // 💰 Llamadas disponibles (SchoolCredit)
+  totalPurchased?: number; // 📞 Total de llamadas compradas
+  totalAllocated?: number; // 🔒 Llamadas bloqueadas
   pendingPayment: boolean;
   pendingLeaderApprovals?: number; // NUEVO - Líderes pendientes de aprobación
   mentorCosts?: {
@@ -160,6 +163,9 @@ export default function SchoolAdminDashboard() {
             })),
           pendingOrders: result.pendingOrders,
           availableCredits: result.stats.availableCredits,
+          callsAvailable: result.stats.callsAvailable || 0,
+          totalPurchased: result.stats.totalPurchased || 0,
+          totalAllocated: result.stats.totalAllocated || 0,
           pendingPayment: result.pendingPayment,
           mentorCosts: result.mentorCosts,
         };
@@ -345,30 +351,30 @@ export default function SchoolAdminDashboard() {
           );
         })()}
 
-        {/* Banner de Alerta - Líderes Pendientes de Aprobación */}
+        {/* Banner de Alerta - Perfiles de Líderes Pendientes de Aprobación */}
         {data.pendingLeaderApprovals && data.pendingLeaderApprovals > 0 && (
-          <div className="bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-cyan-500/20 border-2 border-cyan-500/50 rounded-2xl p-5 shadow-2xl animate-pulse backdrop-blur-sm">
+          <div className="bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-purple-500/20 border-2 border-purple-500/50 rounded-2xl p-5 shadow-2xl animate-pulse backdrop-blur-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <div className="absolute inset-0 bg-cyan-400 rounded-full animate-ping opacity-75"></div>
-                  <div className="relative flex items-center justify-center w-12 h-12 bg-cyan-500 rounded-full">
-                    <UserCheck className="text-white" size={24} />
+                  <div className="absolute inset-0 bg-purple-400 rounded-full animate-ping opacity-75"></div>
+                  <div className="relative flex items-center justify-center w-12 h-12 bg-purple-500 rounded-full">
+                    <Shield className="text-white" size={24} />
                   </div>
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <span className="animate-pulse">🔔</span>
-                    {data.pendingLeaderApprovals} Líder(es) Pendiente(s) de Autorización
+                    <span className="animate-pulse">🔍</span>
+                    {data.pendingLeaderApprovals} Perfil{data.pendingLeaderApprovals !== 1 ? 'es' : ''} de Líder{data.pendingLeaderApprovals !== 1 ? 'es' : ''} Pendiente{data.pendingLeaderApprovals !== 1 ? 's' : ''} de Aprobación
                   </h3>
-                  <p className="text-sm text-cyan-200 mt-1">
-                    Revisa y autoriza los perfiles para activar líderes en tu organización
+                  <p className="text-sm text-purple-200 mt-1">
+                    Los líderes han enviado sus perfiles para revisión. Aprueba o rechaza cada perfil.
                   </p>
                 </div>
               </div>
               <Link href="/dashboard/school-admin/lideres">
-                <button className="px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-cyan-500/50 flex items-center gap-2">
-                  <UserCheck size={20} />
+                <button className="px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-purple-500/50 flex items-center gap-2">
+                  <CheckCircle size={20} />
                   <span>Revisar Perfiles</span>
                 </button>
               </Link>
@@ -472,13 +478,6 @@ export default function SchoolAdminDashboard() {
             color="blue"
           />
           <KpiCard
-            icon={<Target className="text-purple-400" />}
-            label="Tasa de Cumplimiento"
-            value={`${data.overview.completionRate}%`}
-            trend="Cartas y evidencias"
-            color="purple"
-          />
-          <KpiCard
             icon={<Ticket className="text-yellow-400" />}
             label="Licencias Disponibles"
             value={data.availableCredits.toString()}
@@ -490,6 +489,13 @@ export default function SchoolAdminDashboard() {
               return '✅ Activos';
             })()}
             color={data.pendingOrders.length > 0 ? 'blue' : 'yellow'}
+          />
+          <KpiCard
+            icon={<Phone className="text-cyan-400" />}
+            label="Llamadas Disponibles"
+            value={(data.callsAvailable || 0).toString()}
+            trend={`${data.totalAllocated || 0} bloqueadas / ${data.totalPurchased || 0} totales`}
+            color="cyan"
           />
         </div>
 

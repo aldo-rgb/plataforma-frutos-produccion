@@ -75,7 +75,7 @@ export function PrivacySettings() {
       value: 'COMMUNITY' as const,
       icon: Users,
       title: '🌍 Comunidad',
-      description: 'Visible en el Muro para usuarios registrados (Recomendado)',
+      description: 'Visible en el Muro para usuarios registrados de mi Visión',
       color: 'border-blue-500'
     },
     {

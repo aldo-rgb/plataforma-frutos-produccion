@@ -196,14 +196,22 @@ export async function generateTasksForLetter(cartaId: number): Promise<TaskGener
     // 5. Inserción masiva en la base de datos
     console.log(`💾 Insertando ${tasksToCreate.length} tareas en la base de datos...`);
     
-    // CRÍTICO: Convertir fechas a strings ISO para que Prisma las parsee correctamente
-    // Si enviamos Date objects, el driver de PostgreSQL los normaliza incorrectamente
+    // CRÍTICO: Usar formato de fecha local para evitar problemas de zona horaria
+    // Convertir a formato YYYY-MM-DD sin información de hora para que PostgreSQL
+    // lo interprete como medianoche local
+    const formatDateForDB = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}T06:00:00.000Z`; // 6 AM UTC = Medianoche México
+    };
+    
     const tasksToInsert = tasksToCreate.map(task => ({
       ...task,
-      dueDate: task.dueDate.toISOString(),
-      originalDueDate: task.originalDueDate.toISOString(),
-      createdAt: task.createdAt.toISOString(),
-      updatedAt: task.updatedAt.toISOString()
+      dueDate: formatDateForDB(task.dueDate),
+      originalDueDate: formatDateForDB(task.originalDueDate),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     }));
     
     const result = await prisma.taskInstance.createMany({
@@ -494,8 +502,23 @@ export async function generateAdditionalTasks(
     }
 
     // Insertar
+    const formatDateForDB = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}T06:00:00.000Z`; // 6 AM UTC = Medianoche México
+    };
+
+    const tasksToInsert = tasksToCreate.map(task => ({
+      ...task,
+      dueDate: formatDateForDB(task.dueDate),
+      originalDueDate: formatDateForDB(task.originalDueDate),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }));
+
     const result = await prisma.taskInstance.createMany({
-      data: tasksToCreate,
+      data: tasksToInsert,
       skipDuplicates: true
     });
 
