@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
+import { createClient } from '@supabase/supabase-js';
+
+// Función para obtener cliente de Supabase (lazy initialization)
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase environment variables');
+  }
+  return createClient(supabaseUrl, supabaseKey);
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -60,23 +68,32 @@ export async function POST(request: NextRequest) {
     const randomString = Math.random().toString(36).substring(2, 15);
     const extension = file.name.split('.').pop();
     const filename = `${timestamp}-${randomString}.${extension}`;
+    const filePath = `${folder}/${filename}`;
 
-    // Crear directorio si no existe
-    const uploadDir = join(process.cwd(), 'public', folder);
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
+    // Subir a Supabase Storage
+    const { data, error } = await getSupabaseClient().storage
+      .from('mentor-assets')
+      .upload(filePath, buffer, {
+        contentType: file.type,
+        upsert: true,
+      });
+
+    if (error) {
+      console.error('Error subiendo a Supabase:', error);
+      return NextResponse.json(
+        { success: false, error: 'Error al subir el archivo' },
+        { status: 500 }
+      );
     }
 
-    // Guardar archivo
-    const filepath = join(uploadDir, filename);
-    await writeFile(filepath, buffer);
-
-    // Retornar URL del archivo
-    const url = `/${folder}/${filename}`;
+    // Obtener URL pública
+    const { data: { publicUrl } } = getSupabaseClient().storage
+      .from('mentor-assets')
+      .getPublicUrl(filePath);
 
     return NextResponse.json({
       success: true,
-      url,
+      url: publicUrl,
       filename,
     });
 
