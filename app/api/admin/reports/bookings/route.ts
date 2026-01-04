@@ -18,7 +18,7 @@ export async function GET(request: Request) {
       select: { id: true, rol: true }
     });
 
-    if (!user || (user.rol !== 'ADMIN' && user.rol !== 'ADMINISTRADOR')) {
+    if (!user || user.rol !== 'ADMINISTRADOR') {
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 });
     }
 
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     }
 
     if (type) {
-      where.callType = type;
+      where.type = type;
     }
 
     // Obtener bookings con información relacionada
@@ -51,32 +51,21 @@ export async function GET(request: Request) {
       prisma.callBooking.findMany({
         where,
         include: {
-          mentor: {
+          Usuario_CallBooking_mentorIdToUsuario: {
             select: {
               id: true,
               nombre: true,
               email: true,
-              imagen: true
+              imagen: true,
+              profileImage: true
             }
           },
-          student: {
+          Usuario_CallBooking_studentIdToUsuario: {
             select: {
               id: true,
               nombre: true,
               email: true,
-              organizationId: true,
-              Organization: {
-                select: {
-                  id: true,
-                  name: true
-                }
-              }
-            }
-          },
-          vision: {
-            select: {
-              id: true,
-              nombre: true
+              organizationId: true
             }
           }
         },
@@ -99,27 +88,38 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      bookings: bookings.map(booking => ({
-        id: booking.id,
-        date: booking.scheduledAt,
-        type: booking.callType,
-        mentor: {
-          id: booking.mentor.id,
-          name: booking.mentor.nombre,
-          avatar: booking.mentor.imagen
-        },
-        student: {
-          id: booking.student.id,
-          name: booking.student.nombre,
-          organization: booking.student.Organization?.name || 'Sin organización'
-        },
-        vision: booking.vision ? {
-          id: booking.vision.id,
-          name: booking.vision.nombre
-        } : null,
-        status: booking.status,
-        value: (booking.status === 'COMPLETED') ? 90 : 0,
-        notes: booking.notes
+      bookings: await Promise.all(bookings.map(async (booking) => {
+        const mentor = booking.Usuario_CallBooking_mentorIdToUsuario;
+        const student = booking.Usuario_CallBooking_studentIdToUsuario;
+        
+        // Obtener organización si existe
+        let organizationName = 'Sin organización';
+        if (student.organizationId) {
+          const org = await prisma.organization.findUnique({
+            where: { id: student.organizationId },
+            select: { name: true }
+          });
+          if (org) organizationName = org.name;
+        }
+        
+        return {
+          id: booking.id,
+          date: booking.scheduledAt,
+          type: booking.type,
+          mentor: {
+            id: mentor.id,
+            name: mentor.nombre,
+            avatar: mentor.profileImage || mentor.imagen
+          },
+          student: {
+            id: student.id,
+            name: student.nombre,
+            organization: organizationName
+          },
+          status: booking.status,
+          value: (booking.status === 'COMPLETED') ? 90 : 0,
+          notes: booking.notes
+        };
       })),
       pagination: {
         page,

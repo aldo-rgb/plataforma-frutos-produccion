@@ -48,14 +48,14 @@ export async function GET(request: Request) {
         },
         OR: [
           {
-            ParticipanteEnVisiones: {
+            VisionParticipante_VisionParticipante_participanteIdToUsuario: {
               some: {
                 visionId: { in: visionIds }
               }
             }
           },
           {
-            GameChangerEnVisiones: {
+            VisionGameChanger_VisionGameChanger_gameChangerIdToUsuario: {
               some: {
                 visionId: { in: visionIds }
               }

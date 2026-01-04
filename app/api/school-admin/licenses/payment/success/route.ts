@@ -57,28 +57,122 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(new URL('/dashboard/school-admin?error=payment_failed', req.url));
     }
 
-    // ✅ GENERAR CRÉDITOS AUTOMÁTICAMENTE
-    await generateCreditsForOrder(order);
+    // ✅ GENERAR CRÉDITOS O ASIGNAR MENTORES SEGÚN EL TIPO DE PAGO
+    const existingPaymentData = order.paymentData as any;
+    const isVisionPayment = existingPaymentData?.type === 'VISION_MENTOR_PAYMENT';
 
-    // Actualizar estado de la orden
-    await prisma.licenseOrder.update({
-      where: { id: orderId },
-      data: {
-        status: 'COMPLETED',
-        paidAt: new Date(),
-        paymentData,
-        creditsGenerated: true,
-        creditsGeneratedAt: new Date(),
-      },
-    });
+    if (isVisionPayment) {
+      // Es un pago de mentores para una visión
+      await generateMentorAssignmentsForOrder(order);
+      
+      await prisma.licenseOrder.update({
+        where: { id: orderId },
+        data: {
+          status: 'COMPLETED',
+          paidAt: new Date(),
+          paymentData: {
+            ...existingPaymentData,
+            ...paymentData,
+            status: 'completed',
+            paidAt: new Date().toISOString(),
+          },
+        },
+      });
 
-    // Redirigir con éxito
-    return NextResponse.redirect(
-      new URL(`/dashboard/school-admin?success=true&quantity=${order.quantity}&tier=${order.tier}`, req.url)
-    );
+      // Redirigir a la visión
+      const visionId = existingPaymentData.visionId;
+      return NextResponse.redirect(
+        new URL(`/dashboard/school-admin/visiones/${visionId}?success=mentores_contratados`, req.url)
+      );
+    } else {
+      // Es un pago de licencias normal
+      await generateCreditsForOrder(order);
+
+      await prisma.licenseOrder.update({
+        where: { id: orderId },
+        data: {
+          status: 'COMPLETED',
+          paidAt: new Date(),
+          paymentData,
+          creditsGenerated: true,
+          creditsGeneratedAt: new Date(),
+        },
+      });
+
+      // Redirigir con éxito
+      return NextResponse.redirect(
+        new URL(`/dashboard/school-admin?success=true&quantity=${order.quantity}&tier=${order.tier}`, req.url)
+      );
+    }
   } catch (error: any) {
     console.error('❌ Error processing payment success:', error);
     return NextResponse.redirect(new URL('/dashboard/school-admin?error=processing_failed', req.url));
+  }
+}
+
+// ============================================================================
+// FUNCIÓN PARA GENERAR ASIGNACIONES DE MENTORES
+// ============================================================================
+async function generateMentorAssignmentsForOrder(order: any) {
+  try {
+    const paymentData = order.paymentData as any;
+    const visionId = paymentData.visionId;
+    const mentorAssignments = paymentData.mentorAssignments || [];
+
+    console.log(`🎯 Generando asignaciones de mentores para visión ${visionId}...`);
+
+    for (const assignment of mentorAssignments) {
+      const { mentorId, studentCount, ratePerCall } = assignment;
+      const totalSessions = studentCount * 18; // 18 llamadas por estudiante
+      const totalCost = totalSessions * ratePerCall;
+
+      // Crear MentorPackageOrder
+      const packageOrder = await prisma.mentorPackageOrder.create({
+        data: {
+          usuarioId: order.requestedBy,
+          mentorId: mentorId,
+          visionId: visionId,
+          organizationId: order.organizationId,
+          cantidad: totalSessions,
+          precioUnitario: ratePerCall,
+          precioTotal: totalCost,
+          currency: 'MXN',
+          metodoPago: order.paymentMethod || 'paypal',
+          status: 'COMPLETED',
+          externalPaymentId: order.externalPaymentId || `PAYPAL-${order.id}`,
+          paidAt: new Date(),
+        },
+      });
+
+      console.log(`📦 MentorPackageOrder creado: ${packageOrder.id} para mentor ${mentorId}`);
+
+      // Verificar si ya existe VisionMentor
+      const existingVisionMentor = await prisma.visionMentor.findFirst({
+        where: {
+          visionId: visionId,
+          mentorId: mentorId,
+        },
+      });
+
+      if (!existingVisionMentor) {
+        await prisma.visionMentor.create({
+          data: {
+            visionId: visionId,
+            mentorId: mentorId,
+            asignadoPorId: order.requestedBy,
+          },
+        });
+
+        console.log(`✅ VisionMentor creado para mentor ${mentorId} en visión ${visionId}`);
+      } else {
+        console.log(`ℹ️  VisionMentor ya existe para mentor ${mentorId} en visión ${visionId}`);
+      }
+    }
+
+    console.log(`✅ Asignaciones completadas para ${mentorAssignments.length} mentores`);
+  } catch (error) {
+    console.error('❌ Error generando asignaciones de mentores:', error);
+    throw error;
   }
 }
 

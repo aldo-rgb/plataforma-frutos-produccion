@@ -50,13 +50,12 @@ interface Participante {
   id: number;
   participanteId: number;
   gameChangerId: number | null;
-  Participante: {
+  Usuario_VisionParticipante_participanteIdToUsuario: {
     id: number;
     nombre: string;
     email: string;
     telefono: string | null;
     tier: string;
-    licenseCode: string | null;
     assignedMentorId: number | null;
     Usuario_Usuario_assignedMentorIdToUsuario: {
       id: number;
@@ -64,7 +63,11 @@ interface Participante {
       email: string;
       imagen: string | null;
     } | null;
-    LicenseAssignments: {
+    CartaFrutos: {
+      id: number;
+      estado: string;
+    }[];
+    LicenseAssignment_LicenseAssignment_userIdToUsuario: {
       id: number;
       licenseCode: string;
       activatedAt: Date | null;
@@ -72,7 +75,7 @@ interface Participante {
       expiresAt: Date | null;
     }[];
   };
-  GameChanger: {
+  Usuario_VisionParticipante_gameChangerIdToUsuario: {
     id: number;
     nombre: string;
     email: string;
@@ -84,13 +87,12 @@ interface Participante {
 interface GameChanger {
   id: number;
   gameChangerId: number;
-  GameChanger: {
+  Usuario_VisionGameChanger_gameChangerIdToUsuario: {
     id: number;
     nombre: string;
     email: string;
     telefono: string | null;
     tier: string;
-    licenseCode: string | null;
     assignedMentorId: number | null;
     Usuario_Usuario_assignedMentorIdToUsuario: {
       id: number;
@@ -98,7 +100,7 @@ interface GameChanger {
       email: string;
       imagen: string | null;
     } | null;
-    LicenseAssignments: {
+    LicenseAssignment_LicenseAssignment_userIdToUsuario: {
       id: number;
       licenseCode: string;
       activatedAt: Date | null;
@@ -986,10 +988,18 @@ export default function VisionDetailPage() {
     }
   };
 
-  const participantesWithLicense = participantes.filter(p => p.Participante.licenseCode);
-  const participantesWithoutLicense = participantes.filter(p => !p.Participante.licenseCode);
-  const gameChangersWithLicense = gameChangers.filter(gc => gc.GameChanger.licenseCode);
-  const gameChangersWithoutLicense = gameChangers.filter(gc => !gc.GameChanger.licenseCode);
+  const participantesWithLicense = participantes.filter(p => 
+    p.Usuario_VisionParticipante_participanteIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.length > 0
+  );
+  const participantesWithoutLicense = participantes.filter(p => 
+    !p.Usuario_VisionParticipante_participanteIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.length
+  );
+  const gameChangersWithLicense = gameChangers.filter(gc => 
+    gc.Usuario_VisionGameChanger_gameChangerIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.length > 0
+  );
+  const gameChangersWithoutLicense = gameChangers.filter(gc => 
+    !gc.Usuario_VisionGameChanger_gameChangerIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.length
+  );
   const totalWithLicense = participantesWithLicense.length + gameChangersWithLicense.length;
   const totalWithoutLicense = participantesWithoutLicense.length + gameChangersWithoutLicense.length;
 
@@ -1287,57 +1297,63 @@ export default function VisionDetailPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700">
-                  {participantes.map((p) => (
+                  {participantes.map((p) => {
+                    const Participante = p.Usuario_VisionParticipante_participanteIdToUsuario;
+                    const GameChanger = p.Usuario_VisionParticipante_gameChangerIdToUsuario;
+                    const licenseCode = Participante?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode;
+                    const LicenseAssignments = Participante?.LicenseAssignment_LicenseAssignment_userIdToUsuario || [];
+                    
+                    return (
                     <tr key={p.id} className="hover:bg-slate-800/30 transition-colors">
                       <td className="px-6 py-4 text-center">
-                        {!p.Participante.licenseCode && (
+                        {!licenseCode && (
                           <input
                             type="checkbox"
-                            checked={selectedUsers.has(p.Participante.id)}
-                            onChange={() => handleToggleUser(p.Participante.id)}
+                            checked={selectedUsers.has(Participante.id)}
+                            onChange={() => handleToggleUser(Participante.id)}
                             className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-cyan-600 focus:ring-2 focus:ring-cyan-500"
                           />
                         )}
                       </td>
                       <td className="px-6 py-4">
                         <div>
-                          <p className="font-semibold text-white">{p.Participante.nombre}</p>
-                          <p className="text-xs text-slate-500">{p.Participante.email}</p>
-                          {p.Participante.telefono && (
+                          <p className="font-semibold text-white">{Participante.nombre}</p>
+                          <p className="text-xs text-slate-500">{Participante.email}</p>
+                          {Participante.telefono && (
                             <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
                               </svg>
-                              {p.Participante.telefono}
+                              {Participante.telefono}
                             </p>
                           )}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          p.Participante.tier === 'PREMIUM'
+                          Participante.tier === 'PREMIUM'
                             ? 'bg-purple-900/20 text-purple-400 border border-purple-600'
                             : 'bg-cyan-900/20 text-cyan-400 border border-cyan-600'
                         }`}>
-                          {p.Participante.tier || 'FREE'}
+                          {Participante.tier || 'FREE'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {p.Participante.Usuario_Usuario_assignedMentorIdToUsuario ? (
+                        {Participante.Usuario_Usuario_assignedMentorIdToUsuario ? (
                           <div className="flex flex-col items-center gap-1">
                             <span className="text-xs text-slate-400">
-                              {p.Participante.Usuario_Usuario_assignedMentorIdToUsuario.nombre}
+                              {Participante.Usuario_Usuario_assignedMentorIdToUsuario.nombre}
                             </span>
                             <div className="flex items-center gap-1">
                               <button
-                                onClick={() => handleOpenAssignMentorModal(p.Participante.id, 'PARTICIPANTE', p.Participante.nombre, (p.Participante.LicenseAssignments?.length || 0) > 0, true)}
+                                onClick={() => handleOpenAssignMentorModal(Participante.id, 'PARTICIPANTE', Participante.nombre, LicenseAssignments.length > 0, true)}
                                 className="inline-flex items-center gap-1 px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded transition-colors"
                               >
                                 <Users size={12} />
                                 Cambiar
                               </button>
                               <button
-                                onClick={() => handleRemoverMentorDeUsuario(p.Participante.id, 'PARTICIPANTE', p.Participante.nombre)}
+                                onClick={() => handleRemoverMentorDeUsuario(Participante.id, 'PARTICIPANTE', Participante.nombre)}
                                 className="p-1 hover:bg-red-600/20 text-red-400 rounded transition-colors"
                                 title="Remover mentor"
                               >
@@ -1347,7 +1363,7 @@ export default function VisionDetailPage() {
                           </div>
                         ) : (
                           <button
-                            onClick={() => handleOpenAssignMentorModal(p.Participante.id, 'PARTICIPANTE', p.Participante.nombre, (p.Participante.LicenseAssignments?.length || 0) > 0)}
+                            onClick={() => handleOpenAssignMentorModal(Participante.id, 'PARTICIPANTE', Participante.nombre, LicenseAssignments.length > 0)}
                             className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
                           >
                             <Users size={14} />
@@ -1356,10 +1372,10 @@ export default function VisionDetailPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {p.GameChanger ? (
+                        {GameChanger ? (
                           <div className="flex flex-col items-center gap-1">
                             <span className="text-xs text-cyan-400 font-medium">
-                              {p.GameChanger.nombre}
+                              {GameChanger.nombre}
                             </span>
                             <div className="flex items-center gap-1">
                               <button
@@ -1373,7 +1389,7 @@ export default function VisionDetailPage() {
                                 Cambiar
                               </button>
                               <button
-                                onClick={() => handleAssignGameChanger(p.Participante.id, null)}
+                                onClick={() => handleAssignGameChanger(Participante.id, null)}
                                 className="p-1 hover:bg-red-600/20 text-red-400 rounded transition-colors"
                                 title="Remover game changer"
                               >
@@ -1395,8 +1411,8 @@ export default function VisionDetailPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {p.Participante.LicenseAssignments?.[0]?.licenseCode ? (
-                          p.Participante.LicenseAssignments[0].activatedAt ? (
+                        {LicenseAssignments?.[0]?.licenseCode ? (
+                          LicenseAssignments[0].activatedAt ? (
                             <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-900/20 text-green-400 border border-green-600 rounded-full text-xs font-medium">
                               <CheckCircle size={14} />
                               Activa
@@ -1415,13 +1431,13 @@ export default function VisionDetailPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {p.Participante.LicenseAssignments?.[0]?.licenseCode ? (
+                        {LicenseAssignments?.[0]?.licenseCode ? (
                           <div className="flex items-center justify-center gap-2">
                             <code className="px-3 py-1.5 bg-gradient-to-r from-emerald-900/30 to-cyan-900/30 border border-emerald-500/30 rounded-lg text-sm text-emerald-300 font-mono font-semibold tracking-wide">
-                              {p.Participante.LicenseAssignments[0].licenseCode}
+                              {LicenseAssignments[0].licenseCode}
                             </code>
                             <button
-                              onClick={() => copyToClipboard(p.Participante.LicenseAssignments[0].licenseCode)}
+                              onClick={() => copyToClipboard(LicenseAssignments[0].licenseCode)}
                               className="p-1.5 hover:bg-emerald-600/20 text-emerald-400 hover:text-emerald-300 rounded-lg transition-all"
                               title="Copiar código"
                             >
@@ -1435,7 +1451,7 @@ export default function VisionDetailPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
                           <button
-                            onClick={() => handleOpenEditPhone(p.Participante.id, p.Participante.nombre, p.Participante.telefono)}
+                            onClick={() => handleOpenEditPhone(Participante.id, Participante.nombre, Participante.telefono)}
                             className="p-2 hover:bg-blue-600/20 text-blue-400 rounded-lg transition-colors"
                             title="Editar teléfono"
                           >
@@ -1443,7 +1459,7 @@ export default function VisionDetailPage() {
                               <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
                             </svg>
                           </button>
-                          {!p.Participante.LicenseAssignments?.[0]?.licenseCode && (
+                          {!LicenseAssignments?.[0]?.licenseCode && (
                             <button
                               onClick={() => {
                                 setSelectedParticipante(p);
@@ -1465,7 +1481,8 @@ export default function VisionDetailPage() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1522,57 +1539,62 @@ export default function VisionDetailPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700">
-                  {gameChangers.map((gc) => (
+                  {gameChangers.map((gc) => {
+                    const GameChanger = gc.Usuario_VisionGameChanger_gameChangerIdToUsuario;
+                    const licenseCode = GameChanger?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode;
+                    const LicenseAssignments = GameChanger?.LicenseAssignment_LicenseAssignment_userIdToUsuario || [];
+                    
+                    return (
                     <tr key={gc.id} className="hover:bg-slate-800/30 transition-colors">
                       <td className="px-6 py-4 text-center">
-                        {!gc.GameChanger.licenseCode && (
+                        {!licenseCode && (
                           <input
                             type="checkbox"
-                            checked={selectedUsers.has(gc.GameChanger.id)}
-                            onChange={() => handleToggleUser(gc.GameChanger.id)}
+                            checked={selectedUsers.has(GameChanger.id)}
+                            onChange={() => handleToggleUser(GameChanger.id)}
                             className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-cyan-600 focus:ring-2 focus:ring-cyan-500"
                           />
                         )}
                       </td>
                       <td className="px-6 py-4">
                         <div>
-                          <p className="font-semibold text-white">{gc.GameChanger.nombre}</p>
-                          <p className="text-xs text-slate-500">{gc.GameChanger.email}</p>
-                          {gc.GameChanger.telefono && (
+                          <p className="font-semibold text-white">{GameChanger.nombre}</p>
+                          <p className="text-xs text-slate-500">{GameChanger.email}</p>
+                          {GameChanger.telefono && (
                             <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
                               </svg>
-                              {gc.GameChanger.telefono}
+                              {GameChanger.telefono}
                             </p>
                           )}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          gc.GameChanger.tier === 'PREMIUM'
+                          GameChanger.tier === 'PREMIUM'
                             ? 'bg-purple-900/20 text-purple-400 border border-purple-600'
                             : 'bg-cyan-900/20 text-cyan-400 border border-cyan-600'
                         }`}>
-                          {gc.GameChanger.tier || 'FREE'}
+                          {GameChanger.tier || 'FREE'}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {gc.GameChanger.Usuario_Usuario_assignedMentorIdToUsuario ? (
+                        {GameChanger.Usuario_Usuario_assignedMentorIdToUsuario ? (
                           <div className="flex flex-col items-center gap-1">
                             <span className="text-xs text-slate-400">
-                              {gc.GameChanger.Usuario_Usuario_assignedMentorIdToUsuario.nombre}
+                              {GameChanger.Usuario_Usuario_assignedMentorIdToUsuario.nombre}
                             </span>
                             <div className="flex items-center gap-1">
                               <button
-                                onClick={() => handleOpenAssignMentorModal(gc.GameChanger.id, 'GAMECHANGER', gc.GameChanger.nombre, (gc.GameChanger.LicenseAssignments?.length || 0) > 0, true)}
+                                onClick={() => handleOpenAssignMentorModal(GameChanger.id, 'GAMECHANGER', GameChanger.nombre, LicenseAssignments.length > 0, true)}
                                 className="inline-flex items-center gap-1 px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded transition-colors"
                               >
                                 <Users size={12} />
                                 Cambiar
                               </button>
                               <button
-                                onClick={() => handleRemoverMentorDeUsuario(gc.GameChanger.id, 'GAMECHANGER', gc.GameChanger.nombre)}
+                                onClick={() => handleRemoverMentorDeUsuario(GameChanger.id, 'GAMECHANGER', GameChanger.nombre)}
                                 className="p-1 hover:bg-red-600/20 text-red-400 rounded transition-colors"
                                 title="Remover mentor"
                               >
@@ -1582,7 +1604,7 @@ export default function VisionDetailPage() {
                           </div>
                         ) : (
                           <button
-                            onClick={() => handleOpenAssignMentorModal(gc.GameChanger.id, 'GAMECHANGER', gc.GameChanger.nombre, (gc.GameChanger.LicenseAssignments?.length || 0) > 0)}
+                            onClick={() => handleOpenAssignMentorModal(GameChanger.id, 'GAMECHANGER', GameChanger.nombre, LicenseAssignments.length > 0)}
                             className="inline-flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
                           >
                             <Users size={14} />
@@ -1591,8 +1613,8 @@ export default function VisionDetailPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {gc.GameChanger.LicenseAssignments?.[0]?.licenseCode ? (
-                          gc.GameChanger.LicenseAssignments[0].activatedAt ? (
+                        {LicenseAssignments?.[0]?.licenseCode ? (
+                          LicenseAssignments[0].activatedAt ? (
                             <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-900/20 text-green-400 border border-green-600 rounded-full text-xs font-medium">
                               <CheckCircle size={14} />
                               Activa
@@ -1611,13 +1633,13 @@ export default function VisionDetailPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {gc.GameChanger.LicenseAssignments?.[0]?.licenseCode ? (
+                        {LicenseAssignments?.[0]?.licenseCode ? (
                           <div className="flex items-center justify-center gap-2">
                             <code className="px-3 py-1.5 bg-gradient-to-r from-emerald-900/30 to-cyan-900/30 border border-emerald-500/30 rounded-lg text-sm text-emerald-300 font-mono font-semibold tracking-wide">
-                              {gc.GameChanger.LicenseAssignments[0].licenseCode}
+                              {LicenseAssignments[0].licenseCode}
                             </code>
                             <button
-                              onClick={() => copyToClipboard(gc.GameChanger.LicenseAssignments[0].licenseCode)}
+                              onClick={() => copyToClipboard(LicenseAssignments[0].licenseCode)}
                               className="p-1.5 hover:bg-emerald-600/20 text-emerald-400 hover:text-emerald-300 rounded-lg transition-all"
                               title="Copiar código"
                             >
@@ -1631,7 +1653,7 @@ export default function VisionDetailPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
                           <button
-                            onClick={() => handleOpenEditPhone(gc.GameChanger.id, gc.GameChanger.nombre, gc.GameChanger.telefono)}
+                            onClick={() => handleOpenEditPhone(GameChanger.id, GameChanger.nombre, GameChanger.telefono)}
                             className="p-2 hover:bg-blue-600/20 text-blue-400 rounded-lg transition-colors"
                             title="Editar teléfono"
                           >
@@ -1639,7 +1661,7 @@ export default function VisionDetailPage() {
                               <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
                             </svg>
                           </button>
-                          {!gc.GameChanger.LicenseAssignments?.[0]?.licenseCode && (
+                          {!LicenseAssignments?.[0]?.licenseCode && (
                             <button
                               onClick={() => {
                                 setSelectedGameChanger(gc);
@@ -1661,7 +1683,8 @@ export default function VisionDetailPage() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1715,9 +1738,6 @@ export default function VisionDetailPage() {
                     <th className="px-6 py-4 text-center text-xs font-semibold text-slate-400 uppercase">
                       Horarios
                     </th>
-                    <th className="px-6 py-4 text-center text-xs font-semibold text-slate-400 uppercase">
-                      Acciones
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700">
@@ -1767,17 +1787,6 @@ export default function VisionDetailPage() {
                             Sin horarios
                           </span>
                         )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleRemoverMentor(ma.mentorId)}
-                            className="p-2 hover:bg-red-600/20 text-red-400 rounded-lg transition-colors"
-                            title="Remover mentor"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
                       </td>
                     </tr>
                   ))}
@@ -2629,7 +2638,9 @@ export default function VisionDetailPage() {
       )}
 
       {/* Modal de Asignar Game Changer */}
-      {showGameChangerModal && selectedParticipanteForGC && (
+      {showGameChangerModal && selectedParticipanteForGC && (() => {
+        const Participante = selectedParticipanteForGC.Usuario_VisionParticipante_participanteIdToUsuario;
+        return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-cyan-500/30 rounded-2xl p-8 max-w-md w-full shadow-2xl">
             <div className="flex items-center justify-center w-16 h-16 bg-cyan-600/20 rounded-full mx-auto mb-6">
@@ -2641,28 +2652,31 @@ export default function VisionDetailPage() {
             </h2>
             
             <p className="text-slate-300 text-center mb-6">
-              Selecciona un Game Changer para <strong>{selectedParticipanteForGC.Participante.nombre}</strong>
+              Selecciona un Game Changer para <strong>{Participante.nombre}</strong>
             </p>
 
             <div className="space-y-2 max-h-96 overflow-y-auto mb-6">
-              {gameChangers.map((gc) => (
+              {gameChangers.map((gc) => {
+                const GameChanger = gc.Usuario_VisionGameChanger_gameChangerIdToUsuario;
+                return (
                 <button
-                  key={gc.GameChanger.id}
-                  onClick={() => handleAssignGameChanger(selectedParticipanteForGC.Participante.id, gc.GameChanger.id)}
+                  key={GameChanger.id}
+                  onClick={() => handleAssignGameChanger(Participante.id, GameChanger.id)}
                   disabled={assigningGameChanger}
                   className="w-full p-4 bg-slate-800/50 hover:bg-cyan-600/20 border border-slate-700 hover:border-cyan-500/50 rounded-lg transition-all text-left disabled:opacity-50"
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-white font-semibold">{gc.GameChanger.nombre}</p>
-                      <p className="text-xs text-slate-400">{gc.GameChanger.email}</p>
+                      <p className="text-white font-semibold">{GameChanger.nombre}</p>
+                      <p className="text-xs text-slate-400">{GameChanger.email}</p>
                     </div>
-                    {selectedParticipanteForGC.gameChangerId === gc.GameChanger.id && (
+                    {selectedParticipanteForGC.gameChangerId === GameChanger.id && (
                       <CheckCircle className="text-green-400" size={20} />
                     )}
                   </div>
                 </button>
-              ))}
+                );
+              })}
             </div>
 
             <div className="flex gap-3">
@@ -2679,7 +2693,8 @@ export default function VisionDetailPage() {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* Modal de Confirmación de Asignación Aleatoria */}
       {showRandomAssignModal && (

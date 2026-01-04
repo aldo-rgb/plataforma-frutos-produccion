@@ -1,0 +1,1067 @@
+================================================================================
+🚀 PLATAFORMA FRUTOS - DOCUMENTACIÓN COMPLETA PARA CONTINUACIÓN DE CONVERSACIÓN
+================================================================================
+Fecha de snapshot: 4 de enero de 2026
+Proyecto: Plataforma de Transformación Personal con Gamificación
+Stack: Next.js 15.0.3 + Prisma + PostgreSQL + TypeScript
+Repositorio: plataforma-frutos-produccion (GitHub: aldo-rgb)
+Branch: main
+
+================================================================================
+📋 ÍNDICE
+================================================================================
+1. CONTEXTO GENERAL DEL PROYECTO
+2. ARQUITECTURA TÉCNICA
+3. BASE DE DATOS COMPLETA (Schema Prisma)
+4. ROLES Y PERMISOS DEL SISTEMA
+5. FLUJOS PRINCIPALES IMPLEMENTADOS
+6. SISTEMAS Y MÓDULOS COMPLETADOS
+7. ESTADO ACTUAL DEL DESARROLLO
+8. ÚLTIMO TRABAJO REALIZADO (SESIÓN ACTUAL)
+9. PROBLEMAS CONOCIDOS Y PENDIENTES
+10. GUÍA DE CONTINUACIÓN
+
+================================================================================
+1. CONTEXTO GENERAL DEL PROYECTO
+================================================================================
+
+MISIÓN DE LA PLATAFORMA:
+-------------------------
+Sistema integral de transformación personal que combina:
+- Mentoría personalizada (1:1 y grupal)
+- Gamificación (puntos cuánticos, niveles, badges)
+- Carta Frutos (plan de metas de 8 áreas de vida)
+- Disciplina matutina (Club de las 5 AM)
+- Sistema B2B para organizaciones educativas
+- Marketplace de mentores profesionales
+
+MODELO DE NEGOCIO:
+------------------
+1. B2C Individual:
+   - Suscripciones mensuales/anuales (STANDARD/PREMIUM)
+   - Usuarios individuales con mentor asignado
+   - Precio: $600 MXN (STANDARD) / $1,250 MXN (PREMIUM)
+
+2. B2B Organizacional:
+   - Escuelas compran "Visiones" (ciclos de 17 semanas)
+   - Licencias para estudiantes (créditos prepagados)
+   - Directores escolares asignan mentores y coordinan
+   - Sistema de billetera organizacional
+
+3. Marketplace de Mentores:
+   - Mentores profesionales (rol MENTOR) cobran por sesión
+   - Mentores privados (rol LIDER) son internos de la organización
+   - Paquetes de 18 sesiones por $90 MXN c/u = $1,620 MXN total
+   - Club de las 5 AM: llamadas de 15 min (05:00-08:00)
+
+CONCEPTOS CLAVE:
+----------------
+- **Visión**: Ciclo de 17 semanas para una cohorte de estudiantes
+- **Carta Frutos**: Documento con metas en 8 áreas de vida
+- **Puntos Cuánticos (PC)**: Moneda virtual para gamificación
+- **Mentor**: Guía profesional que cobra por servicios
+- **Líder**: Mentor interno de la organización (no cobra)
+- **GameChanger**: Coordinador de grupos pequeños
+- **Coordinador**: Supervisa una Visión completa
+- **School Admin**: Director de organización educativa
+
+================================================================================
+2. ARQUITECTURA TÉCNICA
+================================================================================
+
+STACK PRINCIPAL:
+----------------
+- Framework: Next.js 15.0.3 (App Router)
+- Lenguaje: TypeScript
+- Base de datos: PostgreSQL (Supabase)
+- ORM: Prisma 5.22.0
+- Auth: NextAuth.js 4.24.13
+- Pagos: Stripe, PayPal, MercadoPago
+- Storage: Supabase Storage (imágenes/evidencias)
+- Despliegue: Vercel (producción) + PM2 (local)
+
+ESTRUCTURA DE CARPETAS:
+-----------------------
+```
+plataforma-frutos-FINAL/
+├── app/
+│   ├── api/                        # API Routes (backend)
+│   │   ├── auth/                   # Autenticación
+│   │   ├── school-admin/           # Endpoints para directores
+│   │   │   ├── dashboard/          # Stats organizacionales
+│   │   │   ├── licenses/           # Gestión de licencias
+│   │   │   │   └── checkout/       # Pagos (Stripe/PayPal/MP)
+│   │   │   ├── visiones/           # CRUD de visiones
+│   │   │   │   └── [id]/
+│   │   │   │       ├── route.ts    # GET vision details
+│   │   │   │       └── mentores/   # CRUD mentores
+│   │   │   │           └── route.ts # GET/POST/DELETE mentores
+│   │   │   └── wallet/             # Billetera organizacional
+│   │   ├── mentor/                 # Endpoints para mentores
+│   │   ├── participante/           # Endpoints para estudiantes
+│   │   └── ...
+│   ├── dashboard/
+│   │   ├── school-admin/           # Panel de director
+│   │   │   ├── visiones/
+│   │   │   │   ├── [id]/           # Detalle de visión
+│   │   │   │   │   └── page.tsx    # Vista principal
+│   │   │   │   └── asignacion/
+│   │   │   │       └── [id]/
+│   │   │   │           └── page.tsx # Catálogo de mentores
+│   │   │   └── ...
+│   │   ├── mentor/                 # Panel de mentor
+│   │   ├── participante/           # Panel de estudiante
+│   │   └── ...
+│   ├── login/
+│   └── ...
+├── prisma/
+│   └── schema.prisma               # Esquema de BD (2,395 líneas)
+├── lib/
+│   ├── prisma.ts                   # Cliente Prisma singleton
+│   └── ...
+└── ...
+```
+
+VARIABLES DE ENTORNO CRÍTICAS:
+-------------------------------
+```env
+# Base de datos
+DATABASE_URL="postgresql://..."
+DIRECT_URL="postgresql://..."
+
+# Auth
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="..."
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL="..."
+NEXT_PUBLIC_SUPABASE_ANON_KEY="..."
+SUPABASE_SERVICE_ROLE_KEY="..."
+
+# Stripe
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_..."
+STRIPE_SECRET_KEY="sk_test_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+
+# PayPal
+PAYPAL_CLIENT_ID="..."
+PAYPAL_CLIENT_SECRET="..."
+
+# MercadoPago
+MERCADOPAGO_ACCESS_TOKEN="..."
+
+# OpenAI (para avatares)
+OPENAI_API_KEY="sk-..."
+```
+
+================================================================================
+3. BASE DE DATOS COMPLETA (Schema Prisma)
+================================================================================
+
+MODELOS PRINCIPALES (86 tablas totales):
+-----------------------------------------
+
+**USUARIOS Y AUTENTICACIÓN:**
+- Usuario (id, nombre, email, password, rol, puntosCuanticos, tier, etc.)
+- PerfilMentor (usuarioId, especialidad, precioDisciplina, maxDisciplineClients, etc.)
+- PerfilCompleto (datos adicionales del perfil)
+- Organization (escuelas/empresas)
+- OrganizationWallet (billetera de la organización)
+
+**VISIONES Y ASIGNACIONES:**
+- Vision (id, nombre, coordinadorId, organizationId, startDate, endDate)
+- VisionParticipante (visionId, participanteId, gameChangerId)
+- VisionGameChanger (visionId, gameChangerId)
+- VisionMentor (visionId, mentorId)
+
+**MENTORÍA Y LLAMADAS:**
+- CallAvailability (mentorId, dayOfWeek, startTime, endTime, type, isActive)
+- CallBooking (mentorId, studentId, scheduledAt, status, type, packageOrderId)
+- ProgramEnrollment (userId, mentorId, startDate, endDate, status)
+- DisciplineSubscription (studentId, mentorId, day1, time1, day2, time2)
+
+**PAQUETES DE MENTORÍA (NUEVO SISTEMA):**
+- MentorPackageOrder (id, usuarioId, mentorId, visionId, cantidad, precioTotal, status)
+- PackageSessionCredits (packageOrderId, totalSessions, usedSessions)
+
+**CARTA FRUTOS Y METAS:**
+- CartaFrutos (usuarioId, estado, finanzasMeta, relacionesMeta, etc.)
+- Meta (cartaId, categoria, metaPrincipal, status)
+- Accion (metaId, texto, completada, rarity)
+- TaskInstance (accionId, usuarioId, dueDate, status)
+- EvidenciaAccion (usuarioId, accionId, fotoUrl, estado, highQuality)
+
+**GAMIFICACIÓN:**
+- RewardHistory (usuarioId, type, amount, rarity)
+- Collection (name, type, rewardPC)
+- UserCollectionProgress (usuarioId, collectionId, isCompleted)
+- ArenaQueue, ArenaDuel, ArenaStats (sistema de duelos PvP)
+
+**LICENCIAS Y PAGOS:**
+- License (code, tierAssigned, organizationId)
+- LicenseAssignment (userId, organizationId, visionId, licenseCode)
+- LicenseOrder (id, organizationId, quantity, amount, status)
+- Payment, Subscription, RenewalOffer
+
+**SISTEMA FINANCIERO (ESCROW Y COMISIONES):**
+- VisionEscrow (visionId, totalDeposited, remainingBalance, status)
+- MentorPayout (escrowId, mentorId, weekNumber, totalAmount, status)
+- PayableCall (payoutId, callBookingId, rateApplied)
+- CommissionLedger (mentorId, sourceType, totalAmount, platformFee)
+- WalletTransaction (walletId, amount, type, source)
+- RefundRequest (organizationId, visionId, studentId, amountToRefund)
+
+**TAREAS ADMINISTRATIVAS:**
+- AdminTask (type, titulo, targetType, fechaLimite, rewardLogic)
+- TaskSubmission (adminTaskId, usuarioId, status, puntosGanados)
+
+**APLICACIONES DE MENTORES:**
+- MentorApplication (usuarioId, status, especialidad, paymentIntentId)
+
+**OTROS SISTEMAS:**
+- Notification, PhoenixSession, QuantumPattern, QuantumInsight
+- Location, CheckIn, UserServiceContribution
+- SocialReaction, ResenasMentoria, ReporteAnonimo
+
+ENUMS IMPORTANTES:
+------------------
+```prisma
+enum Rol {
+  LIDER               // Mentor privado de organización
+  PARTICIPANTE        // Estudiante
+  MENTOR              // Mentor profesional del marketplace
+  COORDINADOR         // Supervisa visión
+  ADMINISTRADOR       // Admin general
+  GAMECHANGER         // Líder de grupo pequeño
+  SCHOOL_ADMIN        // Director de organización
+  SUPER_ADMIN         // Admin supremo
+}
+
+enum UserTier {
+  FREE
+  STANDARD
+  PREMIUM
+}
+
+enum CallType {
+  DISCIPLINE          // Llamada de 15 min (05:00-08:00)
+  MENTORSHIP          // Sesión de mentoría completa
+}
+
+enum EstadoCarta {
+  BORRADOR
+  EN_REVISION
+  CAMBIOS_REQUERIDOS
+  APROBADA
+  RECHAZADA
+}
+
+enum PackageOrderStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum ProfileApprovalStatus {
+  DRAFT               // Borrador
+  PENDING             // En revisión
+  APPROVED            // Aprobado (puede aparecer en catálogo)
+  REJECTED            // Rechazado
+}
+```
+
+RELACIONES CLAVE:
+-----------------
+- Usuario → PerfilMentor (1:1)
+- Usuario → Organization (N:1 via organizationId)
+- Vision → Organization (N:1)
+- Vision → VisionMentor (1:N) → Usuario
+- Vision → VisionParticipante (1:N) → Usuario
+- CallBooking → MentorPackageOrder (N:1 via packageOrderId)
+- MentorPackageOrder → PackageSessionCredits (1:1)
+
+================================================================================
+4. ROLES Y PERMISOS DEL SISTEMA
+================================================================================
+
+ROL: LIDER (Mentor Privado de Organización)
+--------------------------------------------
+Características:
+- Pertenece a una organización (organizationId)
+- NO cobra por sus servicios (mentor interno)
+- Solo visible para su organización
+- Requiere perfil aprobado (profileApprovalStatus = APPROVED)
+- Aparece en modal "Asignar Mentor Privado" con emoji 👑
+
+Acceso:
+- Dashboard de mentor básico
+- Revisar cartas de sus mentorados
+- Agendar llamadas de disciplina
+- Ver estadísticas de progreso
+
+ROL: MENTOR (Mentor Profesional del Marketplace)
+-------------------------------------------------
+Características:
+- NO pertenece a organización específica
+- COBRA por sus servicios ($90 MXN por llamada de disciplina)
+- Visible en catálogo público de mentores
+- Puede tener perfil DRAFT o APPROVED (ambos aparecen)
+- Tiene horarios configurados (05:00-08:00 AM)
+- maxDisciplineClients define capacidad
+
+Acceso:
+- Dashboard de mentor completo
+- Sistema de disponibilidad y horarios
+- Gestión de clientes activos
+- Reportes de comisiones
+- Configuración de precios
+
+Aparece en: Catálogo de Mentores Certificados con emoji 💼
+
+ROL: PARTICIPANTE (Estudiante)
+-------------------------------
+Características:
+- Puede ser individual o parte de una organización
+- Tiene Carta Frutos con metas
+- Gana Puntos Cuánticos (PC) por completar tareas
+- Sistema de niveles y rangos
+- Puede contratar mentores del marketplace
+
+Acceso:
+- Dashboard de participante
+- Carta Frutos (creación y edición)
+- Vista de tareas diarias
+- Catálogo de mentores (si tiene fondos)
+- Agendar llamadas de disciplina
+
+ROL: SCHOOL_ADMIN (Director de Organización)
+---------------------------------------------
+Características:
+- Administra una organización educativa
+- Compra licencias en créditos prepagados
+- Crea "Visiones" (ciclos de 17 semanas)
+- Asigna estudiantes, mentores y GameChangers
+- Gestiona billetera organizacional
+
+Acceso:
+- Dashboard school-admin
+- Gestión de licencias
+- CRUD de visiones
+- Asignación de mentores (privados y contratados)
+- Reportes financieros
+- Sistema de reembolsos
+
+Rutas principales:
+- /dashboard/school-admin
+- /dashboard/school-admin/visiones
+- /dashboard/school-admin/visiones/[id]
+- /dashboard/school-admin/visiones/asignacion/[id]
+
+ROL: COORDINADOR
+----------------
+- Supervisa una visión específica
+- Aprueba cartas frutos
+- Monitorea progreso de participantes
+
+ROL: GAMECHANGER
+----------------
+- Lidera grupos pequeños de 3-5 personas
+- Modera sesiones grupales
+- Motiva y da seguimiento
+
+================================================================================
+5. FLUJOS PRINCIPALES IMPLEMENTADOS
+================================================================================
+
+FLUJO 1: DIRECTOR COMPRA LICENCIAS
+-----------------------------------
+1. School Admin ingresa a /dashboard/school-admin
+2. Ve balance de licencias disponibles
+3. Click en "Comprar Licencias"
+4. Selecciona cantidad y método de pago (Stripe/PayPal/MercadoPago)
+5. Completa pago en pasarela externa
+6. Webhook procesa pago → crea LicenseOrder (status: COMPLETED)
+7. Se generan créditos en SchoolCredit
+8. Wallet organizacional se actualiza
+
+Archivos involucrados:
+- `/app/api/school-admin/licenses/checkout/route.ts`
+- `/app/api/webhooks/stripe/route.ts` (y PayPal, MercadoPago)
+
+FLUJO 2: DIRECTOR CREA VISIÓN Y ASIGNA MENTORES
+------------------------------------------------
+1. School Admin crea nueva visión:
+   - Nombre, descripción, fechas (startDate, endDate)
+   - maxParticipantes
+   - Áreas obligatorias (finanzas, salud, etc.)
+
+2. Asigna participantes:
+   - Selecciona estudiantes de su organización
+   - Consume 1 licencia por estudiante
+   - Crea registro en VisionParticipante
+
+3. Asigna mentores:
+   - Opción A: Mentores privados (LIDER) - Modal "Asignar Mentor Privado"
+     → Filtra por organizationId
+     → Solo muestra LIDERs con horarios válidos (05:00-08:00)
+     → Emoji 👑 en vista rápida
+   
+   - Opción B: Contratar mentores profesionales (MENTOR)
+     → Abre "Catálogo de Mentores Certificados"
+     → Muestra todos los MENTOR con rol='MENTOR' y horarios válidos
+     → Selecciona cantidad de alumnos por mentor (máx 5)
+     → Calcula presupuesto total
+     → Procesa pago desde wallet o pasarela
+     → Crea MentorPackageOrder (status: COMPLETED)
+     → Crea VisionMentor
+     → Emoji 💼 en vista rápida
+
+4. Visión activada y lista para iniciar
+
+Archivos involucrados:
+- `/app/dashboard/school-admin/visiones/[id]/page.tsx` (vista principal)
+- `/app/dashboard/school-admin/visiones/asignacion/[id]/page.tsx` (catálogo)
+- `/app/api/school-admin/visiones/[id]/route.ts` (GET vision)
+- `/app/api/school-admin/visiones/[id]/mentores/route.ts` (GET/POST/DELETE)
+
+FLUJO 3: PARTICIPANTE CREA CARTA FRUTOS
+----------------------------------------
+1. Participante ingresa por primera vez
+2. Sistema redirige a /dashboard/participante/carta-frutos
+3. Completa 8 áreas de vida:
+   - Finanzas, Relaciones, Talentos, Paz Mental
+   - Ocio, Salud, Servicio Transformación, Servicio Comunidad
+4. Por cada área:
+   - Declaración de poder (propósito)
+   - Meta principal (objetivo medible)
+   - 3-5 acciones específicas (con frecuencia)
+5. Envía a revisión (estado: EN_REVISION)
+6. Mentor/Coordinador revisa y aprueba/rechaza
+7. Estado: APROBADA → se generan TaskInstances diarias
+
+FLUJO 4: SISTEMA DE TAREAS DIARIAS
+-----------------------------------
+1. Cron job diario (00:00 hrs) ejecuta:
+   - Lee todas las acciones de cartas APROBADAS
+   - Genera TaskInstance por día según frecuencia
+   - Asigna dueDate y assignedDays
+
+2. Participante ve tareas del día en dashboard
+3. Completa tarea → sube evidencia (foto)
+4. EvidenciaAccion creada (estado: PENDIENTE)
+5. Mentor revisa evidencia:
+   - APROBADA → +50 PC base
+   - High Quality → +100 PC adicional
+   - RECHAZADA → debe corregir
+6. PC se acumulan en Usuario.puntosCuanticos
+
+FLUJO 5: CLUB DE LAS 5 AM (Llamadas de Disciplina)
+---------------------------------------------------
+1. Mentor configura disponibilidad:
+   - CallAvailability con type='DISCIPLINE'
+   - Horario: 05:00-08:00
+   - Días: lunes a domingo (0-6)
+
+2. Estudiante agenda llamada:
+   - Selecciona mentor disponible
+   - Elige día y horario dentro de slots
+   - CallBooking creado (status: PENDING)
+   - Si tiene paquete → packageOrderId vinculado
+
+3. Día de la llamada:
+   - Sistema envía recordatorio
+   - Mentor marca asistencia
+   - Mentor presente + Alumno presente → status: COMPLETED → SE COBRA
+   - Mentor presente + Alumno ausente → COMPLETED → SE COBRA
+   - Mentor ausente → MISSED → NO SE COBRA
+
+4. Pago semanal:
+   - Sistema cuenta llamadas COMPLETED del mentor
+   - Genera MentorPayrollItem
+   - Procesa pago desde VisionEscrow
+
+FLUJO 6: PAQUETES DE MENTORÍA (18 sesiones)
+--------------------------------------------
+1. Director selecciona mentor del catálogo
+2. Especifica cantidad de alumnos (máx 5 por mentor)
+3. Sistema calcula:
+   - 18 llamadas × $90 MXN = $1,620 MXN por alumno
+   - Total = $1,620 × cantidad alumnos
+
+4. Opciones de pago:
+   - Wallet organizacional (si tiene saldo)
+   - Stripe/PayPal/MercadoPago (si no hay saldo)
+
+5. Pago exitoso:
+   - MentorPackageOrder creado (status: COMPLETED)
+   - PackageSessionCredits creado (totalSessions: 18, usedSessions: 0)
+   - VisionMentor creado (asignación a visión)
+
+6. Estudiante agenda llamadas:
+   - CallBooking vinculado a packageOrderId
+   - Cada llamada descuenta de PackageSessionCredits
+   - remainingSessions = totalSessions - usedSessions
+
+================================================================================
+6. SISTEMAS Y MÓDULOS COMPLETADOS
+================================================================================
+
+✅ SISTEMA DE AUTENTICACIÓN
+- NextAuth con credentials provider
+- Roles y permisos por middleware
+- Sesiones persistentes
+- Magic links para onboarding
+
+✅ SISTEMA DE ORGANIZACIONES (B2B)
+- Modelo Organization completo
+- School Admin como único owner
+- Geofencing opcional por campus
+- Configuración de precios personalizados
+
+✅ SISTEMA DE LICENCIAS Y CRÉDITOS
+- Compra de licencias (SchoolCredit)
+- Asignación a estudiantes (LicenseAssignment)
+- Consumo al activar en visión
+- Órdenes de licencias (LicenseOrder)
+- 3 métodos de pago implementados (Stripe/PayPal/MercadoPago)
+
+✅ SISTEMA DE VISIONES
+- CRUD completo de visiones
+- Asignación de participantes
+- Asignación de GameChangers
+- Asignación de Mentores (privados y contratados)
+- Vista rápida con emojis diferenciados (👑 vs 💼)
+- Configuración de áreas obligatorias
+
+✅ CARTA FRUTOS (Metas de Vida)
+- Editor completo de 8 áreas
+- Sistema de aprobación mentor/coordinador
+- Generación automática de tareas
+- Estados: BORRADOR → EN_REVISION → APROBADA
+
+✅ SISTEMA DE TAREAS Y EVIDENCIAS
+- TaskInstance generadas por frecuencia
+- Subida de evidencias con Supabase Storage
+- Revisión y calificación por mentor
+- High Quality detection
+- Puntos Cuánticos por calidad
+
+✅ GAMIFICACIÓN COMPLETA
+- Puntos Cuánticos (PC)
+- Niveles y rangos (NOVATO → MAESTRO CUÁNTICO)
+- Badges y condecoraciones
+- Colecciones completables
+- Sistema de rachas (streaks)
+- Arena PvP (duelos entre usuarios)
+
+✅ SISTEMA DE DISPONIBILIDAD DE MENTORES
+- CallAvailability con type (DISCIPLINE/MENTORSHIP)
+- Horarios por día de semana
+- Slots calculados en tiempo real
+- Filtros por horarios válidos (05:00-08:00 para disciplina)
+
+✅ CATÁLOGO DE MENTORES PROFESIONALES
+- Separación LIDER vs MENTOR
+- Cálculo de disponibilidad en tiempo real
+- Filtros por horarios válidos
+- Sistema de selección con límite por mentor
+- Calculadora de presupuesto integrada
+
+✅ SISTEMA DE PAGOS Y PAQUETES
+- MentorPackageOrder con 3 pasarelas
+- PackageSessionCredits (balance de sesiones)
+- Webhooks de confirmación
+- Creación automática de VisionMentor al pagar
+
+✅ BILLETERA ORGANIZACIONAL
+- OrganizationWallet con balance
+- WalletTransaction (historial)
+- Uso de saldo en compras
+- Sistema de reembolsos a wallet
+
+✅ SISTEMA DE ESCROW Y PAGOS SEMANALES
+- VisionEscrow por ciclo
+- MentorPayout semanal
+- PayableCall (llamadas que cuentan)
+- CommissionLedger (registro inmutable)
+- Cálculo de comisión plataforma (15%)
+
+✅ SISTEMA DE REEMBOLSOS
+- RefundRequest por deserción
+- Cálculo proporcional de llamadas
+- Devolución a wallet organizacional
+- Estados de aprobación
+
+✅ SISTEMA DE APLICACIONES DE MENTORES
+- MentorApplication con pago de $125 USD
+- Formulario completo con especialidades
+- Video de presentación
+- Revisión por admin
+- Aprobación → conversión a rol MENTOR
+
+✅ REPORTES Y DASHBOARDS
+- Dashboard school-admin con KPIs
+- Dashboard mentor con alumnos activos
+- Dashboard participante con progreso
+- Reportes de asistencia
+- Alertas de procrastinación
+
+✅ SISTEMA DE NOTIFICACIONES
+- Notification model
+- Tipos: TASK_SUBMISSION, MENTOR_ASSIGNMENT, etc.
+- Push notifications en tiempo real
+
+================================================================================
+7. ESTADO ACTUAL DEL DESARROLLO
+================================================================================
+
+ÚLTIMA ACTUALIZACIÓN: 4 de enero de 2026
+
+MÓDULOS EN PRODUCCIÓN:
+----------------------
+✅ Auth y usuarios
+✅ Organizaciones B2B
+✅ Licencias y créditos
+✅ Visiones (ciclos)
+✅ Carta Frutos
+✅ Tareas y evidencias
+✅ Gamificación
+✅ Catálogo de mentores
+✅ Paquetes de mentoría
+✅ Pagos (Stripe/PayPal/MercadoPago)
+✅ Billetera organizacional
+✅ Sistema de escrow
+✅ Aplicaciones de mentores
+
+MÓDULOS EN DESARROLLO:
+----------------------
+🚧 Sistema de pagos semanales automáticos
+🚧 Reportes de comisiones para mentores
+🚧 Dashboard de análisis para directores
+🚧 Sistema de renovación automática de visiones
+
+BUGS CONOCIDOS Y RESUELTOS:
+---------------------------
+✅ LIDER sin horarios aparecía en modal → FIJADO (filtro por CallAvailability)
+✅ Error al asignar mentor (endpoint incorrecto) → FIJADO (cambio a /mentores)
+✅ Sección "COSTO TOTAL DEL CICLO" duplicada → ELIMINADA
+✅ Mentores contratados no aparecían en vista rápida → FIJADO (payment flow)
+✅ Catálogo mostraba LIDER en lugar de MENTOR → FIJADO (separación de arrays)
+✅ Catálogo vacío con mentores válidos → FIJADO (cambio de lógica de paquetes)
+✅ Wallet route import error → FIJADO (PrismaClient instantiation)
+✅ Duplicate availableSlots declaration → FIJADO (línea 141 eliminada)
+
+PENDIENTE DE PRUEBAS:
+---------------------
+⚠️ Catálogo debe mostrar SOLO rol='MENTOR' (no LIDER)
+⚠️ Verificar que aparecen 5 mentores (IDs: 8, 14, 60, 63, 64)
+⚠️ Verificar que NO aparece ID 62 (sin horarios) ni ID 66 (rol LIDER)
+
+================================================================================
+8. ÚLTIMO TRABAJO REALIZADO (SESIÓN ACTUAL)
+================================================================================
+
+PROBLEMA INICIAL:
+-----------------
+Usuario reportó: "sigue apareciendo un mentor sin horarios"
+Mentor con rol LIDER aparecía en modal "Asignar Mentor Privado" sin tener 
+horarios configurados de tipo DISCIPLINE entre 05:00-08:00.
+
+SOLUCIONES IMPLEMENTADAS (en orden cronológico):
+-------------------------------------------------
+
+1. **FIX: Filtro de LIDER por horarios válidos**
+   Archivo: `/app/api/school-admin/lideres/route.ts`
+   Cambio: Agregado filtro para verificar CallAvailability con:
+   - type: 'DISCIPLINE'
+   - isActive: true
+   - Horario entre 05:00-08:00
+   
+2. **FIX: Error al asignar mentor**
+   Problema: Click en "Asignar" daba error
+   Archivo: `/app/dashboard/school-admin/visiones/[id]/page.tsx`
+   Cambio: Endpoint de `/asignar-mentor` a `/mentores` (línea 336-370)
+
+3. **FEATURE: Remover "COSTO TOTAL DEL CICLO"**
+   Archivo: `/app/dashboard/school-admin/visiones/[id]/page.tsx`
+   Cambio: Eliminadas líneas 1315-1340 (sección completa)
+
+4. **FIX: Mentores contratados no aparecían en vista rápida**
+   Problema: Pago no creaba VisionMentor
+   Archivos: `/app/api/school-admin/licenses/checkout/route.ts`
+   Cambio: Agregado creación de:
+   - MentorPackageOrder (con mentorId)
+   - VisionMentor (asignación a visión)
+   Implementado en 3 métodos: Stripe (líneas 171-227), PayPal (320-375), 
+   MercadoPago (456-510)
+
+5. **FEATURE: Diferenciar mentores privados vs contratados**
+   Archivo: `/app/dashboard/school-admin/visiones/[id]/page.tsx`
+   Cambio: Vista rápida muestra:
+   - 👑 Mentor Privado (LIDER)
+   - 💼 Mentor Contratado (MENTOR con paquete)
+
+6. **FIX: Catálogo mostraba LIDER en lugar de MENTOR**
+   Problema: Ambos tipos aparecían mezclados
+   Archivo: `/app/api/school-admin/visiones/[id]/mentores/route.ts`
+   Cambio: Separar respuesta en:
+   - mentoresDisponibles (solo rol='MENTOR')
+   - lideresDisponibles (solo rol='LIDER')
+
+7. **FIX: Catálogo vacío pese a tener mentores válidos**
+   Problema: Buscaba MentorPackageOrder con COMPLETED (ninguno existía)
+   Cambio FUNDAMENTAL: Lógica de "contracted-only" → "all-available"
+   
+   ANTES:
+   ```typescript
+   const paquetesCompletados = await prisma.mentorPackageOrder.findMany({
+     where: { visionId, status: 'COMPLETED' }
+   });
+   // Extraer mentores de paquetes
+   ```
+   
+   DESPUÉS:
+   ```typescript
+   const mentoresProfesionales = await prisma.usuario.findMany({
+     where: {
+       rol: 'MENTOR',
+       isActive: true,
+       PerfilMentor: { isNot: null }
+     }
+   });
+   // Filtrar por horarios válidos
+   ```
+   
+   Esto permite mostrar mentores ANTES de contratarlos (comportamiento correcto)
+
+8. **FIX: Perfil DRAFT no aparecía**
+   Cambio: Aceptar tanto DRAFT como APPROVED en profileApprovalStatus
+
+9. **FIX: Duplicate variable declaration**
+   Archivo: `/app/api/school-admin/visiones/[id]/mentores/route.ts`
+   Problema: Error de compilación "availableSlots already declared"
+   Línea 141 tenía: `const availableSlots = Math.max(0, maxClients - currentClientsCount);`
+   Línea 139 también tenía la misma declaración
+   Solución: Eliminada línea 141 (duplicada)
+
+10. **GIT: Commit de todos los cambios**
+    Mensaje: "Fix: Payment flow creates MentorPackageOrder and VisionMentor"
+    Archivos committeados:
+    - `/app/api/school-admin/licenses/checkout/route.ts`
+    - `/app/api/school-admin/visiones/[id]/route.ts`
+    - `/app/dashboard/school-admin/visiones/[id]/page.tsx`
+
+ESTADO FINAL DEL CÓDIGO:
+-------------------------
+
+📄 `/app/api/school-admin/visiones/[id]/mentores/route.ts` (CRÍTICO)
+Líneas clave:
+- 35-65: Query usuarios con rol='MENTOR'
+- 115-122: Filtro por horarios válidos (05:00-08:00)
+- 127-159: Cálculo de disponibilidad (maxClients, currentClients, availableSlots)
+- 165-200: Query usuarios con rol='LIDER'
+- 202-230: Filtro LIDER por horarios válidos
+- 285-295: Return separado { mentoresDisponibles, lideresDisponibles }
+
+Lógica actual:
+1. Busca TODOS los usuarios con rol='MENTOR' activos con PerfilMentor
+2. Filtra solo los que tienen CallAvailability DISCIPLINE (05:00-08:00)
+3. Calcula espacios disponibles por ProgramEnrollment activos
+4. Repite proceso para rol='LIDER' pero solo de la organización
+5. Retorna arrays separados
+
+📄 `/app/dashboard/school-admin/visiones/asignacion/[id]/page.tsx`
+Líneas clave:
+- 140-143: Fetching separado de mentoresDisponibles y lideresDisponibles
+- 877-900: Renderiza SOLO mentoresDisponibles.map() en catálogo
+- 890-930: Card de mentor con availabilityInfo y selector de alumnos
+
+📄 `/app/api/school-admin/licenses/checkout/route.ts`
+Líneas críticas:
+- 171-227 (Stripe): Verifica productType === 'VISION_MENTOR_PAYMENT'
+  → Crea MentorPackageOrder
+  → Crea VisionMentor
+- 320-375 (PayPal): Misma lógica
+- 456-510 (MercadoPago): Misma lógica
+
+DATOS DE PRUEBA (Base de datos actual):
+----------------------------------------
+Visión ID: 10
+Organization ID: 14
+
+MENTORES con rol='MENTOR':
+- ID 8: Mentor (mentor@frutos.com) - 2 horarios válidos
+- ID 14: Mentor2 (mentor2@frutos.com) - 2 horarios válidos
+- ID 60: Mentor Independiente (mentori@frutos.com) - 2 horarios válidos
+- ID 62: Mentor 3 pruebas (mentor3@frutos.com) - 0 horarios ❌
+- ID 63: mentor inde 2 (mentori2@frutos.com) - 2 horarios válidos
+- ID 64: mentor inde 3 (mentori3@frutos.com) - 2 horarios válidos
+
+MENTORES con rol='LIDER':
+- ID 66: Juan Mentor Prueba (mentor@wer.com) - 2 horarios válidos
+- ID 65: mentor wer (mentor2@wer.com) - 0 horarios ❌
+
+EXPECTED RESULT:
+Catálogo debe mostrar: IDs 8, 14, 60, 63, 64 (5 mentores)
+NO debe mostrar: ID 62 (sin horarios), ID 66 (es LIDER)
+
+================================================================================
+9. PROBLEMAS CONOCIDOS Y PENDIENTES
+================================================================================
+
+🐛 BUGS ACTIVOS:
+----------------
+NINGUNO CONOCIDO (todos resueltos en sesión actual)
+
+⚠️ VALIDACIONES PENDIENTES:
+---------------------------
+1. Verificar que catálogo muestra exactamente 5 mentores (no 3)
+2. Confirmar que Juan Mentor Prueba NO aparece (es LIDER)
+3. Probar flujo completo de compra de paquete
+4. Verificar creación de MentorPackageOrder al pagar
+5. Confirmar que mentor aparece con 💼 en vista rápida
+
+🚀 MEJORAS SUGERIDAS:
+---------------------
+1. Agregar paginación al catálogo (si hay >20 mentores)
+2. Agregar filtros por especialidad
+3. Agregar ordenamiento por rating/precio
+4. Mostrar reviews de otros directores
+5. Implementar sistema de favoritos
+6. Agregar chat directo con mentor antes de contratar
+
+📊 REPORTES FALTANTES:
+----------------------
+1. Dashboard de comisiones para mentores
+2. Reporte de pagos semanales descargable
+3. Análisis de ROI para directores
+4. Métricas de deserción por mentor
+5. Reporte de uso de wallet
+
+🔐 SEGURIDAD:
+-------------
+1. Validar que solo School Admin accede a rutas /school-admin
+2. Verificar que mentor solo ve sus propios alumnos
+3. Auditar permisos de eliminación de visiones
+4. Implementar rate limiting en endpoints de pago
+5. Encriptar datos sensibles en MentorPackageOrder
+
+================================================================================
+10. GUÍA DE CONTINUACIÓN
+================================================================================
+
+CÓMO USAR ESTE DOCUMENTO EN NUEVA CONVERSACIÓN:
+------------------------------------------------
+
+1. **Contexto inicial**: Copia y pega la sección "CONTEXTO GENERAL DEL PROYECTO"
+
+2. **Para bugs**: Referencia la sección "ÚLTIMO TRABAJO REALIZADO" y menciona:
+   - El archivo específico que tiene el problema
+   - El número de línea aproximado
+   - El comportamiento esperado vs actual
+
+3. **Para nuevas features**: Especifica:
+   - El rol de usuario afectado (LIDER/MENTOR/SCHOOL_ADMIN/etc.)
+   - El flujo donde se integra (ver sección "FLUJOS PRINCIPALES")
+   - Las tablas de BD involucradas (ver sección "BASE DE DATOS")
+
+4. **Para modificaciones de BD**: Siempre menciona:
+   - El modelo Prisma a modificar
+   - Las relaciones afectadas
+   - Necesidad de migración
+
+COMANDOS ÚTILES:
+----------------
+```bash
+# Desarrollo
+npm run dev                    # Inicia Next.js en localhost:3000
+
+# Base de datos
+npx prisma generate           # Regenera cliente Prisma
+npx prisma db push            # Sincroniza schema con BD (dev)
+npx prisma studio             # UI para explorar BD
+
+# Git
+git status
+git add .
+git commit -m "mensaje"
+git push origin main
+
+# Debugging
+node check-user.js            # Scripts de verificación en raíz
+```
+
+ESTRUCTURA DE PROMPTS SUGERIDA:
+--------------------------------
+
+**Para fixes:**
+```
+Tengo un bug en [ARCHIVO]. En la línea [X], el código [DESCRIPCIÓN].
+El comportamiento esperado es [X] pero está haciendo [Y].
+
+Contexto: [Rol de usuario], [Flujo afectado]
+
+Dame el código exacto a buscar y reemplazar.
+```
+
+**Para features:**
+```
+Necesito implementar [FEATURE] para usuarios con rol [ROL].
+
+Flujo:
+1. [Paso 1]
+2. [Paso 2]
+3. [Paso 3]
+
+Tablas involucradas: [Tabla1, Tabla2]
+
+Dame:
+1. Cambios en schema.prisma (si aplica)
+2. Código de API route
+3. Código de componente frontend
+4. Formato buscar/reemplazar exacto
+```
+
+**Para debugging:**
+```
+El endpoint [RUTA] está devolviendo [ERROR].
+
+Request:
+[Mostrar payload]
+
+Response esperada:
+[Mostrar estructura]
+
+Dame un script de Node.js para probar la query en Prisma.
+```
+
+ARCHIVOS CLAVE PARA REFERENCIAR:
+---------------------------------
+
+**Schema de BD:**
+`/Users/aldokmps/plataforma-frutos-FINAL/prisma/schema.prisma`
+
+**Configuración de pagos:**
+`/Users/aldokmps/plataforma-frutos-FINAL/app/api/school-admin/licenses/checkout/route.ts`
+
+**Catálogo de mentores (Backend):**
+`/Users/aldokmps/plataforma-frutos-FINAL/app/api/school-admin/visiones/[id]/mentores/route.ts`
+
+**Catálogo de mentores (Frontend):**
+`/Users/aldokmps/plataforma-frutos-FINAL/app/dashboard/school-admin/visiones/asignacion/[id]/page.tsx`
+
+**Vista de visión (School Admin):**
+`/Users/aldokmps/plataforma-frutos-FINAL/app/dashboard/school-admin/visiones/[id]/page.tsx`
+
+**Cliente Prisma:**
+`/Users/aldokmps/plataforma-frutos-FINAL/lib/prisma.ts`
+
+PATRONES DE CÓDIGO ESTABLECIDOS:
+---------------------------------
+
+**Para queries de Prisma:**
+```typescript
+const result = await prisma.model.findMany({
+  where: { /* filters */ },
+  include: { /* relations */ },
+  select: { /* fields */ }
+});
+```
+
+**Para API routes:**
+```typescript
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+export async function GET(req: NextRequest) {
+  const session = await getServerSession();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  
+  // Logic here
+  
+  return NextResponse.json({ success: true, data });
+}
+```
+
+**Para componentes de dashboard:**
+```typescript
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
+export default function Component() {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  
+  useEffect(() => {
+    fetchData();
+  }, []);
+  
+  const fetchData = async () => {
+    const res = await fetch('/api/...');
+    const json = await res.json();
+    setData(json.data);
+    setLoading(false);
+  };
+  
+  return (/* JSX */);
+}
+```
+
+CONVENCIONES DE CÓDIGO:
+------------------------
+- Idioma: Español para nombres de variables de negocio, inglés para técnicos
+- Formato: Prettier con 2 espacios
+- Nombres de archivos: kebab-case para componentes, camelCase para utilities
+- Imports: Absolute imports con @/ para proyecto root
+- Estados: Prefer server components, use 'use client' solo cuando necesario
+
+TESTING:
+--------
+- Usa scripts de Node.js en raíz para probar queries
+- Formato: `node check-[feature].js`
+- Siempre loguea con console.log() para debugging
+- Verifica en Prisma Studio después de mutations
+
+DESPLIEGUE:
+-----------
+- Desarrollo: localhost:3000 con `npm run dev`
+- Staging: Vercel preview deployments
+- Producción: Vercel main branch auto-deploy
+- Variables de entorno: Configuradas en Vercel dashboard
+
+================================================================================
+ÚLTIMA RECOMENDACIÓN
+================================================================================
+
+Este documento contiene TODO el contexto necesario para continuar el desarrollo.
+
+Si estás empezando una nueva conversación:
+1. Copia la sección relevante (no todo)
+2. Sé específico con el problema/feature
+3. Menciona el archivo y líneas aproximadas
+4. Pide formato "buscar/reemplazar exacto"
+
+La IA responderá de forma más precisa si proporcionas:
+- Contexto del rol de usuario afectado
+- Flujo completo donde se integra
+- Tablas de BD involucradas
+- Comportamiento esperado vs actual
+
+¡Éxito con el desarrollo! 🚀
+
+================================================================================
+FIN DEL DOCUMENTO
+================================================================================
+Fecha de creación: 4 de enero de 2026
+Autor: Copilot (Claude Sonnet 4.5)
+Proyecto: Plataforma Frutos
+Versión: 1.0.0

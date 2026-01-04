@@ -54,14 +54,14 @@ export async function GET() {
           {
             OR: [
               {
-                ParticipanteEnVisiones: {
+                VisionParticipante_VisionParticipante_participanteIdToUsuario: {
                   some: {
                     visionId: { in: visionIds }
                   }
                 }
               },
               {
-                GameChangerEnVisiones: {
+                VisionGameChanger_VisionGameChanger_gameChangerIdToUsuario: {
                   some: {
                     visionId: { in: visionIds }
                   }
@@ -72,7 +72,7 @@ export async function GET() {
         ]
       },
       include: {
-        ParticipanteEnVisiones: {
+        VisionParticipante_VisionParticipante_participanteIdToUsuario: {
           where: {
             visionId: { in: visionIds }
           },
@@ -85,7 +85,7 @@ export async function GET() {
           },
           take: 1
         },
-        GameChangerEnVisiones: {
+        VisionGameChanger_VisionGameChanger_gameChangerIdToUsuario: {
           where: {
             visionId: { in: visionIds }
           },
@@ -112,8 +112,8 @@ export async function GET() {
         id: u.id,
         nombre: u.nombre,
         email: u.email,
-        vision: u.ParticipanteEnVisiones[0]?.Vision?.nombre || 
-                u.GameChangerEnVisiones[0]?.Vision?.nombre || 
+        vision: u.VisionParticipante_VisionParticipante_participanteIdToUsuario[0]?.Vision?.nombre || 
+                u.VisionGameChanger_VisionGameChanger_gameChangerIdToUsuario[0]?.Vision?.nombre || 
                 'Sin visión'
       }))
     });

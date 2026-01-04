@@ -18,7 +18,7 @@ export async function GET(request: Request) {
       select: { id: true, rol: true }
     });
 
-    if (!user || (user.rol !== 'ADMIN' && user.rol !== 'ADMINISTRADOR')) {
+    if (!user || user.rol !== 'ADMINISTRADOR') {
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 });
     }
 
@@ -32,25 +32,19 @@ export async function GET(request: Request) {
         nombre: true,
         email: true,
         imagen: true,
-        PerfilMentor: {
-          select: {
-            id: true,
-            disponible: true,
-            acceptingNewClients: true,
-            maxDisciplineClients: true,
-            calificacionPromedio: true
-          }
-        }
+        profileImage: true,
+        PerfilMentor: true
       }
     });
 
     // Para cada mentor, obtener sus paquetes y alumnos
     const mentoresConPaquetes = await Promise.all(
       mentores.map(async (mentor) => {
-        // Obtener visiones donde este mentor está asignado
-        const visionMentors = await prisma.visionMentor.findMany({
+        // Obtener órdenes de paquetes completadas para este mentor
+        const orders = await prisma.mentorPackageOrder.findMany({
           where: {
-            mentorId: mentor.id
+            mentorId: mentor.id,
+            status: 'COMPLETED'
           },
           include: {
             Vision: {
@@ -60,61 +54,55 @@ export async function GET(request: Request) {
                     id: true,
                     name: true
                   }
-                },
-                MentorPackageOrder: {
-                  where: {
-                    status: 'COMPLETED'
-                  }
                 }
               }
-            }
-          }
-        });
-
-        // Obtener alumnos activos de disciplina
-        const activeStudents = await prisma.programEnrollment.count({
-          where: {
-            mentorId: mentor.id,
-            status: 'ACTIVE'
-          }
-        });
-
-        // Calcular llamadas completadas y pendientes
-        const [completedCalls, totalScheduled] = await Promise.all([
-          prisma.callBooking.count({
-            where: {
-              mentorId: mentor.id,
-              callType: 'DISCIPLINE',
-              status: 'COMPLETED'
-            }
-          }),
-          prisma.callBooking.count({
-            where: {
-              mentorId: mentor.id,
-              callType: 'DISCIPLINE',
-              status: {
-                in: ['SCHEDULED', 'COMPLETED']
+            },
+            Usuario: {
+              select: {
+                id: true,
+                nombre: true,
+                email: true
               }
             }
-          })
-        ]);
+          },
+          orderBy: {
+            paidAt: 'desc'
+          }
+        });
 
-        // Agrupar por organizaciones/visiones
-        const packages = visionMentors.map(vm => {
-          const order = vm.Vision.MentorPackageOrder[0]; // Primera orden completada
-          
+        // Obtener alumnos asignados directamente a este mentor
+        const alumnosDirectos = await prisma.usuario.count({
+          where: {
+            assignedMentorId: mentor.id
+          }
+        });
+
+        // Obtener llamadas completadas para este mentor  
+        const completedCalls = await prisma.callBooking.count({
+          where: {
+            mentorId: mentor.id,
+            status: 'COMPLETED'
+          }
+        });
+
+        // Crear lista de paquetes con información detallada
+        const packages = orders.map(order => {
           return {
-            client: vm.Vision.Organization?.name || 'Sin organización',
-            package: `Paquete Disciplina (Visión)`,
-            visionId: vm.Vision.id,
-            visionName: vm.Vision.nombre,
+            orderId: order.id,
+            client: order.Vision?.Organization?.name || 'Cliente Individual',
+            participant: order.Usuario.nombre,
+            participantEmail: order.Usuario.email,
+            package: `Paquete ${order.cantidad} Sesiones`,
+            visionId: order.visionId,
+            visionName: order.Vision?.nombre || 'Sin visión',
             progress: {
-              used: completedCalls,
-              total: totalScheduled
+              used: 0, // Se calculará desde CallBooking si es necesario
+              total: order.cantidad
             },
-            purchaseDate: vm.createdAt,
-            totalValue: order?.precioTotal || 0,
-            status: vm.Vision.isActive ? 'ACTIVE' : 'INACTIVE'
+            purchaseDate: order.paidAt || order.createdAt,
+            totalValue: order.precioTotal,
+            currency: order.currency,
+            status: order.status
           };
         });
 
@@ -136,13 +124,23 @@ export async function GET(request: Request) {
           }
         });
 
-        // Calcular tasa de retención (alumnos activos vs total histórico)
-        const totalHistoricStudents = await prisma.programEnrollment.count({
+        // Calcular alumnos activos (órdenes completadas con sesiones pendientes + alumnos directos)
+        const activeStudentsFromOrders = await prisma.mentorPackageOrder.count({
           where: {
-            mentorId: mentor.id
+            mentorId: mentor.id,
+            status: 'COMPLETED',
+            CallBooking: {
+              some: {
+                status: 'PENDING'
+              }
+            }
           }
         });
 
+        const activeStudents = alumnosDirectos + activeStudentsFromOrders;
+
+        // Calcular tasa de retención (alumnos activos vs total histórico)
+        const totalHistoricStudents = orders.length + alumnosDirectos;
         const retentionRate = totalHistoricStudents > 0 
           ? (activeStudents / totalHistoricStudents) * 100 
           : 100;
@@ -152,10 +150,10 @@ export async function GET(request: Request) {
             id: mentor.id,
             name: mentor.nombre,
             email: mentor.email,
-            avatar: mentor.imagen,
-            available: mentor.PerfilMentor[0]?.disponible || false,
-            acceptingClients: mentor.PerfilMentor[0]?.acceptingNewClients || false,
-            rating: mentor.PerfilMentor[0]?.calificacionPromedio || 0
+            avatar: mentor.profileImage || mentor.imagen,
+            available: mentor.PerfilMentor?.disponible || false,
+            acceptingClients: mentor.PerfilMentor?.acceptingNewClients || false,
+            rating: mentor.PerfilMentor?.calificacionPromedio || 0
           },
           summary: {
             activeStudents,

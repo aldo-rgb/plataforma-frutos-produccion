@@ -499,50 +499,6 @@ export default function SchoolAdminDashboard() {
           />
         </div>
 
-        {/* Tarjeta de Costos de Mentores */}
-        {data.mentorCosts && data.mentorCosts.totalMentoresActivos > 0 && (
-          <div className="mt-6 bg-gradient-to-br from-emerald-900/30 to-cyan-900/30 border border-emerald-500/30 rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <DollarSign className="text-emerald-400" size={24} />
-                Costos de Mentores - Ciclos Activos
-              </h3>
-              <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full">
-                {data.mentorCosts.visionesActivas} {data.mentorCosts.visionesActivas === 1 ? 'Visión' : 'Visiones'}
-              </span>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
-                <p className="text-xs text-slate-400 uppercase font-semibold mb-2">Mentores Activos</p>
-                <p className="text-3xl font-bold text-white">{data.mentorCosts.totalMentoresActivos}</p>
-                <p className="text-xs text-emerald-400 mt-1">🎓 Mentores pagados</p>
-              </div>
-              
-              <div className="bg-slate-900/50 rounded-xl p-4 border border-slate-700/50">
-                <p className="text-xs text-slate-400 uppercase font-semibold mb-2">Llamadas Totales</p>
-                <p className="text-3xl font-bold text-white">{data.mentorCosts.totalLlamadasDisciplina}</p>
-                <p className="text-xs text-cyan-400 mt-1">📞 2 llamadas/semana</p>
-              </div>
-              
-              <div className="bg-slate-900/50 rounded-xl p-4 border border-emerald-700/50">
-                <p className="text-xs text-slate-400 uppercase font-semibold mb-2">Costo Total</p>
-                <p className="text-3xl font-bold text-emerald-400">
-                  ${data.mentorCosts.costoTotalMentores.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-                <p className="text-xs text-slate-400 mt-1">MXN - Todos los ciclos</p>
-              </div>
-            </div>
-            
-            <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-              <p className="text-xs text-blue-300 flex items-center gap-2">
-                <AlertTriangle size={14} />
-                Este es el costo total de mentores en todas las visiones activas. Los líderes (coordinadores/directores) no tienen costo asociado.
-              </p>
-            </div>
-          </div>
-        )}
-
         {/* WIDGET DE VISIONES ACTIVAS */}
         <div className="bg-slate-900 border border-white/10 rounded-3xl p-6 mt-8">
           <div className="flex items-center justify-between mb-6">

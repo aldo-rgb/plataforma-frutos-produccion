@@ -23,6 +23,10 @@ interface Usuario {
   tier: string;
   licenseCode: string | null;
   assignedMentorId: number | null;
+  LicenseAssignments?: Array<{
+    licenseCode: string;
+    activatedAt: Date | null;
+  }>;
 }
 
 interface Mentor {

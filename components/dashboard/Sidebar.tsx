@@ -220,154 +220,6 @@ export function Sidebar({ usuario }: SidebarProps) {
           <span>Dashboard</span>
         </Link>
 
-        <Link 
-          href="/dashboard/hoy" 
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-            pathname === '/dashboard/hoy' 
-              ? 'bg-blue-600 text-white' 
-              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-          }`}
-        >
-          <CalendarCheck size={20} className="text-blue-400" />
-          <span>HOY</span>
-        </Link>
-
-        {/* THE VAULT - Quantum Archive */}
-        <Link 
-          href="/dashboard/vault" 
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group ${
-            pathname === '/dashboard/vault' 
-              ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white' 
-              : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-900/50 hover:to-blue-900/50 hover:text-white'
-          }`}
-        >
-          <Camera size={20} className="text-purple-400 group-hover:text-purple-300" />
-          <span className="font-semibold">The Vault</span>
-        </Link>
-
-        <Link 
-          href="/dashboard/ciclos/guia" 
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-            pathname === '/dashboard/ciclos/guia' 
-              ? 'bg-blue-600 text-white' 
-              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-          }`}
-        >
-          <Compass size={20} className="text-pink-500" />
-          <span>Guía de Inicio</span>
-        </Link>
-
-        {/* Carta F.R.U.T.O.S. - Redirección dinámica según estado */}
-        <Link 
-          href={
-            cartaStatus === 'CAMBIOS_REQUERIDOS' || cartaStatus === 'EN_REVISION' 
-              ? '/dashboard/carta/resumen' 
-              : '/dashboard/carta'
-          } 
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-            pathname === '/dashboard/carta' || pathname === '/dashboard/carta/resumen'
-              ? 'bg-blue-600 text-white' 
-              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-          }`}
-        >
-          <Target size={20} className="text-purple-500" />
-          <span>Objetivos</span>
-        </Link>
-
-        {/* Quantum Detector - Monitor de Retrasos */}
-        <Link 
-          href="/dashboard/quantum-detector" 
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group ${
-            pathname === '/dashboard/quantum-detector' 
-              ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white' 
-              : 'text-slate-400 hover:bg-gradient-to-r hover:from-amber-900/50 hover:to-orange-900/50 hover:text-white'
-          }`}
-        >
-          <Zap size={20} className="text-amber-400 group-hover:text-amber-300" />
-          <span className="font-semibold">Quantum IA</span>
-          <span className="ml-auto text-xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">Beta</span>
-        </Link>
-
-        {/* Solicitar Mentoría - Solo PARTICIPANTE - SIEMPRE DESBLOQUEADO (Upsell) */}
-        {usuario.rol === 'PARTICIPANTE' && (
-          <Link 
-            href="/dashboard/mentorias" 
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-              pathname === '/dashboard/mentorias' 
-                ? 'bg-purple-600 text-white' 
-                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-            }`}
-          >
-            <Users size={20} className="text-purple-400" />
-            <span>Solicitar Mentoría</span>
-          </Link>
-        )}
-
-        {/* Mis Sesiones - Desbloqueado para todos */}
-        {usuario.rol === 'PARTICIPANTE' && (
-          <Link 
-            href='/dashboard/student/mis-sesiones' 
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-              pathname === '/dashboard/student/mis-sesiones' 
-                ? 'bg-blue-600 text-white' 
-                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-            }`}
-          >
-            <CheckCircle2 size={20} className="text-blue-400" />
-            <span>Mis Sesiones</span>
-          </Link>
-        )}
-
-        <Link 
-          href='/dashboard/ranking' 
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-            pathname === '/dashboard/ranking' 
-              ? 'bg-blue-600 text-white' 
-              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-          }`}
-        >
-          <Trophy size={20} />
-          <span>Ranking Global</span>
-        </Link>
-
-        {/* Muro de la Excelencia - SIEMPRE DESBLOQUEADO */}
-        <Link 
-          href="/dashboard/muro" 
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors group ${
-            pathname === '/dashboard/muro' 
-              ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white' 
-              : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-900/50 hover:to-pink-900/50 hover:text-white'
-          }`}
-        >
-          <Sparkles size={20} className="text-pink-400 group-hover:text-pink-300" />
-          <span className="font-semibold">Muro de la Excelencia</span>
-        </Link>
-
-        <Link 
-          href='/dashboard/canjear' 
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-            pathname === '/dashboard/canjear' 
-              ? 'bg-blue-600 text-white' 
-              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-          }`}
-        >
-          <Package size={20} />
-          <span>Tienda / Canje</span>
-        </Link>
-
-        {/* Membresía - SIEMPRE VISIBLE (para upgrades) */}
-        <Link 
-          href="/dashboard/suscripcion" 
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-            pathname === '/dashboard/suscripcion' 
-              ? 'bg-blue-600 text-white' 
-              : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-          }`}
-        >
-          <CreditCard size={20} />
-          <span>Membresía</span>
-        </Link>
-
         {/* Panel de Game Changer */}
         {usuario.rol === 'GAME_CHANGER' && (
           <div className="pt-6 mt-6 border-t border-slate-800">
@@ -609,16 +461,6 @@ export function Sidebar({ usuario }: SidebarProps) {
               </Link>
             )}
 
-            {canAccess('finanzas') && (
-              <Link 
-                href="/dashboard/admin/pagos" 
-                className="flex items-center gap-3 px-4 py-2 text-sm text-slate-400 hover:text-white rounded-lg hover:bg-emerald-900/20 transition-colors"
-              >
-                <DollarSign size={18} className="text-emerald-500" />
-                <span>Finanzas</span>
-              </Link>
-            )}
-
             {canAccess('inv_recompensas') && (
               <Link 
                 href="/dashboard/admin/productos" 
@@ -626,16 +468,6 @@ export function Sidebar({ usuario }: SidebarProps) {
               >
                 <Package size={18} className="text-purple-500" />
                 <span>Inv. Recompensas</span>
-              </Link>
-            )}
-
-            {canAccess('gestion_precios') && (
-              <Link 
-                href="/dashboard/admin/precios" 
-                className="flex items-center gap-3 px-4 py-2 text-sm text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
-              >
-                <Target size={18} />
-                <span>Gestión de Precios</span>
               </Link>
             )}
 
@@ -661,35 +493,6 @@ export function Sidebar({ usuario }: SidebarProps) {
               >
                 <Users size={18} className="text-purple-400" />
                 <span>Gestión de Escuelas</span>
-              </Link>
-            )}
-
-            {/* Órdenes de Licencias - Solo ADMIN */}
-            {(usuario.rol === 'ADMIN' || usuario.rol === 'ADMINISTRADOR') && (
-              <Link 
-                href="/dashboard/admin/ordenes" 
-                className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
-                  pathname.startsWith('/dashboard/admin/ordenes')
-                    ? 'bg-gradient-to-r from-emerald-600 to-cyan-600 text-white shadow-lg'
-                    : 'text-slate-400 hover:text-white hover:bg-emerald-900/20'
-                }`}
-              >
-                <CreditCard size={18} className="text-emerald-400" />
-                <span>Órdenes de Compra</span>
-              </Link>
-            )}
-
-            {usuario.rol === 'ADMINISTRADOR' && (
-              <Link 
-                href="/dashboard/admin/payment-settings" 
-                className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
-                  pathname.startsWith('/dashboard/admin/payment-settings')
-                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
-                    : 'text-slate-400 hover:text-white hover:bg-purple-900/20'
-                }`}
-              >
-                <DollarSign size={18} className="text-purple-400" />
-                <span>Config. Pagos</span>
               </Link>
             )}
 
@@ -799,8 +602,232 @@ export function Sidebar({ usuario }: SidebarProps) {
               <Briefcase size={18} className="text-purple-400" />
               <span>Paquetes y Mentores</span>
             </Link>
+
+            {/* Comisiones de Mentores */}
+            <Link 
+              href="/dashboard/admin/reports/commissions" 
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/admin/reports/commissions'
+                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-green-900/20'
+              }`}
+            >
+              <DollarSign size={18} className="text-green-400" />
+              <span>Comisiones Mentores</span>
+            </Link>
+
+            {/* Finanzas */}
+            {canAccess('finanzas') && (
+              <Link 
+                href="/dashboard/admin/pagos" 
+                className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                  pathname === '/dashboard/admin/pagos'
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
+                    : 'text-slate-400 hover:text-white hover:bg-emerald-900/20'
+                }`}
+              >
+                <DollarSign size={18} className="text-emerald-500" />
+                <span>Finanzas</span>
+              </Link>
+            )}
+
+            {/* Gestión de Precios */}
+            {canAccess('gestion_precios') && (
+              <Link 
+                href="/dashboard/admin/precios" 
+                className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                  pathname === '/dashboard/admin/precios'
+                    ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg'
+                    : 'text-slate-400 hover:text-white hover:bg-cyan-900/20'
+                }`}
+              >
+                <Target size={18} className="text-cyan-400" />
+                <span>Gestión de Precios</span>
+              </Link>
+            )}
+
+            {/* Órdenes de Compra */}
+            <Link 
+              href="/dashboard/admin/ordenes" 
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname.startsWith('/dashboard/admin/ordenes')
+                  ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-orange-900/20'
+              }`}
+            >
+              <CreditCard size={18} className="text-orange-400" />
+              <span>Órdenes de Compra</span>
+            </Link>
+
+            {/* Configuración de Pagos */}
+            {usuario.rol === 'ADMINISTRADOR' && (
+              <Link 
+                href="/dashboard/admin/payment-settings" 
+                className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                  pathname.startsWith('/dashboard/admin/payment-settings')
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                    : 'text-slate-400 hover:text-white hover:bg-indigo-900/20'
+                }`}
+              >
+                <DollarSign size={18} className="text-indigo-400" />
+                <span>Config. Pagos</span>
+              </Link>
+            )}
           </div>
         )}
+
+        {/* NAVEGACIÓN GENERAL - Al final para todos los usuarios */}
+        <div className="pt-6 mt-6 border-t border-slate-800">
+          <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">🏠 Navegación</p>
+          
+          <Link 
+            href="/dashboard/hoy" 
+            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+              pathname === '/dashboard/hoy' 
+                ? 'bg-blue-600 text-white' 
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            }`}
+          >
+            <CalendarCheck size={18} className="text-blue-400" />
+            <span>HOY</span>
+          </Link>
+
+          {/* THE VAULT - Quantum Archive */}
+          <Link 
+            href="/dashboard/vault" 
+            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
+              pathname === '/dashboard/vault' 
+                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg' 
+                : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-900/50 hover:to-blue-900/50 hover:text-white'
+            }`}
+          >
+            <Camera size={18} className="text-purple-400 group-hover:text-purple-300" />
+            <span className="font-semibold">The Vault</span>
+          </Link>
+
+          <Link 
+            href="/dashboard/ciclos/guia" 
+            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+              pathname === '/dashboard/ciclos/guia' 
+                ? 'bg-blue-600 text-white' 
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            }`}
+          >
+            <Compass size={18} className="text-pink-500" />
+            <span>Guía de Inicio</span>
+          </Link>
+
+          {/* Carta F.R.U.T.O.S. - Redirección dinámica según estado */}
+          <Link 
+            href={
+              cartaStatus === 'CAMBIOS_REQUERIDOS' || cartaStatus === 'EN_REVISION' 
+                ? '/dashboard/carta/resumen' 
+                : '/dashboard/carta'
+            } 
+            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+              pathname === '/dashboard/carta' || pathname === '/dashboard/carta/resumen'
+                ? 'bg-blue-600 text-white' 
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            }`}
+          >
+            <Target size={18} className="text-purple-500" />
+            <span>Objetivos</span>
+          </Link>
+
+          {/* Quantum Detector - Monitor de Retrasos */}
+          <Link 
+            href="/dashboard/quantum-detector" 
+            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
+              pathname === '/dashboard/quantum-detector' 
+                ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg' 
+                : 'text-slate-400 hover:bg-gradient-to-r hover:from-amber-900/50 hover:to-orange-900/50 hover:text-white'
+            }`}
+          >
+            <Zap size={18} className="text-amber-400 group-hover:text-amber-300" />
+            <span className="font-semibold">Quantum IA</span>
+            <span className="ml-auto text-xs bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-full">Beta</span>
+          </Link>
+
+          {/* Solicitar Mentoría - Solo PARTICIPANTE */}
+          {usuario.rol === 'PARTICIPANTE' && (
+            <Link 
+              href="/dashboard/mentorias" 
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/mentorias' 
+                  ? 'bg-purple-600 text-white' 
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <Users size={18} className="text-purple-400" />
+              <span>Solicitar Mentoría</span>
+            </Link>
+          )}
+
+          {/* Mis Sesiones - Solo PARTICIPANTE */}
+          {usuario.rol === 'PARTICIPANTE' && (
+            <Link 
+              href='/dashboard/student/mis-sesiones' 
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/student/mis-sesiones' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+              }`}
+            >
+              <CheckCircle2 size={18} className="text-blue-400" />
+              <span>Mis Sesiones</span>
+            </Link>
+          )}
+
+          <Link 
+            href='/dashboard/ranking' 
+            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+              pathname === '/dashboard/ranking' 
+                ? 'bg-blue-600 text-white' 
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            }`}
+          >
+            <Trophy size={18} />
+            <span>Ranking Global</span>
+          </Link>
+
+          {/* Muro de la Excelencia */}
+          <Link 
+            href="/dashboard/muro" 
+            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
+              pathname === '/dashboard/muro' 
+                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg' 
+                : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-900/50 hover:to-pink-900/50 hover:text-white'
+            }`}
+          >
+            <Sparkles size={18} className="text-pink-400 group-hover:text-pink-300" />
+            <span className="font-semibold">Muro de la Excelencia</span>
+          </Link>
+
+          <Link 
+            href='/dashboard/canjear' 
+            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+              pathname === '/dashboard/canjear' 
+                ? 'bg-blue-600 text-white' 
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            }`}
+          >
+            <Package size={18} />
+            <span>Tienda / Canje</span>
+          </Link>
+
+          {/* Membresía */}
+          <Link 
+            href="/dashboard/suscripcion" 
+            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+              pathname === '/dashboard/suscripcion' 
+                ? 'bg-blue-600 text-white' 
+                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            }`}
+          >
+            <CreditCard size={18} />
+            <span>Membresía</span>
+          </Link>
+        </div>
       </nav>
 
       {/* Logout Button */}

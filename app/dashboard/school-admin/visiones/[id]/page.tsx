@@ -139,6 +139,8 @@ interface MentorAsignado {
     PerfilMentor: {
       precioDisciplina: number;
       precioBase: number;
+      especialidad?: string;
+      calificacionPromedio?: number;
     } | null;
   };
   createdAt: string;
@@ -224,7 +226,12 @@ export default function VisionDetailPage() {
   const [showMentoresPrivadosModal, setShowMentoresPrivadosModal] = useState(false);
   const [lideres, setLideres] = useState<any[]>([]);
   const [loadingLideres, setLoadingLideres] = useState(false);
+  const [loadingMentores, setLoadingMentores] = useState(false);
   const [asignandoMentor, setAsignandoMentor] = useState<number | null>(null);
+  const [showReplaceMentorModal, setShowReplaceMentorModal] = useState(false);
+  const [mentorToReplace, setMentorToReplace] = useState<{id: number, nombre: string} | null>(null);
+  const [selectedReplacementMentor, setSelectedReplacementMentor] = useState<number | null>(null);
+  const [replacingMentor, setReplacingMentor] = useState(false);
   const { showToast, toasts } = useToast();
 
   useEffect(() => {
@@ -292,6 +299,7 @@ export default function VisionDetailPage() {
   };
 
   const fetchMentores = async () => {
+    setLoadingMentores(true);
     try {
       const res = await fetch(`/api/school-admin/visiones/${visionId}/mentores`);
       const data = await res.json();
@@ -302,6 +310,8 @@ export default function VisionDetailPage() {
       }
     } catch (error) {
       console.error('Error fetching mentores:', error);
+    } finally {
+      setLoadingMentores(false);
     }
   };
 
@@ -412,34 +422,56 @@ export default function VisionDetailPage() {
     }
   };
 
-  const handleRemoverMentor = async (mentorId: number) => {
-    if (!confirm('¿Estás seguro de remover este mentor de la visión?')) return;
+  const handleRemoverMentor = async (mentorId: number, mentorNombre: string) => {
+    // Abrir modal para seleccionar mentor de reemplazo
+    setMentorToReplace({ id: mentorId, nombre: mentorNombre });
+    setSelectedReplacementMentor(null);
+    setShowReplaceMentorModal(true);
+  };
+
+  const handleConfirmReplaceMentor = async () => {
+    if (!mentorToReplace || !selectedReplacementMentor) return;
 
     try {
-      const res = await fetch(`/api/school-admin/visiones/${visionId}/mentores?mentorId=${mentorId}`, {
-        method: 'DELETE',
+      setReplacingMentor(true);
+
+      const res = await fetch(`/api/school-admin/visiones/${visionId}/replace-mentor`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          oldMentorId: mentorToReplace.id,
+          newMentorId: selectedReplacementMentor
+        })
       });
 
       const data = await res.json();
 
       if (data.success) {
-        fetchMentores();
         showToast({
-          message: 'Mentor removido exitosamente',
-          type: 'success'
+          message: `✅ ${data.message}. ${data.canceledSessions} sesiones canceladas.`,
+          type: 'success',
+          duration: 6000
         });
+        
+        // Cerrar modal y refrescar datos
+        setShowReplaceMentorModal(false);
+        setMentorToReplace(null);
+        setSelectedReplacementMentor(null);
+        fetchMentores();
       } else {
         showToast({
-          message: data.error || 'Error al remover mentor',
+          message: data.error || 'Error al reemplazar mentor',
           type: 'error'
         });
       }
     } catch (error) {
-      console.error('Error removing mentor:', error);
+      console.error('Error replacing mentor:', error);
       showToast({
-        message: 'Error al remover mentor',
+        message: 'Error al reemplazar mentor',
         type: 'error'
       });
+    } finally {
+      setReplacingMentor(false);
     }
   };
 
@@ -1367,58 +1399,326 @@ export default function VisionDetailPage() {
               </div>
             </div>
 
-            {mentoresAsignados.length > 0 && (
-              <div className="mt-6 bg-slate-800/20 rounded-xl p-4 border border-slate-700/50">
-                <p className="text-sm text-slate-400 mb-3 font-medium">Vista rápida de mentores asignados:</p>
-                <div className="flex flex-wrap gap-3">
-                  {mentoresAsignados.slice(0, 5).map((mentor) => {
-                    const usuario = mentor.Usuario_VisionMentor_mentorIdToUsuario;
-                    const esLider = usuario?.rol === 'LIDER';
-                    const esContratado = (mentor as any).esContratado || false;
-                    
-                    if (!usuario || !usuario.nombre) return null;
-                    
-                    return (
-                      <div key={`${mentor.id}-${mentor.mentorId}`} className="flex items-center gap-2 bg-slate-800/50 rounded-lg px-3 py-2 border border-slate-600/30">
-                        {usuario.imagen ? (
-                          <img 
-                            src={usuario.imagen} 
-                            alt={usuario.nombre}
-                            className={`w-8 h-8 rounded-full object-cover border-2 ${
-                              esContratado ? 'border-cyan-500/50' : 'border-emerald-500/30'
-                            }`}
-                          />
-                        ) : (
-                          <div className={`w-8 h-8 rounded-full ${
-                            esContratado 
-                              ? 'bg-gradient-to-br from-cyan-500 to-blue-500' 
-                              : 'bg-gradient-to-br from-emerald-500 to-cyan-500'
-                          } flex items-center justify-center text-white text-xs font-bold`}>
-                            {usuario.nombre?.charAt(0)?.toUpperCase() || 'M'}
+            {/* 💼 MENTORES PROFESIONALES CONTRATADOS */}
+            {mentoresAsignados.filter(m => m.Usuario_VisionMentor_mentorIdToUsuario?.rol === 'MENTOR').length > 0 && (
+              <div className="mt-6 bg-gradient-to-br from-cyan-900/20 to-blue-900/20 rounded-xl border border-cyan-500/30 overflow-hidden">
+                <div className="bg-cyan-950/40 px-4 py-3 border-b border-cyan-500/20">
+                  <h3 className="text-white font-bold flex items-center gap-2">
+                    <span className="text-2xl">💼</span>
+                    Mentores Profesionales Contratados
+                    <span className="text-sm font-normal text-cyan-400">
+                      ({mentoresAsignados.filter(m => m.Usuario_VisionMentor_mentorIdToUsuario?.rol === 'MENTOR').length})
+                    </span>
+                  </h3>
+                  <p className="text-xs text-cyan-300/70 mt-1">
+                    Mentores del marketplace asignados a esta visión
+                  </p>
+                </div>
+                
+                <div className="p-4 space-y-3">
+                  {mentoresAsignados
+                    .filter(mentor => mentor.Usuario_VisionMentor_mentorIdToUsuario?.rol === 'MENTOR')
+                    .map((mentor) => {
+                      const usuario = mentor.Usuario_VisionMentor_mentorIdToUsuario;
+                      const perfilMentor = usuario?.PerfilMentor;
+                      
+                      return (
+                        <div 
+                          key={`mentor-${mentor.id}`}
+                          className="bg-slate-800/50 rounded-lg p-4 border border-cyan-500/20 hover:border-cyan-500/40 transition-colors"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              {usuario?.imagen ? (
+                                <img 
+                                  src={usuario.imagen} 
+                                  alt={usuario.nombre}
+                                  className="w-12 h-12 rounded-full object-cover border-2 border-cyan-500/50"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-white font-bold text-lg">
+                                  {usuario?.nombre?.charAt(0)?.toUpperCase() || 'M'}
+                                </div>
+                              )}
+                              
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="text-white font-bold">{usuario?.nombre}</h4>
+                                  <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-300 rounded text-xs font-medium">
+                                    PROFESIONAL
+                                  </span>
+                                </div>
+                                
+                                <p className="text-sm text-slate-400 mt-0.5">{usuario?.email}</p>
+                                
+                                <div className="flex items-center gap-4 mt-2">
+                                  {perfilMentor?.especialidad && (
+                                    <div className="flex items-center gap-1 text-xs text-cyan-400">
+                                      <span>🎯</span>
+                                      <span>{perfilMentor.especialidad}</span>
+                                    </div>
+                                  )}
+                                  
+                                  {perfilMentor?.calificacionPromedio && (
+                                    <div className="flex items-center gap-1 text-xs text-yellow-400">
+                                      <span>⭐</span>
+                                      <span>{perfilMentor.calificacionPromedio.toFixed(1)}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <button
+                              onClick={() => handleRemoverMentor(mentor.mentorId, usuario?.nombre || 'Mentor')}
+                              className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs font-medium transition-colors border border-red-500/20"
+                            >
+                              Desasignar
+                            </button>
                           </div>
-                        )}
-                        <div>
-                          <p className="text-white text-sm font-medium">{usuario.nombre}</p>
-                          <p className="text-xs text-slate-500">
-                            {esLider ? '👑 Privado' : esContratado ? '💼 Contratado' : '🎓 Mentor'}
-                          </p>
                         </div>
-                      </div>
-                    );
-                  })}
-                  {mentoresAsignados.length > 5 && (
-                    <div className="flex items-center gap-2 bg-slate-800/50 rounded-lg px-3 py-2 border border-slate-600/30">
-                      <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-400 text-xs font-bold">
-                        +{mentoresAsignados.length - 5}
-                      </div>
-                      <p className="text-slate-400 text-sm">más</p>
-                    </div>
-                  )}
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+
+            {/* 👑 MENTORES PRIVADOS (LIDER) */}
+            {mentoresAsignados.filter(m => m.Usuario_VisionMentor_mentorIdToUsuario?.rol === 'LIDER').length > 0 && (
+              <div className="mt-6 bg-gradient-to-br from-emerald-900/20 to-teal-900/20 rounded-xl border border-emerald-500/30 overflow-hidden">
+                <div className="bg-emerald-950/40 px-4 py-3 border-b border-emerald-500/20">
+                  <h3 className="text-white font-bold flex items-center gap-2">
+                    <span className="text-2xl">👑</span>
+                    Mentores Privados de la Organización
+                    <span className="text-sm font-normal text-emerald-400">
+                      ({mentoresAsignados.filter(m => m.Usuario_VisionMentor_mentorIdToUsuario?.rol === 'LIDER').length})
+                    </span>
+                  </h3>
+                  <p className="text-xs text-emerald-300/70 mt-1">
+                    Mentores internos de tu organización (sin costo adicional)
+                  </p>
+                </div>
+                
+                <div className="p-4 space-y-3">
+                  {mentoresAsignados
+                    .filter(mentor => mentor.Usuario_VisionMentor_mentorIdToUsuario?.rol === 'LIDER')
+                    .map((mentor) => {
+                      const usuario = mentor.Usuario_VisionMentor_mentorIdToUsuario;
+                      const perfilMentor = usuario?.PerfilMentor;
+                      
+                      return (
+                        <div 
+                          key={`lider-${mentor.id}`}
+                          className="bg-slate-800/50 rounded-lg p-4 border border-emerald-500/20 hover:border-emerald-500/40 transition-colors"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              {usuario?.imagen ? (
+                                <img 
+                                  src={usuario.imagen} 
+                                  alt={usuario.nombre}
+                                  className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500/50"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white font-bold text-lg">
+                                  {usuario?.nombre?.charAt(0)?.toUpperCase() || 'L'}
+                                </div>
+                              )}
+                              
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="text-white font-bold">{usuario?.nombre}</h4>
+                                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded text-xs font-medium">
+                                    INTERNO
+                                  </span>
+                                </div>
+                                
+                                <p className="text-sm text-slate-400 mt-0.5">{usuario?.email}</p>
+                                
+                                <div className="flex items-center gap-4 mt-2">
+                                  {perfilMentor?.especialidad && (
+                                    <div className="flex items-center gap-1 text-xs text-emerald-400">
+                                      <span>🎯</span>
+                                      <span>{perfilMentor.especialidad}</span>
+                                    </div>
+                                  )}
+                                  
+                                  {perfilMentor?.calificacionPromedio && (
+                                    <div className="flex items-center gap-1 text-xs text-yellow-400">
+                                      <span>⭐</span>
+                                      <span>{perfilMentor.calificacionPromedio.toFixed(1)}</span>
+                                    </div>
+                                  )}
+                                  
+                                  <div className="flex items-center gap-1 text-xs text-emerald-400">
+                                    <span>✅</span>
+                                    <span>Sin costo adicional</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <button
+                              onClick={() => handleRemoverMentor(mentor.mentorId, usuario?.nombre || 'Mentor')}
+                              className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs font-medium transition-colors border border-red-500/20"
+                            >
+                              Desasignar
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
             )}
           </div>
         </div>
+
+        {/* Modal de Reemplazo de Mentor */}
+        {showReplaceMentorModal && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-700">
+              <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-6 z-10">
+                <h3 className="text-2xl font-bold text-white mb-2">
+                  ⚠️ Reemplazar Mentor
+                </h3>
+                <p className="text-slate-300">
+                  Desasignando a <span className="font-semibold text-red-400">{mentorToReplace?.nombre}</span>
+                </p>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Advertencia */}
+                <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">⚠️</span>
+                    <div>
+                      <h4 className="text-red-400 font-bold mb-2">Consecuencias de esta acción:</h4>
+                      <ul className="text-sm text-slate-300 space-y-1 list-disc list-inside">
+                        <li>Se cancelarán TODAS las sesiones programadas del mentor con estudiantes de esta visión</li>
+                        <li>Los estudiantes recibirán una notificación del cambio</li>
+                        <li>Los estudiantes deberán reagendar con el nuevo mentor</li>
+                        <li>El paquete de llamadas contratado permanecerá intacto</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Selección de nuevo mentor */}
+                <div>
+                  <h4 className="text-white font-bold mb-3">Selecciona el mentor de reemplazo:</h4>
+                  
+                  {loadingMentores ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500 mx-auto"></div>
+                      <p className="text-slate-400 mt-2">Cargando mentores disponibles...</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {mentoresAsignados
+                        .filter(m => m.mentorId !== mentorToReplace?.id)
+                        .map((mentor) => {
+                          const usuario = mentor.Usuario_VisionMentor_mentorIdToUsuario;
+                          const perfilMentor = usuario?.PerfilMentor;
+                          const isSelected = selectedReplacementMentor === mentor.mentorId;
+                          
+                          return (
+                            <button
+                              key={mentor.id}
+                              onClick={() => setSelectedReplacementMentor(mentor.mentorId)}
+                              className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
+                                isSelected
+                                  ? 'border-cyan-500 bg-cyan-500/10'
+                                  : 'border-slate-700 hover:border-slate-600 bg-slate-900/50'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                {usuario?.imagen ? (
+                                  <img
+                                    src={usuario.imagen}
+                                    alt={usuario.nombre}
+                                    className="w-12 h-12 rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center text-white font-bold">
+                                    {usuario?.nombre?.charAt(0)?.toUpperCase() || 'M'}
+                                  </div>
+                                )}
+                                
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <h5 className="text-white font-semibold">{usuario?.nombre}</h5>
+                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                      usuario?.rol === 'LIDER'
+                                        ? 'bg-emerald-500/20 text-emerald-300'
+                                        : 'bg-cyan-500/20 text-cyan-300'
+                                    }`}>
+                                      {usuario?.rol === 'LIDER' ? 'INTERNO' : 'PROFESIONAL'}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-slate-400">{usuario?.email}</p>
+                                  
+                                  {perfilMentor?.especialidad && (
+                                    <p className="text-xs text-cyan-400 mt-1">
+                                      🎯 {perfilMentor.especialidad}
+                                    </p>
+                                  )}
+                                </div>
+                                
+                                {isSelected && (
+                                  <div className="text-cyan-400">
+                                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                    </svg>
+                                  </div>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      
+                      {mentoresAsignados.filter(m => m.mentorId !== mentorToReplace?.id).length === 0 && (
+                        <div className="text-center py-8 text-slate-400">
+                          <p>No hay otros mentores asignados a esta visión.</p>
+                          <p className="text-sm mt-2">Primero debes contratar o asignar otro mentor.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Botones */}
+              <div className="sticky bottom-0 bg-slate-800 border-t border-slate-700 p-6 flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowReplaceMentorModal(false);
+                    setMentorToReplace(null);
+                    setSelectedReplacementMentor(null);
+                  }}
+                  disabled={replacingMentor}
+                  className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConfirmReplaceMentor}
+                  disabled={!selectedReplacementMentor || replacingMentor}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {replacingMentor ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Reemplazando...
+                    </span>
+                  ) : (
+                    'Confirmar Reemplazo'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Participantes List */}
         <div className="bg-slate-900/50 backdrop-blur border border-slate-700 rounded-xl overflow-hidden">

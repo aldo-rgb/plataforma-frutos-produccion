@@ -17,6 +17,18 @@ export async function GET(
       );
     }
 
+    // Obtener el usuario completo por email para tener el ID correcto
+    const usuario = await prisma.usuario.findUnique({
+      where: { email: session.user.email }
+    });
+
+    if (!usuario) {
+      return NextResponse.json(
+        { success: false, error: 'Usuario no encontrado' },
+        { status: 404 }
+      );
+    }
+
     const { id } = await params;
     const visionId = parseInt(id);
 
@@ -56,7 +68,7 @@ export async function GET(
     }
 
     // Verificar que el coordinador tiene acceso a esta visión
-    if (vision.coordinadorId !== session.user.id) {
+    if (vision.coordinadorId !== usuario.id) {
       return NextResponse.json(
         { success: false, error: 'No tienes acceso a esta visión' },
         { status: 403 }
@@ -89,7 +101,7 @@ export async function GET(
                 estado: true,
               },
             },
-            LicenseAssignments: {
+            LicenseAssignment_LicenseAssignment_userIdToUsuario: {
               where: {
                 visionId: visionId,
                 isActive: true
@@ -139,7 +151,7 @@ export async function GET(
                 imagen: true,
               },
             },
-            LicenseAssignments: {
+            LicenseAssignment_LicenseAssignment_userIdToUsuario: {
               where: {
                 visionId: visionId,
                 isActive: true
@@ -191,6 +203,18 @@ export async function PUT(
       return NextResponse.json(
         { success: false, error: 'No autorizado' },
         { status: 401 }
+      );
+    }
+
+    // Obtener el usuario completo por email para tener el ID correcto
+    const usuario = await prisma.usuario.findUnique({
+      where: { email: session.user.email }
+    });
+
+    if (!usuario) {
+      return NextResponse.json(
+        { success: false, error: 'Usuario no encontrado' },
+        { status: 404 }
       );
     }
 
@@ -304,7 +328,7 @@ export async function PUT(
     }
 
     // Verificar que el coordinador tiene acceso a esta visión
-    if (vision.coordinadorId !== session.user.id) {
+    if (vision.coordinadorId !== usuario.id) {
       return NextResponse.json(
         { success: false, error: 'No tienes acceso a esta visión' },
         { status: 403 }

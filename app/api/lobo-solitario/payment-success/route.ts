@@ -145,21 +145,26 @@ export async function GET(request: NextRequest) {
     console.log(`   Monto: $${orden.precioTotal} ${orden.currency}`);
     console.log(`   Sesiones: ${orden.cantidad}`);
 
-    // 2. 💰 REGISTRAR COMISIÓN EN COMMISSION LEDGER
-    try {
-      await onPackagePurchaseCompleted(
-        ordenId,
-        orden.mentorId,
-        orden.usuarioId,
-        orden.Usuario.nombre,
-        orden.precioTotal,
-        orden.cantidad,
-        new Date()
-      );
-      console.log(`💰 Comisión registrada en ledger para lobo ${ordenId}`);
-    } catch (error) {
-      console.error(`⚠️ Error al registrar comisión (no crítico):`, error);
-    }
+    // 2. 💰 COMISIÓN SE REGISTRA POR CADA SESIÓN COMPLETADA
+    // Las comisiones NO se registran al comprar el paquete
+    // Se crearán automáticamente cuando el mentor complete cada sesión ($90 por sesión)
+    console.log(`💰 Comisión se registrará conforme se completen las ${orden.cantidad} sesiones`);
+    
+    // DESACTIVADO: No registrar comisión anticipada
+    // try {
+    //   await onPackagePurchaseCompleted(
+    //     ordenId,
+    //     orden.mentorId,
+    //     orden.usuarioId,
+    //     orden.Usuario.nombre,
+    //     orden.precioTotal,
+    //     orden.cantidad,
+    //     new Date()
+    //   );
+    //   console.log(`💰 Comisión registrada en ledger para lobo ${ordenId}`);
+    // } catch (error) {
+    //   console.error(`⚠️ Error al registrar comisión (no crítico):`, error);
+    // }
 
     // 3. 💳 CREAR CRÉDITOS DE SESIONES
     try {

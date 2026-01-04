@@ -49,7 +49,7 @@ export async function GET() {
             email: true
           }
         },
-        ParticipanteEnVisiones: {
+        VisionParticipante_VisionParticipante_participanteIdToUsuario: {
           include: {
             Vision: {
               include: {
@@ -67,7 +67,7 @@ export async function GET() {
             }
           }
         },
-        GameChangerEnVisiones: {
+        VisionGameChanger_VisionGameChanger_gameChangerIdToUsuario: {
           include: {
             Vision: {
               include: {
@@ -102,16 +102,16 @@ export async function GET() {
         };
       } 
       // Para participantes, obtener mentor de la visión
-      else if (u.rol === 'PARTICIPANTE' && u.ParticipanteEnVisiones?.[0]?.Vision?.Mentores?.length > 0) {
-        const mentorVision = u.ParticipanteEnVisiones[0].Vision.Mentores[0].Mentor;
+      else if (u.rol === 'PARTICIPANTE' && u.VisionParticipante_VisionParticipante_participanteIdToUsuario?.[0]?.Vision?.Mentores?.length > 0) {
+        const mentorVision = u.VisionParticipante_VisionParticipante_participanteIdToUsuario[0].Vision.Mentores[0].Mentor;
         mentor = {
           nombre: mentorVision.nombre,
           email: mentorVision.email
         };
       }
       // Para game changers, obtener mentor de la visión
-      else if (u.rol === 'GAMECHANGER' && u.GameChangerEnVisiones?.[0]?.Vision?.Mentores?.length > 0) {
-        const mentorVision = u.GameChangerEnVisiones[0].Vision.Mentores[0].Mentor;
+      else if (u.rol === 'GAMECHANGER' && u.VisionGameChanger_VisionGameChanger_gameChangerIdToUsuario?.[0]?.Vision?.Mentores?.length > 0) {
+        const mentorVision = u.VisionGameChanger_VisionGameChanger_gameChangerIdToUsuario[0].Vision.Mentores[0].Mentor;
         mentor = {
           nombre: mentorVision.nombre,
           email: mentorVision.email

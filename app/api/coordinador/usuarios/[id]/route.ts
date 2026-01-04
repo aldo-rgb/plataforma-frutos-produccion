@@ -39,7 +39,7 @@ export async function GET(
         tier: true,
         licenseCode: true,
         assignedMentorId: true,
-        ParticipanteEnVisiones: {
+        VisionParticipante_VisionParticipante_participanteIdToUsuario: {
           include: {
             Vision: {
               select: {
@@ -49,7 +49,7 @@ export async function GET(
             }
           }
         },
-        GameChangerEnVisiones: {
+        VisionGameChanger_VisionGameChanger_gameChangerIdToUsuario: {
           include: {
             Vision: {
               select: {
@@ -59,7 +59,7 @@ export async function GET(
             }
           }
         },
-        LicenseAssignments: {
+        LicenseAssignment_LicenseAssignment_userIdToUsuario: {
           where: {
             isActive: true
           },
@@ -78,8 +78,8 @@ export async function GET(
 
     // Verificar que el coordinador tenga acceso a este usuario
     const visionesDelUsuario = [
-      ...usuario.ParticipanteEnVisiones.map(p => p.Vision),
-      ...usuario.GameChangerEnVisiones.map(gc => gc.Vision)
+      ...usuario.VisionParticipante_VisionParticipante_participanteIdToUsuario.map(p => p.Vision),
+      ...usuario.VisionGameChanger_VisionGameChanger_gameChangerIdToUsuario.map(gc => gc.Vision)
     ];
 
     const tieneAcceso = visionesDelUsuario.some(v => v.coordinadorId === coordinador.id);
@@ -91,8 +91,8 @@ export async function GET(
       );
     }
 
-    // Formatear respuesta usando LicenseAssignments si no tiene licenseCode directo
-    const licenseCode = usuario.licenseCode || usuario.LicenseAssignments?.[0]?.licenseCode || null;
+    // Formatear respuesta usando LicenseAssignment_LicenseAssignment_userIdToUsuario si no tiene licenseCode directo
+    const licenseCode = usuario.licenseCode || usuario.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode || null;
 
     return NextResponse.json({
       success: true,

@@ -114,7 +114,8 @@ export async function getMentorCommissionRate(mentorId: number): Promise<number>
  * TRIGGER: Al completar una sesión de mentoría
  * Se llama desde /api/mentor/complete-session
  * 
- * ⚠️ NO registra comisión si la sesión es de un paquete (ya pagado en compra)
+ * ✅ REGISTRA comisión por cada sesión completada, incluyendo las de paquetes
+ * El mentor gana $90 por cada sesión que completa (no por adelantado)
  */
 export async function onMentorshipSessionCompleted(
   bookingId: number,
@@ -126,12 +127,14 @@ export async function onMentorshipSessionCompleted(
   // 📦 VERIFICAR SI ES SESIÓN DE PAQUETE
   const booking = await prisma.callBooking.findUnique({
     where: { id: bookingId },
-    select: { packageOrderId: true }
+    select: { packageOrderId: true, PackageOrder: { select: { precioTotal: true, cantidad: true } } }
   });
 
-  if (booking?.packageOrderId) {
-    console.log(`⚠️ Sesión ${bookingId} es de paquete ${booking.packageOrderId}. Saltando comisión (ya pagada).`);
-    return null;
+  // Si es sesión de paquete, calcular el pago por sesión ($90 por sesión)
+  if (booking?.packageOrderId && booking.PackageOrder) {
+    const paymentPerSession = booking.PackageOrder.precioTotal / booking.PackageOrder.cantidad;
+    console.log(`✅ Sesión ${bookingId} de paquete ${booking.packageOrderId}. Registrando comisión: $${paymentPerSession}`);
+    amount = paymentPerSession; // $1620 / 18 = $90 por sesión
   }
 
   // Obtener datos del estudiante

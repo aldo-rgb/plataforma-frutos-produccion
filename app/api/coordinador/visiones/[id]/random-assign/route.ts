@@ -11,10 +11,27 @@ export async function POST(
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.rol !== 'COORDINADOR') {
+    if (!session?.user?.email) {
       return NextResponse.json(
         { success: false, error: 'No autorizado' },
         { status: 401 }
+      );
+    }
+
+    // Obtener coordinador por email
+    const coordinador = await prisma.usuario.findUnique({
+      where: { email: session.user.email },
+      select: { 
+        id: true,
+        rol: true,
+        organizationId: true 
+      },
+    });
+
+    if (!coordinador || coordinador.rol !== 'COORDINADOR') {
+      return NextResponse.json(
+        { success: false, error: 'No autorizado' },
+        { status: 403 }
       );
     }
 
@@ -28,13 +45,7 @@ export async function POST(
       );
     }
 
-    // Verificar que la visión pertenece a la organización del coordinador
-    const coordinador = await prisma.usuario.findUnique({
-      where: { id: session.user.id },
-      select: { organizationId: true },
-    });
-
-    if (!coordinador?.organizationId) {
+    if (!coordinador.organizationId) {
       return NextResponse.json(
         { success: false, error: 'No tienes organización asignada' },
         { status: 400 }
@@ -45,41 +56,34 @@ export async function POST(
       where: { id: visionId },
     });
 
-    if (!vision || vision.coordinadorId !== session.user.id) {
+    if (!vision || vision.coordinadorId !== coordinador.id) {
       return NextResponse.json(
         { success: false, error: 'No tienes acceso a esta visión' },
         { status: 403 }
       );
     }
 
-    // Obtener mentores de la visión con horarios configurados
-    const mentoresDisponibles = await prisma.visionMentor.findMany({
+    // Obtener mentores disponibles (rol MENTOR o LIDER) de la organización
+    const mentoresDisponibles = await prisma.usuario.findMany({
       where: {
-        visionId,
-      },
-      include: {
-        Mentor: {
-          include: {
-            CallAvailability: {
-              where: {
-                type: 'DISCIPLINE',
-                isActive: true,
-              },
-            },
-          },
+        organizationId: coordinador.organizationId,
+        rol: {
+          in: ['MENTOR', 'LIDER']
         },
+        isActive: true,
+      },
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
       },
     });
 
-    const mentoresConHorarios = mentoresDisponibles.filter(
-      (vm) => vm.Mentor.CallAvailability && vm.Mentor.CallAvailability.length > 0
-    );
-
-    if (mentoresConHorarios.length === 0) {
+    if (mentoresDisponibles.length === 0) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'No hay mentores con horarios configurados en esta visión' 
+          error: 'No hay mentores o líderes disponibles en la organización' 
         },
         { status: 400 }
       );
@@ -93,11 +97,11 @@ export async function POST(
 
     const gameChangerIds = gameChangersDisponibles.map((gc) => gc.gameChangerId);
 
-    // Obtener participantes sin mentor o sin game changer
+    // Obtener participantes
     const participantes = await prisma.visionParticipante.findMany({
       where: { visionId },
       include: {
-        Participante: {
+        Usuario_VisionParticipante_participanteIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -113,8 +117,8 @@ export async function POST(
 
     // Función para obtener mentor aleatorio
     const getRandomMentor = () => {
-      const randomIndex = Math.floor(Math.random() * mentoresConHorarios.length);
-      return mentoresConHorarios[randomIndex].Mentor.id;
+      const randomIndex = Math.floor(Math.random() * mentoresDisponibles.length);
+      return mentoresDisponibles[randomIndex].id;
     };
 
     // Función para obtener game changer aleatorio
@@ -127,14 +131,14 @@ export async function POST(
     // Asignar mentores y game changers aleatoriamente
     for (const participante of participantes) {
       try {
-        const updates: any = {};
+        const usuario = participante.Usuario_VisionParticipante_participanteIdToUsuario;
 
         // Asignar mentor si no tiene
-        if (!participante.Participante.assignedMentorId) {
+        if (!usuario.assignedMentorId) {
           const mentorId = getRandomMentor();
           
           await prisma.usuario.update({
-            where: { id: participante.Participante.id },
+            where: { id: usuario.id },
             data: { assignedMentorId: mentorId },
           });
 
@@ -149,7 +153,7 @@ export async function POST(
             await prisma.visionParticipante.updateMany({
               where: {
                 visionId,
-                participanteId: participante.Participante.id,
+                participanteId: usuario.id,
               },
               data: {
                 gameChangerId,
@@ -160,8 +164,9 @@ export async function POST(
           }
         }
       } catch (error: any) {
-        console.error(`Error asignando a ${participante.Participante.nombre}:`, error);
-        errors.push(`${participante.Participante.nombre}: ${error.message}`);
+        const usuario = participante.Usuario_VisionParticipante_participanteIdToUsuario;
+        console.error(`Error asignando a ${usuario.nombre}:`, error);
+        errors.push(`${usuario.nombre}: ${error.message}`);
       }
     }
 
@@ -172,7 +177,7 @@ export async function POST(
         mentorAssignments,
         gameChangerAssignments,
         totalParticipantes: participantes.length,
-        mentoresDisponibles: mentoresConHorarios.length,
+        mentoresDisponibles: mentoresDisponibles.length,
         gameChangersDisponibles: gameChangerIds.length,
         errors: errors.length > 0 ? errors : undefined,
       },
