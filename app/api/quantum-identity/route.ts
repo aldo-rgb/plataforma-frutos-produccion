@@ -9,15 +9,17 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Inicializar cliente de Supabase
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Función para obtener cliente de Supabase (lazy initialization)
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables');
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase environment variables');
+  }
+
+  return createClient(supabaseUrl, supabaseKey);
 }
-
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 /**
  * Descarga una imagen desde una URL y la sube a Supabase Storage
@@ -43,7 +45,7 @@ async function downloadAndUploadToSupabase(imageUrl: string, userId: number): Pr
     console.log('📤 Subiendo a Supabase Storage:', filePath);
     
     // Subir a Supabase Storage
-    const { data, error } = await supabase.storage
+    const { data, error } = await getSupabaseClient().storage
       .from('mentor-assets')
       .upload(filePath, buffer, {
         contentType: 'image/png',
@@ -56,7 +58,7 @@ async function downloadAndUploadToSupabase(imageUrl: string, userId: number): Pr
     }
     
     // Obtener URL pública
-    const { data: { publicUrl } } = supabase.storage
+    const { data: { publicUrl } } = getSupabaseClient().storage
       .from('mentor-assets')
       .getPublicUrl(filePath);
     
