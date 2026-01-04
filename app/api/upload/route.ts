@@ -5,16 +5,19 @@ import { createClient } from '@supabase/supabase-js';
 
 // Función para obtener cliente de Supabase (lazy initialization)
 function getSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  // En server-side, usar variables sin NEXT_PUBLIC_ prefix cuando sea posible
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   
   console.log('🔍 Checking Supabase env vars:');
-  console.log('  NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✅ Set' : '❌ Missing');
+  console.log('  NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing');
+  console.log('  SUPABASE_URL:', process.env.SUPABASE_URL ? '✅ Set' : '❌ Missing');
   console.log('  SUPABASE_SERVICE_ROLE_KEY:', supabaseKey ? '✅ Set' : '❌ Missing');
+  console.log('  Using URL:', supabaseUrl ? '✅ Set' : '❌ Missing');
   
   if (!supabaseUrl || !supabaseKey) {
     const missingVars = [];
-    if (!supabaseUrl) missingVars.push('NEXT_PUBLIC_SUPABASE_URL');
+    if (!supabaseUrl) missingVars.push('SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL');
     if (!supabaseKey) missingVars.push('SUPABASE_SERVICE_ROLE_KEY');
     throw new Error(`Missing Supabase environment variables: ${missingVars.join(', ')}`);
   }
