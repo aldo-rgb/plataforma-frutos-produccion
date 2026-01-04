@@ -150,7 +150,7 @@ export function Sidebar({ usuario, isMobile = false }: SidebarProps) {
   };
 
   return (
-    <aside className={`${isMobile ? 'flex' : 'hidden lg:flex'} w-64 bg-slate-900 border-r border-slate-800 flex-col`}>
+    <aside className={`${isMobile ? 'flex w-full' : 'hidden lg:flex w-64 border-r border-slate-800'} bg-slate-900 flex-col`}>
       {/* Logo */}
       <div className="p-6 flex items-center gap-3 border-b border-slate-800">
         {usuario.organization?.logoUrl ? (
