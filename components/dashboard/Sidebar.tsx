@@ -28,9 +28,10 @@ interface SidebarProps {
       brandColor: string | null;
     } | null;
   };
+  isMobile?: boolean; // Nueva prop para controlar si se muestra en móvil
 }
 
-export function Sidebar({ usuario }: SidebarProps) {
+export function Sidebar({ usuario, isMobile = false }: SidebarProps) {
   const pathname = usePathname();
   const [cartaStatus, setCartaStatus] = useState<string | null>(null);
   const [showUpsellModal, setShowUpsellModal] = useState(false);
@@ -149,7 +150,7 @@ export function Sidebar({ usuario }: SidebarProps) {
   };
 
   return (
-    <aside className="hidden lg:flex w-64 bg-slate-900 border-r border-slate-800 flex-col">
+    <aside className={`${isMobile ? 'flex' : 'hidden lg:flex'} w-64 bg-slate-900 border-r border-slate-800 flex-col`}>
       {/* Logo */}
       <div className="p-6 flex items-center gap-3 border-b border-slate-800">
         {usuario.organization?.logoUrl ? (

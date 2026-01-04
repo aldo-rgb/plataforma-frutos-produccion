@@ -31,7 +31,7 @@ export function DashboardClientLayout({ usuario, children }: DashboardClientLayo
           isOpen={isMobileMenuOpen} 
           onClose={() => setIsMobileMenuOpen(false)}
         >
-          <Sidebar usuario={usuario} />
+          <Sidebar usuario={usuario} isMobile={true} />
         </MobileSidebar>
 
         <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
