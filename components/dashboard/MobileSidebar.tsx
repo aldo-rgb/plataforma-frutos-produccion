@@ -46,18 +46,22 @@ export function MobileSidebar({ isOpen, onClose, children }: MobileSidebarProps)
       />
 
       {/* Sidebar móvil */}
-      <div className="fixed inset-y-0 left-0 w-64 bg-slate-900 border-r border-slate-800 z-50 lg:hidden flex flex-col animate-slide-in-left">
-        {/* Botón de cerrar */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-lg hover:bg-slate-800 transition-colors"
-          aria-label="Cerrar menú"
-        >
-          <X size={20} className="text-slate-400" />
-        </button>
+      <div className="fixed inset-y-0 left-0 w-64 bg-slate-900 border-r border-slate-800 z-50 lg:hidden flex flex-col animate-slide-in-left overflow-y-auto">
+        {/* Header con botón de cerrar */}
+        <div className="flex items-center justify-end p-4 border-b border-slate-800 shrink-0">
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-slate-800 transition-colors"
+            aria-label="Cerrar menú"
+          >
+            <X size={20} className="text-slate-400" />
+          </button>
+        </div>
 
         {/* Contenido del sidebar (mismo que el desktop) */}
-        {children}
+        <div className="flex-1 overflow-y-auto">
+          {children}
+        </div>
       </div>
     </>
   );
