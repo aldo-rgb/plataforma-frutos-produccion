@@ -61,8 +61,15 @@ function LoginForm() {
 
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <img 
+              src="/quantum-matter-logo.png" 
+              alt="Quantum Matter Logo" 
+              className="w-32 h-32 object-contain"
+            />
+          </div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
-            QUANTUM
+            Quantum Matter
           </h1>
           <p className="text-slate-400">Inicia tu transformación cuántica</p>
         </div>
