@@ -3,11 +3,15 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { createClient } from '@supabase/supabase-js';
 
-// Inicializar cliente de Supabase
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Función para obtener cliente de Supabase (lazy initialization)
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase environment variables');
+  }
+  return createClient(supabaseUrl, supabaseKey);
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -45,7 +49,7 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
 
     // Subir a Supabase Storage
-    const { data, error } = await supabase.storage
+    const { data, error } = await getSupabaseClient().storage
       .from('mentor-assets')
       .upload(filePath, buffer, {
         contentType: file.type,
@@ -58,7 +62,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Obtener URL pública
-    const { data: { publicUrl } } = supabase.storage
+    const { data: { publicUrl } } = getSupabaseClient().storage
       .from('mentor-assets')
       .getPublicUrl(filePath);
 
