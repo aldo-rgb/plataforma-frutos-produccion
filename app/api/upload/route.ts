@@ -7,8 +7,16 @@ import { createClient } from '@supabase/supabase-js';
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  console.log('🔍 Checking Supabase env vars:');
+  console.log('  NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✅ Set' : '❌ Missing');
+  console.log('  SUPABASE_SERVICE_ROLE_KEY:', supabaseKey ? '✅ Set' : '❌ Missing');
+  
   if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing Supabase environment variables');
+    const missingVars = [];
+    if (!supabaseUrl) missingVars.push('NEXT_PUBLIC_SUPABASE_URL');
+    if (!supabaseKey) missingVars.push('SUPABASE_SERVICE_ROLE_KEY');
+    throw new Error(`Missing Supabase environment variables: ${missingVars.join(', ')}`);
   }
   return createClient(supabaseUrl, supabaseKey);
 }
@@ -82,8 +90,17 @@ export async function POST(request: NextRequest) {
     // Subir a Supabase Storage
     console.log('🔄 Uploading to Supabase:', filePath);
     
-    const supabase = getSupabaseClient();
-    console.log('✅ Supabase client created');
+    let supabase;
+    try {
+      supabase = getSupabaseClient();
+      console.log('✅ Supabase client created');
+    } catch (error: any) {
+      console.error('❌ Failed to create Supabase client:', error.message);
+      return NextResponse.json(
+        { success: false, error: `Error de configuración: ${error.message}` },
+        { status: 500 }
+      );
+    }
     
     const { data, error: uploadError } = await supabase.storage
       .from('mentor-assets')
