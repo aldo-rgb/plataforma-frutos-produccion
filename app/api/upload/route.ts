@@ -15,20 +15,29 @@ function getSupabaseClient() {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('📤 Upload API called');
+    
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
+      console.log('❌ Unauthorized: No session');
       return NextResponse.json(
         { success: false, error: 'No autorizado' },
         { status: 401 }
       );
     }
 
+    console.log('✅ User authenticated:', session.user.email);
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const folder = formData.get('folder') as string || 'uploads';
 
+    console.log('📁 Folder:', folder);
+    console.log('📄 File:', file?.name, file?.type, file?.size);
+
     if (!file) {
+      console.log('❌ No file provided');
       return NextResponse.json(
         { success: false, error: 'No se proporcionó ningún archivo' },
         { status: 400 }
@@ -71,7 +80,10 @@ export async function POST(request: NextRequest) {
     const filePath = `${folder}/${filename}`;
 
     // Subir a Supabase Storage
+    console.log('🔄 Uploading to Supabase:', filePath);
+    
     const supabase = getSupabaseClient();
+    console.log('✅ Supabase client created');
     
     const { data, error: uploadError } = await supabase.storage
       .from('mentor-assets')
@@ -81,17 +93,21 @@ export async function POST(request: NextRequest) {
       });
 
     if (uploadError) {
-      console.error('Error subiendo a Supabase:', uploadError);
+      console.error('❌ Error subiendo a Supabase:', uploadError);
       return NextResponse.json(
         { success: false, error: `Error al subir el archivo: ${uploadError.message}` },
         { status: 500 }
       );
     }
 
+    console.log('✅ File uploaded successfully to Supabase');
+
     // Obtener URL pública
     const { data: urlData } = supabase.storage
       .from('mentor-assets')
       .getPublicUrl(filePath);
+
+    console.log('✅ Public URL generated:', urlData.publicUrl);
 
     return NextResponse.json({
       success: true,
@@ -99,10 +115,11 @@ export async function POST(request: NextRequest) {
       filename,
     });
 
-  } catch (error) {
-    console.error('Error uploading file:', error);
+  } catch (error: any) {
+    console.error('❌ Error uploading file:', error);
+    console.error('Error stack:', error.stack);
     return NextResponse.json(
-      { success: false, error: 'Error al subir el archivo' },
+      { success: false, error: error.message || 'Error al subir el archivo' },
       { status: 500 }
     );
   }
