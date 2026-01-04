@@ -7,7 +7,7 @@ import { Lock, Eye, EyeOff, AlertTriangle, CheckCircle, Loader2 } from 'lucide-r
 
 export default function CambiarPasswordPage() {
   const router = useRouter();
-  const { data: session } = useSession();
+  const session = useSession();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -17,6 +17,14 @@ export default function CambiarPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+
+  if (!session || session.status === 'loading') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-white animate-spin" />
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

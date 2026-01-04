@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Lock, Eye, EyeOff, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 
 export default function ChangePasswordPage() {
-  const { data: session, status, update } = useSession();
+  const sessionResult = useSession();
   const router = useRouter();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -17,14 +17,14 @@ export default function ChangePasswordPage() {
   const [passwordStrength, setPasswordStrength] = useState(0);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (!sessionResult || sessionResult.status === 'unauthenticated') {
       router.push('/login');
     }
     // Si el usuario no necesita cambiar contraseña, redirigir al dashboard
-    if (session?.user && !session.user.requirePasswordChange) {
+    if (sessionResult?.data?.user && !sessionResult.data.user.requirePasswordChange) {
       router.push('/dashboard');
     }
-  }, [status, session, router]);
+  }, [sessionResult, router]);
 
   useEffect(() => {
     calculatePasswordStrength(newPassword);
@@ -83,7 +83,7 @@ export default function ChangePasswordPage() {
 
       if (data.success) {
         // Actualizar la sesión para eliminar requirePasswordChange
-        await update({ requirePasswordChange: false });
+        await sessionResult.update({ requirePasswordChange: false });
         // Redirigir al dashboard
         router.push('/dashboard');
       } else {
@@ -101,7 +101,7 @@ export default function ChangePasswordPage() {
     await signOut({ callbackUrl: '/login' });
   };
 
-  if (status === 'loading') {
+  if (!sessionResult || sessionResult.status === 'loading') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
