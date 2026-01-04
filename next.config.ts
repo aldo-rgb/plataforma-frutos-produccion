@@ -3,12 +3,6 @@ import path from "path";
 
 const nextConfig: NextConfig = {
   turbopack: {},
-  experimental: {
-    forceSwcTransforms: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     ignoreBuildErrors: true,
   },

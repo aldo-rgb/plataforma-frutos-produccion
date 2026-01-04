@@ -203,7 +203,7 @@ export default function CoordinadorDashboard() {
           />
         </div>
 
-        {/* Widgets de Acción - 2x3 Grid */}}
+        {/* Widgets de Acción - 2x3 Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           
           {/* Widget 1: Cartas Pendientes */}
