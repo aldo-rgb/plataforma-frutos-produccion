@@ -71,29 +71,31 @@ export async function POST(request: NextRequest) {
     const filePath = `${folder}/${filename}`;
 
     // Subir a Supabase Storage
-    const { data, error } = await getSupabaseClient().storage
+    const supabase = getSupabaseClient();
+    
+    const { data, error: uploadError } = await supabase.storage
       .from('mentor-assets')
       .upload(filePath, buffer, {
         contentType: file.type,
         upsert: true,
       });
 
-    if (error) {
-      console.error('Error subiendo a Supabase:', error);
+    if (uploadError) {
+      console.error('Error subiendo a Supabase:', uploadError);
       return NextResponse.json(
-        { success: false, error: 'Error al subir el archivo' },
+        { success: false, error: `Error al subir el archivo: ${uploadError.message}` },
         { status: 500 }
       );
     }
 
     // Obtener URL pública
-    const { data: { publicUrl } } = getSupabaseClient().storage
+    const { data: urlData } = supabase.storage
       .from('mentor-assets')
       .getPublicUrl(filePath);
 
     return NextResponse.json({
       success: true,
-      url: publicUrl,
+      url: urlData.publicUrl,
       filename,
     });
 
