@@ -354,22 +354,22 @@ export default function SolicitarMentorPage() {
           Volver a Configuración
         </Link>
         
-        <div className="mb-8 text-center">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-3 bg-purple-500/20 rounded-lg">
-              <GraduationCap className="w-8 h-8 text-purple-400" />
+        <div className="mb-4 sm:mb-8 text-center">
+          <div className="flex items-center justify-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+            <div className="p-2 sm:p-3 bg-purple-500/20 rounded-lg">
+              <GraduationCap className="w-6 h-6 sm:w-8 sm:h-8 text-purple-400" />
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-white">Solicitar ser Mentor</h1>
-              <p className="text-slate-400">Comparte tu experiencia y transforma vidas</p>
+            <div className="text-left sm:text-center">
+              <h1 className="text-xl sm:text-3xl font-bold text-white">WIZARD 2.0</h1>
+              <p className="text-xs sm:text-base text-slate-400 hidden sm:block">Múltiples acciones por área</p>
             </div>
           </div>
           
           {/* Progress Steps */}
-          <div className="flex items-center gap-2 max-w-md mx-auto mb-4">
+          <div className="flex items-center gap-1 sm:gap-2 max-w-md mx-auto mb-2 sm:mb-4">
             {[1, 2, 3].map((step) => (
               <div key={step} className="flex items-center flex-1">
-                <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm ${
+                <div className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full font-bold text-xs sm:text-sm ${
                   currentStep >= step
                     ? 'bg-purple-600 text-white'
                     : 'bg-slate-800 text-slate-500'
@@ -377,7 +377,7 @@ export default function SolicitarMentorPage() {
                   {step}
                 </div>
                 {step < 3 && (
-                  <div className={`flex-1 h-1 mx-2 ${
+                  <div className={`flex-1 h-0.5 sm:h-1 mx-1 sm:mx-2 ${
                     currentStep > step ? 'bg-purple-600' : 'bg-slate-800'
                   }`} />
                 )}
@@ -385,17 +385,23 @@ export default function SolicitarMentorPage() {
             ))}
           </div>
           
-          <div className="text-center text-sm text-slate-400">
-            Paso {currentStep} de 3: {
+          <div className="text-center text-xs sm:text-sm text-slate-400">
+            <span className="font-semibold">Paso {currentStep}/3:</span>{' '}
+            <span className="hidden sm:inline">{
               currentStep === 1 ? 'Información Básica y Biografía' :
               currentStep === 2 ? 'Experiencia y Portafolio' :
               'Revisión y Pago'
-            }
+            }</span>
+            <span className="sm:hidden">{
+              currentStep === 1 ? 'Info Básica' :
+              currentStep === 2 ? 'Experiencia' :
+              'Revisión'
+            }</span>
           </div>
         </div>
 
         {/* Form Content */}
-        <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 sm:p-8 shadow-xl">
+        <div className="bg-slate-900 rounded-xl border border-slate-800 p-4 sm:p-6 lg:p-8 shadow-xl">
           {/* Step 1: Información Básica */}
           {currentStep === 1 && (
             <div className="space-y-6">
