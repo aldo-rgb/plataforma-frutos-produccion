@@ -253,8 +253,8 @@ export default function SchoolAdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-3 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 md:space-y-8">
         {/* Notificación de Pago */}
         {notification && (
           <div
@@ -282,31 +282,31 @@ export default function SchoolAdminDashboard() {
         )}
 
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/10 pb-6">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3 md:gap-6 border-b border-white/10 pb-3 md:pb-6">
+          <div className="flex items-center gap-2 md:gap-4">
             {organization?.logoUrl ? (
               <img
                 src={organization.logoUrl}
                 alt={organization.name}
-                className="w-20 h-20 rounded-xl object-cover shadow-lg ring-2 ring-purple-500/30"
+                className="w-12 h-12 md:w-20 md:h-20 rounded-lg md:rounded-xl object-cover shadow-lg ring-2 ring-purple-500/30"
               />
             ) : (
               <div
-                className="w-20 h-20 rounded-xl flex items-center justify-center text-white font-bold text-3xl shadow-lg bg-purple-600"
+                className="w-12 h-12 md:w-20 md:h-20 rounded-lg md:rounded-xl flex items-center justify-center text-white font-bold text-xl md:text-3xl shadow-lg bg-purple-600"
                 style={{ backgroundColor: organization?.brandColor || '#8B5CF6' }}
               >
                 {organization?.name?.charAt(0) || 'C'}
               </div>
             )}
             <div>
-              <h1 className="text-4xl font-black text-white tracking-tight flex items-center gap-3">
-                {organization?.name || 'Centro Educativo'}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500 text-2xl">
+              <h1 className="text-xl md:text-4xl font-black text-white tracking-tight flex flex-col md:flex-row items-start md:items-center gap-1 md:gap-3">
+                <span className="line-clamp-1">{organization?.name || 'Centro Educativo'}</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500 text-sm md:text-2xl">
                   Centro
                 </span>
               </h1>
-              <p className="text-slate-400 mt-1">DIRECTOR • Panel de Control</p>
-              <p className="text-sm text-slate-500">{session?.user?.email}</p>
+              <p className="text-xs md:text-sm text-slate-400 mt-0.5 md:mt-1">DIRECTOR • Panel de Control</p>
+              <p className="text-[10px] md:text-sm text-slate-500 hidden md:block">{session?.user?.email}</p>
             </div>
           </div>
         </div>
@@ -321,18 +321,19 @@ export default function SchoolAdminDashboard() {
           const btnColor = hasProcessing ? 'bg-blue-500 hover:bg-blue-600 shadow-blue-500/50' : 'bg-red-500 hover:bg-red-600 shadow-red-500/50';
           
           return (
-            <div className={`bg-gradient-to-r ${bgColor} border-2 rounded-2xl p-5 shadow-2xl animate-pulse backdrop-blur-sm`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
+            <div className={`bg-gradient-to-r ${bgColor} border-2 rounded-xl md:rounded-2xl p-3 md:p-5 shadow-2xl animate-pulse backdrop-blur-sm`}>
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-0">
+                <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto">
+                  <div className="relative flex-shrink-0">
                     <div className={`absolute inset-0 ${iconPing} rounded-full animate-ping opacity-75`}></div>
-                    <div className={`relative flex items-center justify-center w-12 h-12 ${iconBg} rounded-full`}>
-                      <AlertTriangle className="text-white" size={24} />
+                    <div className={`relative flex items-center justify-center w-10 h-10 md:w-12 md:h-12 ${iconBg} rounded-full`}>
+                      <AlertTriangle className="text-white" size={20} />
                     </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm md:text-lg font-bold text-white flex items-center gap-2">
                       <span className="animate-pulse">{hasProcessing ? '📋' : '⚠️'}</span>
+                      <span className="line-clamp-2">
                       {(() => {
                         const processingOrders = data.pendingOrders.filter((o: any) => o.status === 'PROCESSING');
                         const pendingOrders = data.pendingOrders.filter((o: any) => o.status === 'PENDING');
@@ -345,8 +346,9 @@ export default function SchoolAdminDashboard() {
                           return `Tienes ${pendingOrders.length} orden(es) pendiente(s) de pago`;
                         }
                       })()}
+                      </span>
                     </h3>
-                    <p className={`text-sm ${textColor} mt-1`}>
+                    <p className={`text-xs md:text-sm ${textColor} mt-1 line-clamp-2`}>
                       {hasProcessing
                         ? 'El comprobante de pago está en revisión. Se activarán las licencias pronto.'
                         : 'Completa el proceso de pago para activar tus licencias'
@@ -354,9 +356,9 @@ export default function SchoolAdminDashboard() {
                     </p>
                   </div>
                 </div>
-                <Link href="/dashboard/school-admin/licenses/payment">
-                  <button className={`px-6 py-3 ${btnColor} text-white font-bold rounded-xl transition-all shadow-lg flex items-center gap-2`}>
-                    <ShoppingCart size={20} />
+                <Link href="/dashboard/school-admin/licenses/payment" className="w-full md:w-auto">
+                  <button className={`px-4 md:px-6 py-2 md:py-3 ${btnColor} text-white font-bold rounded-lg md:rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 text-sm md:text-base w-full md:w-auto`}>
+                    <ShoppingCart size={16} className="md:w-5 md:h-5" />
                     <span>Ver Órdenes</span>
                   </button>
                 </Link>
@@ -367,28 +369,30 @@ export default function SchoolAdminDashboard() {
 
         {/* Banner de Alerta - Perfiles de Líderes Pendientes de Aprobación */}
         {data.pendingLeaderApprovals && data.pendingLeaderApprovals > 0 && (
-          <div className="bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-purple-500/20 border-2 border-purple-500/50 rounded-2xl p-5 shadow-2xl animate-pulse backdrop-blur-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="relative">
+          <div className="bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-purple-500/20 border-2 border-purple-500/50 rounded-xl md:rounded-2xl p-3 md:p-5 shadow-2xl animate-pulse backdrop-blur-sm">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-0">
+              <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto">
+                <div className="relative flex-shrink-0">
                   <div className="absolute inset-0 bg-purple-400 rounded-full animate-ping opacity-75"></div>
-                  <div className="relative flex items-center justify-center w-12 h-12 bg-purple-500 rounded-full">
-                    <Shield className="text-white" size={24} />
+                  <div className="relative flex items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-purple-500 rounded-full">
+                    <Shield className="text-white" size={20} />
                   </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm md:text-lg font-bold text-white flex items-center gap-2">
                     <span className="animate-pulse">🔍</span>
+                    <span className="line-clamp-2">
                     {data.pendingLeaderApprovals} Perfil{data.pendingLeaderApprovals !== 1 ? 'es' : ''} de Líder{data.pendingLeaderApprovals !== 1 ? 'es' : ''} Pendiente{data.pendingLeaderApprovals !== 1 ? 's' : ''} de Aprobación
+                    </span>
                   </h3>
-                  <p className="text-sm text-purple-200 mt-1">
+                  <p className="text-xs md:text-sm text-purple-200 mt-1 line-clamp-2">
                     Los líderes han enviado sus perfiles para revisión. Aprueba o rechaza cada perfil.
                   </p>
                 </div>
               </div>
-              <Link href="/dashboard/school-admin/lideres">
-                <button className="px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-purple-500/50 flex items-center gap-2">
-                  <CheckCircle size={20} />
+              <Link href="/dashboard/school-admin/lideres" className="w-full md:w-auto">
+                <button className="px-4 md:px-6 py-2 md:py-3 bg-purple-500 hover:bg-purple-600 text-white font-bold rounded-lg md:rounded-xl transition-all shadow-lg shadow-purple-500/50 flex items-center justify-center gap-2 text-sm md:text-base w-full md:w-auto">
+                  <CheckCircle size={16} className="md:w-5 md:h-5" />
                   <span>Revisar Perfiles</span>
                 </button>
               </Link>
@@ -476,7 +480,7 @@ export default function SchoolAdminDashboard() {
         )}
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
           <KpiCard
             icon={<Users className="text-cyan-400" />}
             label="Usuarios Totales"
@@ -622,7 +626,7 @@ export default function SchoolAdminDashboard() {
 
             <div className="bg-slate-900/50 backdrop-blur border border-slate-800 rounded-3xl p-6">
               <div className="grid grid-cols-3 gap-4 mb-6">
-                {data.tierDistribution.map((tier) => (
+                {data.tierDistribution.filter((tier) => tier.tier !== 'FREE').map((tier) => (
                   <div
                     key={tier.tier}
                     className="bg-slate-800/50 rounded-xl p-4 border border-slate-700"
@@ -1078,14 +1082,14 @@ function KpiCard({ icon, label, value, trend, color }: any) {
   };
 
   return (
-    <div className={`p-6 rounded-2xl border ${colors[color]} backdrop-blur-sm`}>
-      <div className="flex items-center justify-between mb-4">
-        <div className="p-2 bg-slate-900 rounded-lg">{icon}</div>
-        <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">KPI</span>
+    <div className={`p-3 md:p-6 rounded-xl md:rounded-2xl border ${colors[color]} backdrop-blur-sm`}>
+      <div className="flex items-center justify-between mb-2 md:mb-4">
+        <div className="p-1.5 md:p-2 bg-slate-900 rounded-lg">{icon}</div>
+        <span className="text-[8px] md:text-[10px] font-bold uppercase text-slate-500 tracking-wider hidden md:inline">KPI</span>
       </div>
-      <p className="text-3xl font-black text-white">{value}</p>
-      <p className="text-xs font-medium text-slate-400 mt-1">{label}</p>
-      <div className="mt-4 pt-4 border-t border-white/5 text-[10px] font-mono text-slate-500">
+      <p className="text-xl md:text-3xl font-black text-white">{value}</p>
+      <p className="text-[10px] md:text-xs font-medium text-slate-400 mt-0.5 md:mt-1 line-clamp-1">{label}</p>
+      <div className="mt-2 md:mt-4 pt-2 md:pt-4 border-t border-white/5 text-[8px] md:text-[10px] font-mono text-slate-500 line-clamp-2">
         {trend}
       </div>
     </div>
