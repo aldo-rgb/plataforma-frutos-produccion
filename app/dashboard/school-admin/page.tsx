@@ -79,6 +79,7 @@ export default function SchoolAdminDashboard() {
   const [visiones, setVisiones] = useState<any[]>([]);
   const [loadingVisiones, setLoadingVisiones] = useState(true);
   const [notificacionesLideres, setNotificacionesLideres] = useState(0);
+  const [misionesModalOpen, setMisionesModalOpen] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -647,106 +648,28 @@ export default function SchoolAdminDashboard() {
                 ))}
               </div>
 
-              {/* NUEVO: Widget de Misiones y Tareas Extraordinarias */}
-              <div className="mt-8 bg-gradient-to-br from-orange-900/40 via-yellow-900/30 to-orange-900/40 border-2 border-orange-600/40 rounded-2xl p-6">
-                <h3 className="text-lg font-black text-white mb-4 flex items-center gap-2">
-                  <Zap className="text-yellow-400" size={20} />
-                  Misiones & Tareas Extraordinarias
-                </h3>
-                
-                <div className="space-y-3">
-                  {/* Revisar Evidencias */}
-                  <Link 
-                    href="/dashboard/admin/evidencias"
-                    className="block p-4 bg-slate-900/60 border border-amber-600/30 rounded-xl hover:border-amber-500/60 hover:shadow-lg hover:shadow-amber-500/20 transition-all group"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg">
-                          <CheckCircle size={20} className="text-white" />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-white group-hover:text-amber-300 transition-colors">
-                            ✅ Revisar Evidencias
-                          </h4>
-                          <p className="text-xs text-slate-400 mt-1">
-                            Aprueba misiones y tareas extraordinarias
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-amber-400 group-hover:translate-x-1 transition-transform">→</div>
-                    </div>
-                  </Link>
-
-                  {/* Misiones con Quantum IA */}
-                  <Link 
-                    href="/dashboard/admin/tareas/nueva?quantum=true"
-                    className="block p-4 bg-slate-900/60 border border-purple-600/30 rounded-xl hover:border-purple-500/60 hover:shadow-lg hover:shadow-purple-500/20 transition-all group"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
-                          <BookOpen size={20} className="text-white" />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-white group-hover:text-purple-300 transition-colors">
-                            🧠 Misiones con Quantum IA
-                          </h4>
-                          <p className="text-xs text-slate-400 mt-1">
-                            Crea misiones personalizadas con IA para tu comunidad
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-purple-400 group-hover:translate-x-1 transition-transform">→</div>
-                    </div>
-                  </Link>
-
-                  {/* Tareas Extraordinarias */}
-                  <Link 
-                    href="/dashboard/admin/tareas/nueva"
-                    className="block p-4 bg-slate-900/60 border border-orange-600/30 rounded-xl hover:border-orange-500/60 hover:shadow-lg hover:shadow-orange-500/20 transition-all group"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg">
-                          <Shield size={20} className="text-white" />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-white group-hover:text-orange-300 transition-colors">
-                            ⚡ Tareas Extraordinarias
-                          </h4>
-                          <p className="text-xs text-slate-400 mt-1">
-                            Asigna tareas especiales para activar la visión
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-orange-400 group-hover:translate-x-1 transition-transform">→</div>
-                    </div>
-                  </Link>
-
-                  {/* Tip de Quantum IA */}
-                  <div className="mt-4 p-4 bg-gradient-to-r from-cyan-900/20 to-blue-900/20 border border-cyan-600/30 rounded-xl">
-                    <div className="flex items-start gap-3">
-                      <div className="text-2xl">{loadingConsejo ? '⏳' : consejoQuantum?.emoji || '🧬'}</div>
-                      <div className="flex-1">
-                        <p className="text-sm text-cyan-200 font-semibold mb-1">
-                          💡 Consejo de Quantum IA {consejoQuantum?.tipo && `- ${consejoQuantum.tipo}`}
-                        </p>
-                        {loadingConsejo ? (
-                          <p className="text-xs text-cyan-100/60 animate-pulse">
-                            Cargando consejo de activación...
-                          </p>
-                        ) : (
-                          <div 
-                            className="text-xs text-cyan-100/80"
-                            dangerouslySetInnerHTML={{ __html: consejoQuantum?.consejo || 'No hay consejo disponible' }}
-                          />
-                        )}
-                      </div>
+              {/* NUEVO: Widget de Misiones y Tareas Extraordinarias - Clickeable */}
+              <button
+                onClick={() => setMisionesModalOpen(true)}
+                className="mt-8 w-full bg-gradient-to-br from-orange-900/40 via-yellow-900/30 to-orange-900/40 border-2 border-orange-600/40 rounded-2xl p-6 hover:border-orange-500/60 hover:shadow-lg hover:shadow-orange-500/20 transition-all group cursor-pointer"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Zap className="text-yellow-400 group-hover:text-yellow-300 transition-colors" size={24} />
+                    <div className="text-left">
+                      <h3 className="text-lg font-black text-white group-hover:text-orange-300 transition-colors">
+                        Misiones & Tareas Extraordinarias
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Gestiona misiones, tareas y obtén consejos de IA
+                      </p>
                     </div>
                   </div>
+                  <div className="text-orange-400 group-hover:translate-x-1 transition-transform text-2xl">
+                    →
+                  </div>
                 </div>
-              </div>
+              </button>
 
               <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2 mt-8">
                 <Star className="text-yellow-400" size={16} />
@@ -996,6 +919,150 @@ export default function SchoolAdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Modal de Misiones & Tareas Extraordinarias */}
+      {misionesModalOpen && (
+        <div 
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setMisionesModalOpen(false)}
+        >
+          <div 
+            className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-2 border-orange-600/40 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl shadow-orange-500/20"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header del Modal */}
+            <div className="sticky top-0 bg-gradient-to-br from-orange-900/60 via-yellow-900/40 to-orange-900/60 border-b border-orange-600/30 p-6 flex items-center justify-between backdrop-blur-sm z-10">
+              <div className="flex items-center gap-3">
+                <Zap className="text-yellow-400" size={28} />
+                <h2 className="text-2xl font-black text-white">
+                  Misiones & Tareas Extraordinarias
+                </h2>
+              </div>
+              <button
+                onClick={() => setMisionesModalOpen(false)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X className="text-white" size={24} />
+              </button>
+            </div>
+
+            {/* Contenido del Modal */}
+            <div className="p-6 space-y-4">
+              {/* Revisar Evidencias */}
+              <Link 
+                href="/dashboard/admin/evidencias"
+                onClick={() => setMisionesModalOpen(false)}
+                className="block p-5 bg-slate-900/60 border border-amber-600/30 rounded-xl hover:border-amber-500/60 hover:shadow-lg hover:shadow-amber-500/20 transition-all group"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg">
+                      <CheckCircle size={24} className="text-white" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-white text-lg group-hover:text-amber-300 transition-colors">
+                        ✅ Revisar Evidencias
+                      </h4>
+                      <p className="text-sm text-slate-400 mt-1">
+                        Aprueba misiones y tareas extraordinarias
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-amber-400 group-hover:translate-x-1 transition-transform text-xl">→</div>
+                </div>
+              </Link>
+
+              {/* Misiones con Quantum IA */}
+              <Link 
+                href="/dashboard/admin/tareas/nueva?quantum=true"
+                onClick={() => setMisionesModalOpen(false)}
+                className="block p-5 bg-slate-900/60 border border-purple-600/30 rounded-xl hover:border-purple-500/60 hover:shadow-lg hover:shadow-purple-500/20 transition-all group"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
+                      <BookOpen size={24} className="text-white" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-white text-lg group-hover:text-purple-300 transition-colors">
+                        🧠 Misiones con Quantum IA
+                      </h4>
+                      <p className="text-sm text-slate-400 mt-1">
+                        Crea misiones personalizadas con IA para tu comunidad
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-purple-400 group-hover:translate-x-1 transition-transform text-xl">→</div>
+                </div>
+              </Link>
+
+              {/* Tareas Extraordinarias */}
+              <Link 
+                href="/dashboard/admin/tareas/nueva"
+                onClick={() => setMisionesModalOpen(false)}
+                className="block p-5 bg-slate-900/60 border border-orange-600/30 rounded-xl hover:border-orange-500/60 hover:shadow-lg hover:shadow-orange-500/20 transition-all group"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg">
+                      <Shield size={24} className="text-white" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-white text-lg group-hover:text-orange-300 transition-colors">
+                        ⚡ Tareas Extraordinarias
+                      </h4>
+                      <p className="text-sm text-slate-400 mt-1">
+                        Asigna tareas especiales para activar la visión
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-orange-400 group-hover:translate-x-1 transition-transform text-xl">→</div>
+                </div>
+              </Link>
+
+              {/* Consejo de Quantum IA - Invitación */}
+              <div className="mt-6 p-5 bg-gradient-to-r from-cyan-900/30 to-blue-900/30 border border-cyan-600/40 rounded-xl">
+                <div className="flex items-start gap-4">
+                  <div className="text-3xl flex-shrink-0">
+                    {loadingConsejo ? '⏳' : consejoQuantum?.emoji || '🧬'}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-base text-cyan-200 font-bold mb-2 flex items-center gap-2">
+                      <Users size={18} />
+                      💡 Consejo de Quantum IA - Invitación
+                    </p>
+                    {loadingConsejo ? (
+                      <p className="text-sm text-cyan-100/60 animate-pulse">
+                        Cargando consejo de activación...
+                      </p>
+                    ) : (
+                      <>
+                        <p className="text-sm text-cyan-100/80 mb-3">
+                          Asigna una tarea de <strong className="text-cyan-300">invitar a 3 personas</strong> a conocer el programa. El crecimiento orgánico fortalece el compromiso de todos.
+                        </p>
+                        <div 
+                          className="text-xs text-cyan-100/70 leading-relaxed"
+                          dangerouslySetInnerHTML={{ __html: consejoQuantum?.consejo || 'No hay consejo disponible' }}
+                        />
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Botón de cierre al final */}
+              <div className="pt-4 flex justify-end">
+                <button
+                  onClick={() => setMisionesModalOpen(false)}
+                  className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
