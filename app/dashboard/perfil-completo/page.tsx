@@ -280,32 +280,32 @@ export default function ConfiguracionCompletaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+        <div className="mb-6 md:mb-8">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3 w-full md:w-auto">
               <button
                 onClick={() => router.back()}
-                className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-all"
+                className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-all flex-shrink-0"
               >
-                <ArrowLeft size={24} className="text-cyan-400" />
+                <ArrowLeft size={20} className="text-cyan-400" />
               </button>
-              <div className="p-3 bg-cyan-500/20 rounded-xl">
-                <User size={32} className="text-cyan-400" />
+              <div className="p-3 bg-cyan-500/20 rounded-xl flex-shrink-0">
+                <User size={24} className="text-cyan-400" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-white">Perfil Completo</h1>
-                <p className="text-slate-400">Completa tu información personal</p>
+                <h1 className="text-xl md:text-3xl font-bold text-white">Perfil Completo</h1>
+                <p className="text-sm md:text-base text-slate-400">Completa tu información personal</p>
               </div>
             </div>
             
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-6 py-3 bg-cyan-500 hover:bg-cyan-600 disabled:bg-slate-600 text-black font-bold rounded-xl transition-all flex items-center gap-2"
+              className="w-full md:w-auto px-6 py-3 bg-cyan-500 hover:bg-cyan-600 disabled:bg-slate-600 text-black font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg"
             >
               <Save size={20} />
               {saving ? 'Guardando...' : 'Guardar Cambios'}
@@ -315,8 +315,8 @@ export default function ConfiguracionCompletaPage() {
 
         {/* Success Message */}
         {showSuccess && (
-          <div className="mb-6 bg-green-500/10 border border-green-500/30 rounded-xl p-4 flex items-center gap-3">
-            <CheckCircle2 className="text-green-400" size={24} />
+          <div className="mb-6 bg-green-500/10 border border-green-500/30 rounded-xl p-4 flex items-center gap-3 animate-in fade-in duration-300">
+            <CheckCircle2 className="text-green-400 flex-shrink-0" size={24} />
             <div>
               <p className="text-green-400 font-bold">¡Configuración guardada!</p>
               <p className="text-green-300 text-sm">Tus cambios se han guardado correctamente</p>
@@ -331,16 +331,16 @@ export default function ConfiguracionCompletaPage() {
           </div>
         )}
 
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           
           {/* Avatar Cuántico */}
-          <div className="bg-gradient-to-br from-purple-900/30 via-blue-900/30 to-purple-900/30 border-2 border-purple-500/50 rounded-2xl p-6">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <Sparkles size={24} className="text-purple-400" />
+          <div className="bg-gradient-to-br from-purple-900/30 via-blue-900/30 to-purple-900/30 border-2 border-purple-500/50 rounded-2xl p-4 md:p-6 shadow-xl">
+            <h2 className="text-lg md:text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <Sparkles size={20} className="text-purple-400" />
               Avatar Cuántico
             </h2>
             
-            <div className="flex flex-col md:flex-row items-center gap-6">
+            <div className="flex flex-col items-center gap-4 md:gap-6">
               {/* Avatar Display */}
               <div className="relative group">
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 rounded-2xl blur-xl opacity-75 group-hover:opacity-100 transition-opacity"></div>
@@ -349,7 +349,7 @@ export default function ConfiguracionCompletaPage() {
                     key={profileImage}
                     src={profileImage} 
                     alt="Avatar Cuántico" 
-                    className="relative w-48 h-48 rounded-2xl object-cover border-4 border-purple-500/50 shadow-2xl shadow-purple-500/50"
+                    className="relative w-32 h-32 md:w-48 md:h-48 rounded-2xl object-cover border-4 border-purple-500/50 shadow-2xl shadow-purple-500/50"
                     onError={(e) => {
                       console.error('❌ Error cargando imagen:', profileImage);
                       e.currentTarget.style.display = 'none';
@@ -359,35 +359,33 @@ export default function ConfiguracionCompletaPage() {
                     }}
                   />
                 ) : (
-                  <div className="relative w-48 h-48 rounded-2xl border-4 border-purple-500/50 bg-slate-800 flex items-center justify-center">
-                    <User size={64} className="text-slate-600" />
+                  <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-2xl border-4 border-purple-500/50 bg-slate-800 flex items-center justify-center">
+                    <User size={48} className="text-slate-600" />
                   </div>
                 )}
               </div>
               
               {/* Avatar Info & Actions */}
-              <div className="flex-1 space-y-4">
-                <div>
-                  <p className="text-slate-300 mb-2">
-                    Tu avatar cuántico es tu identidad visual en la plataforma. Refleja tu personalidad y tus metas.
+              <div className="w-full text-center space-y-3">
+                <p className="text-sm md:text-base text-slate-300">
+                  Tu avatar cuántico es tu identidad visual en la plataforma. Refleja tu personalidad y tus metas.
+                </p>
+                {lastAvatarChange && (
+                  <p className="text-xs md:text-sm text-slate-400">
+                    Último cambio: {new Date(lastAvatarChange).toLocaleDateString('es-MX', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
                   </p>
-                  {lastAvatarChange && (
-                    <p className="text-sm text-slate-400">
-                      Último cambio: {new Date(lastAvatarChange).toLocaleDateString('es-MX', { 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      })}
-                    </p>
-                  )}
-                </div>
+                )}
                 
                 <button
                   onClick={() => setShowAvatarModal(true)}
                   disabled={!canChangeAvatar}
-                  className={`px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${
+                  className={`w-full md:w-auto px-6 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg ${
                     canChangeAvatar 
-                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg shadow-purple-500/30' 
+                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-purple-500/30' 
                       : 'bg-slate-700 text-slate-400 cursor-not-allowed'
                   }`}
                 >
@@ -396,7 +394,7 @@ export default function ConfiguracionCompletaPage() {
                 </button>
                 
                 {!canChangeAvatar && (
-                  <p className="text-sm text-yellow-400 flex items-center gap-2">
+                  <p className="text-xs md:text-sm text-yellow-400 flex items-center justify-center gap-2">
                     <span className="inline-block w-2 h-2 bg-yellow-400 rounded-full"></span>
                     Solo puedes cambiar tu avatar una vez al mes. Próximo cambio disponible en {
                       lastAvatarChange ? Math.max(0, 30 - Math.ceil((Date.now() - new Date(lastAvatarChange).getTime()) / (1000 * 60 * 60 * 24))) : 0
@@ -408,9 +406,9 @@ export default function ConfiguracionCompletaPage() {
           </div>
           
           {/* Datos Personales */}
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 rounded-2xl p-6">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <User size={24} className="text-cyan-400" />
+          <div className="bg-gradient-to-br from-cyan-900/20 to-slate-900/50 border border-cyan-700/30 rounded-2xl p-4 md:p-6">
+            <h2 className="text-lg md:text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <User size={20} className="text-cyan-400" />
               Datos Personales
             </h2>
             
@@ -421,7 +419,7 @@ export default function ConfiguracionCompletaPage() {
                   type="text"
                   value={config.nombre}
                   onChange={(e) => setConfig({...config, nombre: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
                 />
               </div>
               
@@ -431,7 +429,7 @@ export default function ConfiguracionCompletaPage() {
                   type="text"
                   value={config.apellido}
                   onChange={(e) => setConfig({...config, apellido: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
                 />
               </div>
               
@@ -444,7 +442,7 @@ export default function ConfiguracionCompletaPage() {
                   type="date"
                   value={config.fechaNacimiento}
                   onChange={(e) => setConfig({...config, fechaNacimiento: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
                 />
               </div>
               
@@ -471,7 +469,7 @@ export default function ConfiguracionCompletaPage() {
                   value={config.whatsapp}
                   onChange={(e) => setConfig({...config, whatsapp: e.target.value})}
                   placeholder="+52 123 456 7890"
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
                 />
               </div>
               
@@ -484,16 +482,16 @@ export default function ConfiguracionCompletaPage() {
                   type="text"
                   value={config.ocupacion}
                   onChange={(e) => setConfig({...config, ocupacion: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
                 />
               </div>
             </div>
           </div>
 
           {/* Tribu */}
-          <div className="bg-gradient-to-br from-purple-900/20 to-slate-900/50 border border-purple-700/30 rounded-2xl p-6">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <Users size={24} className="text-purple-400" />
+          <div className="bg-gradient-to-br from-purple-900/20 to-slate-900/50 border border-purple-700/30 rounded-2xl p-4 md:p-6">
+            <h2 className="text-lg md:text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <Users size={20} className="text-purple-400" />
               Información de Equipo
             </h2>
             
@@ -504,7 +502,7 @@ export default function ConfiguracionCompletaPage() {
                   value={config.misionTribu}
                   onChange={(e) => setConfig({...config, misionTribu: e.target.value})}
                   rows={3}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-purple-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-purple-500 focus:outline-none"
                 />
               </div>
               
@@ -517,7 +515,7 @@ export default function ConfiguracionCompletaPage() {
                   type="text"
                   value={config.fraseFavorita}
                   onChange={(e) => setConfig({...config, fraseFavorita: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-purple-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-purple-500 focus:outline-none"
                 />
               </div>
               
@@ -563,7 +561,7 @@ export default function ConfiguracionCompletaPage() {
                   type="text"
                   value={config.angelEnrolamiento}
                   onChange={(e) => setConfig({...config, angelEnrolamiento: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-purple-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-purple-500 focus:outline-none"
                 />
               </div>
               
@@ -576,7 +574,7 @@ export default function ConfiguracionCompletaPage() {
                   type="file"
                   accept="image/jpeg,image/jpg"
                   onChange={(e) => e.target.files?.[0] && handleImageUpload('logoTribu', e.target.files[0])}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:border-purple-500 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-500 file:text-black file:font-medium hover:file:bg-purple-600"
+                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:border-purple-500 focus:outline-none file:mr-4 file:py-3 file:px-4 file:rounded-lg file:border-0 file:bg-purple-500 file:text-black file:font-medium hover:file:bg-purple-600"
                 />
                 {config.logoTribu && (
                   <div className="mt-2">
@@ -588,11 +586,12 @@ export default function ConfiguracionCompletaPage() {
           </div>
 
           {/* Domicilio */}
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 rounded-2xl p-6">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <MapPin size={24} className="text-green-400" />
-              Domicilio (Para recibir correspondencia o paquetería)
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 rounded-2xl p-4 md:p-6">
+            <h2 className="text-lg md:text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <MapPin size={20} className="text-green-400" />
+              Domicilio
             </h2>
+            <p className="text-xs md:text-sm text-slate-400 mb-4">Para recibir correspondencia o paquetería</p>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-2">
@@ -601,7 +600,7 @@ export default function ConfiguracionCompletaPage() {
                   type="text"
                   value={config.calle}
                   onChange={(e) => setConfig({...config, calle: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-green-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-green-500 focus:outline-none"
                 />
               </div>
               
@@ -611,7 +610,7 @@ export default function ConfiguracionCompletaPage() {
                   type="text"
                   value={config.numero}
                   onChange={(e) => setConfig({...config, numero: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-green-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-green-500 focus:outline-none"
                 />
               </div>
               
@@ -621,7 +620,7 @@ export default function ConfiguracionCompletaPage() {
                   type="text"
                   value={config.colonia}
                   onChange={(e) => setConfig({...config, colonia: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-green-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-green-500 focus:outline-none"
                 />
               </div>
               
@@ -631,7 +630,7 @@ export default function ConfiguracionCompletaPage() {
                   type="text"
                   value={config.codigoPostal}
                   onChange={(e) => setConfig({...config, codigoPostal: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-green-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-green-500 focus:outline-none"
                 />
               </div>
               
@@ -641,16 +640,16 @@ export default function ConfiguracionCompletaPage() {
                   type="text"
                   value={config.estadoMunicipio}
                   onChange={(e) => setConfig({...config, estadoMunicipio: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-green-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-green-500 focus:outline-none"
                 />
               </div>
             </div>
           </div>
 
           {/* Datos Físicos */}
-          <div className="bg-gradient-to-br from-orange-900/20 to-slate-900/50 border border-orange-700/30 rounded-2xl p-6">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <Scale size={24} className="text-orange-400" />
+          <div className="bg-gradient-to-br from-orange-900/20 to-slate-900/50 border border-orange-700/30 rounded-2xl p-4 md:p-6">
+            <h2 className="text-lg md:text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <Scale size={20} className="text-orange-400" />
               Datos Físicos y Salud
             </h2>
             
@@ -660,7 +659,7 @@ export default function ConfiguracionCompletaPage() {
                 <select
                   value={config.tallaCamiseta}
                   onChange={(e) => setConfig({...config, tallaCamiseta: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
                 >
                   {TALLAS.map(talla => (
                     <option key={talla} value={talla}>{talla}</option>
@@ -678,7 +677,7 @@ export default function ConfiguracionCompletaPage() {
                   step="0.1"
                   value={config.peso}
                   onChange={(e) => setConfig({...config, peso: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
                 />
               </div>
               
@@ -691,7 +690,7 @@ export default function ConfiguracionCompletaPage() {
                   type="number"
                   value={config.estatura}
                   onChange={(e) => setConfig({...config, estatura: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
                 />
               </div>
               
@@ -713,7 +712,7 @@ export default function ConfiguracionCompletaPage() {
                 <select
                   value={config.fuma ? 'si' : 'no'}
                   onChange={(e) => setConfig({...config, fuma: e.target.value === 'si'})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
                 >
                   <option value="no">No</option>
                   <option value="si">Sí</option>
@@ -728,7 +727,7 @@ export default function ConfiguracionCompletaPage() {
                     value={config.fumaCantidad}
                     onChange={(e) => setConfig({...config, fumaCantidad: e.target.value})}
                     placeholder="Ej: 5 cigarros al día"
-                    className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
+                    className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
                   />
                 </div>
               )}
@@ -742,7 +741,7 @@ export default function ConfiguracionCompletaPage() {
                   type="file"
                   accept="image/*"
                   onChange={(e) => e.target.files?.[0] && handleImageUpload('fotoTicketPeso', e.target.files[0])}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:border-orange-500 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-orange-500 file:text-black file:font-medium hover:file:bg-orange-600"
+                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:border-orange-500 focus:outline-none file:mr-4 file:py-3 file:px-4 file:rounded-lg file:border-0 file:bg-orange-500 file:text-black file:font-medium hover:file:bg-orange-600"
                 />
                 {config.fotoTicketPeso && (
                   <div className="mt-2">
@@ -754,9 +753,9 @@ export default function ConfiguracionCompletaPage() {
           </div>
 
           {/* Staff y Coaches */}
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 rounded-2xl p-6">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <Award size={24} className="text-yellow-400" />
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 rounded-2xl p-4 md:p-6">
+            <h2 className="text-lg md:text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <Award size={20} className="text-yellow-400" />
               Coaches y Staff
             </h2>
             
@@ -779,7 +778,7 @@ export default function ConfiguracionCompletaPage() {
                   type="text"
                   value={config.coachBasico}
                   onChange={(e) => setConfig({...config, coachBasico: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
                 />
               </div>
               
@@ -789,7 +788,7 @@ export default function ConfiguracionCompletaPage() {
                   type="text"
                   value={config.staffBasico}
                   onChange={(e) => setConfig({...config, staffBasico: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
                 />
               </div>
               
@@ -799,7 +798,7 @@ export default function ConfiguracionCompletaPage() {
                   type="text"
                   value={config.coachAvanzado}
                   onChange={(e) => setConfig({...config, coachAvanzado: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
                 />
               </div>
               
@@ -809,7 +808,7 @@ export default function ConfiguracionCompletaPage() {
                   type="text"
                   value={config.staffAvanzado}
                   onChange={(e) => setConfig({...config, staffAvanzado: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
                 />
               </div>
               
@@ -830,7 +829,7 @@ export default function ConfiguracionCompletaPage() {
                   type="text"
                   value={config.coachPrimerFin}
                   onChange={(e) => setConfig({...config, coachPrimerFin: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
                 />
               </div>
               
@@ -840,7 +839,7 @@ export default function ConfiguracionCompletaPage() {
                   type="text"
                   value={config.coachSegundoFin}
                   onChange={(e) => setConfig({...config, coachSegundoFin: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
                 />
               </div>
               
@@ -850,27 +849,27 @@ export default function ConfiguracionCompletaPage() {
                   type="text"
                   value={config.coachTercerFin}
                   onChange={(e) => setConfig({...config, coachTercerFin: e.target.value})}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
                 />
               </div>
             </div>
           </div>
 
           {/* Fotos y Documentos */}
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 rounded-2xl p-6">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <Camera size={24} className="text-pink-400" />
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 rounded-2xl p-4 md:p-6">
+            <h2 className="text-lg md:text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <Camera size={20} className="text-pink-400" />
               Fotos y Documentos
             </h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">Foto de Primer Día (JPG)</label>
                 <input
                   type="file"
                   accept="image/jpeg,image/jpg"
                   onChange={(e) => e.target.files?.[0] && handleImageUpload('fotoPrimerDia', e.target.files[0])}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:border-pink-500 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-pink-500 file:text-black file:font-medium hover:file:bg-pink-600"
+                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:border-pink-500 focus:outline-none file:mr-4 file:py-3 file:px-4 file:rounded-lg file:border-0 file:bg-pink-500 file:text-black file:font-medium hover:file:bg-pink-600"
                 />
                 {config.fotoPrimerDia && (
                   <div className="mt-2">
@@ -885,7 +884,7 @@ export default function ConfiguracionCompletaPage() {
                   type="file"
                   accept="image/jpeg,image/jpg"
                   onChange={(e) => e.target.files?.[0] && handleImageUpload('fotoUltimoDiaPL', e.target.files[0])}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:border-pink-500 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-pink-500 file:text-black file:font-medium hover:file:bg-pink-600"
+                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:border-pink-500 focus:outline-none file:mr-4 file:py-3 file:px-4 file:rounded-lg file:border-0 file:bg-pink-500 file:text-black file:font-medium hover:file:bg-pink-600"
                 />
                 {config.fotoUltimoDiaPL && (
                   <div className="mt-2">
@@ -900,7 +899,7 @@ export default function ConfiguracionCompletaPage() {
                   type="file"
                   accept="image/jpeg,image/jpg"
                   onChange={(e) => e.target.files?.[0] && handleImageUpload('fotoContrato', e.target.files[0])}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:border-pink-500 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-pink-500 file:text-black file:font-medium hover:file:bg-pink-600"
+                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:border-pink-500 focus:outline-none file:mr-4 file:py-3 file:px-4 file:rounded-lg file:border-0 file:bg-pink-500 file:text-black file:font-medium hover:file:bg-pink-600"
                 />
                 {config.fotoContrato && (
                   <div className="mt-2">
@@ -915,19 +914,19 @@ export default function ConfiguracionCompletaPage() {
                   type="file"
                   accept="image/*,application/pdf"
                   onChange={(e) => e.target.files?.[0] && handleImageUpload('contratoAvanzado', e.target.files[0])}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:border-pink-500 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-pink-500 file:text-black file:font-medium hover:file:bg-pink-600"
+                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:border-pink-500 focus:outline-none file:mr-4 file:py-3 file:px-4 file:rounded-lg file:border-0 file:bg-pink-500 file:text-black file:font-medium hover:file:bg-pink-600"
                 />
               </div>
             </div>
           </div>
 
           {/* Condecoraciones */}
-          <div className="bg-gradient-to-br from-yellow-900/20 to-slate-900/50 border border-yellow-700/30 rounded-2xl p-6">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <Award size={24} className="text-yellow-400" />
+          <div className="bg-gradient-to-br from-yellow-900/20 to-slate-900/50 border border-yellow-700/30 rounded-2xl p-4 md:p-6">
+            <h2 className="text-lg md:text-xl font-bold text-white mb-2 flex items-center gap-2">
+              <Award size={20} className="text-yellow-400" />
               Condecoraciones
-              <span className="text-sm text-slate-400 font-normal ml-2">(Asignadas por el coordinador)</span>
             </h2>
+            <p className="text-xs md:text-sm text-slate-400 mb-4">(Asignadas por el coordinador)</p>
             
             <CondecoracionesGrid condecoraciones={config.condecoraciones} />
           </div>
@@ -935,13 +934,13 @@ export default function ConfiguracionCompletaPage() {
         </div>
 
         {/* Save Button (Bottom) */}
-        <div className="mt-8 flex justify-end">
+        <div className="mt-6 md:mt-8 flex justify-center md:justify-end">
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-8 py-4 bg-cyan-500 hover:bg-cyan-600 disabled:bg-slate-600 text-black font-bold text-lg rounded-xl transition-all flex items-center gap-3 shadow-lg shadow-cyan-500/20"
+            className="w-full md:w-auto px-8 py-4 bg-cyan-500 hover:bg-cyan-600 disabled:bg-slate-600 text-black font-bold text-base md:text-lg rounded-xl transition-all flex items-center justify-center gap-3 shadow-lg shadow-cyan-500/20"
           >
-            <Save size={24} />
+            <Save size={20} />
             {saving ? 'Guardando...' : 'Guardar Configuración'}
           </button>
         </div>

@@ -75,6 +75,9 @@ export default function LideresPage() {
       const dataVisiones = await resVisiones.json();
       const dataNotificaciones = await resNotificaciones.json();
 
+      console.log('📊 Datos de notificaciones:', dataNotificaciones);
+      console.log('📊 Total notificaciones:', dataNotificaciones.total);
+
       if (dataLideres.success) {
         setLideres(dataLideres.lideres);
       }
@@ -84,6 +87,7 @@ export default function LideresPage() {
       }
 
       if (dataNotificaciones.notificaciones) {
+        console.log('✅ Estableciendo notificaciones pendientes:', dataNotificaciones.total || 0);
         setNotificacionesPendientes(dataNotificaciones.total || 0);
       }
     } catch (error) {
@@ -214,24 +218,24 @@ export default function LideresPage() {
         )}
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-10">
-          <div className="flex items-center gap-4">
-            <div className="p-4 bg-gradient-to-br from-purple-500 via-pink-500 to-purple-500 rounded-3xl shadow-2xl shadow-purple-500/50 relative">
-              <Shield size={36} className="text-white" />
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 lg:gap-0 mb-6 lg:mb-10">
+          <div className="flex items-center gap-3 lg:gap-4">
+            <div className="p-3 lg:p-4 bg-gradient-to-br from-purple-500 via-pink-500 to-purple-500 rounded-2xl lg:rounded-3xl shadow-2xl shadow-purple-500/50 relative">
+              <Shield size={28} className="text-white lg:w-9 lg:h-9" />
               {notificacionesPendientes > 0 && (
-                <span className="absolute -top-2 -right-2 flex items-center justify-center w-8 h-8 text-xs font-black bg-gradient-to-br from-red-500 to-orange-500 text-white rounded-full shadow-xl shadow-red-500/50 animate-pulse border-2 border-white">
+                <span className="absolute -top-1 -right-1 lg:-top-2 lg:-right-2 flex items-center justify-center w-6 h-6 lg:w-8 lg:h-8 text-xs font-black bg-gradient-to-br from-red-500 to-orange-500 text-white rounded-full shadow-xl shadow-red-500/50 animate-pulse border-2 border-white">
                   {notificacionesPendientes}
                 </span>
               )}
             </div>
             <div>
-              <h1 className="text-4xl font-black bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent mb-2">
+              <h1 className="text-2xl lg:text-4xl font-black bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent mb-1 lg:mb-2">
                 Gestión de Mentores Internos
               </h1>
-              <p className="text-slate-400 text-lg">
+              <p className="text-slate-400 text-sm lg:text-lg">
                 Crea y asigna líderes a tus visiones - Privados de tu organización
                 {notificacionesPendientes > 0 && (
-                  <span className="ml-3 px-3 py-1 bg-red-500/20 border border-red-500/50 text-red-400 rounded-full text-sm font-bold">
+                  <span className="block lg:inline-block lg:ml-3 mt-1 lg:mt-0 px-3 py-1 bg-red-500/20 border border-red-500/50 text-red-400 rounded-full text-xs lg:text-sm font-bold w-fit">
                     {notificacionesPendientes} solicitud{notificacionesPendientes > 1 ? 'es' : ''} de aprobación pendiente{notificacionesPendientes > 1 ? 's' : ''}
                   </span>
                 )}
@@ -241,199 +245,191 @@ export default function LideresPage() {
 
           <button
             onClick={() => setModalCrear(true)}
-            className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 text-white rounded-2xl font-bold hover:shadow-2xl hover:shadow-purple-500/50 transition-all hover:scale-[1.05] active:scale-[0.98] text-lg"
+            className="flex items-center justify-center gap-2 lg:gap-3 px-4 py-3 lg:px-8 lg:py-4 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 text-white rounded-xl lg:rounded-2xl font-bold hover:shadow-2xl hover:shadow-purple-500/50 transition-all hover:scale-[1.05] active:scale-[0.98] text-sm lg:text-lg w-full lg:w-auto"
           >
-            <Plus size={24} />
-            Nuevo Mentor
+            <Plus size={20} className="lg:w-6 lg:h-6" />
+            <span>Nuevo Mentor</span>
           </button>
         </div>
 
         {/* Estadísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-gradient-to-br from-purple-900/60 via-purple-900/40 to-slate-900 border-2 border-purple-500/40 rounded-3xl p-6 hover:border-purple-400/60 transition-all group hover:scale-[1.02] shadow-xl shadow-purple-900/20">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3.5 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl shadow-lg shadow-purple-500/50 group-hover:shadow-purple-500/70 transition-all">
-                <Shield className="text-white" size={28} />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-6 lg:mb-8">
+          <div className="bg-gradient-to-br from-purple-900/60 via-purple-900/40 to-slate-900 border-2 border-purple-500/40 rounded-2xl lg:rounded-3xl p-4 lg:p-6 hover:border-purple-400/60 transition-all group hover:scale-[1.02] shadow-xl shadow-purple-900/20">
+            <div className="flex items-center justify-between mb-2 lg:mb-4">
+              <div className="p-2 lg:p-3.5 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl lg:rounded-2xl shadow-lg shadow-purple-500/50 group-hover:shadow-purple-500/70 transition-all">
+                <Shield className="text-white" size={20} />
               </div>
-              <span className="text-4xl font-black bg-gradient-to-br from-purple-400 to-pink-400 bg-clip-text text-transparent">{lideres.length}</span>
+              <span className="text-2xl lg:text-4xl font-black bg-gradient-to-br from-purple-400 to-pink-400 bg-clip-text text-transparent">{lideres.length}</span>
             </div>
-            <h3 className="text-xl font-black text-white mb-1">Total Mentores</h3>
-            <p className="text-sm text-slate-400 font-medium">En tu organización</p>
+            <h3 className="text-sm lg:text-xl font-black text-white mb-0.5 lg:mb-1">Total Mentores</h3>
+            <p className="text-xs lg:text-sm text-slate-400 font-medium">En tu organización</p>
           </div>
 
-          <div className="bg-gradient-to-br from-green-900/60 via-green-900/40 to-slate-900 border-2 border-green-500/40 rounded-3xl p-6 hover:border-green-400/60 transition-all group hover:scale-[1.02] shadow-xl shadow-green-900/20">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3.5 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl shadow-lg shadow-green-500/50 group-hover:shadow-green-500/70 transition-all">
-                <CheckCircle className="text-white" size={28} />
+          <div className="bg-gradient-to-br from-green-900/60 via-green-900/40 to-slate-900 border-2 border-green-500/40 rounded-2xl lg:rounded-3xl p-4 lg:p-6 hover:border-green-400/60 transition-all group hover:scale-[1.02] shadow-xl shadow-green-900/20">
+            <div className="flex items-center justify-between mb-2 lg:mb-4">
+              <div className="p-2 lg:p-3.5 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl lg:rounded-2xl shadow-lg shadow-green-500/50 group-hover:shadow-green-500/70 transition-all">
+                <CheckCircle className="text-white" size={20} />
               </div>
-              <span className="text-4xl font-black bg-gradient-to-br from-green-400 to-emerald-400 bg-clip-text text-transparent">
+              <span className="text-2xl lg:text-4xl font-black bg-gradient-to-br from-green-400 to-emerald-400 bg-clip-text text-transparent">
                 {lideres.filter(l => l.mentorMarketplaceApproved).length}
               </span>
             </div>
-            <h3 className="text-xl font-black text-white mb-1">Aprobados</h3>
-            <p className="text-sm text-slate-400 font-medium">Líderes activos</p>
+            <h3 className="text-sm lg:text-xl font-black text-white mb-0.5 lg:mb-1">Aprobados</h3>
+            <p className="text-xs lg:text-sm text-slate-400 font-medium">Líderes activos</p>
           </div>
 
-          <div className="bg-gradient-to-br from-orange-900/60 via-orange-900/40 to-slate-900 border-2 border-orange-500/40 rounded-3xl p-6 hover:border-orange-400/60 transition-all group hover:scale-[1.02] shadow-xl shadow-orange-900/20">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3.5 bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl shadow-lg shadow-orange-500/50 group-hover:shadow-orange-500/70 transition-all">
-                <AlertTriangle className="text-white" size={28} />
+          <div className="bg-gradient-to-br from-orange-900/60 via-orange-900/40 to-slate-900 border-2 border-orange-500/40 rounded-2xl lg:rounded-3xl p-4 lg:p-6 hover:border-orange-400/60 transition-all group hover:scale-[1.02] shadow-xl shadow-orange-900/20">
+            <div className="flex items-center justify-between mb-2 lg:mb-4">
+              <div className="p-2 lg:p-3.5 bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl lg:rounded-2xl shadow-lg shadow-orange-500/50 group-hover:shadow-orange-500/70 transition-all">
+                <AlertTriangle className="text-white" size={20} />
               </div>
-              <span className="text-4xl font-black bg-gradient-to-br from-orange-400 to-amber-400 bg-clip-text text-transparent">
+              <span className="text-2xl lg:text-4xl font-black bg-gradient-to-br from-orange-400 to-amber-400 bg-clip-text text-transparent">
                 {lideres.filter(l => !l.mentorMarketplaceApproved).length}
               </span>
             </div>
-            <h3 className="text-xl font-black text-white mb-1">Pendientes</h3>
-            <p className="text-sm text-slate-400 font-medium">Requieren aprobación</p>
+            <h3 className="text-sm lg:text-xl font-black text-white mb-0.5 lg:mb-1">Pendientes</h3>
+            <p className="text-xs lg:text-sm text-slate-400 font-medium">Requieren aprobación</p>
           </div>
 
-          <div className="bg-gradient-to-br from-blue-900/60 via-blue-900/40 to-slate-900 border-2 border-blue-500/40 rounded-3xl p-6 hover:border-blue-400/60 transition-all group hover:scale-[1.02] shadow-xl shadow-blue-900/20">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3.5 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl shadow-lg shadow-blue-500/50 group-hover:shadow-blue-500/70 transition-all">
-                <Users className="text-white" size={28} />
+          <div className="bg-gradient-to-br from-blue-900/60 via-blue-900/40 to-slate-900 border-2 border-blue-500/40 rounded-2xl lg:rounded-3xl p-4 lg:p-6 hover:border-blue-400/60 transition-all group hover:scale-[1.02] shadow-xl shadow-blue-900/20">
+            <div className="flex items-center justify-between mb-2 lg:mb-4">
+              <div className="p-2 lg:p-3.5 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl lg:rounded-2xl shadow-lg shadow-blue-500/50 group-hover:shadow-blue-500/70 transition-all">
+                <Users className="text-white" size={20} />
               </div>
-              <span className="text-4xl font-black bg-gradient-to-br from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+              <span className="text-2xl lg:text-4xl font-black bg-gradient-to-br from-blue-400 to-cyan-400 bg-clip-text text-transparent">
                 {lideres.reduce((sum, l) => sum + l.totalMentorados, 0)}
               </span>
             </div>
-            <h3 className="text-xl font-black text-white mb-1">Mentorados</h3>
-            <p className="text-sm text-slate-400 font-medium">Total asignados</p>
+            <h3 className="text-sm lg:text-xl font-black text-white mb-0.5 lg:mb-1">Mentorados</h3>
+            <p className="text-xs lg:text-sm text-slate-400 font-medium">Total asignados</p>
           </div>
         </div>
 
         {/* Lista de Líderes */}
-        <div className="bg-gradient-to-br from-slate-800/60 via-slate-900/40 to-slate-800/60 border-2 border-slate-700/50 rounded-3xl p-8 shadow-2xl">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl shadow-lg shadow-purple-500/50">
-                <Shield className="text-white" size={28} />
+        <div className="bg-gradient-to-br from-slate-800/60 via-slate-900/40 to-slate-800/60 border-2 border-slate-700/50 rounded-2xl lg:rounded-3xl p-4 lg:p-8 shadow-2xl">
+          <div className="flex items-center justify-between mb-4 lg:mb-6">
+            <div className="flex items-center gap-3 lg:gap-4">
+              <div className="p-2 lg:p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl lg:rounded-2xl shadow-lg shadow-purple-500/50">
+                <Shield className="text-white" size={20} className="lg:w-7 lg:h-7" />
               </div>
-              <h2 className="text-3xl font-black text-white">Mentores de tu Organización</h2>
+              <h2 className="text-xl lg:text-3xl font-black text-white">Mentores de tu Organización</h2>
             </div>
           </div>
           
-          <div className="space-y-4">
+          <div className="space-y-3 lg:space-y-4">
             {lideres.map((lider) => (
               <div
                 key={lider.id}
-                className="bg-gradient-to-r from-slate-800/80 via-slate-900/60 to-slate-800/80 border-2 border-slate-700/70 rounded-2xl p-6 hover:border-purple-500/50 transition-all group hover:scale-[1.01] shadow-lg"
+                className="bg-gradient-to-r from-slate-800/80 via-slate-900/60 to-slate-800/80 border-2 border-slate-700/70 rounded-xl lg:rounded-2xl p-4 lg:p-6 hover:border-purple-500/50 transition-all group hover:scale-[1.01] shadow-lg"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-4 mb-4">
+                <div className="flex flex-col lg:flex-row items-start justify-between gap-4">
+                  <div className="flex-1 w-full">
+                    <div className="flex items-center gap-3 lg:gap-4 mb-3 lg:mb-4">
                       <div className="relative">
                         {lider.profileImage ? (
                           <img 
                             src={lider.profileImage} 
                             alt={lider.nombre}
-                            className="w-16 h-16 rounded-2xl object-cover border-2 border-purple-500/50 shadow-lg shadow-purple-500/30"
+                            className="w-12 h-12 lg:w-16 lg:h-16 rounded-xl lg:rounded-2xl object-cover border-2 border-purple-500/50 shadow-lg shadow-purple-500/30"
                           />
                         ) : (
-                          <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/30">
-                            <Shield size={32} className="text-white" />
+                          <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl lg:rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/30">
+                            <Shield size={24} className="text-white lg:w-8 lg:h-8" />
                           </div>
                         )}
                       </div>
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-white group-hover:text-purple-300 transition-colors">{lider.nombre}</h3>
-                        <p className="text-sm text-slate-400">{lider.email}</p>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base lg:text-xl font-bold text-white group-hover:text-purple-300 transition-colors truncate">{lider.nombre}</h3>
+                        <p className="text-xs lg:text-sm text-slate-400 truncate">{lider.email}</p>
                       </div>
-                      <div className="flex gap-2 items-start flex-wrap">
+                      <div className="flex gap-2 items-start flex-wrap w-full lg:w-auto justify-end">
                         {/* Estado de aprobación del perfil */}
                         {lider.profileApprovalStatus === 'PENDING' ? (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => aprobarPerfilLider(lider.id)}
-                              className="px-4 py-2 bg-green-500/30 text-green-300 text-xs font-black rounded-xl border-2 border-green-500/50 shadow-lg shadow-green-500/20 hover:bg-green-500/50 transition-all hover:scale-105"
-                            >
-                              ✓ APROBAR PERFIL
-                            </button>
-                            <button
-                              onClick={() => {
-                                const feedback = prompt('Razón del rechazo (opcional):');
-                                if (feedback !== null) rechazarPerfilLider(lider.id, feedback);
-                              }}
-                              className="px-4 py-2 bg-red-500/30 text-red-300 text-xs font-black rounded-xl border-2 border-red-500/50 shadow-lg shadow-red-500/20 hover:bg-red-500/50 transition-all hover:scale-105"
-                            >
-                              ✗ RECHAZAR
-                            </button>
-                          </div>
+                          <span className="px-2 lg:px-4 py-1.5 lg:py-2 bg-orange-500/30 text-orange-300 text-xs font-black rounded-lg lg:rounded-xl border-2 border-orange-500/50 shadow-lg shadow-orange-500/20 whitespace-nowrap animate-pulse">
+                            ⏳ <span className="hidden sm:inline">PENDIENTE</span>
+                          </span>
                         ) : lider.profileApprovalStatus === 'APPROVED' ? (
-                          <span className="px-4 py-2 bg-emerald-500/30 text-emerald-300 text-xs font-black rounded-xl border-2 border-emerald-500/50 shadow-lg shadow-emerald-500/20">
-                            ✓ PERFIL APROBADO
+                          <span className="px-2 lg:px-4 py-1.5 lg:py-2 bg-emerald-500/30 text-emerald-300 text-xs font-black rounded-lg lg:rounded-xl border-2 border-emerald-500/50 shadow-lg shadow-emerald-500/20 whitespace-nowrap">
+                            ✓ <span className="hidden sm:inline">PERFIL</span> <span className="hidden lg:inline">APROBADO</span>
                           </span>
                         ) : lider.profileApprovalStatus === 'REJECTED' ? (
-                          <span className="px-4 py-2 bg-red-500/30 text-red-300 text-xs font-black rounded-xl border-2 border-red-500/50 shadow-lg shadow-red-500/20">
-                            ✗ PERFIL RECHAZADO
+                          <span className="px-2 lg:px-4 py-1.5 lg:py-2 bg-red-500/30 text-red-300 text-xs font-black rounded-lg lg:rounded-xl border-2 border-red-500/50 shadow-lg shadow-red-500/20 whitespace-nowrap">
+                            ✗ <span className="hidden sm:inline">RECHAZADO</span>
                           </span>
                         ) : !lider.perfilCompleto ? (
-                          <span className="px-4 py-2 bg-orange-500/30 text-orange-300 text-xs font-black rounded-xl border-2 border-orange-500/50 shadow-lg shadow-orange-500/20">
-                            ⚠️ PERFIL INCOMPLETO
+                          <span className="px-2 lg:px-4 py-1.5 lg:py-2 bg-orange-500/30 text-orange-300 text-xs font-black rounded-lg lg:rounded-xl border-2 border-orange-500/50 shadow-lg shadow-orange-500/20 whitespace-nowrap">
+                            ⚠️ <span className="hidden sm:inline">INCOMPLETO</span>
                           </span>
                         ) : (
-                          <span className="px-4 py-2 bg-gray-500/30 text-gray-300 text-xs font-black rounded-xl border-2 border-gray-500/50 shadow-lg shadow-gray-500/20">
-                            📝 NO ENVIADO
+                          <span className="px-2 lg:px-4 py-1.5 lg:py-2 bg-gray-500/30 text-gray-300 text-xs font-black rounded-lg lg:rounded-xl border-2 border-gray-500/50 shadow-lg shadow-gray-500/20 whitespace-nowrap">
+                            📝 <span className="hidden sm:inline">NO ENVIADO</span>
                           </span>
                         )}
 
                         {/* Estado de marketplace (separado) */}
                         {lider.mentorMarketplaceApproved ? (
-                          <span className="px-4 py-2 bg-purple-500/30 text-purple-300 text-xs font-black rounded-xl border-2 border-purple-500/50 shadow-lg shadow-purple-500/20">
-                            🏪 MARKETPLACE
+                          <span className="px-2 lg:px-4 py-1.5 lg:py-2 bg-purple-500/30 text-purple-300 text-xs font-black rounded-lg lg:rounded-xl border-2 border-purple-500/50 shadow-lg shadow-purple-500/20 whitespace-nowrap">
+                            🏪 <span className="hidden lg:inline">MARKETPLACE</span>
                           </span>
+                        ) : lider.profileApprovalStatus === 'PENDING' ? (
+                          <Link href={`/dashboard/school-admin/lideres/${lider.id}/perfil`}>
+                            <button className="px-2 lg:px-4 py-1.5 lg:py-2 bg-purple-500/30 text-purple-300 text-xs font-black rounded-lg lg:rounded-xl border-2 border-purple-500/50 shadow-lg shadow-purple-500/20 hover:bg-purple-500/50 transition-all hover:scale-105 whitespace-nowrap">
+                              👁️ <span className="hidden lg:inline">VER PERFIL</span>
+                            </button>
+                          </Link>
                         ) : (
                           <button
                             onClick={() => aprobarLider(lider.id)}
-                            className="px-4 py-2 bg-purple-500/30 text-purple-300 text-xs font-black rounded-xl border-2 border-purple-500/50 shadow-lg shadow-purple-500/20 hover:bg-purple-500/50 transition-all hover:scale-105"
+                            className="px-2 lg:px-4 py-1.5 lg:py-2 bg-purple-500/30 text-purple-300 text-xs font-black rounded-lg lg:rounded-xl border-2 border-purple-500/50 shadow-lg shadow-purple-500/20 hover:bg-purple-500/50 transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                             disabled={lider.profileApprovalStatus !== 'APPROVED'}
                           >
-                            🏪 APROBAR
+                            🏪 <span className="hidden lg:inline">APROBAR</span>
                           </button>
                         )}
 
                         {lider.isActive ? (
-                          <span className="px-4 py-2 bg-green-500/30 text-green-300 text-xs font-black rounded-xl border-2 border-green-500/50 shadow-lg shadow-green-500/20">
-                            🟢 ACTIVO
+                          <span className="px-2 lg:px-4 py-1.5 lg:py-2 bg-green-500/30 text-green-300 text-xs font-black rounded-lg lg:rounded-xl border-2 border-green-500/50 shadow-lg shadow-green-500/20 whitespace-nowrap">
+                            🟢 <span className="hidden sm:inline">ACTIVO</span>
                           </span>
                         ) : (
-                          <span className="px-4 py-2 bg-red-500/30 text-red-300 text-xs font-black rounded-xl border-2 border-red-500/50 shadow-lg shadow-red-500/20">
-                            🔴 INACTIVO
+                          <span className="px-2 lg:px-4 py-1.5 lg:py-2 bg-red-500/30 text-red-300 text-xs font-black rounded-lg lg:rounded-xl border-2 border-red-500/50 shadow-lg shadow-red-500/20 whitespace-nowrap">
+                            🔴 <span className="hidden sm:inline">INACTIVO</span>
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-6 mb-4">
-                      <div className="bg-slate-900/60 border border-slate-700/50 rounded-xl p-4">
-                        <p className="text-xs text-slate-500 mb-1.5 font-semibold">Mentorados</p>
-                        <p className="text-2xl font-black text-white">{lider.totalMentorados}</p>
+                    <div className="grid grid-cols-3 gap-2 lg:gap-6 mb-3 lg:mb-4">
+                      <div className="bg-slate-900/60 border border-slate-700/50 rounded-lg lg:rounded-xl p-2 lg:p-4">
+                        <p className="text-xs text-slate-500 mb-1 lg:mb-1.5 font-semibold">Mentorados</p>
+                        <p className="text-lg lg:text-2xl font-black text-white">{lider.totalMentorados}</p>
                       </div>
-                      <div className="bg-slate-900/60 border border-slate-700/50 rounded-xl p-4">
-                        <p className="text-xs text-slate-500 mb-1.5 font-semibold">Visiones</p>
-                        <p className="text-2xl font-black text-white">{lider.totalVisiones}</p>
+                      <div className="bg-slate-900/60 border border-slate-700/50 rounded-lg lg:rounded-xl p-2 lg:p-4">
+                        <p className="text-xs text-slate-500 mb-1 lg:mb-1.5 font-semibold">Visiones</p>
+                        <p className="text-lg lg:text-2xl font-black text-white">{lider.totalVisiones}</p>
                       </div>
-                      <div className="bg-slate-900/60 border border-slate-700/50 rounded-xl p-4">
-                        <p className="text-xs text-slate-500 mb-1.5 font-semibold">Creado</p>
-                        <p className="text-sm font-bold text-slate-300">
+                      <div className="bg-slate-900/60 border border-slate-700/50 rounded-lg lg:rounded-xl p-2 lg:p-4">
+                        <p className="text-xs text-slate-500 mb-1 lg:mb-1.5 font-semibold">Creado</p>
+                        <p className="text-xs lg:text-sm font-bold text-slate-300">
                           {new Date(lider.createdAt).toLocaleDateString('es-MX')}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 lg:gap-3">
                       {lider.VisionesAsignadas.length > 0 ? (
-                        <div className="flex flex-wrap gap-3 flex-1">
+                        <div className="flex flex-wrap gap-2 lg:gap-3 flex-1">
                           {lider.VisionesAsignadas.map(vision => (
                             <span
                               key={vision.id}
-                              className="px-4 py-2 bg-gradient-to-r from-purple-500/30 to-pink-500/30 text-purple-200 text-sm font-bold rounded-xl border-2 border-purple-500/40 shadow-lg shadow-purple-500/20"
+                              className="px-2 lg:px-4 py-1.5 lg:py-2 bg-gradient-to-r from-purple-500/30 to-pink-500/30 text-purple-200 text-xs lg:text-sm font-bold rounded-lg lg:rounded-xl border-2 border-purple-500/40 shadow-lg shadow-purple-500/20"
                             >
                               🎯 {vision.nombre}
                             </span>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-slate-500 text-sm italic">Sin visiones asignadas</p>
+                        <p className="text-slate-500 text-xs lg:text-sm italic">Sin visiones asignadas</p>
                       )}
                     </div>
                   </div>

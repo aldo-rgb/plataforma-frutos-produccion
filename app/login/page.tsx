@@ -63,7 +63,7 @@ function LoginForm() {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <img 
-              src="/quantum-matter-logo.png" 
+              src="/quantum-logo.svg" 
               alt="Quantum Matter Logo" 
               className="w-32 h-32 object-contain"
             />

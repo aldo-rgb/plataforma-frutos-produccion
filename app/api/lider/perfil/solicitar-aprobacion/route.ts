@@ -34,20 +34,31 @@ export async function POST(req: NextRequest) {
     // Obtener el perfil del líder con su organización
     const lider = await prisma.usuario.findUnique({
       where: { id: liderId },
-      include: {
-        Organization_Usuario_organizationIdToOrganization: true,
-        PerfilMentor: true
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        jobTitle: true,
+        organizationId: true,
+        Organization_Usuario_organizationIdToOrganization: {
+          select: {
+            id: true,
+            name: true,
+            schoolAdminId: true
+          }
+        },
+        PerfilMentor: {
+          select: {
+            id: true,
+            biografia: true,
+            titulo: true,
+            profileApprovalStatus: true
+          }
+        }
       }
     });
 
-    if (!lider) {
-      return NextResponse.json(
-        { error: 'Líder no encontrado' },
-        { status: 404 }
-      );
-    }
-
-    if (!lider.organizationId || !lider.Organization_Usuario_organizationIdToOrganization) {
+    if (!lider || !lider.Organization_Usuario_organizationIdToOrganization) {
       return NextResponse.json(
         { error: 'El líder no pertenece a ninguna organización' },
         { status: 400 }
@@ -93,7 +104,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Obtener el director de la organización (schoolAdmin)
-    const directorId = organization?.schoolAdminId;
+    const directorId = organization.schoolAdminId;
     
     if (!directorId) {
       return NextResponse.json(

@@ -332,11 +332,11 @@ export default function MentorProfileEditorPage() {
   }
 
   return (
-    <div className="p-8 max-w-5xl mx-auto">
+    <div className="p-4 lg:p-8 max-w-5xl mx-auto">
       {/* Notificación de Éxito */}
       {showSuccess && (
-        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-5 duration-300">
-          <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 min-w-[320px]">
+        <div className="fixed top-4 right-4 left-4 lg:left-auto z-50 animate-in slide-in-from-top-5 duration-300">
+          <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-4 lg:px-6 py-3 lg:py-4 rounded-xl shadow-2xl flex items-center gap-3 w-full lg:min-w-[320px] lg:w-auto">
             <div className="bg-white/20 p-2 rounded-lg">
               <CheckCircle2 className="w-6 h-6" />
             </div>
@@ -408,96 +408,42 @@ export default function MentorProfileEditorPage() {
         </div>
       )}
 
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Editar Mi Perfil Completo</h1>
-          <p className="text-slate-400">Completa todos los campos de tu perfil público de líder</p>
-        </div>
-        <div className="flex gap-4">
-          <button
-            onClick={handleSave}
-            disabled={initialLoading || loading || !isFormValid()}
-            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Guardando...
-              </>
-            ) : (
-              <>
-                <Save className="w-5 h-5" />
-                Guardar Cambios
-              </>
-            )}
-          </button>
-          <button
-            onClick={solicitarAprobacion}
-            disabled={initialLoading || solicitandoAprobacion || profileApprovalStatus === 'PENDING' || profileApprovalStatus === 'APPROVED' || !isFormValid()}
-            className={`flex items-center gap-2 font-bold py-3 px-6 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg ${
-              profileApprovalStatus === 'PENDING' 
-                ? 'bg-gradient-to-r from-yellow-600 to-amber-600 shadow-yellow-500/30' 
-                : profileApprovalStatus === 'APPROVED'
-                ? 'bg-gradient-to-r from-green-600 to-emerald-600 shadow-green-500/30'
-                : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-green-500/30'
-            } text-white`}
-          >
-            {solicitandoAprobacion ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Enviando...
-              </>
-            ) : profileApprovalStatus === 'PENDING' ? (
-              <>
-                <Loader2 className="w-5 h-5" />
-                🔍 En Revisión
-              </>
-            ) : profileApprovalStatus === 'APPROVED' ? (
-              <>
-                <CheckCircle2 className="w-5 h-5" />
-                ✅ Perfil Aprobado
-              </>
-            ) : (
-              <>
-                <Send className="w-5 h-5" />
-                Solicitar Aprobación
-              </>
-            )}
-          </button>
-        </div>
+      <div className="mb-6 lg:mb-8">
+        <h1 className="text-2xl lg:text-3xl font-bold text-white mb-1 lg:mb-2">Editar Mi Perfil Completo</h1>
+        <p className="text-sm lg:text-base text-slate-400">Completa todos los campos de tu perfil público de líder</p>
       </div>
 
       <div className="space-y-8">
         {/* QUANTUM BIO-WRITER - BANNER SUPERIOR */}
-        <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-4 rounded-xl border border-indigo-500/30 flex items-center justify-between shadow-lg">
-          <div className="flex items-center gap-3">
-            <div className="text-3xl">🎙️</div>
+        <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-4 lg:p-6 rounded-xl border border-indigo-500/30 flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:justify-between shadow-lg">
+          <div className="flex items-start lg:items-center gap-3 flex-1">
+            <div className="text-2xl lg:text-3xl">🎙️</div>
             <div>
-              <h3 className="text-lg font-bold text-white">Tu perfil es lo mas importante</h3>
-              <p className="text-sm text-gray-400">Permite que QUANTUM te guie y genera tu perfil completo en 2 minutos</p>
+              <h3 className="text-base lg:text-lg font-bold text-white">Tu perfil es lo mas importante</h3>
+              <p className="text-xs lg:text-sm text-gray-400">Permite que QUANTUM te guie y genera tu perfil completo en 2 minutos</p>
             </div>
           </div>
           <button 
             onClick={() => setShowQuantumBio(true)}
-            className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg shadow-lg hover:shadow-indigo-500/50 transition-all transform hover:scale-105 flex items-center gap-2 whitespace-nowrap"
+            className="w-full lg:w-auto px-4 lg:px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-lg shadow-lg hover:shadow-indigo-500/50 transition-all transform hover:scale-105 flex items-center justify-center gap-2 text-sm lg:text-base"
           >
             <span>✨</span> Iniciar Entrevista con Quantum
           </button>
         </div>
 
         {/* SECCIÓN 1: IDENTIDAD VISUAL */}
-        <section className="bg-slate-800 p-6 rounded-2xl border border-slate-700">
-          <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-6">
+        <section className="bg-slate-800 p-4 lg:p-6 rounded-2xl border border-slate-700">
+          <h2 className="flex items-center gap-2 text-lg lg:text-xl font-bold text-white mb-4 lg:mb-6">
             <User className="text-purple-400" /> Identidad y Foto
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
             {/* Preview de Foto */}
             <div className="flex flex-col items-center justify-center p-4 bg-slate-900 rounded-xl border-2 border-dashed border-slate-600">
               {formData.profileImage ? (
                 <img 
                   src={formData.profileImage} 
                   alt="Preview" 
-                  className="w-32 h-32 rounded-full object-cover mb-4 border-4 border-slate-700" 
+                  className="w-24 h-24 lg:w-32 lg:h-32 rounded-full object-cover mb-3 lg:mb-4 border-4 border-slate-700" 
                 />
               ) : (
                 <div className="w-32 h-32 bg-slate-800 rounded-full flex items-center justify-center mb-4">
@@ -507,7 +453,7 @@ export default function MentorProfileEditorPage() {
               <p className="text-xs text-slate-400 text-center">Preview de cómo te verán</p>
             </div>
             
-            <div className="md:col-span-2 space-y-4">
+            <div className="lg:col-span-2 space-y-4">
               <div>
                 <label className="block text-slate-300 font-medium mb-2 text-sm">
                   Nombre Completo
@@ -555,8 +501,8 @@ export default function MentorProfileEditorPage() {
                 </label>
                 
                 {/* Botón de subida de archivo */}
-                <div className="flex items-start gap-4">
-                  <div>
+                <div className="flex flex-col lg:flex-row items-start gap-4">
+                  <div className="w-full lg:w-auto">
                     <input
                       type="file"
                       id="imageUpload"
@@ -564,10 +510,10 @@ export default function MentorProfileEditorPage() {
                       onChange={handleImageUpload}
                       className="hidden"
                     />
-                    <div className="grid grid-cols-2 gap-4 mb-3">
+                    <div className="grid grid-cols-2 gap-3 mb-3">
                       <label
                         htmlFor="imageUpload"
-                        className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg cursor-pointer transition-all ${
+                        className={`flex items-center justify-center gap-2 px-3 py-2.5 lg:px-4 lg:py-3 rounded-lg cursor-pointer transition-all text-sm lg:text-base ${
                           uploadingImage
                             ? 'bg-slate-700 cursor-not-allowed'
                             : 'bg-purple-600 hover:bg-purple-700'
@@ -576,28 +522,29 @@ export default function MentorProfileEditorPage() {
                         {uploadingImage ? (
                           <>
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            Subiendo...
+                            <span className="hidden sm:inline">Subiendo...</span>
                           </>
                         ) : (
                           <>
                             <User className="w-4 h-4" />
-                            Subir Imagen
+                            <span className="hidden sm:inline">Subir Imagen</span>
                           </>
                         )}
                       </label>
                       <button
                         type="button"
                         onClick={() => setShowAvatarSelfie(true)}
-                        className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all font-medium"
+                        className="flex items-center justify-center gap-2 px-3 py-2.5 lg:px-4 lg:py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all font-medium text-sm lg:text-base"
                       >
                         <Camera className="w-4 h-4" />
-                        Avatar con IA
+                        <span className="sm:hidden">IA</span>
+                        <span className="hidden sm:inline">Avatar con IA</span>
                       </button>
                     </div>
                     <p className="text-xs text-slate-400">JPG, PNG o GIF (máx. 5MB)</p>
                   </div>
                   
-                  <div className="flex-1 bg-indigo-900/20 border border-indigo-500/30 rounded-lg p-3">
+                  <div className="w-full lg:flex-1 bg-indigo-900/20 border border-indigo-500/30 rounded-lg p-3">
                     <p className="text-xs font-medium text-indigo-300 mb-1">💡 Consejo Profesional</p>
                     <p className="text-xs text-slate-300">
                       Usa una foto profesional con buena iluminación, fondo neutral y vestimenta formal. 
@@ -611,11 +558,11 @@ export default function MentorProfileEditorPage() {
         </section>
 
         {/* SECCIÓN 2: NIVEL Y ESPECIALIDADES */}
-        <section className="bg-slate-800 p-6 rounded-2xl border border-slate-700">
-          <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-6">
+        <section className="bg-slate-800 p-4 lg:p-6 rounded-2xl border border-slate-700">
+          <h2 className="flex items-center gap-2 text-lg lg:text-xl font-bold text-white mb-4 lg:mb-6">
             <Briefcase className="text-purple-400" /> Especialidades
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6 mb-4">
             <div>
               <label className="block text-slate-300 font-medium mb-2 text-sm">
                 Especialidad Principal
@@ -723,8 +670,8 @@ export default function MentorProfileEditorPage() {
         </section>
 
         {/* SECCIÓN 3: BIOGRAFÍA */}
-        <section className="bg-slate-800 p-6 rounded-2xl border border-slate-700">
-          <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-6">
+        <section className="bg-slate-800 p-4 lg:p-6 rounded-2xl border border-slate-700">
+          <h2 className="flex items-center gap-2 text-lg lg:text-xl font-bold text-white mb-4 lg:mb-6">
             <FileText className="text-purple-400" /> Biografía y Presentación
           </h2>
           <div className="space-y-4">
@@ -791,6 +738,60 @@ export default function MentorProfileEditorPage() {
 
         {/* NOTA: Secciones de Ubicación/Configuración y Comisiones están ocultas para el rol LIDER
             Los líderes no manejan precios ni comisiones, solo gestionan su equipo interno */}
+        
+        {/* BOTONES DE ACCIÓN AL FINAL */}
+        <div className="flex flex-col sm:flex-row gap-3 lg:gap-4 pt-4">
+          <button
+            onClick={handleSave}
+            disabled={initialLoading || loading || !isFormValid()}
+            className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 px-4 lg:py-3 lg:px-6 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm lg:text-base w-full sm:w-auto"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Guardando...
+              </>
+            ) : (
+              <>
+                <Save className="w-5 h-5" />
+                Guardar Cambios
+              </>
+            )}
+          </button>
+          <button
+            onClick={solicitarAprobacion}
+            disabled={initialLoading || solicitandoAprobacion || profileApprovalStatus === 'PENDING' || profileApprovalStatus === 'APPROVED' || !isFormValid()}
+            className={`flex items-center justify-center gap-2 font-bold py-2.5 px-4 lg:py-3 lg:px-6 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg text-sm lg:text-base w-full sm:w-auto ${
+              profileApprovalStatus === 'PENDING' 
+                ? 'bg-gradient-to-r from-yellow-600 to-amber-600 shadow-yellow-500/30' 
+                : profileApprovalStatus === 'APPROVED'
+                ? 'bg-gradient-to-r from-green-600 to-emerald-600 shadow-green-500/30'
+                : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-green-500/30'
+            } text-white`}
+          >
+            {solicitandoAprobacion ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Enviando...
+              </>
+            ) : profileApprovalStatus === 'PENDING' ? (
+              <>
+                <Loader2 className="w-5 h-5" />
+                🔍 En Revisión
+              </>
+            ) : profileApprovalStatus === 'APPROVED' ? (
+              <>
+                <CheckCircle2 className="w-5 h-5" />
+                ✅ Perfil Aprobado
+              </>
+            ) : (
+              <>
+                <Send className="w-5 h-5" />
+                Solicitar Aprobación
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Quantum Bio-Writer Modal */}

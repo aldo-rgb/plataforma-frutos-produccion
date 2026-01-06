@@ -1,0 +1,135 @@
+{
+  "common": {
+    "welcome": "Bienvenido",
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "close": "Cerrar",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "finish": "Finalizar",
+    "back": "Atrás",
+    "continue": "Continuar",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "error": "Error",
+    "success": "Éxito",
+    "warning": "Advertencia",
+    "info": "Información"
+  },
+  "nav": {
+    "dashboard": "Panel",
+    "profile": "Perfil",
+    "settings": "Configuración",
+    "logout": "Cerrar Sesión",
+    "home": "Inicio",
+    "about": "Acerca de",
+    "contact": "Contacto"
+  },
+  "auth": {
+    "login": "Iniciar Sesión",
+    "register": "Registrarse",
+    "email": "Correo Electrónico",
+    "password": "Contraseña",
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "rememberMe": "Recordarme",
+    "noAccount": "¿No tienes cuenta?",
+    "hasAccount": "¿Ya tienes cuenta?",
+    "signUp": "Regístrate",
+    "signIn": "Inicia sesión"
+  },
+  "dashboard": {
+    "title": "Panel de Control",
+    "myCart": "Mi Carta Frutos",
+    "progress": "Progreso",
+    "notifications": "Notificaciones",
+    "stats": "Estadísticas",
+    "recentActivity": "Actividad Reciente"
+  },
+  "carta": {
+    "title": "Carta Frutos",
+    "areas": "Áreas",
+    "goals": "Metas",
+    "actions": "Acciones",
+    "evidence": "Evidencias",
+    "create": "Crear Carta",
+    "edit": "Editar Carta",
+    "wizard": "Asistente de Carta",
+    "step": "Paso",
+    "of": "de"
+  },
+  "areas": {
+    "personal": "Personal",
+    "professional": "Profesional",
+    "health": "Salud",
+    "relationships": "Relaciones",
+    "financial": "Financiero",
+    "spiritual": "Espiritual",
+    "learning": "Aprendizaje",
+    "contribution": "Contribución"
+  },
+  "mentor": {
+    "title": "Mentoría",
+    "request": "Solicitar Mentor",
+    "myMentor": "Mi Mentor",
+    "schedule": "Agendar Sesión",
+    "sessions": "Sesiones",
+    "becomeaMentor": "Convertirse en Mentor",
+    "findMentor": "Buscar Mentor"
+  },
+  "profile": {
+    "title": "Perfil",
+    "editProfile": "Editar Perfil",
+    "avatar": "Avatar",
+    "name": "Nombre",
+    "bio": "Biografía",
+    "location": "Ubicación",
+    "language": "Idioma",
+    "timezone": "Zona Horaria"
+  },
+  "wizard": {
+    "title": "Asistente de Configuración",
+    "welcome": "¡Bienvenido!",
+    "letsStart": "Empecemos",
+    "selectAreas": "Selecciona tus Áreas",
+    "defineGoals": "Define tus Metas",
+    "planActions": "Planifica tus Acciones",
+    "chooseAvatar": "Elige tu Avatar",
+    "complete": "¡Completado!",
+    "progress": "Progreso"
+  },
+  "quantum": {
+    "identity": "Identidad Quantum",
+    "selectGender": "Selecciona tu identidad",
+    "male": "Hombre",
+    "female": "Mujer",
+    "neutral": "Neutral",
+    "generating": "Generando tu avatar quantum...",
+    "error": "Error al generar avatar"
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "markAsRead": "Marcar como leída",
+    "markAllAsRead": "Marcar todas como leídas",
+    "noNotifications": "No hay notificaciones",
+    "new": "Nueva"
+  },
+  "errors": {
+    "generic": "Algo salió mal",
+    "network": "Error de conexión",
+    "unauthorized": "No autorizado",
+    "notFound": "No encontrado",
+    "serverError": "Error del servidor",
+    "tryAgain": "Intentar de nuevo"
+  },
+  "validation": {
+    "required": "Este campo es requerido",
+    "email": "Email inválido",
+    "minLength": "Mínimo {min} caracteres",
+    "maxLength": "Máximo {max} caracteres",
+    "password": "La contraseña debe tener al menos 8 caracteres"
+  }
+}

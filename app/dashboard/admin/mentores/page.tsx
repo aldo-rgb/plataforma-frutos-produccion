@@ -158,16 +158,16 @@ export default function AdminMentoresPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 sm:p-6 lg:p-8">
       {/* Header */}
-      <div className="max-w-7xl mx-auto mb-8">
-        <div className="flex items-center justify-between">
+      <div className="max-w-7xl mx-auto mb-6 sm:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-bold text-white mb-2 flex items-center gap-3">
-              <Users className="text-purple-400" size={40} />
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2 flex items-center gap-2 sm:gap-3">
+              <Users className="text-purple-400" size={32} />
               Gestión de Mentores
             </h1>
-            <p className="text-slate-400">
+            <p className="text-slate-400 text-sm sm:text-base">
               Panel maestro de administración de mentores
             </p>
           </div>
@@ -175,80 +175,81 @@ export default function AdminMentoresPage() {
           <div className="flex items-center gap-3">
             <a
               href="/dashboard/admin/asignaciones"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center gap-2 transition-all shadow-lg hover:shadow-blue-500/50"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg flex items-center gap-2 transition-all shadow-lg hover:shadow-blue-500/50 text-sm sm:text-base"
             >
-              <Users size={20} />
-              Asignar Mentores
+              <Users size={18} />
+              <span className="hidden sm:inline">Asignar Mentores</span>
+              <span className="sm:hidden">Asignar</span>
             </a>
           </div>
         </div>
       </div>
 
       {/* Estadísticas rápidas */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+      <div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-slate-400 text-sm">Total Mentores</p>
-              <p className="text-3xl font-bold text-white">
+              <p className="text-slate-400 text-xs sm:text-sm">Total Mentores</p>
+              <p className="text-2xl sm:text-3xl font-bold text-white">
                 {mentores.filter(m => m.tipoPerfil === 'MENTOR_ACTIVO').length}
               </p>
             </div>
-            <Users className="text-purple-400" size={32} />
+            <Users className="text-purple-400" size={28} />
           </div>
         </div>
 
-        <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
+        <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-yellow-400 text-sm">Solicitudes Pendientes</p>
-              <p className="text-3xl font-bold text-yellow-400">
+              <p className="text-yellow-400 text-xs sm:text-sm">Pendientes</p>
+              <p className="text-2xl sm:text-3xl font-bold text-yellow-400">
                 {mentores.filter(m => m.tipoPerfil === 'SOLICITUD_PENDIENTE').length}
               </p>
             </div>
-            <Users className="text-yellow-400" size={32} />
+            <Users className="text-yellow-400" size={28} />
           </div>
         </div>
 
-        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-slate-400 text-sm">Activos</p>
-              <p className="text-3xl font-bold text-green-400">
+              <p className="text-slate-400 text-xs sm:text-sm">Activos</p>
+              <p className="text-2xl sm:text-3xl font-bold text-green-400">
                 {mentores.filter((m) => m.usuario.isActive && m.tipoPerfil === 'MENTOR_ACTIVO').length}
               </p>
             </div>
-            <Eye className="text-green-400" size={32} />
+            <Eye className="text-green-400" size={28} />
           </div>
         </div>
 
-        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-slate-400 text-sm">Destacados</p>
-              <p className="text-3xl font-bold text-amber-400">
+              <p className="text-slate-400 text-xs sm:text-sm">Destacados</p>
+              <p className="text-2xl sm:text-3xl font-bold text-amber-400">
                 {mentores.filter((m) => m.destacado).length}
               </p>
             </div>
-            <Award className="text-amber-400" size={32} />
+            <Award className="text-amber-400" size={28} />
           </div>
         </div>
 
-        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+        <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-3 sm:p-4 col-span-2 lg:col-span-1">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-slate-400 text-sm">Total Sesiones</p>
-              <p className="text-3xl font-bold text-blue-400">
+              <p className="text-slate-400 text-xs sm:text-sm">Total Sesiones</p>
+              <p className="text-2xl sm:text-3xl font-bold text-blue-400">
                 {mentores.reduce((sum, m) => sum + m.totalSolicitudes, 0)}
               </p>
             </div>
-            <DollarSign className="text-blue-400" size={32} />
+            <DollarSign className="text-blue-400" size={28} />
           </div>
         </div>
       </div>
 
-      {/* Tabla de mentores */}
-      <div className="max-w-7xl mx-auto">
+      {/* Tabla de mentores - Desktop */}
+      <div className="max-w-7xl mx-auto hidden lg:block">
         <div className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -465,6 +466,189 @@ export default function AdminMentoresPage() {
             </table>
           </div>
         </div>
+      </div>
+
+      {/* Cards de mentores - Mobile */}
+      <div className="max-w-7xl mx-auto lg:hidden space-y-4">
+        {mentores.length === 0 ? (
+          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-8 text-center text-slate-400">
+            <Users size={48} className="mx-auto mb-4 opacity-30" />
+            <p className="text-lg">No hay mentores registrados</p>
+            <p className="text-sm mt-2">
+              Comienza agregando tu primer mentor usando el botón de arriba
+            </p>
+          </div>
+        ) : (
+          mentores.map((mentor) => (
+            <div
+              key={mentor.id}
+              className={`bg-slate-800/50 border rounded-xl overflow-hidden ${
+                mentor.tipoPerfil === 'SOLICITUD_PENDIENTE' 
+                  ? 'border-yellow-500 bg-yellow-900/10' 
+                  : 'border-slate-700'
+              }`}
+            >
+              {/* Header del card */}
+              <div className="p-4 bg-slate-900/50 border-b border-slate-700">
+                <div className="flex items-start gap-3">
+                  <div className="relative">
+                    {mentor.tipoPerfil === 'SOLICITUD_PENDIENTE' && (
+                      <div className="absolute -top-1 -right-1 z-10">
+                        <span className="flex h-3 w-3">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+                        </span>
+                      </div>
+                    )}
+                    <img
+                      src={mentor.usuario.profileImage || mentor.usuario.imagen || '/default-avatar.png'}
+                      alt={mentor.usuario.nombre}
+                      className="w-16 h-16 rounded-full object-cover border-2 border-slate-600"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-white font-bold text-lg truncate">
+                      {mentor.usuario.nombre}
+                    </h3>
+                    <p className="text-slate-400 text-sm truncate">
+                      {mentor.titulo || 'Sin título'}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span
+                        className={`${getBadgeColor(
+                          mentor.nivel
+                        )} text-white px-2 py-0.5 rounded-full text-xs font-semibold`}
+                      >
+                        {mentor.nivel}
+                      </span>
+                      {mentor.tipoPerfil === 'SOLICITUD_PENDIENTE' && (
+                        <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full border border-yellow-500/30 font-semibold">
+                          PENDIENTE
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contenido del card */}
+              <div className="p-4 space-y-3">
+                {/* Especialidad */}
+                <div>
+                  <p className="text-slate-400 text-xs uppercase font-semibold mb-1">Especialidad</p>
+                  <p className="text-white font-medium">{mentor.especialidad}</p>
+                  {mentor.especialidadesSecundarias.length > 0 && (
+                    <p className="text-slate-400 text-xs mt-1">
+                      +{mentor.especialidadesSecundarias.length} especialidades más
+                    </p>
+                  )}
+                </div>
+
+                {/* Grid de info */}
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Tarifa */}
+                  <div className="bg-slate-900/50 rounded-lg p-3">
+                    <p className="text-slate-400 text-xs uppercase font-semibold mb-1">Tarifa Base</p>
+                    <p className={`font-bold text-lg ${mentor.precioBase > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      ${(mentor.precioBase || 0).toLocaleString()}
+                    </p>
+                    <p className="text-slate-400 text-xs">por sesión</p>
+                  </div>
+
+                  {/* Rating */}
+                  <div className="bg-slate-900/50 rounded-lg p-3">
+                    <p className="text-slate-400 text-xs uppercase font-semibold mb-1">Rating</p>
+                    <div className="flex items-center gap-1">
+                      <Star size={16} className="text-amber-500 fill-amber-500" />
+                      <span className="text-white font-bold text-lg">
+                        {mentor.calificacionPromedio.toFixed(1)}
+                      </span>
+                    </div>
+                    <p className="text-slate-400 text-xs">
+                      {mentor.totalResenas} reseñas
+                    </p>
+                  </div>
+
+                  {/* Comisión */}
+                  <div className="bg-slate-900/50 rounded-lg p-3">
+                    <p className="text-slate-400 text-xs uppercase font-semibold mb-1">Comisión</p>
+                    <p className="text-white font-bold">
+                      {mentor.comisionPlataforma}% / {mentor.comisionMentor}%
+                    </p>
+                    <p className="text-slate-400 text-xs">Plat. / Mentor</p>
+                  </div>
+
+                  {/* Sesiones */}
+                  <div className="bg-slate-900/50 rounded-lg p-3">
+                    <p className="text-slate-400 text-xs uppercase font-semibold mb-1">Sesiones</p>
+                    <p className="text-white font-bold text-lg">
+                      {mentor.totalSolicitudes}
+                    </p>
+                    <p className="text-slate-400 text-xs">completadas</p>
+                  </div>
+                </div>
+
+                {/* Estados */}
+                <div className="flex flex-wrap gap-2">
+                  <span
+                    className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
+                      mentor.usuario.isActive
+                        ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                        : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                    }`}
+                  >
+                    {mentor.usuario.isActive ? (
+                      <>
+                        <Eye size={12} /> Activo
+                      </>
+                    ) : (
+                      <>
+                        <EyeOff size={12} /> Inactivo
+                      </>
+                    )}
+                  </span>
+
+                  {mentor.destacado && (
+                    <span className="bg-amber-500/20 text-amber-400 border border-amber-500/30 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                      <Award size={12} /> Destacado
+                    </span>
+                  )}
+                </div>
+
+                {/* Botón de acción */}
+                <div className="pt-2">
+                  {mentor.tipoPerfil === 'SOLICITUD_PENDIENTE' ? (
+                    mentor.applicationId ? (
+                      <a
+                        href={`/dashboard/admin/mentor-applications?id=${mentor.applicationId}`}
+                        className="w-full inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg transition-all font-semibold"
+                      >
+                        <Eye size={18} />
+                        Revisar Solicitud
+                      </a>
+                    ) : (
+                      <a
+                        href={`/dashboard/admin/mentores/${mentor.id}`}
+                        className="w-full inline-flex items-center justify-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-3 rounded-lg transition-all font-semibold"
+                      >
+                        <Eye size={18} />
+                        Activar Mentor
+                      </a>
+                    )
+                  ) : (
+                    <a
+                      href={`/dashboard/admin/mentores/${mentor.id}`}
+                      className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition-all font-semibold"
+                    >
+                      <Eye size={18} />
+                      Ver Perfil Completo
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Modal de confirmación de eliminación */}

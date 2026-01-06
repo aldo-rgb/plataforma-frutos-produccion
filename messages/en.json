@@ -1,0 +1,135 @@
+{
+  "common": {
+    "welcome": "Welcome",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "next": "Next",
+    "previous": "Previous",
+    "finish": "Finish",
+    "back": "Back",
+    "continue": "Continue",
+    "search": "Search",
+    "filter": "Filter",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Information"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "profile": "Profile",
+    "settings": "Settings",
+    "logout": "Log Out",
+    "home": "Home",
+    "about": "About",
+    "contact": "Contact"
+  },
+  "auth": {
+    "login": "Log In",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot your password?",
+    "rememberMe": "Remember me",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "signUp": "Sign up",
+    "signIn": "Log in"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "myCart": "My Frutos Charter",
+    "progress": "Progress",
+    "notifications": "Notifications",
+    "stats": "Statistics",
+    "recentActivity": "Recent Activity"
+  },
+  "carta": {
+    "title": "Frutos Charter",
+    "areas": "Areas",
+    "goals": "Goals",
+    "actions": "Actions",
+    "evidence": "Evidence",
+    "create": "Create Charter",
+    "edit": "Edit Charter",
+    "wizard": "Charter Wizard",
+    "step": "Step",
+    "of": "of"
+  },
+  "areas": {
+    "personal": "Personal",
+    "professional": "Professional",
+    "health": "Health",
+    "relationships": "Relationships",
+    "financial": "Financial",
+    "spiritual": "Spiritual",
+    "learning": "Learning",
+    "contribution": "Contribution"
+  },
+  "mentor": {
+    "title": "Mentorship",
+    "request": "Request Mentor",
+    "myMentor": "My Mentor",
+    "schedule": "Schedule Session",
+    "sessions": "Sessions",
+    "becomeaMentor": "Become a Mentor",
+    "findMentor": "Find Mentor"
+  },
+  "profile": {
+    "title": "Profile",
+    "editProfile": "Edit Profile",
+    "avatar": "Avatar",
+    "name": "Name",
+    "bio": "Bio",
+    "location": "Location",
+    "language": "Language",
+    "timezone": "Timezone"
+  },
+  "wizard": {
+    "title": "Setup Wizard",
+    "welcome": "Welcome!",
+    "letsStart": "Let's Start",
+    "selectAreas": "Select your Areas",
+    "defineGoals": "Define your Goals",
+    "planActions": "Plan your Actions",
+    "chooseAvatar": "Choose your Avatar",
+    "complete": "Complete!",
+    "progress": "Progress"
+  },
+  "quantum": {
+    "identity": "Quantum Identity",
+    "selectGender": "Select your identity",
+    "male": "Male",
+    "female": "Female",
+    "neutral": "Neutral",
+    "generating": "Generating your quantum avatar...",
+    "error": "Error generating avatar"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAsRead": "Mark as read",
+    "markAllAsRead": "Mark all as read",
+    "noNotifications": "No notifications",
+    "new": "New"
+  },
+  "errors": {
+    "generic": "Something went wrong",
+    "network": "Connection error",
+    "unauthorized": "Unauthorized",
+    "notFound": "Not found",
+    "serverError": "Server error",
+    "tryAgain": "Try again"
+  },
+  "validation": {
+    "required": "This field is required",
+    "email": "Invalid email",
+    "minLength": "Minimum {min} characters",
+    "maxLength": "Maximum {max} characters",
+    "password": "Password must be at least 8 characters"
+  }
+}

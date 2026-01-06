@@ -70,32 +70,22 @@ export async function POST(request: NextRequest) {
 
     let approvalUrl = '';
 
-    // 🎭 MODO SIMULACIÓN: Si no hay credenciales, usar simulación
-    const isSimulationMode = !process.env.PAYPAL_CLIENT_ID || 
-                            !process.env.STRIPE_SECRET_KEY || 
-                            process.env.PAYMENT_SIMULATION_MODE === 'true';
-
-    if (isSimulationMode) {
-      console.log('🎭 MODO SIMULACIÓN DE PAGO ACTIVADO');
-      approvalUrl = await createSimulatedPayment(ordenId, orden.precioTotal, metodoPago);
-    } else {
-      // Generar URL según método de pago REAL
-      switch (metodoPago.toUpperCase()) {
-        case 'PAYPAL':
-          approvalUrl = await createPayPalOrder(ordenId, orden.precioTotal, orden.cantidad);
-          break;
-        case 'STRIPE':
-          approvalUrl = await createStripeCheckout(ordenId, orden.precioTotal, orden.cantidad);
-          break;
-        case 'MERCADOPAGO':
-          approvalUrl = await createMercadoPagoPreference(ordenId, orden.precioTotal, orden.cantidad);
-          break;
-        default:
-          return NextResponse.json(
-            { error: 'Método de pago no válido' },
-            { status: 400 }
-          );
-      }
+    // Generar URL según método de pago
+    switch (metodoPago.toUpperCase()) {
+      case 'PAYPAL':
+        approvalUrl = await createPayPalOrder(ordenId, orden.precioTotal, orden.cantidad);
+        break;
+      case 'STRIPE':
+        approvalUrl = await createStripeCheckout(ordenId, orden.precioTotal, orden.cantidad);
+        break;
+      case 'MERCADOPAGO':
+        approvalUrl = await createMercadoPagoPreference(ordenId, orden.precioTotal, orden.cantidad);
+        break;
+      default:
+        return NextResponse.json(
+          { error: 'Método de pago no válido' },
+          { status: 400 }
+        );
     }
 
     // Actualizar orden con método de pago
@@ -136,16 +126,24 @@ async function createPayPalOrder(
   cantidadSesiones: number
 ): Promise<string> {
   try {
-    const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
-    const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
+    // Obtener configuración de PayPal desde la base de datos
+    const paypalConfig = await prisma.paymentGateway.findFirst({
+      where: {
+        provider: 'PAYPAL',
+        isActive: true,
+      }
+    });
+
+    if (!paypalConfig || !paypalConfig.publicKey || !paypalConfig.secretKey) {
+      throw new Error('PayPal no está configurado. Por favor configúralo desde el panel de administrador.');
+    }
+
+    const PAYPAL_CLIENT_ID = paypalConfig.publicKey;
+    const PAYPAL_SECRET = paypalConfig.secretKey;
     const PAYPAL_API_URL =
-      process.env.PAYPAL_MODE === 'production'
+      paypalConfig.environment === 'production'
         ? 'https://api-m.paypal.com'
         : 'https://api-m.sandbox.paypal.com';
-
-    if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
-      throw new Error('Credenciales de PayPal no configuradas');
-    }
 
     // Obtener access token
     const auth = Buffer.from(`${PAYPAL_CLIENT_ID}:${PAYPAL_SECRET}`).toString('base64');
@@ -228,13 +226,19 @@ async function createStripeCheckout(
   cantidadSesiones: number
 ): Promise<string> {
   try {
-    const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+    // Obtener configuración de Stripe desde la base de datos
+    const stripeConfig = await prisma.paymentGateway.findFirst({
+      where: {
+        provider: 'STRIPE',
+        isActive: true,
+      }
+    });
 
-    if (!STRIPE_SECRET_KEY) {
-      throw new Error('Credenciales de Stripe no configuradas');
+    if (!stripeConfig || !stripeConfig.secretKey) {
+      throw new Error('Stripe no está configurado. Por favor configúralo desde el panel de administrador.');
     }
 
-    const stripe = require('stripe')(STRIPE_SECRET_KEY);
+    const stripe = require('stripe')(stripeConfig.secretKey);
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -282,16 +286,22 @@ async function createMercadoPagoPreference(
   cantidadSesiones: number
 ): Promise<string> {
   try {
-    const MP_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN;
+    // Obtener configuración de Mercado Pago desde la base de datos
+    const mpConfig = await prisma.paymentGateway.findFirst({
+      where: {
+        provider: 'MERCADOPAGO',
+        isActive: true,
+      }
+    });
 
-    if (!MP_ACCESS_TOKEN) {
-      throw new Error('Credenciales de Mercado Pago no configuradas');
+    if (!mpConfig || !mpConfig.secretKey) {
+      throw new Error('Mercado Pago no está configurado. Por favor configúralo desde el panel de administrador.');
     }
 
     const preferenceRes = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${MP_ACCESS_TOKEN}`,
+        Authorization: `Bearer ${mpConfig.secretKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -333,48 +343,6 @@ async function createMercadoPagoPreference(
     return preferenceData.init_point;
   } catch (error: any) {
     console.error('Error en MercadoPago:', error);
-    throw error;
-  }
-}
-
-// ============================================================================
-// 🎭 SIMULACIÓN DE PAGO (Para desarrollo y pruebas)
-// ============================================================================
-async function createSimulatedPayment(
-  ordenId: string,
-  amount: number,
-  metodoPago: string
-): Promise<string> {
-  try {
-    console.log('🎭 Creando pago simulado...');
-    console.log(`   Orden: ${ordenId}`);
-    console.log(`   Monto: $${amount} MXN`);
-    console.log(`   Método: ${metodoPago}`);
-
-    // Generar un ID de pago simulado
-    const simulatedPaymentId = `SIM-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-
-    // Guardar el ID de pago simulado
-    await prisma.mentorPackageOrder.update({
-      where: { id: ordenId },
-      data: { 
-        externalPaymentId: simulatedPaymentId,
-        paymentData: {
-          simulated: true,
-          simulatedAt: new Date().toISOString(),
-          originalMetodoPago: metodoPago,
-        }
-      },
-    });
-
-    console.log(`✅ Pago simulado creado: ${simulatedPaymentId}`);
-
-    // Redirigir a página de simulación de pago
-    const simulationUrl = `${process.env.NEXTAUTH_URL}/api/lobo-solitario/simulate-payment?ordenId=${ordenId}&paymentId=${simulatedPaymentId}`;
-    
-    return simulationUrl;
-  } catch (error: any) {
-    console.error('❌ Error en simulación de pago:', error);
     throw error;
   }
 }

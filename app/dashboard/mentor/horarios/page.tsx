@@ -17,19 +17,19 @@ export default async function HorariosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 p-8">
+    <div className="min-h-screen bg-slate-950 p-4 lg:p-8">
       <div className="max-w-7xl mx-auto">
         
         {/* Encabezado */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent mb-4">
+        <div className="mb-6 lg:mb-8">
+          <h1 className="text-2xl lg:text-4xl font-bold bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-transparent mb-3 lg:mb-4">
             🔥 Llamadas de Disciplina
           </h1>
-          <p className="text-slate-300 text-lg">
+          <p className="text-slate-300 text-sm lg:text-lg">
             Configura tu disponibilidad para el <strong className="text-orange-400">Club de las 5 AM</strong>.
             Solo puedes seleccionar horarios entre <span className="text-orange-400 font-bold">05:00 - 08:00</span>.
           </p>
-          <div className="mt-3 p-4 bg-orange-900/20 border border-orange-500/30 rounded-lg text-sm text-orange-200">
+          <div className="mt-3 p-3 lg:p-4 bg-orange-900/20 border border-orange-500/30 rounded-lg text-xs lg:text-sm text-orange-200">
             💡 <strong>Nota:</strong> Estos horarios se bloquearán automáticamente en tu calendario de disponibilidad general para evitar conflictos con mentorías.
           </div>
         </div>

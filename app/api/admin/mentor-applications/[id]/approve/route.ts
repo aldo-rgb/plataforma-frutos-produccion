@@ -33,7 +33,8 @@ export async function POST(
       );
     }
 
-    const applicationId = parseInt(params.id);
+    const resolvedParams = await params;
+    const applicationId = parseInt(resolvedParams.id);
 
     // Obtener la aplicación
     const application = await prisma.mentorApplication.findUnique({

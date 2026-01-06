@@ -244,27 +244,27 @@ export default function QuantumIdentityModal({
       
       {/* STAGE 0: GENDER SELECTION */}
       {stage === 'gender' && (
-        <div className="max-w-2xl w-full space-y-8 bg-slate-900/80 backdrop-blur-xl p-8 rounded-3xl border-2 border-purple-500/30">
-          <div className="text-center space-y-4">
-            <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
-              <Sparkles className="text-white" size={40} />
+        <div className="max-w-2xl w-full space-y-4 sm:space-y-6 bg-slate-900/80 backdrop-blur-xl p-4 sm:p-6 md:p-8 rounded-3xl border-2 border-purple-500/30 max-h-[95vh] overflow-y-auto">
+          <div className="text-center space-y-2 sm:space-y-3">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
+              <Sparkles className="text-white" size={24} />
             </div>
-            <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400 uppercase tracking-wider">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400 uppercase tracking-wider">
               Consejo Quantum Matter
             </h2>
-            <p className="text-xl text-slate-300">
-              Configuración de tu Perfil Ejecutivo en el Consejo
+            <p className="text-sm sm:text-base md:text-xl text-slate-300">
+              Configuración de tu Perfil Ejecutivo
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <button
               onClick={() => {
                 setGender('male');
               }}
-              className={`group relative h-80 rounded-2xl border-2 transition-all duration-300 hover:scale-105 overflow-hidden ${
+              className={`group relative h-48 sm:h-56 md:h-64 rounded-xl sm:rounded-2xl border-2 transition-all duration-300 hover:scale-105 overflow-hidden ${
                 gender === 'male' 
-                  ? 'border-blue-500 bg-blue-500/20 ring-4 ring-blue-500/50' 
+                  ? 'border-blue-500 bg-blue-500/20 ring-2 sm:ring-4 ring-blue-500/50' 
                   : 'border-blue-500/30 bg-slate-800/50 hover:bg-blue-500/10 hover:border-blue-500'
               }`}
             >
@@ -279,13 +279,13 @@ export default function QuantumIdentityModal({
               </div>
               
               {/* Icon Circle */}
-              <div className="relative h-full flex flex-col items-center justify-center space-y-4">
-                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-2xl shadow-blue-500/50 border-4 border-slate-900/50 group-hover:scale-110 transition-transform">
-                  <svg className="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <div className="relative h-full flex flex-col items-center justify-center space-y-2 sm:space-y-3">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-2xl shadow-blue-500/50 border-2 sm:border-4 border-slate-900/50 group-hover:scale-110 transition-transform">
+                  <svg className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                   </svg>
                 </div>
-                <p className="text-3xl font-bold text-white drop-shadow-lg">Hombre</p>
+                <p className="text-xl sm:text-2xl md:text-3xl font-bold text-white drop-shadow-lg">Hombre</p>
               </div>
             </button>
 
@@ -293,9 +293,9 @@ export default function QuantumIdentityModal({
               onClick={() => {
                 setGender('female');
               }}
-              className={`group relative h-80 rounded-2xl border-2 transition-all duration-300 hover:scale-105 overflow-hidden ${
+              className={`group relative h-48 sm:h-56 md:h-64 rounded-xl sm:rounded-2xl border-2 transition-all duration-300 hover:scale-105 overflow-hidden ${
                 gender === 'female' 
-                  ? 'border-pink-500 bg-pink-500/20 ring-4 ring-pink-500/50' 
+                  ? 'border-pink-500 bg-pink-500/20 ring-2 sm:ring-4 ring-pink-500/50' 
                   : 'border-pink-500/30 bg-slate-800/50 hover:bg-pink-500/10 hover:border-pink-500'
               }`}
             >
@@ -310,13 +310,13 @@ export default function QuantumIdentityModal({
               </div>
               
               {/* Icon Circle */}
-              <div className="relative h-full flex flex-col items-center justify-center space-y-4">
-                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-2xl shadow-pink-500/50 border-4 border-slate-900/50 group-hover:scale-110 transition-transform">
-                  <svg className="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <div className="relative h-full flex flex-col items-center justify-center space-y-2 sm:space-y-3">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-2xl shadow-pink-500/50 border-2 sm:border-4 border-slate-900/50 group-hover:scale-110 transition-transform">
+                  <svg className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                   </svg>
                 </div>
-                <p className="text-3xl font-bold text-white drop-shadow-lg">Mujer</p>
+                <p className="text-xl sm:text-2xl md:text-3xl font-bold text-white drop-shadow-lg">Mujer</p>
               </div>
             </button>
 
@@ -324,9 +324,9 @@ export default function QuantumIdentityModal({
               onClick={() => {
                 setGender('neutral');
               }}
-              className={`group relative h-80 rounded-2xl border-2 transition-all duration-300 hover:scale-105 overflow-hidden ${
+              className={`group relative h-48 sm:h-56 md:h-64 rounded-xl sm:rounded-2xl border-2 transition-all duration-300 hover:scale-105 overflow-hidden ${
                 gender === 'neutral' 
-                  ? 'border-purple-500 bg-purple-500/20 ring-4 ring-purple-500/50' 
+                  ? 'border-purple-500 bg-purple-500/20 ring-2 sm:ring-4 ring-purple-500/50' 
                   : 'border-purple-500/30 bg-slate-800/50 hover:bg-purple-500/10 hover:border-purple-500'
               }`}
             >
@@ -340,22 +340,21 @@ export default function QuantumIdentityModal({
               </div>
               
               {/* Icon Circle */}
-              <div className="relative h-full flex flex-col items-center justify-center space-y-4">
-                <div className="w-32 h-32 rounded-full bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 flex items-center justify-center shadow-2xl shadow-purple-500/50 border-4 border-slate-900/50 group-hover:scale-110 transition-transform">
-                  <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <div className="relative h-full flex flex-col items-center justify-center space-y-2 sm:space-y-3 px-2">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 flex items-center justify-center shadow-2xl shadow-purple-500/50 border-2 sm:border-4 border-slate-900/50 group-hover:scale-110 transition-transform">
+                  <svg className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <p className="text-3xl font-bold text-white drop-shadow-lg">Prefiero no contestar</p>
-                <p className="text-sm text-slate-300">(Avatar neutral)</p>
+                <p className="text-lg sm:text-xl md:text-2xl font-bold text-white drop-shadow-lg text-center leading-tight">Prefiero no contestar</p>
               </div>
             </button>
           </div>
 
           {/* Mensaje de selección de género */}
           {!gender && (
-            <div className="text-center py-4">
-              <p className="text-lg text-yellow-400 animate-pulse">
+            <div className="text-center py-2 sm:py-3">
+              <p className="text-sm sm:text-base md:text-lg text-yellow-400 animate-pulse">
                 ⬆️ Selecciona tu género para continuar
               </p>
             </div>
@@ -363,26 +362,26 @@ export default function QuantumIdentityModal({
 
           {/* Botones de acción cuando hay género seleccionado */}
           {gender && (
-            <div className="space-y-6">
+            <div className="space-y-3 sm:space-y-4">
               <div className="text-center">
-                <p className="text-green-400 text-lg mb-4">
-                  ✓ Género seleccionado: <span className="font-bold capitalize">{gender === 'neutral' ? 'Prefiero no contestar' : gender === 'male' ? 'Hombre' : 'Mujer'}</span>
+                <p className="text-green-400 text-sm sm:text-base md:text-lg mb-2 sm:mb-3">
+                  ✓ Género: <span className="font-bold capitalize">{gender === 'neutral' ? 'Prefiero no contestar' : gender === 'male' ? 'Hombre' : 'Mujer'}</span>
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {/* Botón de Avatar con IA */}
                 <button
                   onClick={() => {
                     setUseSelfieMode(false);
                     setStage('analyzing');
                   }}
-                  className="group relative px-8 py-6 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold rounded-xl transition-all transform hover:scale-105 shadow-lg shadow-purple-500/30"
+                  className="group relative px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold rounded-xl transition-all transform hover:scale-105 shadow-lg shadow-purple-500/30"
                 >
-                  <div className="flex flex-col items-center space-y-3">
-                    <Sparkles size={32} className="group-hover:rotate-12 transition-transform" />
-                    <span className="text-xl">Generar Perfil Ejecutivo con IA</span>
-                    <span className="text-sm text-purple-200">Retrato corporativo profesional del Consejo</span>
+                  <div className="flex flex-col items-center space-y-1 sm:space-y-2">
+                    <Sparkles size={24} className="sm:w-8 sm:h-8 group-hover:rotate-12 transition-transform" />
+                    <span className="text-sm sm:text-base md:text-lg leading-tight text-center">Generar Perfil con IA</span>
+                    <span className="text-xs sm:text-sm text-purple-200 leading-tight text-center">Retrato corporativo del Consejo</span>
                   </div>
                 </button>
 
@@ -392,12 +391,12 @@ export default function QuantumIdentityModal({
                     setUseSelfieMode(true);
                     setStage('analyzing');
                   }}
-                  className="group relative px-8 py-6 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold rounded-xl transition-all transform hover:scale-105 shadow-lg shadow-cyan-500/30"
+                  className="group relative px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold rounded-xl transition-all transform hover:scale-105 shadow-lg shadow-cyan-500/30"
                 >
-                  <div className="flex flex-col items-center space-y-3">
-                    <Camera size={32} className="group-hover:rotate-12 transition-transform" />
-                    <span className="text-xl">📸 Crear Avatar con mi Selfie</span>
-                    <span className="text-sm text-cyan-200">Usa tu cámara para un avatar personalizado con IA</span>
+                  <div className="flex flex-col items-center space-y-1 sm:space-y-2">
+                    <Camera size={24} className="sm:w-8 sm:h-8 group-hover:rotate-12 transition-transform" />
+                    <span className="text-sm sm:text-base md:text-lg leading-tight text-center">📸 Crear con Selfie</span>
+                    <span className="text-xs sm:text-sm text-cyan-200 leading-tight text-center">Avatar personalizado con IA</span>
                   </div>
                 </button>
               </div>

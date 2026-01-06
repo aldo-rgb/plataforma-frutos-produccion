@@ -10,7 +10,7 @@ import { prisma } from '@/lib/prisma';
  */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -19,7 +19,8 @@ export async function PATCH(
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const liderId = parseInt(params.id);
+    const resolvedParams = await params;
+    const liderId = parseInt(resolvedParams.id);
 
     if (isNaN(liderId)) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
@@ -85,6 +86,22 @@ export async function PATCH(
         profileApprovalStatus: 'APPROVED',
         membershipApprovedAt: new Date(),
         membershipApprovedBy: session.user.id
+      }
+    });
+
+    // Marcar como leída la notificación de solicitud de aprobación del director
+    await prisma.mentorAlert.updateMany({
+      where: {
+        mentorId: session.user.id,
+        usuarioId: liderId,
+        type: 'MILESTONE',
+        message: {
+          contains: 'solicita aprobación de su perfil de mentor'
+        },
+        read: false
+      },
+      data: {
+        read: true
       }
     });
 

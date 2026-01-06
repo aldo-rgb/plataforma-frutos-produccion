@@ -72,10 +72,12 @@ export async function GET(req: NextRequest) {
     const mentoresPendientesDirectos: any[] = [];
 
     mentoresFiltrados.forEach((mentor: any) => {
-      // Considerar como pendiente si:
-      // - disponible es false Y
-      // - totalSesiones es 0 (nunca ha dado sesiones)
-      const esPendiente = !mentor.disponible && mentor.totalSesiones === 0;
+      // Un mentor está pendiente solo si:
+      // - Su usuario NO tiene rol MENTOR (aún no ha sido aprobado completamente)
+      // O si:
+      // - disponible es false Y totalSesiones es 0 Y NO tiene rol MENTOR
+      const usuarioTieneMentorRol = mentor.Usuario.rol?.includes('MENTOR');
+      const esPendiente = !usuarioTieneMentorRol || (!mentor.disponible && mentor.totalSesiones === 0 && !usuarioTieneMentorRol);
       
       if (esPendiente) {
         mentoresPendientesDirectos.push(mentor);

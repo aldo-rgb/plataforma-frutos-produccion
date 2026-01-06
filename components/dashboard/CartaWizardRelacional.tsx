@@ -1488,25 +1488,25 @@ export default function CartaWizardRelacional() {
             </div>
           )}
           
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                <Sparkles className="text-purple-400" />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
+                <Sparkles className="text-purple-400 w-5 h-5 sm:w-6 sm:h-6" />
                 WIZARD 2.0
               </h1>
-              <p className="text-sm text-gray-400">Múltiples acciones por área · Configuración individual</p>
+              <p className="text-xs sm:text-sm text-gray-400 truncate">Múltiples acciones por área · Configuración individual</p>
             </div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end flex-wrap">
               {/* Botón configurar áreas (solo si NO pertenece a grupo y está en BORRADOR) */}
               {!perteneceAGrupo && estado === 'BORRADOR' && (
                 <button
                   onClick={() => setShowAreaConfig(true)}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold text-sm flex items-center gap-2 transition"
+                  className="px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold text-xs sm:text-sm flex items-center gap-2 transition whitespace-nowrap"
                   title="Configurar áreas personalizadas"
                 >
-                  <Settings size={16} />
-                  Áreas ({areasActivas.length})
+                  <Settings size={14} className="sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Áreas</span> ({areasActivas.length})
                 </button>
               )}
               
@@ -1520,14 +1520,14 @@ export default function CartaWizardRelacional() {
                       message: '¿Estás seguro de que deseas limpiar el borrador guardado en tu navegador?\n\n⚠️ Esto eliminará TODO el progreso guardado localmente.\n\n✅ La base de datos NO será afectada.\n\nSi tienes datos guardados en el servidor, podrás recuperarlos recargando la página después de limpiar.'
                     });
                   }}
-                  className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors px-3 py-1.5 rounded-lg border border-red-500/30 flex items-center gap-1.5"
+                  className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors px-2 sm:px-3 py-1.5 rounded-lg border border-red-500/30 flex items-center gap-1.5 whitespace-nowrap"
                   title="Limpiar borrador del navegador"
                 >
-                  🗑️ Limpiar Borrador
+                  🗑️ <span className="hidden sm:inline">Limpiar</span>
                 </button>
               )}
               
-              <div className={`px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 ${
+              <div className={`px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap ${
                 estado === 'APROBADA' ? 'bg-green-500/20 text-green-400' :
                 estado === 'CAMBIOS_SOLICITADOS' ? 'bg-orange-500/20 text-orange-400' :
                 estado === 'PENDIENTE_MENTOR' || estado === 'PENDIENTE_ADMIN' ? 'bg-yellow-500/20 text-yellow-400' :
@@ -1541,15 +1541,15 @@ export default function CartaWizardRelacional() {
           </div>
 
           {/* Progress Steps */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-2 scrollbar-thin">
             {WIZARD_STEPS.map((step, idx) => (
-              <div key={step.id} className="flex items-center flex-1">
+              <div key={step.id} className="flex items-center flex-1 min-w-[120px] sm:min-w-0">
                 <button
                   onClick={() => {
                     if (step.id <= currentStep) setCurrentStep(step.id);
                   }}
                   disabled={step.id > currentStep}
-                  className={`flex items-center gap-2 p-3 rounded-xl flex-1 transition-all ${
+                  className={`flex items-center gap-1 sm:gap-2 p-2 sm:p-3 rounded-xl flex-1 transition-all ${
                     currentStep === step.id 
                       ? 'bg-purple-600 text-white' 
                       : currentStep > step.id
@@ -1557,15 +1557,15 @@ export default function CartaWizardRelacional() {
                       : 'bg-gray-800 text-gray-500 cursor-not-allowed'
                   }`}
                 >
-                  <span className="text-2xl">{step.emoji}</span>
-                  <div className="text-left">
-                    <div className="text-xs font-bold">{step.title}</div>
-                    <div className="text-xs opacity-75">{step.subtitle}</div>
+                  <span className="text-lg sm:text-2xl">{step.emoji}</span>
+                  <div className="text-left flex-1 min-w-0">
+                    <div className="text-[10px] sm:text-xs font-bold truncate">{step.title}</div>
+                    <div className="text-[9px] sm:text-xs opacity-75 truncate hidden sm:block">{step.subtitle}</div>
                   </div>
-                  {currentStep > step.id && <Check size={16} className="ml-auto" />}
+                  {currentStep > step.id && <Check size={14} className="ml-auto hidden sm:block sm:w-4 sm:h-4" />}
                 </button>
                 {idx < WIZARD_STEPS.length - 1 && (
-                  <ChevronRight className="text-gray-600 mx-1" size={20} />
+                  <ChevronRight className="text-gray-600 mx-0.5 sm:mx-1 flex-shrink-0" size={16} />
                 )}
               </div>
             ))}
@@ -1581,16 +1581,16 @@ export default function CartaWizardRelacional() {
       </div>
 
       {/* CONTENT */}
-      <div className="max-w-5xl mx-auto p-6">
+      <div className="max-w-5xl mx-auto p-3 sm:p-4 md:p-6">
         {/* Paso 1: Declaración del Ser (NUEVO) */}
         {currentStep === 1 && (
           <div className="space-y-4">
-            <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/30 rounded-xl p-6 mb-6">
-              <div className="flex items-start gap-3">
-                <div className="text-4xl">🧘</div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-white mb-2">Antes de definir qué quieres tener, define quién quieres ser</h3>
-                  <p className="text-sm text-purple-200 mb-4">
+            <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/30 rounded-lg p-3 sm:p-4 mb-4">
+              <div className="flex items-start gap-2">
+                <div className="text-xl sm:text-2xl">🧘</div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm sm:text-base font-bold text-white mb-1.5">Antes de definir qué quieres tener, define quién quieres ser</h3>
+                  <p className="text-xs text-purple-200 mb-3">
                     <strong>💡 Instrucción:</strong> Escribe en presente quién te comprometes ser para alcanzar tus metas. Todas las declaraciones DEBEN comenzar con <span className="text-purple-300 font-bold">"Yo soy" + manera de SER</span>.
                   </p>
                   
@@ -1599,18 +1599,18 @@ export default function CartaWizardRelacional() {
                     onClick={() => setShowQuantumSelectionModal(true)}
                     disabled={isReadOnly}
                     className="relative bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 
-                             disabled:from-slate-700 disabled:to-slate-700 text-white px-5 py-3 rounded-xl font-bold 
-                             transition-all flex items-center gap-3 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/60 
+                             disabled:from-slate-700 disabled:to-slate-700 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold 
+                             transition-all flex items-center gap-2 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/60 
                              hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
-                             border-2 border-cyan-400/30 overflow-hidden group"
+                             border border-cyan-400/30 overflow-hidden group"
                   >
                     {/* Glow effect */}
                     <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                     
                     {/* Animated orb */}
                     <div className="relative">
-                      <div className="absolute inset-0 bg-cyan-300 rounded-full blur-md opacity-50 animate-pulse"></div>
-                      <Atom size={22} className="relative text-white animate-spin" style={{ animationDuration: '8s' }} />
+                      <div className="absolute inset-0 bg-cyan-300 rounded-full blur-sm opacity-50 animate-pulse"></div>
+                      <Atom size={16} className="relative text-white animate-spin sm:w-5 sm:h-5" style={{ animationDuration: '8s' }} />
                     </div>
                     
                     <span className="relative">✨ ¿No sabes que escribir? Pide ayuda a QUANTUM</span>
@@ -2368,26 +2368,26 @@ export default function CartaWizardRelacional() {
 
         {/* Paso 5: Avatar Cuántico */}
         {currentStep === 5 && (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {loadingAvatar ? (
-              <div className="bg-gradient-to-r from-purple-900/40 via-blue-900/40 to-purple-900/40 border-2 border-purple-500/50 rounded-xl p-12 text-center">
-                <div className="flex flex-col items-center gap-6">
-                  <Loader2 className="w-16 h-16 text-purple-400 animate-spin" />
-                  <p className="text-xl text-white">Cargando tu Avatar Cuántico...</p>
+              <div className="bg-gradient-to-r from-purple-900/40 via-blue-900/40 to-purple-900/40 border-2 border-purple-500/50 rounded-xl p-8 sm:p-12 text-center">
+                <div className="flex flex-col items-center gap-4 sm:gap-6">
+                  <Loader2 className="w-12 h-12 sm:w-16 sm:h-16 text-purple-400 animate-spin" />
+                  <p className="text-lg sm:text-xl text-white">Cargando tu Avatar Cuántico...</p>
                 </div>
               </div>
             ) : (
-              <div className="bg-gradient-to-r from-purple-900/40 via-blue-900/40 to-purple-900/40 border-2 border-purple-500/50 rounded-xl p-8 text-center">
-                <div className="flex flex-col items-center gap-6">
-                  <div className="w-24 h-24 bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 rounded-full flex items-center justify-center animate-pulse">
-                    <Sparkles className="text-white" size={48} />
+              <div className="bg-gradient-to-r from-purple-900/40 via-blue-900/40 to-purple-900/40 border-2 border-purple-500/50 rounded-xl p-4 sm:p-6 md:p-8 text-center">
+                <div className="flex flex-col items-center gap-4 sm:gap-6">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 rounded-full flex items-center justify-center animate-pulse">
+                    <Sparkles className="text-white" size={32} />
                   </div>
                   
-                  <div className="space-y-3">
-                    <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 uppercase tracking-wider">
+                  <div className="space-y-2 sm:space-y-3">
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 uppercase tracking-wider">
                       ⚡ Tu Rol en el Consejo Quantum Matter
                     </h2>
-                    <p className="text-xl text-white max-w-2xl mx-auto">
+                    <p className="text-sm sm:text-base md:text-xl text-white max-w-2xl mx-auto px-2">
                       {hasAvatar 
                         ? '¡Ya tienes tu Perfil Ejecutivo! Puedes enviarlo a revisión o regenerar uno nuevo.' 
                         : 'Antes de enviar tus objetivos, vamos a configurar tu Rol en el Consejo Quantum Matter que representará tu identidad corporativa en la plataforma.'
@@ -2396,7 +2396,7 @@ export default function CartaWizardRelacional() {
                   </div>
 
                   {hasAvatar ? (
-                    <div className="flex flex-col items-center gap-4">
+                    <div className="flex flex-col items-center gap-3 sm:gap-4">
                       {/* Mostrar el avatar generado */}
                       {avatarUrl && (
                         <div className="relative group">
@@ -2404,29 +2404,29 @@ export default function CartaWizardRelacional() {
                           <img 
                             src={avatarUrl} 
                             alt="Perfil Ejecutivo del Consejo" 
-                            className="relative w-48 h-48 rounded-2xl object-cover border-4 border-purple-500/50 shadow-2xl shadow-purple-500/50"
+                            className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-2xl object-cover border-4 border-purple-500/50 shadow-2xl shadow-purple-500/50"
                           />
                         </div>
                       )}
                       
-                      <div className="flex items-center gap-2 bg-green-500/20 border border-green-500/50 rounded-lg px-6 py-3">
-                        <CheckCircle2 className="text-green-400" size={24} />
-                        <span className="text-green-300 font-bold">Perfil Ejecutivo Generado</span>
+                      <div className="flex items-center gap-2 bg-green-500/20 border border-green-500/50 rounded-lg px-4 sm:px-6 py-2 sm:py-3">
+                        <CheckCircle2 className="text-green-400" size={20} />
+                        <span className="text-sm sm:text-base text-green-300 font-bold">Perfil Ejecutivo Generado</span>
                       </div>
                       <button
                         onClick={() => setShowAvatarModal(true)}
-                        className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition-all flex items-center gap-2"
+                        className="px-4 sm:px-6 py-2 sm:py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition-all flex items-center gap-2 text-sm sm:text-base"
                       >
-                        <Sparkles size={20} />
+                        <Sparkles size={18} />
                         Regenerar Perfil del Consejo
                       </button>
                     </div>
                   ) : (
                     <button
                       onClick={() => setShowAvatarModal(true)}
-                      className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl font-black uppercase tracking-wider transition-all shadow-lg shadow-purple-500/50 flex items-center gap-3 text-lg"
+                      className="px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-xl font-black uppercase tracking-wider transition-all shadow-lg shadow-purple-500/50 flex items-center gap-2 sm:gap-3 text-sm sm:text-base md:text-lg"
                     >
-                      <Sparkles size={24} />
+                      <Sparkles size={20} />
                       Configurar Rol en el Consejo
                     </button>
                   )}
@@ -2435,12 +2435,12 @@ export default function CartaWizardRelacional() {
             )}
 
             {/* Info adicional */}
-            <div className="bg-blue-900/20 border border-blue-500/30 rounded-xl p-6">
-              <h3 className="text-blue-300 font-bold mb-3 flex items-center gap-2">
-                <Brain size={20} />
+            <div className="bg-blue-900/20 border border-blue-500/30 rounded-xl p-4 sm:p-6">
+              <h3 className="text-sm sm:text-base text-blue-300 font-bold mb-2 sm:mb-3 flex items-center gap-2">
+                <Brain size={18} />
                 ¿Qué es el Perfil del Consejo Quantum Matter?
               </h3>
-              <ul className="space-y-2 text-gray-300 text-sm">
+              <ul className="space-y-2 text-gray-300 text-xs sm:text-sm">
                 <li className="flex items-start gap-2">
                   <span className="text-purple-400 mt-1">•</span>
                   <span>Una representación visual única generada por IA basada en tus metas y objetivos corporativos</span>
@@ -2461,7 +2461,7 @@ export default function CartaWizardRelacional() {
 
       {/* NAVIGATION FOOTER */}
       {!isReadOnly && currentStep !== 3 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-[#1a1b1f] border-t border-gray-800 p-4 z-50">
+        <div className="fixed bottom-0 left-0 right-0 bg-[#1a1b1f] border-t border-gray-800 p-3 sm:p-4 z-50">
           <div className="max-w-5xl mx-auto flex items-center justify-between">
           <button
             onClick={() => {
@@ -2481,22 +2481,23 @@ export default function CartaWizardRelacional() {
               }
             }}
             disabled={currentStep === 1}
-            className="px-6 py-3 bg-gray-800 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            className="px-4 sm:px-6 py-2 sm:py-3 bg-gray-800 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-sm sm:text-base"
           >
-            <ChevronLeft size={20} />
-            Anterior
+            <ChevronLeft size={18} className="sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">Anterior</span>
+            <span className="sm:hidden">Atrás</span>
           </button>
 
           <div className="text-center">
-            <p className="text-sm text-gray-400">
+            <p className="text-xs sm:text-sm text-gray-400">
               {currentStep < 4 ? `Paso ${currentStep} de 5` : currentStep === 4 ? `Meta ${currentMetaIndex + 1} de ${metasFlattened.length}` : 'Paso 5 de 5'}
             </p>
-            <div className="flex gap-2 justify-center mt-2">
-              <div className={`w-2 h-2 rounded-full ${validateStep1() ? 'bg-green-500' : 'bg-gray-600'}`} />
-              <div className={`w-2 h-2 rounded-full ${validateStep2() ? 'bg-green-500' : 'bg-gray-600'}`} />
-              <div className={`w-2 h-2 rounded-full ${validateStep3() ? 'bg-green-500' : 'bg-gray-600'}`} />
-              <div className={`w-2 h-2 rounded-full ${validateStep4() ? 'bg-green-500' : 'bg-gray-600'}`} />
-              <div className={`w-2 h-2 rounded-full ${hasAvatar ? 'bg-green-500' : 'bg-gray-600'}`} />
+            <div className="flex gap-1 sm:gap-2 justify-center mt-1 sm:mt-2">
+              <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${validateStep1() ? 'bg-green-500' : 'bg-gray-600'}`} />
+              <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${validateStep2() ? 'bg-green-500' : 'bg-gray-600'}`} />
+              <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${validateStep3() ? 'bg-green-500' : 'bg-gray-600'}`} />
+              <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${validateStep4() ? 'bg-green-500' : 'bg-gray-600'}`} />
+              <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${hasAvatar ? 'bg-green-500' : 'bg-gray-600'}`} />
             </div>
           </div>
 
@@ -2539,7 +2540,7 @@ export default function CartaWizardRelacional() {
             </button>
           ) : (
             // En el paso 5, mostrar "Enviar" cuando se tenga avatar
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {/* Lógica de habilitación del botón:
                   - Debe pasar TODAS las validaciones (canSubmit)
                   - Si estado es BORRADOR: Habilitado solo si canSubmit()
@@ -2573,24 +2574,26 @@ export default function CartaWizardRelacional() {
                     <button
                       onClick={handleSubmit}
                       disabled={submitting || !shouldEnable}
-                      className={`px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold flex items-center gap-2 hover:shadow-lg hover:scale-105 disabled:cursor-not-allowed transition-all ${buttonOpacity}`}
+                      className={`px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold flex items-center gap-2 hover:shadow-lg hover:scale-105 disabled:cursor-not-allowed transition-all text-sm sm:text-base ${buttonOpacity}`}
                     >
                       {submitting ? (
                         <>
-                          <Loader2 size={20} className="animate-spin" />
-                           Consultando Licencia espere un momento...
+                          <Loader2 size={18} className="animate-spin sm:w-5 sm:h-5" />
+                          <span className="hidden sm:inline">Consultando Licencia espere un momento...</span>
+                          <span className="sm:hidden">Enviando...</span>
                         </>
                       ) : (
                         <>
-                          <Check size={20} />
-                          {estado === 'BORRADOR' ? 'Enviar para Revisión' : 'Reenviar Cambios'}
+                          <Check size={18} className="sm:w-5 sm:h-5" />
+                          <span className="hidden sm:inline">{estado === 'BORRADOR' ? 'Enviar para Revisión' : 'Reenviar Cambios'}</span>
+                          <span className="sm:hidden">Enviar</span>
                         </>
                       )}
                     </button>
                     
                     {/* Indicador visual de validación */}
                     {!allStepsValid && (
-                      <div className="text-xs text-yellow-400 max-w-xs">
+                      <div className="text-[10px] sm:text-xs text-yellow-400 max-w-xs">
                         ⚠️ Completa todos los pasos:
                         {!validateStep1() && <div>• Paso 1: Declaraciones del Ser</div>}
                         {!validateStep2() && <div>• Paso 2: Objetivos</div>}
@@ -2623,25 +2626,25 @@ export default function CartaWizardRelacional() {
 
       {/* MODAL DE ERROR/ÉXITO MEJORADO */}
       {errorModal.show && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in">
-          <div className="bg-gradient-to-br from-gray-900 to-gray-800 border-2 border-purple-500/50 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="flex flex-col items-center text-center gap-4">
-              <div className={`text-6xl ${errorModal.title.includes('✅') ? 'animate-bounce' : 'animate-pulse'}`}>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-3 sm:p-4 animate-in fade-in">
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 border-2 border-purple-500/50 rounded-2xl max-w-md w-full p-4 sm:p-6 shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
+            <div className="flex flex-col items-center text-center gap-3 sm:gap-4">
+              <div className={`text-4xl sm:text-5xl md:text-6xl ${errorModal.title.includes('✅') ? 'animate-bounce' : 'animate-pulse'}`}>
                 {errorModal.title.includes('🗑️') ? '🗑️' : errorModal.title.includes('✅') ? '🎉' : '⚠️'}
               </div>
-              <h3 className="text-2xl font-bold text-white">
+              <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white">
                 {errorModal.title}
               </h3>
-              <p className="text-gray-300 leading-relaxed whitespace-pre-line">
+              <p className="text-sm sm:text-base text-gray-300 leading-relaxed whitespace-pre-line">
                 {errorModal.message}
               </p>
               
               {/* Botones especiales para confirmación de limpiar borrador */}
               {errorModal.title.includes('🗑️') ? (
-                <div className="flex gap-3 w-full mt-2">
+                <div className="flex gap-2 sm:gap-3 w-full mt-2">
                   <button
                     onClick={() => setErrorModal({ show: false, title: '', message: '' })}
-                    className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-xl transition-all"
+                    className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-xl transition-all text-sm sm:text-base"
                   >
                     Cancelar
                   </button>
@@ -2653,7 +2656,7 @@ export default function CartaWizardRelacional() {
                       setErrorModal({ show: false, title: '', message: '' });
                       window.location.reload();
                     }}
-                    className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:shadow-lg hover:scale-105 text-white font-bold py-3 px-6 rounded-xl transition-all"
+                    className="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:shadow-lg hover:scale-105 text-white font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-xl transition-all text-sm sm:text-base"
                   >
                     Sí, Limpiar
                   </button>
@@ -2661,7 +2664,7 @@ export default function CartaWizardRelacional() {
               ) : (
                 <button
                   onClick={() => setErrorModal({ show: false, title: '', message: '' })}
-                  className="mt-4 w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-lg hover:scale-105 text-white font-bold py-3 px-6 rounded-xl transition-all"
+                  className="mt-2 sm:mt-4 w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-lg hover:scale-105 text-white font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-xl transition-all text-sm sm:text-base"
                 >
                   Entendido
                 </button>
@@ -2682,31 +2685,31 @@ export default function CartaWizardRelacional() {
 
       {/* MODAL DE SUGERENCIAS QUANTUM */}
       {showSuggestionsModal.show && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in">
-          <div className="bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900 border-2 border-purple-500/50 rounded-2xl max-w-3xl w-full p-8 shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[100] p-3 sm:p-4 animate-in fade-in">
+          <div className="bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900 border-2 border-purple-500/50 rounded-2xl max-w-3xl w-full p-4 sm:p-6 md:p-8 shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <Atom className="w-10 h-10 text-purple-400 animate-spin" style={{ animationDuration: '3s' }} />
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                <div className="relative flex-shrink-0">
+                  <Atom className="w-8 h-8 sm:w-10 sm:h-10 text-purple-400 animate-spin" style={{ animationDuration: '3s' }} />
                   <div className="absolute inset-0 bg-purple-500/20 blur-xl rounded-full"></div>
                 </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-white">QUANTUM Estratega</h3>
-                  <p className="text-purple-300 text-sm">Objetivos de Alto Impacto - {AREAS.find(a => a.key === showSuggestionsModal.area)?.name}</p>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white truncate">QUANTUM Estratega</h3>
+                  <p className="text-purple-300 text-xs sm:text-sm truncate">Objetivos de Alto Impacto - {AREAS.find(a => a.key === showSuggestionsModal.area)?.name}</p>
                 </div>
               </div>
               <button
                 onClick={handleCloseQuantumModal}
-                className="text-gray-400 hover:text-white transition-colors"
+                className="text-gray-400 hover:text-white transition-colors flex-shrink-0 ml-2"
               >
-                <span className="text-2xl">✕</span>
+                <span className="text-xl sm:text-2xl">✕</span>
               </button>
             </div>
 
             {/* Instrucciones */}
-            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 mb-6">
-              <p className="text-blue-200 text-sm">
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 sm:p-4 mb-4 sm:mb-6">
+              <p className="text-blue-200 text-xs sm:text-sm">
                 💡 <strong>Selecciona uno o varios objetivos</strong> que resuenen contigo. Enfócate en el resultado medible. <strong>Las fechas las definirás después.</strong>
               </p>
             </div>

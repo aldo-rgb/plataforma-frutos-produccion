@@ -78,6 +78,7 @@ export default function SchoolAdminDashboard() {
   const [loadingConsejo, setLoadingConsejo] = useState(true);
   const [visiones, setVisiones] = useState<any[]>([]);
   const [loadingVisiones, setLoadingVisiones] = useState(true);
+  const [notificacionesLideres, setNotificacionesLideres] = useState(0);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -122,12 +123,23 @@ export default function SchoolAdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const res = await fetch('/api/school-admin/dashboard');
-      const result = await res.json();
+      // Cargar dashboard y notificaciones en paralelo
+      const [resDashboard, resNotificaciones] = await Promise.all([
+        fetch('/api/school-admin/dashboard'),
+        fetch('/api/school-admin/notificaciones/lideres')
+      ]);
 
-      console.log('Dashboard API response:', result); // Debug log
+      const result = await resDashboard.json();
+      const notificaciones = await resNotificaciones.json();
 
-      if (res.ok) {
+      console.log('Dashboard API response:', result);
+      console.log('📊 Notificaciones de líderes:', notificaciones);
+
+      // Establecer el contador de notificaciones
+      const pendingLeaderApprovals = notificaciones.notificaciones ? (notificaciones.total || 0) : 0;
+      setNotificacionesLideres(pendingLeaderApprovals);
+
+      if (resDashboard.ok) {
         // Transformar los datos del API al formato esperado por el componente
         const transformedData: DashboardData = {
           overview: {
@@ -167,6 +179,7 @@ export default function SchoolAdminDashboard() {
           totalPurchased: result.stats.totalPurchased || 0,
           totalAllocated: result.stats.totalAllocated || 0,
           pendingPayment: result.pendingPayment,
+          pendingLeaderApprovals: pendingLeaderApprovals,
           mentorCosts: result.mentorCosts,
         };
         

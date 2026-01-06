@@ -181,12 +181,12 @@ export default function AdminPerformancePage() {
     <div className="max-w-7xl mx-auto space-y-8 pb-20">
       
       {/* HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-white/10 pb-6">
-        <div>
-          <h1 className="text-3xl font-black italic text-white tracking-tight uppercase flex items-center gap-3">
+      <div className="flex flex-col md:flex-row justify-between items-center md:items-end gap-6 border-b border-white/10 pb-6">
+        <div className="text-center md:text-left w-full">
+          <h1 className="text-3xl font-black italic text-white tracking-tight uppercase flex items-center justify-center md:justify-start gap-3">
             Comando <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">Central</span>
           </h1>
-          <p className="text-slate-400 mt-2">Monitoreo de rendimiento de Mentores y Game Changers.</p>
+          <p className="text-slate-400 mt-2">Monitoreo de rendimiento de Visiones y Mentores.</p>
         </div>
       </div>
 

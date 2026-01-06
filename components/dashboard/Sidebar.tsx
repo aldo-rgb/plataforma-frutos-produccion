@@ -87,7 +87,16 @@ export function Sidebar({ usuario, isMobile = false }: SidebarProps) {
   }, [usuario.rol]);
 
   const handleLogout = async () => {
-    await signOut({ callbackUrl: '/login' });
+    try {
+      await signOut({ 
+        callbackUrl: '/login',
+        redirect: true 
+      });
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+      // Forzar redirección manual si falla
+      window.location.href = '/login';
+    }
   };
 
   // Lógica de bloqueo visual basada en TIER
@@ -199,8 +208,8 @@ export function Sidebar({ usuario, isMobile = false }: SidebarProps) {
               <span className="font-bold text-xl text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 tracking-wider">
                 QUANTUM
               </span>
-              <span className="text-[9px] text-slate-500 uppercase tracking-widest -mt-1">
-                Neural Network
+              <span className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold -mt-0.5">
+                MATTER
               </span>
             </div>
           </>

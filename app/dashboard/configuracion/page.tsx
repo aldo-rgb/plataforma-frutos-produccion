@@ -15,16 +15,16 @@ export default function ConfiguracionPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6">
+    <div className="min-h-screen bg-slate-950 p-4 md:p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">⚙️ Configuración</h1>
-          <p className="text-slate-400">Personaliza tu experiencia en F.R.U.T.O.S.</p>
+        <div className="mb-6 md:mb-8 text-center md:text-left">
+          <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">⚙️ Configuración</h1>
+          <p className="text-sm md:text-base text-slate-400">Personaliza tu experiencia en F.R.U.T.O.S.</p>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto">
+        {/* Tabs - Stack vertical en móvil, horizontal en desktop */}
+        <div className="flex flex-col md:flex-row gap-3 mb-6">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             if (tab.href) {
@@ -32,10 +32,10 @@ export default function ConfiguracionPage() {
                 <Link
                   key={tab.id}
                   href={tab.href}
-                  className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold whitespace-nowrap transition-all bg-slate-900 text-slate-400 hover:bg-slate-800"
+                  className="flex items-center justify-center md:justify-start gap-3 px-5 py-4 rounded-xl font-semibold transition-all bg-slate-900 text-slate-400 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 shadow-lg w-full"
                 >
-                  <Icon className="w-5 h-5" />
-                  {tab.label}
+                  <Icon className="w-6 h-6 flex-shrink-0" />
+                  <span className="text-base">{tab.label}</span>
                 </Link>
               );
             }
@@ -43,21 +43,21 @@ export default function ConfiguracionPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3 rounded-lg font-semibold whitespace-nowrap transition-all ${
+                className={`flex items-center justify-center md:justify-start gap-3 px-5 py-4 rounded-xl font-semibold transition-all w-full shadow-lg ${
                   activeTab === tab.id
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white border border-blue-400'
+                    : 'bg-slate-900 text-slate-400 hover:bg-slate-800 border border-slate-800 hover:border-slate-700'
                 }`}
               >
-                <Icon className="w-5 h-5" />
-                {tab.label}
+                <Icon className="w-6 h-6 flex-shrink-0" />
+                <span className="text-base">{tab.label}</span>
               </button>
             );
           })}
         </div>
 
         {/* Content */}
-        <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 mb-6">
+        <div className="bg-slate-900 rounded-xl border border-slate-800 p-4 md:p-6 mb-6 shadow-xl">
           {activeTab === 'privacy' && (
             <div>
               <PrivacySettings />
@@ -73,21 +73,21 @@ export default function ConfiguracionPage() {
         </div>
 
         {/* Configuración Avanzada */}
-        <div className="bg-gradient-to-br from-purple-900/20 to-indigo-900/20 rounded-xl border border-purple-500/30 p-6">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-purple-500/20 rounded-lg">
+        <div className="bg-gradient-to-br from-purple-900/20 to-indigo-900/20 rounded-xl border border-purple-500/30 p-4 md:p-6 shadow-xl">
+          <div className="flex flex-col md:flex-row items-start gap-4">
+            <div className="p-3 bg-purple-500/20 rounded-lg mx-auto md:mx-0">
               <GraduationCap className="w-6 h-6 text-purple-400" />
             </div>
-            <div className="flex-1">
-              <h3 className="text-xl font-bold text-white mb-1">Configuración Avanzada</h3>
-              <p className="text-sm text-slate-400 mb-4">Solo para mentores y entrenadores</p>
-              <p className="text-slate-300 mb-4">
+            <div className="flex-1 text-center md:text-left">
+              <h3 className="text-lg md:text-xl font-bold text-white mb-1">Configuración Avanzada</h3>
+              <p className="text-xs md:text-sm text-slate-400 mb-3 md:mb-4">Solo para mentores y entrenadores</p>
+              <p className="text-sm md:text-base text-slate-300 mb-4 leading-relaxed">
                 ¿Tienes certificado de entrenador en transformacion cuántica y te gustaría convertirte en mentor para guiar a otros en su camino de transformación? 
                 Aplica ahora y comparte tu experiencia con la comunidad.
               </p>
               <Link
                 href="/dashboard/solicitar-mentor"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-lg transition-all shadow-lg shadow-purple-500/20"
+                className="inline-flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 w-full md:w-auto text-base"
               >
                 <GraduationCap className="w-5 h-5" />
                 Solicitar ser Mentor

@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useAllowedMenu } from '@/hooks/useAllowedMenu';
 import * as Icons from 'lucide-react';
+import { signOut } from 'next-auth/react';
 
 interface DynamicSidebarProps {
   usuario: {
@@ -116,7 +117,17 @@ export function DynamicSidebar({ usuario }: DynamicSidebarProps) {
       {/* Footer del Sidebar */}
       <div className="p-4 border-t border-slate-800">
         <button 
-          onClick={() => {/* Lógica de logout */}}
+          onClick={async () => {
+            try {
+              await signOut({ 
+                callbackUrl: '/login',
+                redirect: true 
+              });
+            } catch (error) {
+              console.error('Error al cerrar sesión:', error);
+              window.location.href = '/login';
+            }
+          }}
           className="w-full flex items-center gap-2 px-3 py-2 text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
         >
           <Icons.LogOut className="w-4 h-4" />

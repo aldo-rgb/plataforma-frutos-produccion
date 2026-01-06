@@ -1,0 +1,136 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import prisma from '@/lib/prisma';
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession();
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+    }
+
+    const { code } = await request.json();
+
+    if (!code || typeof code !== 'string') {
+      return NextResponse.json({ error: 'Código inválido' }, { status: 400 });
+    }
+
+    // Normalizar el código (quitar guiones y convertir a mayúsculas)
+    const normalizedCode = code.replace(/-/g, '').toUpperCase().trim();
+
+    // Buscar el código en la base de datos
+    const licenseCode = await prisma.licenseCode.findUnique({
+      where: { code: normalizedCode },
+      include: {
+        organization: true
+      }
+    });
+
+    if (!licenseCode) {
+      return NextResponse.json({ 
+        error: 'Código no válido',
+        message: 'El código ingresado no existe o ha expirado'
+      }, { status: 404 });
+    }
+
+    // Verificar si el código ya fue usado
+    if (licenseCode.used) {
+      return NextResponse.json({ 
+        error: 'Código ya utilizado',
+        message: 'Este código ya ha sido usado previamente'
+      }, { status: 400 });
+    }
+
+    // Verificar si el código ha expirado
+    if (licenseCode.expiresAt && licenseCode.expiresAt < new Date()) {
+      return NextResponse.json({ 
+        error: 'Código expirado',
+        message: 'Este código ha expirado'
+      }, { status: 400 });
+    }
+
+    // Verificar el tipo de código
+    if (licenseCode.type !== 'MENTOR_MEMBERSHIP') {
+      return NextResponse.json({ 
+        error: 'Tipo de código inválido',
+        message: 'Este código no es válido para membresía de mentor'
+      }, { status: 400 });
+    }
+
+    // Buscar al usuario y su solicitud más reciente
+    const user = await prisma.usuario.findUnique({
+      where: { email: session.user.email }
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
+    // Buscar la solicitud más reciente del usuario
+    const application = await prisma.mentorApplication.findFirst({
+      where: { usuarioId: user.id },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    if (!application) {
+      return NextResponse.json({ 
+        error: 'No hay solicitud pendiente',
+        message: 'No se encontró una solicitud de mentor pendiente de pago'
+      }, { status: 404 });
+    }
+
+    if (application.status !== 'DRAFT') {
+      return NextResponse.json({ 
+        error: 'Solicitud ya procesada',
+        message: 'Tu solicitud ya fue procesada anteriormente'
+      }, { status: 400 });
+    }
+
+    // Iniciar transacción para actualizar todo
+    await prisma.$transaction(async (tx) => {
+      // 1. Marcar el código como usado
+      await tx.licenseCode.update({
+        where: { id: licenseCode.id },
+        data: {
+          used: true,
+          usedAt: new Date(),
+          usedBy: user.id
+        }
+      });
+
+      // 2. Actualizar la aplicación a PENDING
+      await tx.mentorApplication.update({
+        where: { id: application.id },
+        data: {
+          status: 'PENDING',
+          paidAt: new Date(),
+          paymentMethod: 'LICENSE_CODE',
+          licenseCodeId: licenseCode.id
+        }
+      });
+
+      // 3. Crear notificación para el usuario
+      await tx.notification.create({
+        data: {
+          userId: user.id,
+          title: '¡Código aplicado con éxito!',
+          message: 'Tu código de licencia ha sido validado. Tu solicitud de mentor está ahora en revisión.',
+          type: 'SYSTEM_ALERT',
+          isRead: false
+        }
+      });
+    });
+
+    return NextResponse.json({ 
+      success: true,
+      message: '¡Código validado exitosamente! Tu solicitud está ahora en revisión.'
+    });
+
+  } catch (error) {
+    console.error('Error validando código:', error);
+    return NextResponse.json({ 
+      error: 'Error interno del servidor',
+      message: 'Hubo un error al validar el código'
+    }, { status: 500 });
+  }
+}

@@ -156,19 +156,19 @@ export default function DisciplineScheduleManager() {
       )}
 
       {/* Información del Club de las 5 AM */}
-      <div className="bg-gradient-to-r from-orange-900/20 to-orange-800/20 border border-orange-500/30 rounded-xl p-6 mb-8">
-        <div className="flex items-start gap-4">
-          <div className="bg-orange-500/20 p-3 rounded-lg">
-            <Clock className="w-8 h-8 text-orange-400" />
+      <div className="bg-gradient-to-r from-orange-900/20 to-orange-800/20 border border-orange-500/30 rounded-xl p-4 lg:p-6 mb-6 lg:mb-8">
+        <div className="flex flex-col sm:flex-row items-start gap-3 lg:gap-4">
+          <div className="bg-orange-500/20 p-2.5 lg:p-3 rounded-lg">
+            <Clock className="w-6 h-6 lg:w-8 lg:h-8 text-orange-400" />
           </div>
           <div className="flex-1">
-            <h2 className="text-2xl font-bold text-white mb-2">🔥 Club de las 5 AM</h2>
-            <p className="text-slate-300 mb-3">
+            <h2 className="text-xl lg:text-2xl font-bold text-white mb-2">🔥 Club de las 5 AM</h2>
+            <p className="text-slate-300 text-sm lg:text-base mb-3">
               Configura tus bloques de 15 min. <strong>RECUERDA:</strong> Solo permitido de <span className="text-orange-400 font-bold">05:00 a 08:00 AM</span>.
             </p>
-            <div className="bg-orange-900/30 border border-orange-500/30 rounded-lg p-3 flex items-center gap-2">
-              <Info className="w-5 h-5 text-orange-400 flex-shrink-0" />
-              <p className="text-sm text-orange-200">
+            <div className="bg-orange-900/30 border border-orange-500/30 rounded-lg p-2.5 lg:p-3 flex items-start gap-2">
+              <Info className="w-4 h-4 lg:w-5 lg:h-5 text-orange-400 flex-shrink-0 mt-0.5" />
+              <p className="text-xs lg:text-sm text-orange-200">
                 <strong>Restricción activa:</strong> Solo horarios entre 05:00 - 08:00. Estas horas se bloquearán automáticamente en tu calendario de disponibilidad general.
               </p>
             </div>
@@ -177,12 +177,12 @@ export default function DisciplineScheduleManager() {
       </div>
 
       {/* Contenedor principal */}
-      <div className="bg-slate-900 rounded-xl border border-slate-700 p-6">
+      <div className="bg-slate-900 rounded-xl border border-slate-700 p-4 lg:p-6">
         
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
-            <h3 className="text-xl font-bold text-white mb-1">Selecciona tus días activos</h3>
-            <p className="text-sm text-slate-400">
+            <h3 className="text-lg lg:text-xl font-bold text-white mb-1">Selecciona tus días activos</h3>
+            <p className="text-xs lg:text-sm text-slate-400">
               {contarDiasActivos()} de 7 días configurados
             </p>
           </div>
@@ -190,24 +190,24 @@ export default function DisciplineScheduleManager() {
           <button
             onClick={guardarHorarios}
             disabled={guardando}
-            className="bg-white hover:bg-gray-100 text-black px-6 py-3 rounded-lg font-bold flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+            className="bg-white hover:bg-gray-100 text-black px-4 lg:px-6 py-2.5 lg:py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg text-sm lg:text-base w-full sm:w-auto"
           >
             {guardando ? (
               <>
-                <Loader2 size={20} className="animate-spin" />
-                Guardando...
+                <Loader2 size={18} className="animate-spin lg:w-5 lg:h-5" />
+                <span>Guardando...</span>
               </>
             ) : (
               <>
-                <Save size={20} />
-                Guardar Todo
+                <Save size={18} className="lg:w-5 lg:h-5" />
+                <span>Guardar Todo</span>
               </>
             )}
           </button>
         </div>
 
         {/* Grid de días */}
-        <div className="space-y-4">
+        <div className="space-y-3 lg:space-y-4">
           {DIAS_SEMANA.map((dia, index) => {
             const horasDelDia = horarios[index] || [];
             const diaActivo = horasDelDia.length > 0;
@@ -215,42 +215,40 @@ export default function DisciplineScheduleManager() {
             return (
               <div 
                 key={index}
-                className={`border-2 rounded-xl p-5 transition-all ${
+                className={`border-2 rounded-xl p-3 lg:p-5 transition-all ${
                   diaActivo 
                     ? 'border-purple-500 bg-purple-900/20' 
                     : 'border-slate-700 bg-slate-800/50'
                 }`}
               >
-                <div className="flex flex-col md:flex-row md:items-center gap-4">
+                <div className="flex flex-col gap-3 lg:gap-4">
                   
                   {/* Checkbox y día */}
-                  <div className="flex items-center gap-3 md:w-48">
+                  <div className="flex items-center gap-3">
                     <input
                       type="checkbox"
                       checked={diaActivo}
                       onChange={(e) => toggleDia(index, e.target.checked)}
                       className="w-5 h-5 rounded border-slate-600 text-purple-600 focus:ring-purple-500 focus:ring-offset-slate-900 cursor-pointer"
                     />
-                    <label className="text-lg font-bold text-white cursor-pointer">
+                    <label className="text-base lg:text-lg font-bold text-white cursor-pointer">
                       {dia}
                     </label>
                   </div>
 
                   {/* Horas disponibles */}
                   {diaActivo ? (
-                    <div className="flex-1 flex items-center gap-4">
-                      <div className="flex items-center gap-2 text-sm">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 lg:gap-4 pl-8">
+                      <div className="flex flex-wrap items-center gap-2 text-xs lg:text-sm">
                         <span className="text-slate-400">Hora inicio:</span>
-                        <div className="bg-black/30 px-3 py-1.5 rounded text-white font-mono">
+                        <div className="bg-black/30 px-2.5 lg:px-3 py-1 lg:py-1.5 rounded text-white font-mono text-xs lg:text-sm">
                           {horasDelDia[0] || '05:00'} a.m.
                         </div>
-                      </div>
                       
-                      <span className="text-slate-500">-</span>
+                        <span className="text-slate-500">-</span>
                       
-                      <div className="flex items-center gap-2 text-sm">
                         <span className="text-slate-400">Hora fin:</span>
-                        <div className="bg-black/30 px-3 py-1.5 rounded text-white font-mono">
+                        <div className="bg-black/30 px-2.5 lg:px-3 py-1 lg:py-1.5 rounded text-white font-mono text-xs lg:text-sm">
                           {horasDelDia.length > 0 
                             ? `${String(parseInt(horasDelDia[horasDelDia.length - 1].split(':')[0]) + 1).padStart(2, '0')}:00` 
                             : '08:00'} a.m.
@@ -258,12 +256,12 @@ export default function DisciplineScheduleManager() {
                       </div>
 
                       {/* Selector de horas individuales */}
-                      <div className="flex gap-2 ml-auto">
+                      <div className="flex gap-1.5 lg:gap-2">
                         {HORAS_DISCIPLINA.map(hora => (
                           <button
                             key={hora}
                             onClick={() => toggleHora(index, hora)}
-                            className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${
+                            className={`px-2.5 lg:px-3 py-1.5 rounded text-xs font-bold transition-all ${
                               horasDelDia.includes(hora)
                                 ? 'bg-purple-600 text-white'
                                 : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
@@ -275,7 +273,7 @@ export default function DisciplineScheduleManager() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex-1 text-sm text-slate-500">
+                    <div className="pl-8 text-xs lg:text-sm text-slate-500">
                       Día inactivo
                     </div>
                   )}
@@ -287,8 +285,8 @@ export default function DisciplineScheduleManager() {
         </div>
 
         {/* Info adicional */}
-        <div className="mt-6 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
-          <p className="text-sm text-slate-400">
+        <div className="mt-4 lg:mt-6 p-3 lg:p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+          <p className="text-xs lg:text-sm text-slate-400">
             💡 <strong>Tip:</strong> Estos horarios se sincronizarán automáticamente con tu calendario de disponibilidad general y aparecerán bloqueados (en rojo) para que no puedas agendar mentorías pagadas en estas horas.
           </p>
         </div>

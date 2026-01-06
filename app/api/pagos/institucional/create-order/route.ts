@@ -117,22 +117,21 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Función para crear sesión de Stripe (SIMULADO)
+// Función para crear sesión de Stripe
 async function createStripeCheckout(orderId: number, amount: number, organizationName: string) {
-  // MODO SIMULACIÓN - Comentar/descomentar según necesites
-  const SIMULATION_MODE = true;
+  // Obtener configuración de Stripe desde la base de datos
+  const stripeConfig = await prisma.paymentGateway.findFirst({
+    where: {
+      provider: 'STRIPE',
+      isActive: true,
+    }
+  });
 
-  if (SIMULATION_MODE) {
-    // Simulación: Retornar URL de éxito directamente
-    return {
-      id: `sim_stripe_${orderId}_${Date.now()}`,
-      url: `${process.env.NEXTAUTH_URL}/dashboard/suscripcion/success?order_id=${orderId}&payment_method=stripe&simulated=true`,
-    };
+  if (!stripeConfig || !stripeConfig.publicKey || !stripeConfig.secretKey) {
+    throw new Error('Stripe no está configurado. Por favor configúralo desde el panel de administrador.');
   }
 
-  /* Código real de Stripe (requiere instalación: npm install stripe)
-  
-  const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+  const stripe = require('stripe')(stripeConfig.secretKey);
 
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
@@ -150,7 +149,7 @@ async function createStripeCheckout(orderId: number, amount: number, organizatio
       },
     ],
     mode: 'payment',
-    success_url: `${process.env.NEXTAUTH_URL}/dashboard/suscripcion/success?order_id=${orderId}`,
+    success_url: `${process.env.NEXTAUTH_URL}/dashboard/suscripcion/success?order_id=${orderId}&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${process.env.NEXTAUTH_URL}/dashboard/suscripcion/contratar-institucional`,
     metadata: {
       orderId: orderId.toString(),
@@ -159,30 +158,28 @@ async function createStripeCheckout(orderId: number, amount: number, organizatio
   });
 
   return session;
-  */
-  
-  throw new Error('Stripe no está configurado. Activa SIMULATION_MODE o instala las dependencias.');
 }
 
-// Función para crear orden de PayPal (SIMULADO)
+// Función para crear orden de PayPal
 async function createPayPalOrder(orderId: number, amount: number, organizationName: string) {
-  // MODO SIMULACIÓN - Comentar/descomentar según necesites
-  const SIMULATION_MODE = true;
+  // Obtener configuración de PayPal desde la base de datos
+  const paypalConfig = await prisma.paymentGateway.findFirst({
+    where: {
+      provider: 'PAYPAL',
+      isActive: true,
+    }
+  });
 
-  if (SIMULATION_MODE) {
-    // Simulación: Retornar URL de éxito directamente
-    const simulatedPayPalUrl = `${process.env.NEXTAUTH_URL}/dashboard/suscripcion/success?order_id=${orderId}&payment_method=paypal&simulated=true`;
-    return simulatedPayPalUrl;
+  if (!paypalConfig || !paypalConfig.publicKey || !paypalConfig.secretKey) {
+    throw new Error('PayPal no está configurado. Por favor configúralo desde el panel de administrador.');
   }
 
-  /* Código real de PayPal (requiere instalación: npm install @paypal/checkout-server-sdk)
-  
   const paypal = require('@paypal/checkout-server-sdk');
   
   // Configurar cliente de PayPal
-  const environment = process.env.PAYPAL_MODE === 'production'
-    ? new paypal.core.LiveEnvironment(process.env.PAYPAL_CLIENT_ID, process.env.PAYPAL_CLIENT_SECRET)
-    : new paypal.core.SandboxEnvironment(process.env.PAYPAL_CLIENT_ID, process.env.PAYPAL_CLIENT_SECRET);
+  const environment = paypalConfig.environment === 'production'
+    ? new paypal.core.LiveEnvironment(paypalConfig.publicKey, paypalConfig.secretKey)
+    : new paypal.core.SandboxEnvironment(paypalConfig.publicKey, paypalConfig.secretKey);
   
   const client = new paypal.core.PayPalHttpClient(environment);
 
@@ -208,28 +205,26 @@ async function createPayPalOrder(orderId: number, amount: number, organizationNa
   const approvalUrl = response.result.links.find((link: any) => link.rel === 'approve')?.href;
   
   return approvalUrl || '';
-  */
-  
-  throw new Error('PayPal no está configurado. Activa SIMULATION_MODE o instala las dependencias.');
 }
 
-// Función para crear preferencia de Mercado Pago (SIMULADO)
+// Función para crear preferencia de Mercado Pago
 async function createMercadoPagoPreference(orderId: number, amount: number, organizationName: string) {
-  // MODO SIMULACIÓN - Comentar/descomentar según necesites
-  const SIMULATION_MODE = true;
+  // Obtener configuración de Mercado Pago desde la base de datos
+  const mpConfig = await prisma.paymentGateway.findFirst({
+    where: {
+      provider: 'MERCADOPAGO',
+      isActive: true,
+    }
+  });
 
-  if (SIMULATION_MODE) {
-    // Simulación: Retornar URL de éxito directamente
-    const simulatedMPUrl = `${process.env.NEXTAUTH_URL}/dashboard/suscripcion/success?order_id=${orderId}&payment_method=mercadopago&simulated=true`;
-    return simulatedMPUrl;
+  if (!mpConfig || !mpConfig.secretKey) {
+    throw new Error('Mercado Pago no está configurado. Por favor configúralo desde el panel de administrador.');
   }
 
-  /* Código real de Mercado Pago (requiere instalación: npm install mercadopago)
-  
   const mercadopago = require('mercadopago');
   
   mercadopago.configure({
-    access_token: process.env.MERCADOPAGO_ACCESS_TOKEN,
+    access_token: mpConfig.secretKey,
   });
 
   const preference = {
@@ -253,7 +248,4 @@ async function createMercadoPagoPreference(orderId: number, amount: number, orga
 
   const response = await mercadopago.preferences.create(preference);
   return response.body.init_point;
-  */
-  
-  throw new Error('Mercado Pago no está configurado. Activa SIMULATION_MODE o instala las dependencias.');
 }

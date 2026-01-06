@@ -2,13 +2,10 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import Stripe from 'stripe';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
 /**
  * POST /api/mentor/application/create
- * Crea una solicitud de mentor y genera sesión de pago
+ * Crea una solicitud de mentor en estado DRAFT (sin crear sesión de pago)
  */
 export async function POST(req: Request) {
   try {
@@ -33,7 +30,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Crear la solicitud en estado DRAFT
+    // Crear la solicitud en estado DRAFT (sin pago)
     const application = await prisma.mentorApplication.create({
       data: {
         usuarioId: userId,
@@ -50,47 +47,13 @@ export async function POST(req: Request) {
       }
     });
 
-    // Crear sesión de Stripe
-    const checkoutSession = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'mxn',
-            product_data: {
-              name: 'Certificación de Mentor F.R.U.T.O.S.',
-              description: 'Pago único para solicitud de mentor',
-              images: ['https://tudominio.com/mentor-badge.png']
-            },
-            unit_amount: 99900 // $999 MXN en centavos
-          },
-          quantity: 1
-        }
-      ],
-      mode: 'payment',
-      success_url: `${process.env.NEXTAUTH_URL}/dashboard/solicitar-mentor/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXTAUTH_URL}/dashboard/solicitar-mentor?cancelled=true`,
-      client_reference_id: userId.toString(),
-      metadata: {
-        applicationId: application.id.toString(),
-        userId: userId.toString(),
-        type: 'mentor_application'
-      }
-    });
-
-    // Guardar el payment intent
-    await prisma.mentorApplication.update({
-      where: { id: application.id },
-      data: {
-        paymentIntentId: checkoutSession.id
-      }
-    });
-
     return NextResponse.json({
       success: true,
-      checkoutUrl: checkoutSession.url,
-      checkoutSessionId: checkoutSession.id,
-      applicationId: application.id
+      application: {
+        id: application.id,
+        status: application.status,
+        createdAt: application.createdAt.toISOString()
+      }
     });
 
   } catch (error) {

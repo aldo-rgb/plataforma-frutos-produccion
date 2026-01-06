@@ -856,37 +856,6 @@ export default function SuscripcionPage() {
                         </span>
                     </div>
 
-                    {/* Banner informativo sobre Mentores */}
-                    <div className="bg-gradient-to-r from-blue-900/30 via-purple-900/30 to-blue-900/30 border border-blue-500/30 rounded-xl p-6 mb-8">
-                        <div className="text-center mb-4">
-                            <h3 className="text-xl font-bold text-white mb-2 flex items-center justify-center gap-2">
-                                <Users className="text-blue-400" size={24} />
-                                ✨ Todos los Planes Incluyen Mentor Quantum AI
-                            </h3>
-                            <p className="text-slate-300 text-sm">
-                                Un experto dedicado que te acompaña en cada paso de tu transformación
-                            </p>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                            <div className="bg-slate-900/50 rounded-lg p-3">
-                                <div className="text-2xl mb-1">🎯</div>
-                                <p className="text-xs text-slate-300 font-semibold">Guía Personalizada</p>
-                            </div>
-                            <div className="bg-slate-900/50 rounded-lg p-3">
-                                <div className="text-2xl mb-1">📞</div>
-                                <p className="text-xs text-slate-300 font-semibold">Sesiones 1:1</p>
-                            </div>
-                            <div className="bg-slate-900/50 rounded-lg p-3">
-                                <div className="text-2xl mb-1">💬</div>
-                                <p className="text-xs text-slate-300 font-semibold">Retroalimentación</p>
-                            </div>
-                            <div className="bg-slate-900/50 rounded-lg p-3">
-                                <div className="text-2xl mb-1">📈</div>
-                                <p className="text-xs text-slate-300 font-semibold">Seguimiento</p>
-                            </div>
-                        </div>
-                    </div>
-
                     {/* Tarjetas Comparativas - 3 Columnas */}
                     <div className="grid md:grid-cols-3 gap-6 mb-12">
                         
@@ -1165,7 +1134,7 @@ export default function SuscripcionPage() {
                                         <li className="flex gap-3 text-white text-sm font-semibold"><Check size={16} className="text-purple-400" style={{ filter: 'drop-shadow(0 0 3px rgba(168, 85, 247, 0.5))' }}/> Gestión de licencias activa</li>
                                         <li className="flex gap-3 text-white text-sm font-semibold"><Check size={16} className="text-purple-400" style={{ filter: 'drop-shadow(0 0 3px rgba(168, 85, 247, 0.5))' }}/> Reportes de comunidad</li>
                                         <li className="flex gap-3 text-white text-sm font-bold"><Check size={16} className="text-purple-400" style={{ filter: 'drop-shadow(0 0 3px rgba(168, 85, 247, 0.5))' }}/> 🎯 Mentor asignado por estudiante</li>
-                                        <li className="flex gap-3 text-white text-sm font-bold"><Check size={16} className="text-purple-400" style={{ filter: 'drop-shadow(0 0 3px rgba(168, 85, 247, 0.5))' }}/> 📞 Sesiones 1:1 semanales</li>
+                                        <li className="flex gap-3 text-white text-sm font-bold"><Check size={16} className="text-purple-400" style={{ filter: 'drop-shadow(0 0 3px rgba(168, 85, 247, 0.5))' }}/> Administrador de 📞 Sesiones 1:1 semanales</li>
                                         <li className="flex gap-3 text-slate-300 text-sm"><Check size={16} className="text-purple-400" style={{ filter: 'drop-shadow(0 0 3px rgba(168, 85, 247, 0.5))' }}/> Retroalimentación personalizada</li>
                                     </ul>
                                 </div>

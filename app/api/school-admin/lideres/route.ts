@@ -191,36 +191,43 @@ export async function POST(request: Request) {
     // Hash de la contraseña
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Verificar que la organización tenga créditos disponibles
-    const credits = await prisma.schoolCredit.findFirst({
-      where: {
-        organizationId: admin.organizationId,
-        isActive: true
-      },
+    // Verificar que la organización tenga licencias disponibles
+    const organization = await prisma.organization.findUnique({
+      where: { id: admin.organizationId },
       select: {
-        totalPurchased: true,
-        totalAllocated: true
+        id: true,
+        name: true,
+        totalLicenses: true,
+        activeLicenses: true
       }
     });
 
-    if (!credits) {
+    if (!organization) {
+      console.log(`⚠️ Organización no encontrada: ${admin.organizationId}`);
       return NextResponse.json(
-        { error: 'No se encontraron créditos para esta organización. Contacta al administrador.' },
+        { 
+          error: 'Organización no encontrada', 
+          details: `Organización ID: ${admin.organizationId}` 
+        },
         { status: 400 }
       );
     }
 
-    const availableCredits = credits.totalPurchased - credits.totalAllocated;
+    const availableLicenses = organization.totalLicenses - organization.activeLicenses;
 
-    if (availableCredits <= 0) {
+    if (availableLicenses <= 0) {
+      console.log(`⚠️ Sin licencias disponibles. Total: ${organization.totalLicenses}, Activas: ${organization.activeLicenses}`);
       return NextResponse.json(
-        { error: 'No hay créditos disponibles. Contacta al administrador para comprar más licencias.' },
+        { 
+          error: 'No hay licencias disponibles', 
+          details: `Licencias totales: ${organization.totalLicenses}, Asignadas: ${organization.activeLicenses}. Contacta al administrador para comprar más licencias.` 
+        },
         { status: 400 }
       );
     }
 
-    // Generar código de licencia estándar para líder (SÍ consume créditos)
-    const standardLicenseCode = `QNT-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    // Generar código de licencia estándar para líder
+    const standardLicenseCode = `LDR-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 
     // Crear el líder
     const nuevoLider = await prisma.usuario.create({
@@ -242,7 +249,7 @@ export async function POST(request: Request) {
       }
     });
 
-    // Crear la licencia estándar (consume créditos de la organización)
+    // Crear la licencia estándar (consume 1 licencia de la organización)
     await prisma.licenseAssignment.create({
       data: {
         userId: nuevoLider.id,
@@ -254,20 +261,18 @@ export async function POST(request: Request) {
       }
     });
 
-    // Actualizar créditos asignados en SchoolCredit
-    await prisma.schoolCredit.updateMany({
-      where: {
-        organizationId: admin.organizationId,
-        isActive: true
-      },
+    // Incrementar activeLicenses en la organización
+    await prisma.organization.update({
+      where: { id: admin.organizationId },
       data: {
-        totalAllocated: {
+        activeLicenses: {
           increment: 1
         }
       }
     });
 
     console.log(`✅ Líder creado con licencia estándar: ${standardLicenseCode}`);
+    console.log(`📊 Licencias - Organización: ${organization.name}, Total: ${organization.totalLicenses}, Activas: ${organization.activeLicenses + 1}, Disponibles: ${availableLicenses - 1}`);
 
     return NextResponse.json({
       success: true,
@@ -277,7 +282,7 @@ export async function POST(request: Request) {
         email: nuevoLider.email,
         licenseCode: standardLicenseCode
       },
-      message: `Líder creado exitosamente. Licencia estándar asignada (consume 1 crédito de la organización). Créditos restantes: ${availableCredits - 1}`
+      message: `Líder creado exitosamente. Licencia estándar asignada. Licencias disponibles: ${availableLicenses - 1} de ${organization.totalLicenses}`
     });
 
   } catch (error: any) {

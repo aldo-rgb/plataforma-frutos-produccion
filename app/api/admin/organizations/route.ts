@@ -19,6 +19,13 @@ export async function GET(req: NextRequest) {
             email: true
           }
         },
+        MasterOrganization: {
+          select: {
+            id: true,
+            name: true,
+            logoUrl: true
+          }
+        },
         _count: {
           select: {
             License: true,

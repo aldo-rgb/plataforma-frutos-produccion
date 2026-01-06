@@ -2,6 +2,7 @@
 
 import { Zap, Globe, Menu } from 'lucide-react';
 import { PhoenixButton } from '../phoenix/PhoenixButton';
+import LanguageSwitcher from '../ui/LanguageSwitcher';
 import { useState } from 'react';
 
 interface TopbarProps {
@@ -39,7 +40,10 @@ export function Topbar({ usuario, onMenuClick }: TopbarProps) {
 
       <div className="flex-1 lg:flex-initial" />
       
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-3 md:gap-6">
+        {/* Language Switcher */}
+        <LanguageSwitcher />
+        
         {/* Phoenix SOS Button */}
         <PhoenixButton />
         

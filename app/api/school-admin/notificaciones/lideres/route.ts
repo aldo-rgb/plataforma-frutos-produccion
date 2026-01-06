@@ -29,8 +29,11 @@ export async function GET(req: NextRequest) {
         id: true,
         rol: true,
         organizationId: true,
-        OrganizacionesCreadas: {
-          select: { id: true }
+        Organization_Usuario_organizationIdToOrganization: {
+          select: {
+            id: true,
+            schoolAdminId: true
+          }
         }
       }
     });
@@ -43,7 +46,9 @@ export async function GET(req: NextRequest) {
     }
 
     const esSchoolAdmin = admin.rol === 'SCHOOL_ADMIN';
-    const esDirector = admin.OrganizacionesCreadas && admin.OrganizacionesCreadas.length > 0;
+    const esDirector = admin.Organization_Usuario_organizationIdToOrganization?.schoolAdminId === userId;
+
+    console.log(`📊 Usuario ${userId} (${admin.rol}) - esSchoolAdmin: ${esSchoolAdmin}, esDirector: ${esDirector}`);
 
     if (!esSchoolAdmin && !esDirector) {
       return NextResponse.json(
@@ -53,24 +58,29 @@ export async function GET(req: NextRequest) {
     }
 
     // Obtener notificaciones de líderes
+    console.log(`🔍 Buscando notificaciones para mentorId: ${userId}`);
+    
     const notificaciones = await prisma.mentorAlert.findMany({
       where: {
         mentorId: userId,
-        type: 'lider_solicita_aprobacion',
-        isRead: false
+        type: 'MILESTONE',
+        message: {
+          contains: 'solicita aprobación de su perfil de mentor'
+        },
+        read: false
       },
       orderBy: {
         createdAt: 'desc'
       }
     });
 
+    console.log(`✅ Notificaciones encontradas: ${notificaciones.length}`);
+
     // Enriquecer con datos del líder
     const notificacionesEnriquecidas = await Promise.all(
       notificaciones.map(async (notif) => {
-        const metadata = notif.metadata as any;
-        const liderId = metadata?.liderId;
-
-        if (!liderId) return notif;
+        // El usuarioId es el líder que solicita aprobación
+        const liderId = notif.usuarioId;
 
         const lider = await prisma.usuario.findUnique({
           where: { id: liderId },
@@ -78,22 +88,40 @@ export async function GET(req: NextRequest) {
             id: true,
             nombre: true,
             email: true,
-            fotoPerfil: true,
+            profileImage: true,
             mentorMarketplaceApproved: true,
             isActive: true,
             PerfilMentor: {
               select: {
-                bio: true,
-                especialidades: true,
-                experiencia: true
+                id: true,
+                biografia: true,
+                biografiaCorta: true,
+                especialidad: true,
+                especialidadesSecundarias: true,
+                experienciaAnios: true,
+                nivel: true
               }
             }
           }
         });
 
         return {
-          ...notif,
-          lider
+          id: notif.id,
+          mentorId: notif.mentorId,
+          usuarioId: notif.usuarioId,
+          type: notif.type,
+          message: notif.message,
+          read: notif.read,
+          createdAt: notif.createdAt.toISOString(),
+          lider: lider ? {
+            id: lider.id,
+            nombre: lider.nombre,
+            email: lider.email,
+            profileImage: lider.profileImage,
+            mentorMarketplaceApproved: lider.mentorMarketplaceApproved,
+            isActive: lider.isActive,
+            perfilMentor: lider.PerfilMentor
+          } : null
         };
       })
     );
@@ -159,7 +187,7 @@ export async function PATCH(req: NextRequest) {
     // Marcar como leída
     await prisma.mentorAlert.update({
       where: { id: notificacionId },
-      data: { isRead: true }
+      data: { read: true }
     });
 
     return NextResponse.json({

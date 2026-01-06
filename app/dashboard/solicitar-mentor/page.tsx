@@ -24,6 +24,10 @@ export default function SolicitarMentorPage() {
   const [uploadingDocs, setUploadingDocs] = useState(false);
   const [existingApplication, setExistingApplication] = useState<MentorApplication | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showCodeModal, setShowCodeModal] = useState(false);
+  const [licenseCode, setLicenseCode] = useState('');
+  const [validatingCode, setValidatingCode] = useState(false);
   
   const [formData, setFormData] = useState({
     // Información Básica
@@ -51,6 +55,14 @@ export default function SolicitarMentorPage() {
     checkExistingApplication();
   }, []);
 
+  useEffect(() => {
+    console.log('🔷 showCodeModal cambió a:', showCodeModal);
+  }, [showCodeModal]);
+
+  useEffect(() => {
+    console.log('🔶 showPaymentModal cambió a:', showPaymentModal);
+  }, [showPaymentModal]);
+
   const checkExistingApplication = async () => {
     try {
       const response = await fetch('/api/mentor/application/check');
@@ -63,6 +75,40 @@ export default function SolicitarMentorPage() {
       console.error('Error checking application:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const validateLicenseCode = async () => {
+    if (!licenseCode.trim()) return;
+
+    setValidatingCode(true);
+    try {
+      const response = await fetch('/api/mentor/application/validate-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: licenseCode })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(`❌ ${data.error}\n${data.message || ''}`);
+        return;
+      }
+
+      // Éxito
+      alert(`✅ ${data.message}`);
+      setShowCodeModal(false);
+      setLicenseCode('');
+      
+      // Recargar la página para mostrar el nuevo estado
+      window.location.reload();
+
+    } catch (error) {
+      console.error('Error validando código:', error);
+      alert('❌ Error al validar el código. Por favor intenta de nuevo.');
+    } finally {
+      setValidatingCode(false);
     }
   };
 
@@ -117,7 +163,7 @@ export default function SolicitarMentorPage() {
     try {
       console.log('Enviando solicitud...', formData);
       
-      // 1. Guardar la aplicación
+      // 1. Guardar la aplicación como DRAFT
       const response = await fetch('/api/mentor/application/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -131,13 +177,13 @@ export default function SolicitarMentorPage() {
         throw new Error(data.error || 'Error al enviar solicitud');
       }
       
-      // 2. Redirigir a checkout de Stripe
-      if (data.checkoutUrl) {
-        console.log('Redirigiendo a Stripe:', data.checkoutUrl);
-        window.location.href = data.checkoutUrl;
+      // 2. Actualizar la aplicación existente y mostrar modal de opciones de pago
+      if (data.application) {
+        setExistingApplication(data.application);
+        setSubmitting(false);
+        setShowPaymentModal(true); // Abrir modal de opciones de pago
       } else {
-        console.error('No se recibió checkoutUrl:', data);
-        throw new Error('URL de pago no disponible. Por favor contacta al soporte.');
+        throw new Error('No se pudo crear la aplicación. Por favor contacta al soporte.');
       }
     } catch (error: any) {
       console.error('Error completo:', error);
@@ -275,33 +321,17 @@ export default function SolicitarMentorPage() {
                   </p>
                 </div>
                 
-                {/* Botón de simulación de pago - Solo en desarrollo */}
-                {existingApplication.status === 'DRAFT' && process.env.NODE_ENV === 'development' && (
-                  <button
-                    onClick={async () => {
-                      if (confirm('¿Simular pago para esta solicitud?')) {
-                        try {
-                          const res = await fetch('/api/mentor/application/simulate-payment', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ applicationId: existingApplication.id })
-                          });
-                          const data = await res.json();
-                          if (data.success) {
-                            alert('✅ Pago simulado exitosamente. Recargando página...');
-                            window.location.reload();
-                          } else {
-                            alert('❌ Error: ' + data.error);
-                          }
-                        } catch (error) {
-                          alert('❌ Error al simular pago');
-                        }
-                      }
-                    }}
-                    className="px-6 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-lg transition-colors"
-                  >
-                    🧪 Simular Pago (Dev)
-                  </button>
+                {/* Botón para completar el pago */}
+                {existingApplication.status === 'DRAFT' && (
+                  <div className="flex justify-center">
+                    <button
+                      onClick={() => setShowPaymentModal(true)}
+                      className="px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold rounded-lg transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-3"
+                    >
+                      <DollarSign className="w-5 h-5" />
+                      Completar Pago
+                    </button>
+                  </div>
                 )}
               </>
             )}
@@ -341,6 +371,373 @@ export default function SolicitarMentorPage() {
             )}
           </div>
         </div>
+
+        {/* Modal de opciones de pago */}
+        {showPaymentModal && (
+          <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-slate-900 rounded-3xl max-w-4xl w-full shadow-2xl overflow-hidden my-8">
+              {/* Header del modal */}
+              <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 p-8 relative">
+                <button
+                  onClick={() => setShowPaymentModal(false)}
+                  className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-full"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+                
+                <div className="text-center text-white">
+                  <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl mb-4">
+                    <GraduationCap className="w-10 h-10" />
+                  </div>
+                  <h2 className="text-4xl font-bold mb-3">Membresía de Mentor</h2>
+                  <p className="text-white/90 text-lg mb-4">Quantum Matter - Certificación Profesional</p>
+                  <div className="inline-block bg-white/20 backdrop-blur-sm rounded-xl px-6 py-3">
+                    <div className="text-5xl font-bold">$300</div>
+                    <div className="text-sm text-white/80">USD / Anual</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cuerpo del modal */}
+              <div className="p-8 bg-slate-900">
+                {/* Título de sección */}
+                <div className="mb-6">
+                  <h3 className="text-2xl font-bold text-white mb-2">Selecciona tu método de pago</h3>
+                  <p className="text-slate-400">Elige la opción que prefieras para completar tu membresía</p>
+                </div>
+
+                {/* Grid de opciones de pago */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                  {/* Stripe */}
+                  <button
+                    onClick={async () => {
+                      setSubmitting(true);
+                      try {
+                        const response = await fetch('/api/mentor/application/create-checkout', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ 
+                            applicationId: existingApplication?.id,
+                            paymentMethod: 'stripe'
+                          })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (!response.ok) {
+                          throw new Error(data.error || 'Error al crear sesión de pago');
+                        }
+                        
+                        if (data.checkoutUrl) {
+                          window.location.href = data.checkoutUrl;
+                        } else {
+                          throw new Error('URL de pago no disponible');
+                        }
+                      } catch (error: any) {
+                        console.error('Error:', error);
+                        alert(error.message || 'Error al procesar el pago');
+                        setSubmitting(false);
+                      }
+                    }}
+                    disabled={submitting}
+                    className="group relative bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 disabled:from-slate-400 disabled:to-slate-500 text-white p-6 rounded-2xl transition-all transform hover:scale-[1.02] hover:shadow-xl disabled:cursor-not-allowed disabled:transform-none border-2 border-indigo-500/20"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center">
+                          <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">
+                            <rect x="2" y="5" width="20" height="14" rx="2" fill="#635BFF"/>
+                            <path d="M8 15h8M8 11h4" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+                          </svg>
+                        </div>
+                        <div className="text-left">
+                          <div className="font-bold text-lg">Stripe</div>
+                          <div className="text-sm text-indigo-100">Tarjeta de crédito</div>
+                        </div>
+                      </div>
+                      <span className="text-xs bg-white/20 px-3 py-1 rounded-full font-medium">Recomendado</span>
+                    </div>
+                    <div className="text-sm text-indigo-100">
+                      • Procesamiento instantáneo<br/>
+                      • Acepta Visa, Mastercard, Amex<br/>
+                      • Pago seguro internacional
+                    </div>
+                    {submitting && (
+                      <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                        <Loader2 className="w-8 h-8 animate-spin text-white" />
+                      </div>
+                    )}
+                  </button>
+
+                  {/* PayPal */}
+                  <button
+                    onClick={() => alert('🚧 PayPal estará disponible próximamente')}
+                    className="relative bg-gradient-to-br from-blue-600 to-blue-700 text-white p-6 rounded-2xl opacity-50 cursor-not-allowed border-2 border-blue-500/20"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center">
+                          <svg className="w-8 h-8" viewBox="0 0 24 24" fill="#003087">
+                            <path d="M8.32 21.97a.546.546 0 01-.538-.458L5.003 6.37a.546.546 0 01.538-.635h5.2c3.377 0 5.2 1.674 5.2 4.573 0 3.503-2.24 5.733-5.824 5.733H8.11l-.672 4.904a.546.546 0 01-.538.458l.42-3.433z"/>
+                          </svg>
+                        </div>
+                        <div className="text-left">
+                          <div className="font-bold text-lg">PayPal</div>
+                          <div className="text-sm text-blue-100">Cuenta PayPal</div>
+                        </div>
+                      </div>
+                      <span className="text-xs bg-white/20 px-3 py-1 rounded-full font-medium">Próximamente</span>
+                    </div>
+                    <div className="text-sm text-blue-100">
+                      • Pago rápido y seguro<br/>
+                      • Sin compartir datos bancarios<br/>
+                      • Disponible globalmente
+                    </div>
+                  </button>
+
+                  {/* Mercado Pago */}
+                  <button
+                    onClick={() => alert('🚧 Mercado Pago estará disponible próximamente')}
+                    className="relative bg-gradient-to-br from-cyan-500 to-blue-600 text-white p-6 rounded-2xl opacity-50 cursor-not-allowed border-2 border-cyan-500/20"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center">
+                          <svg className="w-8 h-8" viewBox="0 0 24 24" fill="#009EE3">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M8 12l2 2 4-4" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round"/>
+                          </svg>
+                        </div>
+                        <div className="text-left">
+                          <div className="font-bold text-lg">Mercado Pago</div>
+                          <div className="text-sm text-cyan-100">Pago local</div>
+                        </div>
+                      </div>
+                      <span className="text-xs bg-white/20 px-3 py-1 rounded-full font-medium">Latinoamérica</span>
+                    </div>
+                    <div className="text-sm text-cyan-100">
+                      • Pago en tu moneda local<br/>
+                      • Transferencia o tarjeta<br/>
+                      • Cuotas sin interés
+                    </div>
+                  </button>
+
+                  {/* Código de Licencia */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('🔵 Click en botón Código');
+                      console.log('🔵 showPaymentModal antes:', showPaymentModal);
+                      console.log('🔵 showCodeModal antes:', showCodeModal);
+                      console.log('🔵 Cerrando modal de pago...');
+                      setShowPaymentModal(false);
+                      console.log('🔵 Esperando 150ms...');
+                      setTimeout(() => {
+                        console.log('🔵 Dentro del setTimeout - Abriendo modal de código...');
+                        console.log('🔵 showCodeModal justo antes de cambiar:', showCodeModal);
+                        setShowCodeModal(true);
+                        console.log('🔵 setShowCodeModal(true) ejecutado');
+                      }, 150);
+                    }}
+                    className="relative bg-gradient-to-br from-amber-500 to-orange-600 text-white p-6 rounded-2xl hover:scale-105 transition-all duration-200 border-2 border-amber-400/30 hover:border-amber-300/50 cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center">
+                          <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2"/>
+                            <path d="M7 11V7a5 5 0 0110 0v4"/>
+                          </svg>
+                        </div>
+                        <div className="text-left">
+                          <div className="font-bold text-lg">Código</div>
+                          <div className="text-sm text-amber-100">Licencia especial</div>
+                        </div>
+                      </div>
+                      <span className="text-xs bg-white/20 px-3 py-1 rounded-full font-medium">Especial</span>
+                    </div>
+                    <div className="text-sm text-amber-100">
+                      • Código promocional<br/>
+                      • Licencia corporativa<br/>
+                      • Acceso inmediato
+                    </div>
+                  </button>
+                </div>
+
+                {/* Footer con garantía */}
+                <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0">
+                      <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                        <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-white mb-2 text-lg">Pago 100% Seguro</h4>
+                      <p className="text-slate-400 text-sm leading-relaxed">
+                        Todos los pagos están protegidos con encriptación de nivel bancario (SSL 256-bit). 
+                        Tu información nunca es almacenada en nuestros servidores. Después del pago exitoso, 
+                        tu solicitud será revisada en <strong className="text-white">24-48 horas</strong> y recibirás una notificación por correo.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Código de Licencia - Global para existingApplication */}
+        {showCodeModal && (() => {
+          console.log('🟢 MODAL DE CÓDIGO ESTÁ RENDERIZANDO (existingApplication)');
+          return (
+          <div 
+            className="fixed inset-0 bg-black/95 backdrop-blur-xl flex items-center justify-center z-[70] p-4 animate-in fade-in duration-300"
+            onClick={(e) => {
+              console.log('🔴 Click en overlay del modal de código');
+              if (e.target === e.currentTarget) {
+                console.log('🔴 Cerrando modal de código');
+                setShowCodeModal(false);
+                setLicenseCode('');
+              }
+            }}
+          >
+            <div 
+              className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 rounded-3xl max-w-lg w-full shadow-2xl border border-amber-500/20 overflow-hidden animate-in zoom-in-95 duration-300"
+              onClick={(e) => {
+                console.log('🟡 Click dentro del modal de código (no debería cerrar)');
+                e.stopPropagation();
+              }}
+            >
+              {/* Decorative background elements */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl -z-10"></div>
+              <div className="absolute bottom-0 left-0 w-64 h-64 bg-orange-500/5 rounded-full blur-3xl -z-10"></div>
+              
+              {/* Header */}
+              <div className="relative bg-gradient-to-br from-amber-600 via-orange-600 to-amber-700 p-8">
+                <button
+                  onClick={() => {
+                    setShowCodeModal(false);
+                    setLicenseCode('');
+                  }}
+                  className="absolute top-5 right-5 text-white/80 hover:text-white transition-all p-2 hover:bg-white/10 rounded-xl hover:rotate-90 duration-300"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+                
+                <div className="text-center text-white">
+                  <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl mb-4 shadow-lg transform hover:scale-105 transition-transform duration-300">
+                    <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <rect x="3" y="11" width="18" height="11" rx="2"/>
+                      <path d="M7 11V7a5 5 0 0110 0v4"/>
+                      <circle cx="12" cy="16" r="1" fill="currentColor"/>
+                    </svg>
+                  </div>
+                  <h3 className="text-3xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-white to-white/90">
+                    Código de Licencia
+                  </h3>
+                  <p className="text-white/90 text-sm font-medium">
+                    Ingresa tu código especial para continuar
+                  </p>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="p-8 relative">
+                <div className="mb-6">
+                  <label className="block text-white font-bold mb-3 text-sm flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
+                    Código de Licencia
+                  </label>
+                  <div className="relative group">
+                    <input
+                      type="text"
+                      value={licenseCode}
+                      onChange={(e) => setLicenseCode(e.target.value.toUpperCase())}
+                      placeholder="XXXX-XXXX-XXXX-XXXX"
+                      className="w-full px-5 py-4 bg-slate-800/80 border-2 border-slate-700/50 rounded-2xl text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none focus:ring-4 focus:ring-amber-500/20 transition-all font-mono text-center text-xl tracking-widest hover:bg-slate-800 shadow-inner"
+                      maxLength={19}
+                      autoFocus
+                    />
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-amber-500/0 via-amber-500/5 to-amber-500/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+                  </div>
+                  {licenseCode && (
+                    <p className="text-xs text-slate-400 mt-2 text-center animate-in fade-in slide-in-from-top-1 duration-300">
+                      {licenseCode.length} / 19 caracteres
+                    </p>
+                  )}
+                </div>
+
+                {/* Info */}
+                <div className="bg-gradient-to-br from-slate-800/80 to-slate-800/40 rounded-2xl p-5 mb-6 border border-slate-700/50 backdrop-blur-sm">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center">
+                      <AlertCircle className="w-5 h-5 text-amber-400" />
+                    </div>
+                    <div className="text-sm text-slate-300">
+                      <p className="font-bold text-white mb-2 text-base">Códigos válidos:</p>
+                      <ul className="space-y-2">
+                        <li className="flex items-center gap-2">
+                          <span className="w-1 h-1 bg-amber-400 rounded-full"></span>
+                          <span>Códigos promocionales</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="w-1 h-1 bg-amber-400 rounded-full"></span>
+                          <span>Licencias corporativas</span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="w-1 h-1 bg-amber-400 rounded-full"></span>
+                          <span>Códigos de evento</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Botones */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowCodeModal(false);
+                      setLicenseCode('');
+                    }}
+                    className="flex-1 px-5 py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-bold transition-all hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl border border-slate-700/50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={validateLicenseCode}
+                    disabled={!licenseCode.trim() || validatingCode}
+                    className="flex-1 px-5 py-4 bg-gradient-to-r from-amber-600 via-orange-600 to-amber-600 hover:from-amber-500 hover:via-orange-500 hover:to-amber-500 disabled:from-slate-700 disabled:to-slate-600 text-white rounded-2xl font-bold transition-all disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2 hover:scale-105 active:scale-95 shadow-lg hover:shadow-2xl hover:shadow-amber-500/50 disabled:hover:scale-100"
+                  >
+                    {validatingCode ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>Validando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>Validar Código</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          );
+        })()}
       </div>
     );
   }
@@ -349,9 +746,9 @@ export default function SolicitarMentorPage() {
     <div className="min-h-screen bg-slate-950 p-4 sm:p-6">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
-        <Link href="/dashboard/configuracion" className="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-6">
+        <Link href="/dashboard" className="inline-flex items-center gap-2 text-slate-400 hover:text-white mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4" />
-          Volver a Configuración
+          Volver al Dashboard
         </Link>
         
         <div className="mb-4 sm:mb-8 text-center">
@@ -360,16 +757,16 @@ export default function SolicitarMentorPage() {
               <GraduationCap className="w-6 h-6 sm:w-8 sm:h-8 text-purple-400" />
             </div>
             <div className="text-left sm:text-center">
-              <h1 className="text-xl sm:text-3xl font-bold text-white">WIZARD 2.0</h1>
+              <h1 className="text-xl sm:text-3xl font-bold text-white">WIZARD MENTORES</h1>
               <p className="text-xs sm:text-base text-slate-400 hidden sm:block">Múltiples acciones por área</p>
             </div>
           </div>
           
           {/* Progress Steps */}
-          <div className="flex items-center gap-1 sm:gap-2 max-w-md mx-auto mb-2 sm:mb-4">
+          <div className="flex items-center justify-center gap-0 max-w-xs sm:max-w-md mx-auto mb-2 sm:mb-4">
             {[1, 2, 3].map((step) => (
-              <div key={step} className="flex items-center flex-1">
-                <div className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full font-bold text-xs sm:text-sm ${
+              <div key={step} className="flex items-center justify-center">
+                <div className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full font-bold text-xs sm:text-sm flex-shrink-0 ${
                   currentStep >= step
                     ? 'bg-purple-600 text-white'
                     : 'bg-slate-800 text-slate-500'
@@ -377,7 +774,7 @@ export default function SolicitarMentorPage() {
                   {step}
                 </div>
                 {step < 3 && (
-                  <div className={`flex-1 h-0.5 sm:h-1 mx-1 sm:mx-2 ${
+                  <div className={`w-12 sm:w-16 h-0.5 sm:h-1 mx-1 sm:mx-2 flex-shrink-0 ${
                     currentStep > step ? 'bg-purple-600' : 'bg-slate-800'
                   }`} />
                 )}
@@ -792,6 +1189,223 @@ export default function SolicitarMentorPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal de opciones de pago */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-slate-900 rounded-3xl max-w-4xl w-full shadow-2xl overflow-hidden my-8">
+            {/* Header del modal */}
+            <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 p-8 relative">
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-full"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              
+              <div className="text-center text-white">
+                <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl mb-4">
+                  <GraduationCap className="w-10 h-10" />
+                </div>
+                <h2 className="text-4xl font-bold mb-3">Membresía de Mentor</h2>
+                <p className="text-white/90 text-lg mb-4">Quantum Matter - Certificación Profesional</p>
+                <div className="inline-block bg-white/20 backdrop-blur-sm rounded-xl px-6 py-3">
+                  <div className="text-5xl font-bold">$300</div>
+                  <div className="text-sm text-white/80">USD / Anual</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Cuerpo del modal */}
+            <div className="p-8 bg-slate-900">
+              {/* Título de sección */}
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold text-white mb-2">Selecciona tu método de pago</h3>
+                <p className="text-slate-400">Elige la opción que prefieras para completar tu membresía</p>
+              </div>
+
+              {/* Grid de opciones de pago */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                {/* Stripe */}
+                <button
+                  onClick={async () => {
+                    setSubmitting(true);
+                    try {
+                      const response = await fetch('/api/mentor/application/create-checkout', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                          applicationId: existingApplication?.id,
+                          paymentMethod: 'stripe'
+                        })
+                      });
+                      
+                      const data = await response.json();
+                      
+                      if (!response.ok) {
+                        throw new Error(data.error || 'Error al crear sesión de pago');
+                      }
+                      
+                      if (data.checkoutUrl) {
+                        window.location.href = data.checkoutUrl;
+                      } else {
+                        throw new Error('URL de pago no disponible');
+                      }
+                    } catch (error: any) {
+                      console.error('Error:', error);
+                      alert(error.message || 'Error al procesar el pago');
+                      setSubmitting(false);
+                    }
+                  }}
+                  disabled={submitting}
+                  className="group relative bg-gradient-to-br from-slate-800 to-slate-700 hover:from-slate-700 hover:to-slate-600 disabled:from-slate-800 disabled:to-slate-900 text-white p-6 rounded-2xl transition-all transform hover:scale-[1.02] hover:shadow-2xl hover:shadow-indigo-500/20 disabled:cursor-not-allowed disabled:transform-none border-2 border-slate-700 hover:border-indigo-500/50"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center p-2">
+                        <img src="/logos/Stripe.png" alt="Stripe" className="w-full h-full object-contain" />
+                      </div>
+                      <div className="text-left">
+                        <div className="font-bold text-xl text-white">Stripe</div>
+                        <div className="text-sm text-slate-400">Tarjeta de crédito</div>
+                      </div>
+                    </div>
+                    <span className="text-xs bg-indigo-500 px-3 py-1 rounded-full font-medium">Recomendado</span>
+                  </div>
+                  <div className="text-sm text-slate-300 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-400" />
+                      <span>Procesamiento instantáneo</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-400" />
+                      <span>Acepta Visa, Mastercard, Amex</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-400" />
+                      <span>Pago seguro internacional</span>
+                    </div>
+                  </div>
+                  {submitting && (
+                    <div className="absolute inset-0 bg-black/70 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                      <Loader2 className="w-8 h-8 animate-spin text-white" />
+                    </div>
+                  )}
+                </button>
+
+                {/* PayPal */}
+                <button
+                  onClick={() => alert('🚧 PayPal estará disponible próximamente')}
+                  className="relative bg-gradient-to-br from-slate-800 to-slate-700 text-white p-6 rounded-2xl opacity-50 cursor-not-allowed border-2 border-slate-700"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center p-2">
+                        <img src="/logos/paypal.png" alt="PayPal" className="w-full h-full object-contain" />
+                      </div>
+                      <div className="text-left">
+                        <div className="font-bold text-xl text-white">PayPal</div>
+                        <div className="text-sm text-slate-400">Cuenta PayPal</div>
+                      </div>
+                    </div>
+                    <span className="text-xs bg-slate-600 px-3 py-1 rounded-full font-medium">Próximamente</span>
+                  </div>
+                  <div className="text-sm text-slate-400 space-y-1">
+                    <div>• Pago rápido y seguro</div>
+                    <div>• Sin compartir datos bancarios</div>
+                    <div>• Disponible globalmente</div>
+                  </div>
+                </button>
+
+                {/* Mercado Pago */}
+                <button
+                  onClick={() => alert('🚧 Mercado Pago estará disponible próximamente')}
+                  className="relative bg-gradient-to-br from-slate-800 to-slate-700 text-white p-6 rounded-2xl opacity-50 cursor-not-allowed border-2 border-slate-700"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center p-2">
+                        <img src="/logos/mercadopago.png" alt="Mercado Pago" className="w-full h-full object-contain" />
+                      </div>
+                      <div className="text-left">
+                        <div className="font-bold text-xl text-white">Mercado Pago</div>
+                        <div className="text-sm text-slate-400">Pago local</div>
+                      </div>
+                    </div>
+                    <span className="text-xs bg-slate-600 px-3 py-1 rounded-full font-medium">Latinoamérica</span>
+                  </div>
+                  <div className="text-sm text-slate-400 space-y-1">
+                    <div>• Pago en tu moneda local</div>
+                    <div>• Transferencia o tarjeta</div>
+                    <div>• Cuotas sin interés</div>
+                  </div>
+                </button>
+
+                {/* Código de Licencia */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🟠 Click en botón Código (wizard)');
+                    setShowPaymentModal(false);
+                    setTimeout(() => {
+                      setShowCodeModal(true);
+                      console.log('🟠 Modal código abierto (wizard)');
+                    }, 150);
+                  }}
+                  className="relative bg-gradient-to-br from-amber-500 to-orange-600 text-white p-6 rounded-2xl hover:scale-105 transition-all duration-200 border-2 border-amber-400/30 hover:border-amber-300/50 cursor-pointer"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center">
+                        <svg className="w-8 h-8 text-slate-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <rect x="3" y="11" width="18" height="11" rx="2"/>
+                          <path d="M7 11V7a5 5 0 0110 0v4"/>
+                        </svg>
+                      </div>
+                      <div className="text-left">
+                        <div className="font-bold text-xl text-white">Código</div>
+                        <div className="text-sm text-slate-400">Licencia especial</div>
+                      </div>
+                    </div>
+                    <span className="text-xs bg-slate-600 px-3 py-1 rounded-full font-medium">Especial</span>
+                  </div>
+                  <div className="text-sm text-slate-400 space-y-1">
+                    <div>• Código promocional</div>
+                    <div>• Licencia corporativa</div>
+                    <div>• Acceso inmediato</div>
+                  </div>
+                </button>
+              </div>
+
+              {/* Footer con garantía */}
+              <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                      <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-white mb-2 text-lg">Pago 100% Seguro</h4>
+                    <p className="text-slate-400 text-sm leading-relaxed">
+                      Todos los pagos están protegidos con encriptación de nivel bancario (SSL 256-bit). 
+                      Tu información nunca es almacenada en nuestros servidores. Después del pago exitoso, 
+                      tu solicitud será revisada en <strong className="text-white">24-48 horas</strong> y recibirás una notificación por correo.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-}
+  }
+

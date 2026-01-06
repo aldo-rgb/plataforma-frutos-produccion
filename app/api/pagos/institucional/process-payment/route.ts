@@ -39,17 +39,53 @@ export async function POST(request: NextRequest) {
 
     // Iniciar transacción
     const result = await prisma.$transaction(async (tx) => {
+      // Parsear geofencing data
+      let isGeofenced = false;
+      let campusLatitude = null;
+      let campusLongitude = null;
+      let geofenceRadius = 100;
+
+      if (order.geofencing) {
+        try {
+          const geofencingData = JSON.parse(order.geofencing);
+          if (geofencingData.latitude && geofencingData.longitude) {
+            isGeofenced = true;
+            campusLatitude = geofencingData.latitude;
+            campusLongitude = geofencingData.longitude;
+            geofenceRadius = geofencingData.radius || 50;
+          }
+        } catch (e) {
+          // Si no es JSON, es texto legacy
+          isGeofenced = !!order.geofencing;
+          geofenceRadius = 1000; // Radio por defecto para legacy
+        }
+      }
+
+      // Generar slug único
+      const baseSlug = order.nombreOrganizacion.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+      
+      let slug = baseSlug;
+      let counter = 1;
+      while (await tx.organization.findUnique({ where: { slug } })) {
+        slug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+
       // 1. Crear la organización
       const organization = await tx.organization.create({
         data: {
           name: order.nombreOrganizacion,
-          slug: order.nombreOrganizacion.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+          slug: slug,
           logoUrl: order.logoUrl,
           brandColor: '#9333ea',
           contactEmail: order.Usuario.email,
           status: 'ACTIVE',
-          isGeofenced: !!order.geofencing,
-          geofenceRadius: order.geofencing ? 1000 : 100,
+          isGeofenced: isGeofenced,
+          campusLatitude: campusLatitude,
+          campusLongitude: campusLongitude,
+          geofenceRadius: geofenceRadius,
           schoolAdminId: order.userId,
           totalLicenses: order.cantidadLicencias,
           activeLicenses: order.cantidadLicencias,
