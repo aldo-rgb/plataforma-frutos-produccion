@@ -29,9 +29,10 @@ interface SidebarProps {
     } | null;
   };
   isMobile?: boolean; // Nueva prop para controlar si se muestra en móvil
+  onClose?: () => void; // Función para cerrar el sidebar móvil
 }
 
-export function Sidebar({ usuario, isMobile = false }: SidebarProps) {
+export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [cartaStatus, setCartaStatus] = useState<string | null>(null);
   const [showUpsellModal, setShowUpsellModal] = useState(false);
@@ -43,6 +44,13 @@ export function Sidebar({ usuario, isMobile = false }: SidebarProps) {
     message: 'Completa tus tareas de hoy para ganar más puntos 🚀',
     emoji: '💡'
   });
+
+  // Helper para cerrar el sidebar en móvil al hacer click
+  const handleLinkClick = () => {
+    if (isMobile && onClose) {
+      onClose();
+    }
+  };
 
   // Obtener estado de la carta
   useEffect(() => {
@@ -219,7 +227,8 @@ export function Sidebar({ usuario, isMobile = false }: SidebarProps) {
       {/* Navigation */}
       <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
         <Link 
-          href="/dashboard" 
+          href="/dashboard"
+          onClick={handleLinkClick}
           className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
             pathname === '/dashboard' 
               ? 'bg-blue-600 text-white' 
@@ -236,7 +245,8 @@ export function Sidebar({ usuario, isMobile = false }: SidebarProps) {
             <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">Panel Game Changer</p>
             
             <Link 
-              href="/dashboard/game-changer" 
+              href="/dashboard/game-changer"
+              onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
                 pathname === '/dashboard/game-changer' || pathname.startsWith('/dashboard/game-changer/participante')
                   ? 'bg-gradient-to-r from-cyan-600 to-purple-600 text-white'
@@ -255,7 +265,8 @@ export function Sidebar({ usuario, isMobile = false }: SidebarProps) {
             <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">Panel de Mentor</p>
             
             <Link 
-              href="/dashboard/mentor/revisiones" 
+              href="/dashboard/mentor/revisiones"
+              onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
                 pathname === '/dashboard/mentor/revisiones'
                   ? 'bg-purple-600 text-white'
@@ -315,7 +326,8 @@ export function Sidebar({ usuario, isMobile = false }: SidebarProps) {
             </Link>
 
             <Link 
-              href="/dashboard/mentor/disponibilidad" 
+              href="/dashboard/mentor/disponibilidad"
+              onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
                 pathname === '/dashboard/mentor/disponibilidad'
                   ? 'bg-orange-600 text-white'
@@ -327,7 +339,8 @@ export function Sidebar({ usuario, isMobile = false }: SidebarProps) {
             </Link>
 
             <Link 
-              href="/dashboard/mentor/sesiones" 
+              href="/dashboard/mentor/sesiones"
+              onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
                 pathname === '/dashboard/mentor/sesiones'
                   ? 'bg-purple-600 text-white'
@@ -339,7 +352,8 @@ export function Sidebar({ usuario, isMobile = false }: SidebarProps) {
             </Link>
 
             <Link 
-              href="/dashboard/mentor/perfil" 
+              href="/dashboard/mentor/perfil"
+              onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
                 pathname === '/dashboard/mentor/perfil'
                   ? 'bg-emerald-600 text-white'
@@ -358,7 +372,8 @@ export function Sidebar({ usuario, isMobile = false }: SidebarProps) {
             <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">Panel de Mentor</p>
             
             <Link 
-              href="/dashboard/mentor/revisiones" 
+              href="/dashboard/mentor/revisiones"
+              onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
                 pathname === '/dashboard/mentor/revisiones'
                   ? 'bg-purple-600 text-white'
