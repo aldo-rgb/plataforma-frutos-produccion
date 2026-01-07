@@ -23,7 +23,8 @@ export async function GET(
         name: true,
         logoUrl: true,
         brandColor: true,
-        slug: true
+        slug: true,
+        masterOrganizationId: true
       }
     });
 
@@ -37,55 +38,68 @@ export async function GET(
       );
     }
 
-    // Buscar la próxima visión de nivel BASIC que esté activa y tenga fecha futura
-    // Nota: Usando organizationId en lugar de organizacionId
-    const nextVision = await prisma.vision.findFirst({
-      where: {
-        organizationId: organization.id,
-        isActive: true,
-        enabledLevels: {
-          has: 'BASIC'
-        },
-        startDate: {
-          gte: new Date()
-        }
-      },
-      orderBy: {
-        startDate: 'asc'
-      },
-      select: {
-        id: true,
-        nombre: true,
-        startDate: true,
-        descripcion: true,
-        maxParticipantes: true,
-        VisionParticipante: {
-          select: {
-            id: true
-          }
-        }
-      }
-    });
+    // Determinar si es una organización master o hija
+    let masterOrganization;
+    let childOrganizations = [];
 
-    console.log('📅 Next vision found:', nextVision);
-    console.log('📊 Query conditions:', {
-      organizationId: organization.id,
-      isActive: true,
-      hasBasic: 'BASIC in enabledLevels',
-      startDateGte: new Date().toISOString()
-    });
+    if (organization.masterOrganizationId) {
+      // Es una organización hija, buscar la master
+      masterOrganization = await prisma.organization.findUnique({
+        where: { id: organization.masterOrganizationId },
+        select: {
+          id: true,
+          name: true,
+          logoUrl: true,
+          brandColor: true,
+          slug: true
+        }
+      });
+
+      // Buscar todas las organizaciones hijas de la master
+      childOrganizations = await prisma.organization.findMany({
+        where: {
+          masterOrganizationId: organization.masterOrganizationId
+        },
+        select: {
+          id: true,
+          name: true,
+          logoUrl: true,
+          brandColor: true,
+          slug: true
+        },
+        orderBy: {
+          name: 'asc'
+        }
+      });
+    } else {
+      // Es una organización master
+      masterOrganization = organization;
+
+      // Buscar todas sus organizaciones hijas
+      childOrganizations = await prisma.organization.findMany({
+        where: {
+          masterOrganizationId: organization.id
+        },
+        select: {
+          id: true,
+          name: true,
+          logoUrl: true,
+          brandColor: true,
+          slug: true
+        },
+        orderBy: {
+          name: 'asc'
+        }
+      });
+    }
+
+    console.log('✅ Master Organization:', masterOrganization);
+    console.log('🏢 Child Organizations:', childOrganizations);
 
     const response = {
       success: true,
-      organization,
-      nextVision: nextVision ? {
-        id: nextVision.id,
-        nombre: nextVision.nombre,
-        startDate: nextVision.startDate,
-        descripcion: nextVision.descripcion,
-        maxParticipantes: nextVision.maxParticipantes,
-        currentParticipantes: nextVision.VisionParticipante?.length || 0
-      } : null
+      masterOrganization,
+      childOrganizations
     };
 
     console.log('✅ Sending response:', response);

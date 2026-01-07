@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { nombre, email, password, organizationCode } = body;
+    const { nombre, email, password, organizationCode, organizationId, visionId } = body;
 
     // Validaciones
     if (!nombre || !email || !password) {
@@ -27,9 +27,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Buscar organización si se proporcionó código
-    let organizationId = null;
-    if (organizationCode) {
+    // Determinar organizationId
+    let finalOrganizationId = organizationId;
+    
+    if (!finalOrganizationId && organizationCode) {
       const organization = await prisma.organization.findFirst({
         where: {
           OR: [
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
       });
 
       if (organization) {
-        organizationId = organization.id;
+        finalOrganizationId = organization.id;
       }
     }
 
@@ -55,12 +56,32 @@ export async function POST(request: Request) {
         password: hashedPassword,
         rol: 'PARTICIPANTE',
         tier: 'BASIC',
-        organizationId,
+        organizationId: finalOrganizationId,
         isActive: true,
         experienciaXP: 0,
         puntosCuanticos: 0
       }
     });
+
+    // Si hay visionId, inscribir al usuario en la visión como participante
+    if (visionId && finalOrganizationId) {
+      try {
+        await prisma.visionParticipante.create({
+          data: {
+            usuarioId: newUser.id,
+            visionId: visionId,
+            nivel: 'BASIC',
+            asignadoPor: 'AUTO_REGISTRO',
+            estado: 'PENDIENTE'
+          }
+        });
+
+        console.log(`✅ Usuario ${newUser.id} inscrito en visión ${visionId}`);
+      } catch (error) {
+        console.error('Error al inscribir usuario en visión:', error);
+        // No fallar el registro si falla la inscripción
+      }
+    }
 
     return NextResponse.json({
       success: true,

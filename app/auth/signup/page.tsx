@@ -27,11 +27,15 @@ export default function SignUpPage() {
   const searchParams = useSearchParams();
   const orgCode = searchParams.get('org');
 
-  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [masterOrganization, setMasterOrganization] = useState<Organization | null>(null);
+  const [childOrganizations, setChildOrganizations] = useState<Organization[]>([]);
+  const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
   const [nextVision, setNextVision] = useState<NextVision | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingVision, setLoadingVision] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [step, setStep] = useState<'sede' | 'registro'>('sede');
 
   const [formData, setFormData] = useState({
     nombre: '',
@@ -57,17 +61,52 @@ export default function SignUpPage() {
       console.log('📦 API Response:', data);
 
       if (data.success) {
-        console.log('✅ Organization:', data.organization);
-        console.log('📅 Next Vision:', data.nextVision);
-        setOrganization(data.organization);
-        setNextVision(data.nextVision);
+        console.log('✅ Master Organization:', data.masterOrganization);
+        console.log('🏢 Child Organizations:', data.childOrganizations);
+        setMasterOrganization(data.masterOrganization);
+        setChildOrganizations(data.childOrganizations || []);
+        
+        // Si solo hay una organización hija, seleccionarla automáticamente
+        if (data.childOrganizations && data.childOrganizations.length === 1) {
+          handleSelectOrganization(data.childOrganizations[0]);
+        }
       } else {
         console.error('❌ API Error:', data.error);
+        setError(data.error || 'Error al cargar la información');
       }
     } catch (error) {
       console.error('❌ Error fetching organization:', error);
+      setError('Error al conectar con el servidor');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSelectOrganization = async (org: Organization) => {
+    setSelectedOrganization(org);
+    setLoadingVision(true);
+    setError('');
+
+    try {
+      console.log('🔍 Fetching next vision for organization:', org.id);
+      const res = await fetch(`/api/public/organization/${org.id}/next-vision`);
+      const data = await res.json();
+
+      if (data.success) {
+        console.log('📅 Next Vision:', data.nextVision);
+        setNextVision(data.nextVision);
+        setStep('registro');
+      } else {
+        console.error('❌ No vision found');
+        setNextVision(null);
+        setStep('registro');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching vision:', error);
+      setNextVision(null);
+      setStep('registro');
+    } finally {
+      setLoadingVision(false);
     }
   };
 
@@ -91,6 +130,11 @@ export default function SignUpPage() {
       return;
     }
 
+    if (!selectedOrganization) {
+      setError('Por favor selecciona una sede');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -104,7 +148,8 @@ export default function SignUpPage() {
           nombre: formData.nombre,
           email: formData.email,
           password: formData.password,
-          organizationCode: orgCode
+          organizationId: selectedOrganization.id,
+          visionId: nextVision?.id
         }),
       });
 
@@ -138,168 +183,281 @@ export default function SignUpPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto mb-4"></div>
+          <p className="text-slate-400">Cargando información...</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
-      <div className="max-w-md w-full space-y-8">
-        {/* Logo y nombre de la organización */}
-        {organization && (
+      <div className="max-w-4xl w-full space-y-8">
+        {/* Logo y nombre de la organización master */}
+        {masterOrganization && (
           <div className="text-center">
-            {organization.logoUrl ? (
+            {masterOrganization.logoUrl ? (
               <img
-                src={organization.logoUrl}
-                alt={organization.name}
+                src={masterOrganization.logoUrl}
+                alt={masterOrganization.name}
                 className="mx-auto h-20 w-auto rounded-lg shadow-lg"
               />
             ) : (
               <div 
                 className="mx-auto h-20 w-20 rounded-lg flex items-center justify-center text-white font-bold text-2xl shadow-lg"
-                style={{ backgroundColor: organization.brandColor || '#8B5CF6' }}
+                style={{ backgroundColor: masterOrganization.brandColor || '#8B5CF6' }}
               >
-                {organization.name.charAt(0)}
+                {masterOrganization.name.charAt(0)}
               </div>
             )}
             <h1 className="mt-6 text-3xl font-black text-white">
-              {organization.name}
+              {masterOrganization.name}
             </h1>
-          </div>
-        )}
-
-        {/* Información del próximo básico */}
-        {organization && (
-          nextVision ? (
-            <div className="bg-gradient-to-br from-blue-900/50 to-purple-900/50 border-2 border-blue-500/30 rounded-2xl p-6 text-center">
-              <div className="text-blue-300 text-sm font-medium mb-2">🎯 Próximo Programa Básico</div>
-              <h2 className="text-2xl font-bold text-white mb-2">{nextVision.nombre}</h2>
-              <div className="text-3xl font-black text-blue-400 mb-2">
-                {new Date(nextVision.startDate).toLocaleDateString('es-MX', { 
-                  day: 'numeric', 
-                  month: 'long', 
-                  year: 'numeric' 
-                })}
-              </div>
-              {nextVision.descripcion && (
-                <p className="text-slate-300 text-sm mb-3">{nextVision.descripcion}</p>
-              )}
-              <div className="flex items-center justify-center gap-4 text-sm text-slate-400">
-                <div className="flex items-center gap-1">
-                  <span>👥</span>
-                  <span>{nextVision.currentParticipantes} / {nextVision.maxParticipantes}</span>
-                </div>
-                <div className="h-4 w-px bg-slate-600"></div>
-                <div className="flex items-center gap-1">
-                  <span>📅</span>
-                  <span>
-                    {Math.ceil((new Date(nextVision.startDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} días
-                  </span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-gradient-to-br from-slate-900/50 to-slate-800/50 border-2 border-slate-700/30 rounded-2xl p-6 text-center">
-              <div className="text-slate-400 text-sm font-medium mb-2">📅 Próximas Convocatorias</div>
-              <h2 className="text-xl font-bold text-white mb-2">Aún no hay fechas programadas</h2>
-              <p className="text-slate-400 text-sm">
-                Te notificaremos cuando se abran nuevos grupos básicos
-              </p>
-            </div>
-          )
-        )}
-
-        {/* Formulario de registro */}
-        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 backdrop-blur-sm">
-          <div className="mb-6 text-center">
-            <h2 className="text-2xl font-bold text-white mb-2">Crea tu cuenta</h2>
-            <p className="text-slate-400 text-sm">
-              Únete y comienza tu transformación
+            <p className="text-slate-400 mt-2">
+              {step === 'sede' ? 'Selecciona tu sede' : 'Completa tu registro'}
             </p>
           </div>
+        )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+        {/* PASO 1: Selección de Sede */}
+        {step === 'sede' && (
+          <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 backdrop-blur-sm">
+            <div className="mb-6 text-center">
+              <h2 className="text-2xl font-bold text-white mb-2">¿En qué sede te encuentras?</h2>
+              <p className="text-slate-400 text-sm">
+                Selecciona la sede más cercana para continuar
+              </p>
+            </div>
+
             {error && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-red-400 text-sm">
+              <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-red-400 text-sm mb-6">
                 {error}
               </div>
             )}
 
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Nombre completo
-              </label>
-              <input
-                type="text"
-                required
-                className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="Juan Pérez"
-                value={formData.nombre}
-                onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-              />
-            </div>
+            {loadingVision ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mx-auto mb-4"></div>
+                <p className="text-slate-400">Buscando próximo programa básico...</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {childOrganizations.map((org) => (
+                  <button
+                    key={org.id}
+                    onClick={() => handleSelectOrganization(org)}
+                    className="bg-slate-800/50 hover:bg-slate-800 border-2 border-slate-700 hover:border-purple-500 rounded-xl p-6 transition-all group"
+                  >
+                    <div className="flex items-center gap-4">
+                      {org.logoUrl ? (
+                        <img
+                          src={org.logoUrl}
+                          alt={org.name}
+                          className="h-12 w-12 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div 
+                          className="h-12 w-12 rounded-lg flex items-center justify-center text-white font-bold text-xl"
+                          style={{ backgroundColor: org.brandColor || '#8B5CF6' }}
+                        >
+                          {org.name.charAt(0)}
+                        </div>
+                      )}
+                      <div className="flex-1 text-left">
+                        <h3 className="text-lg font-bold text-white group-hover:text-purple-400 transition-colors">
+                          {org.name}
+                        </h3>
+                        <p className="text-slate-400 text-sm">Ver disponibilidad →</p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
 
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Email
-              </label>
-              <input
-                type="email"
-                required
-                className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="tu@email.com"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Contraseña
-              </label>
-              <input
-                type="password"
-                required
-                className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="Mínimo 6 caracteres"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Confirmar contraseña
-              </label>
-              <input
-                type="password"
-                required
-                className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="Repite tu contraseña"
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-slate-600 disabled:to-slate-700 text-white font-bold rounded-lg transition-all shadow-lg disabled:cursor-not-allowed"
-            >
-              {submitting ? 'Registrando...' : 'Crear cuenta'}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-slate-400 text-sm">
-              ¿Ya tienes cuenta?{' '}
-              <Link href="/auth/signin" className="text-purple-400 hover:text-purple-300 font-medium">
-                Inicia sesión
-              </Link>
-            </p>
+            {childOrganizations.length === 0 && !loadingVision && (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">🏢</div>
+                <p className="text-slate-400 text-lg mb-2">No hay sedes disponibles</p>
+                <p className="text-slate-500 text-sm">
+                  Contacta al administrador para más información
+                </p>
+              </div>
+            )}
           </div>
-        </div>
+        )}
+
+        {/* PASO 2: Formulario de Registro con información del básico */}
+        {step === 'registro' && selectedOrganization && (
+          <div className="space-y-6">
+            {/* Información de la sede seleccionada */}
+            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 backdrop-blur-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  {selectedOrganization.logoUrl ? (
+                    <img
+                      src={selectedOrganization.logoUrl}
+                      alt={selectedOrganization.name}
+                      className="h-10 w-10 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div 
+                      className="h-10 w-10 rounded-lg flex items-center justify-center text-white font-bold"
+                      style={{ backgroundColor: selectedOrganization.brandColor || '#8B5CF6' }}
+                    >
+                      {selectedOrganization.name.charAt(0)}
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="text-lg font-bold text-white">{selectedOrganization.name}</h3>
+                    <p className="text-slate-400 text-sm">Sede seleccionada</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setStep('sede');
+                    setSelectedOrganization(null);
+                    setNextVision(null);
+                  }}
+                  className="text-slate-400 hover:text-white text-sm transition-colors"
+                >
+                  Cambiar sede
+                </button>
+              </div>
+
+              {/* Información del próximo básico */}
+              {nextVision ? (
+                <div className="bg-gradient-to-br from-blue-900/50 to-purple-900/50 border-2 border-blue-500/30 rounded-xl p-6 mt-4">
+                  <div className="text-blue-300 text-sm font-medium mb-2">🎯 Próximo Programa Básico</div>
+                  <h2 className="text-2xl font-bold text-white mb-2">{nextVision.nombre}</h2>
+                  <div className="text-3xl font-black text-blue-400 mb-2">
+                    {new Date(nextVision.startDate).toLocaleDateString('es-MX', { 
+                      day: 'numeric', 
+                      month: 'long', 
+                      year: 'numeric' 
+                    })}
+                  </div>
+                  {nextVision.descripcion && (
+                    <p className="text-slate-300 text-sm mb-3">{nextVision.descripcion}</p>
+                  )}
+                  <div className="flex items-center justify-center gap-4 text-sm text-slate-400">
+                    <div className="flex items-center gap-1">
+                      <span>👥</span>
+                      <span>{nextVision.currentParticipantes} / {nextVision.maxParticipantes}</span>
+                    </div>
+                    <div className="h-4 w-px bg-slate-600"></div>
+                    <div className="flex items-center gap-1">
+                      <span>📅</span>
+                      <span>
+                        Inicia en {Math.ceil((new Date(nextVision.startDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} días
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-gradient-to-br from-slate-800/50 to-slate-700/50 border-2 border-slate-700/30 rounded-xl p-6 mt-4">
+                  <div className="text-slate-400 text-sm font-medium mb-2">📅 Próximas Convocatorias</div>
+                  <h2 className="text-xl font-bold text-white mb-2">Aún no hay fechas programadas</h2>
+                  <p className="text-slate-400 text-sm">
+                    Te notificaremos cuando se abran nuevos grupos básicos en esta sede
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Formulario de registro */}
+            <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 backdrop-blur-sm">
+              <div className="mb-6 text-center">
+                <h2 className="text-2xl font-bold text-white mb-2">Crea tu cuenta</h2>
+                <p className="text-slate-400 text-sm">
+                  Completa tus datos para continuar
+                </p>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-red-400 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Nombre completo
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Juan Pérez"
+                    value={formData.nombre}
+                    onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="tu@email.com"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Contraseña
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Mínimo 6 caracteres"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Confirmar contraseña
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Repite tu contraseña"
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-slate-600 disabled:to-slate-700 text-white font-bold rounded-lg transition-all shadow-lg disabled:cursor-not-allowed"
+                >
+                  {submitting ? 'Registrando...' : 'Crear cuenta'}
+                </button>
+              </form>
+
+              <div className="mt-6 text-center">
+                <p className="text-slate-400 text-sm">
+                  ¿Ya tienes cuenta?{' '}
+                  <Link href="/auth/signin" className="text-purple-400 hover:text-purple-300 font-medium">
+                    Inicia sesión
+                  </Link>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
