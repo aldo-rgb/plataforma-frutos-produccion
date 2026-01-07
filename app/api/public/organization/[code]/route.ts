@@ -91,6 +91,17 @@ export async function GET(
           name: 'asc'
         }
       });
+
+      // Si no hay organizaciones hijas, usar la organización master como única opción
+      if (childOrganizations.length === 0) {
+        childOrganizations = [{
+          id: masterOrganization.id,
+          name: masterOrganization.name,
+          logoUrl: masterOrganization.logoUrl,
+          brandColor: masterOrganization.brandColor,
+          slug: masterOrganization.slug
+        }];
+      }
     }
 
     console.log('✅ Master Organization:', masterOrganization);
