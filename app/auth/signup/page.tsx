@@ -224,7 +224,7 @@ export default function SignUpPage() {
         {step === 'sede' && (
           <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 backdrop-blur-sm">
             <div className="mb-6 text-center">
-              <h2 className="text-2xl font-bold text-white mb-2">¿En qué sede te encuentras?</h2>
+              <h2 className="text-2xl font-bold text-white mb-2">¿En qué sucursal quieres acudir?</h2>
               <p className="text-slate-400 text-sm">
                 Selecciona la sede más cercana para continuar
               </p>

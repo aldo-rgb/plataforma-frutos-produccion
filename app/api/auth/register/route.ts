@@ -63,20 +63,31 @@ export async function POST(request: Request) {
       }
     });
 
-    // Si hay visionId, inscribir al usuario en la visión como participante
+    // Si hay visionId, inscribir al usuario en la visión
     if (visionId && finalOrganizationId) {
       try {
-        await prisma.visionParticipante.create({
-          data: {
-            usuarioId: newUser.id,
-            visionId: visionId,
-            nivel: 'BASIC',
-            asignadoPor: 'AUTO_REGISTRO',
-            estado: 'PENDIENTE'
-          }
+        // Buscar el coordinador de la visión
+        const vision = await prisma.vision.findUnique({
+          where: { id: visionId },
+          select: { coordinadorId: true }
         });
 
-        console.log(`✅ Usuario ${newUser.id} inscrito en visión ${visionId}`);
+        if (vision?.coordinadorId) {
+          await prisma.vision_enrollments.create({
+            data: {
+              userId: newUser.id,
+              visionId: visionId,
+              coordinatorId: vision.coordinadorId,
+              level: 'BASIC',
+              enrollmentStatus: 'ENROLLED',
+              updatedAt: new Date()
+            }
+          });
+
+          console.log(`✅ Usuario ${newUser.id} inscrito en visión ${visionId}`);
+        } else {
+          console.warn(`⚠️ Visión ${visionId} no tiene coordinador asignado`);
+        }
       } catch (error) {
         console.error('Error al inscribir usuario en visión:', error);
         // No fallar el registro si falla la inscripción
