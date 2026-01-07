@@ -166,6 +166,57 @@ export async function GET(
       },
     });
 
+    // Obtener productos/entrenamientos asociados a esta visión
+    const productos = await prisma.schoolProduct.findMany({
+      where: { 
+        visionId,
+        type: 'CORE_TRAINING',
+        isActive: true
+      },
+      include: {
+        Trainer: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+            imagen: true
+          }
+        },
+        Coordinator: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true
+          }
+        }
+      },
+      orderBy: [
+        { levelType: 'asc' } // BASIC, ADVANCED, PL
+      ]
+    });
+
+    // Obtener trainers de PL (3 trainers para el programa de liderato)
+    const plTrainersData = await prisma.visionStaff.findMany({
+      where: {
+        visionId,
+        role: 'PL_TRAINER',
+        level: 'PL'
+      },
+      include: {
+        Usuario_VisionStaff_userIdToUsuario: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+            imagen: true
+          }
+        }
+      },
+      orderBy: {
+        plWeekendNumber: 'asc' // 1, 2, 3
+      }
+    });
+
     // Obtener mentores asignados a esta visión con sus costos
     const mentoresAsignados = await prisma.visionMentor.findMany({
       where: { visionId },
@@ -261,6 +312,22 @@ export async function GET(
       gameChangers,
       mentoresAsignados: mentoresConCostos,
       cicloInfo,
+      productos: productos.map(p => ({
+        ...p,
+        // Si es producto PL, agregar los 3 trainers
+        plTrainers: p.levelType === 'PL' ? plTrainersData.map(pt => pt.Usuario_VisionStaff_userIdToUsuario) : undefined,
+        startDate: p.startDate ? p.startDate.toISOString() : null,
+        endDate: p.endDate ? p.endDate.toISOString() : null,
+        plWeekend1StartDate: p.plWeekend1StartDate ? p.plWeekend1StartDate.toISOString() : null,
+        plWeekend1EndDate: p.plWeekend1EndDate ? p.plWeekend1EndDate.toISOString() : null,
+        plWeekend2StartDate: p.plWeekend2StartDate ? p.plWeekend2StartDate.toISOString() : null,
+        plWeekend2EndDate: p.plWeekend2EndDate ? p.plWeekend2EndDate.toISOString() : null,
+        plWeekend3StartDate: p.plWeekend3StartDate ? p.plWeekend3StartDate.toISOString() : null,
+        plWeekend3EndDate: p.plWeekend3EndDate ? p.plWeekend3EndDate.toISOString() : null,
+        createdAt: p.createdAt.toISOString(),
+        updatedAt: p.updatedAt.toISOString(),
+        promoDeadline: p.promoDeadline ? p.promoDeadline.toISOString() : null
+      }))
     });
   } catch (error) {
     console.error('Error fetching vision details:', error);
@@ -296,189 +363,104 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const {
-      forceFinanzasArea,
-      forceRelacionesArea,
-      forceTalentosArea,
-      forceSaludArea,
-      forcePazMentalArea,
-      forceOcioArea,
-      forceTransformationArea,
-      transformationGuestsTarget,
-      forceCommunityServiceArea,
-    } = body;
+    
+    console.log('📥 PUT Request Body:', body);
 
-    // Validaciones
-    if (typeof forceFinanzasArea !== 'boolean') {
-      return NextResponse.json(
-        { success: false, error: 'forceFinanzasArea debe ser booleano' },
-        { status: 400 }
-      );
+    // Actualizar fechas de la visión principal
+    const visionUpdateData: any = {
+      updatedAt: new Date(),
+    };
+
+    // Si vienen fechas de básico, actualizamos la visión principal
+    if (body.startDate !== undefined) {
+      visionUpdateData.startDate = body.startDate;
+    }
+    if (body.endDate !== undefined) {
+      visionUpdateData.endDate = body.endDate;
     }
 
-    if (typeof forceRelacionesArea !== 'boolean') {
-      return NextResponse.json(
-        { success: false, error: 'forceRelacionesArea debe ser booleano' },
-        { status: 400 }
-      );
-    }
-
-    if (typeof forceTalentosArea !== 'boolean') {
-      return NextResponse.json(
-        { success: false, error: 'forceTalentosArea debe ser booleano' },
-        { status: 400 }
-      );
-    }
-
-    if (typeof forceSaludArea !== 'boolean') {
-      return NextResponse.json(
-        { success: false, error: 'forceSaludArea debe ser booleano' },
-        { status: 400 }
-      );
-    }
-
-    if (typeof forcePazMentalArea !== 'boolean') {
-      return NextResponse.json(
-        { success: false, error: 'forcePazMentalArea debe ser booleano' },
-        { status: 400 }
-      );
-    }
-
-    if (typeof forceOcioArea !== 'boolean') {
-      return NextResponse.json(
-        { success: false, error: 'forceOcioArea debe ser booleano' },
-        { status: 400 }
-      );
-    }
-
-    if (typeof forceTransformationArea !== 'boolean') {
-      return NextResponse.json(
-        { success: false, error: 'forceTransformationArea debe ser booleano' },
-        { status: 400 }
-      );
-    }
-
-    if (forceTransformationArea) {
-      if (
-        typeof transformationGuestsTarget !== 'number' ||
-        transformationGuestsTarget < 1 ||
-        transformationGuestsTarget > 20
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'transformationGuestsTarget debe ser un número entre 1 y 20',
-          },
-          { status: 400 }
-        );
-      }
-    }
-
-    if (typeof forceCommunityServiceArea !== 'boolean') {
-      return NextResponse.json(
-        { success: false, error: 'forceCommunityServiceArea debe ser booleano' },
-        { status: 400 }
-      );
-    }
-
-    // Verificar que la visión existe
-    const vision = await prisma.vision.findUnique({
+    await prisma.vision.update({
       where: { id: visionId },
-      select: { organizationId: true },
+      data: visionUpdateData,
     });
 
-    if (!vision) {
-      return NextResponse.json(
-        { success: false, error: 'Visión no encontrada' },
-        { status: 404 }
-      );
-    }
-
-    // Verificar que la visión pertenece a la organización del director
-    const user = await prisma.usuario.findUnique({
-      where: { id: session.user.id },
-      select: { organizationId: true },
-    });
-
-    if (!user?.organizationId || vision.organizationId !== user.organizationId) {
-      return NextResponse.json(
-        { success: false, error: 'No tienes acceso a esta visión' },
-        { status: 403 }
-      );
-    }
-
-    // Verificar si hay participantes con cartas ya iniciadas
-    const participantesConCarta = await prisma.visionParticipante.findMany({
-      where: { visionId },
-      include: {
-        Participante: {
-          include: {
-            CartaFrutos: {
-              where: {
-                estado: {
-                  not: 'BORRADOR'
-                }
-              },
-              select: { id: true, estado: true }
-            }
-          }
-        }
-      }
-    });
-
-    const usuariosConCartaActiva = participantesConCarta.filter(
-      p => p.Participante.CartaFrutos.length > 0
-    );
-
-    if (usuariosConCartaActiva.length > 0) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'No se pueden modificar las áreas de la visión',
-          details: `Hay ${usuariosConCartaActiva.length} participante(s) que ya han iniciado su ciclo con el wizard. Para proteger su progreso, no se permiten cambios en la configuración de áreas.`,
-          participantesAfectados: usuariosConCartaActiva.length
-        },
-        { status: 400 }
-      );
-    }
-
-    // Actualizar la configuración de áreas
-    const updatedVision = await prisma.vision.update({
-      where: { id: visionId },
-      data: {
-        forceFinanzasArea,
-        forceRelacionesArea,
-        forceTalentosArea,
-        forceSaludArea,
-        forcePazMentalArea,
-        forceOcioArea,
-        forceTransformationArea,
-        transformationGuestsTarget: forceTransformationArea
-          ? transformationGuestsTarget
-          : null,
-        forceCommunityServiceArea,
+    // Actualizar productos: Básico, Avanzado y PL
+    const productos = await prisma.schoolProduct.findMany({
+      where: {
+        visionId,
+        type: 'CORE_TRAINING',
       },
     });
+    
+    console.log('📦 Productos encontrados:', productos.length);
+    productos.forEach(p => console.log(`  - ${p.levelType} (ID: ${p.id})`));
+
+    // Actualizar Producto Básico
+    const basicProduct = productos.find(p => p.levelType === 'BASIC');
+    if (basicProduct) {
+      const basicUpdateData: any = { updatedAt: new Date() };
+      if (body.startDate !== undefined) basicUpdateData.startDate = body.startDate;
+      if (body.endDate !== undefined) basicUpdateData.endDate = body.endDate;
+      
+      await prisma.schoolProduct.update({
+        where: { id: basicProduct.id },
+        data: basicUpdateData,
+      });
+    }
+
+    // Actualizar Producto Avanzado
+    const advancedProduct = productos.find(p => p.levelType === 'ADVANCED');
+    if (advancedProduct) {
+      const advancedUpdateData: any = { updatedAt: new Date() };
+      if (body.advancedStartDate !== undefined) advancedUpdateData.startDate = body.advancedStartDate;
+      if (body.advancedEndDate !== undefined) advancedUpdateData.endDate = body.advancedEndDate;
+      
+      await prisma.schoolProduct.update({
+        where: { id: advancedProduct.id },
+        data: advancedUpdateData,
+      });
+    }
+
+    // Actualizar Programa Liderato (PL) con las 3 fechas de fines de semana
+    const plProduct = productos.find(p => p.levelType === 'PL');
+    if (plProduct) {
+      console.log('👑 Producto PL encontrado, ID:', plProduct.id);
+      
+      const plUpdateData: any = { updatedAt: new Date() };
+      
+      // Fin de Semana 1
+      if (body.plWeekend1StartDate !== undefined) plUpdateData.plWeekend1StartDate = body.plWeekend1StartDate;
+      if (body.plWeekend1EndDate !== undefined) plUpdateData.plWeekend1EndDate = body.plWeekend1EndDate;
+      
+      // Fin de Semana 2
+      if (body.plWeekend2StartDate !== undefined) plUpdateData.plWeekend2StartDate = body.plWeekend2StartDate;
+      if (body.plWeekend2EndDate !== undefined) plUpdateData.plWeekend2EndDate = body.plWeekend2EndDate;
+      
+      // Fin de Semana 3 (Graduación)
+      if (body.plWeekend3StartDate !== undefined) plUpdateData.plWeekend3StartDate = body.plWeekend3StartDate;
+      if (body.plWeekend3EndDate !== undefined) plUpdateData.plWeekend3EndDate = body.plWeekend3EndDate;
+      
+      console.log('💾 Datos a actualizar en PL:', plUpdateData);
+      
+      const updatedPL = await prisma.schoolProduct.update({
+        where: { id: plProduct.id },
+        data: plUpdateData,
+      });
+      
+      console.log('✅ PL actualizado:', updatedPL);
+    } else {
+      console.log('⚠️ NO se encontró producto PL');
+    }
 
     return NextResponse.json({
       success: true,
-      message: 'Configuración de áreas actualizada correctamente',
-      vision: {
-        forceFinanzasArea: updatedVision.forceFinanzasArea,
-        forceRelacionesArea: updatedVision.forceRelacionesArea,
-        forceTalentosArea: updatedVision.forceTalentosArea,
-        forceSaludArea: updatedVision.forceSaludArea,
-        forcePazMentalArea: updatedVision.forcePazMentalArea,
-        forceOcioArea: updatedVision.forceOcioArea,
-        forceTransformationArea: updatedVision.forceTransformationArea,
-        transformationGuestsTarget: updatedVision.transformationGuestsTarget,
-        forceCommunityServiceArea: updatedVision.forceCommunityServiceArea,
-      },
+      message: 'Fechas actualizadas exitosamente',
     });
+
   } catch (error) {
-    console.error('Error updating areas configuration:', error);
+    console.error('Error updating vision dates:', error);
     return NextResponse.json(
-      { success: false, error: 'Error al actualizar la configuración de áreas' },
+      { success: false, error: 'Error al actualizar las fechas' },
       { status: 500 }
     );
   }

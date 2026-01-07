@@ -726,23 +726,25 @@ export default function CartaResumenPage() {
     switch (cartaData.estado) {
       case 'EN_REVISION':
         return (
-          <span className="px-4 py-2 bg-yellow-500/20 text-yellow-400 rounded-full text-sm font-bold flex items-center gap-2">
+          <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-yellow-500/20 text-yellow-400 rounded-full text-xs sm:text-sm font-bold flex items-center gap-2">
             <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
-            En Revisión
+            <span className="hidden xs:inline">En Revisión</span>
+            <span className="xs:hidden">Revisión</span>
           </span>
         );
       case 'APROBADA':
         return (
-          <span className="px-4 py-2 bg-green-500/20 text-green-400 rounded-full text-sm font-bold flex items-center gap-2">
-            <CheckCircle2 size={16} />
+          <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-green-500/20 text-green-400 rounded-full text-xs sm:text-sm font-bold flex items-center gap-2">
+            <CheckCircle2 size={14} className="sm:w-4 sm:h-4" />
             Aprobada
           </span>
         );
       case 'CAMBIOS_REQUERIDOS':
         return (
-          <span className="px-4 py-2 bg-red-500/20 text-red-400 rounded-full text-sm font-bold flex items-center gap-2">
-            <AlertCircle size={16} />
-            Cambios Requeridos
+          <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-red-500/20 text-red-400 rounded-full text-xs sm:text-sm font-bold flex items-center gap-2">
+            <AlertCircle size={14} className="sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline">Cambios Requeridos</span>
+            <span className="xs:hidden">Cambios</span>
           </span>
         );
       default:
@@ -785,16 +787,16 @@ export default function CartaResumenPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f1015] p-6">
+    <div className="min-h-screen bg-[#0f1015] p-3 sm:p-6">
       <div className="max-w-5xl mx-auto">
         {/* ========== HEADER ========== */}
-        <div className="mb-8">
-          <div className="flex items-start justify-between mb-4">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
             <div>
-              <h1 className="text-3xl font-black text-white mb-2">Mi Carta F.R.U.T.O.S.</h1>
-              <p className="text-gray-400">Visualiza y gestiona tus metas por área</p>
+              <h1 className="text-2xl sm:text-3xl font-black text-white mb-2">Mi Carta de<br className="sm:hidden" /> Objetivos</h1>
+              <p className="text-sm sm:text-base text-gray-400">Visualiza y gestiona tus metas por área</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               {getEstadoBadge()}
               <ResetDeclarationsButton />
             </div>
@@ -802,12 +804,12 @@ export default function CartaResumenPage() {
 
           {/* Alerta de Solo Lectura */}
           {isReadOnly && (
-            <div className="bg-green-500/10 border-2 border-green-500/30 rounded-xl p-4 flex items-center gap-3">
-              <div className="p-2 bg-green-500/20 rounded-lg">
-                <Lock className="text-green-400" size={20} />
+            <div className="bg-green-500/10 border-2 border-green-500/30 rounded-xl p-3 sm:p-4 flex items-start gap-3">
+              <div className="p-2 bg-green-500/20 rounded-lg flex-shrink-0">
+                <Lock className="text-green-400" size={18} />
               </div>
-              <div className="flex-1">
-                <p className="text-green-400 font-bold text-sm">
+              <div className="flex-1 min-w-0">
+                <p className="text-green-400 font-bold text-xs sm:text-sm">
                   ✅ Felicitaciones!!! Tus Objetivos han sido aprobados, Gestiona tu Tareas en HOY.
                 </p>
                 <p className="text-gray-400 text-xs mt-1">
@@ -819,14 +821,14 @@ export default function CartaResumenPage() {
 
           {/* Alerta de Cambios Requeridos */}
           {cartaData?.estado === 'CAMBIOS_REQUERIDOS' && (
-            <div className="bg-red-500/10 border-2 border-red-500/30 rounded-xl p-5 mb-6">
-              <div className="flex items-start gap-4">
-                <AlertCircle className="text-red-400 flex-shrink-0 mt-1" size={24} />
-                <div className="flex-1">
-                  <p className="text-red-300 font-bold text-lg mb-2">
+            <div className="bg-red-500/10 border-2 border-red-500/30 rounded-xl p-3 sm:p-5 mb-4 sm:mb-6">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <AlertCircle className="text-red-400 flex-shrink-0 mt-1" size={20} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-red-300 font-bold text-base sm:text-lg mb-2">
                     ⚠️ Tu mentor solicitó cambios en tu carta
                   </p>
-                  <p className="text-gray-300 text-sm mb-3">
+                  <p className="text-gray-300 text-xs sm:text-sm mb-3">
                     Las metas marcadas con <span className="text-red-400 font-bold">borde rojo</span> fueron rechazadas y necesitan ser corregidas. 
                     Las metas con <span className="text-green-400 font-bold">borde verde</span> ya están aprobadas y están bloqueadas.
                   </p>
@@ -852,14 +854,14 @@ export default function CartaResumenPage() {
 
           {/* Alerta de En Revisión */}
           {cartaData?.estado === 'EN_REVISION' && (
-            <div className="bg-blue-500/10 border-2 border-blue-500/30 rounded-xl p-5 mb-6">
-              <div className="flex items-start gap-4">
-                <Loader2 className="text-blue-400 animate-spin flex-shrink-0 mt-1" size={24} />
-                <div className="flex-1">
-                  <p className="text-blue-300 font-bold text-lg mb-2">
+            <div className="bg-blue-500/10 border-2 border-blue-500/30 rounded-xl p-3 sm:p-5 mb-4 sm:mb-6">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <Loader2 className="text-blue-400 animate-spin flex-shrink-0 mt-1" size={20} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-blue-300 font-bold text-base sm:text-lg mb-2">
                     ⏳ Tu carta está en revisión
                   </p>
-                  <p className="text-gray-300 text-sm mb-3">
+                  <p className="text-gray-300 text-xs sm:text-sm mb-3">
                     Tu mentor está revisando tu carta. Mientras tanto, puedes seguir editando y mejorando tus metas.
                   </p>
                   <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3">
@@ -881,10 +883,10 @@ export default function CartaResumenPage() {
             const puedereenviar = metasRechazadasNoEditadas.length === 0;
             
             return (
-              <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-xl p-4 flex items-center gap-3">
-                <AlertCircle className="text-amber-400" size={20} />
-                <div className="flex-1">
-                  <p className="text-amber-400 font-bold text-sm">
+              <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <AlertCircle className="text-amber-400 flex-shrink-0" size={20} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-amber-400 font-bold text-xs sm:text-sm">
                     {puedereenviar ? 'Tienes cambios sin reenviar' : `⚠️ Faltan ${metasRechazadasNoEditadas.length} meta(s) rechazada(s) por editar`}
                   </p>
                   <p className="text-gray-400 text-xs mt-1">
@@ -896,12 +898,12 @@ export default function CartaResumenPage() {
                 <button
                   onClick={handleResubmit}
                   disabled={submitting || !puedereenviar}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  className="w-full sm:w-auto px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
                 >
                 {submitting ? (
                   <>
                     <Loader2 className="animate-spin" size={16} />
-                    Enviando...
+                    Enviando Espere...
                   </>
                 ) : (
                   <>
@@ -947,33 +949,33 @@ export default function CartaResumenPage() {
             )}
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {areas.map((area) => {
               const isExpanded = expandedAreas.has(area.id);
 
               return (
                 <div
                   key={area.id}
-                  className="rounded-2xl border border-indigo-500/30 bg-[#0f172a] p-6 shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/20 transition-all duration-300"
+                  className="rounded-xl sm:rounded-2xl border border-indigo-500/30 bg-[#0f172a] p-3 sm:p-6 shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/20 transition-all duration-300"
                 >
                   {/* Header del Área */}
                   <button
                     onClick={() => toggleArea(area.id)}
-                    className="w-full flex items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-700/50 hover:border-indigo-500/50 transition-all"
+                    className="w-full flex items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-700/50 hover:border-indigo-500/50 transition-all"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="h-14 w-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-3xl shadow-lg shadow-indigo-500/30">
+                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                      <div className="h-10 w-10 sm:h-14 sm:w-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-2xl sm:text-3xl shadow-lg shadow-indigo-500/30 flex-shrink-0">
                         {area.icono}
                       </div>
-                      <div className="text-left">
-                        <h2 className="text-xl font-bold text-white tracking-wide uppercase">{area.nombre}</h2>
+                      <div className="text-left min-w-0">
+                        <h2 className="text-base sm:text-xl font-bold text-white tracking-wide uppercase truncate">{area.nombre}</h2>
                         <span className="text-xs font-medium text-indigo-300 uppercase tracking-wider">
                           {area.objetivo ? '1 Objetivo' : '0 Objetivos'}
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="px-3 py-1.5 bg-gradient-to-r from-purple-600/30 to-pink-600/30 text-purple-300 rounded-full text-xs font-bold border border-purple-500/30">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                      <span className="px-2 sm:px-3 py-1 sm:py-1.5 bg-gradient-to-r from-purple-600/30 to-pink-600/30 text-purple-300 rounded-full text-xs font-bold border border-purple-500/30">
                         {(() => {
                           // Contar el total de acciones en todas las metas del área
                           let totalAcciones = 0;
@@ -986,36 +988,36 @@ export default function CartaResumenPage() {
                         })()}
                       </span>
                       {isExpanded ? (
-                        <ChevronUp className="text-indigo-400" size={24} />
+                        <ChevronUp className="text-indigo-400" size={20} />
                       ) : (
-                        <ChevronDown className="text-indigo-400" size={24} />
+                        <ChevronDown className="text-indigo-400" size={20} />
                       )}
                     </div>
                   </button>
 
                   {/* Metas del Área */}
                   {isExpanded && (
-                    <div className="px-6 pb-4 space-y-4">
+                    <div className="px-0 sm:px-6 pb-3 sm:pb-4 space-y-3 sm:space-y-4">
                       {/* Declaración de Objetivo */}
                       {area.objetivo && (
-                        <div className="bg-gradient-to-br from-purple-500/10 via-pink-500/10 to-purple-500/10 border-2 border-purple-500/40 rounded-xl p-5 group hover:border-purple-500/70 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-300">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex items-start gap-4 flex-1">
-                              <div className="p-2 bg-purple-500/20 rounded-lg flex-shrink-0">
-                                <Sparkles className="text-purple-400" size={22} />
+                        <div className="bg-gradient-to-br from-purple-500/10 via-pink-500/10 to-purple-500/10 border-2 border-purple-500/40 rounded-xl p-3 sm:p-5 group hover:border-purple-500/70 hover:shadow-lg hover:shadow-purple-500/20 transition-all duration-300">
+                          <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
+                            <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0 w-full">
+                              <div className="p-1.5 sm:p-2 bg-purple-500/20 rounded-lg flex-shrink-0">
+                                <Sparkles className="text-purple-400" size={18} />
                               </div>
-                              <div className="flex-1">
-                                <p className="text-xs text-purple-300 font-bold mb-2 uppercase tracking-wider">🎯 Declaración de OBJETIVO</p>
-                                <p className="text-white text-lg font-semibold italic leading-relaxed">"{area.objetivo}"</p>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs text-purple-300 font-bold mb-1 sm:mb-2 uppercase tracking-wider">🎯 Declaración de OBJETIVO</p>
+                                <p className="text-white text-base sm:text-lg font-semibold italic leading-relaxed break-words">"{area.objetivo}"</p>
                               </div>
                             </div>
                             {!isReadOnly && (
                               <button
                                 onClick={() => openEditObjetivo(area.id, area.objetivo || '')}
-                                className="px-3 py-2 rounded-lg bg-purple-600/20 text-purple-300 text-sm border border-purple-500/30 hover:bg-purple-600 hover:text-white hover:border-purple-500 transition-all opacity-0 group-hover:opacity-100 flex-shrink-0 font-medium"
+                                className="w-full sm:w-auto px-3 py-2 rounded-lg bg-purple-600/20 text-purple-300 text-xs sm:text-sm border border-purple-500/30 hover:bg-purple-600 hover:text-white hover:border-purple-500 transition-all sm:opacity-0 sm:group-hover:opacity-100 flex-shrink-0 font-medium justify-center flex items-center gap-1"
                                 title="Editar objetivo"
                               >
-                                ✏️ Editar
+                                ✏️ <span>Editar</span>
                               </button>
                             )}
                           </div>
@@ -1025,10 +1027,10 @@ export default function CartaResumenPage() {
                       {/* Separador y Título de Acciones */}
                       {area.metas.length > 0 && (
                         <div className="pt-2">
-                          <div className="flex items-center gap-3 mb-4">
+                          <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                             <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent"></div>
-                            <h3 className="text-sm font-bold text-gray-400 tracking-wider flex items-center gap-2">
-                              <Target className="text-purple-400" size={16} />
+                            <h3 className="text-xs sm:text-sm font-bold text-gray-400 tracking-wider flex items-center gap-1.5 sm:gap-2">
+                              <Target className="text-purple-400" size={14} />
                               ACCIONES
                             </h3>
                             <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent"></div>
@@ -1056,7 +1058,7 @@ export default function CartaResumenPage() {
                             return (
                               <div
                                 key={accion.id}
-                                className={`group relative rounded-xl p-5 border transition-all duration-300 ${
+                                className={`group relative rounded-xl p-3 sm:p-5 border transition-all duration-300 ${
                                   wasEdited && (meta.status === 'REJECTED' || cartaData?.estado === 'EN_REVISION')
                                     ? 'bg-blue-900/10 border-blue-500/50 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/10'
                                     : meta.status === 'APPROVED' 
@@ -1066,48 +1068,50 @@ export default function CartaResumenPage() {
                                     : 'bg-slate-800/50 border-slate-700 hover:border-indigo-400 hover:shadow-lg hover:shadow-indigo-500/10'
                                 }`}
                               >
-                                {/* Indicador de Estado */}
+                                {/* Indicador de Estado - Responsive */}
                                 {wasEdited && cartaData?.estado === 'EN_REVISION' && (
-                                  <div className="absolute top-3 right-3 flex items-center gap-2 bg-blue-900/50 border border-blue-500 px-3 py-1.5 rounded-full z-10">
-                                    <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
-                                    <span className="text-xs font-bold text-blue-300 whitespace-nowrap">En revisión por mentor</span>
+                                  <div className="absolute top-2 right-2 sm:top-3 sm:right-3 flex items-center gap-1.5 sm:gap-2 bg-blue-900/50 border border-blue-500 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full z-10">
+                                    <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400 animate-spin flex-shrink-0" />
+                                    <span className="text-xs font-bold text-blue-300 hidden sm:inline whitespace-nowrap">En revisión por mentor</span>
+                                    <span className="text-xs font-bold text-blue-300 sm:hidden">Revisión</span>
                                   </div>
                                 )}
                                 {wasEdited && meta.status === 'REJECTED' && cartaData?.estado !== 'EN_REVISION' && (
-                                  <div className="absolute top-3 right-3 flex items-center gap-2 bg-blue-900/50 border border-blue-500 px-3 py-1.5 rounded-full z-10">
-                                    <Edit className="w-4 h-4 text-blue-400" />
-                                    <span className="text-xs font-bold text-blue-300 whitespace-nowrap">Editada - Lista para reenviar</span>
+                                  <div className="absolute top-2 right-2 sm:top-3 sm:right-3 flex items-center gap-1.5 sm:gap-2 bg-blue-900/50 border border-blue-500 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full z-10">
+                                    <Edit className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400 flex-shrink-0" />
+                                    <span className="text-xs font-bold text-blue-300 hidden sm:inline whitespace-nowrap">Editada - Lista para reenviar</span>
+                                    <span className="text-xs font-bold text-blue-300 sm:hidden">Editada</span>
                                   </div>
                                 )}
                                 {!wasEdited && meta.status === 'APPROVED' && (
-                                  <div className="absolute top-3 right-3 flex items-center gap-2 bg-green-900/50 border border-green-500 px-3 py-1.5 rounded-full z-10">
-                                    <CheckCircle2 className="w-4 h-4 text-green-400" />
+                                  <div className="absolute top-2 right-2 sm:top-3 sm:right-3 flex items-center gap-1.5 sm:gap-2 bg-green-900/50 border border-green-500 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full z-10">
+                                    <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 text-green-400 flex-shrink-0" />
                                     <span className="text-xs font-bold text-green-300 whitespace-nowrap">Aprobada</span>
                                   </div>
                                 )}
                                 {!wasEdited && meta.status === 'REJECTED' && (
-                                  <div className="absolute top-3 right-3 flex items-center gap-2 bg-red-900/50 border border-red-500 px-3 py-1.5 rounded-full z-10">
-                                    <AlertCircle className="w-4 h-4 text-red-400" />
+                                  <div className="absolute top-2 right-2 sm:top-3 sm:right-3 flex items-center gap-1.5 sm:gap-2 bg-red-900/50 border border-red-500 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full z-10">
+                                    <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 text-red-400 flex-shrink-0" />
                                     <span className="text-xs font-bold text-red-300 whitespace-nowrap">Rechazada</span>
                                   </div>
                                 )}
 
-                                <div className="flex flex-col gap-4 pr-0 sm:pr-48">
-                                  <div className="flex items-start gap-3">
-                                    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white text-sm font-bold shadow-lg flex-shrink-0">
+                                <div className="flex flex-col gap-3 sm:gap-4 pr-0 sm:pr-40">
+                                  <div className="flex items-start gap-2 sm:gap-3">
+                                    <span className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 text-white text-xs sm:text-sm font-bold shadow-lg flex-shrink-0">
                                       {index + 1}
                                     </span>
                                     <div className="flex-1 min-w-0">
-                                      <p className="text-lg text-gray-100 font-medium leading-relaxed mb-3 break-words">
+                                      <p className="text-sm sm:text-lg text-gray-100 font-medium leading-relaxed mb-2 sm:mb-3 break-words">
                                         {accion.texto}
                                       </p>
                                         
                                         {/* Plan de Acción - Tipo de Recurrencia */}
-                                        <div className="space-y-3">
+                                        <div className="space-y-2 sm:space-y-3">
                                           {/* Badge de Tipo de Recurrencia */}
                                           <div className="flex items-center gap-2 flex-wrap">
                                             {accion.frequency === 'ONE_TIME' && (
-                                              <span className="inline-flex items-center gap-1.5 text-xs text-blue-300 bg-blue-900/30 px-3 py-1.5 rounded-full font-bold border border-blue-700/50 shadow-sm">
+                                              <span className="inline-flex items-center gap-1 sm:gap-1.5 text-xs text-blue-300 bg-blue-900/30 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full font-bold border border-blue-700/50 shadow-sm">
                                                 🎯 Única
                                               </span>
                                             )}
@@ -1124,9 +1128,9 @@ export default function CartaResumenPage() {
                                             return null;
                                           })()}
                                           {accion.frequency === 'ONE_TIME' && accion.specificDate && (
-                                            <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3">
+                                            <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-2 sm:p-3">
                                               <p className="text-xs text-blue-400 font-bold mb-1">📅 Fecha programada:</p>
-                                              <p className="text-sm text-blue-300 font-semibold">
+                                              <p className="text-xs sm:text-sm text-blue-300 font-semibold break-words">
                                                 {new Date(accion.specificDate).toLocaleDateString('es-ES', { 
                                                   weekday: 'long', 
                                                   year: 'numeric', 
@@ -1139,9 +1143,9 @@ export default function CartaResumenPage() {
 
                                           {/* Días de la Semana (WEEKLY) */}
                                           {accion.frequency === 'WEEKLY' && accion.assignedDays?.length > 0 && (
-                                            <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-3">
+                                            <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-2 sm:p-3">
                                               <p className="text-xs text-purple-400 font-bold mb-2">📅 Días de compromiso:</p>
-                                              <div className="flex flex-wrap gap-2">
+                                              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                                 {accion.assignedDays.map((dayNum: number) => (
                                                   <span
                                                     key={dayNum}
@@ -1177,12 +1181,12 @@ export default function CartaResumenPage() {
 
                                         {/* Feedback del Mentor si fue rechazada */}
                                         {meta.status === 'REJECTED' && meta.mentorFeedback && (
-                                          <div className="mt-4 bg-red-900/20 border-2 border-red-500/50 rounded-lg p-4">
-                                            <div className="flex items-start gap-3">
-                                              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                                              <div>
-                                                <p className="text-red-300 font-bold text-sm mb-1">⚠️ Comentario del mentor:</p>
-                                                <p className="text-red-200 text-sm leading-relaxed">{meta.mentorFeedback}</p>
+                                          <div className="mt-3 sm:mt-4 bg-red-900/20 border-2 border-red-500/50 rounded-lg p-3 sm:p-4">
+                                            <div className="flex items-start gap-2 sm:gap-3">
+                                              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                                              <div className="flex-1 min-w-0">
+                                                <p className="text-red-300 font-bold text-xs sm:text-sm mb-1">⚠️ Comentario del mentor:</p>
+                                                <p className="text-red-200 text-xs sm:text-sm leading-relaxed break-words">{meta.mentorFeedback}</p>
                                               </div>
                                             </div>
                                           </div>
@@ -1191,19 +1195,19 @@ export default function CartaResumenPage() {
                                     </div>
 
                                   {/* Botón de Edición - Abajo del contenido */}
-                                  <div className="flex justify-end gap-3 mt-4">
+                                  <div className="flex justify-end gap-2 sm:gap-3 mt-3 sm:mt-4">
                                     {isMetaEditable(meta) && (
                                       <button
                                         onClick={() => openEditModal(accion, meta)}
-                                        className="px-4 py-2 rounded-lg bg-indigo-600/20 text-indigo-300 text-sm border border-indigo-500/30 hover:bg-indigo-600 hover:text-white hover:border-indigo-500 transition-all opacity-0 group-hover:opacity-100 font-medium flex items-center gap-2"
+                                        className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-indigo-600/20 text-indigo-300 text-xs sm:text-sm border border-indigo-500/30 hover:bg-indigo-600 hover:text-white hover:border-indigo-500 transition-all sm:opacity-0 sm:group-hover:opacity-100 font-medium flex items-center gap-1.5 sm:gap-2"
                                         title="Editar acción"
                                       >
-                                        ✏️ Editar
+                                        ✏️ <span>Editar</span>
                                       </button>
                                     )}
                                     {!isMetaEditable(meta) && meta.status === 'APPROVED' && (
-                                      <div className="flex items-center gap-2 text-green-400 text-sm opacity-50">
-                                        <Lock className="w-4 h-4" />
+                                      <div className="flex items-center gap-1.5 sm:gap-2 text-green-400 text-xs sm:text-sm opacity-50">
+                                        <Lock className="w-3 h-3 sm:w-4 sm:h-4" />
                                         <span>Bloqueada</span>
                                       </div>
                                     )}
@@ -1246,22 +1250,24 @@ export default function CartaResumenPage() {
           const puedereenviar = metasRechazadasNoEditadas.length === 0;
           
           return (
-            <div className="fixed bottom-6 right-6">
+            <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
               <button
                 onClick={handleResubmit}
                 disabled={submitting || !puedereenviar}
-                className="px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-full font-bold flex items-center gap-3 shadow-lg shadow-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-full font-bold flex items-center gap-2 sm:gap-3 shadow-lg shadow-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm sm:text-base"
                 title={!puedereenviar ? `Faltan ${metasRechazadasNoEditadas.length} meta(s) rechazada(s) por editar` : ''}
               >
               {submitting ? (
                 <>
-                  <Loader2 className="animate-spin" size={20} />
-                  Enviando Cambios...
+                  <Loader2 className="animate-spin" size={18} />
+                  <span className="hidden sm:inline">Enviando Cambios...</span>
+                  <span className="sm:hidden">Enviando...</span>
                 </>
               ) : (
                 <>
-                  <Save size={20} />
-                  Reenviar para Revisión
+                  <Save size={18} />
+                  <span className="hidden sm:inline">Reenviar para Revisión</span>
+                  <span className="sm:hidden">Reenviar</span>
                 </>
               )}
               </button>
@@ -1272,82 +1278,82 @@ export default function CartaResumenPage() {
 
       {/* ========== MODAL DE EDICIÓN ========== */}
       {editingMeta && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">Editar Meta</h3>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6 max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h3 className="text-lg sm:text-xl font-bold text-white">Editar Meta</h3>
               <button
                 onClick={closeEditModal}
-                className="text-gray-500 hover:text-white transition-colors"
+                className="text-gray-500 hover:text-white transition-colors p-1"
               >
-                <X size={24} />
+                <X size={20} />
               </button>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Texto de la Meta */}
               <div>
-                <label className="block text-sm font-bold text-gray-400 mb-2">
+                <label className="block text-xs sm:text-sm font-bold text-gray-400 mb-2">
                   Texto de la Meta *
                 </label>
                 <textarea
                   value={editForm.texto}
                   onChange={(e) => setEditForm({ ...editForm, texto: e.target.value })}
                   rows={3}
-                  className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-purple-500 focus:outline-none resize-none"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm sm:text-base focus:border-purple-500 focus:outline-none resize-none"
                   placeholder="Describe tu meta..."
                 />
               </div>
 
               {/* Frecuencia */}
               <div>
-                <label className="block text-sm font-bold text-gray-400 mb-3">
+                <label className="block text-xs sm:text-sm font-bold text-gray-400 mb-2 sm:mb-3">
                   Tipo de Frecuencia *
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   <button
                     onClick={() => setEditForm({ ...editForm, tipoFrecuencia: 'ONE_TIME', dias: [] })}
-                    className={`px-4 py-3 rounded-lg font-bold transition-all text-sm ${
+                    className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg font-bold transition-all text-xs sm:text-sm flex items-center justify-center gap-1.5 ${
                       editForm.tipoFrecuencia === 'ONE_TIME'
                         ? 'bg-blue-600 text-white'
                         : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                     }`}
                   >
-                    <Target className="inline mr-2" size={16} />
-                    Única
+                    <Target className="flex-shrink-0" size={14} />
+                    <span>Única</span>
                   </button>
                   <button
                     onClick={() => setEditForm({ ...editForm, tipoFrecuencia: 'WEEKLY' })}
-                    className={`px-4 py-3 rounded-lg font-bold transition-all text-sm ${
+                    className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg font-bold transition-all text-xs sm:text-sm flex items-center justify-center gap-1.5 ${
                       editForm.tipoFrecuencia === 'WEEKLY'
                         ? 'bg-purple-600 text-white'
                         : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                     }`}
                   >
-                    <Calendar className="inline mr-2" size={16} />
-                    Semanal
+                    <Calendar className="flex-shrink-0" size={14} />
+                    <span>Semanal</span>
                   </button>
                   <button
                     onClick={() => setEditForm({ ...editForm, tipoFrecuencia: 'DAILY', dias: [] })}
-                    className={`px-4 py-3 rounded-lg font-bold transition-all text-sm ${
+                    className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg font-bold transition-all text-xs sm:text-sm flex items-center justify-center gap-1.5 ${
                       editForm.tipoFrecuencia === 'DAILY'
                         ? 'bg-green-600 text-white'
                         : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                     }`}
                   >
-                    <Calendar className="inline mr-2" size={16} />
-                    Diario
+                    <Calendar className="flex-shrink-0" size={14} />
+                    <span>Diario</span>
                   </button>
                   <button
                     onClick={() => setEditForm({ ...editForm, tipoFrecuencia: 'MONTHLY', dias: [] })}
-                    className={`px-4 py-3 rounded-lg font-bold transition-all text-sm ${
+                    className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg font-bold transition-all text-xs sm:text-sm flex items-center justify-center gap-1.5 ${
                       editForm.tipoFrecuencia === 'MONTHLY'
                         ? 'bg-pink-600 text-white'
                         : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                     }`}
                   >
-                    <Calendar className="inline mr-2" size={16} />
-                    Mensual
+                    <Calendar className="flex-shrink-0" size={14} />
+                    <span>Mensual</span>
                   </button>
                 </div>
               </div>
@@ -1355,10 +1361,10 @@ export default function CartaResumenPage() {
               {/* Días de la Semana (solo si es semanal) */}
               {editForm.tipoFrecuencia === 'WEEKLY' && (
                 <div>
-                  <label className="block text-sm font-bold text-gray-400 mb-3">
+                  <label className="block text-xs sm:text-sm font-bold text-gray-400 mb-2 sm:mb-3">
                     Días de la Semana *
                   </label>
-                  <div className="grid grid-cols-7 gap-2">
+                  <div className="grid grid-cols-7 gap-1 sm:gap-2">
                     {DIAS_SEMANA.map((dia) => {
                       const isSelected = editForm.dias.includes(dia.id);
                       return (
@@ -1526,19 +1532,19 @@ export default function CartaResumenPage() {
             </div>
 
             {/* Botones de Acción */}
-            <div className="flex gap-3 mt-8">
+            <div className="flex gap-2 sm:gap-3 mt-6 sm:mt-8">
               <button
                 onClick={closeEditModal}
-                className="flex-1 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-bold transition-all"
+                className="flex-1 px-3 sm:px-4 py-2 sm:py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-bold transition-all text-sm sm:text-base"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSaveEdit}
-                className="flex-1 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold flex items-center justify-center gap-2 transition-all"
+                className="flex-1 px-3 sm:px-4 py-2 sm:py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold flex items-center justify-center gap-1.5 sm:gap-2 transition-all text-sm sm:text-base"
               >
-                <Save size={18} />
-                Guardar Cambios
+                <Save size={16} />
+                <span>Guardar Cambios</span>
               </button>
             </div>
           </div>
@@ -1547,11 +1553,11 @@ export default function CartaResumenPage() {
 
       {/* ========== MODAL EDITAR OBJETIVO ========== */}
       {editingObjetivo && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <Sparkles className="text-purple-400" size={24} />
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl sm:rounded-2xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-gray-900 border-b border-gray-800 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+              <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                <Sparkles className="text-purple-400" size={20} />
                 Editar Objetivo o Meta
               </h2>
               <button
@@ -1562,16 +1568,16 @@ export default function CartaResumenPage() {
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
               {/* Campo de texto */}
               <div>
-                <label className="block text-sm font-bold text-gray-400 mb-3">
+                <label className="block text-xs sm:text-sm font-bold text-gray-400 mb-2 sm:mb-3">
                   Objetivo o Meta *
                 </label>
                 <textarea
                   value={objetivoForm}
                   onChange={(e) => setObjetivoForm(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:border-purple-500 focus:outline-none min-h-[120px] resize-none"
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm sm:text-base focus:border-purple-500 focus:outline-none min-h-[100px] sm:min-h-[120px] resize-none"
                   placeholder="Escribe tu objetivo o meta para esta área..."
                 />
                 {!objetivoForm.trim() && (
@@ -1582,25 +1588,25 @@ export default function CartaResumenPage() {
               </div>
 
               {/* Info */}
-              <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
-                <p className="text-sm text-purple-300">
+              <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3 sm:p-4">
+                <p className="text-xs sm:text-sm text-purple-300">
                   💡 <strong>Tip:</strong> Define un objetivo claro y específico que te inspire y motive a alcanzar tus metas en esta área.
                 </p>
               </div>
             </div>
 
             {/* Botones de Acción */}
-            <div className="flex gap-3 px-6 pb-6">
+            <div className="flex gap-2 sm:gap-3 px-4 sm:px-6 pb-4 sm:pb-6">
               <button
                 onClick={closeEditObjetivo}
-                className="flex-1 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-bold transition-all"
+                className="flex-1 px-3 sm:px-4 py-2 sm:py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-bold transition-all text-sm sm:text-base"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSaveObjetivo}
                 disabled={!objetivoForm.trim()}
-                className="flex-1 px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg font-bold flex items-center justify-center gap-2 transition-all"
+                className="flex-1 px-3 sm:px-4 py-2 sm:py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg font-bold flex items-center justify-center gap-1.5 sm:gap-2 transition-all text-sm sm:text-base"
               >
                 <Save size={18} />
                 Guardar Cambios

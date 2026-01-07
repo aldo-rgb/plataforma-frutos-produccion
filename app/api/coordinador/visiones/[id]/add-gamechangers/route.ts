@@ -88,7 +88,7 @@ export async function POST(
       });
       created.push(user);
 
-      // Crear licencia estándar en estado Pendiente
+      // Crear licencia STANDARD ACTIVADA (Game Changers se activan automáticamente)
       await prisma.licenseAssignment.create({
         data: {
           userId: user.id,
@@ -97,8 +97,10 @@ export async function POST(
           assignedBy: session.user.id,
           assignedAt: new Date(),
           licenseCode: `QNT-GC-${user.id}-${Date.now()}`,
-          isActive: false, // Pendiente de activación
-          notes: 'Licencia estándar automática - Game Changer - Pendiente de activación'
+          isActive: true, // ACTIVADA automáticamente para Game Changers
+          activatedAt: new Date(),
+          expiresAt: vision.endDate, // Expira cuando termina la visión
+          notes: 'Licencia STANDARD automática - Game Changer por coordinador - Activada'
         }
       });
       

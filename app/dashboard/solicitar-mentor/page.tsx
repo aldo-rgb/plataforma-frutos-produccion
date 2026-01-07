@@ -26,6 +26,7 @@ export default function SolicitarMentorPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCodeModal, setShowCodeModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [licenseCode, setLicenseCode] = useState('');
   const [validatingCode, setValidatingCode] = useState(false);
   
@@ -96,13 +97,10 @@ export default function SolicitarMentorPage() {
         return;
       }
 
-      // Éxito
-      alert(`✅ ${data.message}`);
+      // Éxito - mostrar modal personalizado
       setShowCodeModal(false);
       setLicenseCode('');
-      
-      // Recargar la página para mostrar el nuevo estado
-      window.location.reload();
+      setShowSuccessModal(true);
 
     } catch (error) {
       console.error('Error validando código:', error);
@@ -738,6 +736,75 @@ export default function SolicitarMentorPage() {
           </div>
           );
         })()}
+      </div>
+    );
+  }
+
+  // Modal de éxito
+  if (showSuccessModal) {
+    return (
+      <div className="fixed inset-0 bg-black/95 backdrop-blur-xl flex items-center justify-center z-[80] p-4 animate-in fade-in duration-300">
+        <div className="bg-gradient-to-br from-green-900/40 via-slate-900 to-slate-900 rounded-3xl max-w-md w-full shadow-2xl border border-green-500/20 overflow-hidden animate-in zoom-in-95 duration-300">
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-green-500/5 rounded-full blur-3xl -z-10"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -z-10"></div>
+          
+          {/* Content */}
+          <div className="relative p-8 text-center">
+            {/* Icon */}
+            <div className="mx-auto w-20 h-20 bg-green-500/20 backdrop-blur-sm rounded-full flex items-center justify-center mb-6 shadow-lg animate-in zoom-in duration-500 delay-150">
+              <CheckCircle className="w-12 h-12 text-green-400 animate-in zoom-in duration-700 delay-300" />
+            </div>
+            
+            {/* Title */}
+            <h3 className="text-2xl font-bold text-white mb-3 animate-in slide-in-from-bottom-4 duration-500 delay-200">
+              ¡Código validado exitosamente!
+            </h3>
+            
+            {/* Message */}
+            <p className="text-slate-300 mb-6 text-base leading-relaxed animate-in slide-in-from-bottom-4 duration-500 delay-300">
+              Tu solicitud está ahora en <span className="text-green-400 font-semibold">revisión</span>. 
+              Te notificaremos cuando sea aprobada.
+            </p>
+            
+            {/* Info box */}
+            <div className="bg-slate-800/50 rounded-xl p-4 mb-6 border border-slate-700/50 animate-in slide-in-from-bottom-4 duration-500 delay-400">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                  <AlertCircle className="w-5 h-5 text-blue-400" />
+                </div>
+                <div className="text-left text-sm text-slate-300">
+                  <p className="font-semibold text-white mb-1">Próximos pasos:</p>
+                  <ul className="space-y-1.5">
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                      <span>Revisaremos tu solicitud en 24-48 horas</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                      <span>Recibirás una notificación por email</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+                      <span>Podrás acceder a tu panel de mentor</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            {/* Button */}
+            <button
+              onClick={() => {
+                setShowSuccessModal(false);
+                window.location.reload();
+              }}
+              className="w-full px-6 py-4 bg-gradient-to-r from-green-600 via-emerald-600 to-green-600 hover:from-green-500 hover:via-emerald-500 hover:to-green-500 text-white rounded-xl font-bold transition-all hover:scale-105 active:scale-95 shadow-lg hover:shadow-2xl hover:shadow-green-500/50 animate-in slide-in-from-bottom-4 duration-500 delay-500"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

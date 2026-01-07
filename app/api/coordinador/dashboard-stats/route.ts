@@ -20,7 +20,10 @@ export async function GET() {
 
     console.log('✅ Usuario encontrado:', { id: usuario?.id, rol: usuario?.rol });
 
-    if (!usuario || usuario.rol !== 'COORDINADOR') {
+    // Roles válidos de coordinador
+    const coordinadorRoles = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER'];
+    
+    if (!usuario || !coordinadorRoles.includes(usuario.rol)) {
       console.log('❌ No es coordinador');
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
@@ -142,55 +145,38 @@ export async function GET() {
         tier: u.tier || 'BASIC',
       }));
 
-    // Licencias disponibles - calcular desde SchoolCredit
+    // Licencias disponibles - Buscar en Organization
     let availableCredits = 0;
     
-    // Intentar obtener créditos de la organización del coordinador
+    // Intentar obtener licencias de la organización del coordinador
     if (usuario.organizationId) {
       try {
-        const schoolCredits = await prisma.schoolCredit.findMany({
-          where: { 
-            organizationId: usuario.organizationId,
-            isActive: true
-          },
+        const organization = await prisma.organization.findUnique({
+          where: { id: usuario.organizationId },
           select: {
-            totalPurchased: true,
-            totalAllocated: true
+            totalLicenses: true,
+            activeLicenses: true
           }
         });
         
-        // Calcular créditos disponibles = total comprado - total asignado
-        availableCredits = schoolCredits.reduce((sum, credit) => {
-          return sum + (credit.totalPurchased - credit.totalAllocated);
-        }, 0);
-        
-        console.log('✅ Créditos de organización:', {
-          organizationId: usuario.organizationId,
-          totalCredits: schoolCredits,
-          available: availableCredits
-        });
+        if (organization) {
+          // Calcular licencias disponibles = total - activas
+          availableCredits = (organization.totalLicenses || 0) - (organization.activeLicenses || 0);
+          
+          console.log('✅ Licencias de organización:', {
+            organizationId: usuario.organizationId,
+            totalLicenses: organization.totalLicenses,
+            activeLicenses: organization.activeLicenses,
+            available: availableCredits
+          });
+        } else {
+          console.log('⚠️ Organización no encontrada');
+        }
       } catch (orgError) {
-        console.error('⚠️ Error obteniendo créditos de organización:', orgError);
+        console.error('⚠️ Error obteniendo licencias de organización:', orgError);
       }
     } else {
-      // Si el coordinador no tiene organizationId, buscar todos los créditos
-      try {
-        const allSchoolCredits = await prisma.schoolCredit.findMany({
-          where: { isActive: true },
-          select: {
-            totalPurchased: true,
-            totalAllocated: true
-          }
-        });
-        
-        availableCredits = allSchoolCredits.reduce((sum, credit) => {
-          return sum + (credit.totalPurchased - credit.totalAllocated);
-        }, 0);
-        
-        console.log('⚠️ Coordinador sin organizationId, usando suma de todos los créditos:', availableCredits);
-      } catch (orgError) {
-        console.error('⚠️ Error obteniendo créditos totales:', orgError);
-      }
+      console.log('⚠️ Coordinador sin organizationId');
     }
 
     console.log('✅ Estadísticas calculadas exitosamente');

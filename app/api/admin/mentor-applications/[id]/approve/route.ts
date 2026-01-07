@@ -40,7 +40,7 @@ export async function POST(
     const application = await prisma.mentorApplication.findUnique({
       where: { id: applicationId },
       include: {
-        Usuario: true
+        Usuario_MentorApplication_usuarioIdToUsuario: true
       }
     });
 
@@ -87,6 +87,10 @@ export async function POST(
           logros: [],
           expertiseTags: [],
           videoIntroUrl: application.videoIntroUrl,
+          // Nivel y comisiones por defecto (JUNIOR)
+          nivel: 'JUNIOR',
+          comisionMentor: 70,
+          comisionPlataforma: 30,
           // Disponibilidad - el mentor debe configurarla
           horarioInicio: null,
           horarioFin: null,
@@ -117,7 +121,8 @@ export async function POST(
         data: {
           status: 'APPROVED',
           reviewedBy: adminUser.id,
-          reviewedAt: new Date()
+          reviewedAt: new Date(),
+          updatedAt: new Date()
         }
       });
 

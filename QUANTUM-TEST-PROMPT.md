@@ -9,7 +9,7 @@ Copia y pega este prompt completo en el chat de `/dashboard/mentor-ia` para que 
 ## 📋 PROMPT DE PRUEBA COMPLETO
 
 ```
-Hola Quantum, quiero crear mi Carta F.R.U.T.O.S. completa. Te voy a dar toda la información de una vez para que la captures:
+Hola Quantum, quiero crear mi de Objetivos completa. Te voy a dar toda la información de una vez para que la captures:
 
 🧘 **SER - FINANZAS**
 Yo soy abundancia en acción constante que genera valor en el mundo. Mi objetivo es alcanzar ingresos de $50,000 MXN mensuales mediante mi emprendimiento digital. Mis acciones serán: prospección de clientes por LinkedIn todos los días de lunes a viernes, revisar estrategias de ventas los lunes y jueves, y actualizar mis habilidades empresariales cada sábado.
@@ -35,7 +35,7 @@ Yo soy impacto positivo que transforma vidas y eleva comunidades. Mi objetivo es
 🤝 **SER - SERVICIO COMUNITARIO**
 Yo soy contribución generosa que fortalece mi comunidad inmediata. Quiero participar en 3 proyectos comunitarios de mi ciudad. Asistiré a juntas vecinales cada sábado, participaré en actividades de limpieza comunitaria los domingos, y apoyaré a vecinos que lo necesiten cada miércoles.
 
-¿Puedes estructurar todo esto en formato JSON para mi Carta F.R.U.T.O.S.?
+¿Puedes estructurar todo esto en formato JSON para mi Carta de Objetivos?
 ```
 
 ---
@@ -58,7 +58,7 @@ El sistema automáticamente guardará esta información en tu tablero.
 Si solo quieres probar con 3-4 áreas:
 
 ```
-Quantum, quiero crear mi Carta F.R.U.T.O.S. Aquí están mis 3 áreas principales:
+Quantum, quiero crear mi Carta de Objetivos Aquí están mis 3 áreas principales:
 
 💰 FINANZAS: Yo soy abundancia en acción. Objetivo: $50k mensuales. Acciones: prospección diaria lun-vie, revisar estrategias lunes y jueves, capacitación cada sábado.
 

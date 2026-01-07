@@ -169,45 +169,45 @@ ${metasText}
 Basado en las metas del usuario, selecciona 3 ROLES del Consejo Quantum Matter (12 roles disponibles) que mejor se alineen con su perfil.
 
 CONSEJO QUANTUM MATTER (12 ROLES DISPONIBLES):
-1. The Quantum Director - Autoridad máxima, visión estratégica
-2. The Systems Architect - Diseñador del sistema, estructura y orden
-3. The Data Curator - Guardián de información, integridad de datos
-4. The Quantum Modeler - Simulación y predicción de futuros
-5. The Ethics Overseer - Balance ético y límites responsables
-6. The Risk Strategist - Evaluación de impacto y prevención
-7. The Quantum Engineer - Implementación técnica y ejecución
-8. The Signal Analyst - Detección de anomalías y alertas
-9. The Knowledge Archivist - Memoria del sistema, continuidad
-10. The Integrity Sentinel - Seguridad y estabilidad del sistema
-11. The Observer - Conciencia cuántica del sistema
-12. The Executive Interface - Avatar del usuario en el sistema
+1. El Director Cuántico - Autoridad máxima, visión estratégica
+2. El Arquitecto de Sistemas - Diseñador del sistema, estructura y orden
+3. El Curador de Datos - Guardián de información, integridad de datos
+4. El Modelador Cuántico - Simulación y predicción de futuros
+5. El Supervisor Ético - Balance ético y límites responsables
+6. El Estratega de Riesgos - Evaluación de impacto y prevención
+7. El Ingeniero Cuántico - Implementación técnica y ejecución
+8. El Analista de Señales - Detección de anomalías y alertas
+9. El Archivista del Conocimiento - Memoria del sistema, continuidad
+10. El Centinela de Integridad - Seguridad y estabilidad del sistema
+11. El Observador - Conciencia cuántica del sistema
+12. La Interfaz Ejecutiva - Avatar del usuario en el sistema
 
 REGLAS ESTRICTAS:
 1. Selecciona 3 roles DIFERENTES del Consejo basados en las metas del usuario
 2. Cada rol debe tener una justificación de 1 línea que conecte con las metas
 3. Los roles deben ser complementarios y diversos entre sí
-4. Mantén los nombres en INGLÉS (son designaciones oficiales del Consejo)
+4. Los nombres deben estar en ESPAÑOL (son designaciones oficiales del Consejo)
 
 RESPONDE ÚNICAMENTE CON UN JSON en este formato exacto:
 {
   "candidates": [
     {
       "id": "opt_1",
-      "designation": "The Quantum Director",
+      "designation": "El Director Cuántico",
       "rationale": "Visión estratégica detectada en metas de liderazgo y planificación.",
       "visual_tags": ["authority", "executive", "dark_suit", "quantum_pattern"],
       "archetype": "DIRECTOR"
     },
     {
       "id": "opt_2",
-      "designation": "The Data Curator",
+      "designation": "El Curador de Datos",
       "rationale": "Enfoque en organización y control de información detectado.",
       "visual_tags": ["analyst", "data_nodes", "monochrome", "precise"],
       "archetype": "CURATOR"
     },
     {
       "id": "opt_3",
-      "designation": "The Risk Strategist",
+      "designation": "El Estratega de Riesgos",
       "rationale": "Prioridad en evaluación de riesgos y prevención.",
       "visual_tags": ["strategist", "risk_graphs", "amber_accent", "tactical"],
       "archetype": "STRATEGIST"
@@ -356,33 +356,35 @@ export async function PUT(request: NextRequest) {
 
     const characterDescription = roleDescriptions[archetype] || roleDescriptions['DIRECTOR'];
 
-    const dallePrompt = `A professional corporate portrait of a ${genderDescriptor} executive in a futuristic tech company setting.
+    const dallePrompt = `A cinematic corporate portrait of a ${genderDescriptor} executive, with distinctive Latino features (e.g., olive complexion, defined bone structure, dark hair).
 
 The subject is a ${characterDescription}.
 
 Corporate role: ${designation}
 
-Art style: Clean, professional corporate photography with subtle sci-fi elements. Minimalist and sophisticated aesthetic. Modern tech company executive portrait.
+Art style: The "Matrix" meets high-end corporate photography. Cinematic color grading with cool tones (steely blues, deep greens) and dramatic contrast. Sleek, sophisticated, and futuristic.
 
-Lighting: Soft professional lighting with subtle technological glow from interfaces. Clean shadows. Corporate environment.
+Lighting: Dramatic rim lighting outlining the subject, mixed with the glow of advanced interfaces. A subtle, faint visual effect around the subject suggestive of quantum displacement or phasing (a very slight chromatic aberration or digital aura), showing they are a "Quantum Jumper".
 
-Background: Blurred modern office environment with abstract data visualizations or clean geometric patterns. Professional depth of field.
+Background: A luxurious, minimalist office that feels like it's inside a digital construct. Abstract flowing data streams, subtle digital rain code patterns, or shifting geometric architecture. Deep depth of field.
 
-Composition: Professional headshot to upper body, facing forward with calm, confident expression. Corporate posture. High resolution, sharp focus on face.
+Clothing: Sleek, tailored, minimalist dark attire (structured jackets, high-collar shirts, modern suits with interesting textures). Expensive fabrics, no standard business casual.
+
+Composition: Professional headshot to upper body, facing forward with an intense, intelligent, and confident expression. Silent authority. High resolution.
 
 STRICT RULES - NO:
 ❌ Weapons of any kind
-❌ Visible cybernetic implants
-❌ Excessive neon colors
+❌ Visible cumbersome cybernetic implants
+❌ Excessive bright neon colors (keep it moody)
 ❌ Aggressive postures or expressions
-❌ Armor or military gear
+❌ Trench coats or sunglasses indoors (must see eyes)
 
 REQUIRED - YES:
-✅ Calm, professional demeanor
-✅ Sober, sophisticated colors (blacks, grays, dark blues)
-✅ Subtle technology integration
+✅ Distinctive Latino appearance
+✅ Sleek, dark, Matrix-inspired fashion
+✅ Subtle quantum/digital distortion effect around subject
 ✅ Silent authority and confidence
-✅ Corporate executive appearance`;
+✅ High-end corporate executive appearance`;
 
     console.log('🎨 Generando avatar corporativo con DALL-E...');
     console.log('Rol del Consejo:', designation);

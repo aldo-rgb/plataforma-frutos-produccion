@@ -38,7 +38,7 @@ export async function GET(req: Request) {
         status: status as any
       },
       include: {
-        Usuario: {
+        Usuario_MentorApplication_usuarioIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -47,7 +47,7 @@ export async function GET(req: Request) {
             createdAt: true
           }
         },
-        ReviewedByUser: {
+        Usuario_MentorApplication_reviewedByToUsuario: {
           select: {
             id: true,
             nombre: true,

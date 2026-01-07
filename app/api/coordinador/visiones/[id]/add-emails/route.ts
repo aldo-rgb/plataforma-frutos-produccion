@@ -107,10 +107,11 @@ export async function POST(
             visionId: visionId,
             organizationId: coordinador.organizationId,
             assignedBy: session.user.id,
-            isActive: true,
+            isActive: false, // PENDIENTE - se activa cuando envía carta
             activatedAt: null, // Pendiente hasta que envíe su carta
             assignedAt: new Date(),
-            expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000) // 10 días para activar
+            expiresAt: vision.endDate, // Expira cuando termina la visión
+            notes: 'Licencia STANDARD automática - Participante por coordinador - Pendiente'
           }
         });
         console.log(`🎫 Licencia pendiente asignada a ${user.email}: ${licenseCode}`);
@@ -213,10 +214,11 @@ export async function POST(
                 visionId: visionId,
                 organizationId: coordinador.organizationId!,
                 assignedBy: session.user.id,
-                isActive: true,
+                isActive: false, // PENDIENTE - se activa cuando envía carta
                 activatedAt: null, // Pendiente
                 assignedAt: new Date(),
-                expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
+                expiresAt: vision.endDate, // Expira cuando termina la visión
+                notes: 'Licencia STANDARD automática - Usuario existente reasignado - Pendiente'
               }
             });
             console.log(`🎫 Licencia pendiente asignada a usuario existente ${user.email}`);

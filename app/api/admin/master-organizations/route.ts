@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
             email: true
           }
         },
-        Organizations: {
+        Organization: {
           select: {
             id: true,
             name: true,
@@ -44,8 +44,8 @@ export async function GET(req: NextRequest) {
 
     const masterOrgsWithCount = masterOrgs.map(mo => ({
       ...mo,
-      organizationCount: mo.Organizations.length,
-      totalLicenses: mo.Organizations.reduce((sum, org) => sum + org.totalLicenses, 0)
+      organizationCount: mo.Organization.length,
+      totalLicenses: mo.Organization.reduce((sum, org) => sum + org.totalLicenses, 0)
     }));
 
     return NextResponse.json(masterOrgsWithCount);

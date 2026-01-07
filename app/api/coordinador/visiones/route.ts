@@ -15,8 +15,11 @@ export async function GET() {
       where: { email: session.user.email }
     });
 
-    // Permitir tanto COORDINADOR como SCHOOL_ADMIN que actúan como coordinadores
-    if (!usuario || (usuario.rol !== 'COORDINADOR' && usuario.rol !== 'SCHOOL_ADMIN')) {
+    // Roles válidos de coordinador y admin
+    const allowedRoles = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER', 'SCHOOL_ADMIN'];
+    
+    // Permitir tanto coordinadores como SCHOOL_ADMIN que actúan como coordinadores
+    if (!usuario || !allowedRoles.includes(usuario.rol)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 

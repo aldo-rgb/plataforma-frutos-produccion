@@ -8,6 +8,31 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+model AccessCode {
+  id                                      Int          @id @default(autoincrement())
+  code                                    String       @unique
+  ticketId                                Int
+  visionId                                Int
+  generatedBy                             Int
+  usedBy                                  Int?
+  amount                                  Float
+  currency                                String       @default("MXN")
+  status                                  String       @default("ACTIVE")
+  expiresAt                               DateTime?
+  usedAt                                  DateTime?
+  metadata                                Json?
+  createdAt                               DateTime     @default(now())
+  Usuario_AccessCode_generatedByToUsuario Usuario      @relation("AccessCode_generatedByToUsuario", fields: [generatedBy], references: [id], onDelete: Cascade)
+  VisionTicket                            VisionTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  Usuario_AccessCode_usedByToUsuario      Usuario?     @relation("AccessCode_usedByToUsuario", fields: [usedBy], references: [id])
+
+  @@index([code])
+  @@index([generatedBy])
+  @@index([status])
+  @@index([ticketId])
+  @@index([visionId])
+}
+
 model Accion {
   id                Int               @id @default(autoincrement())
   metaId            Int
@@ -73,7 +98,7 @@ model AreaConfig {
   areaKey   String
   enabled   Boolean  @default(true)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime
   Usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@unique([usuarioId, areaKey])
@@ -215,31 +240,31 @@ model CallAvailability {
 }
 
 model CallBooking {
-  id                                     Int                @id @default(autoincrement())
+  id                                     Int                 @id @default(autoincrement())
   mentorId                               Int
   studentId                              Int
   scheduledAt                            DateTime
-  duration                               Int                @default(15)
-  status                                 EstadoLlamada      @default(PENDING)
+  duration                               Int                 @default(15)
+  status                                 EstadoLlamada       @default(PENDING)
   notes                                  String?
   rating                                 Int?
   confirmedAt                            DateTime?
   completedAt                            DateTime?
-  createdAt                              DateTime           @default(now())
-  updatedAt                              DateTime           @default(now())
+  createdAt                              DateTime            @default(now())
+  updatedAt                              DateTime            @default(now())
   meetingLink                            String?
-  type                                   CallType           @default(DISCIPLINE)
+  type                                   CallType            @default(DISCIPLINE)
   recurringGroupId                       String?
   programEnrollmentId                    Int?
-  attendanceStatus                       String?            @default("PENDING")
+  attendanceStatus                       String?             @default("PENDING")
   weekNumber                             Int?
-  packageOrderId                         String?            // 📦 Si pertenece a un paquete
-  Usuario_CallBooking_mentorIdToUsuario  Usuario            @relation("CallBooking_mentorIdToUsuario", fields: [mentorId], references: [id], onDelete: Cascade)
-  ProgramEnrollment                      ProgramEnrollment? @relation(fields: [programEnrollmentId], references: [id], onDelete: Cascade)
-  Usuario_CallBooking_studentIdToUsuario Usuario            @relation("CallBooking_studentIdToUsuario", fields: [studentId], references: [id], onDelete: Cascade)
-  MentorPackageOrder                     MentorPackageOrder? @relation(fields: [packageOrderId], references: [id], onDelete: SetNull)
-  Transaction                            Transaction?
+  packageOrderId                         String?
+  Usuario_CallBooking_mentorIdToUsuario  Usuario             @relation("CallBooking_mentorIdToUsuario", fields: [mentorId], references: [id], onDelete: Cascade)
+  MentorPackageOrder                     MentorPackageOrder? @relation(fields: [packageOrderId], references: [id])
+  ProgramEnrollment                      ProgramEnrollment?  @relation(fields: [programEnrollmentId], references: [id], onDelete: Cascade)
+  Usuario_CallBooking_studentIdToUsuario Usuario             @relation("CallBooking_studentIdToUsuario", fields: [studentId], references: [id], onDelete: Cascade)
   PayableCall                            PayableCall[]
+  Transaction                            Transaction?
 
   @@unique([mentorId, scheduledAt])
   @@index([attendanceStatus])
@@ -306,7 +331,6 @@ model CartaFrutos {
   autorizadoMentor                 Boolean     @default(false)
   autorizadoCoord                  Boolean     @default(false)
   autorizadoPorId                  Int?
-  approvedAt                       DateTime?
   fechaActualizacion               DateTime
   fechaCreacion                    DateTime    @default(now())
   finanzasDeclaracion              String?
@@ -334,6 +358,7 @@ model CartaFrutos {
   talentosDeclaracionStatus        EstadoItem  @default(PENDING)
   talentosDeclaracionFeedback      String?
   feedbackMentor                   String?
+  approvedAt                       DateTime?
   Usuario                          Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   Meta                             Meta[]
   Tarea                            Tarea[]
@@ -358,6 +383,25 @@ model CheckIn {
   @@index([usuarioId])
 }
 
+model CodigoAcceso {
+  id                Int          @id @default(autoincrement())
+  codigo            String       @unique
+  tipo              CodigoTipo
+  cantidadLicencias Int?
+  licenciasUsadas   Int?
+  descripcion       String?
+  estado            CodigoEstado @default(DISPONIBLE)
+  canjeadoPorId     Int?
+  canjeadoEn        DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime
+  Usuario           Usuario?     @relation(fields: [canjeadoPorId], references: [id])
+
+  @@index([codigo])
+  @@index([estado])
+  @@index([tipo])
+}
+
 model Collection {
   id                     Int                      @id @default(autoincrement())
   name                   String
@@ -370,6 +414,42 @@ model Collection {
   isActive               Boolean                  @default(true)
   createdAt              DateTime                 @default(now())
   UserCollectionProgress UserCollectionProgress[]
+}
+
+model CommissionLedger {
+  id                                          String           @id
+  mentorId                                    Int
+  sourceType                                  CommissionSource
+  sourceId                                    Int
+  studentId                                   Int
+  studentName                                 String
+  totalAmount                                 Decimal          @db.Decimal(10, 2)
+  platformFee                                 Decimal          @db.Decimal(10, 2)
+  platformPercent                             Int
+  payableAmount                               Decimal          @db.Decimal(10, 2)
+  currency                                    String           @default("MXN")
+  status                                      CommissionStatus @default(PENDING)
+  serviceName                                 String?
+  scheduledAt                                 DateTime
+  completedAt                                 DateTime         @default(now())
+  paidAt                                      DateTime?
+  payoutBatchId                               String?
+  paymentMethod                               String?
+  paymentReference                            String?
+  notes                                       String?
+  createdAt                                   DateTime         @default(now())
+  updatedAt                                   DateTime
+  Usuario_CommissionLedger_mentorIdToUsuario  Usuario          @relation("CommissionLedger_mentorIdToUsuario", fields: [mentorId], references: [id], onDelete: Cascade)
+  Usuario_CommissionLedger_studentIdToUsuario Usuario          @relation("CommissionLedger_studentIdToUsuario", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([completedAt])
+  @@index([mentorId])
+  @@index([paidAt])
+  @@index([payoutBatchId])
+  @@index([sourceId])
+  @@index([sourceType])
+  @@index([status])
+  @@index([studentId])
 }
 
 model DisciplineConfig {
@@ -428,7 +508,7 @@ model DisponibilidadSemanal {
   horaFin        String
   activo         Boolean      @default(true)
   createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  updatedAt      DateTime
   PerfilMentor   PerfilMentor @relation(fields: [perfilMentorId], references: [id], onDelete: Cascade)
 
   @@index([activo])
@@ -486,12 +566,37 @@ model ExcepcionDisponibilidad {
   motivo         String
   descripcion    String?
   createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  updatedAt      DateTime
   PerfilMentor   PerfilMentor @relation(fields: [perfilMentorId], references: [id], onDelete: Cascade)
 
   @@index([fechaFin])
   @@index([fechaInicio])
   @@index([perfilMentorId])
+}
+
+model InstitutionalOrder {
+  id                 Int           @id @default(autoincrement())
+  userId             Int
+  nombreOrganizacion String
+  emailCoordinador   String
+  logoUrl            String?
+  geofencing         String?
+  cantidadLicencias  Int
+  totalAmount        Float
+  paymentMethod      String
+  paymentSessionId   String?
+  paymentId          String?
+  status             String        @default("PENDING")
+  organizationId     Int?
+  processedAt        DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime
+  Organization       Organization? @relation(fields: [organizationId], references: [id])
+  Usuario            Usuario       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([userId])
 }
 
 model License {
@@ -541,6 +646,30 @@ model LicenseAssignment {
   @@index([organizationId])
   @@index([userId])
   @@index([visionId])
+}
+
+model LicenseCode {
+  id                                     Int                 @id @default(autoincrement())
+  code                                   String              @unique
+  type                                   LicenseCodeType
+  organizationId                         Int?
+  used                                   Boolean             @default(false)
+  usedBy                                 Int?
+  usedAt                                 DateTime?
+  expiresAt                              DateTime?
+  createdBy                              Int
+  createdAt                              DateTime            @default(now())
+  updatedAt                              DateTime
+  notes                                  String?
+  Usuario_LicenseCode_createdByToUsuario Usuario             @relation("LicenseCode_createdByToUsuario", fields: [createdBy], references: [id])
+  Organization                           Organization?       @relation(fields: [organizationId], references: [id])
+  Usuario_LicenseCode_usedByToUsuario    Usuario?            @relation("LicenseCode_usedByToUsuario", fields: [usedBy], references: [id])
+  MentorApplication                      MentorApplication[]
+
+  @@index([code])
+  @@index([organizationId])
+  @@index([type])
+  @@index([used])
 }
 
 model LicenseOrder {
@@ -593,6 +722,22 @@ model Location {
   @@index([qrCodeHash])
 }
 
+model MasterOrganization {
+  id           Int            @id @default(autoincrement())
+  name         String         @unique
+  description  String?
+  logoUrl      String?
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime
+  createdBy    Int
+  Usuario      Usuario        @relation(fields: [createdBy], references: [id])
+  Organization Organization[]
+
+  @@index([isActive])
+  @@index([name])
+}
+
 model MensajeChat {
   id        Int      @id @default(autoincrement())
   role      String
@@ -642,6 +787,142 @@ model MentorAlert {
   @@index([usuarioId])
 }
 
+model MentorApplication {
+  id                                            Int               @id @default(autoincrement())
+  usuarioId                                     Int               @unique
+  status                                        ApplicationStatus @default(PENDING)
+  titulo                                        String
+  especialidad                                  String
+  especialidadesSecundarias                     String[]          @default([])
+  experienciaAnios                              Int
+  biografiaCorta                                String?
+  biografiaCompleta                             String
+  tagline                                       String?
+  promiseStatement                              String?
+  methodologyStyle                              MentorStyle?      @default(BALANCED)
+  idealClientDescription                        String?
+  horarioInicio                                 String?           @default("09:00")
+  horarioFin                                    String?           @default("18:00")
+  diasDisponibles                               String[]          @default([])
+  logros                                        String[]          @default([])
+  expertiseTags                                 String[]          @default([])
+  videoIntroUrl                                 String?
+  paymentIntentId                               String?
+  paymentStatus                                 String?           @default("PENDING")
+  amountPaid                                    Float?
+  reviewedBy                                    Int?
+  reviewedAt                                    DateTime?
+  rejectionReason                               String?
+  createdAt                                     DateTime          @default(now())
+  updatedAt                                     DateTime
+  documentosUrls                                String[]          @default([])
+  licenseCodeId                                 Int?
+  paidAt                                        DateTime?
+  paymentMethod                                 String?
+  LicenseCode                                   LicenseCode?      @relation(fields: [licenseCodeId], references: [id])
+  Usuario_MentorApplication_reviewedByToUsuario Usuario?          @relation("MentorApplication_reviewedByToUsuario", fields: [reviewedBy], references: [id])
+  Usuario_MentorApplication_usuarioIdToUsuario  Usuario           @relation("MentorApplication_usuarioIdToUsuario", fields: [usuarioId], references: [id], onDelete: Cascade)
+}
+
+model MentorMembershipRenewal {
+  id                    Int          @id @default(autoincrement())
+  mentorId              Int
+  renewalDate           DateTime
+  expiryDate            DateTime
+  amount                Float
+  stripePaymentIntentId String?
+  status                String       @default("ACTIVE")
+  autoRenewed           Boolean      @default(false)
+  createdAt             DateTime     @default(now())
+  PerfilMentor          PerfilMentor @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@index([expiryDate])
+  @@index([mentorId])
+  @@index([status])
+}
+
+model MentorPackageOrder {
+  id                                            String                 @id
+  usuarioId                                     Int
+  mentorId                                      Int
+  visionId                                      Int
+  organizationId                                Int?
+  cantidad                                      Int
+  precioUnitario                                Int
+  precioTotal                                   Int
+  currency                                      String                 @default("MXN")
+  metodoPago                                    String
+  status                                        PackageOrderStatus     @default(PENDING)
+  externalPaymentId                             String?
+  paymentUrl                                    String?
+  paidAt                                        DateTime?
+  paymentData                                   Json?
+  sessionScheduled                              Boolean                @default(false)
+  sessionsScheduledAt                           DateTime?
+  createdAt                                     DateTime               @default(now())
+  updatedAt                                     DateTime
+  CallBooking                                   CallBooking[]
+  Usuario_MentorPackageOrder_mentorIdToUsuario  Usuario                @relation("MentorPackageOrder_mentorIdToUsuario", fields: [mentorId], references: [id], onDelete: Cascade)
+  Organization                                  Organization?          @relation(fields: [organizationId], references: [id])
+  Usuario_MentorPackageOrder_usuarioIdToUsuario Usuario                @relation("MentorPackageOrder_usuarioIdToUsuario", fields: [usuarioId], references: [id], onDelete: Cascade)
+  Vision                                        Vision                 @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  PackageSessionCredits                         PackageSessionCredits?
+
+  @@index([externalPaymentId])
+  @@index([mentorId])
+  @@index([status])
+  @@index([usuarioId])
+  @@index([visionId])
+}
+
+model MentorPayout {
+  id             Int           @id @default(autoincrement())
+  escrowId       Int
+  mentorId       Int
+  visionId       Int
+  weekNumber     Int
+  callsCompleted Int
+  ratePerCall    Decimal       @db.Decimal(10, 2)
+  totalAmount    Decimal       @db.Decimal(10, 2)
+  status         PayoutStatus  @default(PENDING)
+  generatedAt    DateTime      @default(now())
+  paidAt         DateTime?
+  paymentMethod  String?
+  transactionRef String?
+  VisionEscrow   VisionEscrow  @relation(fields: [escrowId], references: [id], onDelete: Cascade)
+  Usuario        Usuario       @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  PayableCall    PayableCall[]
+
+  @@index([escrowId])
+  @@index([mentorId])
+  @@index([status])
+  @@index([visionId])
+  @@index([weekNumber])
+}
+
+model MentorPayrollItem {
+  id                  Int                 @id @default(autoincrement())
+  payrollPeriodId     Int
+  mentorId            Int
+  callsCompleted      Int                 @default(0)
+  callsMissedByUser   Int                 @default(0)
+  ratePerCall         Decimal             @db.Decimal(10, 2)
+  totalAmount         Decimal             @db.Decimal(10, 2)
+  status              PayrollItemStatus   @default(PENDING)
+  paidAt              DateTime?
+  paymentMethod       String?
+  paymentReference    String?
+  notes               String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime
+  Usuario             Usuario             @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  WeeklyPayrollPeriod WeeklyPayrollPeriod @relation(fields: [payrollPeriodId], references: [id], onDelete: Cascade)
+
+  @@index([mentorId])
+  @@index([payrollPeriodId])
+  @@index([status])
+}
+
 model Meta {
   id               Int               @id @default(autoincrement())
   cartaId          Int
@@ -674,73 +955,107 @@ model Notification {
   @@index([userId, isRead])
 }
 
-model MasterOrganization {
-  id             Int            @id @default(autoincrement())
-  name           String         @unique
-  description    String?
-  logoUrl        String?
-  isActive       Boolean        @default(true)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime
-  createdBy      Int
-  Usuario        Usuario        @relation(fields: [createdBy], references: [id])
-  Organizations  Organization[]
-
-  @@index([isActive])
-  @@index([name])
-}
-
 model Organization {
-  id                                                    Int                   @id @default(autoincrement())
+  id                                                    Int                             @id @default(autoincrement())
   name                                                  String
-  slug                                                  String                @unique
+  slug                                                  String                          @unique
   logoUrl                                               String?
-  brandColor                                            String                @default("#6366F1")
+  brandColor                                            String                          @default("#6366F1")
   contactEmail                                          String
-  status                                                OrganizationStatus    @default(ACTIVE)
-  isGeofenced                                           Boolean               @default(false)
+  status                                                OrganizationStatus              @default(ACTIVE)
+  isGeofenced                                           Boolean                         @default(false)
   campusLatitude                                        Float?
   campusLongitude                                       Float?
-  geofenceRadius                                        Int                   @default(100)
-  schoolAdminId                                         Int                   @unique
-  totalLicenses                                         Int                   @default(0)
-  activeLicenses                                        Int                   @default(0)
-  totalStudents                                         Int                   @default(0)
-  masterOrganizationId                                  Int?
-  createdAt                                             DateTime              @default(now())
+  geofenceRadius                                        Int                             @default(100)
+  schoolAdminId                                         Int                             @unique
+  totalLicenses                                         Int                             @default(0)
+  activeLicenses                                        Int                             @default(0)
+  totalStudents                                         Int                             @default(0)
+  createdAt                                             DateTime                        @default(now())
   updatedAt                                             DateTime
-  premiumLicensePrice                                   Float               @default(1250.00)
-  standardLicensePrice                                  Float               @default(600.00)
-  renewalOfferDiscount                                  Float               @default(50.00)
-  renewalOfferEnabled                                   Boolean             @default(true)
-  visionCycleDuration                                   Int                 @default(6)
+  premiumLicensePrice                                   Float                           @default(1250.00)
+  standardLicensePrice                                  Float                           @default(600.00)
+  renewalOfferDiscount                                  Float                           @default(50.00)
+  renewalOfferEnabled                                   Boolean                         @default(true)
+  visionCycleDuration                                   Int                             @default(6)
+  masterOrganizationId                                  Int?
+  DefaultPrice                                          DefaultPrice[]
+  InstitutionalOrder                                    InstitutionalOrder[]
   License                                               License[]
   LicenseAssignment                                     LicenseAssignment[]
+  LicenseCode                                           LicenseCode[]
   LicenseOrder                                          LicenseOrder[]
-  MasterOrganization                                    MasterOrganization? @relation(fields: [masterOrganizationId], references: [id])
-  Usuario_Organization_schoolAdminIdToUsuario           Usuario             @relation("Organization_schoolAdminIdToUsuario", fields: [schoolAdminId], references: [id])
-  SchoolCredit                                          SchoolCredit[]
-  Usuario_Usuario_communityOrganizationIdToOrganization Usuario[]           @relation("Usuario_communityOrganizationIdToOrganization")
-  Usuario_Usuario_organizationIdToOrganization          Usuario[]           @relation("Usuario_organizationIdToOrganization")
-  Vision                                                Vision[]
-  OrganizationWallet                                    OrganizationWallet?
-  InstitutionalOrder                                    InstitutionalOrder[]
   MentorPackageOrder                                    MentorPackageOrder[]
-  RefundRequest                                         RefundRequest[]      @relation("RefundRequestOrganization")
-  StripeConnectConfig                                   StripeConnectConfig?
+  MasterOrganization                                    MasterOrganization?             @relation(fields: [masterOrganizationId], references: [id])
+  Usuario_Organization_schoolAdminIdToUsuario           Usuario                         @relation("Organization_schoolAdminIdToUsuario", fields: [schoolAdminId], references: [id])
+  OrganizationWallet                                    OrganizationWallet?
+  RefundRequest                                         RefundRequest[]
+  SchoolCredit                                          SchoolCredit[]
+  SchoolProduct                                         SchoolProduct[]
   StaffCommissionsLog                                   StaffCommissionsLog[]
-  
-  // Nuevas relaciones para sistema de comisiones de coordinadores
-  CoordinatorCommissionConfig                           CoordinatorCommissionConfig[]
-  CoordinatorCommissions                                CoordinatorCommission[]
-  WeeklyPayoutSummary                                   WeeklyPayoutSummary[]
-  
-  // Relaciones para códigos de licencia
-  LicenseCodes                                          LicenseCode[]
+  StripeConnectConfig                                   StripeConnectConfig?
+  Usuario_Usuario_communityOrganizationIdToOrganization Usuario[]                       @relation("Usuario_communityOrganizationIdToOrganization")
+  Usuario_Usuario_organizationIdToOrganization          Usuario[]                       @relation("Usuario_organizationIdToOrganization")
+  Vision                                                Vision[]
+  coordinator_commission_config                         coordinator_commission_config[]
+  coordinator_commissions                               coordinator_commissions[]
+  weekly_payout_summary                                 weekly_payout_summary[]
 
+  @@index([masterOrganizationId])
   @@index([slug])
   @@index([status])
-  @@index([masterOrganizationId])
+}
+
+model OrganizationWallet {
+  id                Int                 @id @default(autoincrement())
+  organizationId    Int                 @unique
+  balance           Decimal             @default(0) @db.Decimal(10, 2)
+  currency          String              @default("MXN")
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  Organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  WalletTransaction WalletTransaction[]
+
+  @@index([organizationId])
+}
+
+model PackageSessionCredits {
+  id                 String             @id
+  packageOrderId     String             @unique
+  totalSessions      Int
+  usedSessions       Int                @default(0)
+  remainingSessions  Int
+  expiresAt          DateTime?
+  isActive           Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime
+  MentorPackageOrder MentorPackageOrder @relation(fields: [packageOrderId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([isActive])
+  @@index([packageOrderId])
+}
+
+model PayableCall {
+  id            Int          @id @default(autoincrement())
+  payoutId      Int
+  callBookingId Int
+  mentorId      Int
+  studentId     Int
+  visionId      Int
+  weekNumber    Int
+  callDate      DateTime
+  status        String
+  rateApplied   Decimal      @db.Decimal(10, 2)
+  createdAt     DateTime     @default(now())
+  CallBooking   CallBooking  @relation(fields: [callBookingId], references: [id], onDelete: Cascade)
+  MentorPayout  MentorPayout @relation(fields: [payoutId], references: [id], onDelete: Cascade)
+
+  @@index([callBookingId])
+  @@index([mentorId])
+  @@index([payoutId])
+  @@index([visionId])
+  @@index([weekNumber])
 }
 
 model Payment {
@@ -753,43 +1068,18 @@ model Payment {
   status          PaymentStatus @default(PENDING)
   paymentMethod   String?
   transactionId   String?
-  paymentId       String?
   description     String?
-  metadata        Json?
   isRenewal       Boolean       @default(false)
   isSchoolPayment Boolean       @default(false)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime
+  metadata        Json?
+  paymentId       String?
   Subscription    Subscription? @relation(fields: [subscriptionId], references: [id])
 
   @@index([organizationId])
   @@index([status])
   @@index([userId])
-}
-
-model InstitutionalOrder {
-  id                   Int       @id @default(autoincrement())
-  userId               Int
-  nombreOrganizacion   String
-  emailCoordinador     String
-  logoUrl              String?
-  geofencing           String?
-  cantidadLicencias    Int
-  totalAmount          Float
-  paymentMethod        String
-  paymentSessionId     String?
-  paymentId            String?
-  status               String    @default("PENDING") // PENDING, COMPLETED, FAILED, CANCELLED
-  organizationId       Int?
-  processedAt          DateTime?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-  Usuario              Usuario   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Organization         Organization? @relation(fields: [organizationId], references: [id])
-
-  @@index([userId])
-  @@index([status])
-  @@index([organizationId])
 }
 
 model PaymentSettings {
@@ -866,7 +1156,6 @@ model PerfilMentor {
   ratingSum                 Decimal                   @default(0) @db.Decimal(10, 2)
   ratingCount               Int                       @default(0)
   precioBase                Float                     @default(1000.0)
-  precioDisciplina          Float                     @default(90.0)
   enlaceVideoLlamada        String?
   tipoVideoLlamada          String?                   @default("zoom")
   horarioInicio             String?                   @default("09:00")
@@ -882,8 +1171,6 @@ model PerfilMentor {
   aiGeneratedBio            Boolean                   @default(false)
   lastAiInterviewAt         DateTime?
   evidenciasHighQuality     Int                       @default(0)
-  maxDisciplineClients      Int?                      @default(10)
-  acceptingNewClients       Boolean                   @default(true)
   lastMetricsUpdate         DateTime?
   mentoradosActivos         Int                       @default(0)
   mentoradosTotales         Int                       @default(0)
@@ -891,30 +1178,28 @@ model PerfilMentor {
   promedioXPPorMentorado    Float                     @default(0)
   puntosTotales             Int                       @default(0)
   xpTotalMentorados         Int                       @default(0)
-  
-  // Sistema de Membresía Anual
+  precioDisciplina          Float                     @default(90.0)
+  acceptingNewClients       Boolean                   @default(true)
+  maxDisciplineClients      Int?                      @default(10)
+  autoRenewalEnabled        Boolean                   @default(true)
+  lastRenewalAttempt        DateTime?
   membershipActive          Boolean                   @default(false)
-  membershipStartDate       DateTime?
-  membershipExpiryDate      DateTime?
   membershipApprovedAt      DateTime?
   membershipApprovedBy      Int?
-  autoRenewalEnabled        Boolean                   @default(true)
-  stripeSubscriptionId      String?
-  stripeCustomerId          String?
-  lastRenewalAttempt        DateTime?
+  membershipExpiryDate      DateTime?
+  membershipStartDate       DateTime?
   renewalFailureReason      String?
-  
-  // Estado de aprobación de perfil para LIDER
+  stripeCustomerId          String?
+  stripeSubscriptionId      String?
   profileApprovalStatus     ProfileApprovalStatus     @default(DRAFT)
   profileSubmittedAt        DateTime?
-  
   DisponibilidadSemanal     DisponibilidadSemanal[]
   ExcepcionDisponibilidad   ExcepcionDisponibilidad[]
+  MentorMembershipRenewal   MentorMembershipRenewal[]
   Usuario                   Usuario                   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   ResenasMentoria           ResenasMentoria[]
   ServicioMentoria          ServicioMentoria[]
   SolicitudMentoria         SolicitudMentoria[]
-  MentorMembershipRenewal   MentorMembershipRenewal[]
 }
 
 model PermisoMenu {
@@ -928,6 +1213,23 @@ model PermisoMenu {
   @@unique([role, menuKey])
   @@index([menuKey])
   @@index([role])
+}
+
+model PersonalTask {
+  id          Int        @id @default(autoincrement())
+  usuarioId   Int
+  titulo      String
+  descripcion String?
+  dueDate     DateTime   @db.Date
+  status      TaskStatus @default(PENDING)
+  completedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime
+  Usuario     Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([dueDate])
+  @@index([status])
+  @@index([usuarioId])
 }
 
 model PhoenixSession {
@@ -948,6 +1250,18 @@ model PhoenixSession {
 
   @@index([createdAt])
   @@index([usuarioId])
+}
+
+model PricingConfig {
+  id        Int      @id @default(autoincrement())
+  plan      String
+  currency  String
+  period    String?
+  price     Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+
+  @@unique([plan, currency, period])
 }
 
 model Producto {
@@ -1059,6 +1373,36 @@ model QuantumPattern {
   @@index([usuarioId])
 }
 
+model RefundRequest {
+  id                                         Int          @id @default(autoincrement())
+  organizationId                             Int
+  visionId                                   Int
+  studentId                                  Int
+  requestedBy                                Int
+  studentName                                String
+  dropoutWeek                                Int
+  totalCallsPaid                             Int
+  callsCompleted                             Int
+  callsToRefund                              Int
+  amountPaid                                 Decimal      @db.Decimal(10, 2)
+  amountToRefund                             Decimal      @db.Decimal(10, 2)
+  status                                     RefundStatus @default(PENDING)
+  processedAt                                DateTime?
+  processedBy                                Int?
+  notes                                      String?
+  createdAt                                  DateTime     @default(now())
+  updatedAt                                  DateTime
+  Organization                               Organization @relation(fields: [organizationId], references: [id])
+  Usuario_RefundRequest_processedByToUsuario Usuario?     @relation("RefundRequest_processedByToUsuario", fields: [processedBy], references: [id])
+  Usuario_RefundRequest_requestedByToUsuario Usuario      @relation("RefundRequest_requestedByToUsuario", fields: [requestedBy], references: [id])
+  Usuario_RefundRequest_studentIdToUsuario   Usuario      @relation("RefundRequest_studentIdToUsuario", fields: [studentId], references: [id])
+  Vision                                     Vision       @relation(fields: [visionId], references: [id])
+
+  @@index([organizationId])
+  @@index([status])
+  @@index([visionId])
+}
+
 model RenewalOffer {
   id              Int           @id @default(autoincrement())
   subscriptionId  Int
@@ -1154,6 +1498,67 @@ model SchoolCredit {
   @@index([planType])
 }
 
+model SchoolProduct {
+  id                   Int              @id @default(autoincrement())
+  organizationId       Int
+  visionId             Int?
+  name                 String
+  description          String?
+  imageUrl             String?
+  type                 ProductType
+  levelType            ProductLevelType @default(NONE)
+  basePrice            Float
+  promoPrice           Float?
+  promoDeadline        DateTime?
+  startDate            DateTime?
+  endDate              DateTime?
+  // Fechas de Programa Liderato (3 fines de semana)
+  plWeekend1StartDate  DateTime?
+  plWeekend1EndDate    DateTime?
+  plWeekend2StartDate  DateTime?
+  plWeekend2EndDate    DateTime?
+  plWeekend3StartDate  DateTime?
+  plWeekend3EndDate    DateTime?
+  maxCapacity          Int?
+  currentEnrollment    Int              @default(0)
+  isActive             Boolean          @default(true)
+  location             String?
+  coordinatorId        Int?
+  trainerId            Int?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime
+  createdBy            Int
+  Usuario              Usuario          @relation(fields: [createdBy], references: [id])
+  Organization         Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Vision               Vision?          @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  Coordinator          Usuario?         @relation("ProductCoordinator", fields: [coordinatorId], references: [id])
+  Trainer              Usuario?         @relation("ProductTrainer", fields: [trainerId], references: [id])
+
+  @@index([isActive])
+  @@index([levelType])
+  @@index([organizationId])
+  @@index([type])
+  @@index([visionId])
+  @@index([coordinatorId])
+  @@index([trainerId])
+}
+
+model DefaultPrice {
+  id             Int              @id @default(autoincrement())
+  organizationId Int
+  levelType      ProductLevelType
+  basePrice      Float
+  promoPrice     Float?
+  promoDeadline  DateTime?
+  currency       Currency         @default(MXN)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  Organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, levelType])
+  @@index([organizationId])
+}
+
 model ServiceLadderProgress {
   id                        Int       @id @default(autoincrement())
   usuarioId                 Int       @unique
@@ -1230,6 +1635,74 @@ model SolicitudMentoria {
   PerfilMentor          PerfilMentor            @relation(fields: [perfilMentorId], references: [id], onDelete: Cascade)
   ServicioMentoria      ServicioMentoria        @relation(fields: [servicioId], references: [id], onDelete: Cascade)
   Transaccion           Transaccion?            @relation(fields: [transaccionId], references: [id])
+}
+
+model StaffCommissionsLog {
+  id                                                 Int                    @id @default(autoincrement())
+  staffId                                            Int
+  triggerEvent                                       CommissionTriggerEvent
+  relatedUserId                                      Int?
+  amount                                             Decimal                @db.Decimal(10, 2)
+  status                                             CommissionStatus       @default(PENDING)
+  payoutDate                                         DateTime?
+  paidAt                                             DateTime?
+  notes                                              String?
+  metadata                                           Json?
+  createdAt                                          DateTime               @default(now())
+  updatedAt                                          DateTime
+  visionId                                           Int?
+  organizationId                                     Int?
+  cycleWeek                                          Int?
+  cycleYear                                          Int?
+  Organization                                       Organization?          @relation(fields: [organizationId], references: [id])
+  Usuario_StaffCommissionsLog_relatedUserIdToUsuario Usuario?               @relation("StaffCommissionsLog_relatedUserIdToUsuario", fields: [relatedUserId], references: [id])
+  Usuario_StaffCommissionsLog_staffIdToUsuario       Usuario                @relation("StaffCommissionsLog_staffIdToUsuario", fields: [staffId], references: [id], onDelete: Cascade)
+  Vision                                             Vision?                @relation(fields: [visionId], references: [id])
+
+  @@index([cycleWeek, cycleYear])
+  @@index([organizationId])
+  @@index([payoutDate])
+  @@index([staffId])
+  @@index([status])
+  @@index([triggerEvent])
+  @@index([visionId])
+}
+
+model StripeConnectConfig {
+  id                  Int          @id @default(autoincrement())
+  organizationId      Int          @unique
+  stripeAccountId     String       @unique
+  accountStatus       String       @default("pending")
+  chargesEnabled      Boolean      @default(false)
+  payoutsEnabled      Boolean      @default(false)
+  detailsSubmitted    Boolean      @default(false)
+  onboardingCompleted Boolean      @default(false)
+  platformFeePercent  Float        @default(1.0)
+  metadata            Json?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime
+  Organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([stripeAccountId])
+}
+
+model StudentGraduation {
+  id                                             Int         @id @default(autoincrement())
+  userId                                         Int
+  visionId                                       Int
+  fromLevel                                      VisionLevel
+  toLevel                                        VisionLevel
+  graduatedBy                                    Int
+  notes                                          String?
+  createdAt                                      DateTime    @default(now())
+  Usuario_StudentGraduation_graduatedByToUsuario Usuario     @relation("StudentGraduation_graduatedByToUsuario", fields: [graduatedBy], references: [id], onDelete: Cascade)
+  Usuario_StudentGraduation_userIdToUsuario      Usuario     @relation("StudentGraduation_userIdToUsuario", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([fromLevel])
+  @@index([toLevel])
+  @@index([userId])
+  @@index([visionId])
 }
 
 model Subscription {
@@ -1325,21 +1798,26 @@ model TaskSubmission {
   @@index([usuarioId])
 }
 
-model PersonalTask {
-  id          Int        @id @default(autoincrement())
-  usuarioId   Int
-  titulo      String
-  descripcion String?
-  dueDate     DateTime   @db.Date
-  status      TaskStatus @default(PENDING)
-  completedAt DateTime?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  Usuario     Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+model TicketPurchase {
+  id              Int           @id @default(autoincrement())
+  ticketId        Int
+  userId          Int
+  visionId        Int
+  amount          Float
+  currency        String        @default("MXN")
+  paymentMethod   String
+  stripePaymentId String?
+  status          PaymentStatus @default(PENDING)
+  metadata        Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime
+  VisionTicket    VisionTicket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  Usuario         Usuario       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([usuarioId])
   @@index([status])
-  @@index([dueDate])
+  @@index([ticketId])
+  @@index([userId])
+  @@index([visionId])
 }
 
 model Transaccion {
@@ -1411,242 +1889,285 @@ model UserServiceContribution {
 }
 
 model Usuario {
-  id                                                                  Int                       @id @default(autoincrement())
-  nombre                                                              String
-  email                                                               String                    @unique
-  password                                                            String?
-  imagen                                                              String?
-  rol                                                                 Rol                       @default(PARTICIPANTE)
-  puntosCuanticos                                                     Int                       @default(0)
-  isActive                                                            Boolean                   @default(false)
-  suscripcion                                                         EstadoSuscripcion         @default(INACTIVO)
-  planActual                                                          String?
-  fechaFinSuscripcion                                                 DateTime?
-  tier                                                                UserTier                  @default(FREE)
-  subscriptionStatus                                                  String                    @default("INACTIVE")
-  licenseCode                                                         String?
-  schoolId                                                            Int?
-  mentorId                                                            Int?
-  coordinadorId                                                       Int?
-  vision                                                              String?
-  sede                                                                String?
-  llamadasPerdidas                                                    Int                       @default(0)
-  createdAt                                                           DateTime                  @default(now())
-  updatedAt                                                           DateTime                  @default(now())
-  gameChangerId                                                       Int?
-  puntosGamificacion                                                  Int                       @default(0)
-  experienciaXP                                                       Int                       @default(0)
-  nivelActual                                                         Int                       @default(1)
-  rangoActual                                                         String                    @default("NOVATO_RASTREADOR")
-  completionStreak                                                    Int                       @default(0)
-  lastCompletionDate                                                  DateTime?
-  collectionsCompleted                                                String[]                  @default([])
-  missedCallsCount                                                    Int                       @default(0)
-  assignedMentorId                                                    Int?
-  bioFull                                                             String?
-  bioShort                                                            String?
-  experienceYears                                                     Int                       @default(0)
-  jobTitle                                                            String?
-  profileImage                                                        String?
-  skills                                                              String[]                  @default([])
-  badges                                                              String[]                  @default([])
-  timezone                                                            String                    @default("America/Mexico_City")
-  socialVisibility                                                    SocialVisibility          @default(COMMUNITY)
-  organizationId                                                      Int?
-  isPostVisionUser                                                    Boolean                   @default(false)
-  lastRenewalOfferDate                                                DateTime?
-  originalOrganizationId                                              Int?
-  renewalOfferShown                                                   Boolean                   @default(false)
-  subscriptionEndDate                                                 DateTime?
-  subscriptionPlan                                                    SubscriptionPlan?         @default(NONE)
-  subscriptionStartDate                                               DateTime?
-  telefono                                                            String?
-  requirePasswordChange                                               Boolean                   @default(false)
-  changeRequestedAt                                                   DateTime?
-  changeRequestedBy                                                   Int?
-  newOrganizationId                                                   Int?
-  newVisionId                                                         Int?
-  pendingOrganizationChange                                           Boolean                   @default(false)
-  previousOrganizationId                                              Int?
-  mentorMarketplaceApproved                                           Boolean                   @default(false)
-  visibleInMentorshipMarketplace                                      Boolean                   @default(true)
-  communityOrganizationId                                             Int?
-  magicLinkExpiry                                                     DateTime?
-  magicLinkToken                                                      String?                   @unique
-  onboardingOrigin                                                    String?                   @default("ORGANIC_SIGNUP")
-  temporaryPassword                                                   String?
-  wizardCompleted                                                     Boolean                   @default(false)
-  accumulatedMissedCalls                                              Int                       @default(0)
-  isAcceptingNewStudents                                              Boolean                   @default(true)
-  lastStrikeDate                                                      DateTime?
-  mentorStatus                                                        MentorStatus              @default(ACTIVE)
-  lastAvatarChangeDate                                                DateTime?
-  studentStatus                                                       StudentStatus?            // Estado del estudiante en el sistema multi-nivel
-  currentVisionLevel                                                  VisionLevel?              // Nivel actual en la visión
-  graduatedFromBasic                                                  DateTime?                 // Fecha de graduación del nivel básico
-  graduatedFromAdvanced                                               DateTime?                 // Fecha de graduación del nivel avanzado
-  AdminTask                                                           AdminTask[]
-  AreaConfig                                                          AreaConfig[]
-  ArenaDuel_ArenaDuel_player1IdToUsuario                              ArenaDuel[]               @relation("ArenaDuel_player1IdToUsuario")
-  ArenaDuel_ArenaDuel_player2IdToUsuario                              ArenaDuel[]               @relation("ArenaDuel_player2IdToUsuario")
-  ArenaDuel_ArenaDuel_winnerIdToUsuario                               ArenaDuel[]               @relation("ArenaDuel_winnerIdToUsuario")
-  ArenaQueue                                                          ArenaQueue?
-  ArenaStats                                                          ArenaStats?
-  ArenaTaunt_ArenaTaunt_receiverIdToUsuario                           ArenaTaunt[]              @relation("ArenaTaunt_receiverIdToUsuario")
-  ArenaTaunt_ArenaTaunt_senderIdToUsuario                             ArenaTaunt[]              @relation("ArenaTaunt_senderIdToUsuario")
-  AvatarGenerationAttempt                                             AvatarGenerationAttempt[]
-  CallAvailability                                                    CallAvailability[]
-  CallBooking_CallBooking_mentorIdToUsuario                           CallBooking[]             @relation("CallBooking_mentorIdToUsuario")
-  CallBooking_CallBooking_studentIdToUsuario                          CallBooking[]             @relation("CallBooking_studentIdToUsuario")
-  CallLog_CallLog_mentorIdToUsuario                                   CallLog[]                 @relation("CallLog_mentorIdToUsuario")
-  CallLog_CallLog_studentIdToUsuario                                  CallLog[]                 @relation("CallLog_studentIdToUsuario")
-  CartaFrutos                                                         CartaFrutos[]
-  CheckIn                                                             CheckIn[]
-  DisciplineConfig                                                    DisciplineConfig?
-  DisciplineSchedule                                                  DisciplineSchedule?
-  DisciplineSubscription_DisciplineSubscription_mentorIdToUsuario     DisciplineSubscription[]  @relation("DisciplineSubscription_mentorIdToUsuario")
-  DisciplineSubscription_DisciplineSubscription_studentIdToUsuario    DisciplineSubscription?   @relation("DisciplineSubscription_studentIdToUsuario")
-  Evidencia                                                           Evidencia[]
-  EvidenciaAccion                                                     EvidenciaAccion[]
-  LicenseAssignment_LicenseAssignment_assignedByToUsuario             LicenseAssignment[]       @relation("LicenseAssignment_assignedByToUsuario")
-  LicenseAssignment_LicenseAssignment_userIdToUsuario                 LicenseAssignment[]       @relation("LicenseAssignment_userIdToUsuario")
-  LicenseOrder                                                        LicenseOrder[]
-  MensajeChat                                                         MensajeChat[]
-  MentorAbsenceReport_MentorAbsenceReport_mentorIdToUsuario           MentorAbsenceReport[]     @relation("MentorAbsenceReport_mentorIdToUsuario")
-  MentorAbsenceReport_MentorAbsenceReport_reviewedByToUsuario         MentorAbsenceReport[]     @relation("MentorAbsenceReport_reviewedByToUsuario")
-  MentorAbsenceReport_MentorAbsenceReport_studentIdToUsuario          MentorAbsenceReport[]     @relation("MentorAbsenceReport_studentIdToUsuario")
-  MentorAlert_MentorAlert_mentorIdToUsuario                           MentorAlert[]             @relation("MentorAlert_mentorIdToUsuario")
-  MentorAlert_MentorAlert_usuarioIdToUsuario                          MentorAlert[]             @relation("MentorAlert_usuarioIdToUsuario")
-  Notification                                                        Notification[]
-  Organization_Organization_schoolAdminIdToUsuario                    Organization?             @relation("Organization_schoolAdminIdToUsuario")
-  PerfilMentor                                                        PerfilMentor?
-  PersonalTask                                                        PersonalTask[]
-  PhoenixSession                                                      PhoenixSession[]
-  ProgramEnrollment_ProgramEnrollment_mentorIdToUsuario               ProgramEnrollment[]       @relation("ProgramEnrollment_mentorIdToUsuario")
-  ProgramEnrollment_ProgramEnrollment_userIdToUsuario                 ProgramEnrollment[]       @relation("ProgramEnrollment_userIdToUsuario")
-  QuantumIdentity                                                     QuantumIdentity[]
-  QuantumInsight                                                      QuantumInsight[]
-  QuantumPattern                                                      QuantumPattern[]
-  ReporteAnonimo_ReporteAnonimo_estudianteIdToUsuario                 ReporteAnonimo[]          @relation("ReporteAnonimo_estudianteIdToUsuario")
-  ReporteAnonimo_ReporteAnonimo_mentorIdToUsuario                     ReporteAnonimo[]          @relation("ReporteAnonimo_mentorIdToUsuario")
-  ResenasMentoria                                                     ResenasMentoria[]
-  RewardHistory                                                       RewardHistory[]
-  ServiceLadderProgress                                               ServiceLadderProgress?
-  SocialReaction                                                      SocialReaction[]
-  SolicitudMentoria                                                   SolicitudMentoria[]
-  TaskInstance                                                        TaskInstance[]
-  TaskSubmission_TaskSubmission_reviewedByToUsuario                   TaskSubmission[]          @relation("TaskSubmission_reviewedByToUsuario")
-  TaskSubmission_TaskSubmission_usuarioIdToUsuario                    TaskSubmission[]          @relation("TaskSubmission_usuarioIdToUsuario")
-  Transaccion                                                         Transaccion[]
-  UserCollectionProgress                                              UserCollectionProgress[]
-  UserServiceContribution_UserServiceContribution_reviewedByToUsuario UserServiceContribution[] @relation("UserServiceContribution_reviewedByToUsuario")
-  UserServiceContribution_UserServiceContribution_usuarioIdToUsuario  UserServiceContribution[] @relation("UserServiceContribution_usuarioIdToUsuario")
-  Usuario_Usuario_assignedMentorIdToUsuario                           Usuario?                  @relation("Usuario_assignedMentorIdToUsuario", fields: [assignedMentorId], references: [id], onUpdate: NoAction)
-  other_Usuario_Usuario_assignedMentorIdToUsuario                     Usuario[]                 @relation("Usuario_assignedMentorIdToUsuario")
-  Organization_Usuario_communityOrganizationIdToOrganization          Organization?             @relation("Usuario_communityOrganizationIdToOrganization", fields: [communityOrganizationId], references: [id])
-  Usuario_Usuario_coordinadorIdToUsuario                              Usuario?                  @relation("Usuario_coordinadorIdToUsuario", fields: [coordinadorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_Usuario_Usuario_coordinadorIdToUsuario                        Usuario[]                 @relation("Usuario_coordinadorIdToUsuario")
-  Usuario_Usuario_gameChangerIdToUsuario                              Usuario?                  @relation("Usuario_gameChangerIdToUsuario", fields: [gameChangerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_Usuario_Usuario_gameChangerIdToUsuario                        Usuario[]                 @relation("Usuario_gameChangerIdToUsuario")
-  Usuario_Usuario_mentorIdToUsuario                                   Usuario?                  @relation("Usuario_mentorIdToUsuario", fields: [mentorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  other_Usuario_Usuario_mentorIdToUsuario                             Usuario[]                 @relation("Usuario_mentorIdToUsuario")
-  Organization_Usuario_organizationIdToOrganization                   Organization?             @relation("Usuario_organizationIdToOrganization", fields: [organizationId], references: [id])
-  Vision                                                              Vision[]
-  VisionGameChanger_VisionGameChanger_asignadoPorIdToUsuario          VisionGameChanger[]       @relation("VisionGameChanger_asignadoPorIdToUsuario")
-  VisionGameChanger_VisionGameChanger_gameChangerIdToUsuario          VisionGameChanger[]       @relation("VisionGameChanger_gameChangerIdToUsuario")
-  VisionMentor_VisionMentor_asignadoPorIdToUsuario                    VisionMentor[]            @relation("VisionMentor_asignadoPorIdToUsuario")
-  VisionMentor_VisionMentor_mentorIdToUsuario                         VisionMentor[]            @relation("VisionMentor_mentorIdToUsuario")
-  VisionParticipante_VisionParticipante_asignadoPorIdToUsuario        VisionParticipante[]      @relation("VisionParticipante_asignadoPorIdToUsuario")
-  MasterOrganization                                                  MasterOrganization[]
-  VisionParticipante_VisionParticipante_gameChangerIdToUsuario        VisionParticipante[]      @relation("VisionParticipante_gameChangerIdToUsuario")
-  VisionParticipante_VisionParticipante_participanteIdToUsuario       VisionParticipante[]      @relation("VisionParticipante_participanteIdToUsuario")
-  MentorPayout                                                        MentorPayout[]
-  InstitutionalOrder                                                  InstitutionalOrder[]
-  MentorPackageOrder_MentorPackageOrder_usuarioIdToUsuario            MentorPackageOrder[]
-  MentorPackageOrder_MentorPackageOrder_mentorIdToUsuario             MentorPackageOrder[]      @relation("MentorPackages")
-  CommissionLedger_CommissionLedger_mentorIdToUsuario                 CommissionLedger[]        @relation("CommissionMentor")
-  CommissionLedger_CommissionLedger_studentIdToUsuario                CommissionLedger[]        @relation("CommissionStudent")
-  MentorApplication                                                   MentorApplication?
-  ApplicationsReviewed                                                MentorApplication[]       @relation("ApplicationReviewer")
-  MentorPayrollItem                                                   MentorPayrollItem[]       @relation("MentorPayrollItems")
-  RefundRequest_RefundRequestStudent                                  RefundRequest[]           @relation("RefundRequestStudent")
-  RefundRequest_RefundRequestRequestedBy                              RefundRequest[]           @relation("RefundRequestRequestedBy")
-  RefundRequest_RefundRequestProcessedBy                              RefundRequest[]           @relation("RefundRequestProcessedBy")
-  CodigoAcceso                                                        CodigoAcceso[]            @relation("CodigoCanjeadoPor")
-  TicketPurchase                                                      TicketPurchase[]
-  AccessCode_AccessCodeGeneratedBy                                    AccessCode[]              @relation("AccessCodeGeneratedBy")
-  AccessCode_AccessCodeUsedBy                                         AccessCode[]              @relation("AccessCodeUsedBy")
-  StudentGraduation_StudentGraduated                                  StudentGraduation[]       @relation("StudentGraduated")
-  StaffCommissionsLog_Staff                                           StaffCommissionsLog[]     @relation("StaffCommissions")
-  StaffCommissionsLog_RelatedUser                                     StaffCommissionsLog[]     @relation("CommissionRelatedUser")
-  VisionCommissionConfig_UpdatedBy                                    VisionCommissionConfig[]  @relation("CommissionConfigUpdater")
-  StudentGraduation_GraduationApprovedBy                              StudentGraduation[]       @relation("GraduationApprovedBy")
-  
-  // Nuevas relaciones para sistema de comisiones de coordinadores
-  CoordinatorCommissionConfig_CreatedBy                               CoordinatorCommissionConfig[] @relation("CommissionConfigCreatedBy")
-  CoordinatorCommissions_Coordinator                                  CoordinatorCommission[]   @relation("CoordinatorCommissions")
-  CoordinatorCommissions_RelatedUser                                  CoordinatorCommission[]   @relation("CommissionRelatedUser")
-  CoordinatorCommissions_VerifiedBy                                   CoordinatorCommission[]   @relation("CommissionVerifiedBy")
-  WeeklyPayoutSummary_GeneratedBy                                     WeeklyPayoutSummary[]     @relation("PayoutGeneratedBy")
-  WeeklyPayoutSummary_ApprovedBy                                      WeeklyPayoutSummary[]     @relation("PayoutApprovedBy")
-  VisionEnrollment_User                                               VisionEnrollment[]        @relation("EnrollmentUser")
-  VisionEnrollment_Coordinator                                        VisionEnrollment[]        @relation("EnrollmentCoordinator")
-  
-  // Relaciones para códigos de licencia
-  LicenseCodesUsed                                                    LicenseCode[]             @relation("LicenseCodeUser")
-  LicenseCodesCreated                                                 LicenseCode[]             @relation("LicenseCodeCreator")
-  VisionEnrollment_InvitedBy                                          VisionEnrollment[]        @relation("EnrollmentInvitedBy")
+  id                                                                     Int                             @id @default(autoincrement())
+  nombre                                                                 String
+  email                                                                  String                          @unique
+  password                                                               String?
+  imagen                                                                 String?
+  rol                                                                    Rol                             @default(PARTICIPANTE)
+  puntosCuanticos                                                        Int                             @default(0)
+  isActive                                                               Boolean                         @default(false)
+  suscripcion                                                            EstadoSuscripcion               @default(INACTIVO)
+  planActual                                                             String?
+  fechaFinSuscripcion                                                    DateTime?
+  tier                                                                   UserTier                        @default(FREE)
+  subscriptionStatus                                                     String                          @default("INACTIVE")
+  licenseCode                                                            String?
+  schoolId                                                               Int?
+  mentorId                                                               Int?
+  coordinadorId                                                          Int?
+  vision                                                                 String?
+  sede                                                                   String?
+  llamadasPerdidas                                                       Int                             @default(0)
+  createdAt                                                              DateTime                        @default(now())
+  updatedAt                                                              DateTime                        @default(now())
+  gameChangerId                                                          Int?
+  puntosGamificacion                                                     Int                             @default(0)
+  experienciaXP                                                          Int                             @default(0)
+  nivelActual                                                            Int                             @default(1)
+  rangoActual                                                            String                          @default("NOVATO_RASTREADOR")
+  completionStreak                                                       Int                             @default(0)
+  lastCompletionDate                                                     DateTime?
+  collectionsCompleted                                                   String[]                        @default([])
+  missedCallsCount                                                       Int                             @default(0)
+  assignedMentorId                                                       Int?
+  bioFull                                                                String?
+  bioShort                                                               String?
+  experienceYears                                                        Int                             @default(0)
+  jobTitle                                                               String?
+  profileImage                                                           String?
+  skills                                                                 String[]                        @default([])
+  badges                                                                 String[]                        @default([])
+  timezone                                                               String                          @default("America/Mexico_City")
+  socialVisibility                                                       SocialVisibility                @default(COMMUNITY)
+  organizationId                                                         Int?
+  isPostVisionUser                                                       Boolean                         @default(false)
+  lastRenewalOfferDate                                                   DateTime?
+  originalOrganizationId                                                 Int?
+  renewalOfferShown                                                      Boolean                         @default(false)
+  subscriptionEndDate                                                    DateTime?
+  subscriptionPlan                                                       SubscriptionPlan?               @default(NONE)
+  subscriptionStartDate                                                  DateTime?
+  telefono                                                               String?
+  requirePasswordChange                                                  Boolean                         @default(false)
+  changeRequestedAt                                                      DateTime?
+  changeRequestedBy                                                      Int?
+  newOrganizationId                                                      Int?
+  newVisionId                                                            Int?
+  pendingOrganizationChange                                              Boolean                         @default(false)
+  previousOrganizationId                                                 Int?
+  mentorMarketplaceApproved                                              Boolean                         @default(false)
+  visibleInMentorshipMarketplace                                         Boolean                         @default(true)
+  communityOrganizationId                                                Int?
+  magicLinkExpiry                                                        DateTime?
+  magicLinkToken                                                         String?                         @unique
+  onboardingOrigin                                                       String?                         @default("ORGANIC_SIGNUP")
+  temporaryPassword                                                      String?
+  wizardCompleted                                                        Boolean                         @default(false)
+  accumulatedMissedCalls                                                 Int                             @default(0)
+  isAcceptingNewStudents                                                 Boolean                         @default(true)
+  lastStrikeDate                                                         DateTime?
+  mentorStatus                                                           MentorStatus                    @default(ACTIVE)
+  lastAvatarChangeDate                                                   DateTime?
+  currentVisionLevel                                                     VisionLevel?
+  graduatedFromAdvanced                                                  DateTime?
+  graduatedFromBasic                                                     DateTime?
+  studentStatus                                                          StudentStatus?
+  AccessCode_AccessCode_generatedByToUsuario                             AccessCode[]                    @relation("AccessCode_generatedByToUsuario")
+  AccessCode_AccessCode_usedByToUsuario                                  AccessCode[]                    @relation("AccessCode_usedByToUsuario")
+  AdminTask                                                              AdminTask[]
+  AreaConfig                                                             AreaConfig[]
+  ArenaDuel_ArenaDuel_player1IdToUsuario                                 ArenaDuel[]                     @relation("ArenaDuel_player1IdToUsuario")
+  ArenaDuel_ArenaDuel_player2IdToUsuario                                 ArenaDuel[]                     @relation("ArenaDuel_player2IdToUsuario")
+  ArenaDuel_ArenaDuel_winnerIdToUsuario                                  ArenaDuel[]                     @relation("ArenaDuel_winnerIdToUsuario")
+  ArenaQueue                                                             ArenaQueue?
+  ArenaStats                                                             ArenaStats?
+  ArenaTaunt_ArenaTaunt_receiverIdToUsuario                              ArenaTaunt[]                    @relation("ArenaTaunt_receiverIdToUsuario")
+  ArenaTaunt_ArenaTaunt_senderIdToUsuario                                ArenaTaunt[]                    @relation("ArenaTaunt_senderIdToUsuario")
+  AvatarGenerationAttempt                                                AvatarGenerationAttempt[]
+  CallAvailability                                                       CallAvailability[]
+  CallBooking_CallBooking_mentorIdToUsuario                              CallBooking[]                   @relation("CallBooking_mentorIdToUsuario")
+  CallBooking_CallBooking_studentIdToUsuario                             CallBooking[]                   @relation("CallBooking_studentIdToUsuario")
+  CallLog_CallLog_mentorIdToUsuario                                      CallLog[]                       @relation("CallLog_mentorIdToUsuario")
+  CallLog_CallLog_studentIdToUsuario                                     CallLog[]                       @relation("CallLog_studentIdToUsuario")
+  CartaFrutos                                                            CartaFrutos[]
+  CheckIn                                                                CheckIn[]
+  CodigoAcceso                                                           CodigoAcceso[]
+  CommissionLedger_CommissionLedger_mentorIdToUsuario                    CommissionLedger[]              @relation("CommissionLedger_mentorIdToUsuario")
+  CommissionLedger_CommissionLedger_studentIdToUsuario                   CommissionLedger[]              @relation("CommissionLedger_studentIdToUsuario")
+  DisciplineConfig                                                       DisciplineConfig?
+  DisciplineSchedule                                                     DisciplineSchedule?
+  DisciplineSubscription_DisciplineSubscription_mentorIdToUsuario        DisciplineSubscription[]        @relation("DisciplineSubscription_mentorIdToUsuario")
+  DisciplineSubscription_DisciplineSubscription_studentIdToUsuario       DisciplineSubscription?         @relation("DisciplineSubscription_studentIdToUsuario")
+  Evidencia                                                              Evidencia[]
+  EvidenciaAccion                                                        EvidenciaAccion[]
+  InstitutionalOrder                                                     InstitutionalOrder[]
+  LicenseAssignment_LicenseAssignment_assignedByToUsuario                LicenseAssignment[]             @relation("LicenseAssignment_assignedByToUsuario")
+  LicenseAssignment_LicenseAssignment_userIdToUsuario                    LicenseAssignment[]             @relation("LicenseAssignment_userIdToUsuario")
+  LicenseCode_LicenseCode_createdByToUsuario                             LicenseCode[]                   @relation("LicenseCode_createdByToUsuario")
+  LicenseCode_LicenseCode_usedByToUsuario                                LicenseCode[]                   @relation("LicenseCode_usedByToUsuario")
+  LicenseOrder                                                           LicenseOrder[]
+  MasterOrganization                                                     MasterOrganization[]
+  MensajeChat                                                            MensajeChat[]
+  MentorAbsenceReport_MentorAbsenceReport_mentorIdToUsuario              MentorAbsenceReport[]           @relation("MentorAbsenceReport_mentorIdToUsuario")
+  MentorAbsenceReport_MentorAbsenceReport_reviewedByToUsuario            MentorAbsenceReport[]           @relation("MentorAbsenceReport_reviewedByToUsuario")
+  MentorAbsenceReport_MentorAbsenceReport_studentIdToUsuario             MentorAbsenceReport[]           @relation("MentorAbsenceReport_studentIdToUsuario")
+  MentorAlert_MentorAlert_mentorIdToUsuario                              MentorAlert[]                   @relation("MentorAlert_mentorIdToUsuario")
+  MentorAlert_MentorAlert_usuarioIdToUsuario                             MentorAlert[]                   @relation("MentorAlert_usuarioIdToUsuario")
+  MentorApplication_MentorApplication_reviewedByToUsuario                MentorApplication[]             @relation("MentorApplication_reviewedByToUsuario")
+  MentorApplication_MentorApplication_usuarioIdToUsuario                 MentorApplication?              @relation("MentorApplication_usuarioIdToUsuario")
+  MentorPackageOrder_MentorPackageOrder_mentorIdToUsuario                MentorPackageOrder[]            @relation("MentorPackageOrder_mentorIdToUsuario")
+  MentorPackageOrder_MentorPackageOrder_usuarioIdToUsuario               MentorPackageOrder[]            @relation("MentorPackageOrder_usuarioIdToUsuario")
+  MentorPayout                                                           MentorPayout[]
+  MentorPayrollItem                                                      MentorPayrollItem[]
+  Notification                                                           Notification[]
+  Organization_Organization_schoolAdminIdToUsuario                       Organization?                   @relation("Organization_schoolAdminIdToUsuario")
+  PerfilMentor                                                           PerfilMentor?
+  PersonalTask                                                           PersonalTask[]
+  PhoenixSession                                                         PhoenixSession[]
+  ProgramEnrollment_ProgramEnrollment_mentorIdToUsuario                  ProgramEnrollment[]             @relation("ProgramEnrollment_mentorIdToUsuario")
+  ProgramEnrollment_ProgramEnrollment_userIdToUsuario                    ProgramEnrollment[]             @relation("ProgramEnrollment_userIdToUsuario")
+  QuantumIdentity                                                        QuantumIdentity[]
+  QuantumInsight                                                         QuantumInsight[]
+  QuantumPattern                                                         QuantumPattern[]
+  RefundRequest_RefundRequest_processedByToUsuario                       RefundRequest[]                 @relation("RefundRequest_processedByToUsuario")
+  RefundRequest_RefundRequest_requestedByToUsuario                       RefundRequest[]                 @relation("RefundRequest_requestedByToUsuario")
+  RefundRequest_RefundRequest_studentIdToUsuario                         RefundRequest[]                 @relation("RefundRequest_studentIdToUsuario")
+  ReporteAnonimo_ReporteAnonimo_estudianteIdToUsuario                    ReporteAnonimo[]                @relation("ReporteAnonimo_estudianteIdToUsuario")
+  ReporteAnonimo_ReporteAnonimo_mentorIdToUsuario                        ReporteAnonimo[]                @relation("ReporteAnonimo_mentorIdToUsuario")
+  ResenasMentoria                                                        ResenasMentoria[]
+  RewardHistory                                                          RewardHistory[]
+  SchoolProduct                                                          SchoolProduct[]
+  ServiceLadderProgress                                                  ServiceLadderProgress?
+  SocialReaction                                                         SocialReaction[]
+  SolicitudMentoria                                                      SolicitudMentoria[]
+  StaffCommissionsLog_StaffCommissionsLog_relatedUserIdToUsuario         StaffCommissionsLog[]           @relation("StaffCommissionsLog_relatedUserIdToUsuario")
+  StaffCommissionsLog_StaffCommissionsLog_staffIdToUsuario               StaffCommissionsLog[]           @relation("StaffCommissionsLog_staffIdToUsuario")
+  StudentGraduation_StudentGraduation_graduatedByToUsuario               StudentGraduation[]             @relation("StudentGraduation_graduatedByToUsuario")
+  StudentGraduation_StudentGraduation_userIdToUsuario                    StudentGraduation[]             @relation("StudentGraduation_userIdToUsuario")
+  TaskInstance                                                           TaskInstance[]
+  TaskSubmission_TaskSubmission_reviewedByToUsuario                      TaskSubmission[]                @relation("TaskSubmission_reviewedByToUsuario")
+  TaskSubmission_TaskSubmission_usuarioIdToUsuario                       TaskSubmission[]                @relation("TaskSubmission_usuarioIdToUsuario")
+  TicketPurchase                                                         TicketPurchase[]
+  Transaccion                                                            Transaccion[]
+  UserCollectionProgress                                                 UserCollectionProgress[]
+  UserServiceContribution_UserServiceContribution_reviewedByToUsuario    UserServiceContribution[]       @relation("UserServiceContribution_reviewedByToUsuario")
+  UserServiceContribution_UserServiceContribution_usuarioIdToUsuario     UserServiceContribution[]       @relation("UserServiceContribution_usuarioIdToUsuario")
+  Usuario_Usuario_assignedMentorIdToUsuario                              Usuario?                        @relation("Usuario_assignedMentorIdToUsuario", fields: [assignedMentorId], references: [id], onUpdate: NoAction)
+  other_Usuario_Usuario_assignedMentorIdToUsuario                        Usuario[]                       @relation("Usuario_assignedMentorIdToUsuario")
+  Organization_Usuario_communityOrganizationIdToOrganization             Organization?                   @relation("Usuario_communityOrganizationIdToOrganization", fields: [communityOrganizationId], references: [id])
+  Usuario_Usuario_coordinadorIdToUsuario                                 Usuario?                        @relation("Usuario_coordinadorIdToUsuario", fields: [coordinadorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_Usuario_Usuario_coordinadorIdToUsuario                           Usuario[]                       @relation("Usuario_coordinadorIdToUsuario")
+  Usuario_Usuario_gameChangerIdToUsuario                                 Usuario?                        @relation("Usuario_gameChangerIdToUsuario", fields: [gameChangerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_Usuario_Usuario_gameChangerIdToUsuario                           Usuario[]                       @relation("Usuario_gameChangerIdToUsuario")
+  Usuario_Usuario_mentorIdToUsuario                                      Usuario?                        @relation("Usuario_mentorIdToUsuario", fields: [mentorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_Usuario_Usuario_mentorIdToUsuario                                Usuario[]                       @relation("Usuario_mentorIdToUsuario")
+  Organization_Usuario_organizationIdToOrganization                      Organization?                   @relation("Usuario_organizationIdToOrganization", fields: [organizationId], references: [id])
+  Vision                                                                 Vision[]
+  VisionCommissionConfig                                                 VisionCommissionConfig[]
+  VisionGameChanger_VisionGameChanger_asignadoPorIdToUsuario             VisionGameChanger[]             @relation("VisionGameChanger_asignadoPorIdToUsuario")
+  VisionGameChanger_VisionGameChanger_gameChangerIdToUsuario             VisionGameChanger[]             @relation("VisionGameChanger_gameChangerIdToUsuario")
+  VisionMentor_VisionMentor_asignadoPorIdToUsuario                       VisionMentor[]                  @relation("VisionMentor_asignadoPorIdToUsuario")
+  VisionMentor_VisionMentor_mentorIdToUsuario                            VisionMentor[]                  @relation("VisionMentor_mentorIdToUsuario")
+  VisionParticipante_VisionParticipante_asignadoPorIdToUsuario           VisionParticipante[]            @relation("VisionParticipante_asignadoPorIdToUsuario")
+  VisionParticipante_VisionParticipante_gameChangerIdToUsuario           VisionParticipante[]            @relation("VisionParticipante_gameChangerIdToUsuario")
+  VisionParticipante_VisionParticipante_participanteIdToUsuario          VisionParticipante[]            @relation("VisionParticipante_participanteIdToUsuario")
+  VisionStaff_VisionStaff_assignedByToUsuario                            VisionStaff[]                   @relation("VisionStaff_assignedByToUsuario")
+  VisionStaff_VisionStaff_userIdToUsuario                                VisionStaff[]                   @relation("VisionStaff_userIdToUsuario")
+  ProductCoordinator                                                     SchoolProduct[]                 @relation("ProductCoordinator")
+  ProductTrainer                                                         SchoolProduct[]                 @relation("ProductTrainer")
+  coordinator_commission_config                                          coordinator_commission_config[]
+  coordinator_commissions_coordinator_commissions_coordinatorIdToUsuario coordinator_commissions[]       @relation("coordinator_commissions_coordinatorIdToUsuario")
+  coordinator_commissions_coordinator_commissions_relatedUserIdToUsuario coordinator_commissions[]       @relation("coordinator_commissions_relatedUserIdToUsuario")
+  coordinator_commissions_coordinator_commissions_verifiedByToUsuario    coordinator_commissions[]       @relation("coordinator_commissions_verifiedByToUsuario")
+  vision_enrollments_vision_enrollments_coordinatorIdToUsuario           vision_enrollments[]            @relation("vision_enrollments_coordinatorIdToUsuario")
+  vision_enrollments_vision_enrollments_invitedByToUsuario               vision_enrollments[]            @relation("vision_enrollments_invitedByToUsuario")
+  vision_enrollments_vision_enrollments_userIdToUsuario                  vision_enrollments[]            @relation("vision_enrollments_userIdToUsuario")
+  weekly_payout_summary_weekly_payout_summary_approvedByToUsuario        weekly_payout_summary[]         @relation("weekly_payout_summary_approvedByToUsuario")
+  weekly_payout_summary_weekly_payout_summary_generatedByToUsuario       weekly_payout_summary[]         @relation("weekly_payout_summary_generatedByToUsuario")
 
   @@index([communityOrganizationId])
 }
 
 model Vision {
-  id                         Int                  @id @default(autoincrement())
-  nombre                     String
-  descripcion                String?
-  coordinadorId              Int
-  isActive                   Boolean              @default(true)
-  createdAt                  DateTime             @default(now())
-  updatedAt                  DateTime
-  licensesAllocated          Int                  @default(0)
-  maxParticipantes           Int?
-  organizationId             Int?
-  endDate                    DateTime?
-  startDate                  DateTime?
-  forceCommunityServiceArea  Boolean              @default(true)
-  forceTransformationArea    Boolean              @default(true)
-  transformationGuestsTarget Int?                 @default(4)
-  forceFinanzasArea          Boolean              @default(true)
-  forceOcioArea              Boolean              @default(true)
-  forcePazMentalArea         Boolean              @default(true)
-  forceRelacionesArea        Boolean              @default(true)
-  forceSaludArea             Boolean              @default(true)
-  forceTalentosArea          Boolean              @default(true)
-  enabledLevels              VisionLevel[]        @default([PL])  // Niveles habilitados [BASIC, ADVANCED, PL]
-  financialConfigId          String?              // Stripe Connect Account ID del Director
-  platformFeePercent         Float                @default(0)     // Fee de la plataforma (ej. 1% = 1.0)
-  LicenseAssignment          LicenseAssignment[]
-  Usuario                    Usuario              @relation(fields: [coordinadorId], references: [id], onDelete: Cascade)
-  Organization               Organization?        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  VisionGameChanger          VisionGameChanger[]
-  VisionMentor               VisionMentor[]
-  VisionParticipante         VisionParticipante[]
-  VisionEscrow               VisionEscrow?
-  MentorPackageOrder         MentorPackageOrder[]
-  RefundRequest              RefundRequest[]      @relation("RefundRequestVision")
-  VisionTicket               VisionTicket[]       // Productos/Tickets del Director
-  VisionCommissionConfig     VisionCommissionConfig?
-  StaffCommissionsLog        StaffCommissionsLog[]
-  
-  // Nuevas relaciones para sistema de comisiones de coordinadores
-  CoordinatorCommissionConfig CoordinatorCommissionConfig?
-  CoordinatorCommissions     CoordinatorCommission[]
-  WeeklyPayoutSummary        WeeklyPayoutSummary[]
-  VisionEnrollment           VisionEnrollment[]      @relation("EnrollmentVision")
+  id                            Int                            @id @default(autoincrement())
+  nombre                        String
+  descripcion                   String?
+  coordinadorId                 Int
+  isActive                      Boolean                        @default(true)
+  createdAt                     DateTime                       @default(now())
+  updatedAt                     DateTime
+  licensesAllocated             Int                            @default(0)
+  maxParticipantes              Int?
+  organizationId                Int?
+  endDate                       DateTime?
+  startDate                     DateTime?
+  advancedStartDate             DateTime?
+  advancedEndDate               DateTime?
+  plWeekend1StartDate           DateTime?
+  plWeekend1EndDate             DateTime?
+  plWeekend2StartDate           DateTime?
+  plWeekend2EndDate             DateTime?
+  plWeekend3StartDate           DateTime?
+  plWeekend3EndDate             DateTime?
+  forceCommunityServiceArea     Boolean                        @default(true)
+  forceTransformationArea       Boolean                        @default(true)
+  transformationGuestsTarget    Int?                           @default(4)
+  forceFinanzasArea             Boolean                        @default(true)
+  forceOcioArea                 Boolean                        @default(true)
+  forcePazMentalArea            Boolean                        @default(true)
+  forceRelacionesArea           Boolean                        @default(true)
+  forceSaludArea                Boolean                        @default(true)
+  forceTalentosArea             Boolean                        @default(true)
+  enabledLevels                 VisionLevel[]                  @default([PL])
+  financialConfigId             String?
+  platformFeePercent            Float                          @default(0)
+  LicenseAssignment             LicenseAssignment[]
+  MentorPackageOrder            MentorPackageOrder[]
+  RefundRequest                 RefundRequest[]
+  StaffCommissionsLog           StaffCommissionsLog[]
+  Usuario                       Usuario                        @relation(fields: [coordinadorId], references: [id], onDelete: Cascade)
+  Organization                  Organization?                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  VisionCommissionConfig        VisionCommissionConfig?
+  VisionEscrow                  VisionEscrow?
+  VisionGameChanger             VisionGameChanger[]
+  VisionMentor                  VisionMentor[]
+  VisionParticipante            VisionParticipante[]
+  VisionStaff                   VisionStaff[]
+  VisionTicket                  VisionTicket[]
+  SchoolProduct                 SchoolProduct[]
+  coordinator_commission_config coordinator_commission_config?
+  coordinator_commissions       coordinator_commissions[]
+  vision_enrollments            vision_enrollments[]
+  weekly_payout_summary         weekly_payout_summary[]
 
   @@index([coordinadorId])
   @@index([isActive])
   @@index([organizationId])
+}
+
+model VisionCommissionConfig {
+  id                Int      @id @default(autoincrement())
+  visionId          Int      @unique
+  basicSeatedRate   Decimal  @default(300) @db.Decimal(10, 2)
+  advanceSeatedRate Decimal  @default(500) @db.Decimal(10, 2)
+  plStartRate       Decimal  @default(400) @db.Decimal(10, 2)
+  plGuestRate       Decimal  @default(400) @db.Decimal(10, 2)
+  plGradRate        Decimal  @default(400) @db.Decimal(10, 2)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime
+  updatedBy         Int?
+  Usuario           Usuario? @relation(fields: [updatedBy], references: [id])
+  Vision            Vision   @relation(fields: [visionId], references: [id], onDelete: Cascade)
+
+  @@index([visionId])
+}
+
+model VisionEscrow {
+  id               Int            @id @default(autoincrement())
+  visionId         Int            @unique
+  totalDeposited   Decimal        @db.Decimal(10, 2)
+  totalPaid        Decimal        @default(0) @db.Decimal(10, 2)
+  remainingBalance Decimal        @db.Decimal(10, 2)
+  status           EscrowStatus   @default(ACTIVE)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime
+  closedAt         DateTime?
+  MentorPayout     MentorPayout[]
+  Vision           Vision         @relation(fields: [visionId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([visionId])
 }
 
 model VisionGameChanger {
@@ -1694,6 +2215,221 @@ model VisionParticipante {
   @@unique([visionId, participanteId])
 }
 
+model VisionRefund {
+  id             Int          @id @default(autoincrement())
+  visionId       Int
+  escrowId       Int
+  studentId      Int
+  reason         RefundReason
+  callsScheduled Int
+  callsCompleted Int
+  callsCancelled Int
+  amountRefunded Decimal      @db.Decimal(10, 2)
+  processedAt    DateTime     @default(now())
+  droppedAt      DateTime?
+
+  @@index([escrowId])
+  @@index([studentId])
+  @@index([visionId])
+}
+
+model VisionStaff {
+  id                                      Int         @id @default(autoincrement())
+  visionId                                Int
+  userId                                  Int
+  role                                    StaffRole
+  level                                   VisionLevel
+  plWeekendNumber                         Int?
+  createdAt                               DateTime    @default(now())
+  updatedAt                               DateTime
+  assignedBy                              Int
+  Usuario_VisionStaff_assignedByToUsuario Usuario     @relation("VisionStaff_assignedByToUsuario", fields: [assignedBy], references: [id], onDelete: Cascade)
+  Usuario_VisionStaff_userIdToUsuario     Usuario     @relation("VisionStaff_userIdToUsuario", fields: [userId], references: [id], onDelete: Cascade)
+  Vision                                  Vision      @relation(fields: [visionId], references: [id], onDelete: Cascade)
+
+  @@unique([visionId, userId, role, level, plWeekendNumber])
+  @@index([userId])
+  @@index([visionId])
+}
+
+model VisionTicket {
+  id              Int              @id @default(autoincrement())
+  visionId        Int
+  level           VisionLevel
+  nombre          String
+  nombreEn        String?
+  descripcion     String?
+  descripcionEn   String?
+  precio          Float
+  precioUSD       Float?
+  cupo            Int
+  vendidos        Int              @default(0)
+  isActive        Boolean          @default(true)
+  requiresPayment Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime
+  AccessCode      AccessCode[]
+  TicketPurchase  TicketPurchase[]
+  Vision          Vision           @relation(fields: [visionId], references: [id], onDelete: Cascade)
+
+  @@index([isActive])
+  @@index([level])
+  @@index([visionId])
+}
+
+model WalletTransaction {
+  id                 Int                @id @default(autoincrement())
+  walletId           Int
+  amount             Decimal            @db.Decimal(10, 2)
+  type               WalletTxType
+  source             String
+  description        String
+  visionId           Int?
+  studentId          Int?
+  relatedEntityId    Int?
+  createdAt          DateTime           @default(now())
+  OrganizationWallet OrganizationWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([visionId])
+  @@index([walletId])
+}
+
+model WeeklyPayrollPeriod {
+  id                Int                 @id @default(autoincrement())
+  weekStartDate     DateTime
+  weekEndDate       DateTime
+  status            PayrollStatus       @default(PENDING)
+  totalAmount       Decimal             @default(0) @db.Decimal(10, 2)
+  totalCalls        Int                 @default(0)
+  processedAt       DateTime?
+  processedBy       Int?
+  notes             String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime
+  MentorPayrollItem MentorPayrollItem[]
+
+  @@index([status])
+  @@index([weekStartDate])
+}
+
+model coordinator_commission_config {
+  id                Int          @id @default(autoincrement())
+  visionId          Int          @unique
+  organizationId    Int
+  basicSeatedRate   Decimal      @default(300.00) @db.Decimal(10, 2)
+  advanceSeatedRate Decimal      @default(500.00) @db.Decimal(10, 2)
+  plStartRate       Decimal      @default(400.00) @db.Decimal(10, 2)
+  plGuestRate       Decimal      @default(400.00) @db.Decimal(10, 2)
+  plGradRate        Decimal      @default(400.00) @db.Decimal(10, 2)
+  isActive          Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime
+  createdBy         Int
+  Usuario           Usuario      @relation(fields: [createdBy], references: [id])
+  Organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Vision            Vision       @relation(fields: [visionId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([visionId])
+}
+
+model coordinator_commissions {
+  id                                                     Int                         @id @default(autoincrement())
+  coordinatorId                                          Int
+  coordinatorRole                                        String
+  triggerEvent                                           CommissionTriggerEvent
+  relatedUserId                                          Int
+  relatedEnrollmentId                                    Int?
+  amount                                                 Decimal                     @db.Decimal(10, 2)
+  configSnapshot                                         Json?
+  status                                                 CoordinatorCommissionStatus @default(PENDING_REVIEW)
+  payoutScheduledDate                                    DateTime?
+  payoutCompletedDate                                    DateTime?
+  visionId                                               Int
+  organizationId                                         Int
+  notes                                                  String?
+  verifiedBy                                             Int?
+  verifiedAt                                             DateTime?
+  createdAt                                              DateTime                    @default(now())
+  updatedAt                                              DateTime
+  Usuario_coordinator_commissions_coordinatorIdToUsuario Usuario                     @relation("coordinator_commissions_coordinatorIdToUsuario", fields: [coordinatorId], references: [id], onDelete: Cascade)
+  Organization                                           Organization                @relation(fields: [organizationId], references: [id])
+  vision_enrollments                                     vision_enrollments?         @relation(fields: [relatedEnrollmentId], references: [id])
+  Usuario_coordinator_commissions_relatedUserIdToUsuario Usuario                     @relation("coordinator_commissions_relatedUserIdToUsuario", fields: [relatedUserId], references: [id])
+  Usuario_coordinator_commissions_verifiedByToUsuario    Usuario?                    @relation("coordinator_commissions_verifiedByToUsuario", fields: [verifiedBy], references: [id])
+  Vision                                                 Vision                      @relation(fields: [visionId], references: [id])
+
+  @@index([coordinatorId])
+  @@index([organizationId])
+  @@index([payoutScheduledDate])
+  @@index([relatedUserId])
+  @@index([status])
+  @@index([triggerEvent])
+  @@index([visionId])
+}
+
+model vision_enrollments {
+  id                                                Int                       @id @default(autoincrement())
+  userId                                            Int
+  visionId                                          Int
+  coordinatorId                                     Int
+  enrollmentStatus                                  String                    @default("ENROLLED")
+  attendanceStatus                                  String?
+  paymentStatus                                     String?
+  invitedBy                                         Int?
+  enrolledAt                                        DateTime                  @default(now())
+  completedAt                                       DateTime?
+  graduatedAt                                       DateTime?
+  droppedAt                                         DateTime?
+  createdAt                                         DateTime                  @default(now())
+  updatedAt                                         DateTime
+  level                                             VisionLevel
+  coordinator_commissions                           coordinator_commissions[]
+  Usuario_vision_enrollments_coordinatorIdToUsuario Usuario                   @relation("vision_enrollments_coordinatorIdToUsuario", fields: [coordinatorId], references: [id])
+  Usuario_vision_enrollments_invitedByToUsuario     Usuario?                  @relation("vision_enrollments_invitedByToUsuario", fields: [invitedBy], references: [id])
+  Usuario_vision_enrollments_userIdToUsuario        Usuario                   @relation("vision_enrollments_userIdToUsuario", fields: [userId], references: [id], onDelete: Cascade)
+  Vision                                            Vision                    @relation(fields: [visionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, visionId, level])
+  @@index([coordinatorId])
+  @@index([enrollmentStatus])
+  @@index([invitedBy])
+  @@index([level])
+  @@index([userId])
+  @@index([visionId])
+}
+
+model weekly_payout_summary {
+  id                                                 Int          @id @default(autoincrement())
+  weekStartDate                                      DateTime     @db.Date
+  weekEndDate                                        DateTime     @db.Date
+  payoutDate                                         DateTime     @db.Date
+  organizationId                                     Int
+  visionId                                           Int?
+  totalAmount                                        Decimal      @db.Decimal(10, 2)
+  totalCommissions                                   Int
+  coordinatorsCount                                  Int
+  status                                             String       @default("DRAFT")
+  generatedBy                                        Int
+  approvedBy                                         Int?
+  approvedAt                                         DateTime?
+  summaryData                                        Json
+  notes                                              String?
+  createdAt                                          DateTime     @default(now())
+  updatedAt                                          DateTime
+  Usuario_weekly_payout_summary_approvedByToUsuario  Usuario?     @relation("weekly_payout_summary_approvedByToUsuario", fields: [approvedBy], references: [id])
+  Usuario_weekly_payout_summary_generatedByToUsuario Usuario      @relation("weekly_payout_summary_generatedByToUsuario", fields: [generatedBy], references: [id])
+  Organization                                       Organization @relation(fields: [organizationId], references: [id])
+  Vision                                             Vision?      @relation(fields: [visionId], references: [id])
+
+  @@unique([organizationId, weekStartDate, visionId])
+  @@index([organizationId])
+  @@index([status])
+  @@index([visionId])
+  @@index([weekStartDate])
+}
+
 enum AbsenceReportStatus {
   PENDING
   CONFIRMED
@@ -1713,9 +2449,30 @@ enum AlertType {
   ENCOURAGEMENT
 }
 
+enum ApplicationStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum CallType {
   DISCIPLINE
   MENTORSHIP
+}
+
+enum CodigoEstado {
+  DISPONIBLE
+  CANJEADO
+  EXPIRADO
+}
+
+enum CodigoTipo {
+  MEMBRESIA_MENTOR
+  MEMBRESIA_STANDARD
+  MEMBRESIA_PREMIUM
+  MENTORIA_1_1
+  LICENCIAS_INSTITUCIONAL
 }
 
 enum CollectionType {
@@ -1726,10 +2483,47 @@ enum CollectionType {
   LEVEL_MILESTONE
 }
 
+enum CommissionSource {
+  MENTORSHIP_SESSION
+  DISCIPLINE_CALL
+  PACKAGE_SESSION
+}
+
+enum CommissionStatus {
+  PENDING
+  PAID
+  CANCELLED
+  DISPUTED
+  REFUNDED
+}
+
+enum CommissionTriggerEvent {
+  BASIC_SEATED
+  ADVANCE_SEATED
+  PL_START
+  PL_GUEST_PAID
+  PL_GRADUATION
+  MANUAL_ADJUSTMENT
+}
+
+enum CoordinatorCommissionStatus {
+  PENDING_REVIEW
+  AUTHORIZED
+  PAID
+  CANCELLED
+  DISPUTED
+}
+
 enum DuelStatus {
   MATCHING
   ACTIVE
   COMPLETED
+  CANCELLED
+}
+
+enum EscrowStatus {
+  ACTIVE
+  CLOSED
   CANCELLED
 }
 
@@ -1780,6 +2574,13 @@ enum EvidenceStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum LicenseCodeType {
+  MENTOR_MEMBERSHIP
+  VISION_LICENSE
+  PROMOTIONAL
+  SPECIAL_ACCESS
 }
 
 enum LicenseOrderStatus {
@@ -1835,6 +2636,15 @@ enum OrganizationStatus {
   TRIAL
 }
 
+enum PackageOrderStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
 enum PatternType {
   GOLDEN_HOUR
   KEYSTONE_HABIT
@@ -1851,6 +2661,54 @@ enum PaymentStatus {
   CANCELLED
 }
 
+enum PayoutStatus {
+  PENDING
+  GENERATED
+  PAID
+  FAILED
+  DISPUTED
+}
+
+enum PayrollItemStatus {
+  PENDING
+  PAID
+  CANCELLED
+  DISPUTED
+}
+
+enum PayrollStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+enum ProductLevelType {
+  BASIC
+  ADVANCED
+  PL
+  COMBO_FULL
+  COMBO_ADV_PL
+  NONE
+}
+
+enum ProductType {
+  CORE_TRAINING
+  EXTRA_WORKSHOP
+}
+
+enum Currency {
+  MXN
+  USD
+}
+
+enum ProfileApprovalStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum QueueStatus {
   SEARCHING
   MATCHED
@@ -1863,6 +2721,21 @@ enum ReactionType {
   STRONG
   GENIUS
   APPLAUSE
+}
+
+enum RefundReason {
+  STUDENT_DROPOUT
+  VISION_CANCELLED
+  ADMIN_ADJUSTMENT
+  MENTOR_UNAVAILABLE
+}
+
+enum RefundStatus {
+  PENDING
+  APPROVED
+  COMPLETED
+  REJECTED
+  CANCELLED
 }
 
 enum RenewalStatus {
@@ -1892,9 +2765,9 @@ enum Rol {
   PARTICIPANTE
   MENTOR
   COORDINADOR
-  COORDINATOR_BASIC      // Coordinador Nivel 1: Discovery (Logística, Pagos, Asistencia)
-  COORDINATOR_ADVANCED   // Coordinador Nivel 2: Breakthrough (Dinámicas, Staff)
-  TRAINER                // Coordinador Nivel 3: Quantum Leap (Mentores, Cartas, Gamificación) - LEGACY
+  COORDINATOR_BASIC
+  COORDINATOR_ADVANCED
+  TRAINER
   ADMINISTRADOR
   GAMECHANGER
   SCHOOL_ADMIN
@@ -1920,6 +2793,24 @@ enum SocialVisibility {
   PRIVATE
   COMMUNITY
   PUBLIC
+}
+
+enum StaffRole {
+  BASIC_COORDINATOR
+  BASIC_TRAINER
+  ADVANCED_COORDINATOR
+  ADVANCED_TRAINER
+  PL_COORDINATOR
+  PL_TRAINER
+}
+
+enum StudentStatus {
+  BASIC_STUDENT
+  ADVANCED_CANDIDATE
+  ADVANCED_STUDENT
+  PL_CANDIDATE
+  PL_STUDENT
+  ALUMNI
 }
 
 enum SubmissionStatus {
@@ -1968,21 +2859,6 @@ enum TauntType {
   VENGANZA
 }
 
-enum VisionLevel {
-  BASIC       // Nivel 1: Discovery (Básico)
-  ADVANCED    // Nivel 2: Breakthrough (Avanzado)
-  PL          // Nivel 3: Quantum Leap (Liderato)
-}
-
-enum StudentStatus {
-  BASIC_STUDENT       // Estudiante en nivel Discovery
-  ADVANCED_CANDIDATE  // Graduado de Discovery, elegible para Breakthrough
-  ADVANCED_STUDENT    // Estudiante en nivel Breakthrough
-  PL_CANDIDATE        // Graduado de Breakthrough, elegible para Quantum Leap
-  PL_STUDENT          // Estudiante en nivel Quantum Leap (acceso completo)
-  ALUMNI              // Graduado completo
-}
-
 enum TimeSlot {
   EARLY_MORNING
   MORNING
@@ -2017,915 +2893,13 @@ enum UserTier {
   PREMIUM
 }
 
-model PricingConfig {
-  id        Int      @id @default(autoincrement())
-  plan      String   // 'free', 'standard', 'premium'
-  currency  String   // 'MXN', 'USD'
-  period    String?  // 'bimestral', 'anual' (null for free)
-  price     Float    
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([plan, currency, period])
+enum VisionLevel {
+  BASIC
+  ADVANCED
+  PL
 }
 
-// 🏦 TICKET 4: Organization Wallet - Billetera de la Organización
-model OrganizationWallet {
-  id                Int                      @id @default(autoincrement())
-  organizationId    Int                      @unique
-  balance           Decimal                  @default(0) @db.Decimal(10, 2)
-  currency          String                   @default("MXN")
-  createdAt         DateTime                 @default(now())
-  updatedAt         DateTime                 @updatedAt
-  
-  Organization      Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  WalletTransaction WalletTransaction[]
-
-  @@index([organizationId])
-}
-
-// Historial de transacciones de la billetera
-model WalletTransaction {
-  id                 Int                @id @default(autoincrement())
-  walletId           Int
-  amount             Decimal            @db.Decimal(10, 2)
-  type               WalletTxType       // CREDIT (entrada) o DEBIT (salida)
-  source             String             // 'REFUND_DROPOUT', 'REFUND_VISION_CLOSE', 'PAYMENT_CYCLE', 'ADMIN_ADJUSTMENT'
-  description        String
-  visionId           Int?
-  studentId          Int?
-  relatedEntityId    Int?               // ID de la visión, pago, etc.
-  createdAt          DateTime           @default(now())
-  
-  OrganizationWallet OrganizationWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
-
-  @@index([walletId])
-  @@index([visionId])
-  @@index([createdAt])
-}
-
-// 🧾 TICKET 1: Escrow - Bóveda de Dinero por Visión
-model VisionEscrow {
-  id                    Int              @id @default(autoincrement())
-  visionId              Int              @unique
-  totalDeposited        Decimal          @db.Decimal(10, 2) // Total depositado al inicio
-  totalPaid             Decimal          @default(0) @db.Decimal(10, 2) // Total pagado a mentores
-  remainingBalance      Decimal          @db.Decimal(10, 2) // Saldo restante
-  status                EscrowStatus     @default(ACTIVE)
-  createdAt             DateTime         @default(now())
-  updatedAt             DateTime         @updatedAt
-  closedAt              DateTime?
-  
-  Vision                Vision           @relation(fields: [visionId], references: [id], onDelete: Cascade)
-  MentorPayout          MentorPayout[]
-
-  @@index([visionId])
-  @@index([status])
-}
-
-// 🧾 TICKET 2: Pagos semanales a mentores
-model MentorPayout {
-  id                  Int              @id @default(autoincrement())
-  escrowId            Int
-  mentorId            Int
-  visionId            Int
-  weekNumber          Int              // Semana del ciclo (1-16)
-  callsCompleted      Int              // Llamadas completadas/pagables
-  ratePerCall         Decimal          @db.Decimal(10, 2) // Tarifa por llamada
-  totalAmount         Decimal          @db.Decimal(10, 2) // Total a pagar
-  status              PayoutStatus     @default(PENDING)
-  generatedAt         DateTime         @default(now())
-  paidAt              DateTime?
-  paymentMethod       String?          // 'STRIPE', 'BANK_TRANSFER', 'MANUAL'
-  transactionRef      String?          // Referencia de pago externo
-  
-  VisionEscrow        VisionEscrow     @relation(fields: [escrowId], references: [id], onDelete: Cascade)
-  Usuario             Usuario          @relation(fields: [mentorId], references: [id], onDelete: Cascade)
-  PayableCall         PayableCall[]
-
-  @@index([escrowId])
-  @@index([mentorId])
-  @@index([visionId])
-  @@index([weekNumber])
-  @@index([status])
-}
-
-// Llamadas que cuentan para pago
-model PayableCall {
-  id               Int            @id @default(autoincrement())
-  payoutId         Int
-  callBookingId    Int
-  mentorId         Int
-  studentId        Int
-  visionId         Int
-  weekNumber       Int
-  callDate         DateTime
-  status           String         // 'COMPLETED', 'MISSED_BY_USER'
-  rateApplied      Decimal        @db.Decimal(10, 2)
-  createdAt        DateTime       @default(now())
-  
-  MentorPayout     MentorPayout   @relation(fields: [payoutId], references: [id], onDelete: Cascade)
-  CallBooking      CallBooking    @relation(fields: [callBookingId], references: [id], onDelete: Cascade)
-
-  @@index([payoutId])
-  @@index([callBookingId])
-  @@index([mentorId])
-  @@index([visionId])
-  @@index([weekNumber])
-}
-
-// 🐷 TICKET 3: Sistema de reembolsos por abandono
-model VisionRefund {
-  id                  Int              @id @default(autoincrement())
-  visionId            Int
-  escrowId            Int
-  studentId           Int
-  reason              RefundReason
-  callsScheduled      Int              // Total de llamadas programadas
-  callsCompleted      Int              // Llamadas ya completadas
-  callsCancelled      Int              // Llamadas canceladas (huérfanas)
-  amountRefunded      Decimal          @db.Decimal(10, 2)
-  processedAt         DateTime         @default(now())
-  droppedAt           DateTime?        // Cuando el alumno fue dado de baja
-  
-  @@index([visionId])
-  @@index([escrowId])
-  @@index([studentId])
-}
-
-// Enums para los nuevos modelos
 enum WalletTxType {
-  CREDIT  // Entrada de dinero
-  DEBIT   // Salida de dinero
-}
-
-enum EscrowStatus {
-  ACTIVE    // Ciclo en curso
-  CLOSED    // Ciclo terminado y auditado
-  CANCELLED // Ciclo cancelado
-}
-
-enum PayoutStatus {
-  PENDING     // Esperando generación de reporte
-  GENERATED   // Reporte generado, listo para pago
-  PAID        // Pagado al mentor
-  FAILED      // Fallo en el pago
-  DISPUTED    // En disputa
-}
-
-enum RefundReason {
-  STUDENT_DROPOUT        // Alumno abandonó
-  VISION_CANCELLED       // Visión cancelada
-  ADMIN_ADJUSTMENT       // Ajuste administrativo
-  MENTOR_UNAVAILABLE     // Mentor no disponible
-}
-
-// 💼 Sistema de Paquetes de Mentoría para Participantes
-model MentorPackageOrder {
-  id                  String                @id @default(cuid())
-  usuarioId           Int                   // Participante que compra
-  mentorId            Int                   // Mentor seleccionado
-  visionId            Int                   // Visión asociada
-  organizationId      Int?                  // Organización si aplica
-  cantidad            Int                   // Número de sesiones (18)
-  precioUnitario      Int                   // Precio por sesión
-  precioTotal         Int                   // Precio total del paquete
-  currency            String                @default("MXN")
-  metodoPago          String                // 'stripe', 'paypal', 'mercadopago'
-  status              PackageOrderStatus    @default(PENDING)
-  externalPaymentId   String?               // ID del pago en la pasarela
-  paymentUrl          String?               // URL de checkout
-  paidAt              DateTime?             // Fecha de pago exitoso
-  paymentData         Json?                 // Datos adicionales del pago
-  sessionScheduled    Boolean               @default(false) // Si ya se agendaron las sesiones
-  sessionsScheduledAt DateTime?
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  
-  Usuario             Usuario               @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  Mentor              Usuario               @relation("MentorPackages", fields: [mentorId], references: [id], onDelete: Cascade)
-  Vision              Vision                @relation(fields: [visionId], references: [id], onDelete: Cascade)
-  Organization        Organization?         @relation(fields: [organizationId], references: [id])
-  CallBooking         CallBooking[]         // 📦 Sesiones agendadas del paquete
-  PackageSessionCredits PackageSessionCredits? // 💳 Balance de créditos
-
-  @@index([usuarioId])
-  @@index([mentorId])
-  @@index([visionId])
-  @@index([status])
-  @@index([externalPaymentId])
-}
-
-// 💳 Sistema de Créditos de Sesiones por Paquete
-model PackageSessionCredits {
-  id              String             @id @default(cuid())
-  packageOrderId  String             @unique // Relación 1:1 con paquete
-  totalSessions   Int                // Total de sesiones compradas (18)
-  usedSessions    Int                @default(0) // Sesiones consumidas
-  remainingSessions Int              // Sesiones disponibles (calculado)
-  expiresAt       DateTime?          // Fecha de expiración (opcional)
-  isActive        Boolean            @default(true) // Si el paquete está activo
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  
-  MentorPackageOrder MentorPackageOrder @relation(fields: [packageOrderId], references: [id], onDelete: Cascade)
-
-  @@index([packageOrderId])
-  @@index([isActive])
-  @@index([expiresAt])
-}
-
-enum PackageOrderStatus {
-  PENDING           // Orden creada, esperando pago
-  PROCESSING        // Procesando pago
-  COMPLETED         // Pago exitoso, paquete activado
-  FAILED            // Pago fallido
-  CANCELLED         // Orden cancelada
-  REFUNDED          // Reembolsado
-}
-
-// 💰 SISTEMA DE COMISIONES - Commission Ledger
-// Registro inmutable de pagos a mentores por servicios completados
-model CommissionLedger {
-  id               String           @id @default(cuid())
-  mentorId         Int              // Quien recibe el dinero
-  sourceType       CommissionSource // Tipo de servicio
-  sourceId         Int              // ID de la sesión/llamada
-  studentId        Int              // Cliente que pagó
-  studentName      String           // Nombre del cliente (snapshot)
-  totalAmount      Decimal          @db.Decimal(10, 2) // Lo que pagó el cliente
-  platformFee      Decimal          @db.Decimal(10, 2) // % que se queda Quantum
-  platformPercent  Int              // Porcentaje congelado al momento
-  payableAmount    Decimal          @db.Decimal(10, 2) // Lo que se paga al mentor
-  currency         String           @default("MXN")
-  status           CommissionStatus @default(PENDING)
-  serviceName      String?          // Descripción del servicio
-  scheduledAt      DateTime         // Fecha original del servicio
-  completedAt      DateTime         @default(now()) // Fecha de completado
-  paidAt           DateTime?        // Fecha de pago real al mentor
-  payoutBatchId    String?          // ID del lote de pago bancario
-  paymentMethod    String?          // stripe, paypal, transfer
-  paymentReference String?          // Referencia bancaria/transaction ID
-  notes            String?          // Notas administrativas
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  
-  Mentor           Usuario          @relation("CommissionMentor", fields: [mentorId], references: [id], onDelete: Cascade)
-  Student          Usuario          @relation("CommissionStudent", fields: [studentId], references: [id], onDelete: Cascade)
-
-  @@index([mentorId])
-  @@index([studentId])
-  @@index([sourceType])
-  @@index([sourceId])
-  @@index([status])
-  @@index([completedAt])
-  @@index([paidAt])
-  @@index([payoutBatchId])
-}
-
-model MentorApplication {
-  id                       Int                    @id @default(autoincrement())
-  usuarioId                Int                    @unique
-  status                   ApplicationStatus      @default(PENDING)
-  
-  // Información Básica
-  titulo                   String
-  especialidad             String
-  especialidadesSecundarias String[]              @default([])
-  experienciaAnios         Int
-  
-  // Biografías
-  biografiaCorta           String?
-  biografiaCompleta        String
-  
-  // Metodología y Enfoque
-  tagline                  String?
-  promiseStatement         String?
-  methodologyStyle         MentorStyle?          @default(BALANCED)
-  idealClientDescription   String?
-  
-  // Disponibilidad
-  horarioInicio            String?               @default("09:00")
-  horarioFin               String?               @default("18:00")
-  diasDisponibles          String[]              @default([])
-  
-  // Experiencia y Logros
-  logros                   String[]              @default([])
-  expertiseTags            String[]              @default([])
-  
-  // Video de presentación
-  videoIntroUrl            String?
-  
-  // Documentos de soporte
-  documentosUrls           String[]              @default([])
-  
-  // Pago
-  paymentIntentId          String?
-  paymentStatus            String?               @default("PENDING")
-  amountPaid               Float?
-  paymentMethod            String?               // 'stripe', 'paypal', 'LICENSE_CODE'
-  paidAt                   DateTime?
-  licenseCodeId            Int?
-  
-  // Revisión
-  reviewedBy               Int?
-  reviewedAt               DateTime?
-  rejectionReason          String?
-  
-  // Timestamps
-  createdAt                DateTime              @default(now())
-  updatedAt                DateTime              @updatedAt
-  
-  Usuario                  Usuario               @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  ReviewedByUser           Usuario?              @relation("ApplicationReviewer", fields: [reviewedBy], references: [id])
-  LicenseCode              LicenseCode?          @relation(fields: [licenseCodeId], references: [id])
-}
-
-enum ApplicationStatus {
-  DRAFT      // Borrador (no pagado)
-  PENDING    // Pendiente de revisión (pagado)
-  APPROVED   // Aprobado - usuario convertido a mentor
-  REJECTED   // Rechazado
-}
-
-enum CommissionSource {
-  MENTORSHIP_SESSION // Sesión 1:1 de mentoría
-  DISCIPLINE_CALL    // Llamada de disciplina (15 min)
-  PACKAGE_SESSION    // Sesión dentro de paquete de 18
-}
-
-enum CommissionStatus {
-  PENDING    // Por pagar
-  PAID       // Pagado al mentor
-  CANCELLED  // Cancelado (sesión no realizada)
-  DISPUTED   // En disputa
-  REFUNDED   // Reembolsado
-}
-
-model MentorMembershipRenewal {
-  id                    Int          @id @default(autoincrement())
-  mentorId              Int
-  renewalDate           DateTime
-  expiryDate            DateTime
-  amount                Float
-  stripePaymentIntentId String?
-  status                String       @default("ACTIVE") // ACTIVE, EXPIRED, CANCELLED
-  autoRenewed           Boolean      @default(false)
-  createdAt             DateTime     @default(now())
-  
-  PerfilMentor          PerfilMentor @relation(fields: [mentorId], references: [id], onDelete: Cascade)
-  
-  @@index([mentorId])
-  @@index([expiryDate])
-  @@index([status])
-}
-
-// 💰 Sistema de Pagos Semanales a Mentores
-model WeeklyPayrollPeriod {
-  id                Int                    @id @default(autoincrement())
-  weekStartDate     DateTime               // Lunes 00:00
-  weekEndDate       DateTime               // Domingo 23:59
-  status            PayrollStatus          @default(PENDING)
-  totalAmount       Decimal                @default(0) @db.Decimal(10, 2)
-  totalCalls        Int                    @default(0)
-  processedAt       DateTime?
-  processedBy       Int?
-  notes             String?
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
-  
-  MentorPayrollItem MentorPayrollItem[]
-  
-  @@index([weekStartDate])
-  @@index([status])
-}
-
-model MentorPayrollItem {
-  id              Int                  @id @default(autoincrement())
-  payrollPeriodId Int
-  mentorId        Int
-  callsCompleted  Int                  @default(0)
-  callsMissedByUser Int                @default(0) // Mentor estuvo, alumno faltó (SE COBRA)
-  ratePerCall     Decimal              @db.Decimal(10, 2)
-  totalAmount     Decimal              @db.Decimal(10, 2)
-  status          PayrollItemStatus    @default(PENDING)
-  paidAt          DateTime?
-  paymentMethod   String?              // 'TRANSFER', 'STRIPE_CONNECT', 'CASH'
-  paymentReference String?             // Número de transferencia, etc.
-  notes           String?
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  
-  PayrollPeriod   WeeklyPayrollPeriod  @relation(fields: [payrollPeriodId], references: [id], onDelete: Cascade)
-  Mentor          Usuario              @relation("MentorPayrollItems", fields: [mentorId], references: [id], onDelete: Cascade)
-  
-  @@index([payrollPeriodId])
-  @@index([mentorId])
-  @@index([status])
-}
-
-// 💸 Reembolsos por deserción de estudiantes
-model RefundRequest {
-  id              Int              @id @default(autoincrement())
-  organizationId  Int
-  visionId        Int
-  studentId       Int
-  requestedBy     Int
-  studentName     String
-  dropoutWeek     Int              // Semana en la que desertó
-  totalCallsPaid  Int              // Total de llamadas pagadas
-  callsCompleted  Int              // Llamadas que sí se hicieron
-  callsToRefund   Int              // Llamadas a reembolsar
-  amountPaid      Decimal          @db.Decimal(10, 2)
-  amountToRefund  Decimal          @db.Decimal(10, 2)
-  status          RefundStatus     @default(PENDING)
-  processedAt     DateTime?
-  processedBy     Int?
-  notes           String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  
-  Organization    Organization     @relation("RefundRequestOrganization", fields: [organizationId], references: [id])
-  Vision          Vision           @relation("RefundRequestVision", fields: [visionId], references: [id])
-  Student         Usuario          @relation("RefundRequestStudent", fields: [studentId], references: [id])
-  RequestedBy     Usuario          @relation("RefundRequestRequestedBy", fields: [requestedBy], references: [id])
-  ProcessedBy     Usuario?         @relation("RefundRequestProcessedBy", fields: [processedBy], references: [id])
-  
-  @@index([organizationId])
-  @@index([visionId])
-  @@index([status])
-}
-
-enum PayrollStatus {
-  PENDING    // En espera de procesamiento
-  PROCESSING // Procesando pagos
-  COMPLETED  // Completado
-  CANCELLED  // Cancelado
-}
-
-enum PayrollItemStatus {
-  PENDING    // Por pagar
-  PAID       // Pagado
-  CANCELLED  // Cancelado
-  DISPUTED   // En disputa
-}
-
-enum RefundStatus {
-  PENDING    // Pendiente de aprobación
-  APPROVED   // Aprobado, procesando
-  COMPLETED  // Reembolsado a wallet
-  REJECTED   // Rechazado
-  CANCELLED  // Cancelado
-}
-
-enum ProfileApprovalStatus {
-  DRAFT       // Borrador, no enviado
-  PENDING     // En revisión
-  APPROVED    // Aprobado
-  REJECTED    // Rechazado
-}
-
-// 🎫 Sistema de Códigos de Acceso
-model CodigoAcceso {
-  id                Int         @id @default(autoincrement())
-  codigo            String      @unique
-  tipo              CodigoTipo
-  cantidadLicencias Int?        // Solo para LICENCIAS_INSTITUCIONAL
-  licenciasUsadas   Int?        // Contador para códigos institucionales
-  descripcion       String?     // Descripción opcional del código
-  estado            CodigoEstado @default(DISPONIBLE)
-  canjeadoPorId     Int?
-  canjeadoEn        DateTime?
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
-  
-  canjeadoPor       Usuario?    @relation("CodigoCanjeadoPor", fields: [canjeadoPorId], references: [id], onDelete: SetNull)
-  
-  @@index([codigo])
-  @@index([estado])
-  @@index([tipo])
-}
-
-enum CodigoTipo {
-  MEMBRESIA_MENTOR
-  MEMBRESIA_STANDARD
-  MEMBRESIA_PREMIUM
-  MENTORIA_1_1
-  LICENCIAS_INSTITUCIONAL
-}
-
-enum CodigoEstado {
-  DISPONIBLE
-  CANJEADO
-  EXPIRADO
-}
-
-// ========================================
-// MULTI-LEVEL ECOSYSTEM MODELS
-// ========================================
-
-// Tickets/Productos creados por el Director para cada nivel
-model VisionTicket {
-  id                Int       @id @default(autoincrement())
-  visionId          Int
-  level             VisionLevel // Para qué nivel es este ticket
-  nombre            String    // Ej: "Ticket Básico Generación 40"
-  nombreEn          String?   // "Basic Ticket Generation 40"
-  descripcion       String?
-  descripcionEn     String?
-  precio            Float     // Precio en MXN
-  precioUSD         Float?    // Precio opcional en USD
-  cupo              Int       // Cantidad máxima de participantes
-  vendidos          Int       @default(0)
-  isActive          Boolean   @default(true)
-  requiresPayment   Boolean   @default(true) // Si requiere pago o es gratuito
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  
-  Vision            Vision    @relation(fields: [visionId], references: [id], onDelete: Cascade)
-  TicketPurchase    TicketPurchase[]
-  AccessCode        AccessCode[]
-  
-  @@index([visionId])
-  @@index([level])
-  @@index([isActive])
-}
-
-// Compras de tickets (pagos registrados)
-model TicketPurchase {
-  id                Int           @id @default(autoincrement())
-  ticketId          Int
-  userId            Int
-  visionId          Int
-  amount            Float
-  currency          String        @default("MXN")
-  paymentMethod     String        // stripe, paypal, mercadopago, cash, code
-  stripePaymentId   String?       // ID de pago en Stripe
-  status            PaymentStatus @default(PENDING)
-  metadata          Json?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  
-  VisionTicket      VisionTicket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  Usuario           Usuario       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([ticketId])
-  @@index([userId])
-  @@index([visionId])
-  @@index([status])
-}
-
-// Códigos de acceso generados por coordinadores para pagos en efectivo
-model AccessCode {
-  id                Int          @id @default(autoincrement())
-  code              String       @unique
-  ticketId          Int
-  visionId          Int
-  generatedBy       Int          // Coordinador que lo generó
-  usedBy            Int?         // Usuario que lo canjeó
-  amount            Float        // Monto pagado en efectivo
-  currency          String       @default("MXN")
-  status            String       @default("ACTIVE") // ACTIVE, USED, EXPIRED
-  expiresAt         DateTime?
-  usedAt            DateTime?
-  metadata          Json?        // Info adicional (nombre del pagador, etc)
-  createdAt         DateTime     @default(now())
-  
-  VisionTicket      VisionTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  GeneratedBy       Usuario      @relation("AccessCodeGeneratedBy", fields: [generatedBy], references: [id], onDelete: Cascade)
-  UsedBy            Usuario?     @relation("AccessCodeUsedBy", fields: [usedBy], references: [id], onDelete: SetNull)
-  
-  @@index([code])
-  @@index([ticketId])
-  @@index([visionId])
-  @@index([generatedBy])
-  @@index([status])
-}
-
-// Registro de graduaciones de estudiantes entre niveles
-model StudentGraduation {
-  id                Int          @id @default(autoincrement())
-  userId            Int
-  visionId          Int
-  fromLevel         VisionLevel  // De qué nivel se graduó
-  toLevel           VisionLevel  // A qué nivel avanza
-  graduatedBy       Int          // Coordinador que aprobó la graduación
-  notes             String?      // Notas sobre la graduación
-  createdAt         DateTime     @default(now())
-  
-  Usuario           Usuario      @relation("StudentGraduated", fields: [userId], references: [id], onDelete: Cascade)
-  GraduatedBy       Usuario      @relation("GraduationApprovedBy", fields: [graduatedBy], references: [id], onDelete: Cascade)
-  
-  @@index([userId])
-  @@index([visionId])
-  @@index([fromLevel])
-  @@index([toLevel])
-}
-
-// Configuración financiera de Stripe Connect por Organización
-model StripeConnectConfig {
-  id                    Int           @id @default(autoincrement())
-  organizationId        Int           @unique
-  stripeAccountId       String        @unique // Stripe Connect Account ID
-  accountStatus         String        @default("pending") // pending, active, restricted, disabled
-  chargesEnabled        Boolean       @default(false)
-  payoutsEnabled        Boolean       @default(false)
-  detailsSubmitted      Boolean       @default(false)
-  onboardingCompleted   Boolean       @default(false)
-  platformFeePercent    Float         @default(1.0) // % que cobra la plataforma
-  metadata              Json?
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
-  
-  Organization          Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
-  @@index([stripeAccountId])
-  @@index([organizationId])
-}
-
-// ============================================
-// SISTEMA DE COMISIONES
-// ============================================
-
-// Configuración de tarifas por visión
-model VisionCommissionConfig {
-  id                   Int      @id @default(autoincrement())
-  visionId             Int      @unique
-  basicSeatedRate      Decimal  @default(300) @db.Decimal(10, 2)
-  advanceSeatedRate    Decimal  @default(500) @db.Decimal(10, 2)
-  plStartRate          Decimal  @default(400) @db.Decimal(10, 2)
-  plGuestRate          Decimal  @default(400) @db.Decimal(10, 2)
-  plGradRate           Decimal  @default(400) @db.Decimal(10, 2)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  updatedBy            Int?
-  
-  Vision               Vision   @relation(fields: [visionId], references: [id], onDelete: Cascade)
-  UpdatedByUser        Usuario? @relation("CommissionConfigUpdater", fields: [updatedBy], references: [id])
-  
-  @@index([visionId])
-}
-
-// Log de comisiones generadas
-model StaffCommissionsLog {
-  id                   Int                    @id @default(autoincrement())
-  staffId              Int
-  triggerEvent         CommissionTriggerEvent
-  relatedUserId        Int?
-  amount               Decimal                @db.Decimal(10, 2)
-  status               CommissionStatus       @default(PENDING)
-  payoutDate           DateTime?
-  paidAt               DateTime?
-  notes                String?
-  metadata             Json?
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
-  visionId             Int?
-  organizationId       Int?
-  cycleWeek            Int?                   // Semana del ciclo (1-4)
-  cycleYear            Int?
-  
-  Staff                Usuario                @relation("StaffCommissions", fields: [staffId], references: [id], onDelete: Cascade)
-  RelatedUser          Usuario?               @relation("CommissionRelatedUser", fields: [relatedUserId], references: [id])
-  Vision               Vision?                @relation(fields: [visionId], references: [id])
-  Organization         Organization?          @relation(fields: [organizationId], references: [id])
-  
-  @@index([staffId])
-  @@index([status])
-  @@index([payoutDate])
-  @@index([triggerEvent])
-  @@index([visionId])
-  @@index([organizationId])
-  @@index([cycleWeek, cycleYear])
-}
-
-enum CommissionTriggerEvent {
-  BASIC_SEATED           // Alumno sentado en Básico con pago completo
-  ADVANCE_SEATED         // Alumno que cruzó a Avanzado
-  PL_START               // Alumno que inició PL
-  PL_GUEST_PAID          // Invitado de alumno PL que pagó
-  PL_GRADUATION          // Alumno que se graduó de PL
-  MANUAL_ADJUSTMENT      // Ajuste manual por admin
-}
-
-enum CoordinatorCommissionStatus {
-  PENDING_REVIEW         // Pendiente de revisión
-  AUTHORIZED             // Autorizada, esperando pago
-  PAID                   // Pagada
-  CANCELLED              // Cancelada
-  DISPUTED               // En disputa
-}
-
-// ============================================
-// SISTEMA DE COMISIONES PARA COORDINADORES
-// ============================================
-
-// Registro de inscripciones a Visiones (para tracking de comisiones)
-model VisionEnrollment {
-  id                    Int       @id @default(autoincrement())
-  userId                Int
-  visionId              Int
-  level                 VisionLevel // BASIC, ADVANCED, PL
-  coordinatorId         Int       // Coordinador responsable
-  
-  // Estado de inscripción
-  enrollmentStatus      String    @default("ENROLLED") // ENROLLED, COMPLETED, DROPPED, GRADUATED
-  attendanceStatus      String?   // ATTENDED_BASIC, ATTENDED_ADVANCED, etc.
-  paymentStatus         String?   // PAID_FULL, PAID_PARTIAL, PENDING
-  
-  // Invitaciones (para PL)
-  invitedBy             Int?      // Usuario que invitó (para comisiones de invitados)
-  
-  // Fechas
-  enrolledAt            DateTime  @default(now())
-  completedAt           DateTime?
-  graduatedAt           DateTime?
-  droppedAt             DateTime?
-  
-  // Metadata
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  
-  // Relaciones
-  User                  Usuario   @relation("EnrollmentUser", fields: [userId], references: [id], onDelete: Cascade)
-  Vision                Vision    @relation("EnrollmentVision", fields: [visionId], references: [id], onDelete: Cascade)
-  Coordinator           Usuario   @relation("EnrollmentCoordinator", fields: [coordinatorId], references: [id])
-  InvitedByUser         Usuario?  @relation("EnrollmentInvitedBy", fields: [invitedBy], references: [id])
-  
-  CoordinatorCommissions CoordinatorCommission[]
-  
-  @@unique([userId, visionId, level])
-  @@index([userId])
-  @@index([visionId])
-  @@index([coordinatorId])
-  @@index([invitedBy])
-  @@index([level])
-  @@index([enrollmentStatus])
-  @@map("vision_enrollments")
-}
-
-// Configuración de tarifas por Visión
-model CoordinatorCommissionConfig {
-  id                    Int       @id @default(autoincrement())
-  visionId              Int       @unique
-  organizationId        Int
-  
-  // Tarifas Básico
-  basicSeatedRate       Decimal   @default(300.00) @db.Decimal(10, 2)
-  
-  // Tarifas Avanzado
-  advanceSeatedRate     Decimal   @default(500.00) @db.Decimal(10, 2)
-  
-  // Tarifas PL
-  plStartRate           Decimal   @default(400.00) @db.Decimal(10, 2)
-  plGuestRate           Decimal   @default(400.00) @db.Decimal(10, 2)
-  plGradRate            Decimal   @default(400.00) @db.Decimal(10, 2)
-  
-  // Metadata
-  isActive              Boolean   @default(true)
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  createdBy             Int
-  
-  // Relaciones
-  Vision                Vision    @relation(fields: [visionId], references: [id], onDelete: Cascade)
-  Organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  CreatedByUser         Usuario   @relation("CommissionConfigCreatedBy", fields: [createdBy], references: [id])
-  
-  @@index([visionId])
-  @@index([organizationId])
-  @@map("coordinator_commission_config")
-}
-
-// Log de comisiones generadas
-model CoordinatorCommission {
-  id                    Int                    @id @default(autoincrement())
-  
-  // Quién cobra
-  coordinatorId         Int
-  coordinatorRole       String                 // COORDINATOR_BASIC, COORDINATOR_ADVANCED, COORDINATOR_PL
-  
-  // Trigger del evento
-  triggerEvent          CommissionTriggerEvent
-  relatedUserId         Int                    // El alumno que generó la comisión
-  relatedEnrollmentId   Int?                   // Enrollment relacionado
-  
-  // Montos
-  amount                Decimal                @db.Decimal(10, 2)
-  configSnapshot        Json?                  // Snapshot de la config usada
-  
-  // Estado y fechas
-  status                CoordinatorCommissionStatus @default(PENDING_REVIEW)
-  payoutScheduledDate   DateTime?              // Fecha programada (Miércoles)
-  payoutCompletedDate   DateTime?              // Fecha real de pago
-  
-  // Metadata
-  visionId              Int
-  organizationId        Int
-  notes                 String?
-  verifiedBy            Int?                   // Admin que autorizó
-  verifiedAt            DateTime?
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  
-  // Relaciones
-  Coordinator           Usuario                @relation("CoordinatorCommissions", fields: [coordinatorId], references: [id], onDelete: Cascade)
-  RelatedUser           Usuario                @relation("CommissionRelatedUser", fields: [relatedUserId], references: [id])
-  RelatedEnrollment     VisionEnrollment?      @relation(fields: [relatedEnrollmentId], references: [id])
-  Vision                Vision                 @relation(fields: [visionId], references: [id])
-  Organization          Organization           @relation(fields: [organizationId], references: [id])
-  VerifiedByUser        Usuario?               @relation("CommissionVerifiedBy", fields: [verifiedBy], references: [id])
-  
-  @@index([coordinatorId])
-  @@index([relatedUserId])
-  @@index([status])
-  @@index([payoutScheduledDate])
-  @@index([visionId])
-  @@index([organizationId])
-  @@index([triggerEvent])
-  @@map("coordinator_commissions")
-}
-
-// Resumen semanal de nómina
-model WeeklyPayoutSummary {
-  id                    Int       @id @default(autoincrement())
-  
-  // Periodo
-  weekStartDate         DateTime  @db.Date
-  weekEndDate           DateTime  @db.Date
-  payoutDate            DateTime  @db.Date // Miércoles
-  
-  // Organización
-  organizationId        Int
-  visionId              Int?
-  
-  // Totales
-  totalAmount           Decimal   @db.Decimal(10, 2)
-  totalCommissions      Int       // Cantidad de comisiones
-  coordinatorsCount     Int       // Cantidad de coordinadores
-  
-  // Estado
-  status                String    @default("DRAFT") // DRAFT, APPROVED, PAID
-  generatedBy           Int
-  approvedBy            Int?
-  approvedAt            DateTime?
-  
-  // Metadata
-  summaryData           Json      // Desglose detallado
-  notes                 String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  
-  // Relaciones
-  Organization          Organization @relation(fields: [organizationId], references: [id])
-  Vision                Vision?      @relation(fields: [visionId], references: [id])
-  GeneratedByUser       Usuario      @relation("PayoutGeneratedBy", fields: [generatedBy], references: [id])
-  ApprovedByUser        Usuario?     @relation("PayoutApprovedBy", fields: [approvedBy], references: [id])
-  
-  @@unique([organizationId, weekStartDate, visionId])
-  @@index([organizationId])
-  @@index([visionId])
-  @@index([weekStartDate])
-  @@index([status])
-  @@map("weekly_payout_summary")
-}
-
-// Códigos de licencia para membresías y accesos especiales
-model LicenseCode {
-  id              Int                   @id @default(autoincrement())
-  code            String                @unique // Código único (ej: "MENTOR-ANTFHA")
-  type            LicenseCodeType       // Tipo de código
-  organizationId  Int?                  // Organización que emitió el código
-  
-  // Estado
-  used            Boolean               @default(false)
-  usedBy          Int?                  // ID del usuario que lo usó
-  usedAt          DateTime?             // Fecha de uso
-  
-  // Validez
-  expiresAt       DateTime?             // Fecha de expiración
-  
-  // Metadata
-  createdBy       Int                   // Quien creó el código
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-  notes           String?               // Notas internas
-  
-  // Relaciones
-  organization        Organization?         @relation(fields: [organizationId], references: [id])
-  usedByUser          Usuario?              @relation("LicenseCodeUser", fields: [usedBy], references: [id])
-  createdByUser       Usuario               @relation("LicenseCodeCreator", fields: [createdBy], references: [id])
-  MentorApplications  MentorApplication[]
-  
-  @@index([code])
-  @@index([organizationId])
-  @@index([type])
-  @@index([used])
-}
-
-enum LicenseCodeType {
-  MENTOR_MEMBERSHIP    // Membresía de mentor
-  VISION_LICENSE       // Licencia de visión
-  PROMOTIONAL          // Código promocional genérico
-  SPECIAL_ACCESS       // Acceso especial
+  CREDIT
+  DEBIT
 }

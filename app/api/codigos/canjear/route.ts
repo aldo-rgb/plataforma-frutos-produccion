@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     const codigoAcceso = await prisma.codigoAcceso.findUnique({
       where: { codigo: codigo.trim().toUpperCase() },
       include: {
-        canjeadoPor: {
+        Usuario: {
           select: {
             id: true,
             nombre: true,
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     // Para códigos que no son institucionales, verificar si ya fue canjeado
     if (codigoAcceso.tipo !== 'LICENCIAS_INSTITUCIONAL' && codigoAcceso.estado === 'CANJEADO') {
       return NextResponse.json({ 
-        error: `Este código ya fue canjeado por ${codigoAcceso.canjeadoPor?.nombre || 'otro usuario'}` 
+        error: `Este código ya fue canjeado por ${codigoAcceso.Usuario?.nombre || 'otro usuario'}` 
       }, { status: 400 });
     }
 
@@ -218,7 +218,8 @@ export async function POST(req: NextRequest) {
               ? 'CANJEADO' 
               : 'DISPONIBLE',
             canjeadoPorId: user.id,
-            canjeadoEn: new Date()
+            canjeadoEn: new Date(),
+            updatedAt: new Date()
           }
         });
 
@@ -281,7 +282,8 @@ export async function POST(req: NextRequest) {
           data: {
             estado: 'CANJEADO',
             canjeadoPorId: user.id,
-            canjeadoEn: new Date()
+            canjeadoEn: new Date(),
+            updatedAt: new Date()
           }
         });
 
@@ -310,7 +312,8 @@ export async function POST(req: NextRequest) {
           data: {
             estado: 'CANJEADO',
             canjeadoPorId: user.id,
-            canjeadoEn: new Date()
+            canjeadoEn: new Date(),
+            updatedAt: new Date()
           }
         });
 
@@ -339,7 +342,8 @@ export async function POST(req: NextRequest) {
           data: {
             estado: 'CANJEADO',
             canjeadoPorId: user.id,
-            canjeadoEn: new Date()
+            canjeadoEn: new Date(),
+            updatedAt: new Date()
           }
         });
 
@@ -367,7 +371,8 @@ export async function POST(req: NextRequest) {
           data: {
             estado: 'CANJEADO',
             canjeadoPorId: user.id,
-            canjeadoEn: new Date()
+            canjeadoEn: new Date(),
+            updatedAt: new Date()
           }
         });
 

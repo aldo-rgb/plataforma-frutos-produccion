@@ -49,7 +49,8 @@ export async function POST(req: Request) {
           status: 'PENDING',
           paymentStatus: 'PAID',
           amountPaid: (session.amount_total || 0) / 100, // Convertir de centavos a pesos
-          paymentIntentId: session.payment_intent as string
+          paymentIntentId: session.payment_intent as string,
+          updatedAt: new Date()
         }
       });
 

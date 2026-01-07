@@ -108,38 +108,29 @@ export async function POST(req: NextRequest) {
       for (const assignment of mentorAssignments) {
         const { mentorId, studentCount } = assignment;
 
-        // Buscar el usuario mentor
-        const mentorUser = await prisma.usuario.findFirst({
+        console.log(`🔍 Procesando mentor ID: ${mentorId}`);
+
+        // El mentorId ya es el usuario ID, no el perfil mentor ID
+        // Verificar si ya está asignado
+        const existingAssignment = await prisma.visionMentor.findFirst({
           where: {
-            PerfilMentor: {
-              id: mentorId
-            }
+            visionId: visionId,
+            mentorId: mentorId,
           },
-          select: { id: true }
         });
 
-        if (mentorUser) {
-          // Verificar si ya está asignado
-          const existingAssignment = await prisma.visionMentor.findFirst({
-            where: {
+        if (!existingAssignment) {
+          // Crear asignación
+          await prisma.visionMentor.create({
+            data: {
               visionId: visionId,
-              mentorId: mentorUser.id,
+              mentorId: mentorId,
+              asignadoPorId: user.id,
             },
           });
-
-          if (!existingAssignment) {
-            // Crear asignación
-            await prisma.visionMentor.create({
-              data: {
-                visionId: visionId,
-                mentorId: mentorUser.id,
-                asignadoPorId: user.id,
-              },
-            });
-            console.log(`✅ Mentor ${mentorUser.id} asignado a visión ${visionId}`);
-          } else {
-            console.log(`ℹ️ Mentor ${mentorUser.id} ya estaba asignado`);
-          }
+          console.log(`✅ Mentor ${mentorId} asignado a visión ${visionId}`);
+        } else {
+          console.log(`ℹ️ Mentor ${mentorId} ya estaba asignado a visión ${visionId}`);
         }
       }
 

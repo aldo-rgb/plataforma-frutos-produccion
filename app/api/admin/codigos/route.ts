@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     const codigos = await prisma.codigoAcceso.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
-        canjeadoPor: {
+        Usuario: {
           select: {
             nombre: true,
             email: true
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
       descripcion: c.descripcion,
       estado: c.estado,
       creado: c.createdAt.toISOString(),
-      usuario: c.canjeadoPor?.name || c.canjeadoPor?.email || null,
+      usuario: c.Usuario?.nombre || c.Usuario?.email || null,
       canjeadoEn: c.canjeadoEn?.toISOString() || null
     }));
 

@@ -80,6 +80,9 @@ export default function SchoolAdminDashboard() {
   const [loadingVisiones, setLoadingVisiones] = useState(true);
   const [notificacionesLideres, setNotificacionesLideres] = useState(0);
   const [misionesModalOpen, setMisionesModalOpen] = useState(false);
+  const [qrDataURL, setQrDataURL] = useState<string | null>(null);
+  const [generatingQR, setGeneratingQR] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -232,6 +235,55 @@ export default function SchoolAdminDashboard() {
     }
   };
 
+  const generateOrganizationQR = async () => {
+    setGeneratingQR(true);
+    try {
+      // URL de registro con código de organización
+      const registrationURL = `${window.location.origin}/auth/signup?org=${organization?.codigoOrganizacion || organization?.id}`;
+      
+      // Importar QRCode dinámicamente
+      const QRCodeModule = await import('qrcode');
+      const QRCode = QRCodeModule.default || QRCodeModule;
+      
+      // Generar el QR como data URL
+      const qrDataUrl = await QRCode.toDataURL(registrationURL, {
+        width: 512,
+        margin: 2,
+        color: {
+          dark: organization?.brandColor || '#1e293b',
+          light: '#ffffff'
+        },
+        errorCorrectionLevel: 'H'
+      });
+      
+      setQrDataURL(qrDataUrl);
+    } catch (error) {
+      console.error('Error generating QR:', error);
+      setNotification({
+        type: 'error',
+        message: 'Error al generar el código QR'
+      });
+    } finally {
+      setGeneratingQR(false);
+    }
+  };
+
+  const downloadOrganizationQR = () => {
+    if (!qrDataURL) return;
+    
+    const link = document.createElement('a');
+    link.href = qrDataURL;
+    link.download = `${organization?.name || 'organizacion'}-qr.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setNotification({
+      type: 'success',
+      message: 'QR descargado exitosamente'
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
@@ -253,8 +305,8 @@ export default function SchoolAdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-3 md:p-6">
-      <div className="max-w-7xl mx-auto space-y-4 md:space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-3 md:p-6 overflow-x-hidden">
+      <div className="max-w-7xl mx-auto space-y-4 md:space-y-8 w-full">
         {/* Notificación de Pago */}
         {notification && (
           <div
@@ -282,8 +334,8 @@ export default function SchoolAdminDashboard() {
         )}
 
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3 md:gap-6 border-b border-white/10 pb-3 md:pb-6">
-          <div className="flex items-center gap-2 md:gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3 md:gap-6 border-b border-white/10 pb-3 md:pb-6 w-full">
+          <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
             {organization?.logoUrl ? (
               <img
                 src={organization.logoUrl}
@@ -298,10 +350,10 @@ export default function SchoolAdminDashboard() {
                 {organization?.name?.charAt(0) || 'C'}
               </div>
             )}
-            <div>
+            <div className="min-w-0 flex-1">
               <h1 className="text-xl md:text-4xl font-black text-white tracking-tight flex flex-col md:flex-row items-start md:items-center gap-1 md:gap-3">
-                <span className="line-clamp-1">{organization?.name || 'Centro Educativo'}</span>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500 text-sm md:text-2xl">
+                <span className="line-clamp-1 break-words">{organization?.name || 'Centro Educativo'}</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500 text-sm md:text-2xl flex-shrink-0">
                   Centro
                 </span>
               </h1>
@@ -321,7 +373,7 @@ export default function SchoolAdminDashboard() {
           const btnColor = hasProcessing ? 'bg-blue-500 hover:bg-blue-600 shadow-blue-500/50' : 'bg-red-500 hover:bg-red-600 shadow-red-500/50';
           
           return (
-            <div className={`bg-gradient-to-r ${bgColor} border-2 rounded-xl md:rounded-2xl p-3 md:p-5 shadow-2xl animate-pulse backdrop-blur-sm`}>
+            <div className={`bg-gradient-to-r ${bgColor} border-2 rounded-xl md:rounded-2xl p-3 md:p-5 shadow-2xl animate-pulse backdrop-blur-sm w-full`}>
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-0">
                 <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto">
                   <div className="relative flex-shrink-0">
@@ -369,7 +421,7 @@ export default function SchoolAdminDashboard() {
 
         {/* Banner de Alerta - Perfiles de Líderes Pendientes de Aprobación */}
         {data.pendingLeaderApprovals && data.pendingLeaderApprovals > 0 && (
-          <div className="bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-purple-500/20 border-2 border-purple-500/50 rounded-xl md:rounded-2xl p-3 md:p-5 shadow-2xl animate-pulse backdrop-blur-sm">
+          <div className="bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-purple-500/20 border-2 border-purple-500/50 rounded-xl md:rounded-2xl p-3 md:p-5 shadow-2xl animate-pulse backdrop-blur-sm w-full">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-0">
               <div className="flex items-center gap-2 md:gap-4 w-full md:w-auto">
                 <div className="relative flex-shrink-0">
@@ -402,7 +454,7 @@ export default function SchoolAdminDashboard() {
 
         {/* Widget de Pago Pendiente - COMPACTO - Solo para órdenes PENDING */}
         {data.pendingPayment && data.pendingOrders && data.pendingOrders.filter((o: any) => o.status === 'PENDING').length > 0 && (
-          <div className="relative overflow-hidden bg-gradient-to-br from-purple-900/50 via-pink-900/30 to-slate-900 border-2 border-purple-500/50 rounded-2xl p-6 shadow-2xl">
+          <div className="relative overflow-hidden bg-gradient-to-br from-purple-900/50 via-pink-900/30 to-slate-900 border-2 border-purple-500/50 rounded-2xl p-6 shadow-2xl w-full">
             <div className="absolute top-0 right-0 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl -mt-24 -mr-24"></div>
             <div className="relative z-10">
               <div className="flex items-start justify-between mb-4">
@@ -480,7 +532,7 @@ export default function SchoolAdminDashboard() {
         )}
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 w-full">
           <KpiCard
             icon={<Users className="text-cyan-400" />}
             label="Usuarios Totales"
@@ -518,7 +570,7 @@ export default function SchoolAdminDashboard() {
         </div>
 
         {/* WIDGET DE VISIONES ACTIVAS */}
-        <div className="bg-slate-900 border border-white/10 rounded-3xl p-6 mt-8">
+        <div className="bg-slate-900 border border-white/10 rounded-3xl p-6 mt-8 w-full">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-black text-white italic uppercase flex items-center gap-2">
               <Target className="text-purple-400" /> Visiones Activas
@@ -615,27 +667,29 @@ export default function SchoolAdminDashboard() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8 w-full">
           {/* Columna Izquierda: Distribución de Planes */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 md:space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-black text-white uppercase flex items-center gap-2">
-                <BarChart3 className="text-purple-400" /> Distribución de Estudiantes
+              <h2 className="text-lg md:text-xl font-black text-white uppercase flex items-center gap-2">
+                <BarChart3 className="text-purple-400" size={18} /> 
+                <span className="hidden sm:inline">Distribución de Estudiantes</span>
+                <span className="sm:hidden">Estudiantes</span>
               </h2>
             </div>
 
-            <div className="bg-slate-900/50 backdrop-blur border border-slate-800 rounded-3xl p-6">
-              <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="bg-slate-900/50 backdrop-blur border border-slate-800 rounded-2xl md:rounded-3xl p-4 md:p-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-6 w-full">
                 {data.tierDistribution.filter((tier) => tier.tier !== 'FREE').map((tier) => (
                   <div
                     key={tier.tier}
-                    className="bg-slate-800/50 rounded-xl p-4 border border-slate-700"
+                    className="bg-slate-800/50 rounded-lg md:rounded-xl p-3 md:p-4 border border-slate-700"
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-bold text-slate-400">{tier.tier}</span>
-                      <span className="text-2xl font-black text-white">{tier.count}</span>
+                      <span className="text-xs md:text-sm font-bold text-slate-400">{tier.tier}</span>
+                      <span className="text-xl md:text-2xl font-black text-white">{tier.count}</span>
                     </div>
-                    <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                    <div className="h-1.5 md:h-2 bg-slate-700 rounded-full overflow-hidden">
                       <div
                         className={`h-full ${
                           tier.tier === 'PREMIUM'
@@ -647,56 +701,33 @@ export default function SchoolAdminDashboard() {
                         style={{ width: `${tier.percentage}%` }}
                       />
                     </div>
-                    <span className="text-xs text-slate-500 mt-1 block">{tier.percentage}%</span>
+                    <span className="text-[10px] md:text-xs text-slate-500 mt-1 block">{tier.percentage}%</span>
                   </div>
                 ))}
               </div>
 
-              {/* NUEVO: Widget de Misiones y Tareas Extraordinarias - Clickeable */}
-              <button
-                onClick={() => setMisionesModalOpen(true)}
-                className="mt-8 w-full bg-gradient-to-br from-orange-900/40 via-yellow-900/30 to-orange-900/40 border-2 border-orange-600/40 rounded-2xl p-6 hover:border-orange-500/60 hover:shadow-lg hover:shadow-orange-500/20 transition-all group cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Zap className="text-yellow-400 group-hover:text-yellow-300 transition-colors" size={24} />
-                    <div className="text-left">
-                      <h3 className="text-lg font-black text-white group-hover:text-orange-300 transition-colors">
-                        Misiones & Tareas Extraordinarias
-                      </h3>
-                      <p className="text-xs text-slate-400 mt-1">
-                        Gestiona misiones, tareas y obtén consejos de IA
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-orange-400 group-hover:translate-x-1 transition-transform text-2xl">
-                    →
-                  </div>
-                </div>
-              </button>
-
-              <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2 mt-8">
-                <Star className="text-yellow-400" size={16} />
+              <h3 className="text-xs md:text-sm font-bold text-white mb-2 md:mb-3 flex items-center gap-2 mt-4 md:mt-8">
+                <Star className="text-yellow-400" size={14} />
                 Top Estudiantes
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-2 md:space-y-3">
                 {data.topStudents.slice(0, 5).map((student, index) => (
                   <div
                     key={student.id}
-                    className="flex items-center justify-between p-3 bg-slate-800/30 rounded-xl border border-slate-700/50 hover:border-purple-500/30 transition-colors"
+                    className="flex items-center justify-between p-2 md:p-3 bg-slate-800/30 rounded-lg md:rounded-xl border border-slate-700/50 hover:border-purple-500/30 transition-colors"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm">
+                    <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+                      <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-xs md:text-sm flex-shrink-0">
                         {index + 1}
                       </div>
-                      <div>
-                        <p className="text-white font-semibold text-sm">{student.nombre}</p>
-                        <p className="text-xs text-slate-400">{student.tier}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-white font-semibold text-xs md:text-sm truncate">{student.nombre}</p>
+                        <p className="text-[10px] md:text-xs text-slate-400">{student.tier}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-white font-bold">{student.puntosCultivo} pts</p>
-                      <p className="text-xs text-yellow-400">🔥 {student.racha} días</p>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-white font-bold text-xs md:text-sm">{student.puntosCultivo} pts</p>
+                      <p className="text-[10px] md:text-xs text-yellow-400">🔥 {student.racha}</p>
                     </div>
                   </div>
                 ))}
@@ -705,19 +736,78 @@ export default function SchoolAdminDashboard() {
           </div>
 
           {/* Columna Derecha: Acciones Rápidas */}
-          <div className="space-y-6">
-            <h2 className="text-xl font-black text-white uppercase flex items-center gap-2">
-              <Zap className="text-yellow-400" /> Acciones Rápidas
+          <div className="space-y-4 md:space-y-6">
+            <h2 className="text-lg md:text-xl font-black text-white uppercase flex items-center gap-2">
+              <Zap className="text-yellow-400" size={18} /> 
+              <span className="hidden sm:inline">Acciones Rápidas</span>
+              <span className="sm:hidden">Acciones</span>
             </h2>
 
-            <Link href={data.pendingOrders.length > 0 ? "/dashboard/school-admin/licenses/payment" : "/dashboard/school-admin/licenses/request"}>
+            {/* Widget de QR de Organización */}
+            <div 
+              onClick={() => {
+                if (!qrDataURL) {
+                  generateOrganizationQR();
+                }
+                setShowQRModal(true);
+              }}
+              className="bg-gradient-to-br from-blue-900/50 via-indigo-900/30 to-slate-900 border-2 border-blue-500/30 rounded-xl md:rounded-2xl p-4 md:p-6 transition-all cursor-pointer group hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10 relative overflow-hidden"
+            >
+              {/* Decorative elements */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl -z-10"></div>
+              
+              <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+                <div className="p-2 md:p-3 bg-blue-500/20 group-hover:bg-blue-500/30 rounded-lg md:rounded-xl transition-colors flex-shrink-0">
+                  <span className="text-2xl">📱</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-bold text-white text-xs md:text-sm uppercase line-clamp-2">
+                    QR de Registro
+                  </h3>
+                  <p className="text-[10px] md:text-xs text-blue-300 line-clamp-1">
+                    Código QR personalizado de tu organización
+                  </p>
+                </div>
+              </div>
+              <p className="text-[10px] md:text-xs text-slate-400 line-clamp-2">
+                Comparte este QR para que nuevos usuarios se registren directamente en tu organización
+              </p>
+            </div>
+
+            {/* Widget de Misiones & Tareas Extraordinarias */}
+            <div 
+              onClick={() => setMisionesModalOpen(true)}
+              className="bg-gradient-to-br from-amber-900/50 via-orange-900/30 to-slate-900 border-2 border-amber-500/30 rounded-xl md:rounded-2xl p-4 md:p-6 transition-all cursor-pointer group hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-500/10 relative overflow-hidden"
+            >
+              {/* Decorative elements */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl -z-10"></div>
+              
+              <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+                <div className="p-2 md:p-3 bg-amber-500/20 group-hover:bg-amber-500/30 rounded-lg md:rounded-xl transition-colors flex-shrink-0">
+                  <Zap size={20} className="text-amber-300 md:w-6 md:h-6" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-bold text-white text-xs md:text-sm uppercase line-clamp-2">
+                    Misiones & Tareas Extraordinarias
+                  </h3>
+                  <p className="text-[10px] md:text-xs text-amber-300 line-clamp-1">
+                    Gestiona misiones, tareas y obtén consejos de IA
+                  </p>
+                </div>
+              </div>
+              <p className="text-[10px] md:text-xs text-slate-400 line-clamp-2">
+                Crea misiones especiales, asigna tareas y utiliza IA para optimizar el aprendizaje
+              </p>
+            </div>
+
+            <Link href={data.pendingOrders.length > 0 ? "/dashboard/school-admin/licenses/payment" : "/dashboard/school-admin/licenses/request"} className="block">
               <div className={`bg-gradient-to-br ${(() => {
                 if (data.pendingOrders.length === 0) return 'from-purple-900/50 to-slate-900 border-2 border-purple-500/30';
                 const hasProcessing = data.pendingOrders.some((o: any) => o.status === 'PROCESSING');
                 return hasProcessing 
                   ? 'from-blue-900/50 to-slate-900 border-2 border-blue-500/50 animate-pulse'
                   : 'from-red-900/50 to-slate-900 border-2 border-red-500/50 animate-pulse';
-              })()} rounded-2xl p-6 transition-all cursor-pointer group relative overflow-hidden`}>
+              })()} rounded-xl md:rounded-2xl p-4 md:p-6 transition-all cursor-pointer group relative overflow-hidden`}>
                 {/* Badge animado para órdenes pendientes */}
                 {data.pendingOrders.length > 0 && (() => {
                   const hasProcessing = data.pendingOrders.some((o: any) => o.status === 'PROCESSING');
@@ -726,23 +816,23 @@ export default function SchoolAdminDashboard() {
                   return (
                     <div className="absolute top-2 right-2">
                       <div className="relative">
-                        <div className={`animate-ping absolute inline-flex h-6 w-6 rounded-full ${badgePing} opacity-75`}></div>
-                        <div className={`relative inline-flex items-center justify-center h-6 w-6 rounded-full ${badgeBg} border-2 border-slate-900`}>
-                          <span className="text-white font-bold text-xs">{data.pendingOrders.length}</span>
+                        <div className={`animate-ping absolute inline-flex h-5 w-5 md:h-6 md:w-6 rounded-full ${badgePing} opacity-75`}></div>
+                        <div className={`relative inline-flex items-center justify-center h-5 w-5 md:h-6 md:w-6 rounded-full ${badgeBg} border-2 border-slate-900`}>
+                          <span className="text-white font-bold text-[10px] md:text-xs">{data.pendingOrders.length}</span>
                         </div>
                       </div>
                     </div>
                   );
                 })()}
                 
-                <div className="flex items-center gap-3 mb-4">
-                  <div className={`p-3 ${(() => {
+                <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+                  <div className={`p-2 md:p-3 ${(() => {
                     if (data.pendingOrders.length === 0) return 'bg-purple-500/20 group-hover:bg-purple-500/30';
                     const hasProcessing = data.pendingOrders.some((o: any) => o.status === 'PROCESSING');
                     return hasProcessing
                       ? 'bg-blue-500/20 group-hover:bg-blue-500/30'
                       : 'bg-red-500/20 group-hover:bg-red-500/30';
-                  })()} rounded-xl transition-colors`}>
+                  })()} rounded-lg md:rounded-xl transition-colors flex-shrink-0`}>
                     {data.pendingOrders.length > 0 ? (
                       data.pendingOrders.some((o: any) => o.status === 'PROCESSING') ? (
                         <AlertTriangle size={24} className="text-blue-300" />
@@ -842,7 +932,7 @@ export default function SchoolAdminDashboard() {
                   </div>
                   <div>
                     <h3 className="font-bold text-white text-sm uppercase">
-                      Gestionar Coordinadores
+                      Gestionar Equipo
                     </h3>
                     <p className="text-xs text-blue-300">
                       Crear y asignar
@@ -850,28 +940,7 @@ export default function SchoolAdminDashboard() {
                   </div>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Crea coordinadores y asígnalos a tus visiones
-                </p>
-              </div>
-            </Link>
-
-            <Link href="/dashboard/school-admin/lideres" className="block mt-6">
-              <div className="bg-gradient-to-br from-purple-900/50 to-slate-900 border-2 border-purple-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-3 bg-purple-500/20 group-hover:bg-purple-500/30 rounded-xl transition-colors">
-                    <Shield size={24} className="text-purple-300" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white text-sm uppercase">
-                      Gestionar Mentores
-                    </h3>
-                    <p className="text-xs text-purple-300">
-                      Mentores internos
-                    </p>
-                  </div>
-                </div>
-                <p className="text-xs text-slate-400">
-                  Crea líderes (mentores privados) y asígnalos a tus visiones
+                  Crea coordinadores y mentores para asígnarlos a tus visiones
                 </p>
               </div>
             </Link>
@@ -893,6 +962,27 @@ export default function SchoolAdminDashboard() {
                 </div>
                 <p className="text-xs text-slate-400">
                   Lista completa: Participantes, Game Changers, Coordinadores y Mentores
+                </p>
+              </div>
+            </Link>
+
+            <Link href="/dashboard/school-admin/productos" className="block mt-6">
+              <div className="bg-gradient-to-br from-pink-900/50 to-slate-900 border-2 border-pink-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-pink-500/50 hover:shadow-lg hover:shadow-pink-500/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-pink-500/20 group-hover:bg-pink-500/30 rounded-xl transition-colors">
+                    <ShoppingCart size={24} className="text-pink-300" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm uppercase">
+                      Gestionar Entrenamientos
+                    </h3>
+                    <p className="text-xs text-pink-300">
+                      Entrenamientos y Talleres
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Administra todos tus productos: CORE y talleres extras
                 </p>
               </div>
             </Link>
@@ -1062,6 +1152,99 @@ export default function SchoolAdminDashboard() {
                 >
                   Cerrar
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de QR de Organización */}
+      {showQRModal && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowQRModal(false)}
+        >
+          <div 
+            className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border-2 border-blue-500/30 max-w-lg w-full shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-slate-700 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/20 rounded-lg">
+                  <span className="text-2xl">📱</span>
+                </div>
+                <h3 className="text-2xl font-black text-white">QR de Registro</h3>
+              </div>
+              <button
+                onClick={() => setShowQRModal(false)}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-8 text-center">
+              <div className="w-64 h-64 bg-white rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-2xl overflow-hidden">
+                {qrDataURL ? (
+                  <img src={qrDataURL} alt="QR Code" className="w-full h-full object-contain p-4" />
+                ) : generatingQR ? (
+                  <div className="animate-spin text-4xl">⏳</div>
+                ) : (
+                  <div className="text-slate-400 text-6xl">📱</div>
+                )}
+              </div>
+              
+              <h3 className="text-2xl font-bold text-white mb-2">
+                {organization?.name || 'Organización'}
+              </h3>
+              <p className="text-slate-400 mb-2">
+                Código QR de registro personalizado
+              </p>
+              {qrDataURL && (
+                <p className="text-slate-500 text-sm mb-6 font-mono break-all px-4">
+                  {`${window.location.origin}/auth/signup?org=${organization?.codigoOrganizacion || organization?.id}`}
+                </p>
+              )}
+
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={() => {
+                    if (qrDataURL && navigator.share) {
+                      fetch(qrDataURL)
+                        .then(res => res.blob())
+                        .then(blob => {
+                          const file = new File([blob], `${organization?.name || 'organizacion'}-qr.png`, { type: 'image/png' });
+                          navigator.share({
+                            title: `QR de ${organization?.name || 'Organización'}`,
+                            text: `Únete a ${organization?.name || 'nuestra organización'} escaneando este QR`,
+                            files: [file]
+                          }).catch(err => console.log('Error sharing:', err));
+                        });
+                    } else if (qrDataURL) {
+                      // Fallback: copiar URL al portapapeles
+                      const url = `${window.location.origin}/auth/signup?org=${organization?.codigoOrganizacion || organization?.id}`;
+                      navigator.clipboard.writeText(url);
+                      setNotification({type: 'success', message: 'Enlace copiado al portapapeles'});
+                    }
+                  }}
+                  disabled={!qrDataURL || generatingQR}
+                  className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white rounded-xl font-bold shadow-xl transition-all"
+                >
+                  🔗 Compartir
+                </button>
+                <button 
+                  onClick={downloadOrganizationQR}
+                  disabled={!qrDataURL}
+                  className="px-8 py-4 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-all"
+                >
+                  📥 Descargar
+                </button>
+              </div>
+
+              <div className="mt-8 p-6 bg-blue-900/20 border border-blue-500/30 rounded-xl">
+                <p className="text-blue-300 text-sm">
+                  💡 <strong>Tip:</strong> Comparte este QR para que nuevos usuarios se registren automáticamente en tu organización
+                </p>
               </div>
             </div>
           </div>

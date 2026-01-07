@@ -12,10 +12,13 @@ export async function GET() {
     }
 
     const usuario = await prisma.usuario.findUnique({
-      where: { email: session.user.email }
+      where: { email: session.user.email },
     });
 
-    if (!usuario || usuario.rol !== 'COORDINADOR') {
+    // Roles válidos de coordinador
+    const coordinadorRoles = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER'];
+    
+    if (!usuario || !coordinadorRoles.includes(usuario.rol)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 

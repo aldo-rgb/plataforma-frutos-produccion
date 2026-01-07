@@ -43,8 +43,19 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { image, gender, vibe = 'cyberpunk', designation, archetype, visualTags, identityId, selectedOptionId } = body;
 
+    console.log('📥 Request recibido:');
+    console.log('  - Gender:', gender);
+    console.log('  - Vibe:', vibe);
+    console.log('  - Designation:', designation);
+    console.log('  - Archetype:', archetype);
+    console.log('  - Image length:', image ? image.length : 0);
+
     if (!image) {
       return NextResponse.json({ error: 'Imagen requerida' }, { status: 400 });
+    }
+
+    if (!gender || (gender !== 'male' && gender !== 'female')) {
+      return NextResponse.json({ error: 'Género inválido. Debe ser "male" o "female"' }, { status: 400 });
     }
 
     // Buscar usuario
@@ -88,8 +99,7 @@ export async function POST(request: NextRequest) {
     // Construir el prompt según el género y vibe
     const genderPrompts: Record<string, string> = {
       male: 'male person',
-      female: 'female person',
-      neutral: 'androgynous person'
+      female: 'female person'
     };
 
     const vibePrompts: Record<string, { positive: string; negative: string }> = {
@@ -112,8 +122,7 @@ export async function POST(request: NextRequest) {
     if (designation && visualTags && archetype) {
       const genderPrompts: Record<string, string> = {
         male: 'male person',
-        female: 'female person',
-        neutral: 'androgynous person'
+        female: 'female person'
       };
 
       // Nuevos arquetipos del sistema de niveles
@@ -190,41 +199,49 @@ export async function POST(request: NextRequest) {
 
       const accentColor = accentColors[archetype] || 'cyan';
       
-      // Prompt estilo Cinematic Concept Art
-      promptToUse = `A cinematic, highly detailed concept art portrait of ${characterRole}, based on the facial features of a img ${genderPrompts[gender]}.
+      // Prompt optimizado para PhotoMaker - preservación facial máxima
+      // IMPORTANTE: Solo usar 'img' UNA VEZ en todo el prompt
+      promptToUse = `A cinematic corporate portrait of a img ${genderPrompts[gender]} executive, with a highly accurate likeness to the subject.
+
+The subject is a ${characterRole} (Quantum Jumper).
 
 Corporate role: ${designation}
 
-CRITICAL - Preserve identity: Keep the exact facial structure, nose shape, eye shape, jawline, skin tone, beard style, hair style, and overall facial proportions from the input image. The face must remain identical and seamlessly integrated into the sci-fi art style, not just a photo paste-up.
+CRITICAL - Facial Preservation:
+The face, facial structure, skin tone, eyes, nose, mouth, jawline, hair style, hair color, facial hair (if any), and all unique facial features from the input image MUST be preserved exactly. The person's identity must remain 100% recognizable and identical to the uploaded photo.
 
-BODY ADJUSTMENT: The person appears fit and athletic, with a slightly slimmer silhouette suggesting good physical conditioning. Natural, healthy appearance without exaggeration.
+Art style: The "Matrix" meets high-end corporate photography. Cinematic color grading with cool tones (steely blues, deep greens) and dramatic contrast. Sleek, and futuristic.
 
-OUTFIT & STYLE: They are wearing ${outfit}.
+Lighting: Dramatic rim lighting outlining the subject, mixed with the glow of advanced interfaces. A subtle, faint visual effect around the subject suggestive of quantum displacement or phasing (a very slight chromatic aberration or digital aura).
 
-ACCESSORY: ${accessory}.
+Background: A luxurious, minimalist office that feels like it's inside a digital construct. Abstract flowing data streams, subtle digital rain code patterns, or shifting geometric architecture. Deep depth of field.
 
-THE LOOK: The character has a determined, intense expression. The face is seamlessly integrated into the sci-fi art style with realistic skin texture, subsurface scattering, and proper lighting interaction.
+Clothing: Sleek, tailored, minimalist dark attire (structured jacket with a high collar, dark shirt). Expensive fabric texture. Modern executive fashion.
 
-AESTHETIC: The style is "Organic Sci-Fi" meets "High-Tech Luxury". Elegant, mysterious, and clean. Not dirty or military.
+Composition: Professional headshot to upper body, facing forward with an intense, and confident expression. Silent authority. Sharp focus on the eyes. High resolution.
 
-LIGHTING & ATMOSPHERE: Dramatic neon side-lighting (rim light) in ${accentColor} tones, casting realistic shadows and highlights on the skin with subsurface scattering. The background is a dark, blurred futuristic data interface with floating particles and hexagonal bokeh.
+STRICT RULES - NO:
+❌ Changing facial features from the input image
+❌ Generic or different face than the person
+❌ Weapons of any kind
+❌ Visible cumbersome cybernetic implants
+❌ Excessive bright neon colors (keep it moody)
+❌ Aggressive postures or expressions
 
-QUALITY BOOSTERS: Masterpiece, 8k resolution, sharp focus, Unreal Engine 5 render, highly polished, intricate details, trending on ArtStation, cinematic concept art quality, photorealistic with artistic enhancement.
-
-STRICT RULES:
-✅ PRESERVE: Exact facial features, skin tone, face shape, eye shape, nose, mouth, hair, beard
-✅ INTEGRATE: Face seamlessly into the art style with proper lighting and texture
-✅ CHANGE: Only clothing, accessories, background, lighting style, sci-fi elements
-❌ NEVER: Weapons, face alterations, aggressive poses, military armor, dirty aesthetic, photo paste effect`;
+REQUIRED - YES:
+✅ Exact facial likeness to the person in the input image
+✅ Preserve all unique facial characteristics
+✅ Sleek, dark, Matrix-inspired fashion
+✅ Subtle quantum/digital distortion effect around subject
+✅ Silent authority and confidence
+✅ MATRIX aesthetic with cool cinematic tones;
+    
+      negativePromptToUse = 'different face, face swap, changed facial features, wrong person, altered face shape, different skin tone, different hair color, different facial hair, generic face, face morph, bad face match, poor facial preservation, face paint, face mask, cybernetic face, robotic face parts, face scars, face tattoos, deformed face, ugly, disfigured, bad anatomy, extra limbs, weapons, guns, swords, knives, aggressive pose, angry expression, sunglasses, goggles over eyes, eye coverings, trench coat, military armor, dirty, grungy, post-apocalyptic, excessive neon, cartoon, anime, illustration, watermark, text, logo, blurry face, low quality';
       
-      negativePromptToUse = 'changing face shape, different person, altered facial features, photo collage, cut and paste, poorly integrated face, flat lighting, weapons, guns, swords, knives, military uniform, dirty, grungy, post-apocalyptic, aggressive pose, angry expression, armor plates, battle damage, violent, cartoon, anime, illustration, painting, drawing, ugly, deformed, disfigured, bad anatomy, bad proportions, extra limbs, cloned face, malformed limbs, missing arms, missing legs, fused fingers, too many fingers, long neck, watermark, signature, text, logo, blurry face, low quality, amateur';
-      
-      console.log('🎭 Prompt Cinematic Concept Art para PhotoMaker');
+      console.log('🎭 Prompt optimizado para PhotoMaker');
       console.log('🏢 Designación:', designation);
       console.log('🏢 Arquetipo:', archetype);
-      console.log('👔 Outfit:', outfit.substring(0, 50) + '...');
-      console.log('⚡ Accesorio:', accessory.substring(0, 50) + '...');
-      console.log('🎨 Color acento:', accentColor);
+      console.log('👤 Rol:', characterRole);
     }
 
     console.log('🎨 Generando con Replicate...');
@@ -234,7 +251,7 @@ STRICT RULES:
     // IMPORTANTE: Usamos el método de predictions para obtener URLs directamente
     // PhotoMaker retorna ReadableStream con replicate.run(), necesitamos polling
     
-    // Crear predicción en Replicate con parámetros optimizados para preservación facial
+    // Crear predicción en Replicate con parámetros optimizados para máxima preservación facial
     const prediction = await replicate.predictions.create({
       version: "ddfc2b08d209f9fa8c1eca692712918bd449f695dabb4a958da31802a9570fe4",
       input: {
@@ -242,10 +259,10 @@ STRICT RULES:
         prompt: promptToUse,
         negative_prompt: negativePromptToUse,
         num_outputs: 1,
-        guidance_scale: 5.0, // Reducido de 7.5 a 5.0 para mejor preservación facial
-        num_inference_steps: 50, // Aumentado de 30 a 50 para mejor calidad
+        guidance_scale: 3.5, // Reducido a 3.5 para máxima preservación (menos interpretación de la IA)
+        num_inference_steps: 60, // Aumentado a 60 para mejor calidad y precisión
         scheduler: "DPMSolverMultistep",
-        style_strength_ratio: 15, // Control de cuánto estilo aplicar (menor = más parecido al original)
+        style_strength_ratio: 15, // Mínimo permitido por el modelo (menor = más parecido al original)
       }
     });
 
@@ -344,10 +361,14 @@ STRICT RULES:
 
   } catch (error: any) {
     console.error('❌ Error generando avatar:', error);
+    console.error('❌ Stack trace:', error.stack);
+    console.error('❌ Error name:', error.name);
+    console.error('❌ Error message:', error.message);
     return NextResponse.json(
       { 
         error: 'Error al generar el avatar',
-        details: error.message 
+        details: error.message,
+        errorName: error.name
       },
       { status: 500 }
     );

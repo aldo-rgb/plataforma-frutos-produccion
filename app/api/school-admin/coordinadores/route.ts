@@ -42,13 +42,13 @@ export async function GET() {
       );
     }
 
-    // Obtener coordinadores de la misma organización
-    // Incluir tanto COORDINADOR como SCHOOL_ADMIN (que también pueden actuar como coordinadores)
+    // Obtener coordinadores y trainers de la misma organización
+    // Incluir COORDINATOR_BASIC, COORDINATOR_ADVANCED, TRAINER, COORDINADOR, y SCHOOL_ADMIN
     const coordinadores = await prisma.usuario.findMany({
       where: {
         organizationId: user.organizationId,
         rol: {
-          in: ['COORDINADOR', 'SCHOOL_ADMIN']
+          in: ['COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER', 'COORDINADOR', 'SCHOOL_ADMIN']
         }
       },
       select: {

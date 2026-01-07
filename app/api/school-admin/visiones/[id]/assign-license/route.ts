@@ -192,7 +192,10 @@ export async function POST(
           licenseCode,
           assignedBy: session.user.id,
           assignedAt: new Date(),
-          expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // 10 días para activar
+          isActive: false, // Pendiente de activación por el participante
+          activatedAt: null,
+          expiresAt: vision.endDate, // Expira cuando termina la visión
+          notes: 'Licencia asignada manualmente por director'
         },
       });
 

@@ -63,7 +63,8 @@ export async function POST(
     const vision = await prisma.vision.findUnique({
       where: { id: visionId },
       select: {
-        organizationId: true
+        organizationId: true,
+        endDate: true // Necesitamos la fecha de fin para la licencia
       }
     });
 
@@ -73,6 +74,30 @@ export async function POST(
 
     if (vision.organizationId !== admin.organizationId) {
       return NextResponse.json({ error: 'Esta visión no pertenece a tu organización' }, { status: 403 });
+    }
+
+    // Verificar créditos disponibles (los líderes también consumen licencias al asignarse a visiones)
+    const schoolCredit = await prisma.schoolCredit.findFirst({
+      where: {
+        organizationId: admin.organizationId,
+        isActive: true
+      }
+    });
+
+    if (!schoolCredit) {
+      return NextResponse.json(
+        { error: 'No se encontró registro de créditos' },
+        { status: 404 }
+      );
+    }
+
+    const availableCredits = schoolCredit.totalPurchased - schoolCredit.totalAllocated;
+
+    if (availableCredits < 1) {
+      return NextResponse.json(
+        { error: 'No hay licencias disponibles para asignar este líder a la visión. Compra más licencias.' },
+        { status: 400 }
+      );
     }
 
     // Verificar si ya existe la asignación
@@ -100,6 +125,34 @@ export async function POST(
         asignadoPorId: session.user.id
       }
     });
+
+    // Crear NUEVA licencia ACTIVADA para el líder en esta visión
+    const licenseCode = `QNT-LDR-STD-${liderId}-${Date.now()}`;
+    await prisma.licenseAssignment.create({
+      data: {
+        userId: liderId,
+        organizationId: admin.organizationId,
+        visionId: visionId,
+        assignedBy: session.user.id,
+        assignedAt: new Date(),
+        licenseCode: licenseCode,
+        isActive: true, // ACTIVADA automáticamente para líderes
+        activatedAt: new Date(),
+        expiresAt: vision.endDate, // Expira cuando termina la visión
+        notes: 'Licencia STANDARD automática - Líder asignado a visión - Activada'
+      }
+    });
+
+    // Descontar de SchoolCredit
+    await prisma.schoolCredit.update({
+      where: { id: schoolCredit.id },
+      data: {
+        totalAllocated: { increment: 1 }
+      }
+    });
+
+    console.log(`✅ Líder ${liderId} asignado a visión ${visionId} con licencia ${licenseCode}`);
+    console.log(`📊 Licencias disponibles: ${availableCredits - 1} de ${schoolCredit.totalPurchased}`);
 
     return NextResponse.json({
       success: true,

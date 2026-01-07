@@ -46,11 +46,29 @@ export default function QuantumIdentityModal({
   const [showSelfieCapture, setShowSelfieCapture] = useState(false);
   const [useSelfieMode, setUseSelfieMode] = useState(false);
 
-  // Funci\u00f3n para limpiar el cooldown cuando el avatar se guarda exitosamente
+  // Función para limpiar el cooldown cuando el avatar se guarda exitosamente
   const clearCooldown = () => {
     localStorage.removeItem('quantum_identity_cooldown');
-    console.log('\u2705 Cooldown limpiado - avatar guardado exitosamente');
+    console.log('✅ Cooldown limpiado - avatar guardado exitosamente');
   };
+
+  // Resetear el modal cuando se abre para regenerar
+  useEffect(() => {
+    if (isOpen) {
+      console.log('🔄 Modal abierto - reseteando estados...');
+      setStage('gender');
+      setGender(null);
+      setCandidates([]);
+      setSelectedCandidate(null);
+      setAvatarUrl('');
+      setIdentityId(null);
+      setErrorMessage('');
+      setErrorTitle('Error');
+      setIsGenerating(false);
+      setShowSelfieCapture(false);
+      setUseSelfieMode(false);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && stage === 'analyzing' && !isGenerating && gender) {
@@ -257,12 +275,12 @@ export default function QuantumIdentityModal({
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 gap-3 sm:gap-4">
             <button
               onClick={() => {
                 setGender('male');
               }}
-              className={`group relative h-48 sm:h-56 md:h-64 rounded-xl sm:rounded-2xl border-2 transition-all duration-300 hover:scale-105 overflow-hidden ${
+              className={`group relative h-32 sm:h-40 rounded-xl sm:rounded-2xl border-2 transition-all duration-300 overflow-hidden ${
                 gender === 'male' 
                   ? 'border-blue-500 bg-blue-500/20 ring-2 sm:ring-4 ring-blue-500/50' 
                   : 'border-blue-500/30 bg-slate-800/50 hover:bg-blue-500/10 hover:border-blue-500'
@@ -279,13 +297,13 @@ export default function QuantumIdentityModal({
               </div>
               
               {/* Icon Circle */}
-              <div className="relative h-full flex flex-col items-center justify-center space-y-2 sm:space-y-3">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-2xl shadow-blue-500/50 border-2 sm:border-4 border-slate-900/50 group-hover:scale-110 transition-transform">
-                  <svg className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <div className="relative h-full flex items-center justify-start px-6 space-x-4">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-2xl shadow-blue-500/50 border-2 sm:border-4 border-slate-900/50 group-hover:scale-110 transition-transform flex-shrink-0">
+                  <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                   </svg>
                 </div>
-                <p className="text-xl sm:text-2xl md:text-3xl font-bold text-white drop-shadow-lg">Hombre</p>
+                <p className="text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">Hombre</p>
               </div>
             </button>
 
@@ -293,7 +311,7 @@ export default function QuantumIdentityModal({
               onClick={() => {
                 setGender('female');
               }}
-              className={`group relative h-48 sm:h-56 md:h-64 rounded-xl sm:rounded-2xl border-2 transition-all duration-300 hover:scale-105 overflow-hidden ${
+              className={`group relative h-32 sm:h-40 rounded-xl sm:rounded-2xl border-2 transition-all duration-300 overflow-hidden ${
                 gender === 'female' 
                   ? 'border-pink-500 bg-pink-500/20 ring-2 sm:ring-4 ring-pink-500/50' 
                   : 'border-pink-500/30 bg-slate-800/50 hover:bg-pink-500/10 hover:border-pink-500'
@@ -310,43 +328,13 @@ export default function QuantumIdentityModal({
               </div>
               
               {/* Icon Circle */}
-              <div className="relative h-full flex flex-col items-center justify-center space-y-2 sm:space-y-3">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-2xl shadow-pink-500/50 border-2 sm:border-4 border-slate-900/50 group-hover:scale-110 transition-transform">
-                  <svg className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
+              <div className="relative h-full flex items-center justify-start px-6 space-x-4">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-2xl shadow-pink-500/50 border-2 sm:border-4 border-slate-900/50 group-hover:scale-110 transition-transform flex-shrink-0">
+                  <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                   </svg>
                 </div>
-                <p className="text-xl sm:text-2xl md:text-3xl font-bold text-white drop-shadow-lg">Mujer</p>
-              </div>
-            </button>
-
-            <button
-              onClick={() => {
-                setGender('neutral');
-              }}
-              className={`group relative h-48 sm:h-56 md:h-64 rounded-xl sm:rounded-2xl border-2 transition-all duration-300 hover:scale-105 overflow-hidden ${
-                gender === 'neutral' 
-                  ? 'border-purple-500 bg-purple-500/20 ring-2 sm:ring-4 ring-purple-500/50' 
-                  : 'border-purple-500/30 bg-slate-800/50 hover:bg-purple-500/10 hover:border-purple-500'
-              }`}
-            >
-              {/* Cyberpunk Background */}
-              <div className="absolute inset-0">
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-900/50 via-blue-900/50 to-cyan-900/50"></div>
-                <div className="absolute inset-0 opacity-30" style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-                }}></div>
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/80 to-transparent"></div>
-              </div>
-              
-              {/* Icon Circle */}
-              <div className="relative h-full flex flex-col items-center justify-center space-y-2 sm:space-y-3 px-2">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-br from-purple-500 via-blue-500 to-cyan-500 flex items-center justify-center shadow-2xl shadow-purple-500/50 border-2 sm:border-4 border-slate-900/50 group-hover:scale-110 transition-transform">
-                  <svg className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <p className="text-lg sm:text-xl md:text-2xl font-bold text-white drop-shadow-lg text-center leading-tight">Prefiero no contestar</p>
+                <p className="text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">Mujer</p>
               </div>
             </button>
           </div>
@@ -365,7 +353,7 @@ export default function QuantumIdentityModal({
             <div className="space-y-3 sm:space-y-4">
               <div className="text-center">
                 <p className="text-green-400 text-sm sm:text-base md:text-lg mb-2 sm:mb-3">
-                  ✓ Género: <span className="font-bold capitalize">{gender === 'neutral' ? 'Prefiero no contestar' : gender === 'male' ? 'Hombre' : 'Mujer'}</span>
+                  ✓ Género: <span className="font-bold capitalize">{gender === 'male' ? 'Hombre' : 'Mujer'}</span>
                 </p>
               </div>
 
@@ -450,23 +438,23 @@ export default function QuantumIdentityModal({
 
       {/* STAGE 2: SELECTION */}
       {stage === 'selection' && (
-        <div className="max-w-6xl w-full space-y-8">
+        <div className="max-w-6xl w-full space-y-6 sm:space-y-8 bg-slate-900/80 backdrop-blur-xl p-4 sm:p-6 md:p-8 rounded-3xl border-2 border-purple-500/30 max-h-[95vh] overflow-y-auto">
           
           {/* Header */}
-          <div className="text-center space-y-4">
-            <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 uppercase tracking-wider">
+          <div className="text-center space-y-3 sm:space-y-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 uppercase tracking-wider leading-tight">
               ROLES DEL CONSEJO DISPONIBLES
             </h2>
-            <p className="text-xl text-slate-300">
+            <p className="text-base sm:text-lg md:text-xl text-slate-300 px-4">
               El Consejo Quantum Matter ha identificado 3 roles compatibles con tu perfil.
             </p>
-            <p className="text-lg text-purple-400 font-semibold">
+            <p className="text-sm sm:text-base md:text-lg text-purple-400 font-semibold">
               Selecciona tu Posición en el Consejo.
             </p>
           </div>
 
           {/* Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
             {candidates.map((candidate) => (
               <button
                 key={candidate.id}
@@ -474,7 +462,7 @@ export default function QuantumIdentityModal({
                 onMouseEnter={() => setHoveredCard(candidate.id)}
                 onMouseLeave={() => setHoveredCard(null)}
                 className={`
-                  relative p-6 rounded-2xl border-2 transition-all duration-300 transform
+                  relative p-4 sm:p-6 rounded-2xl border-2 transition-all duration-300 transform
                   ${selectedCandidate?.id === candidate.id
                     ? `border-purple-500 bg-gradient-to-br ${getArchetypeGradient(candidate.archetype)}/20 scale-105 shadow-2xl`
                     : 'border-slate-700 bg-slate-900/50 hover:scale-105 hover:border-slate-500'
@@ -487,25 +475,25 @@ export default function QuantumIdentityModal({
                   <div className={`absolute inset-0 bg-gradient-to-br ${getArchetypeGradient(candidate.archetype)} opacity-20 blur-xl rounded-2xl`}></div>
                 )}
 
-                <div className="relative z-10 space-y-4">
+                <div className="relative z-10 space-y-3 sm:space-y-4">
                   {/* Icon */}
                   <div className="flex justify-center">
                     {getArchetypeIcon(candidate.archetype)}
                   </div>
 
                   {/* Designation */}
-                  <h3 className="text-2xl font-black text-white uppercase tracking-widest text-center">
+                  <h3 className="text-lg sm:text-xl md:text-2xl font-black text-white uppercase tracking-wider sm:tracking-widest text-center leading-tight">
                     {candidate.designation}
                   </h3>
 
                   {/* Rationale */}
-                  <p className="text-sm text-slate-300 text-center">
+                  <p className="text-xs sm:text-sm text-slate-300 text-center leading-relaxed">
                     {candidate.rationale}
                   </p>
 
                   {/* Archetype Badge */}
                   <div className="flex justify-center">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r ${getArchetypeGradient(candidate.archetype)} text-white`}>
+                    <span className={`px-2.5 sm:px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r ${getArchetypeGradient(candidate.archetype)} text-white`}>
                       {candidate.archetype}
                     </span>
                   </div>
@@ -513,7 +501,7 @@ export default function QuantumIdentityModal({
                   {/* Selection Indicator */}
                   {selectedCandidate?.id === candidate.id && (
                     <div className="flex justify-center">
-                      <CheckCircle className="text-green-400 animate-pulse" size={32} />
+                      <CheckCircle className="text-green-400 animate-pulse" size={28} />
                     </div>
                   )}
                 </div>
@@ -522,10 +510,10 @@ export default function QuantumIdentityModal({
           </div>
 
           {/* Confirm Button */}
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 px-4">
             <button
               onClick={onClose}
-              className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-semibold transition-all"
+              className="w-full sm:w-auto px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-semibold transition-all"
             >
               Cancelar
             </button>
@@ -533,14 +521,15 @@ export default function QuantumIdentityModal({
               onClick={confirmSelection}
               disabled={!selectedCandidate}
               className={`
-                px-8 py-3 rounded-lg font-black uppercase tracking-wider transition-all
+                w-full sm:w-auto px-6 sm:px-8 py-3 rounded-lg font-black uppercase tracking-wide sm:tracking-wider transition-all text-sm sm:text-base
                 ${selectedCandidate
                   ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg shadow-purple-500/50'
                   : 'bg-slate-800 text-slate-600 cursor-not-allowed'
                 }
               `}
             >
-              Confirmar Rol en el Consejo
+              <span className="hidden sm:inline">Confirmar Rol en el Consejo</span>
+              <span className="sm:hidden">Confirmar Rol</span>
             </button>
           </div>
         </div>

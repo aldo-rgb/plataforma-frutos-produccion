@@ -27,13 +27,13 @@ interface Application {
   documentosUrls: string[];
   amountPaid: number;
   createdAt: string;
-  Usuario: {
+  Usuario_MentorApplication_usuarioIdToUsuario: {
     id: number;
     nombre: string;
     email: string;
     imagen: string | null;
   };
-  ReviewedByUser: {
+  Usuario_MentorApplication_reviewedByToUsuario: {
     nombre: string;
   } | null;
 }
@@ -202,12 +202,12 @@ export default function MentorApplicationsPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex gap-4 flex-1">
                     <img
-                      src={app.Usuario.imagen || '/default-avatar.png'}
-                      alt={app.Usuario.nombre}
+                      src={app.Usuario_MentorApplication_usuarioIdToUsuario.imagen || '/default-avatar.png'}
+                      alt={app.Usuario_MentorApplication_usuarioIdToUsuario.nombre}
                       className="w-16 h-16 rounded-full object-cover"
                     />
                     <div className="flex-1">
-                      <h3 className="text-xl font-bold text-white mb-1">{app.Usuario.nombre}</h3>
+                      <h3 className="text-xl font-bold text-white mb-1">{app.Usuario_MentorApplication_usuarioIdToUsuario.nombre}</h3>
                       <p className="text-purple-400 font-medium mb-2">{app.titulo}</p>
                       <div className="flex flex-wrap gap-2 mb-3">
                         <span className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-sm">
@@ -223,7 +223,7 @@ export default function MentorApplicationsPage() {
                       <div className="flex items-center gap-4 text-sm text-slate-400">
                         <span className="flex items-center gap-1">
                           <Mail className="w-4 h-4" />
-                          {app.Usuario.email}
+                          {app.Usuario_MentorApplication_usuarioIdToUsuario.email}
                         </span>
                         <span className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />

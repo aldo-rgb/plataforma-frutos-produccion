@@ -349,7 +349,7 @@ export default function CorrectionsView() {
             {submitting ? (
               <>
                 <Loader2 size={20} className="animate-spin" />
-                Enviando...
+                Enviando Espere...
               </>
             ) : (
               <>

@@ -285,7 +285,7 @@ export default function CartaWizard() {
             <div>
               <h1 className="text-2xl font-bold text-white flex items-center gap-2">
                 <Sparkles className="text-purple-400" />
-                Mi Carta F.R.U.T.O.S.
+                Mi Carta de Objetivos
               </h1>
               <p className="text-sm text-gray-400">Constructor de mi futuro en 100 días</p>
             </div>
@@ -716,7 +716,7 @@ export default function CartaWizard() {
               {submitting ? (
                 <>
                   <Loader2 size={20} className="animate-spin" />
-                  Enviando...
+                  Enviando Espere...
                 </>
               ) : (
                 <>

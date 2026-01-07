@@ -87,6 +87,7 @@ export async function POST(req: NextRequest) {
       where: { id: applicationId },
       data: {
         paymentIntentId: checkoutSession.payment_intent as string,
+        updatedAt: new Date()
       },
     });
 

@@ -43,7 +43,8 @@ export async function POST(req: Request) {
         logros: data.logros || [],
         expertiseTags: data.expertiseTags || [],
         documentosUrls: data.documentosUrls || [],
-        videoIntroUrl: data.videoIntroUrl || null
+        videoIntroUrl: data.videoIntroUrl || null,
+        updatedAt: new Date()
       }
     });
 

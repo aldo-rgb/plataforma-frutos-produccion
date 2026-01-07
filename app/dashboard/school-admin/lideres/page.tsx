@@ -218,9 +218,9 @@ export default function LideresPage() {
         )}
 
         {/* Header */}
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 lg:gap-0 mb-6 lg:mb-10">
-          <div className="flex items-center gap-3 lg:gap-4">
-            <div className="p-3 lg:p-4 bg-gradient-to-br from-purple-500 via-pink-500 to-purple-500 rounded-2xl lg:rounded-3xl shadow-2xl shadow-purple-500/50 relative">
+        <div className="flex flex-col gap-4 mb-6 lg:mb-10">
+          <div className="flex items-start gap-3 lg:gap-4">
+            <div className="p-3 lg:p-4 bg-gradient-to-br from-purple-500 via-pink-500 to-purple-500 rounded-2xl lg:rounded-3xl shadow-2xl shadow-purple-500/50 relative flex-shrink-0">
               <Shield size={28} className="text-white lg:w-9 lg:h-9" />
               {notificacionesPendientes > 0 && (
                 <span className="absolute -top-1 -right-1 lg:-top-2 lg:-right-2 flex items-center justify-center w-6 h-6 lg:w-8 lg:h-8 text-xs font-black bg-gradient-to-br from-red-500 to-orange-500 text-white rounded-full shadow-xl shadow-red-500/50 animate-pulse border-2 border-white">
@@ -228,18 +228,18 @@ export default function LideresPage() {
                 </span>
               )}
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <h1 className="text-2xl lg:text-4xl font-black bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent mb-1 lg:mb-2">
                 Gestión de Mentores Internos
               </h1>
               <p className="text-slate-400 text-sm lg:text-lg">
                 Crea y asigna líderes a tus visiones - Privados de tu organización
-                {notificacionesPendientes > 0 && (
-                  <span className="block lg:inline-block lg:ml-3 mt-1 lg:mt-0 px-3 py-1 bg-red-500/20 border border-red-500/50 text-red-400 rounded-full text-xs lg:text-sm font-bold w-fit">
-                    {notificacionesPendientes} solicitud{notificacionesPendientes > 1 ? 'es' : ''} de aprobación pendiente{notificacionesPendientes > 1 ? 's' : ''}
-                  </span>
-                )}
               </p>
+              {notificacionesPendientes > 0 && (
+                <span className="inline-block mt-2 px-3 py-1 bg-red-500/20 border border-red-500/50 text-red-400 rounded-full text-xs lg:text-sm font-bold">
+                  {notificacionesPendientes} solicitud{notificacionesPendientes > 1 ? 'es' : ''} pendiente{notificacionesPendientes > 1 ? 's' : ''}
+                </span>
+              )}
             </div>
           </div>
 
@@ -307,47 +307,46 @@ export default function LideresPage() {
 
         {/* Lista de Líderes */}
         <div className="bg-gradient-to-br from-slate-800/60 via-slate-900/40 to-slate-800/60 border-2 border-slate-700/50 rounded-2xl lg:rounded-3xl p-4 lg:p-8 shadow-2xl">
-          <div className="flex items-center justify-between mb-4 lg:mb-6">
-            <div className="flex items-center gap-3 lg:gap-4">
-              <div className="p-2 lg:p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl lg:rounded-2xl shadow-lg shadow-purple-500/50">
-                <Shield className="text-white" size={20} className="lg:w-7 lg:h-7" />
-              </div>
-              <h2 className="text-xl lg:text-3xl font-black text-white">Mentores de tu Organización</h2>
+          <div className="flex items-center gap-3 lg:gap-4 mb-4 lg:mb-6">
+            <div className="p-2 lg:p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl lg:rounded-2xl shadow-lg shadow-purple-500/50 flex-shrink-0">
+              <Shield className="text-white w-5 h-5 lg:w-7 lg:h-7" />
             </div>
+            <h2 className="text-xl lg:text-3xl font-black text-white">Mentores de tu Organización</h2>
           </div>
           
           <div className="space-y-3 lg:space-y-4">
             {lideres.map((lider) => (
-              <div
-                key={lider.id}
-                className="bg-gradient-to-r from-slate-800/80 via-slate-900/60 to-slate-800/80 border-2 border-slate-700/70 rounded-xl lg:rounded-2xl p-4 lg:p-6 hover:border-purple-500/50 transition-all group hover:scale-[1.01] shadow-lg"
-              >
-                <div className="flex flex-col lg:flex-row items-start justify-between gap-4">
-                  <div className="flex-1 w-full">
-                    <div className="flex items-center gap-3 lg:gap-4 mb-3 lg:mb-4">
-                      <div className="relative">
-                        {lider.profileImage ? (
-                          <img 
-                            src={lider.profileImage} 
-                            alt={lider.nombre}
-                            className="w-12 h-12 lg:w-16 lg:h-16 rounded-xl lg:rounded-2xl object-cover border-2 border-purple-500/50 shadow-lg shadow-purple-500/30"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl lg:rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/30">
-                            <Shield size={24} className="text-white lg:w-8 lg:h-8" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-base lg:text-xl font-bold text-white group-hover:text-purple-300 transition-colors truncate">{lider.nombre}</h3>
-                        <p className="text-xs lg:text-sm text-slate-400 truncate">{lider.email}</p>
-                      </div>
-                      <div className="flex gap-2 items-start flex-wrap w-full lg:w-auto justify-end">
-                        {/* Estado de aprobación del perfil */}
-                        {lider.profileApprovalStatus === 'PENDING' ? (
-                          <span className="px-2 lg:px-4 py-1.5 lg:py-2 bg-orange-500/30 text-orange-300 text-xs font-black rounded-lg lg:rounded-xl border-2 border-orange-500/50 shadow-lg shadow-orange-500/20 whitespace-nowrap animate-pulse">
-                            ⏳ <span className="hidden sm:inline">PENDIENTE</span>
-                          </span>
+              <div className="bg-gradient-to-r from-slate-800/80 via-slate-900/60 to-slate-800/80 border-2 border-slate-700/70 rounded-xl lg:rounded-2xl p-4 lg:p-6 hover:border-purple-500/50 transition-all group hover:scale-[1.01] shadow-lg">
+                <div className="flex flex-col gap-4">
+                  {/* Top Section: Avatar + Name + Badges */}
+                  <div className="flex items-start gap-3 lg:gap-4">
+                    <div className="relative flex-shrink-0">
+                      {lider.profileImage ? (
+                        <img 
+                          src={lider.profileImage} 
+                          alt={lider.nombre}
+                          className="w-12 h-12 lg:w-16 lg:h-16 rounded-xl lg:rounded-2xl object-cover border-2 border-purple-500/50 shadow-lg shadow-purple-500/30"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl lg:rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/30">
+                          <Shield size={24} className="text-white lg:w-8 lg:h-8" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base lg:text-xl font-bold text-white group-hover:text-purple-300 transition-colors truncate">{lider.nombre}</h3>
+                      <p className="text-xs lg:text-sm text-slate-400 truncate">{lider.email}</p>
+                    </div>
+                  </div>
+
+                  {/* Badges Section - Now in a separate row for mobile */}
+                  <div className="flex gap-1.5 lg:gap-2 flex-wrap">
+                    {/* Estado de aprobación del perfil */}
+                    {lider.profileApprovalStatus === 'PENDING' ? (
+                      <span className="px-2 lg:px-4 py-1.5 lg:py-2 bg-orange-500/30 text-orange-300 text-xs font-black rounded-lg lg:rounded-xl border-2 border-orange-500/50 shadow-lg shadow-orange-500/20 whitespace-nowrap animate-pulse">
+                        ⏳ <span className="hidden sm:inline">PENDIENTE</span>
+                      </span>
                         ) : lider.profileApprovalStatus === 'APPROVED' ? (
                           <span className="px-2 lg:px-4 py-1.5 lg:py-2 bg-emerald-500/30 text-emerald-300 text-xs font-black rounded-lg lg:rounded-xl border-2 border-emerald-500/50 shadow-lg shadow-emerald-500/20 whitespace-nowrap">
                             ✓ <span className="hidden sm:inline">PERFIL</span> <span className="hidden lg:inline">APROBADO</span>
@@ -397,9 +396,9 @@ export default function LideresPage() {
                           </span>
                         )}
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-3 gap-2 lg:gap-6 mb-3 lg:mb-4">
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-3 gap-2 lg:gap-6">
                       <div className="bg-slate-900/60 border border-slate-700/50 rounded-lg lg:rounded-xl p-2 lg:p-4">
                         <p className="text-xs text-slate-500 mb-1 lg:mb-1.5 font-semibold">Mentorados</p>
                         <p className="text-lg lg:text-2xl font-black text-white">{lider.totalMentorados}</p>
@@ -411,11 +410,12 @@ export default function LideresPage() {
                       <div className="bg-slate-900/60 border border-slate-700/50 rounded-lg lg:rounded-xl p-2 lg:p-4">
                         <p className="text-xs text-slate-500 mb-1 lg:mb-1.5 font-semibold">Creado</p>
                         <p className="text-xs lg:text-sm font-bold text-slate-300">
-                          {new Date(lider.createdAt).toLocaleDateString('es-MX')}
+                          {new Date(lider.createdAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}
                         </p>
                       </div>
                     </div>
 
+                    {/* Visiones Asignadas */}
                     <div className="flex items-center gap-2 lg:gap-3">
                       {lider.VisionesAsignadas.length > 0 ? (
                         <div className="flex flex-wrap gap-2 lg:gap-3 flex-1">
@@ -434,7 +434,6 @@ export default function LideresPage() {
                     </div>
                   </div>
                 </div>
-              </div>
             ))}
 
             {lideres.length === 0 && (

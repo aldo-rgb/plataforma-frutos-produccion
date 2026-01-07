@@ -1,0 +1,1078 @@
+================================================================================
+    DOCUMENTO DE ARQUITECTURA COMPLETA - PLATAFORMA FRUTOS
+    Versión: 7 Enero 2026
+    Estado: Producción Activa
+================================================================================
+
+CONTEXTO DE LA CONVERSACIÓN
+================================================================================
+
+Estoy continuando una conversación técnica con el desarrollador principal de 
+la Plataforma Frutos. Hemos estado trabajando en múltiples iteraciones del 
+sistema, especialmente en:
+- Vision Builder con auto-creación de productos
+- Sistema de gestión de staff por niveles
+- Integración de múltiples monedas (USD/MXN)
+- Ajustes responsive para móviles
+
+Mi tono es directo, técnico y eficiente. Uso emojis ocasionalmente (✅🔥💰) 
+pero mantengo profesionalismo. Siempre proporciono código exacto con contexto 
+de líneas antes/después para reemplazos precisos.
+
+================================================================================
+ARQUITECTURA GENERAL
+================================================================================
+
+Stack Tecnológico
+--------------------------------------------------------------------------------
+- Frontend: Next.js 16.1.1 (App Router, Turbopack)
+- Base de Datos: PostgreSQL vía Supabase
+- ORM: Prisma 5.22.0
+- Autenticación: NextAuth.js
+- Estilos: Tailwind CSS
+- Deployment: Vercel
+- Puerto Local: localhost:3000
+
+Estructura de Carpetas Principal
+--------------------------------------------------------------------------------
+/app
+  /api
+    /admin
+    /mentor
+    /school-admin
+      /coordinadores
+      /default-prices
+      /products
+      /visiones
+  /dashboard
+    /school-admin
+    /mentor
+    /participante
+    /carta/wizard-v2
+/components
+  /dashboard
+  /quantum
+/lib
+/prisma
+  schema.prisma
+
+================================================================================
+MODELOS DE BASE DE DATOS CLAVE
+================================================================================
+
+1. Usuario (Usuario)
+--------------------------------------------------------------------------------
+model Usuario {
+  id: Int
+  nombre: String
+  email: String (unique)
+  password: String
+  rol: Rol (enum)
+  organizationId: Int?
+  profileImage: String?
+  wizardCompleted: Boolean
+  // ... múltiples relaciones
+}
+
+Roles Disponibles:
+- PARTICIPANTE
+- MENTOR
+- COORDINATOR_BASIC
+- COORDINATOR_ADVANCED
+- COORDINADOR (genérico)
+- TRAINER
+- SCHOOL_ADMIN
+- ADMIN
+- GAME_CHANGER
+
+2. Organization
+--------------------------------------------------------------------------------
+model Organization {
+  id: Int
+  nombre: String
+  tipo: TipoOrganizacion (UNIVERSITY, COMPANY, GOVERNMENT, NONPROFIT, SCHOOL)
+  dominioEmail: String? (unique)
+  contactoEmail: String
+  logoUrl: String?
+  isActive: Boolean
+  subscriptionTier: String
+  totalCredits: Int (llamadas de mentoría disponibles)
+}
+
+3. Vision (Grupos/Talleres)
+--------------------------------------------------------------------------------
+model Vision {
+  id: Int
+  nombre: String
+  descripcion: String?
+  coordinadorId: Int
+  organizationId: Int?
+  isActive: Boolean
+  maxParticipantes: Int?
+  enabledLevels: VisionLevel[] (BASIC, ADVANCED, PL)
+  
+  // Fechas
+  startDate: DateTime?
+  endDate: DateTime?
+  advancedStartDate: DateTime?
+  advancedEndDate: DateTime?
+  plWeekend1StartDate: DateTime?
+  plWeekend1EndDate: DateTime?
+  plWeekend2StartDate: DateTime?
+  plWeekend2EndDate: DateTime?
+  plWeekend3StartDate: DateTime?
+  plWeekend3EndDate: DateTime?
+  
+  // Áreas forzadas
+  forceFinanzasArea: Boolean
+  forceRelacionesArea: Boolean
+  forceTalentosArea: Boolean
+  forceSaludArea: Boolean
+  forcePazMentalArea: Boolean
+  forceOcioArea: Boolean
+  forceTransformationArea: Boolean
+  transformationGuestsTarget: Int (default 4)
+  forceCommunityServiceArea: Boolean
+}
+
+4. SchoolProduct (Productos CORE)
+--------------------------------------------------------------------------------
+model SchoolProduct {
+  id: Int
+  name: String
+  description: String?
+  type: ProductType (CORE_TRAINING, COACHING_SESSION, RESOURCE, OTHER)
+  levelType: ProductLevel (BASIC, ADVANCED, PL, COMBO_FULL, COMBO_ADV_PL, NONE)
+  
+  // Precios
+  basePrice: Float
+  promoPrice: Float?
+  promoDeadline: DateTime?
+  currency: Currency (MXN, USD) @default(MXN)
+  
+  // Fechas y capacidad
+  startDate: DateTime?
+  endDate: DateTime?
+  maxCapacity: Int?
+  currentEnrollment: Int @default(0)
+  
+  // Relaciones
+  organizationId: Int
+  visionId: Int? (vinculado a una visión específica)
+  coordinatorId: Int?
+  trainerId: Int?
+  location: String?
+  
+  isActive: Boolean
+  createdBy: Int
+}
+
+Enums importantes:
+--------------------------------------------------------------------------------
+enum ProductLevel {
+  BASIC
+  ADVANCED
+  PL
+  COMBO_FULL
+  COMBO_ADV_PL
+  NONE
+}
+
+enum Currency {
+  MXN
+  USD
+}
+
+5. DefaultPrice (Configuración de Precios)
+--------------------------------------------------------------------------------
+model DefaultPrice {
+  id: Int
+  organizationId: Int
+  levelType: ProductLevel (BASIC, ADVANCED, PL, COMBO_FULL, COMBO_ADV_PL)
+  basePrice: Float
+  promoPrice: Float?
+  promoDeadline: DateTime?
+  currency: Currency @default(MXN)
+  isActive: Boolean @default(true)
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+6. VisionStaff (Asignación de Staff)
+--------------------------------------------------------------------------------
+model VisionStaff {
+  id: Int
+  visionId: Int
+  userId: Int
+  role: StaffRole
+  level: VisionLevel
+  plWeekendNumber: Int? (1, 2, o 3 para trainers de PL)
+  assignedBy: Int
+  createdAt: DateTime
+  updatedAt: DateTime
+  
+  @@unique([visionId, userId, role, level, plWeekendNumber])
+}
+
+enum StaffRole {
+  BASIC_COORDINATOR
+  BASIC_TRAINER
+  ADVANCED_COORDINATOR
+  ADVANCED_TRAINER
+  PL_COORDINATOR  // ✅ AGREGADO HOY
+  PL_TRAINER
+}
+
+enum VisionLevel {
+  BASIC
+  ADVANCED
+  PL
+}
+
+7. VisionParticipante (Inscripciones)
+--------------------------------------------------------------------------------
+model VisionParticipante {
+  id: Int
+  visionId: Int
+  usuarioId: Int
+  enrolledAt: DateTime
+  currentLevel: VisionLevel
+  completedBasic: Boolean
+  completedAdvanced: Boolean
+  completedPL: Boolean
+}
+
+8. VisionGameChanger
+--------------------------------------------------------------------------------
+model VisionGameChanger {
+  id: Int
+  visionId: Int
+  usuarioId: Int
+  assignedAt: DateTime
+}
+
+9. Carta (Carta F.R.U.T.O.S.)
+--------------------------------------------------------------------------------
+model Carta {
+  id: Int
+  usuarioId: Int
+  estado: EstadoCarta (BORRADOR, EN_REVISION, APROBADA, RECHAZADA)
+  comentarios: String?
+  reviewedBy: Int?
+  reviewedAt: DateTime?
+  createdAt: DateTime
+  updatedAt: DateTime
+  
+  // Relaciones
+  CartaDeclaracion[] (Yo Soy por área)
+  CartaObjetivo[] (Objetivos/Identidades)
+  CartaAccion[] (Metas/Acciones)
+  CartaAccionConfig[] (Configuración de frecuencia)
+}
+
+10. QuantumIdentity (Avatar Cuántico)
+--------------------------------------------------------------------------------
+model QuantumIdentity {
+  id: Int
+  usuarioId: Int
+  cartaId: Int?
+  gender: String (male, female, neutral)
+  selectedOptionId: String
+  designation: String (ej: "THE QUANTUM DIRECTOR")
+  rationale: String
+  archetype: String (DIRECTOR, ARCHITECT, CURATOR, etc.)
+  avatarUrl: String?
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+================================================================================
+FLUJO PRINCIPAL: SCHOOL ADMIN
+================================================================================
+
+Dashboard Principal (/dashboard/school-admin)
+--------------------------------------------------------------------------------
+Archivo: /app/dashboard/school-admin/page.tsx
+
+Métricas mostradas:
+- Total de estudiantes
+- Estudiantes activos
+- Tasa de completación
+- Cartas aprobadas
+- Créditos disponibles (llamadas de mentoría)
+- Costos de mentores
+- Pendientes de aprobación (líderes)
+
+Secciones:
+1. Resumen Ejecutivo: KPIs principales
+2. Gestión de Créditos: Compra de paquetes de llamadas
+3. Consejo Quantum: Avatar del director
+4. Visiones Activas: Lista de grupos/talleres
+5. Links rápidos: Coordinadores, Productos, Precios, etc.
+
+1. Configuración de Precios por Defecto
+--------------------------------------------------------------------------------
+Ruta: /dashboard/school-admin/precios
+API: /api/school-admin/default-prices
+
+Funcionalidad:
+- Configurar precios base para 5 niveles:
+  * BASIC (Nivel Básico)
+  * ADVANCED (Nivel Avanzado)
+  * PL (Programa de Liderato)
+  * COMBO_FULL (Básico + Avanzado + PL)
+  * COMBO_ADV_PL (Avanzado + PL)
+- Selector de moneda global: 🇲🇽 Pesos MXN / 🇺🇸 Dólares USD
+- Precio base y precio promocional con fecha límite
+- Los precios se guardan en DefaultPrice tabla
+
+Estado actual: ✅ COMPLETADO
+- Currency field agregado a DefaultPrice
+- API actualizado para manejar USD/MXN
+- UI con switch de moneda funcional
+- Validación de números (evita NaN)
+
+2. Gestión de Productos
+--------------------------------------------------------------------------------
+Ruta: /dashboard/school-admin/productos
+API: /api/school-admin/products
+
+Funcionalidad:
+- Listar todos los productos de la organización
+- Filtrar por tipo (CORE_TRAINING, COACHING_SESSION, etc.)
+- Ver productos vinculados a visiones específicas
+- Editar precios, fechas, capacidad
+- Ver inscripciones actuales
+- Activar/desactivar productos
+
+Relación con Visiones:
+- Productos CORE se crean automáticamente al crear una visión con Vision Builder
+- Cada visión genera 3 productos: Básico, Avanzado, Liderato
+- Products tienen visionId para rastrear a qué visión pertenecen
+
+3. Vision Builder (Creación de Visiones Completas)
+--------------------------------------------------------------------------------
+Ruta: /dashboard/school-admin/visiones
+API: /api/school-admin/visiones/create-complete
+
+Archivo principal: /app/dashboard/school-admin/visiones/page.tsx
+
+Estado de Implementación: ✅ COMPLETADO
+
+Flujo del Vision Builder:
+
+1. Datos Básicos:
+   - Nombre de la visión
+   - Color identificador
+   - Descripción
+   - Máximo de participantes
+   - Niveles habilitados (Básico, Avanzado, PL)
+
+2. Configuración de Nivel Básico:
+   - Fecha de inicio
+   - Fecha de fin
+   - Coordinador (dropdown de COORDINATOR_BASIC)
+   - Trainer (dropdown de TRAINER)
+   - Ubicación
+   - Costo (pre-llenado desde DefaultPrice)
+
+3. Configuración de Nivel Avanzado:
+   - Fecha de inicio
+   - Fecha de fin
+   - Coordinador (dropdown de COORDINATOR_ADVANCED)
+   - Trainer
+   - Ubicación
+   - Costo
+
+4. Configuración de Programa Liderato:
+   - Coordinador General (dropdown todos los coordinadores)
+   - 3 Fines de Semana:
+     * Fin de Semana 1: nombre, fechas, ubicación, trainer
+     * Fin de Semana 2: nombre, fechas, ubicación, trainer
+     * Graduación (Fin de Semana 3): nombre, fechas, ubicación, trainer
+   - Costo total del programa
+
+5. Resumen y Confirmación:
+   - Resumen de todas las configuraciones
+   - Botón "Crear Visión Completa"
+   - Modal de éxito (con diseño mejorado)
+
+Lo que hace al crear:
+--------------------------------------------------------------------------------
+En /api/school-admin/visiones/create-complete/route.ts:
+
+// 1. Crea la Vision principal
+const vision = await prisma.vision.create({
+  data: {
+    nombre,
+    descripcion,
+    maxParticipantes,
+    organizationId,
+    coordinadorId, // Prioridad: PL > Advanced > Basic
+    enabledLevels: ['BASIC', 'ADVANCED', 'PL'],
+    
+    // ✅ Fechas de cada nivel
+    startDate: basicConfig.startDate,
+    endDate: basicConfig.endDate,
+    advancedStartDate: advancedConfig.startDate,
+    advancedEndDate: advancedConfig.endDate,
+    plWeekend1StartDate: plConfig.weekends[0].startDate,
+    plWeekend1EndDate: plConfig.weekends[0].endDate,
+    plWeekend2StartDate: plConfig.weekends[1].startDate,
+    plWeekend2EndDate: plConfig.weekends[1].endDate,
+    plWeekend3StartDate: plConfig.weekends[2].startDate,
+    plWeekend3EndDate: plConfig.weekends[2].endDate,
+    
+    // Áreas forzadas
+    forceFinanzasArea: true,
+    forceRelacionesArea: true,
+    // ... todas las áreas obligatorias
+  }
+});
+
+// 2. Crea 3 Productos (Básico, Avanzado, Liderato)
+const basicProduct = await prisma.schoolProduct.create({
+  data: {
+    name: `${nombre} - Básico`,
+    type: 'CORE_TRAINING',
+    levelType: 'BASIC',
+    basePrice: basicConfig.price,
+    currency: currency || 'MXN', // ✅ Currency dinámico
+    startDate: basicConfig.startDate,
+    endDate: basicConfig.endDate,
+    visionId: vision.id,
+    coordinatorId: basicConfig.coordinatorId,
+    trainerId: basicConfig.trainerId,
+    location: basicConfig.location,
+  }
+});
+
+// Similar para Advanced y PL
+
+// 3. ✅ Crea registros en VisionStaff
+const staffRecords = [];
+
+// Staff Básico
+if (basicConfig.coordinatorId) {
+  staffRecords.push({
+    visionId: vision.id,
+    userId: basicConfig.coordinatorId,
+    role: 'BASIC_COORDINATOR',
+  });
+}
+if (basicConfig.trainerId) {
+  staffRecords.push({
+    visionId: vision.id,
+    userId: basicConfig.trainerId,
+    role: 'BASIC_TRAINER',
+  });
+}
+
+// Staff Avanzado
+if (advancedConfig.coordinatorId) {
+  staffRecords.push({
+    visionId: vision.id,
+    userId: advancedConfig.coordinatorId,
+    role: 'ADVANCED_COORDINATOR',
+  });
+}
+if (advancedConfig.trainerId) {
+  staffRecords.push({
+    visionId: vision.id,
+    userId: advancedConfig.trainerId,
+    role: 'ADVANCED_TRAINER',
+  });
+}
+
+// Staff Liderato - Coordinador
+if (plConfig.coordinatorId) {
+  staffRecords.push({
+    visionId: vision.id,
+    userId: plConfig.coordinatorId,
+    role: 'PL_COORDINATOR', // ✅ NUEVO HOY
+  });
+}
+
+// Staff Liderato - 3 Trainers
+plConfig.weekends.forEach((weekend, index) => {
+  if (weekend.trainerId) {
+    staffRecords.push({
+      visionId: vision.id,
+      userId: weekend.trainerId,
+      role: 'PL_TRAINER',
+      plWeekendNumber: index + 1, // 1, 2, 3
+    });
+  }
+});
+
+// Crear todos los registros de staff
+await prisma.visionStaff.createMany({
+  data: staffRecords,
+  skipDuplicates: true,
+});
+
+Currency Feature (Agregado hoy)
+--------------------------------------------------------------------------------
+Problema resuelto:
+- Se necesitaba soporte para USD y MXN en precios
+- Los precios se mostraban siempre como "MXN" hardcodeado
+
+Solución implementada:
+
+1. Schema: Agregado currency a DefaultPrice y SchoolProduct
+2. Migration: Usado script SQL raw para agregar columna:
+   ALTER TYPE "Currency" ADD VALUE IF NOT EXISTS 'USD';
+   ALTER TABLE "DefaultPrice" ADD COLUMN currency "Currency" NOT NULL DEFAULT 'MXN';
+   ALTER TABLE "SchoolProduct" ADD COLUMN currency "Currency" NOT NULL DEFAULT 'MXN';
+
+3. UI en /precios: Switch de moneda que actualiza todos los 5 niveles
+4. Vision Builder: Detecta currency de DefaultPrice y:
+   - Muestra labels dinámicos: "💰 Costo del Nivel Básico (USD)" o "(MXN)"
+   - Formato de display: "USD 500" o "$500"
+   - Pasa currency al API al crear visión
+5. Productos creados: Heredan el currency configurado
+
+Formato de Display:
+{productPrices.currency === 'USD' ? 'USD ' : '$'}{amount.toLocaleString()}
+// Resultado: "USD 1,500" o "$1,500"
+
+4. Gestión de Visión Individual
+--------------------------------------------------------------------------------
+Ruta: /dashboard/school-admin/vision/[id]/manage
+Archivo: /app/dashboard/school-admin/vision/[id]/manage/page.tsx
+
+Tabs disponibles:
+
+1. 📋 Información:
+- Nombre de la visión (compacto, 3 columnas)
+- Fecha de inicio (Nivel Básico)
+- Fecha de finalización (último fin de semana de PL)
+- Lista de participantes inscritos
+- Lista de Game Changers
+
+Cambios recientes:
+- ❌ Eliminado "Coordinador Principal"
+- ❌ Eliminada sección "Descripción"
+- ✅ Grid más compacto (3 columnas, padding reducido)
+
+2. 📅 Fechas:
+- Editar fechas de Nivel Básico
+- Editar fechas de Nivel Avanzado
+- Editar fechas de 3 fines de semana de PL
+- Botón "Guardar Fechas"
+
+API: PUT /api/school-admin/visiones/[id]
+
+3. 👥 Staff:
+
+Secciones:
+- 🌱 Coordinador Nivel Básico
+- 🎯 Trainer Nivel Básico
+- 🔥 Coordinador Nivel Avanzado
+- 🎯 Trainer Nivel Avanzado
+- 👑 Coordinador Programa Liderato ✅ NUEVO
+- 👑 Trainers Programa Liderato (3 fines de semana)
+
+API: 
+- GET /api/school-admin/visiones/[id]/staff - Cargar staff actual
+- PUT /api/school-admin/visiones/[id]/staff - Guardar configuración
+
+Lógica del API Staff:
+
+// GET - Retorna estructura:
+{
+  basicCoordinatorId: '123',
+  basicTrainerId: '456',
+  advancedCoordinatorId: '789',
+  advancedTrainerId: '012',
+  plCoordinatorId: '345', // ✅ NUEVO
+  plTrainers: ['678', '901', '234'] // Array de 3
+}
+
+// PUT - Recibe mismo formato
+// Borra todos los registros existentes
+await prisma.VisionStaff.deleteMany({ where: { visionId } });
+
+// Crea nuevos registros según los IDs proporcionados
+// Cada registro tiene:
+// - visionId
+// - userId
+// - role (enum StaffRole)
+// - level (BASIC, ADVANCED, PL)
+// - plWeekendNumber (solo para PL_TRAINER: 1, 2, 3)
+// - assignedBy
+// - updatedAt
+
+Estado actual: ✅ COMPLETADO
+- Staff configurado en Vision Builder aparece pre-seleccionado
+- Se agregó PL_COORDINATOR al enum StaffRole
+- Frontend y backend integrados correctamente
+
+4. ⭐ Game Changers:
+- Lista de Game Changers asignados
+- Botón para registrar nuevos Game Changers
+- Modal de registro (nombre, email)
+- API crea usuario si no existe y lo asigna a la visión
+
+5. 📱 QR Code:
+- Generar QR para inscripción pública
+- URL: /dashboard/program/enroll?visionId={id}
+- Descargar imagen PNG del QR
+
+5. Gestión de Coordinadores
+--------------------------------------------------------------------------------
+Ruta: /dashboard/school-admin/coordinadores
+API: /api/school-admin/coordinadores
+
+Funcionalidad:
+- Listar todos los coordinadores y trainers
+- Crear nuevos coordinadores (nombre, email, rol, contraseña)
+- Roles disponibles:
+  * COORDINATOR_BASIC
+  * COORDINATOR_ADVANCED
+  * COORDINADOR (genérico)
+  * TRAINER
+  * GAME_CHANGER
+
+Importante: Los usuarios creados aquí:
+- Se asignan automáticamente a la organización del director
+- Aparecen en los dropdowns del Vision Builder
+- Pueden ser asignados a múltiples visiones
+
+================================================================================
+COMPONENTES IMPORTANTES
+================================================================================
+
+1. Success Modal (Vision Created)
+--------------------------------------------------------------------------------
+Ubicación: /app/dashboard/school-admin/visiones/page.tsx (líneas ~1570+)
+
+Diseño: ✅ MEJORADO HOY
+- Reemplaza alert() básico
+- Modal con:
+  * Animación de entrada (fade + zoom)
+  * Ícono de checkmark animado (bounce + ping)
+  * Gradiente esmeralda/verde
+  * Mensaje: "¡Visión Creada!" y "3 Productos Creados"
+  * Dos botones: "Cerrar" y "Ver Visión →"
+
+// Estado
+const [showSuccessModal, setShowSuccessModal] = useState(false);
+const [createdVisionId, setCreatedVisionId] = useState<number | null>(null);
+
+// En handleCreateVision success:
+if (data.success) {
+  setShowBasicVisionModal(false);
+  setCreatedVisionId(data.vision.id);
+  setShowSuccessModal(true);
+}
+
+2. Quantum Identity Modal (Avatar Cuántico)
+--------------------------------------------------------------------------------
+Ubicación: /components/quantum/QuantumIdentityModal.tsx
+
+Funcionalidad:
+- Selección de género (Hombre/Mujer/Prefiero no contestar)
+- Análisis IA de la Carta F.R.U.T.O.S. del usuario
+- Generación de 3-5 opciones de identidad cuántica
+- Designaciones tipo: "THE QUANTUM DIRECTOR", "THE SYSTEMS ARCHITECT"
+- Generación de avatar con IA (Replicate/Flux)
+- Opción de selfie como avatar
+- Compartir en redes sociales
+
+Mejoras responsive hoy: ✅ COMPLETADO
+- Cambió de grid 3 columnas a 1 columna vertical
+- Layout horizontal (icono + texto) en lugar de vertical
+- Altura reducida (h-32 en móvil vs h-48 antes)
+- Mejor uso del espacio en pantallas angostas
+
+Código modificado:
+// ANTES: grid-cols-1 sm:grid-cols-3, h-48 sm:h-56 md:h-64, flex-col
+// AHORA: grid-cols-1, h-32 sm:h-40, flex-row justify-start
+<div className="grid grid-cols-1 gap-3 sm:gap-4">
+  <button className="relative h-32 sm:h-40 rounded-xl">
+    <div className="flex items-center justify-start px-6 space-x-4">
+      <div className="w-16 h-16 rounded-full bg-gradient...">
+        {/* Icon */}
+      </div>
+      <p className="text-2xl font-bold">Hombre</p>
+    </div>
+  </button>
+  {/* Similar para Mujer y Prefiero no contestar */}
+</div>
+
+================================================================================
+SISTEMA DE CARTA F.R.U.T.O.S. 2.0
+================================================================================
+
+Ruta Wizard: /dashboard/carta/wizard-v2
+Componente: CartaWizardRelacional
+
+Estructura de la Carta:
+--------------------------------------------------------------------------------
+8 Áreas de Desarrollo:
+1. 💰 FINANZAS
+2. ❤️ RELACIONES
+3. 🎨 TALENTOS
+4. 💪 SALUD
+5. 🧘 PAZ MENTAL
+6. 🎮 OCIO
+7. 🌟 SERVICIO TRANSFORMACIONAL (con objetivo de invitados)
+8. 🤝 SERVICIO COMUNITARIO
+
+Pasos del Wizard:
+1. SER (Declaración): "Yo soy..." por área
+2. Objetivo (Visualización): Identidades/objetivos múltiples por área
+3. HACER (Acciones): Metas vinculadas a cada objetivo
+4. Frecuencia: Configuración de cada acción (días, horarios)
+5. Avatar Cuántico: Generar identidad visual
+
+Modelo Relacional:
+CartaDeclaracion (Yo Soy)
+  ↓
+CartaObjetivo (Identidades)
+  ↓
+CartaAccion (Metas)
+  ↓
+CartaAccionConfig (Frecuencia)
+
+Estados de Carta:
+- BORRADOR: Usuario editando
+- EN_REVISION: Enviada a revisión
+- APROBADA: Mentor/coordinador aprobó
+- RECHAZADA: Requiere correcciones
+
+Restricción importante: Solo usuarios con carta APROBADA pueden generar 
+Avatar Cuántico
+
+================================================================================
+SISTEMA DE AUTENTICACIÓN
+================================================================================
+
+NextAuth Configuration: /lib/auth.ts
+
+Providers:
+- Credentials (email + password)
+
+Session Strategy: JWT
+
+Roles y Redirecciones:
+// Después de signin:
+- PARTICIPANTE sin wizard → /dashboard/carta/wizard-v2
+- PARTICIPANTE con wizard → /dashboard
+- SCHOOL_ADMIN → /dashboard/school-admin
+- MENTOR → /dashboard/mentor
+- ADMIN → /dashboard/admin
+
+Protección de Rutas:
+- Middleware verifica session y rol
+- APIs verifican rol del usuario antes de ejecutar acciones
+- organizationId se verifica para aislar datos entre organizaciones
+
+================================================================================
+SISTEMA DE CRÉDITOS (Llamadas de Mentoría)
+================================================================================
+
+Modelo: SchoolCredit
+
+Campos clave:
+- organizationId
+- totalCredits: Llamadas totales disponibles
+- usedCredits: Llamadas ya asignadas/bloqueadas
+- purchaseHistory: JSON con historial de compras
+
+Flujo de compra:
+1. School Admin ve créditos disponibles en dashboard
+2. Puede comprar paquetes (50, 100, 200 llamadas)
+3. Se genera orden de pago (Stripe integration pendiente)
+4. Créditos se suman a totalCredits
+5. Al asignar mentores, se descuentan de availableCredits
+
+API: /api/school-admin/credits
+
+================================================================================
+ESTADO ACTUAL DEL PROYECTO
+================================================================================
+
+✅ COMPLETADO
+--------------------------------------------------------------------------------
+1. Vision Builder:
+   - Auto-creación de 3 productos
+   - Configuración completa de 3 niveles
+   - Fechas por nivel guardadas en Vision
+   - Staff pre-configurado en VisionStaff
+   - Currency support (USD/MXN)
+   - Success modal mejorado
+
+2. Staff Management:
+   - GET/PUT endpoints funcionales
+   - Frontend con dropdowns por nivel
+   - PL_COORDINATOR agregado al enum
+   - Pre-selección de staff configurado en Vision Builder
+
+3. Currency System:
+   - DefaultPrice con currency field
+   - SchoolProduct con currency field
+   - UI en /precios con switch MXN/USD
+   - Vision Builder detecta y usa currency dinámicamente
+   - Display format correcto (USD 500 vs $500)
+
+4. Responsive Improvements:
+   - Quantum Identity Modal optimizado para móviles
+   - Grid compacto en visión management
+   - Eliminadas secciones innecesarias
+
+5. Base de Datos:
+   - Enum StaffRole con PL_COORDINATOR
+   - Enum Currency con USD y MXN
+   - Campos de fechas en Vision para cada nivel
+   - VisionStaff con relación única correcta
+
+🚧 EN PROGRESO / PENDIENTE
+--------------------------------------------------------------------------------
+1. Pagos:
+   - Integración de Stripe para compra de créditos
+   - Webhooks de confirmación de pago
+   - Facturación automática
+
+2. Mentoría:
+   - Asignación automática de mentores (existe pero mejorar)
+   - Calendario de sesiones
+   - Sistema de evaluación post-sesión
+
+3. Reportes:
+   - Dashboard de métricas avanzadas
+   - Exportar datos a Excel/CSV
+   - Gráficas de progreso por visión
+
+4. Notificaciones:
+   - Email notifications (Resend integration)
+   - Push notifications
+   - Recordatorios de tareas/eventos
+
+5. Multi-idioma:
+   - i18n setup (español/inglés)
+   - Traducción de interfaces
+   - Contenido dinámico
+
+6. Mobile App:
+   - PWA optimization
+   - Native app (React Native?)
+   - Offline capabilities
+
+================================================================================
+BUGS CONOCIDOS Y SOLUCIONES
+================================================================================
+
+1. Prisma db push no funciona confiable
+--------------------------------------------------------------------------------
+Problema: npx prisma db push a veces no aplica cambios al schema
+
+Solución aplicada: Scripts SQL raw con Node.js
+
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+await prisma.$executeRawUnsafe(`
+  ALTER TABLE "DefaultPrice" 
+  ADD COLUMN IF NOT EXISTS currency "Currency" NOT NULL DEFAULT 'MXN';
+`);
+
+2. NaN en precios
+--------------------------------------------------------------------------------
+Problema: Valores NaN se guardaban en base de datos
+
+Solución: Validación estricta en handlePriceChange
+
+const numValue = typeof value === 'number' ? value : parseFloat(value);
+processedValue = isNaN(numValue) ? (field === 'basePrice' ? 0 : null) : numValue;
+
+3. P2022 Error en upsert
+--------------------------------------------------------------------------------
+Problema: upsert fallaba con "Record not found"
+
+Solución: Cambiar a findFirst + conditional update/create
+
+const existing = await prisma.defaultPrice.findFirst({ where });
+if (existing) {
+  await prisma.defaultPrice.update({ where: { id: existing.id }, data });
+} else {
+  await prisma.defaultPrice.create({ data });
+}
+
+4. Currency mostraba duplicado
+--------------------------------------------------------------------------------
+Problema: Display mostraba "USD $500 USD"
+
+Solución: Cambiar formato de display
+
+// ANTES: {currency === 'USD' ? 'USD $' : '$'}{amount} {currency}
+// AHORA: {currency === 'USD' ? 'USD ' : '$'}{amount}
+
+================================================================================
+CONVENCIONES DE CÓDIGO
+================================================================================
+
+Naming:
+--------------------------------------------------------------------------------
+- Componentes: PascalCase (VisionBuilder, StaffManager)
+- Variables: camelCase (staffData, visionId)
+- Constantes: UPPER_SNAKE_CASE (WIZARD_STEPS, AREAS)
+- APIs: kebab-case en rutas (/default-prices, /create-complete)
+
+Estructura de APIs:
+--------------------------------------------------------------------------------
+// GET
+export async function GET(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ error }, { status: 401 });
+  
+  // Verificar rol
+  if (session.user.rol !== 'SCHOOL_ADMIN') {
+    return NextResponse.json({ error }, { status: 403 });
+  }
+  
+  // Lógica
+  const data = await prisma...
+  
+  return NextResponse.json({ success: true, data });
+}
+
+// POST/PUT
+export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  // Verificaciones...
+  
+  const body = await request.json();
+  const { field1, field2 } = body;
+  
+  // Validaciones
+  if (!field1) {
+    return NextResponse.json(
+      { success: false, error: 'Campo requerido' },
+      { status: 400 }
+    );
+  }
+  
+  // Operación de DB
+  const result = await prisma...
+  
+  return NextResponse.json({ success: true, data: result });
+}
+
+Tailwind Classes:
+--------------------------------------------------------------------------------
+- Mobile-first: class="text-sm sm:text-base md:text-lg"
+- Gradientes: bg-gradient-to-r from-purple-600 to-blue-600
+- Sombras: shadow-lg shadow-purple-500/50
+- Animaciones: transition-all duration-300 hover:scale-105
+
+Console Logging:
+--------------------------------------------------------------------------------
+console.log('✅ Éxito:', data);
+console.error('❌ Error:', error);
+console.log('🔧 Debug:', variable);
+console.log('📦 Data:', JSON.stringify(data, null, 2));
+
+================================================================================
+COMANDOS ÚTILES
+================================================================================
+
+# Development
+npm run dev
+
+# Prisma
+npx prisma studio                    # Abrir GUI de base de datos
+npx prisma db push --skip-generate  # Aplicar schema sin regenerar client
+npx prisma generate                  # Regenerar Prisma Client
+
+# Git
+git status
+git add .
+git commit -m "mensaje"
+git push origin main
+
+# Limpiar cache Next.js
+rm -rf .next
+pkill -f "next dev"
+npm run dev
+
+# Verificar puerto
+lsof -i :3000
+kill -9 <PID>
+
+================================================================================
+RECURSOS EXTERNOS
+================================================================================
+
+- Replicate API: Generación de avatares (stability-ai/sdxl)
+- Supabase: Base de datos PostgreSQL
+- Vercel: Deployment y hosting
+- Tailwind CSS: Framework de estilos
+- NextAuth: Autenticación
+- QRCode Library: Generación de códigos QR
+
+================================================================================
+PRÓXIMOS PASOS RECOMENDADOS
+================================================================================
+
+1. Testing:
+   - Unit tests para APIs críticas
+   - Integration tests para flujos completos
+   - E2E tests con Playwright
+
+2. Performance:
+   - Optimizar queries de Prisma (include solo necesario)
+   - Implementar caching (Redis?)
+   - Lazy loading de componentes pesados
+
+3. Seguridad:
+   - Rate limiting en APIs
+   - CSRF protection
+   - Input sanitization
+
+4. UX:
+   - Loading skeletons en lugar de spinners
+   - Error boundaries
+   - Offline mode indicators
+
+5. Documentación:
+   - API documentation (Swagger?)
+   - Component Storybook
+   - User guides en-app
+
+================================================================================
+CÓMO CONTINUAR ESTA CONVERSACIÓN
+================================================================================
+
+Cuando inicies una nueva conversación, usa este formato:
+
+"Hola, continúo con el desarrollo de la Plataforma Frutos. 
+
+Última sesión trabajamos en:
+- [Describe brevemente qué se hizo]
+
+Ahora necesito:
+- [Tu nueva tarea o pregunta]
+
+Stack: Next.js 16.1.1, Prisma 5.22.0, PostgreSQL, NextAuth"
+
+Mi estilo de respuesta será:
+- Directo y técnico
+- Código exacto con líneas de contexto antes/después
+- Emojis para estados (✅🔥❌⚠️)
+- Explicaciones concisas
+- Siempre verifico archivos antes de editar
+
+Para cambios de código, dame:
+1. Archivo completo: /ruta/al/archivo.tsx
+2. Contexto: "Buscar líneas X-Y" o "Buscar string exacto"
+3. Cambio: Qué agregar/modificar/eliminar
+4. Por qué: Razón del cambio
+
+================================================================================
+FIN DEL DOCUMENTO
+Versión: 7 Enero 2026
+Estado: Producción Activa
+Total de líneas: ~1500+
+================================================================================

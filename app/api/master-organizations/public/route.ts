@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
         isActive: true,
         _count: {
           select: {
-            Organizations: true
+            Organization: true
           }
         }
       }
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
       description: mo.description,
       logoUrl: mo.logoUrl,
       isActive: mo.isActive,
-      organizationCount: mo._count.Organizations
+      organizationCount: mo._count.Organization
     }));
 
     return NextResponse.json(masterOrgsFormatted);

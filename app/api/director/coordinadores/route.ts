@@ -30,16 +30,19 @@ export async function GET(request: Request) {
       );
     }
 
-    // Obtener coordinadores de la organización
+    // Obtener coordinadores de la organización (todos los tipos)
     const coordinadores = await prisma.usuario.findMany({
       where: {
         organizationId: director.organizationId,
-        rol: 'COORDINADOR'
+        rol: {
+          in: ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER']
+        }
       },
       select: {
         id: true,
         nombre: true,
         email: true,
+        rol: true, // Incluir el tipo de coordinador
         isActive: true,
         createdAt: true,
         Vision: {
@@ -105,11 +108,20 @@ export async function POST(request: Request) {
     const directorId = parseInt(session.user.id);
     const body = await request.json();
 
-    const { nombre, email, password } = body;
+    const { nombre, email, password, rol } = body;
 
-    if (!nombre || !email || !password) {
+    if (!nombre || !email || !password || !rol) {
       return NextResponse.json(
         { error: 'Faltan campos requeridos' },
+        { status: 400 }
+      );
+    }
+
+    // Validar que el rol sea un tipo de coordinador válido
+    const validCoordinatorRoles = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER'];
+    if (!validCoordinatorRoles.includes(rol)) {
+      return NextResponse.json(
+        { error: 'Tipo de coordinador inválido' },
         { status: 400 }
       );
     }
@@ -151,7 +163,7 @@ export async function POST(request: Request) {
         nombre,
         email,
         password: hashedPassword,
-        rol: 'COORDINADOR',
+        rol, // Usar el rol enviado desde el formulario
         organizationId: director.organizationId,
         isActive: true,
         // Asignar licencia administrativa directamente (no consume créditos de la organización)

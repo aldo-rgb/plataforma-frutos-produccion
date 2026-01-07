@@ -29,7 +29,7 @@ else if (carta.estado === 'EN_REVISION' || carta.estado === 'APROBADA') {
 
 ```
 ┌────────────────────────────────────────────┐
-│ Header: "Mi Carta F.R.U.T.O.S."           │
+│ Header: "Mi Carta de Objetivos"           │
 │ Badge: 🟡 En Revisión / 🟢 Aprobada       │
 │                                            │
 │ [Alerta de Solo Lectura] (si APROBADA)    │
@@ -51,7 +51,7 @@ else if (carta.estado === 'EN_REVISION' || carta.estado === 'APROBADA') {
 ### Componentes Visuales
 
 #### 1. Header
-- **Título**: "Mi Carta F.R.U.T.O.S."
+- **Título**: "Mi Carta de Objetivos"
 - **Badge de Estado**:
   - 🟡 `EN_REVISION` - Amarillo con pulso animado
   - 🟢 `APROBADA` - Verde con ícono CheckCircle2

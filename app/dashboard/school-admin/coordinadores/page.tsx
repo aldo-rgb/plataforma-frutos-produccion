@@ -8,6 +8,7 @@ interface Coordinador {
   id: number;
   nombre: string;
   email: string;
+  rol: string;
   isActive: boolean;
   createdAt: string;
   totalVisiones: number;
@@ -26,6 +27,16 @@ interface Vision {
     nombre: string;
   } | null;
 }
+
+const getRolLabel = (rol: string) => {
+  const labels: Record<string, { text: string; emoji: string; color: string }> = {
+    'COORDINADOR': { text: 'Liderato', emoji: '🎯', color: 'from-purple-500 to-pink-500' },
+    'COORDINATOR_BASIC': { text: 'Básico', emoji: '📋', color: 'from-blue-500 to-cyan-500' },
+    'COORDINATOR_ADVANCED': { text: 'Avanzado', emoji: '🎪', color: 'from-green-500 to-emerald-500' },
+    'TRAINER': { text: 'Trainer', emoji: '🚀', color: 'from-orange-500 to-yellow-500' }
+  };
+  return labels[rol] || { text: rol, emoji: '👤', color: 'from-slate-500 to-slate-600' };
+};
 
 export default function CoordinadoresPage() {
   const [coordinadores, setCoordinadores] = useState<Coordinador[]>([]);
@@ -167,14 +178,26 @@ export default function CoordinadoresPage() {
             </div>
           </div>
 
-          <button
-            onClick={() => setModalCrear(true)}
-            className="w-full lg:w-auto flex items-center justify-center gap-2 lg:gap-3 px-6 lg:px-8 py-3 lg:py-4 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500 text-white rounded-xl lg:rounded-2xl font-bold hover:shadow-2xl hover:shadow-blue-500/50 transition-all hover:scale-[1.05] active:scale-[0.98] text-base lg:text-lg"
-          >
-            <Plus size={20} className="lg:hidden" />
-            <Plus size={24} className="hidden lg:block" />
-            <span>Nuevo Coordinador</span>
-          </button>
+          <div className="flex flex-col lg:flex-row gap-3">
+            <button
+              onClick={() => setModalCrear(true)}
+              className="w-full lg:w-auto flex items-center justify-center gap-2 lg:gap-3 px-6 lg:px-8 py-3 lg:py-4 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500 text-white rounded-xl lg:rounded-2xl font-bold hover:shadow-2xl hover:shadow-blue-500/50 transition-all hover:scale-[1.05] active:scale-[0.98] text-base lg:text-lg"
+            >
+              <Plus size={20} className="lg:hidden" />
+              <Plus size={24} className="hidden lg:block" />
+              <span>Nuevo Coordinador</span>
+            </button>
+
+            <Link href="/dashboard/school-admin/lideres">
+              <button
+                className="w-full lg:w-auto flex items-center justify-center gap-2 lg:gap-3 px-6 lg:px-8 py-3 lg:py-4 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 text-white rounded-xl lg:rounded-2xl font-bold hover:shadow-2xl hover:shadow-purple-500/50 transition-all hover:scale-[1.05] active:scale-[0.98] text-base lg:text-lg"
+              >
+                <Plus size={20} className="lg:hidden" />
+                <Plus size={24} className="hidden lg:block" />
+                <span>Nuevo Mentor</span>
+              </button>
+            </Link>
+          </div>
         </div>
 
         {/* Estadísticas */}
@@ -242,7 +265,12 @@ export default function CoordinadoresPage() {
                         <UserCheck size={24} className="text-white hidden lg:block" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-base lg:text-xl font-bold text-white group-hover:text-blue-300 transition-colors truncate">{coord.nombre}</h3>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-base lg:text-xl font-bold text-white group-hover:text-blue-300 transition-colors truncate">{coord.nombre}</h3>
+                          <span className={`px-2.5 py-1 bg-gradient-to-r ${getRolLabel(coord.rol).color} text-white text-[10px] lg:text-xs font-black rounded-lg shadow-lg whitespace-nowrap`}>
+                            {getRolLabel(coord.rol).emoji} {getRolLabel(coord.rol).text}
+                          </span>
+                        </div>
                         <p className="text-xs lg:text-sm text-slate-400 truncate">{coord.email}</p>
                       </div>
                       {coord.isActive ? (

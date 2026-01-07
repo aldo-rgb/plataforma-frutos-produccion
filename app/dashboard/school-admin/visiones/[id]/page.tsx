@@ -23,7 +23,8 @@ import {
   Download,
   Calendar,
   Clock,
-  QrCode
+  QrCode,
+  MapPin
 } from 'lucide-react';
 import Link from 'next/link';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -152,6 +153,32 @@ interface CicloInfo {
   diasTotales: number;
 }
 
+interface Producto {
+  id: number;
+  name: string;
+  levelType: 'BASIC' | 'ADVANCED' | 'PL';
+  startDate: string | null;
+  endDate: string | null;
+  location: string | null;
+  plWeekend1StartDate: string | null;
+  plWeekend1EndDate: string | null;
+  plWeekend2StartDate: string | null;
+  plWeekend2EndDate: string | null;
+  plWeekend3StartDate: string | null;
+  plWeekend3EndDate: string | null;
+  Trainer: {
+    id: number;
+    nombre: string;
+    email: string;
+    imagen: string | null;
+  } | null;
+  Coordinator: {
+    id: number;
+    nombre: string;
+    email: string;
+  } | null;
+}
+
 export default function VisionDetailPage() {
   const { data: session } = useSession();
   const router = useRouter();
@@ -163,6 +190,7 @@ export default function VisionDetailPage() {
   const [gameChangers, setGameChangers] = useState<GameChanger[]>([]);
   const [mentoresAsignados, setMentoresAsignados] = useState<MentorAsignado[]>([]);
   const [cicloInfo, setCicloInfo] = useState<CicloInfo | null>(null);
+  const [productos, setProductos] = useState<Producto[]>([]);
   const [mentoresDisponibles, setMentoresDisponibles] = useState<Mentor[]>([]);
   const [showAddMentorModal, setShowAddMentorModal] = useState(false);
   const [availableCredits, setAvailableCredits] = useState(0);
@@ -259,6 +287,16 @@ export default function VisionDetailPage() {
         setGameChangers(data.gameChangers || []);
         setMentoresAsignados(data.mentoresAsignados || []);
         setCicloInfo(data.cicloInfo || null);
+        setProductos(data.productos || []);
+        
+        // Debug: Ver los datos de productos
+        console.log('📦 Productos recibidos:', data.productos);
+        if (data.productos?.length > 0) {
+          const plProduct = data.productos.find((p: any) => p.levelType === 'PL');
+          if (plProduct) {
+            console.log('👑 Producto PL completo:', plProduct);
+          }
+        }
         
         // Cargar configuración de áreas
         setAreasConfig({
@@ -1155,81 +1193,298 @@ export default function VisionDetailPage() {
       <ToastContainer toasts={toasts} />
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/dashboard/school-admin/visiones"
-              className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="text-slate-400" size={24} />
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold text-white mb-2">{vision.nombre}</h1>
-              {vision.descripcion && (
-                <p className="text-slate-400">{vision.descripcion}</p>
-              )}
-              {/* Fechas de la Visión */}
-              {(vision.startDate || vision.endDate) && (
-                <div className="flex items-center gap-4 mt-4">
-                  {vision.startDate && (
-                    <div className="flex items-center gap-3 bg-purple-500/10 border border-purple-500/30 rounded-lg px-4 py-2.5">
-                      <Calendar className="text-purple-400 shrink-0" size={20} />
-                      <div>
-                        <span className="text-xs text-purple-400 font-medium block">Inicio</span>
-                        <span className="text-sm text-white font-semibold">
-                          {(() => {
-                            try {
-                              const dateStr = vision.startDate;
-                              if (!dateStr) return 'No definida';
-                              const date = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
-                              return date.toLocaleDateString('es-MX', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                              });
-                            } catch (e) {
-                              return 'No definida';
-                            }
-                          })()}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  {vision.endDate && (
-                    <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-4 py-2.5">
-                      <Calendar className="text-emerald-400 shrink-0" size={20} />
-                      <div>
-                        <span className="text-xs text-emerald-400 font-medium block">Finalización</span>
-                        <span className="text-sm text-white font-semibold">
-                          {(() => {
-                            try {
-                              const dateStr = vision.endDate;
-                              if (!dateStr) return 'No definida';
-                              const date = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
-                              return date.toLocaleDateString('es-MX', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                              });
-                            } catch (e) {
-                              return 'No definida';
-                            }
-                          })()}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-              {vision.Coordinador && (
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-sm text-purple-400 font-medium">Coordinador:</span>
-                  <span className="text-sm text-white">{vision.Coordinador.nombre}</span>
-                  <span className="text-sm text-slate-500">({vision.Coordinador.email})</span>
-                </div>
-              )}
+        <div className="flex items-center gap-4 mb-6">
+          <Link
+            href="/dashboard/school-admin/visiones"
+            className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+          >
+            <ArrowLeft className="text-slate-400" size={24} />
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">{vision.nombre}</h1>
+            {vision.descripcion && (
+              <p className="text-slate-400">{vision.descripcion}</p>
+            )}
           </div>
         </div>
+
+        {/* Sección de Entrenamientos Configurados */}
+        {productos.length > 0 && (
+            <div className="bg-gradient-to-br from-slate-900/80 via-indigo-950/30 to-slate-900/80 rounded-xl border border-indigo-500/20 overflow-hidden backdrop-blur-sm">
+              <div className="bg-gradient-to-r from-indigo-950/60 to-purple-950/60 px-6 py-4 border-b border-indigo-500/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-500/20 rounded-lg">
+                      <Calendar className="text-indigo-400" size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-bold text-lg">
+                        Entrenamientos Configurados
+                        <span className="text-sm font-normal text-indigo-400 ml-2">
+                          ({productos.length})
+                        </span>
+                      </h3>
+                      <p className="text-xs text-indigo-300/70 mt-0.5">
+                        Programación de entrenamientos básico, avanzado y programa de liderato
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  {productos.map((producto) => {
+                    // Debug: Ver fechas de PL específicamente
+                    if (producto.levelType === 'PL') {
+                      console.log('🔍 Renderizando PL:', {
+                        plWeekend1StartDate: producto.plWeekend1StartDate,
+                        plWeekend1EndDate: producto.plWeekend1EndDate,
+                        plWeekend2StartDate: producto.plWeekend2StartDate,
+                        plWeekend2EndDate: producto.plWeekend2EndDate,
+                        plWeekend3StartDate: producto.plWeekend3StartDate,
+                        plWeekend3EndDate: producto.plWeekend3EndDate,
+                      });
+                    }
+                    
+                    const levelConfig = {
+                      BASIC: { 
+                        emoji: '🌱', 
+                        label: 'Entrenamiento Básico',
+                        sublabel: 'Visión Prueba - Básico',
+                        bgGradient: 'from-emerald-900/30 to-green-900/20',
+                        borderColor: 'border-emerald-500/30',
+                        iconBg: 'bg-emerald-500/20',
+                        iconColor: 'text-emerald-400',
+                        textColor: 'text-emerald-400'
+                      },
+                      ADVANCED: { 
+                        emoji: '🔥', 
+                        label: 'Entrenamiento Avanzado',
+                        sublabel: 'Visión Prueba - Avanzado',
+                        bgGradient: 'from-orange-900/30 to-red-900/20',
+                        borderColor: 'border-orange-500/30',
+                        iconBg: 'bg-orange-500/20',
+                        iconColor: 'text-orange-400',
+                        textColor: 'text-orange-400'
+                      },
+                      PL: { 
+                        emoji: '👑', 
+                        label: 'Programa Liderato',
+                        sublabel: 'Visión Prueba - Liderato',
+                        bgGradient: 'from-purple-900/30 to-pink-900/20',
+                        borderColor: 'border-purple-500/30',
+                        iconBg: 'bg-purple-500/20',
+                        iconColor: 'text-purple-400',
+                        textColor: 'text-purple-400'
+                      }
+                    };
+                    
+                    const config = levelConfig[producto.levelType] || levelConfig.BASIC;
+                    
+                    return (
+                      <div 
+                        key={producto.id}
+                        className={`bg-gradient-to-br ${config.bgGradient} rounded-lg border ${config.borderColor} overflow-hidden hover:border-opacity-60 transition-all`}
+                      >
+                        {/* Header con emoji y título */}
+                        <div className="bg-slate-900/60 px-4 py-3 border-b border-slate-700/50">
+                          <div className="flex items-center gap-3">
+                            <span className="text-3xl">{config.emoji}</span>
+                            <div className="flex-1">
+                              <h4 className="text-white font-bold text-sm">{config.label}</h4>
+                              <p className="text-slate-400 text-xs">{config.sublabel}</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Contenido */}
+                        <div className="p-4 space-y-3">
+                          {/* Fechas - Mostrar fines de semana para PL */}
+                          {producto.levelType === 'PL' ? (
+                            // Programa Liderato: Mostrar los 3 fines de semana
+                            <div className="space-y-2">
+                              {/* Fin de Semana 1 */}
+                              {(producto.plWeekend1StartDate || producto.plWeekend1EndDate) && (
+                                <div className="bg-purple-500/10 rounded-lg p-2 border border-purple-500/20">
+                                  <p className="text-xs font-semibold text-purple-300 mb-1">Fin de Semana 1</p>
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className={`${config.iconColor} shrink-0`} size={14} />
+                                    <span className="text-xs text-white">
+                                      {producto.plWeekend1StartDate && new Date(producto.plWeekend1StartDate).toLocaleDateString('es-MX', {
+                                        day: '2-digit',
+                                        month: 'short'
+                                      })}
+                                      {producto.plWeekend1EndDate && ` - ${new Date(producto.plWeekend1EndDate).toLocaleDateString('es-MX', {
+                                        day: '2-digit',
+                                        month: 'short',
+                                        year: 'numeric'
+                                      })}`}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Fin de Semana 2 */}
+                              {(producto.plWeekend2StartDate || producto.plWeekend2EndDate) && (
+                                <div className="bg-purple-500/10 rounded-lg p-2 border border-purple-500/20">
+                                  <p className="text-xs font-semibold text-purple-300 mb-1">Fin de Semana 2</p>
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className={`${config.iconColor} shrink-0`} size={14} />
+                                    <span className="text-xs text-white">
+                                      {producto.plWeekend2StartDate && new Date(producto.plWeekend2StartDate).toLocaleDateString('es-MX', {
+                                        day: '2-digit',
+                                        month: 'short'
+                                      })}
+                                      {producto.plWeekend2EndDate && ` - ${new Date(producto.plWeekend2EndDate).toLocaleDateString('es-MX', {
+                                        day: '2-digit',
+                                        month: 'short',
+                                        year: 'numeric'
+                                      })}`}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Fin de Semana 3 */}
+                              {(producto.plWeekend3StartDate || producto.plWeekend3EndDate) && (
+                                <div className="bg-purple-500/10 rounded-lg p-2 border border-purple-500/20">
+                                  <p className="text-xs font-semibold text-purple-300 mb-1">Fin de Semana 3</p>
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className={`${config.iconColor} shrink-0`} size={14} />
+                                    <span className="text-xs text-white">
+                                      {producto.plWeekend3StartDate && new Date(producto.plWeekend3StartDate).toLocaleDateString('es-MX', {
+                                        day: '2-digit',
+                                        month: 'short'
+                                      })}
+                                      {producto.plWeekend3EndDate && ` - ${new Date(producto.plWeekend3EndDate).toLocaleDateString('es-MX', {
+                                        day: '2-digit',
+                                        month: 'short',
+                                        year: 'numeric'
+                                      })}`}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            // Básico y Avanzado: Mostrar fechas normales
+                            <div className="space-y-2">
+                              {producto.startDate && (
+                                <div className="flex items-center gap-2">
+                                  <Calendar className={`${config.iconColor} shrink-0`} size={16} />
+                                  <div className="flex-1">
+                                    <span className="text-xs text-slate-400">Inicio:</span>
+                                    <span className="text-sm text-white font-semibold ml-2">
+                                      {new Date(producto.startDate).toLocaleDateString('es-MX', {
+                                        day: '2-digit',
+                                        month: 'short',
+                                        year: 'numeric'
+                                      })}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                              {producto.endDate && (
+                                <div className="flex items-center gap-2">
+                                  <Calendar className={`${config.iconColor} shrink-0`} size={16} />
+                                  <div className="flex-1">
+                                    <span className="text-xs text-slate-400">Fin:</span>
+                                    <span className="text-sm text-white font-semibold ml-2">
+                                      {new Date(producto.endDate).toLocaleDateString('es-MX', {
+                                        day: '2-digit',
+                                        month: 'short',
+                                        year: 'numeric'
+                                      })}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Entrenador(es) */}
+                          {producto.levelType === 'PL' && producto.plTrainers && producto.plTrainers.length > 0 ? (
+                            <div className="border-t border-slate-700/50 pt-3">
+                              <p className="text-xs text-slate-400 mb-3">Entrenadores:</p>
+                              <div className="space-y-3">
+                                {producto.plTrainers.map((trainer: any, index: number) => (
+                                  <div key={trainer.id} className="bg-purple-500/10 rounded-lg p-3 border border-purple-500/20">
+                                    <p className="text-xs text-purple-300 font-semibold mb-2">
+                                      Fin de Semana {index + 1} {index === 2 && '(Graduación)'}
+                                    </p>
+                                    <div className="flex items-center gap-3">
+                                      {trainer.imagen ? (
+                                        <img 
+                                          src={trainer.imagen} 
+                                          alt={trainer.nombre}
+                                          className="w-10 h-10 rounded-full object-cover border-2 border-purple-500/30"
+                                        />
+                                      ) : (
+                                        <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-white font-bold border-2 border-purple-500/30">
+                                          {trainer.nombre.charAt(0).toUpperCase()}
+                                        </div>
+                                      )}
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm text-white font-semibold truncate">{trainer.nombre}</p>
+                                        <p className="text-xs text-purple-300 truncate">{trainer.email}</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : producto.Trainer ? (
+                            <div className="border-t border-slate-700/50 pt-3">
+                              <div className="flex items-center gap-3">
+                                {producto.Trainer.imagen ? (
+                                  <img 
+                                    src={producto.Trainer.imagen} 
+                                    alt={producto.Trainer.nombre}
+                                    className="w-10 h-10 rounded-full object-cover border-2 border-slate-700"
+                                  />
+                                ) : (
+                                  <div className={`w-10 h-10 rounded-full ${config.iconBg} flex items-center justify-center text-white text-sm font-bold border-2 border-slate-700`}>
+                                    {producto.Trainer.nombre.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs text-slate-400">Entrenador:</p>
+                                  <p className="text-sm text-white font-semibold truncate">
+                                    {producto.Trainer.nombre}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ) : null}
+                          
+                          {/* Ubicación */}
+                          {producto.location && (
+                            <div className="flex items-start gap-2 pt-2 border-t border-slate-700/50">
+                              <MapPin className={`${config.iconColor} shrink-0 mt-0.5`} size={14} />
+                              <div className="flex-1">
+                                <p className="text-xs text-slate-400">Impacto Cuántico Monterrey</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Información del Coordinador */}
+        {vision.Coordinador && (
+          <div className="flex items-center gap-2 mb-8">
+            <span className="text-sm text-purple-400 font-medium">Coordinador:</span>
+            <span className="text-sm text-white">{vision.Coordinador.nombre}</span>
+            <span className="text-sm text-slate-500">({vision.Coordinador.email})</span>
+          </div>
+        )}
         
         {/* Botones de Acción - Organizado por grupos */}
         <div className="flex flex-col gap-3">
@@ -1284,7 +1539,6 @@ export default function VisionDetailPage() {
             </button>
           </div>
         </div>
-      </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
@@ -2179,7 +2433,6 @@ export default function VisionDetailPage() {
             </div>
           )}
         </div>
-      </div>
 
       {/* Add Mentor Modal */}
       {showAddMentorModal && (

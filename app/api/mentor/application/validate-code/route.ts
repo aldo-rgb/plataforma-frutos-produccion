@@ -15,18 +15,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Código inválido' }, { status: 400 });
     }
 
-    // Normalizar el código (quitar guiones y convertir a mayúsculas)
-    const normalizedCode = code.replace(/-/g, '').toUpperCase().trim();
+    // Limpiar el código (convertir a mayúsculas y trim)
+    const cleanCode = code.toUpperCase().trim();
 
-    // Buscar el código en la base de datos
-    const licenseCode = await prisma.licenseCode.findUnique({
-      where: { code: normalizedCode },
-      include: {
-        organization: true
-      }
+    // Buscar el código en la tabla CodigoAcceso (donde se guardan desde el dashboard de admin)
+    const codigoAcceso = await prisma.codigoAcceso.findUnique({
+      where: { codigo: cleanCode }
     });
 
-    if (!licenseCode) {
+    if (!codigoAcceso) {
       return NextResponse.json({ 
         error: 'Código no válido',
         message: 'El código ingresado no existe o ha expirado'
@@ -34,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar si el código ya fue usado
-    if (licenseCode.used) {
+    if (codigoAcceso.estado === 'CANJEADO') {
       return NextResponse.json({ 
         error: 'Código ya utilizado',
         message: 'Este código ya ha sido usado previamente'
@@ -42,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar si el código ha expirado
-    if (licenseCode.expiresAt && licenseCode.expiresAt < new Date()) {
+    if (codigoAcceso.estado === 'EXPIRADO') {
       return NextResponse.json({ 
         error: 'Código expirado',
         message: 'Este código ha expirado'
@@ -50,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar el tipo de código
-    if (licenseCode.type !== 'MENTOR_MEMBERSHIP') {
+    if (codigoAcceso.tipo !== 'MEMBRESIA_MENTOR') {
       return NextResponse.json({ 
         error: 'Tipo de código inválido',
         message: 'Este código no es válido para membresía de mentor'
@@ -88,13 +85,14 @@ export async function POST(request: NextRequest) {
 
     // Iniciar transacción para actualizar todo
     await prisma.$transaction(async (tx) => {
-      // 1. Marcar el código como usado
-      await tx.licenseCode.update({
-        where: { id: licenseCode.id },
+      // 1. Marcar el código como canjeado en CodigoAcceso
+      await tx.codigoAcceso.update({
+        where: { id: codigoAcceso.id },
         data: {
-          used: true,
-          usedAt: new Date(),
-          usedBy: user.id
+          estado: 'CANJEADO',
+          canjeadoEn: new Date(),
+          canjeadoPorId: user.id,
+          updatedAt: new Date()
         }
       });
 
@@ -105,7 +103,7 @@ export async function POST(request: NextRequest) {
           status: 'PENDING',
           paidAt: new Date(),
           paymentMethod: 'LICENSE_CODE',
-          licenseCodeId: licenseCode.id
+          updatedAt: new Date()
         }
       });
 

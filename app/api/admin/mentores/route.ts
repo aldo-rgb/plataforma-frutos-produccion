@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
         }
       },
       include: {
-        Usuario: {
+        Usuario_MentorApplication_usuarioIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -124,7 +124,7 @@ export async function GET(req: NextRequest) {
       id: `app-${app.id}`, // Prefijo para diferenciar de mentores reales
       applicationId: app.id,
       usuarioId: app.usuarioId,
-      usuario: app.Usuario,
+      usuario: app.Usuario_MentorApplication_usuarioIdToUsuario,
       nivel: 'JUNIOR', // Por defecto para nuevas solicitudes
       titulo: app.titulo,
       especialidad: app.especialidad,

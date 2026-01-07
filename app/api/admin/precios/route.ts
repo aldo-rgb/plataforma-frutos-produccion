@@ -82,11 +82,11 @@ export async function POST(req: NextRequest) {
       if (existing) {
         return prisma.pricingConfig.update({
           where: { id: existing.id },
-          data: { price }
+          data: { price, updatedAt: new Date() }
         });
       } else {
         return prisma.pricingConfig.create({
-          data: { plan, currency, period, price }
+          data: { plan, currency, period, price, updatedAt: new Date() }
         });
       }
     };

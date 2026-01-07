@@ -17,11 +17,12 @@ interface Vision {
 
 interface VisionesWidgetProps {
   visiones: Vision[];
-  userRole: 'SCHOOL_ADMIN' | 'COORDINADOR';
+  userRole: 'SCHOOL_ADMIN' | 'COORDINADOR' | 'COORDINATOR_BASIC' | 'COORDINATOR_ADVANCED' | 'TRAINER';
   loading?: boolean;
 }
 
 export default function VisionesWidget({ visiones, userRole, loading }: VisionesWidgetProps) {
+  // Para todos los tipos de coordinador, usar la ruta de coordinador
   const baseUrl = userRole === 'SCHOOL_ADMIN' ? '/dashboard/director/visiones' : '/dashboard/coordinador/visiones';
   
   // Debug log

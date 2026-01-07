@@ -58,7 +58,8 @@ export async function POST(req: NextRequest) {
             cantidadLicencias: c.cantidadLicencias || null,
             licenciasUsadas: c.tipo === 'LICENCIAS_INSTITUCIONAL' ? 0 : null,
             descripcion: c.descripcion || null,
-            estado: 'DISPONIBLE'
+            estado: 'DISPONIBLE',
+            updatedAt: new Date()
           }
         })
       )

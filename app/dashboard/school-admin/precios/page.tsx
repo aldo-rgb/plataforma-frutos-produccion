@@ -1,0 +1,398 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import {
+  ArrowLeft,
+  DollarSign,
+  Loader2,
+  Save,
+  CheckCircle,
+  AlertCircle,
+  Tag,
+} from 'lucide-react';
+import Link from 'next/link';
+
+interface DefaultPrice {
+  id: number;
+  organizationId: number;
+  levelType: 'BASIC' | 'ADVANCED' | 'PL' | 'COMBO_FULL' | 'COMBO_ADV_PL';
+  basePrice: number;
+  promoPrice: number | null;
+  promoDeadline: string | null;
+  currency: 'MXN' | 'USD';
+}
+
+export default function DefaultPricesPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notification, setNotification] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
+
+  // Precios predeterminados para cada nivel
+  const [prices, setPrices] = useState({
+    BASIC: { basePrice: 3500, promoPrice: null as number | null, promoDeadline: '', currency: 'MXN' as 'MXN' | 'USD' },
+    ADVANCED: { basePrice: 5000, promoPrice: null as number | null, promoDeadline: '', currency: 'MXN' as 'MXN' | 'USD' },
+    PL: { basePrice: 7000, promoPrice: null as number | null, promoDeadline: '', currency: 'MXN' as 'MXN' | 'USD' },
+    COMBO_FULL: { basePrice: 12000, promoPrice: null as number | null, promoDeadline: '', currency: 'MXN' as 'MXN' | 'USD' },
+    COMBO_ADV_PL: { basePrice: 9500, promoPrice: null as number | null, promoDeadline: '', currency: 'MXN' as 'MXN' | 'USD' },
+  });
+
+  // Estado global de moneda
+  const [globalCurrency, setGlobalCurrency] = useState<'MXN' | 'USD'>('MXN');
+
+  // Función para cambiar la moneda de todos los precios
+  const handleGlobalCurrencyChange = (currency: 'MXN' | 'USD') => {
+    setGlobalCurrency(currency);
+    const updatedPrices = { ...prices };
+    Object.keys(updatedPrices).forEach((key) => {
+      updatedPrices[key as keyof typeof prices].currency = currency;
+    });
+    setPrices(updatedPrices);
+  };
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/signin');
+    } else if (session?.user?.rol !== 'SCHOOL_ADMIN') {
+      router.push('/dashboard');
+    } else {
+      fetchDefaultPrices();
+    }
+  }, [status, session]);
+
+  const fetchDefaultPrices = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/school-admin/default-prices');
+      const data = await res.json();
+
+      if (data.success && data.prices) {
+        // Mapear precios obtenidos al estado
+        const pricesMap: any = { ...prices };
+        data.prices.forEach((p: DefaultPrice) => {
+          if (pricesMap[p.levelType]) {
+            pricesMap[p.levelType] = {
+              basePrice: p.basePrice,
+              promoPrice: p.promoPrice,
+              promoDeadline: p.promoDeadline || '',
+              currency: p.currency || 'MXN',
+            };
+          }
+        });
+        setPrices(pricesMap);
+        
+        // Establecer moneda global basada en el primer precio encontrado
+        if (data.prices.length > 0) {
+          setGlobalCurrency(data.prices[0].currency || 'MXN');
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching default prices:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const showNotification = (type: 'success' | 'error', message: string) => {
+    setNotification({ type, message });
+    setTimeout(() => setNotification(null), 5000);
+  };
+
+  const handleSavePrice = async (levelType: keyof typeof prices) => {
+    if (saving) return;
+
+    try {
+      setSaving(true);
+      const res = await fetch('/api/school-admin/default-prices', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          levelType,
+          ...prices[levelType],
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        showNotification('success', '✅ Precio predeterminado actualizado');
+      } else {
+        showNotification('error', data.error || 'Error al actualizar');
+      }
+    } catch (error) {
+      console.error('Error updating price:', error);
+      showNotification('error', 'Error al actualizar el precio');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePriceChange = (levelType: keyof typeof prices, field: string, value: any) => {
+    let processedValue = value;
+    
+    // Para campos numéricos, asegurar que sean números válidos
+    if (field === 'basePrice' || field === 'promoPrice') {
+      if (value === '' || value === null || value === undefined) {
+        processedValue = field === 'basePrice' ? 0 : null;
+      } else {
+        const numValue = typeof value === 'number' ? value : parseFloat(value);
+        processedValue = isNaN(numValue) ? (field === 'basePrice' ? 0 : null) : numValue;
+      }
+    }
+    
+    setPrices({
+      ...prices,
+      [levelType]: {
+        ...prices[levelType],
+        [field]: processedValue,
+      },
+    });
+  };
+
+  const priceConfigs = [
+    {
+      key: 'BASIC' as const,
+      name: 'Entrenamiento Básico',
+      icon: '🌱',
+      color: 'from-green-900/30 to-slate-900/50',
+      borderColor: 'border-green-500/30',
+      description: 'Precio predeterminado para nivel básico',
+    },
+    {
+      key: 'ADVANCED' as const,
+      name: 'Entrenamiento Avanzado',
+      icon: '🔥',
+      color: 'from-orange-900/30 to-slate-900/50',
+      borderColor: 'border-orange-500/30',
+      description: 'Precio predeterminado para nivel avanzado',
+    },
+    {
+      key: 'PL' as const,
+      name: 'Programa de Liderato',
+      icon: '👑',
+      color: 'from-purple-900/30 to-slate-900/50',
+      borderColor: 'border-purple-500/30',
+      description: 'Precio predeterminado para programa de liderazgo',
+    },
+    {
+      key: 'COMBO_FULL' as const,
+      name: 'Combo Completo',
+      icon: '💎',
+      color: 'from-blue-900/30 to-slate-900/50',
+      borderColor: 'border-blue-500/30',
+      description: 'Básico + Avanzado + PL (paquete completo)',
+    },
+    {
+      key: 'COMBO_ADV_PL' as const,
+      name: 'Combo Avanzado + PL',
+      icon: '⚡',
+      color: 'from-cyan-900/30 to-slate-900/50',
+      borderColor: 'border-cyan-500/30',
+      description: 'Avanzado + PL (paquete avanzado)',
+    },
+  ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 p-3 sm:p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-6 sm:mb-8">
+          <Link
+            href="/dashboard/school-admin"
+            className="p-2 hover:bg-slate-800 rounded-lg transition-colors flex-shrink-0"
+          >
+            <ArrowLeft className="text-slate-400" size={20} />
+          </Link>
+          <div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1">
+              💰 Precios Predeterminados
+            </h1>
+            <p className="text-slate-400 text-xs sm:text-sm">
+              Configura los precios que se usarán al crear nuevas visiones en el Vision Builder
+            </p>
+          </div>
+        </div>
+
+        {/* Notification */}
+        {notification && (
+          <div
+            className={`mb-6 p-4 rounded-lg border-2 flex items-center gap-3 ${
+              notification.type === 'success'
+                ? 'bg-emerald-900/20 border-emerald-500/50 text-emerald-300'
+                : 'bg-red-900/20 border-red-500/50 text-red-300'
+            }`}
+          >
+            {notification.type === 'success' ? (
+              <CheckCircle size={20} />
+            ) : (
+              <AlertCircle size={20} />
+            )}
+            <p className="text-sm font-medium">{notification.message}</p>
+          </div>
+        )}
+
+        {/* Currency Switch */}
+        <div className="mb-6 bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border-2 border-slate-700/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-white mb-1">Moneda</h3>
+              <p className="text-slate-400 text-sm">Selecciona la moneda para todos los precios</p>
+            </div>
+            <div className="flex items-center gap-3 bg-slate-900/80 rounded-xl p-2 border border-slate-600">
+              <button
+                onClick={() => handleGlobalCurrencyChange('MXN')}
+                className={`px-6 py-3 rounded-lg font-bold transition-all ${
+                  globalCurrency === 'MXN'
+                    ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                🇲🇽 Pesos MXN
+              </button>
+              <button
+                onClick={() => handleGlobalCurrencyChange('USD')}
+                className={`px-6 py-3 rounded-lg font-bold transition-all ${
+                  globalCurrency === 'USD'
+                    ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                🇺🇸 Dólares USD
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Info Box */}
+        <div className="mb-8 bg-blue-900/20 border-2 border-blue-500/30 rounded-xl p-6">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center text-2xl">
+              💡
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-blue-300 mb-2">
+                ¿Cómo funcionan los precios predeterminados?
+              </h3>
+              <p className="text-blue-200/80 text-sm leading-relaxed">
+                Estos precios se aplicarán automáticamente cuando crees una nueva <strong>Visión</strong> en el Vision Builder. 
+                Cada visión tendrá sus propios productos CORE con estos precios como punto de partida. 
+                Luego podrás ajustar los precios específicos de cada visión si es necesario.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Price Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {priceConfigs.map((config) => (
+            <div
+              key={config.key}
+              className={`bg-gradient-to-br ${config.color} rounded-xl p-6 border-2 ${config.borderColor}`}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="text-4xl">{config.icon}</div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white">{config.name}</h3>
+                  <p className="text-slate-400 text-sm">{config.description}</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {/* Precio Base */}
+                <div>
+                  <label className="text-white font-semibold text-sm mb-2 block flex items-center gap-2">
+                    <DollarSign size={16} />
+                    Precio Base ({globalCurrency === 'MXN' ? '$' : 'USD $'})
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white font-bold text-lg"
+                    value={prices[config.key].basePrice || ''}
+                    onChange={(e) =>
+                      handlePriceChange(config.key, 'basePrice', e.target.value)
+                    }
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+
+                {/* Precio Promocional */}
+                <div>
+                  <label className="text-white font-semibold text-sm mb-2 block flex items-center gap-2">
+                    <Tag size={16} />
+                    Precio Promocional (Opcional) ({globalCurrency === 'MXN' ? '$' : 'USD $'})
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white"
+                    value={prices[config.key].promoPrice || ''}
+                    onChange={(e) =>
+                      handlePriceChange(
+                        config.key,
+                        'promoPrice',
+                        e.target.value
+                      )
+                    }
+                    min="0"
+                    step="0.01"
+                    placeholder="Sin promoción"
+                  />
+                </div>
+
+                {/* Fecha Límite Promoción */}
+                {prices[config.key].promoPrice && (
+                  <div>
+                    <label className="text-white font-semibold text-sm mb-2 block">
+                      Fecha Límite Promoción
+                    </label>
+                    <input
+                      type="date"
+                      className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white"
+                      value={prices[config.key].promoDeadline}
+                      onChange={(e) =>
+                        handlePriceChange(config.key, 'promoDeadline', e.target.value)
+                      }
+                    />
+                  </div>
+                )}
+
+                {/* Botón Guardar */}
+                <button
+                  onClick={() => handleSavePrice(config.key)}
+                  disabled={saving}
+                  className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white rounded-lg font-bold transition-all flex items-center justify-center gap-2"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="animate-spin" size={18} />
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={18} />
+                      Guardar Precio
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

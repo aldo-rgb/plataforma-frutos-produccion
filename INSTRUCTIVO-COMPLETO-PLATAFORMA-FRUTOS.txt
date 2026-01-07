@@ -1,0 +1,1376 @@
+================================================================================
+📋 INSTRUCTIVO COMPLETO - PLATAFORMA FRUTOS QUANTUM
+================================================================================
+
+🎯 CONTEXTO DE LA CONVERSACIÓN
+================================================================================
+
+Estás continuando una conversación técnica con un desarrollador experimentado 
+que está trabajando en una plataforma educativa llamada "Plataforma Frutos 
+QUANTUM". El tono es directo, técnico y eficiente. Se utilizan emojis para 
+marcar secciones importantes y se responde de forma concisa pero completa.
+
+================================================================================
+🏗️ ARQUITECTURA GENERAL DE LA APLICACIÓN
+================================================================================
+
+STACK TECNOLÓGICO
+--------------------------------------------------------------------------------
+- Framework: Next.js 16.1.1 con Turbopack
+- Base de Datos: PostgreSQL con Prisma ORM
+- Autenticación: NextAuth.js
+- Estilización: Tailwind CSS
+- Lenguaje: TypeScript
+- Real-time: Socket.IO
+- Pagos: Stripe (pagos individuales) + Sistema B2B de licencias
+- Deployment: Vercel
+
+ESTRUCTURA DE CARPETAS PRINCIPAL
+--------------------------------------------------------------------------------
+plataforma-frutos-FINAL/
+├── app/                          # App Router de Next.js
+│   ├── api/                      # API Routes
+│   ├── auth/                     # Páginas de autenticación
+│   └── dashboard/                # Páginas del dashboard
+├── components/                   # Componentes React
+│   ├── dashboard/                # Componentes del dashboard
+│   ├── phoenix/                  # Sistema Phoenix (suspendido)
+│   └── ui/                       # Componentes UI reutilizables
+├── contexts/                     # React Contexts
+├── lib/                          # Utilidades y configuraciones
+├── prisma/                       # Esquema de base de datos
+└── public/                       # Archivos estáticos
+
+================================================================================
+🗄️ BASE DE DATOS COMPLETA (PRISMA SCHEMA)
+================================================================================
+
+MODELOS PRINCIPALES Y SUS RELACIONES
+================================================================================
+
+1. USUARIO (MODELO CENTRAL)
+--------------------------------------------------------------------------------
+model Usuario {
+  id                    Int       @id @default(autoincrement())
+  nombre                String
+  email                 String    @unique
+  password              String
+  imagen                String?
+  rol                   Rol       @default(PARTICIPANTE)
+  puntosCuanticos       Int       @default(0)
+  isActive              Boolean   @default(true)
+  tier                  Tier      @default(FREE)
+  
+  // Relaciones de organización (B2B)
+  organizationId        Int?
+  organization          Organization? @relation("OrganizationMembers")
+  communityOrganizationId Int?
+  communityOrganization Organization? @relation("CommunityMembers")
+  
+  // Relaciones de mentoría
+  mentorId              Int?
+  mentor                Usuario?  @relation("MentorParticipantes")
+  mentorados            Usuario[] @relation("MentorParticipantes")
+  assignedMentorId      Int?
+  assignedMentor        Usuario?  @relation("AssignedMentor")
+  assignedStudents      Usuario[] @relation("AssignedMentor")
+  
+  // Gamificación
+  experienciaXP         Int       @default(0)
+  nivelActual           Int       @default(1)
+  rangoActual           String    @default("NOVATO")
+  puntosGamificacion    Int       @default(0)
+  completionStreak      Int       @default(0)
+  lastCompletionDate    DateTime?
+  
+  // Perfil de mentor
+  perfilMentor          PerfilMentor?
+  
+  // Carta F.R.U.T.O.S.
+  cartasFrutos          CartaFrutos[]
+  
+  // Evidencias
+  evidencias            EvidenciaAccion[]
+  
+  // Muchas más relaciones...
+}
+
+enum Rol {
+  PARTICIPANTE
+  MENTOR
+  LIDER
+  GAME_CHANGER
+  COORDINADOR
+  DIRECTOR
+  SCHOOL_ADMIN
+  ADMIN
+  ADMINISTRADOR
+}
+
+enum Tier {
+  FREE
+  STANDARD
+  PREMIUM
+  ELITE
+}
+
+2. ORGANIZATION (SISTEMA B2B)
+--------------------------------------------------------------------------------
+model Organization {
+  id                Int       @id @default(autoincrement())
+  name              String
+  contactEmail      String
+  logoUrl           String?
+  brandColor        String?
+  schoolAdminId     Int?      @unique
+  schoolAdmin       Usuario?  @relation("SchoolAdmin")
+  
+  // Miembros
+  members           Usuario[] @relation("OrganizationMembers")
+  communityMembers  Usuario[] @relation("CommunityMembers")
+  
+  // Licencias
+  licenses          License[]
+  licenseAssignments LicenseAssignment[]
+  licenseOrders     LicenseOrder[]
+  
+  // Créditos de llamadas
+  schoolCredits     SchoolCredit[]
+  
+  // Visiones
+  visiones          Vision[]
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+3. LICENSE (SISTEMA DE LICENCIAS B2B)
+--------------------------------------------------------------------------------
+model License {
+  id              Int          @id @default(autoincrement())
+  code            String       @unique
+  tier            Tier         @default(STANDARD)
+  organizationId  Int
+  organization    Organization @relation(fields: [organizationId])
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+}
+
+model LicenseAssignment {
+  id              Int          @id @default(autoincrement())
+  licenseCode     String
+  usuarioId       Int          @unique
+  usuario         Usuario      @relation("UserLicense")
+  organizationId  Int
+  organization    Organization @relation(fields: [organizationId])
+  assignedAt      DateTime     @default(now())
+  activatedAt     DateTime?
+  isActive        Boolean      @default(true)
+}
+
+model LicenseOrder {
+  id              String            @id @default(cuid())
+  organizationId  Int
+  organization    Organization      @relation(fields: [organizationId])
+  quantity        Int
+  tier            Tier
+  amount          Float
+  status          LicenseOrderStatus @default(PENDING)
+  paymentMethod   String?
+  paymentUrl      String?
+  receiptUrl      String?
+  createdAt       DateTime          @default(now())
+  paidAt          DateTime?
+}
+
+enum LicenseOrderStatus {
+  PENDING      // Esperando pago
+  PROCESSING   // Pago en revisión
+  PAID         // Pagado y licencias activadas
+  CANCELLED    // Cancelado
+}
+
+4. SCHOOLCREDIT (CRÉDITOS DE LLAMADAS)
+--------------------------------------------------------------------------------
+model SchoolCredit {
+  id                Int          @id @default(autoincrement())
+  organizationId    Int
+  organization      Organization @relation(fields: [organizationId])
+  totalPurchased    Int          // Total de llamadas compradas
+  totalAllocated    Int          @default(0) // Llamadas bloqueadas
+  isActive          Boolean      @default(true)
+  purchasedAt       DateTime     @default(now())
+}
+
+5. VISION (CICLOS EDUCATIVOS)
+--------------------------------------------------------------------------------
+model Vision {
+  id                  Int       @id @default(autoincrement())
+  nombre              String
+  descripcion         String?
+  coordinadorId       Int
+  coordinador         Usuario   @relation("CoordinadorVision")
+  organizationId      Int?
+  organization        Organization? @relation(fields: [organizationId])
+  
+  // Configuración de áreas
+  forceFinanzasArea       Boolean @default(false)
+  forceOcioArea           Boolean @default(false)
+  forcePazMentalArea      Boolean @default(false)
+  forceRelacionesArea     Boolean @default(false)
+  forceSaludArea          Boolean @default(false)
+  forceTalentosArea       Boolean @default(false)
+  forceCommunityServiceArea Boolean @default(false)
+  forceTransformationArea Boolean @default(false)
+  
+  // Niveles habilitados
+  enabledLevels       VisionLevel[] @default([BASIC])
+  
+  // Límites
+  maxParticipantes    Int?
+  licensesAllocated   Int       @default(0)
+  
+  // Participantes
+  participantes       VisionParticipante[]
+  mentores            VisionMentor[]
+  gameChangers        VisionGameChanger[]
+  
+  // Fechas
+  startDate           DateTime?
+  endDate             DateTime?
+  isActive            Boolean   @default(true)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+enum VisionLevel {
+  BASIC      // Nivel básico
+  ADVANCED   // Nivel avanzado
+  MASTERY    // Nivel maestría
+}
+
+6. CARTAFRUTOS (SISTEMA DE OBJETIVOS)
+--------------------------------------------------------------------------------
+model CartaFrutos {
+  id                        Int       @id @default(autoincrement())
+  usuarioId                 Int
+  usuario                   Usuario   @relation(fields: [usuarioId])
+  
+  // Estado de la carta
+  estado                    EstadoCarta @default(BORRADOR)
+  autorizadoMentor          Boolean   @default(false)
+  autorizadoCoord           Boolean   @default(false)
+  autorizadoPorId           Int?
+  autorizadoPor             Usuario?  @relation("CartaAutorizador")
+  approvedAt                DateTime?
+  
+  // Áreas F.R.U.T.O.S. con metas y avances
+  finanzasMeta              Int       @default(0)
+  finanzasAvance            Int       @default(0)
+  finanzasScheduledDays     Json?     // Días programados
+  finanzasDeclaracion       String?
+  finanzasDeclaracionStatus DeclaracionStatus @default(PENDIENTE)
+  
+  relacionesMeta            Int       @default(0)
+  relacionesAvance          Int       @default(0)
+  relacionesScheduledDays   Json?
+  relacionesDeclaracion     String?
+  relacionesDeclaracionStatus DeclaracionStatus @default(PENDIENTE)
+  
+  // ... (mismo patrón para las 6 áreas restantes)
+  
+  // Área de Enrolamiento
+  enrolamientoMeta          Int       @default(0)
+  enrolamientoAvance        Int       @default(0)
+  invitadosInscritos        Int       @default(0)
+  
+  // Feedback del mentor
+  feedbackMentor            String?
+  
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+  
+  // Relaciones
+  metas                     Meta[]
+}
+
+enum EstadoCarta {
+  BORRADOR
+  EN_REVISION
+  CAMBIOS_REQUERIDOS
+  APROBADA
+}
+
+enum DeclaracionStatus {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+}
+
+7. META (METAS POR ÁREA)
+--------------------------------------------------------------------------------
+model Meta {
+  id                  Int       @id @default(autoincrement())
+  cartaId             Int
+  carta               CartaFrutos @relation(fields: [cartaId])
+  categoria           String    // 'FINANZAS', 'RELACIONES', etc.
+  orden               Int
+  declaracionPoder    String
+  metaPrincipal       String
+  avance              Int       @default(0)
+  status              String    @default("ACTIVA")
+  mentorFeedback      String?
+  
+  // Relación con acciones
+  acciones            Accion[]
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+8. ACCION (ACCIONES DE CADA META)
+--------------------------------------------------------------------------------
+model Accion {
+  id                  Int       @id @default(autoincrement())
+  metaId              Int
+  meta                Meta      @relation(fields: [metaId])
+  orden               Int
+  descripcion         String
+  completada          Boolean   @default(false)
+  
+  // Evidencias
+  evidencias          EvidenciaAccion[]
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+9. EVIDENCIAACCION (SISTEMA DE EVIDENCIAS)
+--------------------------------------------------------------------------------
+model EvidenciaAccion {
+  id                      Int       @id @default(autoincrement())
+  usuarioId               Int
+  usuario                 Usuario   @relation(fields: [usuarioId])
+  metaId                  Int?
+  meta                    Meta?     @relation(fields: [metaId])
+  accionId                Int?
+  accion                  Accion?   @relation(fields: [accionId])
+  
+  // Evidencia
+  fotoUrl                 String
+  descripcion             String?
+  
+  // Estado de revisión
+  estado                  EstadoEvidencia @default(PENDIENTE)
+  comentarioMentor        String?
+  revisadoPorId           Int?
+  revisadoPor             Usuario?  @relation("EvidenciaRevisor")
+  fechaRevision           DateTime?
+  
+  // Calidad y puntos
+  highQuality             Boolean   @default(false)
+  qualityScore            Float?
+  rarityBonus             Float     @default(1.0)
+  puntosGenerados         Int       @default(0)
+  
+  // Rechazos
+  intentosCorreccion      Int       @default(0)
+  rechazadaDefinitivamente Boolean  @default(false)
+  tipoRechazo             TipoRechazo?
+  
+  fechaSubida             DateTime  @default(now())
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+}
+
+enum EstadoEvidencia {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+}
+
+enum TipoRechazo {
+  CALIDAD_BAJA
+  NO_RELACIONADA
+  DUPLICADA
+  INAPROPIADA
+}
+
+10. PERFILMENTOR (PERFIL DE MENTORES)
+--------------------------------------------------------------------------------
+model PerfilMentor {
+  id                      Int       @id @default(autoincrement())
+  usuarioId               Int       @unique
+  usuario                 Usuario   @relation(fields: [usuarioId])
+  
+  // Información básica
+  nivel                   NivelMentor @default(JUNIOR)
+  especialidad            String[]
+  biografia               String?
+  biografiaCompleta       String?
+  biografiaCorta          String?
+  titulo                  String?
+  tagline                 String?
+  
+  // Métricas
+  calificacionPromedio    Float     @default(0)
+  totalResenas            Int       @default(0)
+  totalSesiones           Int       @default(0)
+  completedSessionsCount  Int       @default(0)
+  
+  // Disponibilidad
+  disponible              Boolean   @default(true)
+  acceptingNewClients     Boolean   @default(true)
+  maxDisciplineClients    Int       @default(10)
+  
+  // Comisiones
+  comisionMentor          Float     @default(70)
+  comisionPlataforma      Float     @default(30)
+  
+  // Métricas de calidad
+  mentoradosActivos       Int       @default(0)
+  mentoradosTotales       Int       @default(0)
+  evidenciasHighQuality   Int       @default(0)
+  porcentajeHighQuality   Float     @default(0)
+  promedioXPPorMentorado  Float     @default(0)
+  
+  // Aprobación de perfil
+  profileApprovalStatus   ProfileApprovalStatus @default(DRAFT)
+  profileSubmittedAt      DateTime?
+  
+  // Membresía de mentor
+  membershipActive        Boolean   @default(false)
+  membershipStartDate     DateTime?
+  membershipExpiryDate    DateTime?
+  autoRenewalEnabled      Boolean   @default(false)
+  
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+}
+
+enum NivelMentor {
+  JUNIOR
+  SENIOR
+  MASTER
+  LEGEND
+}
+
+enum ProfileApprovalStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
+11. PROGRAMENROLLMENT (INSCRIPCIÓN A PROGRAMAS DE DISCIPLINA)
+--------------------------------------------------------------------------------
+model ProgramEnrollment {
+  id                Int       @id @default(autoincrement())
+  userId            Int
+  user              Usuario   @relation("StudentEnrollments")
+  mentorId          Int
+  mentor            Usuario   @relation("MentorEnrollments")
+  
+  // Tipo de ciclo
+  cycleType         CycleType
+  cycleStartDate    DateTime
+  cycleEndDate      DateTime
+  
+  // Estado
+  status            String    @default("ACTIVE")
+  
+  // Llamadas del ciclo
+  callBookings      CallBooking[]
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+enum CycleType {
+  WEEKLY_4   // 4 semanas, 1 llamada/semana
+  BIWEEKLY_8 // 8 semanas, 1 llamada cada 2 semanas
+}
+
+12. CALLBOOKING (RESERVAS DE LLAMADAS)
+--------------------------------------------------------------------------------
+model CallBooking {
+  id                    Int       @id @default(autoincrement())
+  studentId             Int
+  student               Usuario   @relation("StudentCalls")
+  mentorId              Int
+  mentor                Usuario   @relation("MentorCalls")
+  programEnrollmentId   Int?
+  programEnrollment     ProgramEnrollment? @relation(fields: [programEnrollmentId])
+  
+  // Fecha y hora
+  scheduledDate         DateTime
+  scheduledTime         String
+  
+  // Estado
+  status                CallStatus @default(SCHEDULED)
+  completedAt           DateTime?
+  cancelledAt           DateTime?
+  
+  // Notas
+  studentNotes          String?
+  mentorNotes           String?
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+enum CallStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  MISSED
+}
+
+13. ADMINTASK (TAREAS EXTRAORDINARIAS / EVENTOS)
+--------------------------------------------------------------------------------
+model AdminTask {
+  id                Int       @id @default(autoincrement())
+  title             String
+  description       String
+  category          TaskCategory
+  type              TaskType  @default(GENERAL)
+  
+  // Recompensas
+  quantumPoints     Int       @default(0)
+  experiencePoints  Int       @default(0)
+  
+  // Configuración
+  requiresEvidence  Boolean   @default(false)
+  isActive          Boolean   @default(true)
+  isFeatured        Boolean   @default(false)
+  
+  // Asignación
+  assignedTo        TaskAssignmentType @default(ALL)
+  specificVisionId  Int?
+  specificVision    Vision?   @relation(fields: [specificVisionId])
+  
+  // Fechas
+  availableFrom     DateTime?
+  availableUntil    DateTime?
+  
+  // Límites
+  maxCompletions    Int?
+  currentCompletions Int      @default(0)
+  
+  // Submissions
+  submissions       TaskSubmission[]
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+enum TaskCategory {
+  EVENTO
+  MISION
+  DESAFIO
+  ESPECIAL
+}
+
+enum TaskType {
+  GENERAL
+  VISION_SPECIFIC
+  ROLE_SPECIFIC
+}
+
+enum TaskAssignmentType {
+  ALL
+  VISION_ONLY
+  ROLE_SPECIFIC
+}
+
+14. TASKSUBMISSION (ENVÍOS DE TAREAS)
+--------------------------------------------------------------------------------
+model TaskSubmission {
+  id                Int       @id @default(autoincrement())
+  adminTaskId       Int
+  adminTask         AdminTask @relation(fields: [adminTaskId])
+  usuarioId         Int
+  usuario           Usuario   @relation(fields: [usuarioId])
+  
+  // Evidencia
+  evidenciaUrl      String?
+  comentario        String?
+  
+  // Estado
+  status            SubmissionStatus @default(PENDING)
+  reviewedBy        Int?
+  reviewer          Usuario?  @relation("TaskReviewer")
+  reviewedAt        DateTime?
+  feedbackMentor    String?
+  
+  // Puntos otorgados
+  puntosGanados     Int?
+  rewardMetadata    Json?
+  pointsCalculatedAt DateTime?
+  
+  submittedAt       DateTime  @default(now())
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+================================================================================
+🚀 FUNCIONALIDADES IMPLEMENTADAS
+================================================================================
+
+✅ SISTEMA DE AUTENTICACIÓN Y USUARIOS
+--------------------------------------------------------------------------------
+Estado: COMPLETO
+- Login/Registro con NextAuth.js
+- Roles: PARTICIPANTE, MENTOR, LIDER, GAME_CHANGER, COORDINADOR, DIRECTOR, 
+  SCHOOL_ADMIN, ADMIN, ADMINISTRADOR
+- Sistema de permisos dinámicos (config/menuPermissions.ts)
+- Cambio de contraseña obligatorio para nuevos usuarios
+- Magic links para acceso sin contraseña
+
+✅ SISTEMA B2B DE ORGANIZACIONES
+--------------------------------------------------------------------------------
+Estado: COMPLETO
+- Gestión de organizaciones educativas
+- Director (SCHOOL_ADMIN) por organización
+- Dashboard del director con métricas
+- Sistema de licencias con 3 tiers (FREE, STANDARD, PREMIUM)
+- Órdenes de licencias con estados (PENDING, PROCESSING, PAID)
+- Asignación de licencias a usuarios
+- Miembros de organización vs miembros de comunidad
+- Logo y branding personalizado por organización
+
+✅ SISTEMA DE LICENCIAS
+--------------------------------------------------------------------------------
+Estado: COMPLETO
+- Generación automática de códigos únicos
+- Compra de licencias con pago por transferencia
+- Upload de comprobantes de pago
+- Aprobación manual por admin
+- Activación automática al aprobar pago
+- Dashboard de gestión de licencias
+- Revocación de licencias
+- Histórico de órdenes
+
+✅ SISTEMA DE CRÉDITOS DE LLAMADAS (SCHOOLCREDIT)
+--------------------------------------------------------------------------------
+Estado: COMPLETO
+- Compra de créditos de llamadas en bloques
+- Bloqueo automático al agendar llamada
+- Liberación al completar/cancelar llamada
+- Dashboard de monitoreo
+- Alertas de créditos bajos
+
+✅ SISTEMA DE VISIONES (CICLOS EDUCATIVOS)
+--------------------------------------------------------------------------------
+Estado: COMPLETO
+- Creación de visiones por coordinador
+- Asignación de mentores, game changers y participantes
+- Configuración de áreas obligatorias
+- Niveles habilitados (BASIC, ADVANCED, MASTERY)
+- Límites de participantes
+- Fechas de inicio/fin
+- Dashboard de visiones activas
+
+✅ SISTEMA DE CARTA F.R.U.T.O.S.
+--------------------------------------------------------------------------------
+Estado: COMPLETO
+- 8 áreas configurables:
+  1. Finanzas
+  2. Relaciones
+  3. Talentos
+  4. Ocio
+  5. Paz Mental
+  6. Salud
+  7. Servicio Comunitario
+  8. Servicio Transformación
+- Metas y submetas por área
+- Declaraciones de poder
+- Programación de días de ejecución
+- Estados: BORRADOR, EN_REVISION, CAMBIOS_REQUERIDOS, APROBADA
+- Sistema de aprobación (mentor + coordinador)
+- Usuarios FREE: auto-aprobación
+- Feedback del mentor por área
+
+✅ SISTEMA DE EVIDENCIAS
+--------------------------------------------------------------------------------
+Estado: COMPLETO
+- Upload de fotos como evidencia
+- Estados: PENDIENTE, APROBADA, RECHAZADA
+- Sistema de calidad (high quality vs normal)
+- Quality score y rarity bonus
+- Generación de puntos cuánticos (solo usuarios de pago)
+- Generación de XP (todos los usuarios)
+- Sistema de reintentos (máx 3)
+- Rechazo definitivo
+- Tipos de rechazo: CALIDAD_BAJA, NO_RELACIONADA, DUPLICADA, INAPROPIADA
+- Panel de revisión para mentores
+- Contador de evidencias pendientes
+
+✅ SISTEMA DE GAMIFICACIÓN
+--------------------------------------------------------------------------------
+Estado: COMPLETO
+- Puntos Cuánticos (solo usuarios de pago)
+- Experiencia XP (todos los usuarios)
+- Niveles (1-100)
+- Rangos: NOVATO, APRENDIZ, EXPLORADOR, MAESTRO, LEYENDA, etc.
+- Racha de completación (streak)
+- Sistema de colecciones
+- Badges y medallas
+- Ranking global
+- Muro de la Excelencia (evidencias destacadas)
+
+✅ SISTEMA DE TAREAS EXTRAORDINARIAS
+--------------------------------------------------------------------------------
+Estado: COMPLETO
+- Creación por admin/coordinador/director
+- Categorías: EVENTO, MISION, DESAFIO, ESPECIAL
+- Tipos: GENERAL, VISION_SPECIFIC, ROLE_SPECIFIC
+- Asignación: ALL, VISION_ONLY, ROLE_SPECIFIC
+- Recompensas configurables (puntos + XP)
+- Requiere evidencia opcional
+- Fechas de disponibilidad
+- Límite de completaciones
+- Estado: PENDING, APPROVED, REJECTED
+- Panel de revisión para mentores
+
+✅ SISTEMA DE MENTORÍA INDIVIDUAL
+--------------------------------------------------------------------------------
+Estado: COMPLETO
+- Perfil de mentor con biografía y especialidades
+- Niveles: JUNIOR, SENIOR, MASTER, LEGEND
+- Calificaciones y reseñas
+- Disponibilidad y horarios
+- Sistema de comisiones (70/30 por defecto)
+- Métricas de calidad del mentor
+- Aprobación de perfiles (DRAFT, PENDING_APPROVAL, APPROVED, REJECTED)
+- Marketplace de mentores
+- Membresía de mentores (pago mensual)
+
+✅ SISTEMA DE DISCIPLINA/MENTORÍA GRUPAL
+--------------------------------------------------------------------------------
+Estado: COMPLETO
+- Programas de 4 o 8 semanas
+- Inscripción a programas
+- Ciclos: WEEKLY_4 (1 llamada/semana x 4) o BIWEEKLY_8 (1 cada 2 semanas x 8)
+- Agendamiento de llamadas
+- Estados de llamadas: SCHEDULED, COMPLETED, CANCELLED, MISSED
+- Sistema de créditos por llamada
+- Dashboard de llamadas para mentores
+- Calendario de sesiones
+
+✅ PANEL DE MENTOR
+--------------------------------------------------------------------------------
+Estado: COMPLETO
+- Revisar cartas de participantes
+- Validar evidencias
+- Ver participantes asignados
+- Calendario de llamadas
+- Configurar horarios de disponibilidad
+- Ver sesiones programadas
+- Editar perfil de mentor
+- Métricas de desempeño
+
+✅ PANEL DE DIRECTOR (SCHOOL ADMIN)
+--------------------------------------------------------------------------------
+Estado: COMPLETO
+- Dashboard con KPIs:
+  - Usuarios totales
+  - Miembros de comunidad
+  - Licencias disponibles
+  - Llamadas disponibles
+- Distribución de estudiantes por tier
+- Top estudiantes
+- Lista de todos los usuarios
+- Gestión de licencias
+- Gestión de créditos de llamadas
+- Órdenes de compra
+- Aprobación de perfiles de líderes
+- Gestión de visiones activas
+- Notificaciones de líderes pendientes
+- Consejo cuántico (IA)
+
+✅ PANEL MAESTRO (ADMIN/COORDINADOR)
+--------------------------------------------------------------------------------
+Estado: COMPLETO
+- Autorizar cartas
+- Autorizar evidencias
+- Buzón anónimo (reportes)
+- Gestión de inventario de recompensas
+- Gestión de usuarios
+- Gestión de escuelas B2B
+- Códigos de regalo
+- Gestión de mentores
+- Gestor de misiones y eventos
+- Gestión de ciclos
+- Gestión de permisos
+- Reportes financieros
+- Control de reservas
+- Paquetes y mentores
+- Comisiones de mentores
+- Gestión de precios
+- Órdenes de compra
+- Configuración de pagos
+
+✅ NAVEGACIÓN GENERAL
+--------------------------------------------------------------------------------
+Estado: COMPLETO
+- Dashboard principal
+- HOY (tareas del día)
+- The Vault (archivo de evidencias aprobadas)
+- Guía de inicio
+- Carta F.R.U.T.O.S. (Objetivos)
+- Quantum Detector (monitor de retrasos con IA)
+- Solicitar mentoría (solo participantes)
+- Mis sesiones (solo participantes)
+- Ranking global
+- Muro de la Excelencia
+- Tienda/Canje
+- Membresía
+- Configuración
+
+✅ COMPONENTES DEL DASHBOARD
+--------------------------------------------------------------------------------
+Estado: COMPLETO
+- DashboardClientLayout.tsx: Layout principal con sidebar y topbar
+- Sidebar.tsx: Navegación lateral con permisos y roles
+  * RECIÉN IMPLEMENTADO: Auto-cierre en mobile al hacer click en opciones
+  * Helper handleLinkClick() para cerrar sidebar mobile
+  * Prop onClose para control desde el layout
+- MobileSidebar.tsx: Wrapper para sidebar mobile
+- Topbar.tsx: Barra superior con puntos cuánticos, timezone, idioma
+- PhoenixButton.tsx: Botón SOS (temporalmente suspendido)
+- PhoenixWrapper.tsx: Context provider para protocolo Phoenix
+
+✅ OPTIMIZACIONES MOBILE RECIENTES
+--------------------------------------------------------------------------------
+Estado: COMPLETO (Última actualización)
+- Grid de KPI Cards: 2 columnas en mobile
+- Padding responsivo: p-3 en mobile vs p-6 en desktop
+- Tamaños de fuente adaptativos
+- Header compacto en mobile
+- Banners de alerta responsivos
+- Espaciado optimizado (space-y-4 en mobile)
+
+================================================================================
+⚠️ FUNCIONALIDADES PARCIALES O EN DESARROLLO
+================================================================================
+
+🔶 SISTEMA PHOENIX (PROTOCOLO SOS)
+--------------------------------------------------------------------------------
+Estado: SUSPENDIDO TEMPORALMENTE
+- Función de ayuda para usuarios bloqueados
+- Debe reactivarse y conectarse con IA
+- Archivo: components/phoenix/PhoenixButton.tsx
+
+🔶 SISTEMA DE TIMEZONE
+--------------------------------------------------------------------------------
+Estado: PARCIAL
+- Detecta timezone del usuario
+- TimezoneWrapper.tsx implementado
+- Falta: aplicar timezone a todas las fechas de la app
+
+🔶 SISTEMA DE NOTIFICACIONES REAL-TIME
+--------------------------------------------------------------------------------
+Estado: PARCIAL
+- Socket.IO configurado (SocketWrapper.tsx)
+- Falta: implementar eventos específicos de notificaciones
+
+🔶 QUANTUM IA / DETECTOR DE RETRASOS
+--------------------------------------------------------------------------------
+Estado: BÁSICO
+- Endpoint básico implementado
+- Falta: lógica real de IA/análisis
+- Archivo: /app/api/quantum-ia/recommendation/route.ts
+
+🔶 SISTEMA DE CANJE DE RECOMPENSAS
+--------------------------------------------------------------------------------
+Estado: BÁSICO
+- Vista de tienda implementada
+- Falta: lógica de transacciones y envío
+
+🔶 SISTEMA DE SUSCRIPCIONES INDIVIDUALES (STRIPE)
+--------------------------------------------------------------------------------
+Estado: BÁSICO
+- Integración con Stripe configurada
+- Falta: webhooks y renovaciones automáticas
+
+================================================================================
+❌ PENDIENTE DE DESARROLLO
+================================================================================
+
+🔴 SISTEMA DE PAGOS PARA MENTORÍAS INDIVIDUALES
+--------------------------------------------------------------------------------
+- Integración completa de pagos por sesión
+- Cálculo de comisiones
+- Transferencias a mentores
+- Dashboard financiero para mentores
+
+🔴 SISTEMA DE VIDEOCONFERENCIA
+--------------------------------------------------------------------------------
+- Integración con Zoom/Meet/Jitsi
+- Enlaces de llamadas automáticos
+- Grabación de sesiones
+
+🔴 SISTEMA DE CHAT REAL-TIME
+--------------------------------------------------------------------------------
+- Chat entre mentor y participante
+- Chat grupal en visiones
+- Notificaciones de mensajes
+
+🔴 REPORTES AVANZADOS
+--------------------------------------------------------------------------------
+- Exportación de datos
+- Gráficos de progreso
+- Análisis predictivo
+
+🔴 APP MOBILE NATIVA
+--------------------------------------------------------------------------------
+- React Native o Flutter
+- Push notifications
+- Offline mode
+
+🔴 SISTEMA DE REFERIDOS
+--------------------------------------------------------------------------------
+- Links de referidos
+- Tracking de conversiones
+- Recompensas por referidos
+
+================================================================================
+🔧 CONFIGURACIONES IMPORTANTES
+================================================================================
+
+ENVIRONMENT VARIABLES (.env.local)
+--------------------------------------------------------------------------------
+# Database
+DATABASE_URL="postgresql://..."
+
+# NextAuth
+NEXTAUTH_SECRET="..."
+NEXTAUTH_URL="http://localhost:3000"
+
+# Stripe
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_..."
+STRIPE_SECRET_KEY="sk_test_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+
+# Cloudinary (para imágenes)
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME="..."
+CLOUDINARY_API_KEY="..."
+CLOUDINARY_API_SECRET="..."
+
+# OpenAI (para IA)
+OPENAI_API_KEY="sk-..."
+
+CONFIGURACIÓN DE PERMISOS (config/menuPermissions.ts)
+--------------------------------------------------------------------------------
+export const MENU_ITEMS = [
+  { id: 'ranking', name: 'Ranking Global', section: 'Navegación' },
+  { id: 'tienda', name: 'Tienda / Canje', section: 'Navegación' },
+  { id: 'membresia', name: 'Membresía', section: 'Navegación' },
+  { id: 'auth_cartas', name: 'Autorizar Cartas', section: 'Panel Maestro' },
+  // ... más items
+];
+
+================================================================================
+📊 FLUJOS PRINCIPALES DE LA APLICACIÓN
+================================================================================
+
+FLUJO DE REGISTRO Y ONBOARDING
+--------------------------------------------------------------------------------
+1. Usuario se registra con email/password
+2. Sistema asigna rol por defecto: PARTICIPANTE
+3. Tier por defecto: FREE
+4. Si tiene código de licencia → valida y asigna tier
+5. Si está en organización → asigna a organización
+6. Redirect a /dashboard
+7. Si requirePasswordChange → forzar cambio de contraseña
+
+FLUJO DE CARTA F.R.U.T.O.S.
+--------------------------------------------------------------------------------
+1. Usuario crea carta (estado: BORRADOR)
+2. Define metas en cada área
+3. Programa días de ejecución
+4. Envía a revisión (estado: EN_REVISION)
+5. Si es FREE: auto-aprobación (estado: APROBADA)
+6. Si es de pago:
+   - Mentor revisa y aprueba/rechaza
+   - Si rechaza → CAMBIOS_REQUERIDOS
+   - Si aprueba → espera coordinador
+   - Coordinador aprueba → APROBADA
+7. Carta aprobada → puede subir evidencias
+
+FLUJO DE EVIDENCIAS
+--------------------------------------------------------------------------------
+1. Usuario sube foto + descripción
+2. Estado: PENDIENTE
+3. Mentor revisa
+4. Si aprueba:
+   - Marca como APROBADA
+   - Puede marcar como High Quality
+   - Si usuario es FREE: +XP (sin puntos cuánticos)
+   - Si usuario de pago: +XP + puntos cuánticos
+5. Si rechaza:
+   - Marca como RECHAZADA
+   - Selecciona tipo de rechazo
+   - Usuario puede reintentar (máx 3 veces)
+   - Tercer rechazo → rechazo definitivo
+
+FLUJO DE LICENCIAS (B2B)
+--------------------------------------------------------------------------------
+1. Director crea orden de licencias
+2. Selecciona cantidad y tier
+3. Sistema genera orden (estado: PENDING)
+4. Director realiza transferencia bancaria
+5. Director sube comprobante de pago
+6. Estado cambia a: PROCESSING
+7. Admin revisa comprobante
+8. Si aprueba:
+   - Genera códigos de licencia
+   - Marca orden como PAID
+   - Notifica al director
+9. Director asigna licencias a usuarios
+10. Usuario activa licencia → cambia tier
+
+FLUJO DE MENTORÍA GRUPAL (DISCIPLINA)
+--------------------------------------------------------------------------------
+1. Participante se inscribe a programa
+2. Selecciona mentor
+3. Selecciona tipo de ciclo (4 o 8 semanas)
+4. Sistema bloquea créditos de llamadas
+5. Sistema genera fechas de llamadas
+6. Participante agenda horario para cada llamada
+7. Mentor confirma o reprograma
+8. Al completar llamada:
+   - Marca como COMPLETED
+   - Libera crédito usado
+   - Genera feedback
+9. Al finalizar ciclo → certificado
+
+FLUJO DE TAREAS EXTRAORDINARIAS
+--------------------------------------------------------------------------------
+1. Admin/Coordinador crea tarea
+2. Define categoría y recompensas
+3. Define asignación (todos, visión específica, rol)
+4. Define fechas de disponibilidad
+5. Usuarios ven tarea en dashboard
+6. Usuario sube evidencia (si requiere)
+7. Estado: PENDING
+8. Revisor aprueba/rechaza
+9. Si aprueba:
+   - Otorga puntos y XP
+   - Incrementa contador de completaciones
+   - Si alcanza límite → desactiva tarea
+
+================================================================================
+🎨 GUÍAS DE ESTILO Y DISEÑO
+================================================================================
+
+COLORES PRINCIPALES
+--------------------------------------------------------------------------------
+Tier Colors:
+- FREE: slate-500
+- STANDARD: cyan-500
+- PREMIUM: purple-500
+- ELITE: yellow-500
+
+Status Colors:
+- APROBADA: green-500
+- EN_REVISION: blue-500
+- RECHAZADA: red-500
+- BORRADOR: slate-500
+- PENDIENTE: yellow-500
+
+Role Colors:
+- PARTICIPANTE: blue-500
+- MENTOR: purple-500
+- LIDER: cyan-500
+- COORDINADOR: orange-500
+- ADMIN: red-500
+
+ICONOS (lucide-react)
+--------------------------------------------------------------------------------
+- Users: usuarios/participantes
+- Shield: permisos/admin
+- Target: objetivos/metas
+- Zap: puntos cuánticos/energía
+- Trophy: ranking/logros
+- Calendar: fechas/horarios
+- CheckCircle: aprobado
+- XCircle: rechazado
+- Clock: pendiente
+
+COMPONENTES UI REUTILIZABLES
+--------------------------------------------------------------------------------
+- Todos en components/ui/
+- Sin dependencia de shadcn/ui (se removió)
+- HTML nativo + Tailwind CSS
+
+================================================================================
+🐛 BUGS CONOCIDOS Y SOLUCIONES APLICADAS
+================================================================================
+
+✅ BUG: Sidebar no se cierra en mobile al navegar
+--------------------------------------------------------------------------------
+Solución aplicada:
+- Agregado prop onClose al Sidebar
+- Agregado onClick={handleLinkClick} a todos los Links
+- Helper handleLinkClick() verifica isMobile antes de cerrar
+
+✅ BUG: Shadcn/ui causaba errores de compilación
+--------------------------------------------------------------------------------
+Solución aplicada:
+- Removida dependencia de shadcn/ui
+- Reemplazados componentes con HTML nativo + Tailwind
+
+✅ BUG: Evidencias duplicadas en panel de revisión
+--------------------------------------------------------------------------------
+Solución aplicada:
+- Agregado filtro para evitar duplicados en query
+
+✅ BUG: Usuarios FREE generaban puntos cuánticos
+--------------------------------------------------------------------------------
+Solución aplicada:
+- Lógica condicional: solo usuarios de pago generan puntos cuánticos
+- Todos generan XP
+
+⚠️ BUG PENDIENTE: Timezone no se aplica consistentemente
+--------------------------------------------------------------------------------
+Pendiente: Normalizar todas las fechas con timezone del usuario
+
+⚠️ BUG PENDIENTE: Socket.IO se desconecta aleatoriamente
+--------------------------------------------------------------------------------
+Pendiente: Implementar reconexión automática
+
+================================================================================
+📁 ESTRUCTURA DE ARCHIVOS CLAVE
+================================================================================
+
+API ROUTES
+--------------------------------------------------------------------------------
+app/api/
+├── auth/                       # Autenticación
+├── carta/                      # Carta F.R.U.T.O.S.
+├── evidencias/                 # Sistema de evidencias
+├── mentor/                     # Funciones de mentor
+├── school-admin/               # Panel de director
+├── director/                   # Gestión de visiones
+├── admin/                      # Panel maestro
+├── quantum-ia/                 # IA y recomendaciones
+├── user/                       # Gestión de usuarios
+├── subscriptions/              # Suscripciones Stripe
+└── licenses/                   # Sistema de licencias
+
+COMPONENTES
+--------------------------------------------------------------------------------
+components/
+├── dashboard/
+│   ├── DashboardClientLayout.tsx   # Layout principal
+│   ├── Sidebar.tsx                 # Navegación lateral
+│   ├── MobileSidebar.tsx           # Sidebar mobile
+│   ├── Topbar.tsx                  # Barra superior
+│   ├── PlanSelectionModal.tsx      # Selección de tier
+│   └── mentor/                     # Componentes de mentor
+├── phoenix/
+│   ├── PhoenixButton.tsx           # Botón SOS
+│   └── PhoenixWrapper.tsx          # Context provider
+└── ui/
+    └── LanguageSwitcher.tsx        # Selector de idioma
+
+PÁGINAS DEL DASHBOARD
+--------------------------------------------------------------------------------
+app/dashboard/
+├── page.tsx                    # Dashboard principal
+├── hoy/                        # Vista HOY
+├── vault/                      # The Vault
+├── carta/                      # Carta F.R.U.T.O.S.
+├── quantum-detector/           # Monitor IA
+├── mentorias/                  # Solicitar mentoría
+├── ranking/                    # Ranking global
+├── muro/                       # Muro de excelencia
+├── canjear/                    # Tienda
+├── suscripcion/                # Membresía
+├── mentor/                     # Panel de mentor
+├── lider/                      # Panel de líder
+├── game-changer/               # Panel de game changer
+├── coordinador/                # Panel de coordinador
+├── school-admin/               # Panel de director
+├── admin/                      # Panel maestro
+└── configuracion/              # Configuración
+
+================================================================================
+🔐 SISTEMA DE PERMISOS
+================================================================================
+
+ROLES Y SUS ACCESOS
+================================================================================
+
+PARTICIPANTE
+--------------------------------------------------------------------------------
+- Ver dashboard personal
+- Crear/editar carta F.R.U.T.O.S.
+- Subir evidencias
+- Ver ranking
+- Canjear recompensas
+- Solicitar mentoría
+- Ver sus sesiones
+
+MENTOR
+--------------------------------------------------------------------------------
+Todo lo de PARTICIPANTE +
+- Revisar cartas de mentorados
+- Validar evidencias
+- Ver participantes asignados
+- Configurar horarios
+- Ver calendario de llamadas
+- Editar perfil de mentor
+
+LIDER
+--------------------------------------------------------------------------------
+Todo lo de MENTOR +
+- Gestión de visión asignada
+- Reportes de su visión
+
+GAME_CHANGER
+--------------------------------------------------------------------------------
+Todo lo de PARTICIPANTE +
+- Ver participantes de su visión
+- Seguimiento de progreso
+
+COORDINADOR
+--------------------------------------------------------------------------------
+Todo lo de LIDER +
+- Crear visiones
+- Asignar mentores
+- Aprobar cartas
+- Ver reportes globales
+- Crear tareas extraordinarias
+
+DIRECTOR / SCHOOL_ADMIN
+--------------------------------------------------------------------------------
+- Dashboard de organización
+- Gestión de licencias
+- Gestión de créditos de llamadas
+- Ver todos los usuarios de su organización
+- Aprobar perfiles de líderes
+- Ver visiones activas
+- Comprar licencias y créditos
+
+ADMIN / ADMINISTRADOR
+--------------------------------------------------------------------------------
+- Acceso total
+- Gestión de todas las organizaciones
+- Aprobar órdenes de licencias
+- Gestión de permisos
+- Panel maestro completo
+
+CONFIGURACIÓN DE PERMISOS DINÁMICOS
+--------------------------------------------------------------------------------
+Los permisos se definen en config/menuPermissions.ts y se pueden asignar 
+a usuarios específicos en la tabla Usuario.permissions (JSON array).
+
+================================================================================
+🚀 COMANDOS ÚTILES
+================================================================================
+
+DESARROLLO
+--------------------------------------------------------------------------------
+npm run dev              # Iniciar servidor de desarrollo
+npm run build            # Construir para producción
+npm start                # Iniciar servidor de producción
+
+BASE DE DATOS
+--------------------------------------------------------------------------------
+npx prisma generate      # Generar cliente de Prisma
+npx prisma db push       # Sincronizar schema con BD
+npx prisma studio        # Abrir Prisma Studio
+npx prisma migrate dev   # Crear migración
+npx prisma db seed       # Ejecutar seeds
+
+GIT
+--------------------------------------------------------------------------------
+git status               # Ver estado
+git add .                # Agregar todos los cambios
+git commit -m "mensaje"  # Commit con mensaje
+git push                 # Subir cambios
+
+VERCEL
+--------------------------------------------------------------------------------
+vercel                   # Deploy a preview
+vercel --prod            # Deploy a producción
+vercel logs              # Ver logs
+
+================================================================================
+📝 NOTAS FINALES Y PRÓXIMOS PASOS
+================================================================================
+
+PRIORIDADES INMEDIATAS
+--------------------------------------------------------------------------------
+1. ✅ Optimizar responsive mobile (COMPLETADO)
+2. ✅ Sistema de auto-cierre de sidebar mobile (COMPLETADO)
+3. ⚠️ Reactivar sistema Phoenix
+4. ⚠️ Implementar timezone consistente
+5. ⚠️ Completar sistema de pagos para mentorías
+6. ⚠️ Implementar videoconferencia
+
+CONSIDERACIONES TÉCNICAS
+--------------------------------------------------------------------------------
+- Performance: Usar React.memo para componentes pesados
+- SEO: Metadata en cada página
+- Accesibilidad: ARIA labels en todos los botones
+- Security: Validar inputs en servidor
+- Testing: Implementar tests unitarios (pendiente)
+
+ESTILO DE CÓDIGO
+--------------------------------------------------------------------------------
+- TypeScript estricto
+- Componentes funcionales con hooks
+- Props interfaces definidas
+- Comentarios en español
+- Nombres de variables en español
+- Console.logs con emojis para debugging
+
+CONVENCIONES DE COMMITS
+--------------------------------------------------------------------------------
+feat: Nueva funcionalidad
+fix: Corrección de bug
+refactor: Refactorización sin cambio funcional
+style: Cambios de estilo/formato
+docs: Documentación
+chore: Tareas de mantenimiento
+
+================================================================================
+🎯 CÓMO CONTINUAR LA CONVERSACIÓN
+================================================================================
+
+Cuando inicies una nueva conversación, comparte este contexto completo y di:
+
+"Estoy continuando el desarrollo de la Plataforma Frutos QUANTUM. Aquí está 
+todo el contexto de lo que llevamos hasta ahora: [pegar este documento]. 
+Necesito ayuda con [tu pregunta específica]."
+
+EJEMPLOS DE PREGUNTAS EFECTIVAS
+--------------------------------------------------------------------------------
+- "Necesito implementar [funcionalidad X]. ¿Cuál es la mejor forma según 
+  nuestra arquitectura?"
+- "Tengo un bug en [componente Y]. ¿Puedes ayudarme a solucionarlo?"
+- "Quiero optimizar [aspecto Z]. Dame el código exacto para buscar y 
+  reemplazar."
+- "Necesito crear una nueva funcionalidad de [descripción]. Dame el paso 
+  a paso."
+
+FORMATO DE RESPUESTA ESPERADO
+--------------------------------------------------------------------------------
+Siempre pide:
+- "Dame el código exacto para buscar"
+- "Dame el código exacto para reemplazar"
+- "Dime la línea de arriba y la línea de abajo donde debo pegar"
+- "Si es nuevo, dime después de qué línea lo pego"
+
+================================================================================
+¡LISTO! Ahora tienes todo el contexto para continuar el desarrollo de la 
+plataforma. 🚀
+================================================================================

@@ -71,7 +71,8 @@ export async function POST(
         status: 'REJECTED',
         reviewedBy: adminUser.id,
         reviewedAt: new Date(),
-        rejectionReason: reason
+        rejectionReason: reason,
+        updatedAt: new Date()
       }
     });
 

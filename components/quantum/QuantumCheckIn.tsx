@@ -373,7 +373,7 @@ export default function QuantumCheckIn() {
                     disabled={loading || !selectedServiceLevel || !evidenceFile}
                     className="flex-1 px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {loading ? "Enviando..." : "Enviar evidencia"}
+                    {loading ? "Enviando Espere..." : "Enviar evidencia"}
                   </button>
                 </div>
               </div>

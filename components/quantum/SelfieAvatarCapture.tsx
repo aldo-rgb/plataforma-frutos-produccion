@@ -77,7 +77,21 @@ export default function SelfieAvatarCapture({
       
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
-        await videoRef.current.play();
+        
+        // Esperar a que el metadata esté cargado antes de reproducir
+        videoRef.current.onloadedmetadata = async () => {
+          try {
+            if (videoRef.current) {
+              await videoRef.current.play();
+              console.log('✅ Video reproduciendo correctamente');
+            }
+          } catch (playError: any) {
+            // Ignorar AbortError si el componente se desmonta
+            if (playError.name !== 'AbortError') {
+              console.error('❌ Error reproduciendo video:', playError);
+            }
+          }
+        };
       }
       
       setError('');
@@ -107,6 +121,12 @@ export default function SelfieAvatarCapture({
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
       setStream(null);
+    }
+    
+    // Limpiar el video element
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+      videoRef.current.onloadedmetadata = null;
     }
   };
 

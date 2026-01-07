@@ -94,6 +94,19 @@ export default function AsignacionMentoresPage() {
   const router = useRouter();
   const visionId = parseInt(params.id as string);
 
+  // Obtener parámetro de retorno
+  const [returnTo, setReturnTo] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const returnParam = searchParams.get('returnTo');
+      if (returnParam) {
+        setReturnTo(decodeURIComponent(returnParam));
+      }
+    }
+  }, []);
+
   const [vision, setVision] = useState<Vision | null>(null);
   const [cicloInfo, setCicloInfo] = useState<CicloInfo | null>(null);
   const [mentoresAsignados, setMentoresAsignados] = useState<MentorAsignado[]>([]);
@@ -166,6 +179,13 @@ export default function AsignacionMentoresPage() {
 
       if (response.ok) {
         await fetchData();
+        
+        // Si hay una URL de retorno, redirigir después de asignar
+        if (returnTo) {
+          setTimeout(() => {
+            router.push(returnTo);
+          }, 500); // Pequeño delay para que se vea el cambio
+        }
       } else {
         const error = await response.json();
         alert(error.error || 'Error al asignar mentor');

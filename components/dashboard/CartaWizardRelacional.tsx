@@ -2580,7 +2580,7 @@ export default function CartaWizardRelacional() {
                         <>
                           <Loader2 size={18} className="animate-spin sm:w-5 sm:h-5" />
                           <span className="hidden sm:inline">Consultando Licencia espere un momento...</span>
-                          <span className="sm:hidden">Enviando...</span>
+                          <span className="sm:hidden">Enviando Espere...</span>
                         </>
                       ) : (
                         <>
