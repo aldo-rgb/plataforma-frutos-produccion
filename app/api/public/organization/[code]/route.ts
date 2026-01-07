@@ -44,6 +44,8 @@ export async function GET(
 
     if (organization.masterOrganizationId) {
       // Es una organización hija, buscar la master
+      console.log('📍 Es organización HIJA, buscando master ID:', organization.masterOrganizationId);
+      
       masterOrganization = await prisma.organization.findUnique({
         where: { id: organization.masterOrganizationId },
         select: {
@@ -54,6 +56,8 @@ export async function GET(
           slug: true
         }
       });
+
+      console.log('🏢 Master encontrada:', masterOrganization);
 
       // Buscar todas las organizaciones hijas de la master
       childOrganizations = await prisma.organization.findMany({
@@ -71,8 +75,11 @@ export async function GET(
           name: 'asc'
         }
       });
+
+      console.log(`🏢 Organizaciones hijas encontradas: ${childOrganizations.length}`, childOrganizations);
     } else {
       // Es una organización master
+      console.log('👑 Es organización MASTER, buscando sus hijas...');
       masterOrganization = organization;
 
       // Buscar todas sus organizaciones hijas
@@ -92,8 +99,11 @@ export async function GET(
         }
       });
 
+      console.log(`🏢 Organizaciones hijas encontradas: ${childOrganizations.length}`, childOrganizations);
+
       // Si no hay organizaciones hijas, usar la organización master como única opción
       if (childOrganizations.length === 0) {
+        console.log('⚠️ No hay hijas, usando master como única sede');
         childOrganizations = [{
           id: masterOrganization.id,
           name: masterOrganization.name,

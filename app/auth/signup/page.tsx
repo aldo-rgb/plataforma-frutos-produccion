@@ -280,9 +280,22 @@ export default function SignUpPage() {
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">🏢</div>
                 <p className="text-slate-400 text-lg mb-2">No hay sedes disponibles</p>
-                <p className="text-slate-500 text-sm">
-                  Contacta al administrador para más información
+                <p className="text-slate-500 text-sm mb-4">
+                  No se encontraron organizaciones asociadas a este grupo
                 </p>
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 text-left max-w-md mx-auto">
+                  <p className="text-amber-400 text-sm">
+                    <strong>💡 Posibles causas:</strong>
+                  </p>
+                  <ul className="text-amber-300/80 text-xs mt-2 space-y-1 ml-4 list-disc">
+                    <li>Las sedes no tienen configurado el campo "Master Organization"</li>
+                    <li>Esta organización no tiene sedes asociadas</li>
+                    <li>Problema de configuración en la base de datos</li>
+                  </ul>
+                  <p className="text-slate-400 text-xs mt-3">
+                    Por favor contacta al administrador del sistema
+                  </p>
+                </div>
               </div>
             )}
           </div>
