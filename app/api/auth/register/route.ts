@@ -55,7 +55,7 @@ export async function POST(request: Request) {
         email,
         password: hashedPassword,
         rol: 'PARTICIPANTE',
-        tier: 'BASIC',
+        tier: 'FREE',
         organizationId: finalOrganizationId,
         isActive: true,
         experienciaXP: 0,
