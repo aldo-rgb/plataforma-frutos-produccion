@@ -33,6 +33,44 @@ model AccessCode {
   @@index([visionId])
 }
 
+model BasicCallTracking {
+  id                       Int                @id @default(autoincrement())
+  enrollmentId             Int                @unique
+  nickname                 String?
+  phone                    String?
+  preferredCallTimeStart   String?
+  preferredCallTimeEnd     String?
+  coordinatorId            Int?
+  attendanceStatus         AttendanceStatus   @default(PENDING)
+  callAttempts             Int                @default(0)
+  lastInteractionAt        DateTime?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime
+  vision_enrollments       vision_enrollments @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  Usuario                  Usuario?           @relation(fields: [coordinatorId], references: [id])
+  CallInteractionLog       CallInteractionLog[]
+
+  @@index([enrollmentId])
+  @@index([coordinatorId])
+  @@index([attendanceStatus])
+  @@index([preferredCallTimeStart])
+}
+
+model CallInteractionLog {
+  id                Int                @id @default(autoincrement())
+  trackingId        Int
+  coordinatorId     Int
+  callResult        CallResult
+  comments          String?
+  createdAt         DateTime           @default(now())
+  BasicCallTracking BasicCallTracking  @relation(fields: [trackingId], references: [id], onDelete: Cascade)
+  Usuario           Usuario            @relation(fields: [coordinatorId], references: [id])
+
+  @@index([trackingId])
+  @@index([coordinatorId])
+  @@index([createdAt])
+}
+
 model Accion {
   id                Int               @id @default(autoincrement())
   metaId            Int
@@ -2075,6 +2113,8 @@ model Usuario {
   vision_enrollments_vision_enrollments_userIdToUsuario                  vision_enrollments[]            @relation("vision_enrollments_userIdToUsuario")
   weekly_payout_summary_weekly_payout_summary_approvedByToUsuario        weekly_payout_summary[]         @relation("weekly_payout_summary_approvedByToUsuario")
   weekly_payout_summary_weekly_payout_summary_generatedByToUsuario       weekly_payout_summary[]         @relation("weekly_payout_summary_generatedByToUsuario")
+  BasicCallTracking                                                      BasicCallTracking[]
+  CallInteractionLog                                                     CallInteractionLog[]
 
   @@index([communityOrganizationId])
 }
@@ -2386,6 +2426,7 @@ model vision_enrollments {
   updatedAt                                         DateTime
   level                                             VisionLevel
   coordinator_commissions                           coordinator_commissions[]
+  BasicCallTracking                                 BasicCallTracking?
   Usuario_vision_enrollments_coordinatorIdToUsuario Usuario                   @relation("vision_enrollments_coordinatorIdToUsuario", fields: [coordinatorId], references: [id])
   Usuario_vision_enrollments_invitedByToUsuario     Usuario?                  @relation("vision_enrollments_invitedByToUsuario", fields: [invitedBy], references: [id])
   Usuario_vision_enrollments_userIdToUsuario        Usuario                   @relation("vision_enrollments_userIdToUsuario", fields: [userId], references: [id], onDelete: Cascade)
@@ -2902,4 +2943,19 @@ enum VisionLevel {
 enum WalletTxType {
   CREDIT
   DEBIT
+}
+
+enum AttendanceStatus {
+  PENDING
+  ASISTE
+  NO_ASISTE
+}
+
+enum CallResult {
+  ANSWERED
+  VOICEMAIL
+  NO_ANSWER
+  WRONG_NUMBER
+  RESCHEDULED
+  CONFIRMED
 }

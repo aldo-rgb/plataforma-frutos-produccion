@@ -546,9 +546,10 @@ export default function VisionManagePage() {
         {/* Tabs */}
         <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-2 mb-6 flex gap-2 overflow-x-auto">
           {[
-            { id: 'info', label: '📋 Información', icon: '📋' },
+            { id: 'info', label: '🌱 Básico', icon: '🌱' },
+            { id: 'avanzado', label: '🔥 Avanzado', icon: '🔥' },
             { id: 'fechas', label: '📅 Fechas', icon: '📅' },
-            { id: 'staff', label: '👥 Staff', icon: '👥' },
+            { id: 'staff', label: '👥 Coordinadores', icon: '👥' },
             { id: 'gamechangers', label: '⭐ Game Changers', icon: '⭐' },
             { id: 'qr', label: '📱 QR Code', icon: '📱' },
           ].map((tab) => (
@@ -609,6 +610,13 @@ export default function VisionManagePage() {
                         </p>
                       </div>
                     </div>
+                    <button
+                      onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/call-management`)}
+                      className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-bold text-sm transition-all flex items-center gap-2 shadow-lg"
+                    >
+                      <span className="text-xl">📞</span>
+                      Gestión de Llamadas
+                    </button>
                   </div>
                 </div>
                 
@@ -744,6 +752,242 @@ export default function VisionManagePage() {
                                    participante.currentLevel === 'ADVANCED' ? '🔥 Avanzado' : '👑 PL'}
                                 </span>
                               </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Lista de Game Changers */}
+              <div className="bg-gradient-to-br from-yellow-900/30 to-slate-900/50 rounded-xl border-2 border-yellow-500/30 overflow-hidden">
+                <div className="bg-yellow-900/40 p-6 border-b border-yellow-500/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center text-2xl">
+                        ⭐
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black text-yellow-300">Game Changers</h3>
+                        <p className="text-yellow-400/60 text-sm">
+                          {gameChangers.length} participantes destacados
+                        </p>
+                      </div>
+                    </div>
+                    <button className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-bold text-sm transition-all">
+                      ➕ Registrar Game Changer
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="p-6">
+                  {loadingGameChangers ? (
+                    <div className="text-center py-8 text-slate-400">Cargando game changers...</div>
+                  ) : gameChangers.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="text-6xl mb-4">⭐</div>
+                      <p className="text-slate-400 text-lg">No hay Game Changers registrados aún</p>
+                      <p className="text-slate-500 text-sm mt-2">Los Game Changers son participantes destacados de la visión</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {gameChangers.map((gc) => (
+                        <div
+                          key={gc.id}
+                          className="bg-slate-900/50 rounded-lg p-4 border-2 border-yellow-500/30 hover:border-yellow-500/50 transition-all relative overflow-hidden"
+                        >
+                          <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-500/10 rounded-bl-full"></div>
+                          <div className="absolute top-2 right-2 text-2xl">⭐</div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-14 h-14 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                              {gc.usuario.nombre.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-white font-bold truncate text-lg">{gc.usuario.nombre}</div>
+                              <div className="text-slate-400 text-xs truncate">{gc.usuario.email}</div>
+                              <div className="text-yellow-400 text-xs mt-1">
+                                {new Date(gc.assignedAt).toLocaleDateString('es-MX')}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab: Avanzado */}
+          {activeTab === 'avanzado' && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-black text-white mb-4">🔥 Nivel Avanzado</h2>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                  <label className="text-slate-400 text-xs font-medium mb-1 block">Nombre de la Visión</label>
+                  <div className="text-white text-lg font-bold">{vision.nombre}</div>
+                </div>
+
+                <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                  <label className="text-slate-400 text-xs font-medium mb-1 block">Fecha de Inicio</label>
+                  <div className="text-white text-lg font-bold">
+                    {vision.startDate ? new Date(vision.startDate).toLocaleDateString('es-MX') : 'No definida'}
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                  <label className="text-slate-400 text-xs font-medium mb-1 block">Fecha de Finalización</label>
+                  <div className="text-white text-lg font-bold">
+                    {vision.endDate ? new Date(vision.endDate).toLocaleDateString('es-MX') : 'No definida'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabla de Registros del Nivel BÁSICO */}
+              <div className="bg-gradient-to-br from-green-900/30 to-slate-900/50 rounded-xl border-2 border-green-500/30 overflow-hidden">
+                <div className="bg-green-900/40 p-6 border-b border-green-500/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center text-2xl">
+                        🌱
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black text-green-300">Registros Nivel BÁSICO</h3>
+                        <p className="text-green-400/60 text-sm">
+                          {basicEnrollments.length} usuario(s) registrado(s) desde el signup
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="p-6">
+                  {loadingBasicEnrollments ? (
+                    <div className="text-center py-8 text-slate-400">Cargando registros...</div>
+                  ) : basicEnrollments.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="text-6xl mb-4">🌱</div>
+                      <p className="text-slate-400 text-lg">No hay registros aún</p>
+                      <p className="text-slate-500 text-sm mt-2">Los usuarios que se registren aparecerán aquí</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-green-500/20">
+                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Usuario</th>
+                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Email</th>
+                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Organización</th>
+                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Fecha de Registro</th>
+                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Estado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {basicEnrollments.map((enrollment) => (
+                            <tr 
+                              key={enrollment.id}
+                              className="border-b border-slate-700/50 hover:bg-green-500/5 transition-colors"
+                            >
+                              <td className="py-4 px-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white font-bold">
+                                    {enrollment.Usuario?.nombre?.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <div className="text-white font-bold">{enrollment.Usuario?.nombre}</div>
+                                    <div className="text-slate-400 text-xs">ID: {enrollment.userId}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <div className="text-slate-300 text-sm">{enrollment.Usuario?.email}</div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <div className="text-slate-300 text-sm">
+                                  {enrollment.Usuario?.Organization?.name || 'N/A'}
+                                </div>
+                                <div className="text-slate-500 text-xs">
+                                  ID: {enrollment.Usuario?.organizationId}
+                                </div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <div className="text-slate-300 text-sm">
+                                  {new Date(enrollment.enrolledAt).toLocaleDateString('es-MX', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                  })}
+                                </div>
+                                <div className="text-slate-500 text-xs">
+                                  {new Date(enrollment.enrolledAt).toLocaleTimeString('es-MX', {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
+                                  enrollment.enrollmentStatus === 'ENROLLED' 
+                                    ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                                    : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+                                }`}>
+                                  {enrollment.enrollmentStatus === 'ENROLLED' ? '✅ Inscrito' : '⏳ Pendiente'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Lista de Participantes */}
+              <div className="bg-gradient-to-br from-blue-900/30 to-slate-900/50 rounded-xl border-2 border-blue-500/30 overflow-hidden">
+                <div className="bg-blue-900/40 p-6 border-b border-blue-500/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center text-2xl">
+                        👥
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black text-blue-300">Participantes</h3>
+                        <p className="text-blue-400/60 text-sm">
+                          {participantes.length} usuarios inscritos
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="p-6">
+                  {loadingParticipantes ? (
+                    <div className="text-center py-8 text-slate-400">Cargando participantes...</div>
+                  ) : participantes.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="text-6xl mb-4">👥</div>
+                      <p className="text-slate-400 text-lg">No hay participantes inscritos</p>
+                      <p className="text-slate-500 text-sm mt-2">Los participantes aparecerán aquí una vez inscritos</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {participantes.map((p) => (
+                        <div
+                          key={p.id}
+                          className="bg-slate-900/50 rounded-lg p-4 border-2 border-blue-500/30 hover:border-blue-500/50 transition-all"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                              {p.usuario.nombre.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-white font-bold truncate text-lg">{p.usuario.nombre}</div>
+                              <div className="text-slate-400 text-xs truncate">{p.usuario.email}</div>
                             </div>
                           </div>
                         </div>
