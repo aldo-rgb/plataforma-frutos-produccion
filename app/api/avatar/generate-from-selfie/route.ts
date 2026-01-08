@@ -234,7 +234,7 @@ REQUIRED - YES:
 ✅ Sleek, dark, Matrix-inspired fashion
 ✅ Subtle quantum/digital distortion effect around subject
 ✅ Silent authority and confidence
-✅ MATRIX aesthetic with cool cinematic tones;
+✅ MATRIX aesthetic with cool cinematic tones`;
     
       negativePromptToUse = 'different face, face swap, changed facial features, wrong person, altered face shape, different skin tone, different hair color, different facial hair, generic face, face morph, bad face match, poor facial preservation, face paint, face mask, cybernetic face, robotic face parts, face scars, face tattoos, deformed face, ugly, disfigured, bad anatomy, extra limbs, weapons, guns, swords, knives, aggressive pose, angry expression, sunglasses, goggles over eyes, eye coverings, trench coat, military armor, dirty, grungy, post-apocalyptic, excessive neon, cartoon, anime, illustration, watermark, text, logo, blurry face, low quality';
       
@@ -296,7 +296,8 @@ REQUIRED - YES:
     /*
     const imageResponse = await fetch(avatarUrl);
     const imageBuffer = await imageResponse.arrayBuffer();
-    const uploadedUrl = await uploadToS3(imageBuffer, `avatars/${usuario.id}-${Date.now()}.png`);
+    const fileName = 'avatars/' + usuario.id + '-' + Date.now() + '.png';
+    const uploadedUrl = await uploadToS3(imageBuffer, fileName);
     avatarUrl = uploadedUrl;
     */
 
