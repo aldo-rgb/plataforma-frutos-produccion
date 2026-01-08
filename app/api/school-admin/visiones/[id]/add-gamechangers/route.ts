@@ -21,10 +21,15 @@ export async function POST(
     const { id } = await params;
     const visionId = parseInt(id);
     const body = await request.json();
-    const { emails, gameChangerIds } = body;
+    const { emails, gameChangerIds, level } = body; // Agregar level
 
     if (!visionId) {
       return NextResponse.json({ success: false, error: 'ID de visión inválido' }, { status: 400 });
+    }
+
+    // Validar que se envió un nivel válido
+    if (!level || !['BASIC', 'ADVANCED', 'PL'].includes(level)) {
+      return NextResponse.json({ success: false, error: 'Nivel inválido. Debe ser BASIC, ADVANCED o PL' }, { status: 400 });
     }
 
     // Verificar visión y organización
@@ -55,9 +60,13 @@ export async function POST(
           continue; // Skip usuarios inválidos
         }
 
-        // Verificar si ya está asignado
+        // Verificar si ya está asignado EN ESE NIVEL
         const existingAssignment = await prisma.visionGameChanger.findFirst({
-          where: { gameChangerId: userId, visionId: visionId }
+          where: { 
+            gameChangerId: userId, 
+            visionId: visionId,
+            level: level
+          }
         });
 
         if (!existingAssignment) {
@@ -66,6 +75,7 @@ export async function POST(
               gameChangerId: userId,
               visionId: visionId,
               asignadoPorId: session.user.id,
+              level: level,
               createdAt: new Date()
             }
           });
@@ -288,9 +298,13 @@ export async function POST(
     const wizardsReset: string[] = [];
 
     for (const user of [...usersToAdd, ...created]) {
-      // Verificar si ya está en la visión
+      // Verificar si ya está en la visión EN ESE NIVEL
       const already = await prisma.visionGameChanger.findFirst({ 
-        where: { visionId, gameChangerId: user.id } 
+        where: { 
+          visionId, 
+          gameChangerId: user.id,
+          level: level
+        } 
       });
       
       if (!already) {
@@ -298,7 +312,8 @@ export async function POST(
           data: { 
             visionId, 
             gameChangerId: user.id,
-            asignadoPorId: session.user.id
+            asignadoPorId: session.user.id,
+            level: level
           } 
         });
         results.push(user.email);
@@ -346,8 +361,9 @@ export async function POST(
               console.warn(`⚠️ Sin créditos disponibles para crear licencia de usuario existente ${user.email}`);
             }
           }
+        }
 
-          // Reiniciar su wizard si ya existía
+        // Reiniciar su wizard si ya existía
         if (!created.find(c => c.id === user.id)) {
           const carta = await prisma.cartaFrutos.findFirst({
             where: { usuarioId: user.id }

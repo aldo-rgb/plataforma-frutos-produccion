@@ -62,7 +62,7 @@ export default function VisionManagePage() {
 
   const [vision, setVision] = useState<Vision | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'info' | 'fechas' | 'staff' | 'gamechangers' | 'qr'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'avanzado' | 'liderato' | 'fechas' | 'staff' | 'gamechangers' | 'qr'>('info');
   
   // Toast notification state
   const [toast, setToast] = useState<{show: boolean; message: string; type: 'success' | 'error'}>({
@@ -84,6 +84,14 @@ export default function VisionManagePage() {
   // Estado para registros del nivel BÁSICO
   const [basicEnrollments, setBasicEnrollments] = useState<any[]>([]);
   const [loadingBasicEnrollments, setLoadingBasicEnrollments] = useState(false);
+  
+  // Estado para registros del nivel AVANZADO
+  const [advancedEnrollments, setAdvancedEnrollments] = useState<any[]>([]);
+  const [loadingAdvancedEnrollments, setLoadingAdvancedEnrollments] = useState(false);
+  
+  // Estado para registros del nivel LIDERATO (PL)
+  const [plEnrollments, setPlEnrollments] = useState<any[]>([]);
+  const [loadingPlEnrollments, setLoadingPlEnrollments] = useState(false);
   
   // Estados para edición
   const [editingDates, setEditingDates] = useState(false);
@@ -110,6 +118,7 @@ export default function VisionManagePage() {
   const [newGameChangerData, setNewGameChangerData] = useState({
     nombre: '',
     email: '',
+    level: 'BASIC', // Default level
   });
 
   // Estados para QR
@@ -124,6 +133,8 @@ export default function VisionManagePage() {
     fetchStaffData(); // Cargar staff existente
     generateQR(); // Generar QR automáticamente
     fetchBasicEnrollments(); // Cargar registros del nivel BÁSICO
+    fetchAdvancedEnrollments(); // Cargar registros del nivel AVANZADO
+    fetchPlEnrollments(); // Cargar registros del nivel LIDERATO
   }, [visionId]);
 
   const fetchVisionData = async () => {
@@ -230,6 +241,38 @@ export default function VisionManagePage() {
     }
   };
 
+  const fetchAdvancedEnrollments = async () => {
+    try {
+      setLoadingAdvancedEnrollments(true);
+      const res = await fetch(`/api/school-admin/visiones/${visionId}/advanced-enrollments`);
+      const data = await res.json();
+      
+      if (data.success) {
+        setAdvancedEnrollments(data.enrollments || []);
+      }
+    } catch (error) {
+      console.error('Error fetching advanced enrollments:', error);
+    } finally {
+      setLoadingAdvancedEnrollments(false);
+    }
+  };
+
+  const fetchPlEnrollments = async () => {
+    try {
+      setLoadingPlEnrollments(true);
+      const res = await fetch(`/api/school-admin/visiones/${visionId}/pl-enrollments`);
+      const data = await res.json();
+      
+      if (data.success) {
+        setPlEnrollments(data.enrollments || []);
+      }
+    } catch (error) {
+      console.error('Error fetching PL enrollments:', error);
+    } finally {
+      setLoadingPlEnrollments(false);
+    }
+  };
+
   const fetchStaffData = async () => {
     try {
       const res = await fetch(`/api/school-admin/visiones/${visionId}/staff`);
@@ -249,9 +292,9 @@ export default function VisionManagePage() {
     }
   };
 
-  const handleOpenGameChangerModal = () => {
+  const handleOpenGameChangerModal = (level?: string) => {
     setShowGameChangerModal(true);
-    setNewGameChangerData({ nombre: '', email: '' });
+    setNewGameChangerData({ nombre: '', email: '', level: level || 'BASIC' });
   };
 
   const handleRegisterGameChanger = async () => {
@@ -290,14 +333,15 @@ export default function VisionManagePage() {
 
       const gameChangerId = createData.userId;
 
-      // Asignar Game Changer a la visión
+      // Asignar Game Changer a la visión with level
       const res = await fetch(`/api/school-admin/visiones/${visionId}/add-gamechangers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          gameChangerIds: [gameChangerId]
+          gameChangerIds: [gameChangerId],
+          level: newGameChangerData.level || 'BASIC' // Include level
         }),
       });
 
@@ -307,7 +351,7 @@ export default function VisionManagePage() {
         setToast({show: true, message: 'Game Changer registrado exitosamente', type: 'success'});
         setTimeout(() => setToast({show: false, message: '', type: 'success'}), 3000);
         setShowGameChangerModal(false);
-        setNewGameChangerData({ nombre: '', email: '' });
+        setNewGameChangerData({ nombre: '', email: '', level: 'BASIC' });
         fetchGameChangers();
       } else {
         setToast({show: true, message: data.error || 'Error al registrar Game Changer', type: 'error'});
@@ -548,6 +592,7 @@ export default function VisionManagePage() {
           {[
             { id: 'info', label: '🌱 Básico', icon: '🌱' },
             { id: 'avanzado', label: '🔥 Avanzado', icon: '🔥' },
+            { id: 'liderato', label: '👑 Liderato', icon: '👑' },
             { id: 'fechas', label: '📅 Fechas', icon: '📅' },
             { id: 'staff', label: '👥 Coordinadores', icon: '👥' },
             { id: 'gamechangers', label: '⭐ Game Changers', icon: '⭐' },
@@ -595,173 +640,7 @@ export default function VisionManagePage() {
                 </div>
               </div>
 
-              {/* Tabla de Registros del Nivel BÁSICO */}
-              <div className="bg-gradient-to-br from-green-900/30 to-slate-900/50 rounded-xl border-2 border-green-500/30 overflow-hidden">
-                <div className="bg-green-900/40 p-6 border-b border-green-500/30">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center text-2xl">
-                        🌱
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-black text-green-300">Registros Nivel BÁSICO</h3>
-                        <p className="text-green-400/60 text-sm">
-                          {basicEnrollments.length} usuario(s) registrado(s) desde el signup
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/call-management`)}
-                      className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-bold text-sm transition-all flex items-center gap-2 shadow-lg"
-                    >
-                      <span className="text-xl">📞</span>
-                      Gestión de Llamadas
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="p-6">
-                  {loadingBasicEnrollments ? (
-                    <div className="text-center py-8 text-slate-400">Cargando registros...</div>
-                  ) : basicEnrollments.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="text-6xl mb-4">🌱</div>
-                      <p className="text-slate-400 text-lg">No hay registros aún</p>
-                      <p className="text-slate-500 text-sm mt-2">Los usuarios que se registren aparecerán aquí</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-green-500/20">
-                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Usuario</th>
-                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Email</th>
-                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Organización</th>
-                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Fecha de Registro</th>
-                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Estado</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {basicEnrollments.map((enrollment) => (
-                            <tr 
-                              key={enrollment.id}
-                              className="border-b border-slate-700/50 hover:bg-green-500/5 transition-colors"
-                            >
-                              <td className="py-4 px-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white font-bold">
-                                    {enrollment.Usuario?.nombre?.charAt(0).toUpperCase()}
-                                  </div>
-                                  <div>
-                                    <div className="text-white font-bold">{enrollment.Usuario?.nombre}</div>
-                                    <div className="text-slate-400 text-xs">ID: {enrollment.userId}</div>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="py-4 px-4">
-                                <div className="text-slate-300 text-sm">{enrollment.Usuario?.email}</div>
-                              </td>
-                              <td className="py-4 px-4">
-                                <div className="text-slate-300 text-sm">
-                                  {enrollment.Usuario?.Organization?.name || 'N/A'}
-                                </div>
-                                <div className="text-slate-500 text-xs">
-                                  ID: {enrollment.Usuario?.organizationId}
-                                </div>
-                              </td>
-                              <td className="py-4 px-4">
-                                <div className="text-slate-300 text-sm">
-                                  {new Date(enrollment.enrolledAt).toLocaleDateString('es-MX', {
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric'
-                                  })}
-                                </div>
-                                <div className="text-slate-500 text-xs">
-                                  {new Date(enrollment.enrolledAt).toLocaleTimeString('es-MX', {
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  })}
-                                </div>
-                              </td>
-                              <td className="py-4 px-4">
-                                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
-                                  enrollment.enrollmentStatus === 'ENROLLED' 
-                                    ? 'bg-green-500/20 text-green-300 border border-green-500/30'
-                                    : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
-                                }`}>
-                                  {enrollment.enrollmentStatus === 'ENROLLED' ? '✅ Inscrito' : '⏳ Pendiente'}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Lista de Participantes */}
-              <div className="bg-gradient-to-br from-blue-900/30 to-slate-900/50 rounded-xl border-2 border-blue-500/30 overflow-hidden">
-                <div className="bg-blue-900/40 p-6 border-b border-blue-500/30">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center text-2xl">
-                        👥
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-black text-blue-300">Participantes Inscritos</h3>
-                        <p className="text-blue-400/60 text-sm">
-                          {participantes.length} / {vision.maxParticipantes} participantes
-                        </p>
-                      </div>
-                    </div>
-                    <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm transition-all">
-                      ➕ Agregar Participante
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="p-6">
-                  {loadingParticipantes ? (
-                    <div className="text-center py-8 text-slate-400">Cargando participantes...</div>
-                  ) : participantes.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="text-6xl mb-4">👥</div>
-                      <p className="text-slate-400 text-lg">No hay participantes inscritos aún</p>
-                      <p className="text-slate-500 text-sm mt-2">Los participantes aparecerán aquí cuando se inscriban</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {participantes.map((participante) => (
-                        <div
-                          key={participante.id}
-                          className="bg-slate-900/50 rounded-lg p-4 border border-blue-500/20 hover:border-blue-500/40 transition-all"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                              {participante.usuario.nombre.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-white font-bold truncate">{participante.usuario.nombre}</div>
-                              <div className="text-slate-400 text-xs truncate">{participante.usuario.email}</div>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded">
-                                  {participante.currentLevel === 'BASIC' ? '🌱 Básico' : 
-                                   participante.currentLevel === 'ADVANCED' ? '🔥 Avanzado' : '👑 PL'}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Lista de Game Changers */}
+              {/* Lista de Game Changers BÁSICO */}
               <div className="bg-gradient-to-br from-yellow-900/30 to-slate-900/50 rounded-xl border-2 border-yellow-500/30 overflow-hidden">
                 <div className="bg-yellow-900/40 p-6 border-b border-yellow-500/30">
                   <div className="flex items-center justify-between">
@@ -770,13 +649,16 @@ export default function VisionManagePage() {
                         ⭐
                       </div>
                       <div>
-                        <h3 className="text-xl font-black text-yellow-300">Game Changers</h3>
+                        <h3 className="text-xl font-black text-yellow-300">Game Changers - Nivel BÁSICO</h3>
                         <p className="text-yellow-400/60 text-sm">
-                          {gameChangers.length} participantes destacados
+                          {gameChangers.filter((gc: any) => gc.level === 'BASIC').length} participantes destacados
                         </p>
                       </div>
                     </div>
-                    <button className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-bold text-sm transition-all">
+                    <button 
+                      onClick={() => handleOpenGameChangerModal('BASIC')}
+                      className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-bold text-sm transition-all"
+                    >
                       ➕ Registrar Game Changer
                     </button>
                   </div>
@@ -785,15 +667,15 @@ export default function VisionManagePage() {
                 <div className="p-6">
                   {loadingGameChangers ? (
                     <div className="text-center py-8 text-slate-400">Cargando game changers...</div>
-                  ) : gameChangers.length === 0 ? (
+                  ) : gameChangers.filter((gc: any) => gc.level === 'BASIC').length === 0 ? (
                     <div className="text-center py-12">
                       <div className="text-6xl mb-4">⭐</div>
-                      <p className="text-slate-400 text-lg">No hay Game Changers registrados aún</p>
-                      <p className="text-slate-500 text-sm mt-2">Los Game Changers son participantes destacados de la visión</p>
+                      <p className="text-slate-400 text-lg">No hay Game Changers de BÁSICO registrados aún</p>
+                      <p className="text-slate-500 text-sm mt-2">Registra Game Changers para el nivel Básico</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {gameChangers.map((gc) => (
+                      {gameChangers.filter((gc: any) => gc.level === 'BASIC').map((gc: any) => (
                         <div
                           key={gc.id}
                           className="bg-slate-900/50 rounded-lg p-4 border-2 border-yellow-500/30 hover:border-yellow-500/50 transition-all relative overflow-hidden"
@@ -818,36 +700,8 @@ export default function VisionManagePage() {
                   )}
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* Tab: Avanzado */}
-          {activeTab === 'avanzado' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-black text-white mb-4">🔥 Nivel Avanzado</h2>
-              
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
-                  <label className="text-slate-400 text-xs font-medium mb-1 block">Nombre de la Visión</label>
-                  <div className="text-white text-lg font-bold">{vision.nombre}</div>
-                </div>
-
-                <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
-                  <label className="text-slate-400 text-xs font-medium mb-1 block">Fecha de Inicio</label>
-                  <div className="text-white text-lg font-bold">
-                    {vision.startDate ? new Date(vision.startDate).toLocaleDateString('es-MX') : 'No definida'}
-                  </div>
-                </div>
-
-                <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
-                  <label className="text-slate-400 text-xs font-medium mb-1 block">Fecha de Finalización</label>
-                  <div className="text-white text-lg font-bold">
-                    {vision.endDate ? new Date(vision.endDate).toLocaleDateString('es-MX') : 'No definida'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Tabla de Registros del Nivel BÁSICO */}
+              {/* Registros Nivel BÁSICO */}
               <div className="bg-gradient-to-br from-green-900/30 to-slate-900/50 rounded-xl border-2 border-green-500/30 overflow-hidden">
                 <div className="bg-green-900/40 p-6 border-b border-green-500/30">
                   <div className="flex items-center justify-between">
@@ -862,6 +716,12 @@ export default function VisionManagePage() {
                         </p>
                       </div>
                     </div>
+                    <button
+                      onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/call-management?level=BASIC`)}
+                      className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                    >
+                      <span>📞</span> Gestión de Llamadas
+                    </button>
                   </div>
                 </div>
                 
@@ -944,6 +804,382 @@ export default function VisionManagePage() {
                       </table>
                     </div>
                   )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab: Avanzado */}
+          {activeTab === 'avanzado' && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-black text-white mb-4">🔥 Nivel Avanzado</h2>
+              
+              {/* Game Changers AVANZADO - Agregar aquí */}
+              <div className="bg-gradient-to-br from-orange-900/30 to-slate-900/50 rounded-xl border-2 border-orange-500/30 overflow-hidden">
+                <div className="bg-orange-900/40 p-6 border-b border-orange-500/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center text-2xl">
+                        ⭐
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black text-orange-300">Game Changers - Nivel AVANZADO</h3>
+                        <p className="text-orange-400/60 text-sm">
+                          {gameChangers.filter((gc: any) => gc.level === 'ADVANCED').length} participantes destacados
+                        </p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => handleOpenGameChangerModal('ADVANCED')}
+                      className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-bold text-sm transition-all"
+                    >
+                      ➕ Registrar Game Changer
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="p-6">
+                  {loadingGameChangers ? (
+                    <div className="text-center py-8 text-slate-400">Cargando game changers...</div>
+                  ) : gameChangers.filter((gc: any) => gc.level === 'ADVANCED').length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="text-6xl mb-4">⭐</div>
+                      <p className="text-slate-400 text-lg">No hay Game Changers de AVANZADO registrados aún</p>
+                      <p className="text-slate-500 text-sm mt-2">Registra Game Changers para el nivel Avanzado</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {gameChangers.filter((gc: any) => gc.level === 'ADVANCED').map((gc: any) => (
+                        <div
+                          key={gc.id}
+                          className="bg-slate-900/50 rounded-lg p-4 border-2 border-orange-500/30 hover:border-orange-500/50 transition-all relative overflow-hidden"
+                        >
+                          <div className="absolute top-0 right-0 w-16 h-16 bg-orange-500/10 rounded-bl-full"></div>
+                          <div className="absolute top-2 right-2 text-2xl">⭐</div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                              {gc.usuario.nombre.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-white font-bold truncate text-lg">{gc.usuario.nombre}</div>
+                              <div className="text-slate-400 text-xs truncate">{gc.usuario.email}</div>
+                              <div className="text-orange-400 text-xs mt-1">
+                                {new Date(gc.assignedAt).toLocaleDateString('es-MX')}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Registros Nivel AVANZADO */}
+              <div className="bg-gradient-to-br from-orange-900/30 to-slate-900/50 rounded-xl border-2 border-orange-500/30 overflow-hidden">
+                <div className="bg-orange-900/40 p-6 border-b border-orange-500/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center text-2xl">
+                        🔥
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black text-orange-300">Registros Nivel AVANZADO</h3>
+                        <p className="text-orange-400/60 text-sm">
+                          {advancedEnrollments.length} usuario(s) registrado(s) desde el signup
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/call-management?level=ADVANCED`)}
+                      className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                    >
+                      <span>📞</span> Gestión de Llamadas
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="p-6">
+                  {loadingAdvancedEnrollments ? (
+                    <div className="text-center py-8 text-slate-400">Cargando registros...</div>
+                  ) : advancedEnrollments.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="text-6xl mb-4">🔥</div>
+                      <p className="text-slate-400 text-lg">No hay registros aún</p>
+                      <p className="text-slate-500 text-sm mt-2">Los usuarios que se registren aparecerán aquí</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-orange-500/20">
+                            <th className="text-left py-3 px-4 text-orange-300 font-bold text-sm">Usuario</th>
+                            <th className="text-left py-3 px-4 text-orange-300 font-bold text-sm">Email</th>
+                            <th className="text-left py-3 px-4 text-orange-300 font-bold text-sm">Organización</th>
+                            <th className="text-left py-3 px-4 text-orange-300 font-bold text-sm">Fecha de Registro</th>
+                            <th className="text-left py-3 px-4 text-orange-300 font-bold text-sm">Estado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {advancedEnrollments.map((enrollment) => (
+                            <tr 
+                              key={enrollment.id}
+                              className="border-b border-slate-700/50 hover:bg-orange-500/5 transition-colors"
+                            >
+                              <td className="py-4 px-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center text-white font-bold">
+                                    {enrollment.Usuario?.nombre?.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <div className="text-white font-bold">{enrollment.Usuario?.nombre}</div>
+                                    <div className="text-slate-400 text-xs">ID: {enrollment.userId}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <div className="text-slate-300 text-sm">{enrollment.Usuario?.email}</div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <div className="text-slate-300 text-sm">
+                                  {enrollment.Usuario?.Organization?.name || 'N/A'}
+                                </div>
+                                <div className="text-slate-500 text-xs">
+                                  ID: {enrollment.Usuario?.organizationId}
+                                </div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <div className="text-slate-300 text-sm">
+                                  {new Date(enrollment.enrolledAt).toLocaleDateString('es-MX', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                  })}
+                                </div>
+                                <div className="text-slate-500 text-xs">
+                                  {new Date(enrollment.enrolledAt).toLocaleTimeString('es-MX', {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
+                                  enrollment.enrollmentStatus === 'ENROLLED' 
+                                    ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
+                                    : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+                                }`}>
+                                  {enrollment.enrollmentStatus === 'ENROLLED' ? '✅ Inscrito' : '⏳ Pendiente'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab: Liderato */}
+          {activeTab === 'liderato' && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-black text-white mb-4">👑 Nivel Liderato</h2>
+              
+              {/* Game Changers LIDERATO */}
+              <div className="bg-gradient-to-br from-purple-900/30 to-slate-900/50 rounded-xl border-2 border-purple-500/30 overflow-hidden">
+                <div className="bg-purple-900/40 p-6 border-b border-purple-500/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center text-2xl">
+                        ⭐
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black text-purple-300">Game Changers - Nivel LIDERATO</h3>
+                        <p className="text-purple-400/60 text-sm">
+                          {gameChangers.filter((gc: any) => gc.level === 'PL').length} participantes destacados
+                        </p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => handleOpenGameChangerModal('PL')}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold text-sm transition-all"
+                    >
+                      ➕ Registrar Game Changer
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="p-6">
+                  {loadingGameChangers ? (
+                    <div className="text-center py-8 text-slate-400">Cargando game changers...</div>
+                  ) : gameChangers.filter((gc: any) => gc.level === 'PL').length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="text-6xl mb-4">⭐</div>
+                      <p className="text-slate-400 text-lg">No hay Game Changers de LIDERATO registrados aún</p>
+                      <p className="text-slate-500 text-sm mt-2">Registra Game Changers para el nivel Liderato</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {gameChangers.filter((gc: any) => gc.level === 'PL').map((gc: any) => (
+                        <div
+                          key={gc.id}
+                          className="bg-slate-900/50 rounded-lg p-4 border-2 border-purple-500/30 hover:border-purple-500/50 transition-all relative overflow-hidden"
+                        >
+                          <div className="absolute top-0 right-0 w-16 h-16 bg-purple-500/10 rounded-bl-full"></div>
+                          <div className="absolute top-2 right-2 text-2xl">⭐</div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                              {gc.usuario.nombre.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-white font-bold truncate text-lg">{gc.usuario.nombre}</div>
+                              <div className="text-slate-400 text-xs truncate">{gc.usuario.email}</div>
+                              <div className="text-purple-400 text-xs mt-1">
+                                {new Date(gc.assignedAt).toLocaleDateString('es-MX')}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Registros Nivel LIDERATO */}
+              <div className="bg-gradient-to-br from-purple-900/30 to-slate-900/50 rounded-xl border-2 border-purple-500/30 overflow-hidden">
+                <div className="bg-purple-900/40 p-6 border-b border-purple-500/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center text-2xl">
+                        👑
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black text-purple-300">Registros Nivel LIDERATO</h3>
+                        <p className="text-purple-400/60 text-sm">
+                          {plEnrollments.length} usuario(s) registrado(s) desde el signup
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/call-management?level=PL`)}
+                      className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                    >
+                      <span>📞</span> Gestión de Llamadas
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="p-6">
+                  {loadingPlEnrollments ? (
+                    <div className="text-center py-8 text-slate-400">Cargando registros...</div>
+                  ) : plEnrollments.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="text-6xl mb-4">👑</div>
+                      <p className="text-slate-400 text-lg">No hay registros aún</p>
+                      <p className="text-slate-500 text-sm mt-2">Los usuarios que se registren aparecerán aquí</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-purple-500/20">
+                            <th className="text-left py-3 px-4 text-purple-300 font-bold text-sm">Usuario</th>
+                            <th className="text-left py-3 px-4 text-purple-300 font-bold text-sm">Email</th>
+                            <th className="text-left py-3 px-4 text-purple-300 font-bold text-sm">Organización</th>
+                            <th className="text-left py-3 px-4 text-purple-300 font-bold text-sm">Fecha de Registro</th>
+                            <th className="text-left py-3 px-4 text-purple-300 font-bold text-sm">Estado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {plEnrollments.map((enrollment) => (
+                            <tr 
+                              key={enrollment.id}
+                              className="border-b border-slate-700/50 hover:bg-purple-500/5 transition-colors"
+                            >
+                              <td className="py-4 px-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center text-white font-bold">
+                                    {enrollment.Usuario?.nombre?.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <div className="text-white font-bold">{enrollment.Usuario?.nombre}</div>
+                                    <div className="text-slate-400 text-xs">ID: {enrollment.userId}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <div className="text-slate-300 text-sm">{enrollment.Usuario?.email}</div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <div className="text-slate-300 text-sm">
+                                  {enrollment.Usuario?.Organization?.name || 'N/A'}
+                                </div>
+                                <div className="text-slate-500 text-xs">
+                                  ID: {enrollment.Usuario?.organizationId}
+                                </div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <div className="text-slate-300 text-sm">
+                                  {new Date(enrollment.enrolledAt).toLocaleDateString('es-MX', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                  })}
+                                </div>
+                                <div className="text-slate-500 text-xs">
+                                  {new Date(enrollment.enrolledAt).toLocaleTimeString('es-MX', {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
+                                  enrollment.enrollmentStatus === 'ENROLLED' 
+                                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                                    : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+                                }`}>
+                                  {enrollment.enrollmentStatus === 'ENROLLED' ? '✅ Inscrito' : '⏳ Pendiente'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tab: Fechas */}
+          {activeTab === 'fechas' && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-black text-white mb-4">📅 Gestión de Fechas</h2>
+              
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                  <label className="text-slate-400 text-xs font-medium mb-1 block">Nombre de la Visión</label>
+                  <div className="text-white text-lg font-bold">{vision.nombre}</div>
+                </div>
+
+                <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                  <label className="text-slate-400 text-xs font-medium mb-1 block">Fecha de Inicio</label>
+                  <div className="text-white text-lg font-bold">
+                    {vision.startDate ? new Date(vision.startDate).toLocaleDateString('es-MX') : 'No definida'}
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                  <label className="text-slate-400 text-xs font-medium mb-1 block">Fecha de Finalización</label>
+                  <div className="text-white text-lg font-bold">
+                    {vision.endDate ? new Date(vision.endDate).toLocaleDateString('es-MX') : 'No definida'}
+                  </div>
                 </div>
               </div>
 
@@ -1356,7 +1592,7 @@ export default function VisionManagePage() {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-black text-white">⭐ Game Changers</h2>
                 <button 
-                  onClick={handleOpenGameChangerModal}
+                  onClick={() => handleOpenGameChangerModal()}
                   className="px-6 py-3 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 text-white rounded-xl font-bold transition-all shadow-lg"
                 >
                   ➕ Registrar Game Changer
@@ -1480,11 +1716,16 @@ export default function VisionManagePage() {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border-2 border-yellow-500/30 max-w-md w-full shadow-2xl">
             <div className="p-6 border-b border-slate-700 flex items-center justify-between">
-              <h3 className="text-2xl font-black text-white">⭐ Registrar Game Changer</h3>
+              <div>
+                <h3 className="text-2xl font-black text-white">⭐ Registrar Game Changer</h3>
+                <p className="text-sm text-yellow-400 mt-1">
+                  Nivel: {newGameChangerData.level === 'BASIC' ? '🌱 BÁSICO' : newGameChangerData.level === 'ADVANCED' ? '🔥 AVANZADO' : '👑 PL'}
+                </p>
+              </div>
               <button
                 onClick={() => {
                   setShowGameChangerModal(false);
-                  setNewGameChangerData({ nombre: '', email: '' });
+                  setNewGameChangerData({ nombre: '', email: '', level: 'BASIC' });
                 }}
                 className="text-slate-400 hover:text-white transition-colors"
               >
@@ -1494,7 +1735,7 @@ export default function VisionManagePage() {
 
             <div className="p-6 space-y-4">
               <p className="text-slate-300 text-sm">
-                Crea un nuevo usuario Game Changer. Si el email ya existe, se convertirá a Game Changer.
+                Crea un nuevo usuario Game Changer para el nivel <strong className="text-yellow-400">{newGameChangerData.level}</strong>. Si el email ya existe, se asignará como Game Changer a este nivel.
               </p>
               
               <div className="space-y-3">
@@ -1532,7 +1773,7 @@ export default function VisionManagePage() {
               <button
                 onClick={() => {
                   setShowGameChangerModal(false);
-                  setNewGameChangerData({ nombre: '', email: '' });
+                  setNewGameChangerData({ nombre: '', email: '', level: 'BASIC' });
                 }}
                 className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all"
               >

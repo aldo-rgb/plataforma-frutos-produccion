@@ -56,6 +56,51 @@ export default function SolicitarMentorPage() {
     checkExistingApplication();
   }, []);
 
+  // Auto-refresh cuando el estado es DRAFT (Pago Pendiente)
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    
+    if (existingApplication?.status === 'DRAFT') {
+      console.log('🔄 Iniciando auto-refresh cada 5 segundos para verificar estado de pago...');
+      
+      intervalId = setInterval(async () => {
+        try {
+          const response = await fetch('/api/mentor/application/check');
+          const data = await response.json();
+          
+          if (data.hasApplication) {
+            const newStatus = data.application.status;
+            const oldStatus = existingApplication.status;
+            
+            // Si el estado cambió de DRAFT a otro estado
+            if (oldStatus === 'DRAFT' && newStatus !== 'DRAFT') {
+              console.log('✅ Estado actualizado de DRAFT a', newStatus);
+              setExistingApplication(data.application);
+              clearInterval(intervalId); // Detener el polling
+              
+              // Mostrar notificación de éxito
+              if (newStatus === 'PENDING') {
+                alert('✅ ¡Pago completado! Tu solicitud está ahora en revisión.');
+              }
+            } else if (newStatus !== oldStatus) {
+              setExistingApplication(data.application);
+            }
+          }
+        } catch (error) {
+          console.error('Error verificando estado:', error);
+        }
+      }, 5000); // Verificar cada 5 segundos
+    }
+    
+    // Cleanup al desmontar o cuando el estado cambie
+    return () => {
+      if (intervalId) {
+        console.log('🛑 Deteniendo auto-refresh');
+        clearInterval(intervalId);
+      }
+    };
+  }, [existingApplication?.status]);
+
   useEffect(() => {
     console.log('🔷 showCodeModal cambió a:', showCodeModal);
   }, [showCodeModal]);
@@ -297,6 +342,15 @@ export default function SolicitarMentorPage() {
                     : 'Tu solicitud para ser mentor está siendo revisada por nuestro equipo de administración.'
                   }
                 </p>
+                
+                {/* Indicador de auto-refresh cuando está en DRAFT */}
+                {existingApplication.status === 'DRAFT' && (
+                  <div className="mb-4 flex items-center justify-center gap-2 text-sm text-slate-400">
+                    <Loader2 className="w-4 h-4 animate-spin text-yellow-400" />
+                    <span>Verificando estado del pago automáticamente...</span>
+                  </div>
+                )}
+                
                 {existingApplication.status === 'PENDING' && (
                   <p className="text-slate-500 mb-6">
                     El proceso de revisión toma entre 3-5 días hábiles. Te notificaremos por correo electrónico cuando tengamos una respuesta.

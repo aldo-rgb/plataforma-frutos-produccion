@@ -2211,18 +2211,20 @@ model VisionEscrow {
 }
 
 model VisionGameChanger {
-  id                                               Int      @id @default(autoincrement())
+  id                                               Int         @id @default(autoincrement())
   visionId                                         Int
   gameChangerId                                    Int
   asignadoPorId                                    Int
-  createdAt                                        DateTime @default(now())
-  Usuario_VisionGameChanger_asignadoPorIdToUsuario Usuario  @relation("VisionGameChanger_asignadoPorIdToUsuario", fields: [asignadoPorId], references: [id], onDelete: Cascade)
-  Usuario_VisionGameChanger_gameChangerIdToUsuario Usuario  @relation("VisionGameChanger_gameChangerIdToUsuario", fields: [gameChangerId], references: [id], onDelete: Cascade)
-  Vision                                           Vision   @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  level                                            VisionLevel
+  createdAt                                        DateTime    @default(now())
+  Usuario_VisionGameChanger_asignadoPorIdToUsuario Usuario     @relation("VisionGameChanger_asignadoPorIdToUsuario", fields: [asignadoPorId], references: [id], onDelete: Cascade)
+  Usuario_VisionGameChanger_gameChangerIdToUsuario Usuario     @relation("VisionGameChanger_gameChangerIdToUsuario", fields: [gameChangerId], references: [id], onDelete: Cascade)
+  Vision                                           Vision      @relation(fields: [visionId], references: [id], onDelete: Cascade)
 
-  @@unique([visionId, gameChangerId])
+  @@unique([visionId, gameChangerId, level])
   @@index([gameChangerId])
   @@index([visionId])
+  @@index([level])
 }
 
 model VisionMentor {

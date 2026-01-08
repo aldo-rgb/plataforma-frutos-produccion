@@ -60,17 +60,18 @@ export async function POST() {
     const comboCompleto = basicoPrice + avanzadoPrice + plPrice;
     const comboAvanzadoPL = avanzadoPrice + plPrice;
 
-    // Verificar si ya existen productos CORE
+    // Verificar si este director ya tiene productos CORE
     const existingCore = await prisma.schoolProduct.findFirst({
       where: {
         organizationId: user.organizationId,
+        createdBy: session.user.id, // Verificar solo para este director
         type: 'CORE_TRAINING',
       },
     });
 
     if (existingCore) {
       return NextResponse.json(
-        { success: false, error: 'Los productos CORE ya están inicializados' },
+        { success: false, error: 'Los productos CORE ya están inicializados para este director' },
         { status: 400 }
       );
     }

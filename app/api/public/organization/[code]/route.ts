@@ -38,28 +38,26 @@ export async function GET(
       );
     }
 
-    // Determinar si es una organización master o hija
-    let masterOrganization;
+    // Determinar si tiene una master organization
+    let masterOrganization = null;
     let childOrganizations = [];
 
     if (organization.masterOrganizationId) {
-      // Es una organización hija, buscar la master
-      console.log('📍 Es organización HIJA, buscando master ID:', organization.masterOrganizationId);
+      // Buscar la master organization en la tabla MasterOrganization
+      console.log('📍 Buscando MasterOrganization ID:', organization.masterOrganizationId);
       
-      masterOrganization = await prisma.organization.findUnique({
+      masterOrganization = await prisma.masterOrganization.findUnique({
         where: { id: organization.masterOrganizationId },
         select: {
           id: true,
           name: true,
-          logoUrl: true,
-          brandColor: true,
-          slug: true
+          logoUrl: true
         }
       });
 
-      console.log('🏢 Master encontrada:', masterOrganization);
+      console.log('🏢 Master Organization encontrada:', masterOrganization);
 
-      // Buscar todas las organizaciones hijas de la master
+      // Buscar todas las organizaciones que pertenecen a esta master
       childOrganizations = await prisma.organization.findMany({
         where: {
           masterOrganizationId: organization.masterOrganizationId
@@ -76,42 +74,17 @@ export async function GET(
         }
       });
 
-      console.log(`🏢 Organizaciones hijas encontradas: ${childOrganizations.length}`, childOrganizations);
+      console.log(`🏢 Sedes encontradas: ${childOrganizations.length}`, childOrganizations);
     } else {
-      // Es una organización master
-      console.log('👑 Es organización MASTER, buscando sus hijas...');
-      masterOrganization = organization;
-
-      // Buscar todas sus organizaciones hijas
-      childOrganizations = await prisma.organization.findMany({
-        where: {
-          masterOrganizationId: organization.id
-        },
-        select: {
-          id: true,
-          name: true,
-          logoUrl: true,
-          brandColor: true,
-          slug: true
-        },
-        orderBy: {
-          name: 'asc'
-        }
-      });
-
-      console.log(`🏢 Organizaciones hijas encontradas: ${childOrganizations.length}`, childOrganizations);
-
-      // Si no hay organizaciones hijas, usar la organización master como única opción
-      if (childOrganizations.length === 0) {
-        console.log('⚠️ No hay hijas, usando master como única sede');
-        childOrganizations = [{
-          id: masterOrganization.id,
-          name: masterOrganization.name,
-          logoUrl: masterOrganization.logoUrl,
-          brandColor: masterOrganization.brandColor,
-          slug: masterOrganization.slug
-        }];
-      }
+      // No tiene master organization - retornar solo esta organización
+      console.log('⚠️ Organización sin master, usando solo esta sede');
+      childOrganizations = [{
+        id: organization.id,
+        name: organization.name,
+        logoUrl: organization.logoUrl,
+        brandColor: organization.brandColor,
+        slug: organization.slug
+      }];
     }
 
     console.log('✅ Master Organization:', masterOrganization);

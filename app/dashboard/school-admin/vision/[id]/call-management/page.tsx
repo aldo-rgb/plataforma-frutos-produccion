@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
 interface CallTrackingData {
@@ -55,14 +55,22 @@ interface CallTrackingData {
 export default function CallManagementPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
   const visionId = params?.id as string;
+
+  // Obtener el nivel desde la URL o usar BASIC por defecto
+  const levelFromUrl = searchParams?.get('level') as 'BASIC' | 'ADVANCED' | 'PL' | null;
+  const initialLevel = levelFromUrl && ['BASIC', 'ADVANCED', 'PL'].includes(levelFromUrl) 
+    ? levelFromUrl 
+    : 'BASIC';
 
   const [callData, setCallData] = useState<CallTrackingData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMyList, setFilterMyList] = useState(false);
   const [filterActiveHours, setFilterActiveHours] = useState(false);
+  const [selectedLevel, setSelectedLevel] = useState<'BASIC' | 'ADVANCED' | 'PL'>(initialLevel);
   const [selectedCard, setSelectedCard] = useState<CallTrackingData | null>(null);
   const [showCallModal, setShowCallModal] = useState(false);
   const [callResult, setCallResult] = useState('');
@@ -78,12 +86,12 @@ export default function CallManagementPage() {
   // Fetch data
   useEffect(() => {
     fetchCallTrackingData();
-  }, [visionId]);
+  }, [visionId, selectedLevel]);
 
   const fetchCallTrackingData = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/school-admin/visiones/${visionId}/call-tracking`);
+      const response = await fetch(`/api/school-admin/visiones/${visionId}/call-tracking?level=${selectedLevel}`);
       if (response.ok) {
         const data = await response.json();
         setCallData(data);
@@ -128,7 +136,7 @@ export default function CallManagementPage() {
 
       // My list filter
       if (filterMyList && session?.user?.id) {
-        const myCoordinadorMatch = item.coordinador?.id.toString() === session.user.id;
+        const myCoordinadorMatch = item.coordinador?.id === Number(session.user.id);
         if (!myCoordinadorMatch) return false;
       }
 
@@ -207,6 +215,11 @@ export default function CallManagementPage() {
       }
 
       // Register interaction
+      if (!selectedCard.tracking) {
+        console.error('No tracking found');
+        return;
+      }
+      
       const response = await fetch(
         `/api/school-admin/visiones/${visionId}/call-interactions`,
         {
@@ -340,7 +353,7 @@ export default function CallManagementPage() {
                 <span className="text-4xl">📞</span>
                 Quantum Connection Hub
               </h1>
-              <p className="text-slate-400">Gestión Inteligente de Llamadas - Nivel BÁSICO</p>
+              <p className="text-slate-400">Gestión Inteligente de Llamadas - Nivel {selectedLevel === 'BASIC' ? '🌱 BÁSICO' : selectedLevel === 'ADVANCED' ? '🔥 AVANZADO' : '👑 LIDERATO'}</p>
             </div>
 
             {/* Stats Bar */}
@@ -379,6 +392,40 @@ export default function CallManagementPage() {
       {/* Filters Bar */}
       <div className="max-w-7xl mx-auto mb-6">
         <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-4 border border-slate-700 flex gap-4 items-center">
+          {/* Level Selector */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSelectedLevel('BASIC')}
+              className={`px-4 py-2 rounded-lg font-bold transition-all ${
+                selectedLevel === 'BASIC'
+                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg'
+                  : 'bg-slate-700 text-slate-400 hover:text-white'
+              }`}
+            >
+              🌱 Básico
+            </button>
+            <button
+              onClick={() => setSelectedLevel('ADVANCED')}
+              className={`px-4 py-2 rounded-lg font-bold transition-all ${
+                selectedLevel === 'ADVANCED'
+                  ? 'bg-gradient-to-r from-orange-600 to-red-600 text-white shadow-lg'
+                  : 'bg-slate-700 text-slate-400 hover:text-white'
+              }`}
+            >
+              🔥 Avanzado
+            </button>
+            <button
+              onClick={() => setSelectedLevel('PL')}
+              className={`px-4 py-2 rounded-lg font-bold transition-all ${
+                selectedLevel === 'PL'
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
+                  : 'bg-slate-700 text-slate-400 hover:text-white'
+              }`}
+            >
+              👑 Liderato
+            </button>
+          </div>
+
           {/* Search */}
           <div className="flex-1">
             <div className="relative">

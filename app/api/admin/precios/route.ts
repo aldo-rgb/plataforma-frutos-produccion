@@ -73,50 +73,74 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { precios } = body;
 
+    if (!precios) {
+      return NextResponse.json({ error: 'No se proporcionaron precios' }, { status: 400 });
+    }
+
+    console.log('💰 Guardando precios:', JSON.stringify(precios, null, 2));
+
     // Función helper para upsert que maneja búsqueda manual
     const upsertPrice = async (plan: string, currency: string, period: string | null, price: number) => {
-      const existing = await prisma.pricingConfig.findFirst({
-        where: { plan, currency, period }
-      });
+      try {
+        // Construir where clause considerando si period es null
+        const whereClause: any = { plan, currency };
+        if (period === null) {
+          whereClause.period = null;
+        } else {
+          whereClause.period = period;
+        }
 
-      if (existing) {
-        return prisma.pricingConfig.update({
-          where: { id: existing.id },
-          data: { price, updatedAt: new Date() }
+        const existing = await prisma.pricingConfig.findFirst({
+          where: whereClause
         });
-      } else {
-        return prisma.pricingConfig.create({
-          data: { plan, currency, period, price, updatedAt: new Date() }
-        });
+
+        if (existing) {
+          return await prisma.pricingConfig.update({
+            where: { id: existing.id },
+            data: { price, updatedAt: new Date() }
+          });
+        } else {
+          return await prisma.pricingConfig.create({
+            data: { plan, currency, period, price, updatedAt: new Date() }
+          });
+        }
+      } catch (error) {
+        console.error(`Error upserting price for ${plan}-${currency}-${period}:`, error);
+        throw error;
       }
     };
 
     // Preparar todas las operaciones
-    const updates = [
+    const updates = [];
+    
+    try {
       // Standard MXN
-      upsertPrice('standard', 'MXN', 'bimestral', precios.standard.mxn.bimestral),
-      upsertPrice('standard', 'MXN', 'anual', precios.standard.mxn.anual),
+      updates.push(await upsertPrice('standard', 'MXN', 'bimestral', precios.standard.mxn.bimestral));
+      updates.push(await upsertPrice('standard', 'MXN', 'anual', precios.standard.mxn.anual));
       // Standard USD
-      upsertPrice('standard', 'USD', 'bimestral', precios.standard.usd.bimestral),
-      upsertPrice('standard', 'USD', 'anual', precios.standard.usd.anual),
+      updates.push(await upsertPrice('standard', 'USD', 'bimestral', precios.standard.usd.bimestral));
+      updates.push(await upsertPrice('standard', 'USD', 'anual', precios.standard.usd.anual));
       // Premium MXN
-      upsertPrice('premium', 'MXN', 'bimestral', precios.premium.mxn.bimestral),
-      upsertPrice('premium', 'MXN', 'anual', precios.premium.mxn.anual),
+      updates.push(await upsertPrice('premium', 'MXN', 'bimestral', precios.premium.mxn.bimestral));
+      updates.push(await upsertPrice('premium', 'MXN', 'anual', precios.premium.mxn.anual));
       // Premium USD
-      upsertPrice('premium', 'USD', 'bimestral', precios.premium.usd.bimestral),
-      upsertPrice('premium', 'USD', 'anual', precios.premium.usd.anual),
+      updates.push(await upsertPrice('premium', 'USD', 'bimestral', precios.premium.usd.bimestral));
+      updates.push(await upsertPrice('premium', 'USD', 'anual', precios.premium.usd.anual));
       // Institucional
-      upsertPrice('institucional', 'MXN', 'licencia', precios.institucional.mxn.licencia),
-      upsertPrice('institucional', 'USD', 'licencia', precios.institucional.usd.licencia),
+      updates.push(await upsertPrice('institucional', 'MXN', 'licencia', precios.institucional.mxn.licencia));
+      updates.push(await upsertPrice('institucional', 'USD', 'licencia', precios.institucional.usd.licencia));
       // Disciplina
-      upsertPrice('disciplina', 'MXN', 'llamada', precios.disciplina.mxn.llamada),
-      upsertPrice('disciplina', 'USD', 'llamada', precios.disciplina.usd.llamada),
+      updates.push(await upsertPrice('disciplina', 'MXN', 'llamada', precios.disciplina.mxn.llamada));
+      updates.push(await upsertPrice('disciplina', 'USD', 'llamada', precios.disciplina.usd.llamada));
       // Free plans
-      upsertPrice('free', 'MXN', null, 0),
-      upsertPrice('free', 'USD', null, 0),
-    ];
-
-    await Promise.all(updates);
+      updates.push(await upsertPrice('free', 'MXN', null, 0));
+      updates.push(await upsertPrice('free', 'USD', null, 0));
+      
+      console.log('✅ Precios guardados exitosamente:', updates.length);
+    } catch (error) {
+      console.error('❌ Error ejecutando updates:', error);
+      throw error;
+    }
 
     return NextResponse.json({ 
       success: true, 

@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { DollarSign, Save, RefreshCw, Shield, Zap, Sparkles, Globe, MapPin } from 'lucide-react';
+import { DollarSign, Save, RefreshCw, Shield, Zap, Sparkles, Globe, MapPin, CheckCircle, XCircle, X } from 'lucide-react';
 
 export default function AdminPreciosPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [moneda, setMoneda] = useState<'MXN' | 'USD'>('MXN');
+  const [showModal, setShowModal] = useState(false);
+  const [modalData, setModalData] = useState({ type: 'success', title: '', message: '', count: 0 });
 
   // ESTADO DE PRECIOS (Ahora se cargan desde la BD)
   const [precios, setPrecios] = useState({
@@ -75,14 +77,32 @@ export default function AdminPreciosPage() {
 
       if (response.ok) {
         const data = await response.json();
-        alert(`✅ ${data.message}\n${data.count} precios actualizados`);
+        setModalData({
+          type: 'success',
+          title: 'Precios actualizados correctamente',
+          message: data.message,
+          count: data.count
+        });
+        setShowModal(true);
       } else {
         const error = await response.json();
-        alert(`❌ Error: ${error.error}\n${error.details || ''}`);
+        setModalData({
+          type: 'error',
+          title: 'Error al guardar precios',
+          message: error.details || error.error,
+          count: 0
+        });
+        setShowModal(true);
       }
     } catch (error) {
       console.error('Error al guardar:', error);
-      alert('❌ Error al guardar los precios');
+      setModalData({
+        type: 'error',
+        title: 'Error de conexión',
+        message: 'No se pudo conectar con el servidor',
+        count: 0
+      });
+      setShowModal(true);
     } finally {
       setIsSaving(false);
     }
@@ -505,6 +525,93 @@ export default function AdminPreciosPage() {
           {isSaving ? 'Guardando Cambios...' : 'Actualizar Tarifas'}
         </button>
       </div>
+
+      {/* Modal de Confirmación */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border-2 border-slate-700 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-300">
+            {/* Header */}
+            <div className={`p-6 border-b ${modalData.type === 'success' ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-red-500/30 bg-red-500/5'}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                    modalData.type === 'success' 
+                      ? 'bg-emerald-500/20 text-emerald-400' 
+                      : 'bg-red-500/20 text-red-400'
+                  }`}>
+                    {modalData.type === 'success' ? (
+                      <CheckCircle className="w-6 h-6" />
+                    ) : (
+                      <XCircle className="w-6 h-6" />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-white">
+                      {modalData.title}
+                    </h3>
+                    {modalData.type === 'success' && modalData.count > 0 && (
+                      <p className="text-sm text-emerald-400 mt-1">
+                        {modalData.count} precios actualizados
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-700"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="p-6">
+              <p className={`text-base ${modalData.type === 'success' ? 'text-slate-300' : 'text-slate-400'}`}>
+                {modalData.message}
+              </p>
+
+              {modalData.type === 'success' && (
+                <div className="mt-4 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-emerald-300">
+                      <p className="font-semibold mb-1">¡Cambios aplicados exitosamente!</p>
+                      <p className="text-emerald-400/80">Los nuevos precios ya están disponibles para todos los usuarios.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {modalData.type === 'error' && (
+                <div className="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <XCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-red-300">
+                      <p className="font-semibold mb-1">Error al procesar la solicitud</p>
+                      <p className="text-red-400/80">Por favor, verifica los datos e intenta nuevamente.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-slate-700 flex justify-end">
+              <button
+                onClick={() => setShowModal(false)}
+                className={`px-6 py-3 rounded-lg font-bold transition-all shadow-lg ${
+                  modalData.type === 'success'
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/20'
+                    : 'bg-red-600 hover:bg-red-500 text-white shadow-red-600/20'
+                }`}
+              >
+                {modalData.type === 'success' ? '¡Entendido!' : 'Cerrar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

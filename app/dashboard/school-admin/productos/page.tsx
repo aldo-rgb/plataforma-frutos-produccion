@@ -93,26 +93,35 @@ export default function ProductosPage() {
       const data = await res.json();
 
       if (data.success) {
-        if (data.products.length === 0) {
-          // Inicializar productos CORE
-          const initRes = await fetch('/api/school-admin/products/initialize', {
-            method: 'POST',
-          });
-          const initData = await initRes.json();
-          
-          if (initData.success) {
-            setProducts(initData.products);
-            showToast('success', '✅ Productos CORE inicializados');
-          }
-        } else {
-          setProducts(data.products);
-        }
+        setProducts(data.products);
       }
     } catch (error) {
       console.error('Error fetching products:', error);
       showToast('error', 'Error al cargar productos');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleInitializeCoreProducts = async () => {
+    try {
+      setSaving(true);
+      const initRes = await fetch('/api/school-admin/products/initialize', {
+        method: 'POST',
+      });
+      const initData = await initRes.json();
+      
+      if (initData.success) {
+        setProducts(initData.products);
+        showToast('success', '✅ Productos CORE inicializados correctamente');
+      } else {
+        showToast('error', initData.error || 'Error al inicializar productos');
+      }
+    } catch (error) {
+      console.error('Error initializing products:', error);
+      showToast('error', 'Error al inicializar productos CORE');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -493,7 +502,7 @@ export default function ProductosPage() {
                 className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-bold shadow-xl transition-all flex items-center gap-2 whitespace-nowrap"
               >
                 <Plus className="w-5 h-5" />
-                Crear Producto
+                Crear Taller
               </button>
             </div>
           </div>
@@ -550,17 +559,36 @@ export default function ProductosPage() {
             <p className="text-slate-500 mb-6">
               {searchTerm 
                 ? 'Intenta con otros términos de búsqueda' 
-                : 'Comienza creando tu primer producto'
+                : 'Puedes inicializar los 5 productos CORE (Básico, Avanzado, PL y Combos) o crear tus propios productos personalizados'
               }
             </p>
             {!searchTerm && (
-              <button
-                onClick={() => handleOpenModal()}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all inline-flex items-center gap-2"
-              >
-                <Plus className="w-5 h-5" />
-                Crear Producto
-              </button>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <button
+                  onClick={handleInitializeCoreProducts}
+                  disabled={saving}
+                  className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-green-800 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-all inline-flex items-center justify-center gap-2"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Inicializando...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-5 h-5" />
+                      Inicializar Productos CORE
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => handleOpenModal()}
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all inline-flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-5 h-5" />
+                  Crear Producto Personalizado
+                </button>
+              </div>
             )}
           </div>
         ) : (

@@ -64,10 +64,11 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      gamechangers: gameChangers.map(gc => ({
+      gameChangers: gameChangers.map(gc => ({
         id: gc.id,
         usuario: gc.Usuario_VisionGameChanger_gameChangerIdToUsuario,
         assignedAt: gc.createdAt,
+        level: gc.level, // Include level field
       })),
     });
 
