@@ -320,7 +320,10 @@ export default function VisionManagePage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newGameChangerData),
+        body: JSON.stringify({
+          ...newGameChangerData,
+          visionId: parseInt(visionId)
+        }),
       });
 
       const createData = await createRes.json();

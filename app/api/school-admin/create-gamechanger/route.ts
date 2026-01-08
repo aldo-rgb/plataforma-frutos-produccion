@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { nombre, email } = body;
+    const { nombre, email, visionId } = body;
 
     if (!nombre || !email) {
       return NextResponse.json(
@@ -108,6 +108,30 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Usuario no existe - crear nuevo con contraseña Quantum123
+      
+      // Verificar créditos disponibles
+      const schoolCredit = await prisma.schoolCredit.findFirst({
+        where: {
+          organizationId: director.organizationId,
+          isActive: true
+        }
+      });
+
+      if (!schoolCredit) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'No hay créditos de licencias configurados para esta organización' 
+        }, { status: 400 });
+      }
+
+      const availableCredits = (schoolCredit.totalPurchased || 0) - (schoolCredit.totalAllocated || 0);
+      if (availableCredits < 1) {
+        return NextResponse.json({ 
+          success: false, 
+          error: `Créditos insuficientes. Disponibles: ${availableCredits}, Necesarios: 1` 
+        }, { status: 400 });
+      }
+
       const hashedPassword = await bcrypt.hash('Quantum123', 10);
 
       const newUser = await prisma.usuario.create({
@@ -116,6 +140,7 @@ export async function POST(request: NextRequest) {
           email: email.toLowerCase(),
           password: hashedPassword,
           rol: 'GAMECHANGER',
+          tier: 'STANDARD',
           organizationId: director.organizationId,
           isActive: true,
         },
@@ -123,10 +148,36 @@ export async function POST(request: NextRequest) {
 
       userId = newUser.id;
 
+      // Crear licencia STANDARD ACTIVADA automáticamente
+      await prisma.licenseAssignment.create({
+        data: {
+          userId: newUser.id,
+          organizationId: director.organizationId,
+          visionId: visionId || null, // Incluir visionId si se proporciona
+          assignedBy: session.user.id,
+          assignedAt: new Date(),
+          licenseCode: `QNT-GC-STD-${newUser.id}-${Date.now()}`,
+          isActive: true, // ACTIVADA automáticamente para Game Changers
+          activatedAt: new Date(),
+          notes: 'Licencia STANDARD automática - Game Changer creado por School Admin - Activada'
+        }
+      });
+
+      // Descontar del SchoolCredit
+      await prisma.schoolCredit.updateMany({
+        where: {
+          organizationId: director.organizationId,
+          isActive: true
+        },
+        data: {
+          totalAllocated: { increment: 1 }
+        }
+      });
+
       return NextResponse.json({
         success: true,
         userId,
-        message: 'Game Changer creado exitosamente',
+        message: 'Game Changer creado exitosamente con licencia STANDARD activada',
         isExisting: false,
         defaultPassword: 'Quantum123',
       });
