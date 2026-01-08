@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
           data: {
             organizationId: director.organizationId,
             rol: 'GAMECHANGER',
+            tier: 'STANDARD', // ✅ Asignar tier STANDARD
             updatedAt: new Date(),
           },
         });
@@ -93,6 +94,7 @@ export async function POST(request: NextRequest) {
           where: { id: existingUser.id },
           data: {
             rol: 'GAMECHANGER',
+            tier: 'STANDARD', // ✅ Asignar tier STANDARD
             updatedAt: new Date(),
           },
         });
@@ -109,26 +111,36 @@ export async function POST(request: NextRequest) {
     } else {
       // Usuario no existe - crear nuevo con contraseña Quantum123
       
-      // Verificar créditos disponibles
-      const schoolCredit = await prisma.schoolCredit.findFirst({
+      // ✅ Verificar licencias disponibles en tabla License
+      // Obtener todas las licencias activas de la organización
+      const allLicenses = await prisma.license.findMany({
         where: {
           organizationId: director.organizationId,
-          isActive: true
+          isActive: true,
+        },
+        select: {
+          code: true
         }
       });
 
-      if (!schoolCredit) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'No hay créditos de licencias configurados para esta organización' 
-        }, { status: 400 });
-      }
+      // Obtener códigos de licencias ya asignadas
+      const assignedCodes = await prisma.licenseAssignment.findMany({
+        where: {
+          organizationId: director.organizationId,
+          isActive: true,
+        },
+        select: {
+          licenseCode: true
+        }
+      });
 
-      const availableCredits = (schoolCredit.totalPurchased || 0) - (schoolCredit.totalAllocated || 0);
-      if (availableCredits < 1) {
+      const assignedCodesSet = new Set(assignedCodes.map(a => a.licenseCode));
+      const availableLicenses = allLicenses.filter(l => !assignedCodesSet.has(l.code));
+      
+      if (availableLicenses.length < 1) {
         return NextResponse.json({ 
           success: false, 
-          error: `Créditos insuficientes. Disponibles: ${availableCredits}, Necesarios: 1` 
+          error: `No hay licencias disponibles. Disponibles: ${availableLicenses.length}, Necesarias: 1. Compra más licencias primero.` 
         }, { status: 400 });
       }
 
@@ -148,29 +160,21 @@ export async function POST(request: NextRequest) {
 
       userId = newUser.id;
 
+      // Tomar una licencia disponible y asignarla
+      const licenseToAssign = availableLicenses[0];
+
       // Crear licencia STANDARD ACTIVADA automáticamente
       await prisma.licenseAssignment.create({
         data: {
           userId: newUser.id,
           organizationId: director.organizationId,
-          visionId: visionId || null, // Incluir visionId si se proporciona
+          visionId: visionId || null,
           assignedBy: session.user.id,
           assignedAt: new Date(),
-          licenseCode: `QNT-GC-STD-${newUser.id}-${Date.now()}`,
-          isActive: true, // ACTIVADA automáticamente para Game Changers
+          licenseCode: licenseToAssign.code, // ✅ Usar código de licencia real
+          isActive: true,
           activatedAt: new Date(),
           notes: 'Licencia STANDARD automática - Game Changer creado por School Admin - Activada'
-        }
-      });
-
-      // Descontar del SchoolCredit
-      await prisma.schoolCredit.updateMany({
-        where: {
-          organizationId: director.organizationId,
-          isActive: true
-        },
-        data: {
-          totalAllocated: { increment: 1 }
         }
       });
 
@@ -180,6 +184,7 @@ export async function POST(request: NextRequest) {
         message: 'Game Changer creado exitosamente con licencia STANDARD activada',
         isExisting: false,
         defaultPassword: 'Quantum123',
+        licensesRemaining: availableLicenses.length - 1
       });
     }
 

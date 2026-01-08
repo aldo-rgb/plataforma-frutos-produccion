@@ -41,6 +41,87 @@
     "signUp": "Sign up",
     "signIn": "Log in"
   },
+  "signup": {
+    "title": "Create your account",
+    "subtitle": "Complete your information to continue",
+    "language": "Language",
+    "personalInfo": {
+      "title": "Personal Information",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "nickname": "How do you like to be called?",
+      "nicknamePlaceholder": "John, Johnny, JD...",
+      "profession": "Profession",
+      "professionPlaceholder": "Engineer, Designer, Entrepreneur...",
+      "birthdate": "Date of Birth",
+      "age": "Age",
+      "phone": "Phone",
+      "phonePlaceholder": "5551234567",
+      "contactPreference": "Preferred contact time",
+      "timeSlots": {
+        "earlyMorning": "05:00 AM - 10:00 AM (Early Bird)",
+        "midday": "10:00 AM - 03:00 PM (Midday)",
+        "afternoon": "03:00 PM - 07:00 PM (Afternoon)",
+        "night": "07:00 PM - 10:00 PM (Night Owl)"
+      }
+    },
+    "contact": {
+      "title": "Contact Information",
+      "email": "Email address",
+      "emailPlaceholder": "your@email.com",
+      "confirmEmail": "Confirm email",
+      "confirmEmailPlaceholder": "Type your email again",
+      "noPaste": "Please type your email without copy/paste"
+    },
+    "family": {
+      "title": "Family",
+      "children": "Number of children",
+      "childrenPlaceholder": "0"
+    },
+    "goals": {
+      "title": "Your Goals",
+      "goal1": "Goal 1 (Required)",
+      "goal1Placeholder": "What do you want to achieve?",
+      "goal2": "Goal 2 (Optional)",
+      "goal2Placeholder": "Another goal you want to reach",
+      "goal3": "Goal 3 (Optional)",
+      "goal3Placeholder": "One more goal"
+    },
+    "referral": {
+      "title": "Invitation Code",
+      "code": "Referral code",
+      "codePlaceholder": "JOHN123",
+      "locked": "This code was automatically applied"
+    },
+    "legal": {
+      "title": "Terms and Conditions",
+      "content": "By registering you accept our terms of service, privacy policy and refund conditions. Please read carefully before continuing.",
+      "checkbox": "I have read and accept the terms and conditions",
+      "refundPolicy": "Refund Policy",
+      "transferPolicy": "Transfer Policy",
+      "guarantee": "Guarantee"
+    },
+    "credentials": {
+      "title": "Access Credentials",
+      "password": "Password",
+      "passwordPlaceholder": "Minimum 6 characters",
+      "confirmPassword": "Confirm password",
+      "confirmPasswordPlaceholder": "Type your password again"
+    },
+    "submit": "Create account",
+    "submitting": "Creating account...",
+    "errors": {
+      "allFieldsRequired": "Please complete all required fields",
+      "passwordMismatch": "Passwords don't match",
+      "passwordTooShort": "Password must be at least 6 characters",
+      "emailMismatch": "Emails don't match",
+      "emailExists": "This email is already registered",
+      "selectOrganization": "Please select a campus",
+      "mustAcceptTerms": "You must accept the terms and conditions",
+      "invalidDate": "Invalid date of birth",
+      "mustBe18": "You must be at least 18 years old"
+    }
+  },
   "dashboard": {
     "title": "Dashboard",
     "myCart": "My Frutos Charter",
@@ -116,6 +197,81 @@
     "markAllAsRead": "Mark all as read",
     "noNotifications": "No notifications",
     "new": "New"
+  },
+  "wallet": {
+    "title": "My Tickets",
+    "myTickets": "My Tickets",
+    "stats": {
+      "total": "Total Tickets",
+      "active": "Active",
+      "pending": "Pending",
+      "transferred": "Transferred"
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "PENDING": "Pending",
+      "TRANSFERRED": "Transferred",
+      "EXPIRED": "Expired",
+      "CANCELLED": "Cancelled"
+    },
+    "level": {
+      "BASIC": "Basic",
+      "ADVANCED": "Advanced",
+      "PL": "Leadership"
+    },
+    "transfer": {
+      "button": "Transfer",
+      "title": "Transfer Ticket",
+      "subtitle": "Enter recipient's email",
+      "recipientEmail": "Recipient's email",
+      "recipientEmailPlaceholder": "example@email.com",
+      "warning": "⚠️ This ticket can only be transferred once",
+      "timeLimit": "Time limit: Up to 1 hour after event start",
+      "validate": "Validate",
+      "confirmTitle": "Confirm Transfer",
+      "confirmSubtitle": "Review details before confirming",
+      "transferringTo": "Transferring to",
+      "ticketDetails": "Ticket Details",
+      "level": "Level",
+      "vision": "Vision",
+      "organization": "Organization",
+      "confirmWarning": "This action cannot be undone. The ticket will be permanently transferred.",
+      "confirmButton": "Confirm Transfer",
+      "successTitle": "Transfer Successful!",
+      "successMessage": "The ticket has been successfully transferred",
+      "successDetails": "The recipient will receive an email notification with their new ticket details.",
+      "done": "Got it",
+      "validating": "Validating...",
+      "transferring": "Transferring...",
+      "errors": {
+        "invalidEmail": "Invalid email",
+        "sameEmail": "You cannot transfer to your own email",
+        "validation": "Error validating transfer",
+        "transfer": "Error transferring ticket",
+        "notFound": "Ticket not found",
+        "notOwner": "You don't have permission to transfer this ticket",
+        "notActive": "You can only transfer active tickets",
+        "notTransferable": "This ticket is no longer transferable",
+        "expired": "Transfer time has expired"
+      }
+    },
+    "empty": {
+      "title": "No tickets yet",
+      "message": "When you purchase event tickets, they will appear here",
+      "button": "Explore Events"
+    },
+    "daysUntil": "{days} days until",
+    "startsToday": "Starts today",
+    "startsSoon": "Starts soon",
+    "validUntil": "Valid until",
+    "purchased": "Purchased",
+    "paymentStatus": {
+      "PAID": "Paid",
+      "PENDING": "Pending",
+      "PARTIAL": "Partial payment",
+      "FAILED": "Failed",
+      "REFUNDED": "Refunded"
+    }
   },
   "errors": {
     "generic": "Something went wrong",

@@ -39,6 +39,12 @@ export default function SignUpPage() {
 
   const [formData, setFormData] = useState({
     nombre: '',
+    apodo: '',
+    telefono: '',
+    horarioLlamada: '',
+    angelEnrrolamiento: '',
+    visionAngel: '',
+    responsableSeguimiento: '',
     email: '',
     password: '',
     confirmPassword: ''
@@ -115,7 +121,9 @@ export default function SignUpPage() {
     setError('');
 
     // Validaciones
-    if (!formData.nombre || !formData.email || !formData.password) {
+    if (!formData.nombre || !formData.apodo || !formData.telefono || !formData.horarioLlamada || 
+        !formData.angelEnrrolamiento || !formData.visionAngel || !formData.responsableSeguimiento ||
+        !formData.email || !formData.password) {
       setError('Por favor completa todos los campos');
       return;
     }
@@ -146,6 +154,12 @@ export default function SignUpPage() {
         },
         body: JSON.stringify({
           nombre: formData.nombre,
+          apodo: formData.apodo,
+          telefono: formData.telefono,
+          horarioLlamada: formData.horarioLlamada,
+          angelEnrrolamiento: formData.angelEnrrolamiento,
+          visionAngel: formData.visionAngel,
+          responsableSeguimiento: formData.responsableSeguimiento,
           email: formData.email,
           password: formData.password,
           organizationId: selectedOrganization.id,
@@ -397,13 +411,13 @@ export default function SignUpPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Nombre completo
+                    Nombre completo *
                   </label>
                   <input
                     type="text"
                     required
                     className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    placeholder="Juan Pérez"
+                    placeholder="Juan Pérez García"
                     value={formData.nombre}
                     onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                   />
@@ -411,7 +425,99 @@ export default function SignUpPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Email
+                    ¿Cómo te gusta que te digan? *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Juan, Juanito, JP..."
+                    value={formData.apodo}
+                    onChange={(e) => setFormData({ ...formData, apodo: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Teléfono *
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="8112345678"
+                    value={formData.telefono}
+                    onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Horario de llamada *
+                  </label>
+                  <select
+                    required
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    value={formData.horarioLlamada}
+                    onChange={(e) => setFormData({ ...formData, horarioLlamada: e.target.value })}
+                  >
+                    <option value="">Selecciona un horario</option>
+                    <option value="5am-10am">5 am a 10 am</option>
+                    <option value="10am-3pm">10 am a 3 pm</option>
+                    <option value="3pm-7pm">3 pm a 7 pm</option>
+                    <option value="7pm-10pm">7 pm a 10 pm</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Ángel de enrrolamiento (¿Quién te invitó?) *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Nombre de quien te invitó"
+                    value={formData.angelEnrrolamiento}
+                    onChange={(e) => setFormData({ ...formData, angelEnrrolamiento: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Visión del ángel de enrrolamiento *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Ej: Visión 1, Básico 6, etc."
+                    value={formData.visionAngel}
+                    onChange={(e) => setFormData({ ...formData, visionAngel: e.target.value })}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Responsable de seguimiento *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Nombre del responsable"
+                    value={formData.responsableSeguimiento}
+                    onChange={(e) => setFormData({ ...formData, responsableSeguimiento: e.target.value })}
+                  />
+                </div>
+
+                <div className="pt-4 border-t border-slate-700">
+                  <h3 className="text-lg font-semibold text-white mb-4">Datos de acceso</h3>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Email *
                   </label>
                   <input
                     type="email"
@@ -425,7 +531,7 @@ export default function SignUpPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Contraseña
+                    Contraseña *
                   </label>
                   <input
                     type="password"
@@ -439,7 +545,7 @@ export default function SignUpPage() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Confirmar contraseña
+                    Confirmar contraseña *
                   </label>
                   <input
                     type="password"

@@ -98,30 +98,30 @@ export async function GET(req: Request) {
       }
     });
 
-    // Contar licencias disponibles (no asignadas) desde la tabla License
-    const allLicenses = await prisma.license.findMany({
+    // Contar licencias totales en tabla License
+    const totalLicensesInPool = await prisma.license.count({
       where: {
         organizationId: fullUser.organizationId,
         isActive: true,
-      },
-      select: {
-        code: true
       }
     });
 
-    // Obtener códigos de licencias ya asignadas
-    const assignedCodes = await prisma.licenseAssignment.findMany({
+    // Contar licencias PAGADAS asignadas (GAMECHANGER, PARTICIPANTE, LIDER)
+    // Excluir staff (coordinadores y trainers) que tienen licencias de cortesía
+    const paidLicensesAssigned = await prisma.licenseAssignment.count({
       where: {
         organizationId: fullUser.organizationId,
         isActive: true,
-      },
-      select: {
-        licenseCode: true
+        Usuario_LicenseAssignment_userIdToUsuario: {
+          rol: {
+            in: ['GAMECHANGER', 'PARTICIPANTE', 'LIDER']
+          }
+        }
       }
     });
 
-    const assignedCodesSet = new Set(assignedCodes.map(a => a.licenseCode));
-    const availableLicenses = allLicenses.filter(l => !assignedCodesSet.has(l.code)).length;
+    // Licencias disponibles = Total en pool - Asignadas a roles pagados
+    const availableLicenses = totalLicensesInPool - paidLicensesAssigned;
 
     // Contar solo las licencias ACTIVADAS (con activatedAt no nulo)
     const activatedLicenses = await prisma.licenseAssignment.count({

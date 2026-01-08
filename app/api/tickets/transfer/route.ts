@@ -1,0 +1,191 @@
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { prisma } from '@/lib/prisma';
+import crypto from 'crypto';
+
+export async function POST(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { success: false, error: 'No autorizado' },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const { ticketId, recipientEmail } = body;
+
+    if (!ticketId || !recipientEmail) {
+      return NextResponse.json(
+        { success: false, error: 'Datos incompletos' },
+        { status: 400 }
+      );
+    }
+
+    // Buscar usuario actual
+    const currentUser = await prisma.usuario.findUnique({
+      where: { email: session.user.email },
+      select: { id: true, nombre: true },
+    });
+
+    if (!currentUser) {
+      return NextResponse.json(
+        { success: false, error: 'Usuario no encontrado' },
+        { status: 404 }
+      );
+    }
+
+    // Buscar ticket con todas las relaciones necesarias
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      include: {
+        vision: {
+          select: {
+            id: true,
+            startDate: true,
+            name: true,
+          },
+        },
+        organization: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!ticket) {
+      return NextResponse.json(
+        { success: false, error: 'Ticket no encontrado' },
+        { status: 404 }
+      );
+    }
+
+    // RE-VALIDAR todas las condiciones (seguridad)
+    if (ticket.ownerId !== currentUser.id) {
+      return NextResponse.json(
+        { success: false, error: 'No tienes permiso para transferir este ticket' },
+        { status: 403 }
+      );
+    }
+
+    if (ticket.status !== 'ACTIVE') {
+      return NextResponse.json(
+        { success: false, error: 'Solo puedes transferir tickets activos' },
+        { status: 400 }
+      );
+    }
+
+    if (!ticket.isTransferable) {
+      return NextResponse.json(
+        { success: false, error: 'Este ticket ya no es transferible' },
+        { status: 400 }
+      );
+    }
+
+    const now = new Date();
+    const visionStartDate = new Date(ticket.vision.startDate);
+    const transferDeadline = new Date(visionStartDate.getTime() + (60 * 60 * 1000));
+
+    if (now > transferDeadline) {
+      return NextResponse.json(
+        { success: false, error: 'El tiempo para transferir ha expirado' },
+        { status: 400 }
+      );
+    }
+
+    if (recipientEmail.toLowerCase() === session.user.email.toLowerCase()) {
+      return NextResponse.json(
+        { success: false, error: 'No puedes transferir un ticket a ti mismo' },
+        { status: 400 }
+      );
+    }
+
+    // Buscar o crear usuario receptor
+    let recipient = await prisma.usuario.findUnique({
+      where: { email: recipientEmail.toLowerCase() },
+    });
+
+    if (!recipient) {
+      // Crear shadow user (usuario invitado que aún no se ha registrado)
+      const tempPassword = crypto.randomBytes(32).toString('hex');
+      const recipientName = recipientEmail.split('@')[0];
+
+      recipient = await prisma.usuario.create({
+        data: {
+          email: recipientEmail.toLowerCase(),
+          nombre: recipientName,
+          password: tempPassword, // Deberán establecer su propia contraseña al registrarse
+          tipo: 'PARTICIPANTE',
+          status: 'PENDIENTE', // Estado especial para shadow users
+          organizationId: ticket.organizationId, // Misma organización que el ticket
+        },
+      });
+    }
+
+    // Ejecutar transferencia
+    const updatedTicket = await prisma.ticket.update({
+      where: { id: ticketId },
+      data: {
+        ownerId: recipient.id,
+        status: 'TRANSFERRED',
+        isTransferable: false,
+        transferredAt: now,
+        transferredTo: recipient.id,
+      },
+      include: {
+        owner: {
+          select: {
+            nombre: true,
+            email: true,
+          },
+        },
+        vision: {
+          select: {
+            name: true,
+            startDate: true,
+          },
+        },
+      },
+    });
+
+    // TODO: Aquí deberías enviar un email al receptor notificándole que recibió un ticket
+    // Ejemplo:
+    // await sendTicketTransferNotification({
+    //   recipientEmail: recipient.email,
+    //   recipientName: recipient.nombre,
+    //   senderName: currentUser.nombre,
+    //   ticketLevel: updatedTicket.level,
+    //   visionName: updatedTicket.vision.name,
+    //   visionDate: updatedTicket.vision.startDate,
+    //   isNewUser: !recipient,
+    // });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Ticket transferido exitosamente',
+      ticket: {
+        id: updatedTicket.id,
+        level: updatedTicket.level,
+        newOwner: {
+          name: updatedTicket.owner.nombre,
+          email: updatedTicket.owner.email,
+        },
+        vision: {
+          name: updatedTicket.vision.name,
+          startDate: updatedTicket.vision.startDate,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Error executing transfer:', error);
+    return NextResponse.json(
+      { success: false, error: 'Error al transferir ticket' },
+      { status: 500 }
+    );
+  }
+}

@@ -164,6 +164,7 @@ export async function POST(request: Request) {
         email,
         password: hashedPassword,
         rol, // Usar el rol enviado desde el formulario
+        tier: 'STANDARD', // ✅ Licencia de cortesía STANDARD
         organizationId: director.organizationId,
         isActive: true,
         // Asignar licencia administrativa directamente (no consume créditos de la organización)

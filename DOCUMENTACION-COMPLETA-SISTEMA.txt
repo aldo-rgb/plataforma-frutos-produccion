@@ -1,0 +1,782 @@
+================================================================================
+          📋 DOCUMENTACIÓN COMPLETA DEL SISTEMA PLATAFORMA FRUTOS
+================================================================================
+
+## 🎯 CONTEXTO DE LA CONVERSACIÓN
+
+Esta es una continuación de desarrollo de la **Plataforma Frutos - Sistema de 
+Gestión de Visiones con Multi-Organización**. Has estado trabajando con un 
+desarrollador experimentado que conoce profundamente Next.js, React, Prisma, 
+TypeScript y arquitecturas complejas de bases de datos.
+
+**Estilo de comunicación del desarrollador:**
+- Directo y conciso
+- Proporciona código completo y funcional
+- Usa emojis para organizar información (✅ ❌ 🔧 📊 etc.)
+- Formato "Buscar y Reemplazar Exacto" cuando solicitas correcciones
+- Ejecuta comandos en terminal para verificar datos
+- Lee archivos completos antes de hacer cambios
+- Hace múltiples cambios en paralelo con multi_replace cuando es eficiente
+
+================================================================================
+                        🏗️ ARQUITECTURA GENERAL DEL SISTEMA
+================================================================================
+
+### Stack Tecnológico
+```
+- Frontend: Next.js 16.1.1 (App Router con Turbopack)
+- Backend: Next.js API Routes
+- Base de Datos: PostgreSQL con Prisma ORM 5.22.0
+- Autenticación: NextAuth.js v4.24.13
+- UI: Tailwind CSS + Radix UI components
+- Real-time: Socket.io 4.8.1
+- Pagos: Stripe, PayPal, MercadoPago
+- Storage: Supabase
+- Deploy: Vercel
+```
+
+### Variables de Entorno Requeridas
+```env
+DATABASE_URL=postgresql://...
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=...
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+STRIPE_SECRET_KEY=...
+OPENAI_API_KEY=...
+REPLICATE_API_TOKEN=...
+```
+
+================================================================================
+                  📊 ESTRUCTURA DE BASE DE DATOS (Prisma Schema)
+================================================================================
+
+### Modelos Principales
+
+#### 1. **Usuario** (Tabla central del sistema)
+```prisma
+model Usuario {
+  id                    Int       @id @default(autoincrement())
+  email                 String    @unique
+  nombre                String
+  password              String
+  rol                   Rol       // ADMIN, SCHOOL_ADMIN, COORDINADOR, etc.
+  tier                  Tier?     // STANDARD, PREMIUM
+  organizationId        Int?
+  isActive              Boolean   @default(true)
+  
+  // Relaciones importantes
+  Organization          Organization? @relation("Usuario_organizationIdToOrganization")
+  LicenseAssignments    LicenseAssignment[] @relation("LicenseAssignment_userIdToUsuario")
+  VisionParticipante    VisionParticipante[]
+  VisionGameChanger     VisionGameChanger[]
+}
+
+enum Rol {
+  ADMIN
+  SCHOOL_ADMIN
+  COORDINADOR
+  COORDINATOR_BASIC
+  COORDINATOR_ADVANCED
+  TRAINER
+  GAMECHANGER
+  PARTICIPANTE
+  MENTOR
+  LOBO_SOLITARIO
+}
+
+enum Tier {
+  STANDARD
+  PREMIUM
+}
+```
+
+#### 2. **MasterOrganization** (Agrupaciones principales)
+```prisma
+model MasterOrganization {
+  id            Int      @id @default(autoincrement())
+  name          String
+  description   String?
+  logoUrl       String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  
+  Organizations Organization[]
+}
+```
+
+#### 3. **Organization** (Sedes/Escuelas)
+```prisma
+model Organization {
+  id                    Int       @id @default(autoincrement())
+  name                  String
+  slug                  String    @unique
+  masterOrganizationId  Int?      // FK a MasterOrganization
+  totalLicenses         Int       @default(0)
+  activeLicenses        Int       @default(0)
+  
+  MasterOrganization    MasterOrganization? @relation(fields: [masterOrganizationId])
+  Usuarios              Usuario[] @relation("Usuario_organizationIdToOrganization")
+  Visions               Vision[]
+  Licenses              License[]
+  SchoolCredits         SchoolCredit[]
+}
+```
+
+**Relación Actual:**
+- MasterOrganization ID:1 = "Zero Move"
+  - Organization ID:1 = "Zero Mty" (masterOrganizationId: 1)
+  - Organization ID:2 = "Zero Gdl" (masterOrganizationId: 1)
+
+#### 4. **Vision** (Programas/Ciclos)
+```prisma
+model Vision {
+  id                    Int       @id @default(autoincrement())
+  nombre                String
+  descripcion           String?
+  organizationId        Int
+  coordinadorId         Int?
+  isActive              Boolean   @default(true)
+  maxParticipantes      Int       @default(100)
+  
+  // Fechas BÁSICO
+  startDate             DateTime
+  endDate               DateTime
+  
+  // Fechas AVANZADO
+  advancedStartDate     DateTime?
+  advancedEndDate       DateTime?
+  
+  // Fechas LIDERATO (PL) - 3 fines de semana
+  plWeekend1StartDate   DateTime?
+  plWeekend1EndDate     DateTime?
+  plWeekend2StartDate   DateTime?
+  plWeekend2EndDate     DateTime?
+  plWeekend3StartDate   DateTime?
+  plWeekend3EndDate     DateTime?
+  
+  // Niveles habilitados
+  enabledLevels         Level[]   // ['BASIC', 'ADVANCED', 'PL']
+  
+  Organization          Organization @relation(fields: [organizationId])
+  VisionParticipante    VisionParticipante[]
+  VisionGameChanger     VisionGameChanger[]
+  vision_enrollments    vision_enrollments[]
+}
+
+enum Level {
+  BASIC
+  ADVANCED
+  PL
+}
+```
+
+#### 5. **vision_enrollments** (Inscripciones por nivel)
+```prisma
+model vision_enrollments {
+  id              Int       @id @default(autoincrement())
+  visionId        Int
+  userId          Int
+  level           Level     // BASIC, ADVANCED, PL
+  enrolledAt      DateTime  @default(now())
+  completedAt     DateTime?
+  status          String?   // 'ACTIVE', 'COMPLETED', 'DROPPED'
+  
+  Vision          Vision    @relation(fields: [visionId])
+  Usuario         Usuario   @relation(fields: [userId])
+  
+  @@unique([visionId, userId, level])
+}
+```
+
+#### 6. **VisionParticipante** (Participantes asignados)
+```prisma
+model VisionParticipante {
+  id              Int       @id @default(autoincrement())
+  visionId        Int
+  participanteId  Int
+  gameChangerId   Int?
+  asignadoPorId   Int?
+  createdAt       DateTime  @default(now())
+  
+  Vision          Vision    @relation(fields: [visionId])
+  Participante    Usuario   @relation(fields: [participanteId])
+}
+```
+
+#### 7. **VisionGameChanger** (Game Changers por nivel)
+```prisma
+model VisionGameChanger {
+  id              Int       @id @default(autoincrement())
+  visionId        Int
+  gameChangerId   Int
+  level           Level     // BASIC, ADVANCED, PL
+  asignadoPorId   Int?
+  createdAt       DateTime  @default(now())
+  
+  Vision          Vision    @relation(fields: [visionId])
+  GameChanger     Usuario   @relation(fields: [gameChangerId])
+  
+  @@unique([visionId, gameChangerId, level])
+}
+```
+
+#### 8. **License** (Licencias generadas)
+```prisma
+model License {
+  id              Int       @id @default(autoincrement())
+  code            String    @unique
+  tierAssigned    Tier
+  maxUses         Int       @default(1)
+  usedCount       Int       @default(0)
+  isActive        Boolean   @default(true)
+  isMasterCode    Boolean   @default(false)
+  organizationId  Int
+  expiresAt       DateTime?
+  
+  Organization    Organization @relation(fields: [organizationId])
+}
+```
+
+#### 9. **LicenseAssignment** (Asignaciones de licencias a usuarios)
+```prisma
+model LicenseAssignment {
+  id              Int       @id @default(autoincrement())
+  userId          Int
+  organizationId  Int
+  visionId        Int?
+  licenseCode     String
+  assignedBy      Int
+  assignedAt      DateTime  @default(now())
+  isActive        Boolean   @default(false)
+  activatedAt     DateTime?
+  expiresAt       DateTime?
+  notes           String?
+  
+  Usuario         Usuario   @relation("LicenseAssignment_userIdToUsuario", fields: [userId])
+  Organization    Organization @relation(fields: [organizationId])
+  Vision          Vision?   @relation(fields: [visionId])
+  AssignedBy      Usuario   @relation("LicenseAssignment_assignedByToUsuario", fields: [assignedBy])
+}
+```
+
+#### 10. **SchoolCredit** (Control de licencias por organización)
+```prisma
+model SchoolCredit {
+  id              Int       @id @default(autoincrement())
+  organizationId  Int
+  totalPurchased  Int       @default(0)  // Licencias compradas/disponibles
+  totalAllocated  Int       @default(0)  // Licencias ya asignadas
+  isActive        Boolean   @default(true)
+  
+  Organization    Organization @relation(fields: [organizationId])
+  
+  // Disponibles = totalPurchased - totalAllocated
+}
+```
+
+================================================================================
+                          🎮 SISTEMA DE TRES NIVELES
+================================================================================
+
+### Estructura Implementada
+
+**BÁSICO (BASIC)**
+- Duración: startDate → endDate
+- Participantes inscritos en vision_enrollments con level='BASIC'
+- Game Changers asignados en VisionGameChanger con level='BASIC'
+- Coordinador: basicCoordinatorId
+- Trainer: basicTrainerId
+
+**AVANZADO (ADVANCED)**
+- Duración: advancedStartDate → advancedEndDate
+- Participantes inscritos con level='ADVANCED'
+- Game Changers con level='ADVANCED'
+- Coordinador: advancedCoordinatorId
+- Trainer: advancedTrainerId
+
+**LIDERATO (PL - Program Leadership)**
+- 3 Fines de semana:
+  - Weekend 1: plWeekend1StartDate → plWeekend1EndDate
+  - Weekend 2: plWeekend2StartDate → plWeekend2EndDate
+  - Graduación: plWeekend3StartDate → plWeekend3EndDate
+- Participantes inscritos con level='PL'
+- Game Changers con level='PL'
+- Coordinador: plCoordinatorId
+- 3 Trainers (uno por fin de semana): plTrainer1Id, plTrainer2Id, plTrainer3Id
+
+### APIs de Enrollments Implementadas
+
+```typescript
+// BÁSICO
+GET /api/school-admin/visiones/[id]/basic-enrollments
+// Retorna: vision_enrollments donde level='BASIC'
+
+// AVANZADO
+GET /api/school-admin/visiones/[id]/advanced-enrollments
+// Retorna: vision_enrollments donde level='ADVANCED'
+
+// LIDERATO
+GET /api/school-admin/visiones/[id]/pl-enrollments
+// Retorna: vision_enrollments donde level='PL'
+```
+
+================================================================================
+                      🔧 FUNCIONALIDADES IMPLEMENTADAS
+================================================================================
+
+### 1. Sistema Multi-Organización ✅
+
+**Signup Flow con Master/Child Organizations:**
+
+Archivo: /app/auth/signup/page.tsx
+- URL: /auth/signup?org=1 (donde 1 es el ID de una Organization)
+- Proceso:
+  1. Llama a /api/public/organization/[code] con el ID
+  2. API busca la Organization y su MasterOrganization
+  3. Retorna: { masterOrganization, childOrganizations[] }
+  4. UI muestra logo de MasterOrganization como título
+  5. Muestra cards de childOrganizations para seleccionar sede
+  6. Al seleccionar sede: llama a /api/public/organization/[orgId]/next-vision
+  7. Muestra próxima visión BASIC activa de esa sede
+  8. Registra usuario con organizationId de la sede seleccionada
+
+**API Clave Corregida:**
+```typescript
+// /app/api/public/organization/[code]/route.ts
+// CAMBIO IMPORTANTE: Ahora busca en MasterOrganization correctamente
+
+if (organization.masterOrganizationId) {
+  // Buscar en tabla MasterOrganization (NO en Organization)
+  masterOrganization = await prisma.masterOrganization.findUnique({
+    where: { id: organization.masterOrganizationId }
+  });
+  
+  // Buscar todas las sedes de esa master
+  childOrganizations = await prisma.organization.findMany({
+    where: { masterOrganizationId: organization.masterOrganizationId }
+  });
+}
+```
+
+### 2. Gestión de Visiones ✅
+
+**Página Principal:** /app/dashboard/school-admin/vision/[id]/manage/page.tsx (1796 líneas)
+
+**Tabs Implementados:**
+1. **Info** - Datos generales de la visión
+2. **Avanzado** - Gestión nivel ADVANCED
+3. **Liderato** - Gestión nivel PL (NUEVO)
+4. **Fechas** - Configuración de fechas por nivel
+5. **Staff** - Asignación de coordinadores y trainers
+6. **Game Changers** - Listado y gestión
+7. **QR** - Código QR para inscripción
+
+**Sección Liderato (Líneas 986-1180):**
+```tsx
+// Game Changers de nivel PL
+const plGameChangers = gameChangers.filter(gc => gc.level === 'PL');
+
+// Tabla de registros (plEnrollments)
+// Botón "Gestión de Llamadas" con URL: ?level=PL
+router.push(`/dashboard/school-admin/vision/${vision.id}/call-management?level=PL`)
+```
+
+### 3. Sistema de Licencias para Game Changers ✅
+
+**Flujo Completo Implementado:**
+
+**Archivo:** /app/api/school-admin/create-gamechanger/route.ts
+
+**Proceso al crear Game Changer:**
+1. Verificar que hay créditos disponibles en SchoolCredit
+2. Crear usuario con rol='GAMECHANGER', tier='STANDARD'
+3. Crear LicenseAssignment automáticamente:
+   ```typescript
+   await prisma.licenseAssignment.create({
+     data: {
+       userId: newUser.id,
+       organizationId: director.organizationId,
+       visionId: visionId || null,  // ✅ Incluye visionId
+       assignedBy: session.user.id,
+       licenseCode: `QNT-GC-STD-${newUser.id}-${Date.now()}`,
+       isActive: true,              // ✅ Activa automáticamente
+       activatedAt: new Date(),
+       notes: 'Licencia STANDARD automática - Game Changer'
+     }
+   });
+   ```
+4. Descontar crédito:
+   ```typescript
+   await prisma.schoolCredit.updateMany({
+     where: { organizationId, isActive: true },
+     data: { totalAllocated: { increment: 1 } }
+   });
+   ```
+
+**Frontend actualizado:**
+```typescript
+// manage/page.tsx línea 318
+const createRes = await fetch('/api/school-admin/create-gamechanger', {
+  method: 'POST',
+  body: JSON.stringify({
+    ...newGameChangerData,
+    visionId: parseInt(visionId)  // ✅ Ahora envía visionId
+  })
+});
+```
+
+**Estado Actual:**
+- ✅ 4 Game Changers existentes ya tienen licencias asignadas retroactivamente
+- ✅ Nuevos Game Changers se crean con licencia automática
+- ✅ Sistema verifica créditos antes de crear usuarios
+- ✅ Descuenta correctamente del SchoolCredit
+
+### 4. Quantum Connection Hub (Call Management) ✅
+
+**Archivo:** /app/dashboard/school-admin/vision/[id]/call-management/page.tsx
+
+**Preselección de Nivel por URL:**
+```typescript
+const searchParams = useSearchParams();
+const levelFromUrl = searchParams?.get('level') as 'BASIC' | 'ADVANCED' | 'PL' | null;
+
+const initialLevel = levelFromUrl && ['BASIC', 'ADVANCED', 'PL'].includes(levelFromUrl) 
+  ? levelFromUrl 
+  : 'BASIC';
+
+const [selectedLevel, setSelectedLevel] = useState(initialLevel);
+```
+
+**Navegación desde Manage:**
+- Botón Básico: ?level=BASIC
+- Botón Avanzado: ?level=ADVANCED
+- Botón Liderato: ?level=PL
+
+### 5. Componentes UI Creados ✅
+
+Todos en /components/ui/:
+- button.tsx - Botones con variantes
+- input.tsx - Inputs de formulario
+- label.tsx - Labels con Radix UI
+- alert.tsx - Alertas y mensajes
+- tabs.tsx - Sistema de pestañas
+- card.tsx - Cards (ya existía)
+- badge.tsx - Badges (ya existía)
+- separator.tsx - Separadores (ya existía)
+
+**Hook creado:**
+- /hooks/use-toast.ts - Sistema de notificaciones toast
+
+**Dependencias instaladas:**
+```json
+"recharts": "latest",
+"@radix-ui/react-slot": "latest",
+"@radix-ui/react-label": "latest",
+"@radix-ui/react-tabs": "latest",
+"@radix-ui/react-toast": "latest"
+```
+
+================================================================================
+                     🚧 PENDIENTES Y PRÓXIMOS DESARROLLOS
+================================================================================
+
+### 1. Sistema de Fechas Completo
+- ❌ Validación de overlapping de fechas
+- ❌ Cálculo automático de semanas por nivel
+- ❌ Restricciones de inscripción según fechas
+
+### 2. Gestión de Staff
+- ✅ Asignación básica implementada
+- ❌ Validación de disponibilidad
+- ❌ Notificaciones automáticas
+- ❌ Dashboard para coordinadores
+
+### 3. Sistema de Llamadas
+- ✅ Quantum Connection Hub básico
+- ❌ Tracking completo por nivel
+- ❌ Métricas y reportes por GC
+- ❌ Sistema de alertas de llamadas perdidas
+
+### 4. Inscripciones (vision_enrollments)
+- ✅ Modelo creado
+- ✅ APIs por nivel
+- ❌ UI para inscribir participantes
+- ❌ Validación de cupos
+- ❌ Migración automática entre niveles
+
+### 5. Sistema de Pagos
+- ❌ Compra de licencias
+- ❌ Renovaciones automáticas
+- ❌ Gestión de reembolsos
+
+### 6. Dashboard Analítico
+- ❌ Métricas por nivel
+- ❌ Progreso de participantes
+- ❌ Performance de Game Changers
+- ❌ Reportes exportables
+
+================================================================================
+                        📁 ESTRUCTURA DE ARCHIVOS CLAVE
+================================================================================
+
+plataforma-frutos-FINAL/
+├── app/
+│   ├── api/
+│   │   ├── school-admin/
+│   │   │   ├── create-gamechanger/route.ts ✅ ACTUALIZADO
+│   │   │   └── visiones/[id]/
+│   │   │       ├── basic-enrollments/route.ts ✅
+│   │   │       ├── advanced-enrollments/route.ts ✅
+│   │   │       ├── pl-enrollments/route.ts ✅
+│   │   │       ├── add-gamechangers/route.ts ✅
+│   │   │       ├── gamechangers/route.ts
+│   │   │       ├── participantes/route.ts
+│   │   │       └── staff/route.ts
+│   │   ├── public/
+│   │   │   └── organization/[code]/
+│   │   │       ├── route.ts ✅ CORREGIDO
+│   │   │       └── next-vision/route.ts
+│   │   └── auth/
+│   │       └── register/route.ts
+│   ├── dashboard/
+│   │   └── school-admin/
+│   │       └── vision/[id]/
+│   │           ├── manage/page.tsx ✅ ACTUALIZADO (1796 líneas)
+│   │           └── call-management/page.tsx ✅ ACTUALIZADO
+│   └── auth/
+│       └── signup/page.tsx ✅
+├── components/ui/ ✅ COMPLETO
+├── hooks/
+│   └── use-toast.ts ✅
+├── lib/
+│   ├── prisma.ts
+│   └── auth.ts
+└── prisma/
+    └── schema.prisma
+
+================================================================================
+                         🔍 SCRIPTS DE UTILIDAD CREADOS
+================================================================================
+
+// assign-licenses-to-gamechangers.js
+// Asigna licencias retroactivas a GCs sin licencia
+// ✅ Ya ejecutado - 4 GCs tienen licencias
+
+// fix-gamechangers-licenses.js
+// Script de corrección de licencias
+
+// check-school-credit-org1.js
+// Verifica créditos de una organización
+
+================================================================================
+                          🐛 BUGS CORREGIDOS ESTA SESIÓN
+================================================================================
+
+### 1. MasterOrganization Lookup ✅
+**Problema:** API buscaba master organization en tabla Organization
+**Solución:** Actualizado para buscar en MasterOrganization
+
+BUSCAR EXACTO EN: /app/api/public/organization/[code]/route.ts
+```typescript
+masterOrganization = await prisma.organization.findUnique({
+  where: { id: organization.masterOrganizationId }
+});
+```
+
+REEMPLAZAR CON:
+```typescript
+masterOrganization = await prisma.masterOrganization.findUnique({
+  where: { id: organization.masterOrganizationId }
+});
+```
+
+### 2. Game Changers sin Licencia ✅
+**Problema:** Se creaban GCs pero sin LicenseAssignment
+**Solución:** Endpoint create-gamechanger ahora crea licencia automática
+
+### 3. Build Errors en Vercel ✅
+**Problema:** Faltaban componentes UI y dependencias
+**Solución:** Creados todos los componentes y agregadas dependencias
+
+### 4. Template Literal Syntax Error ✅
+**Problema:** Template literals en comentarios causaban errores de parsing
+**Solución:** Reemplazados con concatenación en avatar/route.ts
+
+### 5. Preselección de Nivel en Call Management ✅
+**Problema:** No leía parámetro ?level= de URL
+**Solución:** Agregado useSearchParams y lógica de initialLevel
+
+================================================================================
+                       💾 DATOS ACTUALES EN BASE DE DATOS
+================================================================================
+
+### Organizations
+- **Zero Mty** (ID: 1, masterOrganizationId: 1)
+  - 100 licencias generadas
+  - Vision 1: "ZERO V1" (starts: 2026-01-09)
+  
+- **Zero Gdl** (ID: 2, masterOrganizationId: 1)
+  - 100 licencias generadas
+  - Vision 2: "v1 gdl" (starts: 2026-01-29)
+
+### MasterOrganization
+- **Zero Move** (ID: 1)
+  - Logo: URL en Supabase
+  - 2 child organizations (Mty y Gdl)
+
+### Game Changers Actuales
+```
+1. Game (game1@zero.com) - Org 1 - ✅ Licencia QNT-GC-STD-12-...
+2. game 2 (game2@zero.com) - Org 1 - ✅ Licencia QNT-GC-STD-13-...
+3. Game3 (game3@zero.com) - Org 1 - ✅ Licencia QNT-GC-STD-14-...
+4. game4 (game4@zero.com) - Org 1 - ✅ Licencia QNT-GC-STD-15-...
+```
+
+================================================================================
+                         🎨 TEMAS Y COLORES POR NIVEL
+================================================================================
+
+// Básico (BASIC)
+colors: {
+  primary: 'bg-blue-500',
+  gradient: 'from-blue-500 to-blue-700',
+  text: 'text-blue-600'
+}
+
+// Avanzado (ADVANCED)
+colors: {
+  primary: 'bg-green-500',
+  gradient: 'from-green-500 to-green-700',
+  text: 'text-green-600'
+}
+
+// Liderato (PL)
+colors: {
+  primary: 'bg-purple-500',
+  gradient: 'from-purple-500 to-purple-700',
+  text: 'text-purple-600'
+}
+
+================================================================================
+                            🔐 ROLES Y PERMISOS
+================================================================================
+
+// ADMIN - Acceso total
+// SCHOOL_ADMIN - Gestiona su organización y visiones
+// COORDINADOR - Coordina una visión
+// COORDINATOR_BASIC - Coordina nivel BASIC
+// COORDINATOR_ADVANCED - Coordina nivel ADVANCED
+// TRAINER - Imparte entrenamientos
+// GAMECHANGER - Líder de equipo por nivel
+// PARTICIPANTE - Usuario inscrito en programa
+// MENTOR - Sistema de mentoría (otro módulo)
+// LOBO_SOLITARIO - Usuario sin organización
+
+================================================================================
+                              📝 COMANDOS ÚTILES
+================================================================================
+
+# Desarrollo
+npm run dev
+
+# Build
+npm run build
+
+# Prisma
+npx prisma generate
+npx prisma db push
+npx prisma studio
+
+# Git
+git add -A
+git commit -m "mensaje"
+git push origin main
+
+================================================================================
+                            🚀 ÚLTIMOS COMMITS
+================================================================================
+
+cfd6635 - Fix: Asegurar que Game Changers se creen con licencia STANDARD activa
+e3a974d - Fix build errors: Add missing UI components and dependencies
+8ce20be - Fix: Corregir lookup de MasterOrganization en signup flow
+
+================================================================================
+                    📌 FORMATO "BUSCAR Y REEMPLAZAR EXACTO"
+================================================================================
+
+Cuando solicites correcciones, se te proporcionarán así:
+
+UBICACIÓN:
+Archivo: /ruta/al/archivo.tsx
+Línea aproximada: 150
+
+BUSCAR ESTE BLOQUE EXACTO (incluye líneas antes/después para contexto):
+
+  const handleFunction = () => {
+    // código viejo
+    console.log('viejo');
+  }
+
+REEMPLAZAR CON ESTE BLOQUE EXACTO:
+
+  const handleFunction = () => {
+    // código nuevo
+    console.log('nuevo');
+  }
+
+================================================================================
+                         🎯 PRÓXIMOS PASOS SUGERIDOS
+================================================================================
+
+1. **Terminar sistema de inscripciones**
+   - UI para inscribir participantes desde dashboard
+   - Validación de cupos por nivel
+   - Migración automática Básico → Avanzado → Liderato
+
+2. **Dashboard de Coordinador**
+   - Vista de su nivel asignado
+   - Listado de participantes y GCs
+   - Herramientas de seguimiento
+
+3. **Sistema de métricas**
+   - Tabla vision_metrics
+   - Cálculo automático por nivel
+   - Gráficas con recharts
+
+4. **Notificaciones**
+   - Email automático al crear GC
+   - Recordatorios de fechas importantes
+   - Alertas de cupos llenos
+
+================================================================================
+                            💡 NOTAS IMPORTANTES
+================================================================================
+
+- **SchoolCredit:** Controla licencias disponibles. NO crear créditos 
+  manualmente sin orden real.
+
+- **visionId en licencias:** Siempre incluir cuando se conoce la visión.
+
+- **Niveles:** BASIC es obligatorio, ADVANCED y PL son opcionales según 
+  enabledLevels.
+
+- **Game Changers:** SIEMPRE deben tener licencia STANDARD activa al crearse.
+
+- **MasterOrganization vs Organization:** NO confundir las tablas.
+
+- **Relaciones Prisma:** Nombres auto-generados pueden ser largos 
+  (Usuario_LicenseAssignment_userIdToUsuario). Verificar en schema.
+
+- **Fechas:** Todas en UTC, convertir en frontend según timezone.
+
+- **Créditos disponibles:** totalPurchased - totalAllocated
+
+================================================================================
+                                  FIN
+================================================================================
+
+Fecha de generación: 7 de enero de 2026
+Proyecto: Plataforma Frutos
+Repositorio: plataforma-frutos-produccion
+Branch: main

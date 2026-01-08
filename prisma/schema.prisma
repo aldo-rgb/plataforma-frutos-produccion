@@ -34,21 +34,21 @@ model AccessCode {
 }
 
 model BasicCallTracking {
-  id                       Int                @id @default(autoincrement())
-  enrollmentId             Int                @unique
-  nickname                 String?
-  phone                    String?
-  preferredCallTimeStart   String?
-  preferredCallTimeEnd     String?
-  coordinatorId            Int?
-  attendanceStatus         AttendanceStatus   @default(PENDING)
-  callAttempts             Int                @default(0)
-  lastInteractionAt        DateTime?
-  createdAt                DateTime           @default(now())
-  updatedAt                DateTime
-  vision_enrollments       vision_enrollments @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
-  Usuario                  Usuario?           @relation(fields: [coordinatorId], references: [id])
-  CallInteractionLog       CallInteractionLog[]
+  id                     Int                  @id @default(autoincrement())
+  enrollmentId           Int                  @unique
+  nickname               String?
+  phone                  String?
+  preferredCallTimeStart String?
+  preferredCallTimeEnd   String?
+  coordinatorId          Int?
+  attendanceStatus       AttendanceStatus     @default(PENDING)
+  callAttempts           Int                  @default(0)
+  lastInteractionAt      DateTime?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime
+  vision_enrollments     vision_enrollments   @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  Usuario                Usuario?             @relation(fields: [coordinatorId], references: [id])
+  CallInteractionLog     CallInteractionLog[]
 
   @@index([enrollmentId])
   @@index([coordinatorId])
@@ -57,14 +57,14 @@ model BasicCallTracking {
 }
 
 model CallInteractionLog {
-  id                Int                @id @default(autoincrement())
+  id                Int               @id @default(autoincrement())
   trackingId        Int
   coordinatorId     Int
   callResult        CallResult
   comments          String?
-  createdAt         DateTime           @default(now())
-  BasicCallTracking BasicCallTracking  @relation(fields: [trackingId], references: [id], onDelete: Cascade)
-  Usuario           Usuario            @relation(fields: [coordinatorId], references: [id])
+  createdAt         DateTime          @default(now())
+  BasicCallTracking BasicCallTracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
+  Usuario           Usuario           @relation(fields: [coordinatorId], references: [id])
 
   @@index([trackingId])
   @@index([coordinatorId])
@@ -1035,6 +1035,9 @@ model Organization {
   Usuario_Usuario_communityOrganizationIdToOrganization Usuario[]                       @relation("Usuario_communityOrganizationIdToOrganization")
   Usuario_Usuario_organizationIdToOrganization          Usuario[]                       @relation("Usuario_organizationIdToOrganization")
   Vision                                                Vision[]
+  Ticket                                                Ticket[]
+  TicketPriceConfig                                     TicketPriceConfig[]
+  PaymentGatewayConfig                                  PaymentGatewayConfig?
   coordinator_commission_config                         coordinator_commission_config[]
   coordinator_commissions                               coordinator_commissions[]
   weekly_payout_summary                                 weekly_payout_summary[]
@@ -1537,40 +1540,40 @@ model SchoolCredit {
 }
 
 model SchoolProduct {
-  id                   Int              @id @default(autoincrement())
-  organizationId       Int
-  visionId             Int?
-  name                 String
-  description          String?
-  imageUrl             String?
-  type                 ProductType
-  levelType            ProductLevelType @default(NONE)
-  basePrice            Float
-  promoPrice           Float?
-  promoDeadline        DateTime?
-  startDate            DateTime?
-  endDate              DateTime?
+  id                  Int              @id @default(autoincrement())
+  organizationId      Int
+  visionId            Int?
+  name                String
+  description         String?
+  imageUrl            String?
+  type                ProductType
+  levelType           ProductLevelType @default(NONE)
+  basePrice           Float
+  promoPrice          Float?
+  promoDeadline       DateTime?
+  startDate           DateTime?
+  endDate             DateTime?
   // Fechas de Programa Liderato (3 fines de semana)
-  plWeekend1StartDate  DateTime?
-  plWeekend1EndDate    DateTime?
-  plWeekend2StartDate  DateTime?
-  plWeekend2EndDate    DateTime?
-  plWeekend3StartDate  DateTime?
-  plWeekend3EndDate    DateTime?
-  maxCapacity          Int?
-  currentEnrollment    Int              @default(0)
-  isActive             Boolean          @default(true)
-  location             String?
-  coordinatorId        Int?
-  trainerId            Int?
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime
-  createdBy            Int
-  Usuario              Usuario          @relation(fields: [createdBy], references: [id])
-  Organization         Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  Vision               Vision?          @relation(fields: [visionId], references: [id], onDelete: Cascade)
-  Coordinator          Usuario?         @relation("ProductCoordinator", fields: [coordinatorId], references: [id])
-  Trainer              Usuario?         @relation("ProductTrainer", fields: [trainerId], references: [id])
+  plWeekend1StartDate DateTime?
+  plWeekend1EndDate   DateTime?
+  plWeekend2StartDate DateTime?
+  plWeekend2EndDate   DateTime?
+  plWeekend3StartDate DateTime?
+  plWeekend3EndDate   DateTime?
+  maxCapacity         Int?
+  currentEnrollment   Int              @default(0)
+  isActive            Boolean          @default(true)
+  location            String?
+  coordinatorId       Int?
+  trainerId           Int?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime
+  createdBy           Int
+  Usuario             Usuario          @relation(fields: [createdBy], references: [id])
+  Organization        Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Vision              Vision?          @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  Coordinator         Usuario?         @relation("ProductCoordinator", fields: [coordinatorId], references: [id])
+  Trainer             Usuario?         @relation("ProductTrainer", fields: [trainerId], references: [id])
 
   @@index([isActive])
   @@index([levelType])
@@ -1977,6 +1980,18 @@ model Usuario {
   subscriptionPlan                                                       SubscriptionPlan?               @default(NONE)
   subscriptionStartDate                                                  DateTime?
   telefono                                                               String?
+  apodo                                                                  String?
+  horarioLlamada                                                         String?
+  profession                                                             String?
+  birthdate                                                              DateTime?
+  children                                                               Int?
+  goals                                                                  String?
+  angelEnrrolamiento                                                     String?
+  visionAngel                                                            String?
+  responsableSeguimiento                                                 String?
+  referralCode                                                           String?                         @unique
+  invitedCount                                                           Int                             @default(0)
+  invitedBy                                                              Int?
   requirePasswordChange                                                  Boolean                         @default(false)
   changeRequestedAt                                                      DateTime?
   changeRequestedBy                                                      Int?
@@ -2115,6 +2130,8 @@ model Usuario {
   weekly_payout_summary_weekly_payout_summary_generatedByToUsuario       weekly_payout_summary[]         @relation("weekly_payout_summary_generatedByToUsuario")
   BasicCallTracking                                                      BasicCallTracking[]
   CallInteractionLog                                                     CallInteractionLog[]
+  Ticket_TicketOwner                                                     Ticket[]                        @relation("TicketOwner")
+  Ticket_TicketReferrer                                                  Ticket[]                        @relation("TicketReferrer")
 
   @@index([communityOrganizationId])
 }
@@ -2170,6 +2187,7 @@ model Vision {
   coordinator_commissions       coordinator_commissions[]
   vision_enrollments            vision_enrollments[]
   weekly_payout_summary         weekly_payout_summary[]
+  Ticket                        Ticket[]
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -2471,6 +2489,73 @@ model weekly_payout_summary {
   @@index([status])
   @@index([visionId])
   @@index([weekStartDate])
+}
+
+model Ticket {
+  id             String              @id @default(uuid())
+  ownerId        Int
+  organizationId Int
+  visionId       Int
+  level          VisionLevel
+  type           TicketType          @default(STANDARD)
+  status         TicketStatus        @default(PENDING_PAYMENT)
+  isTransferable Boolean             @default(true)
+  validUntil     DateTime?
+  paymentStatus  TicketPaymentStatus @default(PENDING)
+  purchasePrice  Decimal?            @db.Decimal(10, 2)
+  transferredAt  DateTime?
+  transferredTo  Int?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  owner        Usuario      @relation("TicketOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  referrer     Usuario?     @relation("TicketReferrer", fields: [transferredTo], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vision       Vision       @relation(fields: [visionId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+  @@index([organizationId])
+  @@index([visionId])
+  @@index([level])
+  @@index([status])
+  @@index([validUntil])
+}
+
+model TicketPriceConfig {
+  id              Int         @id @default(autoincrement())
+  organizationId  Int
+  level           VisionLevel
+  regularPrice    Decimal     @db.Decimal(10, 2)
+  promoPrice      Decimal?    @db.Decimal(10, 2)
+  promoValidUntil DateTime?
+  comboAdvPL      Decimal?    @db.Decimal(10, 2)
+  partialPayment  Decimal?    @db.Decimal(10, 2)
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, level])
+  @@index([organizationId])
+  @@index([level])
+}
+
+model PaymentGatewayConfig {
+  id             Int      @id @default(autoincrement())
+  organizationId Int      @unique
+  provider       String
+  publicKey      String?
+  secretKey      String?
+  webhookSecret  String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([provider])
 }
 
 enum AbsenceReportStatus {
@@ -2940,6 +3025,28 @@ enum VisionLevel {
   BASIC
   ADVANCED
   PL
+}
+
+enum TicketType {
+  STANDARD
+  PROMO_50
+  SCHOLARSHIP
+  COMBO_PARTIAL
+}
+
+enum TicketStatus {
+  ACTIVE
+  PENDING_PAYMENT
+  TRANSFERRED
+  EXPIRED
+  CANCELLED
+}
+
+enum TicketPaymentStatus {
+  PAID
+  PARTIAL
+  GIFT
+  PENDING
 }
 
 enum WalletTxType {
