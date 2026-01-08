@@ -229,16 +229,6 @@ export default function VisionManagePage() {
       setLoadingBasicEnrollments(false);
     }
   };
-      
-      if (data.success) {
-        setGameChangers(data.gamechangers || []);
-      }
-    } catch (error) {
-      console.error('Error fetching game changers:', error);
-    } finally {
-      setLoadingGameChangers(false);
-    }
-  };
 
   const fetchStaffData = async () => {
     try {
