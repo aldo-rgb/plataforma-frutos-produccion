@@ -81,6 +81,10 @@ export default function VisionManagePage() {
   const [loadingParticipantes, setLoadingParticipantes] = useState(false);
   const [loadingGameChangers, setLoadingGameChangers] = useState(false);
   
+  // Estado para registros del nivel BÁSICO
+  const [basicEnrollments, setBasicEnrollments] = useState<any[]>([]);
+  const [loadingBasicEnrollments, setLoadingBasicEnrollments] = useState(false);
+  
   // Estados para edición
   const [editingDates, setEditingDates] = useState(false);
   const [dateData, setDateData] = useState({
@@ -119,6 +123,7 @@ export default function VisionManagePage() {
     fetchGameChangers();
     fetchStaffData(); // Cargar staff existente
     generateQR(); // Generar QR automáticamente
+    fetchBasicEnrollments(); // Cargar registros del nivel BÁSICO
   }, [visionId]);
 
   const fetchVisionData = async () => {
@@ -198,6 +203,32 @@ export default function VisionManagePage() {
       setLoadingGameChangers(true);
       const res = await fetch(`/api/school-admin/visiones/${visionId}/gamechangers`);
       const data = await res.json();
+      
+      if (data.success) {
+        setGameChangers(data.gameChangers || []);
+      }
+    } catch (error) {
+      console.error('Error fetching game changers:', error);
+    } finally {
+      setLoadingGameChangers(false);
+    }
+  };
+
+  const fetchBasicEnrollments = async () => {
+    try {
+      setLoadingBasicEnrollments(true);
+      const res = await fetch(`/api/school-admin/visiones/${visionId}/basic-enrollments`);
+      const data = await res.json();
+      
+      if (data.success) {
+        setBasicEnrollments(data.enrollments || []);
+      }
+    } catch (error) {
+      console.error('Error fetching basic enrollments:', error);
+    } finally {
+      setLoadingBasicEnrollments(false);
+    }
+  };
       
       if (data.success) {
         setGameChangers(data.gamechangers || []);
@@ -570,6 +601,106 @@ export default function VisionManagePage() {
                   <div className="text-white text-lg font-bold">
                     {vision.endDate ? new Date(vision.endDate).toLocaleDateString('es-MX') : 'No definida'}
                   </div>
+                </div>
+              </div>
+
+              {/* Tabla de Registros del Nivel BÁSICO */}
+              <div className="bg-gradient-to-br from-green-900/30 to-slate-900/50 rounded-xl border-2 border-green-500/30 overflow-hidden">
+                <div className="bg-green-900/40 p-6 border-b border-green-500/30">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center text-2xl">
+                        🌱
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black text-green-300">Registros Nivel BÁSICO</h3>
+                        <p className="text-green-400/60 text-sm">
+                          {basicEnrollments.length} usuario(s) registrado(s) desde el signup
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="p-6">
+                  {loadingBasicEnrollments ? (
+                    <div className="text-center py-8 text-slate-400">Cargando registros...</div>
+                  ) : basicEnrollments.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="text-6xl mb-4">🌱</div>
+                      <p className="text-slate-400 text-lg">No hay registros aún</p>
+                      <p className="text-slate-500 text-sm mt-2">Los usuarios que se registren aparecerán aquí</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-green-500/20">
+                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Usuario</th>
+                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Email</th>
+                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Organización</th>
+                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Fecha de Registro</th>
+                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Estado</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {basicEnrollments.map((enrollment) => (
+                            <tr 
+                              key={enrollment.id}
+                              className="border-b border-slate-700/50 hover:bg-green-500/5 transition-colors"
+                            >
+                              <td className="py-4 px-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white font-bold">
+                                    {enrollment.Usuario?.nombre?.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <div className="text-white font-bold">{enrollment.Usuario?.nombre}</div>
+                                    <div className="text-slate-400 text-xs">ID: {enrollment.userId}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <div className="text-slate-300 text-sm">{enrollment.Usuario?.email}</div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <div className="text-slate-300 text-sm">
+                                  {enrollment.Usuario?.Organization?.name || 'N/A'}
+                                </div>
+                                <div className="text-slate-500 text-xs">
+                                  ID: {enrollment.Usuario?.organizationId}
+                                </div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <div className="text-slate-300 text-sm">
+                                  {new Date(enrollment.enrolledAt).toLocaleDateString('es-MX', {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric'
+                                  })}
+                                </div>
+                                <div className="text-slate-500 text-xs">
+                                  {new Date(enrollment.enrolledAt).toLocaleTimeString('es-MX', {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
+                                  enrollment.enrollmentStatus === 'ENROLLED' 
+                                    ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                                    : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+                                }`}>
+                                  {enrollment.enrollmentStatus === 'ENROLLED' ? '✅ Inscrito' : '⏳ Pendiente'}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               </div>
 
