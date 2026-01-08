@@ -1295,6 +1295,12 @@ export default function VisionDetailPage() {
                               <h4 className="text-white font-bold text-sm">{config.label}</h4>
                               <p className="text-slate-400 text-xs">{config.sublabel}</p>
                             </div>
+                            <button
+                              onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/manage`)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:scale-105 ${config.iconBg} ${config.textColor} border ${config.borderColor} hover:shadow-lg`}
+                            >
+                              Gestionar
+                            </button>
                           </div>
                         </div>
                         
