@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,7 +17,8 @@ export async function GET(
       );
     }
 
-    const visionId = parseInt(params.id);
+    const resolvedParams = await params;
+    const visionId = parseInt(resolvedParams.id);
 
     // Buscar enrollments del nivel BÁSICO para esta visión
     const enrollments = await prisma.vision_enrollments.findMany({
