@@ -27,12 +27,7 @@ export async function GET(
       },
       include: {
         Usuario_vision_enrollments_userIdToUsuario: {
-          select: {
-            id: true,
-            nombre: true,
-            email: true,
-            organizationId: true,
-            createdAt: true,
+          include: {
             Organization_Usuario_organizationIdToOrganization: {
               select: {
                 id: true,
