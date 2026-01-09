@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 type VisionLevel = 'BASIC' | 'ADVANCED' | 'PL' | 'FULL';
+type UserType = 'VISION_ENROLLED' | 'VISION_PARTICIPANTE' | 'LOBO_SOLITARIO';
 
 interface AccessibleModules {
   carta: boolean;
@@ -29,8 +30,10 @@ interface LockedMessages {
 
 interface VisionAccessContextType {
   isLoading: boolean;
+  userType: UserType;
   isVisionUser: boolean;
   isLoboSolitario: boolean;
+  isVisionParticipante: boolean; // Agregado por coordinador = acceso completo
   currentLevel: VisionLevel;
   completedLevels: string[];
   hasFullAccess: boolean;
@@ -69,8 +72,10 @@ const VisionAccessContext = createContext<VisionAccessContextType | undefined>(u
 
 export function VisionAccessProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
+  const [userType, setUserType] = useState<UserType>('LOBO_SOLITARIO');
   const [isVisionUser, setIsVisionUser] = useState(false);
   const [isLoboSolitario, setIsLoboSolitario] = useState(true);
+  const [isVisionParticipante, setIsVisionParticipante] = useState(false);
   const [currentLevel, setCurrentLevel] = useState<VisionLevel>('FULL');
   const [completedLevels, setCompletedLevels] = useState<string[]>([]);
   const [hasFullAccess, setHasFullAccess] = useState(true);
@@ -85,8 +90,10 @@ export function VisionAccessProvider({ children }: { children: ReactNode }) {
       const data = await res.json();
 
       if (res.ok && data.success) {
+        setUserType(data.userType || 'LOBO_SOLITARIO');
         setIsVisionUser(data.isVisionUser || false);
         setIsLoboSolitario(data.isLoboSolitario || false);
+        setIsVisionParticipante(data.isVisionParticipante || false);
         setCurrentLevel(data.currentLevel || 'FULL');
         setCompletedLevels(data.completedLevels || []);
         setHasFullAccess(data.hasFullAccess || false);
@@ -109,7 +116,8 @@ export function VisionAccessProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const canAccess = (module: keyof AccessibleModules): boolean => {
-    if (isLoboSolitario || hasFullAccess) return true;
+    // VisionParticipante, Lobo Solitario, o hasFullAccess = acceso completo
+    if (isVisionParticipante || isLoboSolitario || hasFullAccess) return true;
     return accessibleModules[module] ?? false;
   };
 
@@ -121,8 +129,10 @@ export function VisionAccessProvider({ children }: { children: ReactNode }) {
     <VisionAccessContext.Provider
       value={{
         isLoading,
+        userType,
         isVisionUser,
         isLoboSolitario,
+        isVisionParticipante,
         currentLevel,
         completedLevels,
         hasFullAccess,
@@ -149,10 +159,10 @@ export function useVisionAccess() {
 
 // Hook simplificado para verificar acceso rápido
 export function useCanAccess(module: keyof AccessibleModules): boolean {
-  const { canAccess, isLoading, isLoboSolitario, hasFullAccess } = useVisionAccess();
+  const { canAccess, isLoading, isLoboSolitario, isVisionParticipante, hasFullAccess } = useVisionAccess();
   
-  // Durante la carga o si es lobo solitario, permitir acceso
-  if (isLoading || isLoboSolitario || hasFullAccess) return true;
+  // Durante la carga, VisionParticipante, Lobo Solitario, o hasFullAccess = permitir acceso
+  if (isLoading || isVisionParticipante || isLoboSolitario || hasFullAccess) return true;
   
   return canAccess(module);
 }

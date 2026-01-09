@@ -5,8 +5,13 @@ import { prisma } from '@/lib/prisma';
 
 /**
  * GET /api/user/vision-level
- * Obtiene el nivel actual del usuario en la Vision (BASIC, ADVANCED, PL)
- * También indica si es Lobo Solitario (sin restricciones) o usuario de Vision (acceso progresivo)
+ * Determina el tipo de usuario y su nivel de acceso:
+ * 
+ * 1. vision_enrollments (BASIC/ADVANCED/PL) → Acceso PROGRESIVO según nivel
+ * 2. VisionParticipante (sin enrollment) → Acceso COMPLETO (Liderato directo)
+ * 3. Ninguno → Lobo Solitario con acceso COMPLETO
+ * 
+ * Programa de Seguimiento (disciplina): Solo PL, VisionParticipante, o Lobo Solitario
  */
 export async function GET() {
   try {
@@ -42,7 +47,7 @@ export async function GET() {
       );
     }
 
-    // Verificar si el usuario tiene enrollments en alguna Vision (fuente principal de verdad)
+    // PASO 1: Verificar vision_enrollments (fuente de acceso progresivo)
     const enrollments = await prisma.vision_enrollments.findMany({
       where: {
         userId,
@@ -63,7 +68,7 @@ export async function GET() {
       }
     });
 
-    // También verificar VisionParticipante como fuente secundaria
+    // PASO 2: Verificar VisionParticipante (agregado por coordinador = acceso completo)
     const visionParticipante = await prisma.visionParticipante.findFirst({
       where: { participanteId: userId },
       include: {
@@ -73,101 +78,117 @@ export async function GET() {
       }
     });
 
-    // Si NO tiene enrollments NI es participante → Es "Lobo Solitario" con acceso completo
-    const isVisionUser = enrollments.length > 0 || !!visionParticipante;
-    
-    if (!isVisionUser) {
+    // Acceso completo para todos los módulos
+    const fullAccess = {
+      carta: true,
+      metas: true,
+      tareas: true,
+      evidencias: true,
+      llamadasMentor: true,
+      quantum: true,
+      disciplina: true,
+      ranking: true,
+      all: true
+    };
+
+    // CASO 1: Usuario tiene enrollment → Acceso PROGRESIVO según nivel
+    if (enrollments.length > 0) {
+      const visionId = enrollments[0]?.visionId;
+      const visionName = enrollments[0]?.Vision?.nombre;
+
+      // Determinar el nivel más alto del usuario
+      const levelPriority: Record<string, number> = { 'PL': 3, 'ADVANCED': 2, 'BASIC': 1 };
+      let currentLevel: 'BASIC' | 'ADVANCED' | 'PL' = 'BASIC';
+      let completedLevels: string[] = [];
+
+      for (const enrollment of enrollments) {
+        if (enrollment.graduatedAt || enrollment.completedAt) {
+          completedLevels.push(enrollment.level);
+        }
+        if (levelPriority[enrollment.level] > levelPriority[currentLevel]) {
+          currentLevel = enrollment.level as 'BASIC' | 'ADVANCED' | 'PL';
+        }
+      }
+
+      // Definir acceso según nivel
+      // BASIC: Ranking, Quantum, Llamadas Mentor
+      // ADVANCED: + Carta, Metas
+      // PL: + Tareas, Evidencias, Disciplina (acceso completo)
+      const accessibleModules = {
+        ranking: true,
+        quantum: true,
+        llamadasMentor: true,
+        carta: currentLevel === 'ADVANCED' || currentLevel === 'PL',
+        metas: currentLevel === 'ADVANCED' || currentLevel === 'PL',
+        tareas: currentLevel === 'PL',
+        evidencias: currentLevel === 'PL',
+        disciplina: currentLevel === 'PL',
+        all: currentLevel === 'PL'
+      };
+
+      const lockedMessages = {
+        tareas: '🔒 Disponible al registrarte en PL (Program Leadership)',
+        evidencias: '🔒 Disponible al registrarte en PL (Program Leadership)',
+        carta: '🔒 Disponible al registrarte en AVANZADO',
+        metas: '🔒 Disponible al registrarte en AVANZADO',
+        disciplina: '🔒 Disponible al registrarte en PL (Program Leadership)',
+        ranking: '',
+        quantum: '',
+        llamadasMentor: '',
+      };
+
       return NextResponse.json({
         success: true,
-        isVisionUser: false,
-        isLoboSolitario: true,
-        currentLevel: 'FULL', // Acceso completo
-        hasFullAccess: true,
-        accessibleModules: {
-          carta: true,
-          metas: true,
-          tareas: true,
-          evidencias: true,
-          llamadasMentor: true,
-          quantum: true,
-          disciplina: true,
-          ranking: true,
-          all: true
-        },
-        message: 'Lobo Solitario - Acceso completo al software'
+        userType: 'VISION_ENROLLED', // Usuario con enrollment progresivo
+        isVisionUser: true,
+        isLoboSolitario: false,
+        isVisionParticipante: false,
+        visionId,
+        visionName,
+        currentLevel,
+        completedLevels,
+        hasFullAccess: currentLevel === 'PL',
+        accessibleModules,
+        lockedMessages,
+        enrollments: enrollments.map(e => ({
+          level: e.level,
+          enrolledAt: e.enrolledAt,
+          completed: !!e.completedAt || !!e.graduatedAt
+        })),
+        message: `Usuario Vision nivel ${currentLevel}`
       });
     }
 
-    // Si tiene enrollments o es participante de Vision → Verificar nivel actual
-    const visionId = enrollments[0]?.visionId || visionParticipante?.Vision?.id;
-    const visionName = enrollments[0]?.Vision?.nombre || visionParticipante?.Vision?.nombre;
-
-    // Determinar el nivel más alto del usuario
-    // Orden de prioridad: PL > ADVANCED > BASIC
-    const levelPriority: Record<string, number> = { 'PL': 3, 'ADVANCED': 2, 'BASIC': 1 };
-    let currentLevel: 'BASIC' | 'ADVANCED' | 'PL' = 'BASIC';
-    let completedLevels: string[] = [];
-
-    for (const enrollment of enrollments) {
-      if (enrollment.graduatedAt || enrollment.completedAt) {
-        completedLevels.push(enrollment.level);
-      }
-      if (levelPriority[enrollment.level] > levelPriority[currentLevel]) {
-        currentLevel = enrollment.level as 'BASIC' | 'ADVANCED' | 'PL';
-      }
+    // CASO 2: Usuario es VisionParticipante (sin enrollment) → Acceso COMPLETO
+    if (visionParticipante) {
+      return NextResponse.json({
+        success: true,
+        userType: 'VISION_PARTICIPANTE', // Agregado por coordinador
+        isVisionUser: true,
+        isLoboSolitario: false,
+        isVisionParticipante: true,
+        visionId: visionParticipante.Vision?.id,
+        visionName: visionParticipante.Vision?.nombre,
+        currentLevel: 'FULL',
+        hasFullAccess: true,
+        accessibleModules: fullAccess,
+        lockedMessages: {},
+        message: 'VisionParticipante - Acceso completo (Liderato directo)'
+      });
     }
 
-    // Definir qué módulos están accesibles según el nivel
-    // BASIC: Ranking, Quantum, Llamadas Mentor
-    // ADVANCED: + Carta, Metas
-    // PL: + Tareas, Evidencias, Disciplina (acceso completo)
-    const accessibleModules = {
-      // Siempre disponibles (todos los niveles)
-      ranking: true,
-      quantum: true,
-      llamadasMentor: true,
-      
-      // ADVANCED y PL: Carta, Metas
-      carta: currentLevel === 'ADVANCED' || currentLevel === 'PL',
-      metas: currentLevel === 'ADVANCED' || currentLevel === 'PL',
-      
-      // Solo PL: Tareas, Evidencias, Disciplina
-      tareas: currentLevel === 'PL',
-      evidencias: currentLevel === 'PL',
-      disciplina: currentLevel === 'PL',
-      
-      // Acceso completo solo si es PL
-      all: currentLevel === 'PL'
-    };
-
-    // Mensajes de bloqueo por módulo
-    const lockedMessages = {
-      tareas: '🔒 Disponible al registrarte en PL (Program Leadership)',
-      evidencias: '🔒 Disponible al registrarte en PL (Program Leadership)',
-      carta: '🔒 Disponible al registrarte en AVANZADO',
-      metas: '🔒 Disponible al registrarte en AVANZADO',
-      disciplina: '🔒 Disponible al registrarte en PL (Program Leadership)',
-      ranking: '', // Siempre disponible
-      quantum: '', // Siempre disponible
-      llamadasMentor: '', // Siempre disponible
-    };
-
+    // CASO 3: No tiene enrollment ni es participante → Lobo Solitario
     return NextResponse.json({
       success: true,
-      isVisionUser: true,
-      isLoboSolitario: false,
-      visionId,
-      visionName,
-      currentLevel,
-      completedLevels,
-      hasFullAccess: currentLevel === 'PL',
-      accessibleModules,
-      lockedMessages,
-      enrollments: enrollments.map(e => ({
-        level: e.level,
-        enrolledAt: e.enrolledAt,
-        completed: !!e.completedAt || !!e.graduatedAt
-      }))
+      userType: 'LOBO_SOLITARIO',
+      isVisionUser: false,
+      isLoboSolitario: true,
+      isVisionParticipante: false,
+      currentLevel: 'FULL',
+      hasFullAccess: true,
+      accessibleModules: fullAccess,
+      lockedMessages: {},
+      message: 'Lobo Solitario - Acceso completo al software'
     });
 
   } catch (error) {
