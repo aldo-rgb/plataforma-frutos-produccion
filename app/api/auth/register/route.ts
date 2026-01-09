@@ -5,6 +5,14 @@ import bcrypt from 'bcryptjs';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    console.log('📝 Registro recibido:', { 
+      nombre: body.nombre,
+      email: body.email,
+      organizationId: body.organizationId,
+      referralCode: body.referralCode,
+      expectations: body.expectations
+    });
+    
     const { 
       nombre, 
       apodo,
@@ -19,7 +27,8 @@ export async function POST(request: Request) {
       profession,
       birthdate,
       children,
-      goals
+      goals,
+      expectations
     } = body;
 
     // Validaciones básicas
@@ -65,13 +74,31 @@ export async function POST(request: Request) {
 
     // Procesar referido si existe
     let invitedById: number | null = null;
+    let invitedByText: string | null = null;
     let generatedReferralCode: string | null = null;
 
-    if (referralCode) {
-      const referrer = await prisma.usuario.findUnique({
+    if (referralCode && referralCode.trim()) {
+      // Guardar el texto original que escribió el usuario
+      invitedByText = referralCode.trim();
+
+      // Intentar buscar por código de referido primero
+      let referrer = await prisma.usuario.findUnique({
         where: { referralCode: referralCode.toUpperCase() },
         select: { id: true }
       });
+
+      // Si no se encuentra por código, buscar por nombre exacto
+      if (!referrer) {
+        referrer = await prisma.usuario.findFirst({
+          where: { 
+            nombre: {
+              equals: referralCode,
+              mode: 'insensitive'
+            }
+          },
+          select: { id: true }
+        });
+      }
 
       if (referrer) {
         invitedById = referrer.id;
@@ -81,6 +108,10 @@ export async function POST(request: Request) {
           where: { id: referrer.id },
           data: { invitedCount: { increment: 1 } }
         });
+        
+        console.log(`✅ Referido encontrado: Usuario ${referrer.id} invitó con texto "${invitedByText}"`);
+      } else {
+        console.log(`ℹ️ No se encontró referido para "${invitedByText}", pero se guardará el texto`);
       }
     }
 
@@ -105,12 +136,14 @@ export async function POST(request: Request) {
         experienciaXP: 0,
         puntosCuanticos: 0,
         invitedBy: invitedById,
+        invitedByText: invitedByText,
         referralCode: generatedReferralCode,
         // Campos opcionales del formulario extendido
         ...(profession && { profession }),
         ...(birthdate && { birthdate: new Date(birthdate) }),
         ...(children !== undefined && { children: parseInt(children) }),
         ...(goals && goals.length > 0 && { goals: JSON.stringify(goals) }),
+        ...(expectations && { expectations }),
       }
     });
 

@@ -1,30 +1,159 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { CheckCircle2, Ticket, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Ticket, ArrowRight, Mail, Sparkles, LogIn, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 
-export default function CheckoutSuccessPage() {
+function SuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const sessionId = searchParams.get('session_id');
-  const [countdown, setCountdown] = useState(5);
+  const email = searchParams.get('email');
+  const ticketsCreated = parseInt(searchParams.get('tickets') || '1');
+  const isNewRegistration = !!email; // If email is present, it's a new registration
+  
+  const [countdown, setCountdown] = useState(10);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          router.push('/dashboard/my-tickets');
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    // Only auto-redirect for existing users (Stripe flow)
+    if (!isNewRegistration) {
+      const interval = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            router.push('/dashboard/my-tickets');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
 
-    return () => clearInterval(interval);
-  }, [router]);
+      return () => clearInterval(interval);
+    }
+  }, [router, isNewRegistration]);
 
+  // New Registration Flow (Gift Code)
+  if (isNewRegistration) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white flex items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-2xl w-full"
+        >
+          <div className="text-center p-12 bg-slate-800/50 rounded-3xl border border-slate-700">
+            {/* Success Icon */}
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: 'spring' }}
+              className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-2xl shadow-green-500/50"
+            >
+              <CheckCircle2 size={48} className="text-white" />
+            </motion.div>
+
+            {/* Title */}
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-4xl font-bold mb-4 bg-gradient-to-r from-green-400 via-emerald-400 to-cyan-400 bg-clip-text text-transparent"
+            >
+              ¡Registro Exitoso!
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="text-xl text-slate-300 mb-8"
+            >
+              Bienvenido!!!! 🎉
+            </motion.p>
+
+            {/* Info Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="bg-slate-900/70 border border-slate-700 rounded-2xl p-6 text-left mb-8"
+            >
+              {/* Tickets Created */}
+              <div className="flex items-center gap-4 pb-4 border-b border-slate-700 mb-4">
+                <div className="p-3 bg-yellow-500/20 rounded-xl">
+                  <Ticket className="text-yellow-400" size={24} />
+                </div>
+                <div>
+                  <p className="font-bold text-white">
+                    {ticketsCreated} Ticket{ticketsCreated > 1 ? 's' : ''} Activado{ticketsCreated > 1 ? 's' : ''}
+                  </p>
+                  <p className="text-sm text-slate-400">
+                    {ticketsCreated === 1 
+                      ? 'Acceso a nivel Básico' 
+                      : 'Acceso a todos los niveles (Básico, Avanzado, PL)'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Email Sent */}
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-cyan-500/20 rounded-xl">
+                  <Mail className="text-cyan-400" size={24} />
+                </div>
+                <div>
+                  <p className="font-bold text-white">Confirmación Enviada</p>
+                  <p className="text-sm text-slate-400">
+                    Revisa tu correo: <span className="text-cyan-400">{email}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Start Journey */}
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-purple-500/20 rounded-xl">
+                  <Sparkles className="text-purple-400" size={24} />
+                </div>
+                <div>
+                  <p className="font-bold text-white">Tu Aventura Comienza</p>
+                  <p className="text-sm text-slate-400">
+                    Inicia sesión para comenzar tu transformación
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* CTA Button */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+            >
+              <Link href="/login">
+                <button className="w-full py-4 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/30">
+                  <LogIn size={20} />
+                  Iniciar Sesión
+                  <ArrowRight size={20} />
+                </button>
+              </Link>
+            </motion.div>
+
+            {/* Footer Note */}
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.7 }}
+              className="mt-6 text-sm text-slate-500"
+            >
+              ¿Tienes problemas? Contacta a tu administrador o escríbenos a soporte@frutos.app
+            </motion.p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Existing User Flow (Stripe Purchase)
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white flex items-center justify-center p-6">
       <motion.div
@@ -115,5 +244,17 @@ export default function CheckoutSuccessPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function CheckoutSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   );
 }

@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { codigo, nombreOrganizacion, logoUrl, geofencing, masterOrganizationId } = body;
+    const { codigo, nombreOrganizacion, address, logoUrl, geofencing, masterOrganizationId } = body;
 
     if (!codigo || !codigo.trim()) {
       return NextResponse.json({ error: 'Código requerido' }, { status: 400 });
@@ -155,6 +155,7 @@ export async function POST(req: NextRequest) {
               slug: slug,
               contactEmail: user.email || '',
               logoUrl: logoUrl || null,
+              address: address?.trim() || null,
               isGeofenced: isGeofenced,
               campusLatitude: campusLatitude,
               campusLongitude: campusLongitude,

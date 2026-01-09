@@ -31,10 +31,31 @@ export async function GET() {
       rol: usuario.rol
     });
 
+    // Buscar visiones donde el usuario está asignado como staff coordinador
+    const visionStaff = await prisma.visionStaff.findMany({
+      where: {
+        userId: usuario.id,
+        role: {
+          in: ['BASIC_COORDINATOR', 'ADVANCED_COORDINATOR', 'PL_COORDINATOR']
+        }
+      },
+      select: {
+        visionId: true
+      }
+    });
+
+    const visionIds = visionStaff.map(vs => vs.visionId);
+
+    console.log('📋 Visiones asignadas en VisionStaff:', visionIds);
+
     // Obtener visiones donde el coordinador es el coordinador asignado
+    // O donde está asignado en VisionStaff
     const visiones = await prisma.vision.findMany({
       where: {
-        coordinadorId: usuario.id
+        OR: [
+          { coordinadorId: usuario.id },
+          { id: { in: visionIds.length > 0 ? visionIds : [0] } }
+        ]
       },
       include: {
         _count: {

@@ -5,7 +5,8 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
   Users, Search, Filter, ArrowLeft, Trophy, Flame, Star,
-  TrendingUp, Calendar, Award, Shield, Zap, Target
+  TrendingUp, Calendar, Award, Shield, Zap, Target,
+  CreditCard, AlertTriangle, CheckCircle, Clock
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -18,6 +19,8 @@ interface User {
   experienciaXP: number;
   isActive: boolean;
   createdAt: string;
+  paymentStatus: string;
+  ticketsCount: number;
 }
 
 export default function UsersListPage() {
@@ -28,6 +31,7 @@ export default function UsersListPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
+  const [paymentFilter, setPaymentFilter] = useState<string>('ALL');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -51,6 +55,8 @@ export default function UsersListPage() {
             experienciaXP: u.experienciaXP || 0,
             isActive: u.isActive,
             createdAt: u.createdAt,
+            paymentStatus: u.paymentStatus || 'NO_TICKET',
+            ticketsCount: u.ticketsCount || 0,
           }));
           
           setUsers(userList);
@@ -76,6 +82,11 @@ export default function UsersListPage() {
       filtered = filtered.filter(u => u.rol === roleFilter);
     }
 
+    // Filtrar por estado de pago
+    if (paymentFilter !== 'ALL') {
+      filtered = filtered.filter(u => u.paymentStatus === paymentFilter);
+    }
+
     // Filtrar por búsqueda
     if (searchTerm) {
       filtered = filtered.filter(u =>
@@ -85,7 +96,7 @@ export default function UsersListPage() {
     }
 
     setFilteredUsers(filtered);
-  }, [searchTerm, roleFilter, users]);
+  }, [searchTerm, roleFilter, paymentFilter, users]);
 
   if (status === 'loading' || loading) {
     return (
@@ -136,6 +147,34 @@ export default function UsersListPage() {
     }
   };
 
+  const getPaymentBadge = (status: string) => {
+    switch (status) {
+      case 'PAID':
+        return (
+          <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
+            <CheckCircle size={12} />
+            Pagado
+          </span>
+        );
+      case 'PARTIAL':
+        return (
+          <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+            <Clock size={12} />
+            Parcial
+          </span>
+        );
+      case 'UNPAID':
+        return (
+          <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/30">
+            <AlertTriangle size={12} />
+            Sin Pago
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
       <div className="max-w-7xl mx-auto">
@@ -168,7 +207,7 @@ export default function UsersListPage() {
 
         {/* Filtros y Búsqueda */}
         <div className="bg-slate-900/50 border border-slate-700 rounded-2xl p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Búsqueda */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
@@ -194,6 +233,22 @@ export default function UsersListPage() {
                 <option value="GAMECHANGER">Game Changers</option>
                 <option value="COORDINADOR">Coordinadores</option>
                 <option value="MENTOR">Mentores</option>
+              </select>
+            </div>
+
+            {/* Filtro por Estado de Pago */}
+            <div className="relative">
+              <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+              <select
+                value={paymentFilter}
+                onChange={(e) => setPaymentFilter(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 appearance-none cursor-pointer"
+              >
+                <option value="ALL">Todos los pagos</option>
+                <option value="PAID">✅ Pagado</option>
+                <option value="PARTIAL">⏳ Pago Parcial</option>
+                <option value="UNPAID">⚠️ Sin Pagar</option>
+                <option value="NO_TICKET">📭 Sin Ticket</option>
               </select>
             </div>
           </div>
@@ -222,7 +277,7 @@ export default function UsersListPage() {
 
                     {/* Detalles */}
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
                         <h3 className="text-xl font-bold text-white">{user.nombre}</h3>
                         <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getRoleBadgeColor(user.rol)}`}>
                           {getRoleName(user.rol)}
@@ -230,6 +285,7 @@ export default function UsersListPage() {
                         <span className={`px-3 py-1 rounded-full text-xs font-bold ${getTierBadgeColor(user.tier)}`}>
                           {user.tier}
                         </span>
+                        {getPaymentBadge(user.paymentStatus)}
                       </div>
                       <p className="text-slate-400 text-sm">{user.email}</p>
                     </div>
@@ -266,7 +322,7 @@ export default function UsersListPage() {
           )}
         </div>
 
-        {/* Resumen de Estadísticas */}
+        {/* Resumen de Estadísticas por Rol */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-blue-900/30 border border-blue-500/30 rounded-xl p-4">
             <div className="flex items-center gap-3">
@@ -312,6 +368,57 @@ export default function UsersListPage() {
                   {users.filter(u => u.rol === 'MENTOR').length}
                 </p>
                 <p className="text-sm text-slate-400">Mentores Activos</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Resumen de Estadísticas por Pago */}
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-green-900/30 border border-green-500/30 rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="text-green-400" size={24} />
+              <div>
+                <p className="text-2xl font-bold text-white">
+                  {users.filter(u => u.paymentStatus === 'PAID').length}
+                </p>
+                <p className="text-sm text-slate-400">Pagados</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <Clock className="text-yellow-400" size={24} />
+              <div>
+                <p className="text-2xl font-bold text-white">
+                  {users.filter(u => u.paymentStatus === 'PARTIAL').length}
+                </p>
+                <p className="text-sm text-slate-400">Pago Parcial</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-red-900/30 border border-red-500/30 rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="text-red-400" size={24} />
+              <div>
+                <p className="text-2xl font-bold text-white">
+                  {users.filter(u => u.paymentStatus === 'UNPAID').length}
+                </p>
+                <p className="text-sm text-slate-400">Sin Pagar</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-800/50 border border-slate-600/30 rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <CreditCard className="text-slate-400" size={24} />
+              <div>
+                <p className="text-2xl font-bold text-white">
+                  {users.filter(u => !u.paymentStatus || u.paymentStatus === 'NO_TICKET').length}
+                </p>
+                <p className="text-sm text-slate-400">Sin Ticket</p>
               </div>
             </div>
           </div>

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Send, Bot, ShieldCheck, Save, ArrowLeft, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { ProtectedModulePage } from '@/components/ui/LockedModuleOverlay';
 
 // Las 9 Categorías con Lenguaje de Transformación
 const CATEGORIAS = [
@@ -154,6 +155,7 @@ export default function ChatbotPage() {
   };
 
   return (
+    <ProtectedModulePage moduleKey="metas">
     <div className="max-w-4xl mx-auto h-[calc(100vh-100px)] flex flex-col bg-slate-950 border border-white/10 rounded-3xl overflow-hidden shadow-2xl mt-4 mb-20">
       
       {/* HEADER */}
@@ -258,5 +260,6 @@ export default function ChatbotPage() {
         </div>
       )}
     </div>
+    </ProtectedModulePage>
   );
 }

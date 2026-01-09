@@ -618,6 +618,7 @@ model InstitutionalOrder {
   nombreOrganizacion String
   emailCoordinador   String
   logoUrl            String?
+  address            String?
   geofencing         String?
   cantidadLicencias  Int
   totalAmount        Float
@@ -1005,6 +1006,7 @@ model Organization {
   campusLatitude                                        Float?
   campusLongitude                                       Float?
   geofenceRadius                                        Int                             @default(100)
+  address                                               String?
   schoolAdminId                                         Int                             @unique
   totalLicenses                                         Int                             @default(0)
   activeLicenses                                        Int                             @default(0)
@@ -1038,6 +1040,7 @@ model Organization {
   Ticket                                                Ticket[]
   TicketPriceConfig                                     TicketPriceConfig[]
   PaymentGatewayConfig                                  PaymentGatewayConfig?
+  GiftCode                                              GiftCode[]
   coordinator_commission_config                         coordinator_commission_config[]
   coordinator_commissions                               coordinator_commissions[]
   weekly_payout_summary                                 weekly_payout_summary[]
@@ -1564,6 +1567,7 @@ model SchoolProduct {
   currentEnrollment   Int              @default(0)
   isActive            Boolean          @default(true)
   location            String?
+  videoUrl            String?
   coordinatorId       Int?
   trainerId           Int?
   createdAt           DateTime         @default(now())
@@ -1986,12 +1990,14 @@ model Usuario {
   birthdate                                                              DateTime?
   children                                                               Int?
   goals                                                                  String?
+  expectations                                                           String?
   angelEnrrolamiento                                                     String?
   visionAngel                                                            String?
   responsableSeguimiento                                                 String?
   referralCode                                                           String?                         @unique
   invitedCount                                                           Int                             @default(0)
   invitedBy                                                              Int?
+  invitedByText                                                          String?
   requirePasswordChange                                                  Boolean                         @default(false)
   changeRequestedAt                                                      DateTime?
   changeRequestedBy                                                      Int?
@@ -2132,6 +2138,10 @@ model Usuario {
   CallInteractionLog                                                     CallInteractionLog[]
   Ticket_TicketOwner                                                     Ticket[]                        @relation("TicketOwner")
   Ticket_TicketReferrer                                                  Ticket[]                        @relation("TicketReferrer")
+  GiftCode_Creator                                                       GiftCode[]                      @relation("GiftCodeCreator")
+  GiftCode_User                                                          GiftCode[]                      @relation("GiftCodeUser")
+  MedicalForm                                                            MedicalForm?
+  MedicalFormReviewed                                                    MedicalForm[]                   @relation("MedicalFormReviewer")
 
   @@index([communityOrganizationId])
 }
@@ -2188,6 +2198,8 @@ model Vision {
   vision_enrollments            vision_enrollments[]
   weekly_payout_summary         weekly_payout_summary[]
   Ticket                        Ticket[]
+  GiftCode                      GiftCode[]
+  MedicalForm                   MedicalForm[]
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -2492,33 +2504,90 @@ model weekly_payout_summary {
 }
 
 model Ticket {
-  id             String              @id @default(uuid())
-  ownerId        Int
-  organizationId Int
-  visionId       Int
-  level          VisionLevel
-  type           TicketType          @default(STANDARD)
-  status         TicketStatus        @default(PENDING_PAYMENT)
-  isTransferable Boolean             @default(true)
-  validUntil     DateTime?
-  paymentStatus  TicketPaymentStatus @default(PENDING)
-  purchasePrice  Decimal?            @db.Decimal(10, 2)
-  transferredAt  DateTime?
-  transferredTo  Int?
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
+  id              String              @id @default(uuid())
+  ownerId         Int
+  organizationId  Int
+  visionId        Int
+  level           VisionLevel
+  type            TicketType          @default(STANDARD)
+  status          TicketStatus        @default(PENDING_PAYMENT)
+  isTransferable  Boolean             @default(true)
+  validUntil      DateTime?
+  paymentStatus   TicketPaymentStatus @default(UNPAID)
+  costAtPurchase  Decimal?            @db.Decimal(10, 2)  // Precio congelado al momento de compra
+  amountPaid      Decimal             @default(0) @db.Decimal(10, 2)  // Total pagado
+  purchasePrice   Decimal?            @db.Decimal(10, 2)  // Deprecated, usar costAtPurchase
+  giftCodeId      Int?                // Si fue adquirido con código de regalo
+  transferredAt   DateTime?
+  transferredTo   Int?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
 
-  owner        Usuario      @relation("TicketOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  referrer     Usuario?     @relation("TicketReferrer", fields: [transferredTo], references: [id])
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  vision       Vision       @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  owner        Usuario             @relation("TicketOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  referrer     Usuario?            @relation("TicketReferrer", fields: [transferredTo], references: [id])
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vision       Vision              @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  giftCode     GiftCode?           @relation(fields: [giftCodeId], references: [id])
+  transactions TicketTransaction[]
 
   @@index([ownerId])
   @@index([organizationId])
   @@index([visionId])
   @@index([level])
   @@index([status])
+  @@index([paymentStatus])
   @@index([validUntil])
+}
+
+// Códigos de regalo para tickets
+model GiftCode {
+  id                 Int            @id @default(autoincrement())
+  code               String         @unique  // Ej: GOLDEN-ABC123, PLATINUM-XYZ789
+  type               GiftCodeType   // GOLDEN (1 básico) o PLATINUM (los 3 niveles)
+  organizationId     Int
+  visionId           Int?           // Opcional: si es específico para una visión
+  status             GiftCodeStatus @default(ACTIVE)
+  value              Decimal?       @db.Decimal(10, 2)  // Valor monetario (para parciales)
+  discountPercentage Int?           // Porcentaje de descuento (solo para GOLDEN_DISCOUNT)
+  createdBy          Int            // Admin que lo creó
+  usedBy             Int?           // Usuario que lo usó
+  usedAt             DateTime?
+  expiresAt          DateTime?
+  notes              String?        // Notas del admin
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vision       Vision?      @relation(fields: [visionId], references: [id])
+  creator      Usuario      @relation("GiftCodeCreator", fields: [createdBy], references: [id])
+  user         Usuario?     @relation("GiftCodeUser", fields: [usedBy], references: [id])
+  tickets      Ticket[]
+
+  @@index([code])
+  @@index([organizationId])
+  @@index([status])
+  @@index([type])
+}
+
+// Historial de transacciones de pago para tickets
+model TicketTransaction {
+  id             String            @id @default(uuid())
+  ticketId       String
+  gateway        PaymentGateway
+  transactionRef String?           // ID de transacción externa (Stripe/MP/PayPal)
+  amount         Decimal           @db.Decimal(10, 2)
+  currency       Currency          @default(MXN)
+  status         TransactionStatus @default(PENDING)
+  metadata       Json?             // Datos adicionales del gateway
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([gateway])
+  @@index([status])
+  @@index([transactionRef])
 }
 
 model TicketPriceConfig {
@@ -3047,6 +3116,36 @@ enum TicketPaymentStatus {
   PARTIAL
   GIFT
   PENDING
+  UNPAID
+}
+
+// Tipos de código de regalo
+enum GiftCodeType {
+  GOLDEN          // 1 entrada a básico (gratis)
+  GOLDEN_DISCOUNT // 1 entrada a básico con descuento personalizado
+  PLATINUM        // 1 entrada a cada nivel (3 tickets)
+}
+
+enum GiftCodeStatus {
+  ACTIVE
+  USED
+  EXPIRED
+  CANCELLED
+}
+
+enum PaymentGateway {
+  STRIPE
+  MERCADOPAGO
+  PAYPAL
+  GIFT_CODE
+  CASH_MANUAL
+}
+
+enum TransactionStatus {
+  SUCCESS
+  PENDING
+  FAILED
+  REFUNDED
 }
 
 enum WalletTxType {
@@ -3067,4 +3166,73 @@ enum CallResult {
   WRONG_NUMBER
   RESCHEDULED
   CONFIRMED
+}
+
+// ========================================
+// FORMULARIO MÉDICO - Medical Form
+// ========================================
+
+model MedicalForm {
+  id                      Int       @id @default(autoincrement())
+  userId                  Int       @unique
+  visionId                Int?
+  
+  // Sección 1: Condiciones Médicas
+  hasCurrentIllness       Boolean   @default(false)
+  currentIllnessDetails   String?
+  
+  hasCurrentTreatment     Boolean   @default(false)
+  currentTreatmentDetails String?
+  
+  takesMedication         Boolean   @default(false)
+  medicationDetails       String?
+  
+  hasAllergies            Boolean   @default(false)
+  allergyDetails          String?
+  
+  hadSurgery              Boolean   @default(false)
+  surgeryDetails          String?
+  
+  wasHospitalized         Boolean   @default(false)
+  hospitalizationDetails  String?
+  
+  hasChronicIllness       Boolean   @default(false)  // diabetes, hipertensión, epilepsia, asma
+  chronicIllnessDetails   String?
+  
+  hasPhysicalInjury       Boolean   @default(false)
+  physicalInjuryDetails   String?
+  
+  hasActivityRestrictions Boolean   @default(false)
+  activityRestrictionDetails String?
+  
+  hasPsychologicalCondition Boolean @default(false)
+  psychologicalConditionDetails String?
+  
+  // Sección 2: Contacto de Emergencia
+  emergencyContactName    String
+  emergencyContactRelation String
+  emergencyContactPhone   String
+  
+  // Sección 3: Consentimiento
+  consentAccepted         Boolean   @default(false)
+  signatureData           String?   // Base64 de la firma digital
+  signedAt                DateTime?
+  
+  // Control de alertas
+  hasAlerts               Boolean   @default(false)  // True si cualquier condición es Sí
+  alertsReviewedAt        DateTime?
+  alertsReviewedBy        Int?
+  
+  // Metadata
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  
+  // Relaciones
+  Usuario                 Usuario   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Vision                  Vision?   @relation(fields: [visionId], references: [id])
+  ReviewedBy              Usuario?  @relation("MedicalFormReviewer", fields: [alertsReviewedBy], references: [id])
+  
+  @@index([userId])
+  @@index([visionId])
+  @@index([hasAlerts])
 }

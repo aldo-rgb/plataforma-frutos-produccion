@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Calendar, CheckCircle2, Circle, AlertCircle, Clock } from 'lucide-react';
 import Link from 'next/link';
+import { ProtectedModulePage } from '@/components/ui/LockedModuleOverlay';
 
 // --- TIPO DE DATO PARA TAREA (Simulando Prisma) ---
 type TareaView = {
@@ -39,6 +40,7 @@ export default function MetasHoyPage() {
   const deHoy = tareas.filter(t => t.estado === 'HOY');
 
   return (
+    <ProtectedModulePage moduleKey="metas">
     <div className="p-4 md:p-8 max-w-4xl mx-auto">
       
       {/* Header y Navegación */}
@@ -135,5 +137,6 @@ export default function MetasHoyPage() {
 
       </div>
     </div>
+    </ProtectedModulePage>
   );
 }

@@ -5,6 +5,7 @@ import {
   UploadCloud, Image as ImageIcon, X, CheckCircle, 
   Loader2, Trophy, Zap, Shield, Target, Scan, ArrowRight
 } from 'lucide-react';
+import { ProtectedModulePage } from '@/components/ui/LockedModuleOverlay';
 
 const CATEGORIAS = [
   { id: 'finanzas', label: 'Finanzas', color: 'text-emerald-400', border: 'group-hover:border-emerald-500/50', bg: 'group-hover:bg-emerald-500/10' },
@@ -88,6 +89,7 @@ export default function EvidenciasPage() {
   };
 
   return (
+    <ProtectedModulePage moduleKey="evidencias">
     <div className="relative max-w-6xl mx-auto space-y-8 pb-20">
       
       {/* Luces Ambientales */}
@@ -255,5 +257,6 @@ export default function EvidenciasPage() {
 
       </div>
     </div>
+    </ProtectedModulePage>
   );
 }

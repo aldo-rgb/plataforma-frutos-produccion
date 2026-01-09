@@ -39,6 +39,11 @@ export async function GET(
         startDate: true,
         descripcion: true,
         maxParticipantes: true,
+        Organization: {
+          select: {
+            address: true
+          }
+        },
         VisionParticipante: {
           select: {
             id: true
@@ -57,7 +62,8 @@ export async function GET(
         startDate: nextVision.startDate,
         descripcion: nextVision.descripcion,
         maxParticipantes: nextVision.maxParticipantes,
-        currentParticipantes: nextVision.VisionParticipante?.length || 0
+        currentParticipantes: nextVision.VisionParticipante?.length || 0,
+        location: nextVision.Organization?.address || null
       } : null
     };
 

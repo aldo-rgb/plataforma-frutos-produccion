@@ -7,7 +7,7 @@ import {
   Users, TrendingUp, Target, Ticket, Award, BarChart3, Download,
   AlertTriangle, CheckCircle, XCircle, Plus, X, CreditCard, Clock,
   DollarSign, ShoppingCart, Building2, UserCheck, Activity, Zap,
-  Shield, BookOpen, GraduationCap, Star, Phone
+  Shield, BookOpen, GraduationCap, Star, Phone, Heart
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -79,6 +79,7 @@ export default function SchoolAdminDashboard() {
   const [visiones, setVisiones] = useState<any[]>([]);
   const [loadingVisiones, setLoadingVisiones] = useState(true);
   const [notificacionesLideres, setNotificacionesLideres] = useState(0);
+  const [medicalAlertsCount, setMedicalAlertsCount] = useState(0);
   const [misionesModalOpen, setMisionesModalOpen] = useState(false);
   const [qrDataURL, setQrDataURL] = useState<string | null>(null);
   const [generatingQR, setGeneratingQR] = useState(false);
@@ -94,6 +95,7 @@ export default function SchoolAdminDashboard() {
       checkPaymentStatus();
       fetchConsejoQuantum();
       fetchVisiones();
+      fetchMedicalAlerts();
     }
   }, [status, session]);
 
@@ -232,6 +234,18 @@ export default function SchoolAdminDashboard() {
       console.error('Error fetching visiones:', error);
     } finally {
       setLoadingVisiones(false);
+    }
+  };
+
+  const fetchMedicalAlerts = async () => {
+    try {
+      const res = await fetch('/api/coordinator/medical-alerts?onlyAlerts=true');
+      const result = await res.json();
+      if (res.ok && result.success) {
+        setMedicalAlertsCount(result.unreviewedAlertsCount || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching medical alerts:', error);
     }
   };
 
@@ -903,6 +917,40 @@ export default function SchoolAdminDashboard() {
               </div>
             </Link>
 
+            {/* Widget de Registros Médicos */}
+            <Link href="/dashboard/school-admin/medical-records" className="block mt-6">
+              <div className="bg-gradient-to-br from-red-900/50 via-pink-900/30 to-slate-900 border-2 border-red-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-red-500/50 hover:shadow-lg hover:shadow-red-500/10 relative overflow-hidden">
+                {/* Badge de alertas */}
+                {medicalAlertsCount > 0 && (
+                  <div className="absolute top-2 right-2">
+                    <div className="relative">
+                      <div className="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-red-400 opacity-75"></div>
+                      <div className="relative inline-flex items-center justify-center h-6 w-6 rounded-full bg-red-500 border-2 border-slate-900">
+                        <span className="text-white font-bold text-xs">{medicalAlertsCount}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-red-500/20 group-hover:bg-red-500/30 rounded-xl transition-colors">
+                    <Heart size={24} className="text-red-300" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm uppercase">
+                      🏥 Registros Médicos
+                    </h3>
+                    <p className="text-xs text-red-300">
+                      {medicalAlertsCount > 0 ? `${medicalAlertsCount} alertas pendientes` : 'Ver formularios médicos'}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Revisa los registros médicos de los participantes y alertas de condiciones especiales
+                </p>
+              </div>
+            </Link>
+
             <Link href="/dashboard/school-admin/strikes" className="block mt-6">
               <div className="bg-gradient-to-br from-purple-900/50 via-pink-900/30 to-slate-900 border-2 border-purple-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10">
                 <div className="flex items-center gap-3 mb-4">
@@ -983,6 +1031,27 @@ export default function SchoolAdminDashboard() {
                 </div>
                 <p className="text-xs text-slate-400">
                   Administra todos tus productos: CORE y talleres extras
+                </p>
+              </div>
+            </Link>
+
+            <Link href="/dashboard/school-admin/gift-codes" className="block mt-6">
+              <div className="bg-gradient-to-br from-yellow-900/50 via-amber-900/40 to-slate-900 border-2 border-yellow-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-yellow-500/50 hover:shadow-lg hover:shadow-yellow-500/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-yellow-500/20 group-hover:bg-yellow-500/30 rounded-xl transition-colors">
+                    <Ticket size={24} className="text-yellow-300" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm uppercase">
+                      CODIGOS BECAS
+                    </h3>
+                    <p className="text-xs text-yellow-300">
+                      Golden & Platinum Tickets
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Genera códigos de regalo para tickets de acceso a tus visiones
                 </p>
               </div>
             </Link>

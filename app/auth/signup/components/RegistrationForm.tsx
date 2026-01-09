@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion';
 import { tw } from '@/lib/theme/quantum';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { useState, useEffect } from 'react';
 
 interface Organization {
   id: number;
@@ -16,6 +18,7 @@ interface NextVision {
   descripcion: string | null;
   maxParticipantes: number;
   currentParticipantes: number;
+  location: string | null;
 }
 
 interface ReferralUser {
@@ -39,6 +42,7 @@ interface FormData {
   goal1: string;
   goal2: string;
   goal3: string;
+  expectations: string;
   referralCode: string;
   acceptTerms: boolean;
   password: string;
@@ -58,7 +62,7 @@ interface Props {
   onBack: () => void;
   onLegalScroll: (e: React.UIEvent<HTMLDivElement>) => void;
   onSubmit: (e: React.FormEvent) => void;
-  t: any;
+  locale: 'es' | 'en';
 }
 
 export function RegistrationForm({
@@ -74,27 +78,80 @@ export function RegistrationForm({
   onBack,
   onLegalScroll,
   onSubmit,
-  t,
+  locale,
 }: Props) {
+  const t = useTranslations('signup');
+  const [searchingReferral, setSearchingReferral] = useState(false);
+  const [referralSuggestions, setReferralSuggestions] = useState<ReferralUser[]>([]);
+  const [referralSearchText, setReferralSearchText] = useState('');
+  const [selectedReferral, setSelectedReferral] = useState<ReferralUser | null>(referralUser);
+  const [showNoPasteModal, setShowNoPasteModal] = useState(false);
+  const [ageWarning, setAgeWarning] = useState<'none' | 'needs_tutor' | 'too_young'>('none');
+
+  // Validar edad cuando cambia
+  useEffect(() => {
+    const age = parseInt(formData.age);
+    if (!isNaN(age)) {
+      if (age < 17) {
+        setAgeWarning('too_young');
+      } else if (age === 17) {
+        setAgeWarning('needs_tutor');
+      } else {
+        setAgeWarning('none');
+      }
+    } else {
+      setAgeWarning('none');
+    }
+  }, [formData.age]);
+  
   const handleChange = (field: keyof FormData) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
-    if (e.target instanceof HTMLInputElement && e.target.type === 'checkbox') {
-      setFormData(prev => ({ ...prev, [field]: e.target.checked }));
+    const target = e.target;
+    if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+      setFormData(prev => ({ ...prev, [field]: target.checked }));
     } else {
-      setFormData(prev => ({ ...prev, [field]: e.target.value }));
+      setFormData(prev => ({ ...prev, [field]: target.value }));
     }
   };
 
   // Prevenir paste en email confirm
   const handleEmailConfirmPaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
-    alert(t('contact.noPaste'));
+    setShowNoPasteModal(true);
   };
 
   const daysUntilStart = nextVision ? Math.ceil(
     (new Date(nextVision.startDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
   ) : 0;
+
+  // Buscar referidos por nombre
+  useEffect(() => {
+    const searchReferrals = async () => {
+      if (referralSearchText.trim().length < 2) {
+        setReferralSuggestions([]);
+        return;
+      }
+
+      setSearchingReferral(true);
+      try {
+        const response = await fetch(
+          `/api/public/search-referrals?query=${encodeURIComponent(referralSearchText)}&orgId=${selectedOrganization?.id}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setReferralSuggestions(data.users || []);
+        }
+      } catch (error) {
+        console.error('Error searching referrals:', error);
+      } finally {
+        setSearchingReferral(false);
+      }
+    };
+
+    const debounce = setTimeout(searchReferrals, 300);
+    return () => clearTimeout(debounce);
+  }, [referralSearchText, selectedOrganization]);
 
   return (
     <motion.div
@@ -141,40 +198,46 @@ export function RegistrationForm({
               Cambiar sede
             </button>
           </div>
-
           {/* Próximo básico */}
           {nextVision ? (
             <div className="bg-gradient-to-br from-blue-900/30 to-purple-900/30 border-2 border-[#00F0FF]/30 rounded-xl p-6 mt-4">
-              <div className={`${tw.textQuantum} text-sm font-medium mb-2`}>🎯 Próximo Programa Básico</div>
+              <div className={`${tw.textQuantum} text-sm font-medium mb-2`}>
+                🎯 {locale === 'es' ? 'Próximo Programa Básico' : 'Next Basic Program'}
+              </div>
               <h2 className="text-2xl font-bold text-white mb-2">{nextVision.nombre}</h2>
               <div className={`text-3xl font-black ${tw.textQuantum} mb-2`} style={{ fontFamily: 'JetBrains Mono, monospace' }}>
-                {new Date(nextVision.startDate).toLocaleDateString('es-MX', {
+                {new Date(nextVision.startDate).toLocaleDateString(locale === 'es' ? 'es-MX' : 'en-US', {
                   day: 'numeric',
                   month: 'long',
                   year: 'numeric'
                 })}
               </div>
-              {nextVision.descripcion && (
-                <p className="text-slate-300 text-sm mb-3">{nextVision.descripcion}</p>
+              {nextVision.location && (
+                <p className="text-slate-300 text-sm mb-3 flex items-center gap-2">
+                  <span>📍</span>
+                  <span>{nextVision.location}</span>
+                </p>
               )}
               <div className="flex items-center justify-center gap-4 text-sm text-slate-400">
                 <div className="flex items-center gap-1">
-                  <span>👥</span>
-                  <span>{nextVision.currentParticipantes} / {nextVision.maxParticipantes}</span>
-                </div>
-                <div className="h-4 w-px bg-slate-600"></div>
-                <div className="flex items-center gap-1">
                   <span>📅</span>
-                  <span>Inicia en {daysUntilStart} días</span>
+                  <span>{locale === 'es' ? 'Inicia en' : 'Starts in'} {daysUntilStart} {locale === 'es' ? 'días' : 'days'}</span>
                 </div>
               </div>
             </div>
           ) : (
             <div className="bg-slate-800/50 border-2 border-slate-700/30 rounded-xl p-6 mt-4">
-              <div className="text-slate-400 text-sm font-medium mb-2">📅 Próximas Convocatorias</div>
-              <h2 className="text-xl font-bold text-white mb-2">Aún no hay fechas programadas</h2>
+              <div className="text-slate-400 text-sm font-medium mb-2">
+                📅 {locale === 'es' ? 'Próximas Convocatorias' : 'Next Sessions'}
+              </div>
+              <h2 className="text-xl font-bold text-white mb-2">
+                {locale === 'es' ? 'Aún no hay fechas programadas' : 'No scheduled dates yet'}
+              </h2>
               <p className="text-slate-400 text-sm">
-                Te notificaremos cuando se abran nuevos grupos básicos
+                {locale === 'es' 
+                  ? 'Te notificaremos cuando se abran nuevos grupos básicos'
+                  : 'We will notify you when new basic groups open'
+                }
               </p>
             </div>
           )}
@@ -252,10 +315,56 @@ export function RegistrationForm({
               <InputField
                 label={t('personalInfo.age')}
                 value={formData.age}
+                onChange={() => {}} // readonly field
                 readOnly
                 className="bg-slate-800/50 cursor-not-allowed"
               />
             </div>
+
+            {/* Warning de edad */}
+            {ageWarning === 'needs_tutor' && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-4 bg-yellow-500/10 border border-yellow-500/50 rounded-xl"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">⚠️</span>
+                  <div>
+                    <p className="text-yellow-400 font-semibold">
+                      {locale === 'es' ? 'Requiere carta de padre o tutor' : 'Requires parental or guardian letter'}
+                    </p>
+                    <p className="text-yellow-300/80 text-sm mt-1">
+                      {locale === 'es' 
+                        ? 'Al ser menor de 18 años, necesitarás presentar una carta de autorización firmada por tu padre, madre o tutor legal para completar tu inscripción.'
+                        : 'As you are under 18, you will need to submit a signed authorization letter from your parent or legal guardian to complete your registration.'}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {ageWarning === 'too_young' && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-4 bg-red-500/10 border border-red-500/50 rounded-xl"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">🚫</span>
+                  <div>
+                    <p className="text-red-400 font-semibold">
+                      {locale === 'es' ? 'No puedes registrarte en este momento' : 'You cannot register at this time'}
+                    </p>
+                    <p className="text-red-300/80 text-sm mt-1">
+                      {locale === 'es' 
+                        ? 'Este entrenamiento es para mayores de 17 años. ¡Te invitamos a esperar nuestro próximo entrenamiento especial para TEENS! 🚀'
+                        : 'This training is for people 17 and older. We invite you to wait for our next special TEENS training! 🚀'}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
 
             <InputField
               label={t('personalInfo.phone')}
@@ -266,18 +375,32 @@ export function RegistrationForm({
               required
             />
 
-            <SelectField
-              label={t('personalInfo.contactPreference')}
-              value={formData.contactPreference}
-              onChange={handleChange('contactPreference')}
-              required
-            >
-              <option value="">Selecciona un horario</option>
-              <option value="5am-10am">{t('personalInfo.timeSlots.earlyMorning')}</option>
-              <option value="10am-3pm">{t('personalInfo.timeSlots.midday')}</option>
-              <option value="3pm-7pm">{t('personalInfo.timeSlots.afternoon')}</option>
-              <option value="7pm-10pm">{t('personalInfo.timeSlots.night')}</option>
-            </SelectField>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-3">
+                {t('personalInfo.contactPreference')} <span className="text-[#00F0FF]">*</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  { value: '5am-10am', label: t('personalInfo.timeSlots.earlyMorning') },
+                  { value: '10am-3pm', label: t('personalInfo.timeSlots.midday') },
+                  { value: '3pm-7pm', label: t('personalInfo.timeSlots.afternoon') },
+                  { value: '7pm-10pm', label: t('personalInfo.timeSlots.night') },
+                ].map((slot) => (
+                  <button
+                    key={slot.value}
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, contactPreference: slot.value }))}
+                    className={`px-4 py-3 rounded-lg border-2 transition-all font-medium ${
+                      formData.contactPreference === slot.value
+                        ? 'border-[#00F0FF] bg-[#00F0FF]/10 text-[#00F0FF] shadow-[0_0_15px_rgba(0,240,255,0.3)]'
+                        : 'border-slate-700/50 bg-slate-800/30 text-slate-300 hover:border-slate-600 hover:bg-slate-800/50'
+                    }`}
+                  >
+                    {slot.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </FormSection>
 
           {/* Sección: Contacto */}
@@ -336,58 +459,189 @@ export function RegistrationForm({
             />
           </FormSection>
 
+          {/* Sección: Expectativas */}
+          <FormSection title={t('expectations.title')}>
+            <TextareaField
+              label={t('expectations.question')}
+              value={formData.expectations}
+              onChange={handleChange('expectations')}
+              placeholder={t('expectations.placeholder')}
+              required
+            />
+          </FormSection>
+
           {/* Sección: Referral */}
-          {referralUser || !referralLocked ? (
-            <FormSection title={t('referral.title')}>
-              <div className="relative">
-                <InputField
-                  label={t('referral.code')}
-                  value={formData.referralCode}
-                  onChange={handleChange('referralCode')}
-                  placeholder={t('referral.codePlaceholder')}
-                  disabled={referralLocked}
-                  className={referralLocked ? 'bg-slate-800/50 cursor-not-allowed' : ''}
-                />
-                {referralUser && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`mt-2 flex items-center gap-2 text-sm ${tw.textQuantum}`}
-                  >
-                    <span>🔒</span>
-                    <span>Invitado por: <strong>{referralUser.nombre}</strong></span>
-                  </motion.div>
-                )}
-              </div>
-            </FormSection>
-          ) : null}
+          <FormSection title={t('referral.title')}>
+            <div className="relative">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                {t('referral.code')}
+              </label>
+              
+              {selectedReferral ? (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center justify-between p-4 bg-slate-800/50 border-2 border-[#00F0FF]/50 rounded-lg"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">👤</span>
+                    <div>
+                      <p className={`font-semibold ${tw.textQuantum}`}>{selectedReferral.nombre}</p>
+                      <p className="text-xs text-slate-400">
+                        {selectedReferral.referralCode ? `Código: ${selectedReferral.referralCode}` : 'Participante registrado'}
+                      </p>
+                      {referralLocked && (
+                        <p className="text-xs text-yellow-400 mt-1 flex items-center gap-1">
+                          🔒 {t('referral.locked')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {!referralLocked && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedReferral(null);
+                        setReferralSearchText('');
+                        setFormData(prev => ({ ...prev, referralCode: '' }));
+                      }}
+                      className="text-slate-400 hover:text-red-400 transition-colors"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </motion.div>
+              ) : (
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={referralSearchText}
+                    onChange={(e) => {
+                      setReferralSearchText(e.target.value);
+                      setFormData(prev => ({ ...prev, referralCode: e.target.value }));
+                    }}
+                    placeholder="Escribe el nombre de quien te invitó..."
+                    className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00F0FF]/50 focus:border-[#00F0FF]/50 transition-all"
+                  />
+                  {searchingReferral && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-[#00F0FF]"></div>
+                    </div>
+                  )}
+                  
+                  {/* Sugerencias */}
+                  {referralSuggestions.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="absolute z-50 w-full mt-2 bg-slate-900 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto"
+                    >
+                      {referralSuggestions.map((user) => (
+                        <button
+                          key={user.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedReferral(user);
+                            setReferralSearchText(user.nombre);
+                            setFormData(prev => ({ ...prev, referralCode: user.referralCode || user.nombre }));
+                            setReferralSuggestions([]);
+                          }}
+                          className="w-full px-4 py-3 text-left hover:bg-slate-800 transition-colors border-b border-slate-800 last:border-b-0 flex items-center gap-3"
+                        >
+                          <span className="text-xl">👤</span>
+                          <div>
+                            <p className="text-white font-medium">{user.nombre}</p>
+                            <p className="text-xs text-slate-400">
+                              {user.referralCode ? `Código: ${user.referralCode}` : 'Participante registrado'}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                  
+                  {referralSearchText.length >= 2 && !searchingReferral && referralSuggestions.length === 0 && (
+                    <p className="mt-2 text-xs text-slate-400">
+                      No se encontraron coincidencias. El texto se registrará tal como lo escribiste.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </FormSection>
 
           {/* Sección: Legal */}
           <FormSection title={t('legal.title')}>
+            <p className="text-sm text-slate-300 mb-3 font-medium">{t('legal.intro')}</p>
             <div
-              className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4 h-40 overflow-y-auto text-sm text-slate-300 space-y-2"
+              className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-5 h-80 overflow-y-auto text-sm text-slate-300 space-y-4"
               onScroll={onLegalScroll}
             >
-              <p>{t('legal.content')}</p>
-              <p className="font-semibold mt-4">{t('legal.refundPolicy')}</p>
-              <p className="text-slate-400 text-xs">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-              </p>
-              <p className="font-semibold mt-4">{t('legal.transferPolicy')}</p>
-              <p className="text-slate-400 text-xs">
-                Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-              </p>
-              <p className="font-semibold mt-4">{t('legal.guarantee')}</p>
-              <p className="text-slate-400 text-xs">
-                Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-              </p>
+              {/* Política de Reembolso */}
+              <div>
+                <h4 className={`font-bold text-base mb-2 ${tw.textQuantum}`}>{t('legal.refundTitle')}</h4>
+                <p className="font-semibold mb-2">{t('legal.refundIntro')}</p>
+                <ul className="list-none space-y-2 pl-4">
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#00F0FF] mt-1">1.</span>
+                    <span>{t('legal.refund1')}</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#00F0FF] mt-1">2.</span>
+                    <span className="font-semibold text-yellow-400">{t('legal.refund2')}</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-[#00F0FF] mt-1">3.</span>
+                    <span className="font-semibold text-green-400">{t('legal.refund3')}</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Detalles del Entrenamiento */}
+              <div className="border-t border-slate-700 pt-4">
+                <h4 className={`font-bold text-base mb-2 ${tw.textQuantum}`}>{t('legal.scheduleTitle')}</h4>
+                <p className="font-semibold mb-3">{t('legal.scheduleIntro')}</p>
+                <div className="space-y-2 pl-4">
+                  <div className="flex items-start gap-2">
+                    <span className="text-[#00F0FF] font-bold">•</span>
+                    <p><span className="font-semibold">{t('legal.friday')}</span></p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-[#00F0FF] font-bold">•</span>
+                    <p><span className="font-semibold">{t('legal.saturday')}</span></p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-[#00F0FF] font-bold">•</span>
+                    <p><span className="font-semibold">{t('legal.sunday')}</span></p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Advertencia Importante */}
+              <div className="border-t border-slate-700 pt-4">
+                <div className="bg-red-900/20 border-l-4 border-red-500 p-4 rounded">
+                  <p className="font-bold text-red-400">{t('legal.integralWarning')}</p>
+                </div>
+              </div>
+
+              {/* Espaciador final para asegurar scroll */}
+              <div className="h-4"></div>
             </div>
-            <label className="flex items-center gap-3 cursor-pointer group">
+            
+            {!scrolledLegal && (
+              <p className="text-xs text-yellow-400 mt-2 flex items-center gap-2">
+                <span>⚠️</span>
+                <span>{t('legal.scrollWarning')}</span>
+              </p>
+            )}
+            
+            <label className="flex items-center gap-3 cursor-pointer group mt-4">
               <input
                 type="checkbox"
                 checked={formData.acceptTerms}
                 onChange={handleChange('acceptTerms')}
-                className="w-5 h-5 rounded border-2 border-slate-600 bg-slate-800/50 checked:bg-[#00F0FF] checked:border-[#00F0FF] transition-colors"
+                disabled={!scrolledLegal}
+                className="w-5 h-5 rounded border-2 border-slate-600 bg-slate-800/50 checked:bg-[#00F0FF] checked:border-[#00F0FF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 required
               />
               <span className="text-sm text-slate-300 group-hover:text-white transition-colors">
@@ -419,26 +673,65 @@ export function RegistrationForm({
           {/* Submit */}
           <motion.button
             type="submit"
-            disabled={submitting}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            disabled={submitting || ageWarning === 'too_young'}
+            whileHover={{ scale: submitting || ageWarning === 'too_young' ? 1 : 1.02 }}
+            whileTap={{ scale: submitting || ageWarning === 'too_young' ? 1 : 0.98 }}
             className="w-full py-4 rounded-xl font-bold text-lg text-[#050B14] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
-              background: 'linear-gradient(135deg, #00F0FF 0%, #0099CC 100%)',
-              boxShadow: '0 0 30px rgba(0, 240, 255, 0.4)',
+              background: ageWarning === 'too_young' 
+                ? 'linear-gradient(135deg, #666 0%, #444 100%)'
+                : 'linear-gradient(135deg, #00F0FF 0%, #0099CC 100%)',
+              boxShadow: ageWarning === 'too_young' 
+                ? 'none'
+                : '0 0 30px rgba(0, 240, 255, 0.4)',
             }}
           >
-            {submitting ? t('submitting') : t('submit')}
+            {submitting ? t('submitting') : ageWarning === 'too_young' ? (locale === 'es' ? '🚫 Registro no disponible' : '🚫 Registration unavailable') : t('submit')}
           </motion.button>
-
-          <div className="text-center text-sm text-slate-400">
-            {t('hasAccount')}{' '}
-            <Link href="/auth/signin" className={`${tw.textQuantum} hover:underline font-medium`}>
-              {t('signIn')}
-            </Link>
-          </div>
         </form>
       </motion.div>
+
+      {/* Modal de No Pegar */}
+      {showNoPasteModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => setShowNoPasteModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            className="bg-slate-900 border-2 border-[#00F0FF]/50 rounded-2xl p-8 max-w-md w-full shadow-[0_0_50px_rgba(0,240,255,0.3)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center">
+              <div className="mb-6">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-yellow-500/20 border-2 border-yellow-500 mb-4">
+                  <span className="text-5xl">⚠️</span>
+                </div>
+                <h3 className={`text-2xl font-bold ${tw.textQuantum} mb-2`} style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                  Atención
+                </h3>
+                <p className="text-slate-300 text-lg">
+                  {t('contact.noPaste')}
+                </p>
+              </div>
+              
+              <button
+                onClick={() => setShowNoPasteModal(false)}
+                className="w-full py-3 px-6 rounded-lg font-bold text-[#050B14] transition-all hover:scale-105"
+                style={{
+                  background: 'linear-gradient(135deg, #00F0FF 0%, #0099CC 100%)',
+                  boxShadow: '0 0 20px rgba(0, 240, 255, 0.4)',
+                }}
+              >
+                Entendido
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
     </motion.div>
   );
 }

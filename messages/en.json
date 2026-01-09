@@ -87,19 +87,33 @@
       "goal3": "Goal 3 (Optional)",
       "goal3Placeholder": "One more goal"
     },
+    "expectations": {
+      "title": "Expectations",
+      "question": "What do you expect from the training?",
+      "placeholder": "Describe what you expect to learn or achieve with this program..."
+    },
     "referral": {
       "title": "Invitation Code",
       "code": "Referral code",
       "codePlaceholder": "JOHN123",
-      "locked": "This code was automatically applied"
+      "locked": "Invitation received via QR"
     },
     "legal": {
       "title": "Terms and Conditions",
-      "content": "By registering you accept our terms of service, privacy policy and refund conditions. Please read carefully before continuing.",
-      "checkbox": "I have read and accept the terms and conditions",
-      "refundPolicy": "Refund Policy",
-      "transferPolicy": "Transfer Policy",
-      "guarantee": "Guarantee"
+      "intro": "Before completing registration, please read the following information carefully:",
+      "refundTitle": "REFUND POLICY",
+      "refundIntro": "YOU WILL BE ENTITLED TO A FULL REFUND OF THE TRAINING AMOUNT IF:",
+      "refund1": "The training is cancelled",
+      "refund2": "The registration fee is NOT REFUNDABLE and NOT TRANSFERABLE to another person",
+      "refund3": "SATISFACTION GUARANTEE: If you are not satisfied with the value of the training, you may request a refund (must stay until Sunday closing)",
+      "scheduleTitle": "BASIC TRAINING DETAILS",
+      "scheduleIntro": "Schedule:",
+      "friday": "Friday: Registration 9AM - Start at 10 AM until approximately 10 PM (may vary based on group progress)",
+      "saturday": "Saturday: Start at 10 AM until approximately 10 PM (may vary based on group progress)",
+      "sunday": "Sunday: Start at 10 AM until approximately 7 PM (may vary based on group progress)",
+      "integralWarning": "The Basic training is comprehensive and if the participant leaves the training at any time, they will NOT be allowed to re-enter as they may miss some dynamics.",
+      "checkbox": "I have read and accept the training terms and conditions",
+      "scrollWarning": "You must read all content to continue"
     },
     "credentials": {
       "title": "Access Credentials",
@@ -110,6 +124,8 @@
     },
     "submit": "Create account",
     "submitting": "Creating account...",
+    "hasAccount": "Already have an account?",
+    "signIn": "Sign in",
     "errors": {
       "allFieldsRequired": "Please complete all required fields",
       "passwordMismatch": "Passwords don't match",

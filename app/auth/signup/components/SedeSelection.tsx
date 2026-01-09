@@ -74,7 +74,15 @@ export function SedeSelection({
             transition={{ delay: 0.3 }}
             className="text-slate-400 mt-3 text-lg"
           >
-            Selecciona tu sede
+            ¿En qué sucursal quieres acudir?
+          </motion.p>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.35 }}
+            className="text-slate-500 mt-1 text-sm"
+          >
+            Selecciona la sede más cercana para continuar
           </motion.p>
         </div>
       )}
@@ -146,7 +154,7 @@ export function SedeSelection({
                       {org.name}
                     </h3>
                     <p className="text-slate-400 text-sm flex items-center gap-2">
-                      <span>Ver disponibilidad</span>
+                      <span>Registrarme en esta sucursal</span>
                       <motion.span
                         animate={{ x: [0, 5, 0] }}
                         transition={{ repeat: Infinity, duration: 1.5 }}

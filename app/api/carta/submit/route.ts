@@ -9,6 +9,7 @@ import { validateCartaForSubmission } from '@/lib/validaciones-carta';
  * POST /api/carta/submit
  * Envía la carta para revisión (mentor o admin)
  * ⚠️ VALIDACIÓN DURA: Valida completitud antes de permitir envío
+ * ⚠️ VALIDACIÓN VISION: Usuarios de Vision DEBEN tener mentor asignado
  */
 export async function POST(req: Request) {
   try {
@@ -63,6 +64,36 @@ export async function POST(req: Request) {
       }
     });
 
+    // ========== VALIDACIÓN USUARIOS DE VISION: MENTOR OBLIGATORIO ==========
+    // Verificar si el usuario pertenece a una Vision (grupo)
+    const visionParticipante = await prisma.visionParticipante.findFirst({
+      where: { participanteId: userId },
+      include: {
+        Vision: {
+          select: { id: true, nombre: true }
+        }
+      }
+    });
+
+    const perteneceAVision = !!visionParticipante;
+    const mentorId = usuario?.assignedMentorId || usuario?.mentorId;
+
+    // Si pertenece a una Vision y NO tiene mentor asignado → BLOQUEAR
+    if (perteneceAVision && !mentorId) {
+      console.log('❌ Usuario de Vision sin mentor - Bloqueando envío');
+      console.log('   Vision:', visionParticipante?.Vision?.nombre || 'N/A');
+      console.log('   UserId:', userId);
+      
+      return NextResponse.json({ 
+        error: 'Mentor requerido',
+        message: 'Debes tener un mentor asignado para enviar tu carta a revisión. Contacta a tu coordinador.',
+        requiresMentor: true,
+        isVisionUser: true,
+        visionName: visionParticipante?.Vision?.nombre
+      }, { status: 403 });
+    }
+    // ==================================================================
+
     // Solo validar suscripción si es PARTICIPANTE
     if (usuario?.rol === 'PARTICIPANTE') {
       const userTier = usuario.tier || 'FREE';
@@ -71,6 +102,8 @@ export async function POST(req: Request) {
       console.log('   Tier:', userTier);
       console.log('   Suscripción:', usuario.suscripcion);
       console.log('   Tiene licencia asignada:', !!licenseAssignment);
+      console.log('   Pertenece a Vision:', perteneceAVision);
+      console.log('   Tiene mentor:', !!mentorId);
       
       // 🎫 Si tiene LICENCIA ASIGNADA de organización, permitir envío
       if (licenseAssignment) {
@@ -128,7 +161,7 @@ export async function POST(req: Request) {
     }
     // ==========================================================
 
-    const mentorId = usuario?.assignedMentorId || usuario?.mentorId;
+    // mentorId ya fue calculado arriba en la validación de Vision
 
     // Determinar el estado según si tiene mentor (usando valores del enum EstadoCarta)
     const newStatus = 'EN_REVISION' as const;

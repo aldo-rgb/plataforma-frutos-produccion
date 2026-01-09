@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/ToastProvider';
 import ResetDeclarationsButton from '@/components/ResetDeclarationsButton';
+import { ProtectedModulePage } from '@/components/ui/LockedModuleOverlay';
 import { 
   CheckCircle2, 
   Edit, 
@@ -787,6 +788,7 @@ export default function CartaResumenPage() {
   };
 
   return (
+    <ProtectedModulePage module="carta" fallbackHref="/dashboard">
     <div className="min-h-screen bg-[#0f1015] p-3 sm:p-6">
       <div className="max-w-5xl mx-auto">
         {/* ========== HEADER ========== */}
@@ -1616,5 +1618,6 @@ export default function CartaResumenPage() {
         </div>
       )}
     </div>
+    </ProtectedModulePage>
   );
 }

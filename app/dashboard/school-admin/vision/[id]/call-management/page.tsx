@@ -13,17 +13,28 @@ interface CallTrackingData {
   usuario: {
     id: number;
     nombre: string;
+    apodo: string | null;
     email: string;
     telefono: string | null;
+    expectations: string | null;
+    invitedByText: string | null;
+    invitedByUser: {
+      id: number;
+      nombre: string;
+      vision: string | null;
+      telefono: string | null;
+    } | null;
     organizacion: {
       id: number;
       name: string;
     } | null;
+    paymentStatus?: 'PAID' | 'PARTIAL' | 'UNPAID' | 'NO_TICKET' | 'PENDING';
   };
   angelEnrolamiento: {
     id: number;
     nombre: string;
     email: string;
+    telefono: string | null;
   } | null;
   coordinador: {
     id: number;
@@ -70,12 +81,18 @@ export default function CallManagementPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMyList, setFilterMyList] = useState(false);
   const [filterActiveHours, setFilterActiveHours] = useState(false);
+  const [filterByStatus, setFilterByStatus] = useState<'ALL' | 'PENDING' | 'ASISTE' | 'NO_ASISTE'>('ALL');
+  const [excludeUnpaid, setExcludeUnpaid] = useState(true); // Por defecto excluir usuarios sin pago
   const [selectedLevel, setSelectedLevel] = useState<'BASIC' | 'ADVANCED' | 'PL'>(initialLevel);
   const [selectedCard, setSelectedCard] = useState<CallTrackingData | null>(null);
   const [showCallModal, setShowCallModal] = useState(false);
+  const [showAttendanceConfirm, setShowAttendanceConfirm] = useState(false);
   const [callResult, setCallResult] = useState('');
   const [callComments, setCallComments] = useState('');
+  const [rescheduleDate, setRescheduleDate] = useState('');
   const [editingTrackingId, setEditingTrackingId] = useState<number | null>(null);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<{nombre: string, telefono: string} | null>(null);
   const [editFormData, setEditFormData] = useState({
     nickname: '',
     phone: '',
@@ -86,12 +103,12 @@ export default function CallManagementPage() {
   // Fetch data
   useEffect(() => {
     fetchCallTrackingData();
-  }, [visionId, selectedLevel]);
+  }, [visionId, selectedLevel, excludeUnpaid]);
 
   const fetchCallTrackingData = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/school-admin/visiones/${visionId}/call-tracking?level=${selectedLevel}`);
+      const response = await fetch(`/api/school-admin/visiones/${visionId}/call-tracking?level=${selectedLevel}&excludeUnpaid=${excludeUnpaid}`);
       if (response.ok) {
         const data = await response.json();
         setCallData(data);
@@ -103,22 +120,66 @@ export default function CallManagementPage() {
     }
   };
 
+  // Utility: Parse time from different formats (HH:mm or "10am-3pm")
+  const parseTimeRange = (timeString: string | null | undefined): { start: number, end: number } | null => {
+    if (!timeString) return null;
+    
+    // Formato "HH:mm - HH:mm" o "HH:mm-HH:mm"
+    if (timeString.includes(':')) {
+      const parts = timeString.split('-').map(s => s.trim());
+      if (parts.length === 2) {
+        const [startHour, startMin] = parts[0].split(':').map(Number);
+        const [endHour, endMin] = parts[1].split(':').map(Number);
+        return {
+          start: startHour * 60 + startMin,
+          end: endHour * 60 + endMin
+        };
+      }
+    }
+    
+    // Formato "10am-3pm"
+    const ampmMatch = timeString.match(/(\d+)(am|pm)\s*-\s*(\d+)(am|pm)/i);
+    if (ampmMatch) {
+      let startHour = parseInt(ampmMatch[1]);
+      const startPeriod = ampmMatch[2].toLowerCase();
+      let endHour = parseInt(ampmMatch[3]);
+      const endPeriod = ampmMatch[4].toLowerCase();
+      
+      // Convertir a formato 24 horas
+      if (startPeriod === 'pm' && startHour !== 12) startHour += 12;
+      if (startPeriod === 'am' && startHour === 12) startHour = 0;
+      if (endPeriod === 'pm' && endHour !== 12) endHour += 12;
+      if (endPeriod === 'am' && endHour === 12) endHour = 0;
+      
+      return {
+        start: startHour * 60,
+        end: endHour * 60
+      };
+    }
+    
+    return null;
+  };
+
   // Utility: Check if current time is within preferred call window
-  const isWithinPreferredHours = (start: string | null, end: string | null): boolean => {
-    if (!start || !end) return false;
+  const isWithinPreferredHours = (start: string | null, end: string | null, horarioLlamada?: string | null): boolean => {
+    // Primero intentar con start/end del tracking
+    let timeRange = null;
+    if (start && end) {
+      timeRange = parseTimeRange(`${start}-${end}`);
+    }
+    // Si no hay en tracking, usar horarioLlamada del usuario
+    else if (horarioLlamada) {
+      timeRange = parseTimeRange(horarioLlamada);
+    }
+    
+    if (!timeRange) return false;
     
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinutes = now.getMinutes();
     const currentTime = currentHour * 60 + currentMinutes;
 
-    const [startHour, startMin] = start.split(':').map(Number);
-    const [endHour, endMin] = end.split(':').map(Number);
-    
-    const startTime = startHour * 60 + startMin;
-    const endTime = endHour * 60 + endMin;
-
-    return currentTime >= startTime && currentTime <= endTime;
+    return currentTime >= timeRange.start && currentTime <= timeRange.end;
   };
 
   // Filter and sort data
@@ -149,17 +210,25 @@ export default function CallManagementPage() {
         if (!isActive) return false;
       }
 
+      // Status filter
+      if (filterByStatus !== 'ALL') {
+        const status = item.tracking?.attendanceStatus || 'PENDING';
+        if (status !== filterByStatus) return false;
+      }
+
       return true;
     })
     .sort((a, b) => {
       // Smart sorting: prioritize those within preferred hours
       const aIsActive = isWithinPreferredHours(
         a.tracking?.preferredCallTimeStart ?? null,
-        a.tracking?.preferredCallTimeEnd ?? null
+        a.tracking?.preferredCallTimeEnd ?? null,
+        (a.usuario as any).horarioLlamada
       );
       const bIsActive = isWithinPreferredHours(
         b.tracking?.preferredCallTimeStart ?? null,
-        b.tracking?.preferredCallTimeEnd ?? null
+        b.tracking?.preferredCallTimeEnd ?? null,
+        (b.usuario as any).horarioLlamada
       );
 
       if (aIsActive && !bIsActive) return -1;
@@ -182,9 +251,33 @@ export default function CallManagementPage() {
     setShowCallModal(true);
     setCallResult('');
     setCallComments('');
+    setRescheduleDate('');
   };
 
   const handleSubmitCallResult = async () => {
+    if (!selectedCard || !callResult) return;
+    
+    // Si es "Contestó", mostrar modal de confirmación de asistencia
+    if (callResult === 'ANSWERED') {
+      setShowAttendanceConfirm(true);
+      return;
+    }
+    
+    // Si es reagendar, validar que tenga fecha
+    if (callResult === 'RESCHEDULED' && !rescheduleDate) {
+      alert('Por favor selecciona una fecha para reagendar');
+      return;
+    }
+
+    await submitCallInteraction();
+  };
+
+  const handleAttendanceConfirm = async (willAttend: boolean) => {
+    setShowAttendanceConfirm(false);
+    await submitCallInteraction(willAttend ? 'ASISTE' : 'NO_ASISTE');
+  };
+
+  const submitCallInteraction = async (attendanceStatus?: string) => {
     if (!selectedCard || !callResult) return;
 
     try {
@@ -220,6 +313,17 @@ export default function CallManagementPage() {
         return;
       }
       
+      // Preparar comentarios con fecha de reagendamiento si aplica
+      let finalComments = callComments;
+      if (callResult === 'RESCHEDULED' && rescheduleDate) {
+        const fecha = new Date(rescheduleDate);
+        const fechaFormateada = fecha.toLocaleString('es-ES', { 
+          dateStyle: 'medium', 
+          timeStyle: 'short' 
+        });
+        finalComments = `${callComments}\n📅 Reagendado para: ${fechaFormateada}`;
+      }
+      
       const response = await fetch(
         `/api/school-admin/visiones/${visionId}/call-interactions`,
         {
@@ -228,13 +332,16 @@ export default function CallManagementPage() {
           body: JSON.stringify({
             trackingId: selectedCard.tracking.id,
             callResult,
-            comments: callComments,
+            comments: finalComments,
+            // Si es reagendar, volver a PENDING; si viene attendanceStatus (ASISTE/NO_ASISTE) usarlo
+            attendanceStatus: callResult === 'RESCHEDULED' ? 'PENDING' : attendanceStatus,
           }),
         }
       );
 
       if (response.ok) {
         setShowCallModal(false);
+        setShowAttendanceConfirm(false);
         fetchCallTrackingData(); // Refresh data
       }
     } catch (error) {
@@ -328,11 +435,10 @@ export default function CallManagementPage() {
   const callsAsiste = filteredAndSortedData.filter(
     (item) => item.tracking?.attendanceStatus === 'ASISTE'
   ).length;
+  
+  // Llamadas pendientes (PENDING = no han sido atendidas aún)
   const callsToday = filteredAndSortedData.filter((item) => {
-    if (!item.tracking?.lastInteractionAt) return false;
-    const lastCall = new Date(item.tracking.lastInteractionAt);
-    const today = new Date();
-    return lastCall.toDateString() === today.toDateString();
+    return item.tracking?.attendanceStatus === 'PENDING';
   }).length;
 
   return (
@@ -346,29 +452,29 @@ export default function CallManagementPage() {
           ← Volver
         </button>
 
-        <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700 shadow-xl">
-          <div className="flex items-center justify-between">
+        <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-4 md:p-6 border border-slate-700 shadow-xl">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-black text-white mb-2 flex items-center gap-3">
-                <span className="text-4xl">📞</span>
-                Quantum Connection Hub
+              <h1 className="text-2xl md:text-3xl font-black text-white mb-2 flex items-center gap-2 md:gap-3">
+                <span className="text-3xl md:text-4xl">📞</span>
+                <span className="break-words">Quantum Connection Hub</span>
               </h1>
-              <p className="text-slate-400">Gestión Inteligente de Llamadas - Nivel {selectedLevel === 'BASIC' ? '🌱 BÁSICO' : selectedLevel === 'ADVANCED' ? '🔥 AVANZADO' : '👑 LIDERATO'}</p>
+              <p className="text-slate-400 text-sm md:text-base">Gestión Inteligente de Llamadas - Nivel {selectedLevel === 'BASIC' ? '🌱 BÁSICO' : selectedLevel === 'ADVANCED' ? '🔥 AVANZADO' : '👑 LIDERATO'}</p>
             </div>
 
             {/* Stats Bar */}
-            <div className="flex gap-4">
-              <div className="bg-gradient-to-br from-blue-900/50 to-blue-800/50 rounded-xl p-4 border border-blue-500/30">
-                <div className="text-blue-400 text-xs font-medium">Llamadas Hoy</div>
-                <div className="text-white text-2xl font-bold">{callsToday}/50</div>
+            <div className="grid grid-cols-3 gap-2 md:gap-4">
+              <div className="bg-gradient-to-br from-blue-900/50 to-blue-800/50 rounded-xl p-3 md:p-4 border border-blue-500/30">
+                <div className="text-blue-400 text-xs font-medium">Pendientes</div>
+                <div className="text-white text-xl md:text-2xl font-bold">{callsToday}</div>
               </div>
-              <div className="bg-gradient-to-br from-green-900/50 to-green-800/50 rounded-xl p-4 border border-green-500/30">
+              <div className="bg-gradient-to-br from-green-900/50 to-green-800/50 rounded-xl p-3 md:p-4 border border-green-500/30">
                 <div className="text-green-400 text-xs font-medium">Confirmados</div>
-                <div className="text-white text-2xl font-bold">{callsAsiste}</div>
+                <div className="text-white text-xl md:text-2xl font-bold">{callsAsiste}/{totalCalls}</div>
               </div>
-              <div className="bg-gradient-to-br from-purple-900/50 to-purple-800/50 rounded-xl p-4 border border-purple-500/30">
+              <div className="bg-gradient-to-br from-purple-900/50 to-purple-800/50 rounded-xl p-3 md:p-4 border border-purple-500/30">
                 <div className="text-purple-400 text-xs font-medium">Total</div>
-                <div className="text-white text-2xl font-bold">{totalCalls}</div>
+                <div className="text-white text-xl md:text-2xl font-bold">{totalCalls}</div>
               </div>
             </div>
           </div>
@@ -377,12 +483,12 @@ export default function CallManagementPage() {
           <div className="mt-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-slate-400 text-sm">Progreso Diario</span>
-              <span className="text-white font-bold">{Math.round((callsToday / 50) * 100)}%</span>
+              <span className="text-white font-bold">{totalCalls > 0 ? Math.round((callsToday / totalCalls) * 100) : 0}%</span>
             </div>
             <div className="w-full h-3 bg-slate-700 rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500"
-                style={{ width: `${Math.min((callsToday / 50) * 100, 100)}%` }}
+                style={{ width: `${totalCalls > 0 ? Math.min((callsToday / totalCalls) * 100, 100) : 0}%` }}
               />
             </div>
           </div>
@@ -391,12 +497,12 @@ export default function CallManagementPage() {
 
       {/* Filters Bar */}
       <div className="max-w-7xl mx-auto mb-6">
-        <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-4 border border-slate-700 flex gap-4 items-center">
+        <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-3 md:p-4 border border-slate-700">
           {/* Level Selector */}
-          <div className="flex gap-2">
+          <div className="flex gap-1 md:gap-2 mb-3 overflow-x-auto pb-2">
             <button
               onClick={() => setSelectedLevel('BASIC')}
-              className={`px-4 py-2 rounded-lg font-bold transition-all ${
+              className={`px-3 md:px-4 py-2 rounded-lg font-bold transition-all whitespace-nowrap text-sm md:text-base ${
                 selectedLevel === 'BASIC'
                   ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg'
                   : 'bg-slate-700 text-slate-400 hover:text-white'
@@ -406,7 +512,7 @@ export default function CallManagementPage() {
             </button>
             <button
               onClick={() => setSelectedLevel('ADVANCED')}
-              className={`px-4 py-2 rounded-lg font-bold transition-all ${
+              className={`px-3 md:px-4 py-2 rounded-lg font-bold transition-all whitespace-nowrap text-sm md:text-base ${
                 selectedLevel === 'ADVANCED'
                   ? 'bg-gradient-to-r from-orange-600 to-red-600 text-white shadow-lg'
                   : 'bg-slate-700 text-slate-400 hover:text-white'
@@ -416,7 +522,7 @@ export default function CallManagementPage() {
             </button>
             <button
               onClick={() => setSelectedLevel('PL')}
-              className={`px-4 py-2 rounded-lg font-bold transition-all ${
+              className={`px-3 md:px-4 py-2 rounded-lg font-bold transition-all whitespace-nowrap text-sm md:text-base ${
                 selectedLevel === 'PL'
                   ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
                   : 'bg-slate-700 text-slate-400 hover:text-white'
@@ -427,39 +533,97 @@ export default function CallManagementPage() {
           </div>
 
           {/* Search */}
-          <div className="flex-1">
+          <div className="mb-3">
             <div className="relative">
               <input
                 type="text"
-                placeholder="🔍 Buscar por nombre, email, teléfono..."
+                placeholder="🔍 Buscar..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-slate-900/50 border border-slate-600 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full bg-slate-900/50 border border-slate-600 rounded-lg px-4 py-2 md:py-3 text-sm md:text-base text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
               />
             </div>
           </div>
 
-          {/* Filter: My List */}
-          <label className="flex items-center gap-2 cursor-pointer bg-slate-900/50 px-4 py-3 rounded-lg border border-slate-600 hover:border-purple-500 transition-all">
-            <input
-              type="checkbox"
-              checked={filterMyList}
-              onChange={(e) => setFilterMyList(e.target.checked)}
-              className="w-5 h-5"
-            />
-            <span className="text-white text-sm font-medium">Mi Lista</span>
-          </label>
+          {/* Filters */}
+          <div className="flex flex-col gap-3">
+            {/* Filtros de checkbox */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <label className="flex items-center gap-2 cursor-pointer bg-slate-900/50 px-3 md:px-4 py-2 md:py-3 rounded-lg border border-slate-600 hover:border-purple-500 transition-all">
+                <input
+                  type="checkbox"
+                  checked={filterMyList}
+                  onChange={(e) => setFilterMyList(e.target.checked)}
+                  className="w-4 h-4 md:w-5 md:h-5"
+                />
+                <span className="text-white text-xs md:text-sm font-medium">Mi Lista</span>
+              </label>
 
-          {/* Filter: Active Hours */}
-          <label className="flex items-center gap-2 cursor-pointer bg-slate-900/50 px-4 py-3 rounded-lg border border-slate-600 hover:border-green-500 transition-all">
-            <input
-              type="checkbox"
-              checked={filterActiveHours}
-              onChange={(e) => setFilterActiveHours(e.target.checked)}
-              className="w-5 h-5"
-            />
-            <span className="text-white text-sm font-medium">🕒 Solo Disponibles Ahora</span>
-          </label>
+              <label className="flex items-center gap-2 cursor-pointer bg-slate-900/50 px-3 md:px-4 py-2 md:py-3 rounded-lg border border-slate-600 hover:border-green-500 transition-all">
+                <input
+                  type="checkbox"
+                  checked={filterActiveHours}
+                  onChange={(e) => setFilterActiveHours(e.target.checked)}
+                  className="w-4 h-4 md:w-5 md:h-5"
+                />
+                <span className="text-white text-xs md:text-sm font-medium">🕒 Solo Disponibles</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer bg-slate-900/50 px-3 md:px-4 py-2 md:py-3 rounded-lg border border-red-500/50 hover:border-red-500 transition-all">
+                <input
+                  type="checkbox"
+                  checked={excludeUnpaid}
+                  onChange={(e) => setExcludeUnpaid(e.target.checked)}
+                  className="w-4 h-4 md:w-5 md:h-5 accent-red-500"
+                />
+                <span className="text-white text-xs md:text-sm font-medium">💳 Excluir Sin Pago</span>
+              </label>
+            </div>
+
+            {/* Filtros por status de asistencia */}
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              <button
+                onClick={() => setFilterByStatus('ALL')}
+                className={`px-4 py-2 rounded-lg font-bold transition-all whitespace-nowrap text-sm ${
+                  filterByStatus === 'ALL'
+                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                    : 'bg-slate-700 text-slate-400 hover:text-white'
+                }`}
+              >
+                📋 Todos
+              </button>
+              <button
+                onClick={() => setFilterByStatus('PENDING')}
+                className={`px-4 py-2 rounded-lg font-bold transition-all whitespace-nowrap text-sm ${
+                  filterByStatus === 'PENDING'
+                    ? 'bg-gradient-to-r from-yellow-600 to-amber-600 text-white shadow-lg'
+                    : 'bg-slate-700 text-slate-400 hover:text-white'
+                }`}
+              >
+                ⏳ Pendientes
+              </button>
+              <button
+                onClick={() => setFilterByStatus('ASISTE')}
+                className={`px-4 py-2 rounded-lg font-bold transition-all whitespace-nowrap text-sm ${
+                  filterByStatus === 'ASISTE'
+                    ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg'
+                    : 'bg-slate-700 text-slate-400 hover:text-white'
+                }`}
+              >
+                ✅ Asisten
+              </button>
+              <button
+                onClick={() => setFilterByStatus('NO_ASISTE')}
+                className={`px-4 py-2 rounded-lg font-bold transition-all whitespace-nowrap text-sm ${
+                  filterByStatus === 'NO_ASISTE'
+                    ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg'
+                    : 'bg-slate-700 text-slate-400 hover:text-white'
+                }`}
+              >
+                ❌ No Asisten
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -513,22 +677,42 @@ export default function CallManagementPage() {
                       </div>
 
                       {/* Attendance Badge */}
-                      <button
-                        onClick={() => toggleAttendanceStatus(item)}
-                        className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition-all ${
-                          attendanceStatus === 'ASISTE'
-                            ? 'bg-green-500/20 text-green-300 border border-green-500/50 hover:bg-green-500/30'
+                      <div className="flex flex-col gap-2 items-end">
+                        <button
+                          onClick={() => toggleAttendanceStatus(item)}
+                          className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition-all ${
+                            attendanceStatus === 'ASISTE'
+                              ? 'bg-green-500/20 text-green-300 border border-green-500/50 hover:bg-green-500/30'
+                              : attendanceStatus === 'NO_ASISTE'
+                              ? 'bg-red-500/20 text-red-300 border border-red-500/50 hover:bg-red-500/30'
+                              : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/50 hover:bg-yellow-500/30'
+                          }`}
+                        >
+                          {attendanceStatus === 'ASISTE'
+                            ? '✅ ASISTE'
                             : attendanceStatus === 'NO_ASISTE'
-                            ? 'bg-red-500/20 text-red-300 border border-red-500/50 hover:bg-red-500/30'
-                            : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/50 hover:bg-yellow-500/30'
-                        }`}
-                      >
-                        {attendanceStatus === 'ASISTE'
-                          ? '✅ ASISTE'
-                          : attendanceStatus === 'NO_ASISTE'
-                          ? '🔴 NO ASISTE'
-                          : '⏳ PENDIENTE'}
-                      </button>
+                            ? '🔴 NO ASISTE'
+                            : '⏳ PENDIENTE'}
+                        </button>
+                        
+                        {/* Payment Status Badge */}
+                        {item.usuario.paymentStatus && (
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            item.usuario.paymentStatus === 'PAID'
+                              ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                              : item.usuario.paymentStatus === 'PARTIAL'
+                              ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+                              : item.usuario.paymentStatus === 'UNPAID'
+                              ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                              : 'bg-slate-500/20 text-slate-300 border border-slate-500/30'
+                          }`}>
+                            {item.usuario.paymentStatus === 'PAID' ? '💳 PAGADO' 
+                              : item.usuario.paymentStatus === 'PARTIAL' ? '⏳ PARCIAL'
+                              : item.usuario.paymentStatus === 'UNPAID' ? '⚠️ SIN PAGO'
+                              : '📭 SIN TICKET'}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Active Hours Indicator */}
@@ -554,6 +738,22 @@ export default function CallManagementPage() {
                         {item.tracking?.phone || item.usuario.telefono || 'No registrado'}
                       </div>
                     </div>
+
+                    {/* Apodo / Nickname */}
+                    {item.usuario.apodo && (
+                      <div>
+                        <div className="text-slate-400 text-xs mb-1">💫 Le gusta que le digan</div>
+                        <div className="text-white text-sm font-medium">{item.usuario.apodo}</div>
+                      </div>
+                    )}
+
+                    {/* Expectativas del entrenamiento */}
+                    {item.usuario.expectations && (
+                      <div>
+                        <div className="text-slate-400 text-xs mb-1">🎯 Qué espera del entrenamiento</div>
+                        <div className="text-white text-sm italic">"{item.usuario.expectations}"</div>
+                      </div>
+                    )}
 
                     {/* Preferred Call Time */}
                     {editingTrackingId === item.tracking?.id ? (
@@ -596,10 +796,9 @@ export default function CallManagementPage() {
                         <div className="text-slate-400 text-xs mb-1">🕒 Horario de Llamada</div>
                         <div className="flex items-center justify-between">
                           <div className="text-white text-sm">
-                            {item.tracking?.preferredCallTimeStart &&
-                            item.tracking?.preferredCallTimeEnd
+                            {item.tracking?.preferredCallTimeStart && item.tracking?.preferredCallTimeEnd
                               ? `${item.tracking.preferredCallTimeStart} - ${item.tracking.preferredCallTimeEnd}`
-                              : 'No definido'}
+                              : (item.usuario as any).horarioLlamada || 'No definido'}
                           </div>
                           <button
                             onClick={() => handleEditTracking(item)}
@@ -612,30 +811,31 @@ export default function CallManagementPage() {
                     )}
 
                     {/* Angel de Enrolamiento */}
-                    {item.angelEnrolamiento && (
+                    {(item.angelEnrolamiento || item.usuario.invitedByUser || item.usuario.invitedByText) && (
                       <div>
                         <div className="text-slate-400 text-xs mb-1">😇 Invitado por</div>
                         <div className="text-white text-sm">
-                          {item.angelEnrolamiento.nombre}
+                          {item.angelEnrolamiento?.nombre || item.usuario.invitedByUser?.nombre || item.usuario.invitedByText || 'No especificado'}
                         </div>
-                      </div>
-                    )}
-
-                    {/* Organization */}
-                    {item.usuario.organizacion && (
-                      <div>
-                        <div className="text-slate-400 text-xs mb-1">🏢 Organización</div>
-                        <div className="text-white text-sm">
-                          {item.usuario.organizacion.name}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Coordinator */}
-                    {item.coordinador && (
-                      <div>
-                        <div className="text-slate-400 text-xs mb-1">👤 Coordinador</div>
-                        <div className="text-white text-sm">{item.coordinador.nombre}</div>
+                        {item.usuario.invitedByUser?.vision && (
+                          <div className="text-cyan-400 text-xs mt-1">
+                            Visión: {item.usuario.invitedByUser.vision}
+                          </div>
+                        )}
+                        {item.usuario.invitedByUser?.telefono && (
+                          <button
+                            onClick={() => {
+                              setSelectedContact({
+                                nombre: item.usuario.invitedByUser!.nombre,
+                                telefono: item.usuario.invitedByUser!.telefono!
+                              });
+                              setContactModalOpen(true);
+                            }}
+                            className="mt-2 flex items-center gap-2 text-green-400 hover:text-green-300 text-xs transition-colors"
+                          >
+                            📞 {item.usuario.invitedByUser.telefono}
+                          </button>
+                        )}
                       </div>
                     )}
 
@@ -727,6 +927,18 @@ export default function CallManagementPage() {
             </div>
 
             <div className="p-6 space-y-4">
+              {/* Botón de Llamar */}
+              {selectedCard.usuario.telefono && (
+                <a
+                  href={`tel:${selectedCard.usuario.telefono}`}
+                  className="flex items-center justify-center gap-3 w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl py-4 font-bold text-lg transition-all shadow-lg hover:shadow-xl hover:scale-105"
+                >
+                  <span className="text-2xl">📞</span>
+                  Llamar ahora
+                  <span className="text-sm font-normal opacity-90">({selectedCard.usuario.telefono})</span>
+                </a>
+              )}
+              
               {/* Call Result Options */}
               <div>
                 <label className="text-slate-300 text-sm font-medium mb-2 block">
@@ -755,6 +967,60 @@ export default function CallManagementPage() {
                   ))}
                 </div>
               </div>
+
+              {/* Campo de fecha para reagendar */}
+              {callResult === 'RESCHEDULED' && (
+                <div className="animate-fadeIn">
+                  <label className="text-slate-300 text-sm font-medium mb-2 block">
+                    📅 Fecha y Hora para Reagendar
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={rescheduleDate}
+                    onChange={(e) => setRescheduleDate(e.target.value)}
+                    className="w-full bg-slate-900/50 border border-blue-500/50 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              )}
+
+              {/* Información del invitador cuando es número erróneo */}
+              {callResult === 'WRONG_NUMBER' && (
+                <div className="animate-fadeIn bg-orange-500/10 border border-orange-500/30 rounded-lg p-4">
+                  <div className="text-orange-400 text-sm font-medium mb-3">
+                    😇 Contactar a quien lo invitó
+                  </div>
+                  {selectedCard.angelEnrolamiento ? (
+                    <>
+                      <div className="text-white text-lg font-bold mb-2">
+                        {selectedCard.angelEnrolamiento.nombre}
+                      </div>
+                      <div className="text-slate-300 text-sm mb-3">
+                        {selectedCard.angelEnrolamiento.email}
+                      </div>
+                      {selectedCard.angelEnrolamiento.telefono ? (
+                        <a
+                          href={`tel:${selectedCard.angelEnrolamiento.telefono}`}
+                          className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white rounded-lg py-3 font-bold transition-all shadow-lg hover:shadow-xl hover:scale-105"
+                        >
+                          <span className="text-xl">📞</span>
+                          Llamar a {selectedCard.angelEnrolamiento.nombre.split(' ')[0]}
+                          <span className="text-sm font-normal opacity-90">
+                            ({selectedCard.angelEnrolamiento.telefono})
+                          </span>
+                        </a>
+                      ) : (
+                        <div className="text-slate-400 text-sm text-center py-2">
+                          No hay teléfono registrado para esta persona
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-slate-400 text-sm text-center py-2">
+                      No se encontró información de quien invitó a este usuario
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Comments */}
               <div>
@@ -786,6 +1052,124 @@ export default function CallManagementPage() {
               >
                 Guardar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación de Asistencia */}
+      {showAttendanceConfirm && selectedCard && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl shadow-2xl border border-slate-700 max-w-md w-full overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-6 bg-gradient-to-r from-green-600 to-emerald-600 border-b border-slate-700">
+              <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                <span className="text-3xl">✅</span>
+                Confirmación de Asistencia
+              </h2>
+              <p className="text-green-100 text-sm mt-2">
+                {selectedCard.usuario.nombre} contestó la llamada
+              </p>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              <p className="text-slate-300 text-center mb-6 text-lg">
+                ¿Confirmó que va a asistir al entrenamiento?
+              </p>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => handleAttendanceConfirm(true)}
+                  className="px-6 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-bold text-lg transition-all shadow-lg hover:shadow-xl hover:scale-105 flex flex-col items-center gap-2"
+                >
+                  <span className="text-3xl">✅</span>
+                  <span>Sí Asiste</span>
+                </button>
+                
+                <button
+                  onClick={() => handleAttendanceConfirm(false)}
+                  className="px-6 py-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white rounded-xl font-bold text-lg transition-all shadow-lg hover:shadow-xl hover:scale-105 flex flex-col items-center gap-2"
+                >
+                  <span className="text-3xl">❌</span>
+                  <span>No Asiste</span>
+                </button>
+              </div>
+
+              <button
+                onClick={() => setShowAttendanceConfirm(false)}
+                className="w-full mt-4 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-bold transition-all"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Contacto */}
+      {contactModalOpen && selectedContact && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-2xl border-2 border-purple-500 shadow-2xl max-w-md w-full overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-purple-900/50 to-blue-900/50 p-6 border-b border-slate-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-2xl font-bold text-white mb-1">Contactar</h3>
+                  <p className="text-slate-300">{selectedContact.nombre}</p>
+                </div>
+                <button
+                  onClick={() => setContactModalOpen(false)}
+                  className="text-slate-400 hover:text-white transition-colors text-2xl"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              <div className="bg-slate-900/50 rounded-lg p-4 text-center">
+                <div className="text-slate-400 text-sm mb-2">Teléfono</div>
+                <div className="text-white text-2xl font-mono font-bold">
+                  {selectedContact.telefono}
+                </div>
+              </div>
+
+              {/* Botones de acción */}
+              <div className="space-y-3">
+                {/* WhatsApp */}
+                <a
+                  href={`https://wa.me/${selectedContact.telefono.replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-3 w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-bold py-4 rounded-xl transition-all transform hover:scale-105 shadow-lg hover:shadow-green-500/50"
+                >
+                  <span className="text-2xl">💬</span>
+                  <span>Enviar WhatsApp</span>
+                </a>
+
+                {/* Llamar */}
+                <a
+                  href={`tel:${selectedContact.telefono}`}
+                  className="flex items-center justify-center gap-3 w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-bold py-4 rounded-xl transition-all transform hover:scale-105 shadow-lg hover:shadow-blue-500/50"
+                >
+                  <span className="text-2xl">📞</span>
+                  <span>Llamar Ahora</span>
+                </a>
+
+                {/* Copiar */}
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(selectedContact.telefono);
+                    alert('📋 Teléfono copiado al portapapeles');
+                  }}
+                  className="flex items-center justify-center gap-3 w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-4 rounded-xl transition-all"
+                >
+                  <span className="text-2xl">📋</span>
+                  <span>Copiar Número</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

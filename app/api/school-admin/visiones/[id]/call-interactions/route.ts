@@ -15,13 +15,14 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { trackingId, callResult, comments } = body;
+    const { trackingId, callResult, comments, attendanceStatus } = body;
+    const coordinatorId = parseInt(session.user.id);
 
     // Crear log de interacción
     const interaction = await prisma.callInteractionLog.create({
       data: {
         trackingId,
-        coordinatorId: parseInt(session.user.id),
+        coordinatorId,
         callResult,
         comments,
       },
@@ -35,19 +36,27 @@ export async function POST(
       },
     });
 
-    // Actualizar el tracking con la última interacción y contador de intentos
+    // Preparar datos de actualización
+    const updateData: any = {
+      lastInteractionAt: new Date(),
+      callAttempts: { increment: 1 },
+      coordinatorId, // Asignar coordinador para seguimiento
+    };
+
+    // Solo cambiar attendanceStatus en casos específicos:
+    // - CONFIRMED → ASISTE
+    // - RESCHEDULED → PENDING (viene en attendanceStatus)
+    if (callResult === 'CONFIRMED') {
+      updateData.attendanceStatus = 'ASISTE';
+    } else if (attendanceStatus) {
+      updateData.attendanceStatus = attendanceStatus;
+    }
+    // Para ANSWERED, VOICEMAIL, NO_ANSWER → mantener PENDING (no cambiar)
+
+    // Actualizar el tracking
     await prisma.basicCallTracking.update({
       where: { id: trackingId },
-      data: {
-        lastInteractionAt: new Date(),
-        callAttempts: {
-          increment: 1,
-        },
-        // Si confirmó asistencia, actualizar status
-        ...(callResult === 'CONFIRMED' && {
-          attendanceStatus: 'ASISTE',
-        }),
-      },
+      data: updateData,
     });
 
     return NextResponse.json(interaction);

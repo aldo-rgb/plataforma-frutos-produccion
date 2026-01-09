@@ -27,6 +27,7 @@ export default function ContratarInstitucionalPage() {
   
   // Form data
   const [nombreOrganizacion, setNombreOrganizacion] = useState('');
+  const [address, setAddress] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [geofencing, setGeofencing] = useState('');
@@ -247,6 +248,7 @@ export default function ContratarInstitucionalPage() {
           body: JSON.stringify({ 
             codigo: codigo.trim(),
             nombreOrganizacion,
+            address: address.trim(),
             logoUrl,
             geofencing: geofencingData ? JSON.stringify(geofencingData) : null,
             masterOrganizationId: selectedMasterOrg ? parseInt(selectedMasterOrg) : null
@@ -278,13 +280,13 @@ export default function ContratarInstitucionalPage() {
         longitude: parseFloat(longitude),
         radius: parseInt(geofenceRadius) || 50
       } : null;
-
       // Crear orden de pago
       const res = await fetch('/api/pagos/institucional/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nombreOrganizacion,
+          address: address.trim(),
           logoUrl,
           geofencing: geofencingData ? JSON.stringify(geofencingData) : null,
           cantidadLicencias,
@@ -601,6 +603,23 @@ export default function ContratarInstitucionalPage() {
                     placeholder="Ej: Centro Educativo Quantum"
                     required
                   />
+                </div>
+
+                {/* Dirección de la Organización */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-3 uppercase tracking-wider flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-purple-400" />
+                    Dirección de la Sede
+                  </label>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="w-full px-5 py-4 bg-black/40 border border-white/10 rounded-2xl text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 focus:bg-black/60 transition-all"
+                    placeholder="Ej: Av. Constitución 2828 Pte., Obispado, 64060 Monterrey, N.L."
+                    required
+                  />
+                  <p className="mt-2 text-xs text-gray-600">Dirección completa donde se realizarán los entrenamientos</p>
                 </div>
 
                 {/* Logo de la Organización */}

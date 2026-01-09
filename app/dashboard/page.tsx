@@ -620,6 +620,8 @@ export default async function DashboardPage() {
             userName={usuario.nombre}
             userId={usuario.id}
             userEmail={usuario.email}
+            referralCode={usuario.referralCode || undefined}
+            organizationId={usuario.organizationId}
           />
         </div>
       )}

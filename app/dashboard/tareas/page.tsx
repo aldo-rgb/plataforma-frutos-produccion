@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { filterThingsLikeTasks } from '../../../utils/task-filter';
 import Link from 'next/link';
+import { ProtectedModulePage } from '@/components/ui/LockedModuleOverlay';
 
 // Importar las categorías desde carta
 const CATEGORIAS = [
@@ -113,14 +114,17 @@ export default function TareasPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
-        <div className="text-white">Cargando tareas...</div>
-      </div>
+      <ProtectedModulePage moduleKey="tareas">
+        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+          <div className="text-white">Cargando tareas...</div>
+        </div>
+      </ProtectedModulePage>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
+    <ProtectedModulePage moduleKey="tareas">
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -247,5 +251,6 @@ export default function TareasPage() {
         </div>
       </div>
     </div>
+    </ProtectedModulePage>
   );
 }

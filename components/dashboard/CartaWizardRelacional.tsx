@@ -1408,6 +1408,15 @@ export default function CartaWizardRelacional() {
         setTimeout(() => {
           window.location.href = '/dashboard/carta/resumen';
         }, 2000);
+      } else if (submitRes.status === 403 && submitData.requiresMentor) {
+        // Usuario de Vision sin mentor asignado
+        console.log('❌ Requiere mentor - Usuario de Vision:', submitData.visionName);
+        setErrorModal({
+          show: true,
+          title: '👥 Mentor Requerido',
+          message: submitData.message || 'Debes tener un mentor asignado para enviar tu carta a revisión. Contacta a tu coordinador.'
+        });
+        // No redirigir, solo mostrar mensaje
       } else if (submitRes.status === 403 && submitData.requiresSubscription) {
         // Redirección a suscripción si es necesario
         setErrorModal({

@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       nombreOrganizacion,
+      address,
       logoUrl,
       geofencing,
       cantidadLicencias,
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest) {
         nombreOrganizacion,
         emailCoordinador: '', // Se dejará vacío, el director puede crear coordinadores después
         logoUrl,
+        address: address?.trim() || null,
         geofencing,
         cantidadLicencias,
         totalAmount,

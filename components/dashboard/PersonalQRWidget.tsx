@@ -7,9 +7,11 @@ interface PersonalQRWidgetProps {
   userName: string;
   userId: number;
   userEmail: string;
+  referralCode?: string;
+  organizationId?: number | null;
 }
 
-export default function PersonalQRWidget({ userName, userId, userEmail }: PersonalQRWidgetProps) {
+export default function PersonalQRWidget({ userName, userId, userEmail, referralCode, organizationId }: PersonalQRWidgetProps) {
   const [showModal, setShowModal] = useState(false);
   const [qrDataURL, setQrDataURL] = useState<string | null>(null);
   const [generatingQR, setGeneratingQR] = useState(false);
@@ -17,8 +19,10 @@ export default function PersonalQRWidget({ userName, userId, userEmail }: Person
   const generateQR = async () => {
     setGeneratingQR(true);
     try {
-      // URL con información del usuario
-      const userURL = `${window.location.origin}/profile/${userId}`;
+      // URL que dirige al signup con el código de referido y organización
+      const userURL = referralCode && organizationId
+        ? `${window.location.origin}/auth/signup?org=${organizationId}&ref=${referralCode}`
+        : `${window.location.origin}/profile/${userId}`;
       
       // Importar QRCode dinámicamente
       const QRCodeModule = await import('qrcode');
@@ -130,11 +134,14 @@ export default function PersonalQRWidget({ userName, userId, userEmail }: Person
                 {userName}
               </h3>
               <p className="text-slate-400 mb-2">
-                Tu código QR personalizado
+                {referralCode ? 'QR para registro con tu referido' : 'Tu código QR personalizado'}
               </p>
               {qrDataURL && (
                 <p className="text-slate-500 text-sm mb-6 font-mono break-all px-4">
-                  {`${window.location.origin}/profile/${userId}`}
+                  {referralCode && organizationId
+                    ? `${window.location.origin}/auth/signup?org=${organizationId}&ref=${referralCode}`
+                    : `${window.location.origin}/profile/${userId}`
+                  }
                 </p>
               )}
 

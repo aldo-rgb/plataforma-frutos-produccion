@@ -6,10 +6,9 @@ import { useRouter } from 'next/navigation';
 import {
   Users, Target, Ticket, BarChart3, Zap,
   AlertTriangle, Building2, GraduationCap, Star, Activity,
-  FileText, CheckCircle, Shield, Clock
+  FileText, CheckCircle, Shield, Clock, Calendar
 } from 'lucide-react';
 import Link from 'next/link';
-import VisionesWidget from '@/components/dashboard/VisionesWidget';
 
 interface DashboardData {
   overview: {
@@ -53,8 +52,9 @@ export default function CoordinadorBasicoDashboard() {
   const [loading, setLoading] = useState(true);
   const [consejoQuantum, setConsejoQuantum] = useState<any>(null);
   const [loadingConsejo, setLoadingConsejo] = useState(true);
-  const [visiones, setVisiones] = useState<any[]>([]);
-  const [loadingVisiones, setLoadingVisiones] = useState(true);
+  const [productos, setProductos] = useState<any[]>([]);
+  const [loadingProductos, setLoadingProductos] = useState(true);
+  const [countdown, setCountdown] = useState<{[key: number]: string}>({});
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -65,7 +65,7 @@ export default function CoordinadorBasicoDashboard() {
       fetchDashboardData();
       fetchActionStats();
       fetchConsejoQuantum();
-      fetchVisiones();
+      fetchProductos();
     }
   }, [status, session]);
 
@@ -110,19 +110,52 @@ export default function CoordinadorBasicoDashboard() {
     }
   };
 
-  const fetchVisiones = async () => {
+  const fetchProductos = async () => {
     try {
-      const res = await fetch('/api/coordinador/visiones');
+      const res = await fetch('/api/coordinador/productos-activos');
       const result = await res.json();
       if (res.ok && result.success) {
-        setVisiones(result.visiones || []);
+        setProductos(result.productos || []);
       }
     } catch (error) {
-      console.error('Error fetching visiones:', error);
+      console.error('Error fetching productos:', error);
     } finally {
-      setLoadingVisiones(false);
+      setLoadingProductos(false);
     }
   };
+
+  // Actualizar countdown cada segundo
+  useEffect(() => {
+    if (productos.length === 0) return;
+
+    const updateCountdowns = () => {
+      const now = new Date();
+      const newCountdowns: {[key: number]: string} = {};
+
+      productos.forEach(producto => {
+        if (!producto.startDate) return;
+
+        const startDate = new Date(producto.startDate);
+        startDate.setHours(9, 0, 0, 0); // 9 AM
+
+        const diff = startDate.getTime() - now.getTime();
+        
+        if (diff > 0 && diff <= 24 * 60 * 60 * 1000) { // Menos de 24 horas
+          const hours = Math.floor(diff / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+          newCountdowns[producto.id] = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+      });
+
+      setCountdown(newCountdowns);
+    };
+
+    updateCountdowns();
+    const interval = setInterval(updateCountdowns, 1000);
+
+    return () => clearInterval(interval);
+  }, [productos]);
 
   if (loading) {
     return (
@@ -164,29 +197,186 @@ export default function CoordinadorBasicoDashboard() {
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <KpiCard
-            icon={<Building2 className="text-blue-400" />}
-            label="Comunidad"
-            value={(data.overview.totalCommunityMembers || 0).toString()}
-            trend="Todos los usuarios que pertenecen la comunidad"
-            color="blue"
-          />
-          <KpiCard
-            icon={<Ticket className="text-yellow-400" />}
-            label="Licencias Disponibles"
-            value={data.availableCredits.toString()}
-            trend="✅ Activos"
-            color="yellow"
-          />
+          {/* Widget Comunidad */}
+          <div className="bg-gradient-to-br from-blue-900/40 via-cyan-900/30 to-slate-900 border-2 border-blue-500/30 rounded-2xl p-6 hover:border-blue-500/50 transition-all hover:scale-105 hover:shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-blue-500/20 rounded-xl transition-colors">
+                  <Building2 className="text-blue-400" size={32} />
+                </div>
+                <div>
+                  <div className="text-blue-400 text-sm font-medium uppercase tracking-wider">Comunidad</div>
+                  <div className="text-white text-4xl font-black mt-1">{data.overview.totalCommunityMembers || 0}</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <span className="text-slate-400 text-sm">Todos los usuarios que pertenecen la comunidad</span>
+            </div>
+          </div>
+          
+          {/* Widget Llamadas Pendientes con botón */}
+          <Link href="/dashboard/school-admin/vision/1/call-management?level=BASIC">
+            <div className="bg-gradient-to-br from-yellow-900/40 via-orange-900/30 to-slate-900 border-2 border-yellow-500/30 rounded-2xl p-6 hover:border-yellow-500/50 transition-all cursor-pointer group hover:scale-105 hover:shadow-2xl">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-yellow-500/20 group-hover:bg-yellow-500/30 rounded-xl transition-colors">
+                    <Ticket className="text-yellow-400" size={32} />
+                  </div>
+                  <div>
+                    <div className="text-yellow-400 text-sm font-medium uppercase tracking-wider">Llamadas Pendientes</div>
+                    <div className="text-white text-4xl font-black mt-1">0/50</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 text-sm">Gestión de llamadas del día</span>
+                <div className="flex items-center gap-2 text-yellow-400 font-semibold group-hover:gap-3 transition-all">
+                  <span>Ir a llamadas</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </Link>
         </div>
 
-        {/* Widget de Visiones */}
+        {/* Widget de Productos Activos */}
         <div className="mt-8">
-          <VisionesWidget 
-            visiones={visiones} 
-            userRole="COORDINATOR_BASIC" 
-            loading={loadingVisiones}
-          />
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-cyan-500/20 rounded-lg">
+                  <Calendar className="text-cyan-400" size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Productos Activos</h2>
+                  <p className="text-sm text-slate-400">Ordenados por fecha de inicio</p>
+                </div>
+              </div>
+              <div className="text-cyan-400 font-bold text-lg">{productos.length}</div>
+            </div>
+
+            {loadingProductos ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto"></div>
+                <p className="text-slate-400 mt-4">Cargando productos...</p>
+              </div>
+            ) : productos.length === 0 ? (
+              <div className="text-center py-12">
+                <Activity className="mx-auto text-slate-600 mb-4" size={48} />
+                <p className="text-slate-400">No hay productos activos</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {productos.map((producto: any) => {
+                  const startDate = producto.startDate ? new Date(producto.startDate) : null;
+                  const now = new Date();
+                  const hasStarted = startDate && startDate <= now;
+                  const showCountdown = countdown[producto.id];
+
+                  return (
+                    <Link
+                      key={producto.id}
+                      href={`/dashboard/school-admin/vision/${producto.visionId}`}
+                      className="block"
+                    >
+                      <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-2 border-slate-700/50 rounded-xl p-5 hover:border-cyan-500/50 transition-all cursor-pointer group hover:scale-[1.02]">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <h3 className="text-white font-bold text-lg mb-1 group-hover:text-cyan-400 transition-colors">
+                              {producto.name}
+                            </h3>
+                            {producto.description && (
+                              <p className="text-slate-400 text-sm line-clamp-1">
+                                {producto.description}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            {/* Badge de Tipo (Workshop/Training) */}
+                            {producto.type && (
+                              <div className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+                                producto.type === 'WORKSHOP' 
+                                  ? 'bg-purple-500/20 text-purple-400 border-purple-500/50'
+                                  : producto.type === 'EXTRA_WORKSHOP'
+                                  ? 'bg-pink-500/20 text-pink-400 border-pink-500/50'
+                                  : 'bg-blue-500/20 text-blue-400 border-blue-500/50'
+                              }`}>
+                                {producto.type === 'WORKSHOP' ? '🎯 Taller' : 
+                                 producto.type === 'EXTRA_WORKSHOP' ? '✨ Taller Extra' : 
+                                 '📚 Entrenamiento'}
+                              </div>
+                            )}
+                            {/* Badge de Nivel */}
+                            {producto.levelType && producto.levelType !== 'NONE' && (
+                              <div className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+                                producto.levelType === 'BASIC' 
+                                  ? 'bg-green-500/20 text-green-400 border-green-500/50'
+                                  : producto.levelType === 'INTERMEDIATE'
+                                  ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50'
+                                  : producto.levelType === 'ADVANCED'
+                                  ? 'bg-red-500/20 text-red-400 border-red-500/50'
+                                  : producto.levelType === 'PL'
+                                  ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/50'
+                                  : 'bg-slate-500/20 text-slate-400 border-slate-500/50'
+                              }`}>
+                                {producto.levelType === 'BASIC' ? 'Básico' : 
+                                 producto.levelType === 'INTERMEDIATE' ? 'Intermedio' : 
+                                 producto.levelType === 'ADVANCED' ? 'Avanzado' :
+                                 producto.levelType === 'PL' ? 'Liderato' :
+                                 producto.levelType}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4 text-sm">
+                            <div className="flex items-center gap-2">
+                              <Calendar size={14} className="text-slate-400" />
+                              <span className="text-slate-300">
+                                {startDate ? new Date(startDate).toLocaleDateString('es-ES', { 
+                                  day: 'numeric', 
+                                  month: 'short',
+                                  year: 'numeric'
+                                }) : 'Sin fecha'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Users size={14} className="text-slate-400" />
+                              <span className="text-slate-300">
+                                {producto.currentEnrollment || 0}/{producto.maxCapacity || 0}
+                              </span>
+                            </div>
+                          </div>
+
+                          {showCountdown && !hasStarted && (
+                            <div className="flex items-center gap-2 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/50 px-4 py-2 rounded-lg animate-pulse">
+                              <Clock size={16} className="text-orange-400" />
+                              <span className="text-orange-400 font-bold font-mono text-sm">
+                                {countdown[producto.id]}
+                              </span>
+                            </div>
+                          )}
+
+                          {hasStarted && (
+                            <div className="flex items-center gap-2 text-green-400 text-sm font-semibold">
+                              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                              En curso
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Widgets de Acción - 2x3 Grid */}

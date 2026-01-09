@@ -6,6 +6,7 @@ import { SecurityGate } from "../../components/dashboard";
 import DashboardProviders from "../../components/DashboardProviders";
 import { ToastProvider } from "../../components/ui/ToastProvider";
 import { PhoenixProvider } from "../../contexts/PhoenixContext";
+import { VisionAccessProvider } from "../../contexts/VisionAccessContext";
 import { DashboardClientLayout } from "../../components/dashboard/DashboardClientLayout";
 
 export default async function DashboardLayout({
@@ -76,11 +77,13 @@ export default async function DashboardLayout({
     <DashboardProviders session={session}>
       <ToastProvider>
         <PhoenixProvider>
-          <DashboardClientLayout usuario={usuarioSerializado}>
-            <SecurityGate rol={usuarioSerializado.rol} suscripcion={usuarioSerializado.suscripcion}>
-              {children}
-            </SecurityGate>
-          </DashboardClientLayout>
+          <VisionAccessProvider>
+            <DashboardClientLayout usuario={usuarioSerializado}>
+              <SecurityGate rol={usuarioSerializado.rol} suscripcion={usuarioSerializado.suscripcion}>
+                {children}
+              </SecurityGate>
+            </DashboardClientLayout>
+          </VisionAccessProvider>
         </PhoenixProvider>
       </ToastProvider>
     </DashboardProviders>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Clock, AlertTriangle, CheckCircle2, Loader2, PhoneOff, Zap, CreditCard, Users, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { ProtectedModulePage } from '@/components/ui/LockedModuleOverlay';
 
 interface MentorAsignado {
   id: number;
@@ -576,6 +577,7 @@ export default function ProgramEnrollPage() {
     : 'Programa de Seguimiento (Lobo Solitario)';
 
   return (
+    <ProtectedModulePage moduleKey="disciplina">
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
@@ -1244,5 +1246,6 @@ export default function ProgramEnrollPage() {
         </p>
       </div>
     </div>
+    </ProtectedModulePage>
   );
 }

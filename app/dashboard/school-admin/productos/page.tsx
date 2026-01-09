@@ -37,6 +37,8 @@ interface SchoolProduct {
   maxCapacity: number | null;
   currentEnrollment: number;
   isActive: boolean;
+  location: string | null;
+  videoUrl: string | null;
   createdAt: string;
   Organization?: {
     logoUrl: string | null;
@@ -74,6 +76,8 @@ export default function ProductosPage() {
     startDate: '',
     endDate: '',
     maxCapacity: 30,
+    location: '',
+    videoUrl: '',
   });
 
   useEffect(() => {
@@ -144,6 +148,8 @@ export default function ProductosPage() {
         startDate: product.startDate ? product.startDate.split('T')[0] : '',
         endDate: product.endDate ? product.endDate.split('T')[0] : '',
         maxCapacity: product.maxCapacity || 30,
+        location: product.location || '',
+        videoUrl: product.videoUrl || '',
       });
     } else {
       setEditingProduct(null);
@@ -177,6 +183,8 @@ export default function ProductosPage() {
       startDate: '',
       endDate: '',
       maxCapacity: 30,
+      location: '',
+      videoUrl: '',
     });
   };
 
@@ -800,6 +808,31 @@ export default function ProductosPage() {
                     onChange={(e) => setProductForm({ ...productForm, maxCapacity: parseInt(e.target.value) || 30 })}
                   />
                 </div>
+              </div>
+
+              {/* Location (Address) */}
+              <div>
+                <label className="text-white font-bold block mb-2">Dirección del Evento</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Av. Revolucíon 1234, Col. Centro, Monterrey, NL"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg text-white"
+                  value={productForm.location}
+                  onChange={(e) => setProductForm({ ...productForm, location: e.target.value })}
+                />
+              </div>
+
+              {/* Video URL */}
+              <div>
+                <label className="text-white font-bold block mb-2">URL del Video</label>
+                <input
+                  type="url"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg text-white"
+                  value={productForm.videoUrl}
+                  onChange={(e) => setProductForm({ ...productForm, videoUrl: e.target.value })}
+                />
+                <p className="text-slate-400 text-xs mt-2">URL del video promocional o informativo del taller</p>
               </div>
 
               {/* Warning for CORE products */}

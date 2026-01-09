@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
           name: order.nombreOrganizacion,
           slug: slug,
           logoUrl: order.logoUrl,
+          address: order.address || null,
           brandColor: '#9333ea',
           contactEmail: order.Usuario.email,
           status: 'ACTIVE',
