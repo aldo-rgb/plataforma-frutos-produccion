@@ -87,6 +87,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!vision.organizationId) {
+      return NextResponse.json(
+        { success: false, error: 'Visión sin organización asignada' },
+        { status: 400 }
+      );
+    }
+
     // Obtener configuración de precios
     const priceConfig = await prisma.ticketPriceConfig.findUnique({
       where: {

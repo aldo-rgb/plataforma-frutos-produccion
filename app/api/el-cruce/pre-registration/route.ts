@@ -37,16 +37,16 @@ export async function GET(request: NextRequest) {
     const preRegistrations = await prisma.advancedPreRegistration.findMany({
       where,
       include: {
-        user: {
-          select: { id: true, nombre: true, email: true, image: true, phone: true }
+        Usuario: {
+          select: { id: true, nombre: true, email: true, imagen: true, telefono: true }
         },
-        currentProduct: {
+        SchoolProduct_AdvancedPreRegistration_currentProductIdToSchoolProduct: {
           select: { id: true, name: true, levelType: true }
         },
-        targetProduct: {
+        SchoolProduct_AdvancedPreRegistration_targetProductIdToSchoolProduct: {
           select: { id: true, name: true, levelType: true, startDate: true, basePrice: true }
         },
-        scannedByStaff: {
+        Usuario_AdvancedPreRegistration_scannedByStaffIdToUsuario: {
           select: { id: true, nombre: true }
         }
       },
@@ -56,14 +56,14 @@ export async function GET(request: NextRequest) {
     // Calcular stats
     const stats = {
       total: preRegistrations.length,
-      pending: preRegistrations.filter(pr => pr.status === "PENDING").length,
-      paid: preRegistrations.filter(pr => pr.status === "PAID").length,
-      expired: preRegistrations.filter(pr => pr.status === "EXPIRED").length
+      pending: preRegistrations.filter((pr: any) => pr.status === "PENDING").length,
+      paid: preRegistrations.filter((pr: any) => pr.status === "PAID").length,
+      expired: preRegistrations.filter((pr: any) => pr.status === "EXPIRED").length
     }
 
     // Calcular countdown para cada pre-registro pendiente
     const now = Date.now()
-    const preRegistrationsWithCountdown = preRegistrations.map(pr => ({
+    const preRegistrationsWithCountdown = preRegistrations.map((pr: any) => ({
       ...pr,
       countdownSeconds: pr.status === "PENDING" 
         ? Math.max(0, Math.floor((new Date(pr.promoDeadline).getTime() - now) / 1000))
@@ -115,10 +115,10 @@ export async function PATCH(request: NextRequest) {
       where: { id: preRegistrationId },
       data: updateData,
       include: {
-        user: {
+        Usuario: {
           select: { id: true, nombre: true }
         },
-        targetProduct: {
+        SchoolProduct_AdvancedPreRegistration_targetProductIdToSchoolProduct: {
           select: { id: true, name: true }
         }
       }

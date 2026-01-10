@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
-    const staffId = parseInt(session.user.id)
+    const staffId = typeof session.user.id === 'string' ? parseInt(session.user.id) : session.user.id
     const body = await request.json()
     const { 
       sessionId,        // ID de la sesión de El Cruce activa
@@ -63,18 +63,18 @@ export async function POST(request: NextRequest) {
     if (participantId) {
       participant = await prisma.usuario.findUnique({
         where: { id: participantId },
-        select: { id: true, nombre: true, email: true, image: true, badgeCode: true }
+        select: { id: true, nombre: true, email: true, imagen: true, referralCode: true }
       })
     } else {
-      // Buscar por código de gafete (badgeCode o referralCode)
+      // Buscar por código de gafete (referralCode o licenseCode)
       participant = await prisma.usuario.findFirst({
         where: {
           OR: [
-            { badgeCode: participantCode },
-            { referralCode: participantCode }
+            { referralCode: participantCode },
+            { licenseCode: participantCode }
           ]
         },
-        select: { id: true, nombre: true, email: true, image: true, badgeCode: true }
+        select: { id: true, nombre: true, email: true, imagen: true, referralCode: true }
       })
     }
 
@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
     emitCrossing(sessionId, {
       participantId: participant.id,
       participantName: participant.nombre,
-      participantImage: participant.image,
+      participantImage: participant.imagen,
       crossedCount,
       totalParticipants,
       timestamp: Date.now()
@@ -226,7 +226,7 @@ export async function POST(request: NextRequest) {
       participant: {
         id: participant.id,
         nombre: participant.nombre,
-        image: participant.image
+        imagen: participant.imagen
       },
       preRegistration: {
         id: preRegistration.id,
@@ -270,16 +270,16 @@ export async function GET(request: NextRequest) {
     const participant = await prisma.usuario.findFirst({
       where: {
         OR: [
-          { badgeCode: participantCode },
-          { referralCode: participantCode }
+          { referralCode: participantCode },
+          { licenseCode: participantCode }
         ]
       },
       select: { 
         id: true, 
         nombre: true, 
         email: true, 
-        image: true,
-        AdvancedPreRegistrations: {
+        imagen: true,
+        AdvancedPreRegistration: {
           select: {
             id: true,
             status: true,
@@ -298,8 +298,8 @@ export async function GET(request: NextRequest) {
       where: { id: sessionId }
     })
 
-    const hasPreRegistration = participant.AdvancedPreRegistrations.some(
-      pr => pr.targetProductId === crossingSession?.targetProductId
+    const hasPreRegistration = participant.AdvancedPreRegistration.some(
+      (pr: { targetProductId: number }) => pr.targetProductId === crossingSession?.targetProductId
     )
 
     return NextResponse.json({
@@ -307,7 +307,7 @@ export async function GET(request: NextRequest) {
       participant: {
         id: participant.id,
         nombre: participant.nombre,
-        image: participant.image
+        imagen: participant.imagen
       },
       hasPreRegistration
     })
