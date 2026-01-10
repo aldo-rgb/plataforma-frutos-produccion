@@ -184,14 +184,6 @@ export default function MentorDashboardClient({
           </div>
         </div>
       )}
-                    <XCircle size={14} /> Rechazar
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
 
       {/* VISTA 2: SEGUIMIENTO Y LLAMADAS (Accountability) */}
       {activeTab === 'seguimiento' && (
