@@ -195,9 +195,7 @@ function CheckoutContent() {
   const addGiftCodePayment = () => {
     if (!validatedCode || !prices) return;
 
-    const totalPrice = ticketSelection === 'FULL_VISION' ? prices.FULL_VISION : prices.BASIC;
     const currentPaid = appliedPayments.reduce((sum, p) => sum + p.amount, 0);
-    const remaining = totalPrice - currentPaid;
 
     // Calculate how much this code covers
     let codeValue = 0;
@@ -205,16 +203,19 @@ function CheckoutContent() {
 
     if (validatedCode.type === 'GOLDEN') {
       // GOLDEN covers full BASIC price
-      codeValue = Math.min(prices.BASIC, remaining);
+      const remaining = prices.BASIC - currentPaid;
+      codeValue = Math.min(prices.BASIC, Math.max(0, remaining));
       description = '🎫 Golden Ticket - Básico Gratis';
     } else if (validatedCode.type === 'GOLDEN_DISCOUNT') {
       // GOLDEN_DISCOUNT gives a percentage discount on BASIC
       const discountAmount = Math.round(prices.BASIC * ((validatedCode.discountPercentage || 0) / 100));
-      codeValue = Math.min(discountAmount, remaining);
+      const remaining = prices.BASIC - currentPaid;
+      codeValue = Math.min(discountAmount, Math.max(0, remaining));
       description = `🎫 Golden ${validatedCode.discountPercentage}% - Descuento`;
     } else if (validatedCode.type === 'PLATINUM') {
-      // PLATINUM covers full FULL_VISION price
-      codeValue = Math.min(prices.FULL_VISION, remaining);
+      // PLATINUM covers full FULL_VISION price - calculate against FULL price, not current selection
+      const remaining = prices.FULL_VISION - currentPaid;
+      codeValue = Math.min(prices.FULL_VISION, Math.max(0, remaining));
       description = '👑 Platinum Ticket - Visión Completa';
       // Auto-switch to FULL_VISION if PLATINUM
       setTicketSelection('FULL_VISION');

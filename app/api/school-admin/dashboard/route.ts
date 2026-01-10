@@ -40,6 +40,9 @@ export async function GET(req: Request) {
         contactEmail: true,
         logoUrl: true,
         brandColor: true,
+        totalLicenses: true,
+        activeLicenses: true,
+        licensesAvailable: true,
         Usuario_Usuario_organizationIdToOrganization: {
           where: {
             isActive: true,
@@ -106,22 +109,30 @@ export async function GET(req: Request) {
       }
     });
 
-    // Contar licencias PAGADAS asignadas (GAMECHANGER, PARTICIPANTE, LIDER)
-    // Excluir staff (coordinadores y trainers) que tienen licencias de cortesía
-    const paidLicensesAssigned = await prisma.licenseAssignment.count({
+    // === CÁLCULO CORRECTO DE LICENCIAS CONSUMIDAS ===
+    // 1. GAMECHANGER y LIDER: Consumen licencia al ser creados (no requieren check-in)
+    const gcLiderCount = await prisma.usuario.count({
       where: {
         organizationId: fullUser.organizationId,
-        isActive: true,
-        Usuario_LicenseAssignment_userIdToUsuario: {
-          rol: {
-            in: ['GAMECHANGER', 'PARTICIPANTE', 'LIDER']
-          }
-        }
+        rol: { in: ['GAMECHANGER', 'LIDER'] },
+        isActive: true
       }
     });
 
-    // Licencias disponibles = Total en pool - Asignadas a roles pagados
-    const availableLicenses = totalLicensesInPool - paidLicensesAssigned;
+    // 2. PARTICIPANTES: Consumen licencia SOLO cuando hacen check-in (registro con gafete)
+    const participantesWithCheckIn = await prisma.checkInRecord.count({
+      where: {
+        organizationId: fullUser.organizationId,
+        licenseConsumed: true,
+        Usuario: { rol: 'PARTICIPANTE' }
+      }
+    });
+
+    // Total de licencias consumidas
+    const licensesConsumed = gcLiderCount + participantesWithCheckIn;
+
+    // Licencias disponibles = Total en pool - Consumidas
+    const availableLicenses = totalLicensesInPool - licensesConsumed;
 
     // Contar solo las licencias ACTIVADAS (con activatedAt no nulo)
     const activatedLicenses = await prisma.licenseAssignment.count({
@@ -278,6 +289,9 @@ export async function GET(req: Request) {
         contactEmail: organization.contactEmail,
         logoUrl: organization.logoUrl,
         brandColor: organization.brandColor,
+        totalLicenses: organization.totalLicenses,
+        activeLicenses: organization.activeLicenses,
+        licensesAvailable: organization.licensesAvailable,
       },
       stats: {
         totalStudents,

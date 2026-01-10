@@ -51,11 +51,13 @@ export async function GET(
       visionId: enrollment.visionId,
       enrolledAt: enrollment.enrolledAt,
       enrollmentStatus: enrollment.enrollmentStatus,
+      attendanceStatus: enrollment.attendanceStatus,
       level: enrollment.level,
       Usuario: {
         id: enrollment.Usuario_vision_enrollments_userIdToUsuario.id,
         nombre: enrollment.Usuario_vision_enrollments_userIdToUsuario.nombre,
         email: enrollment.Usuario_vision_enrollments_userIdToUsuario.email,
+        telefono: enrollment.Usuario_vision_enrollments_userIdToUsuario.telefono,
         organizationId: enrollment.Usuario_vision_enrollments_userIdToUsuario.organizationId,
         createdAt: enrollment.Usuario_vision_enrollments_userIdToUsuario.createdAt,
         Organization: enrollment.Usuario_vision_enrollments_userIdToUsuario.Organization_Usuario_organizationIdToOrganization

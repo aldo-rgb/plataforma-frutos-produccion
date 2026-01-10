@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 // PATCH - Actualizar estado de tarea personal (completar/reabrir)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -25,7 +25,8 @@ export async function PATCH(
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    const taskId = parseInt(params.id);
+    const { id } = await params;
+    const taskId = parseInt(id);
     if (isNaN(taskId)) {
       return NextResponse.json({ error: 'ID de tarea inválido' }, { status: 400 });
     }
@@ -57,6 +58,7 @@ export async function PATCH(
       data: {
         status,
         completedAt: status === 'COMPLETED' ? new Date() : null,
+        updatedAt: new Date(),
       },
     });
 
@@ -74,7 +76,7 @@ export async function PATCH(
 // DELETE - Eliminar tarea personal
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -93,7 +95,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    const taskId = parseInt(params.id);
+    const { id } = await params;
+    const taskId = parseInt(id);
     if (isNaN(taskId)) {
       return NextResponse.json({ error: 'ID de tarea inválido' }, { status: 400 });
     }

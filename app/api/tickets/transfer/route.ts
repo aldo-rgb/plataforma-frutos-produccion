@@ -73,6 +73,14 @@ export async function POST(request: Request) {
       );
     }
 
+    // Solo tickets BASIC pueden iniciar una transferencia
+    if (ticket.level !== 'BASIC') {
+      return NextResponse.json(
+        { success: false, error: 'Solo puedes transferir desde el ticket Básico' },
+        { status: 400 }
+      );
+    }
+
     if (ticket.status !== 'ACTIVE') {
       return NextResponse.json(
         { success: false, error: 'Solo puedes transferir tickets activos' },
@@ -127,16 +135,35 @@ export async function POST(request: Request) {
       });
     }
 
-    // Ejecutar transferencia
-    const updatedTicket = await prisma.ticket.update({
-      where: { id: ticketId },
-      data: {
-        ownerId: recipient.id,
-        status: 'TRANSFERRED',
-        isTransferable: false,
-        transferredAt: now,
-        transferredTo: recipient.id,
+    // Buscar TODOS los tickets activos del usuario para la misma visión
+    const allUserTickets = await prisma.ticket.findMany({
+      where: {
+        ownerId: currentUser.id,
+        visionId: ticket.visionId,
+        status: 'ACTIVE',
       },
+      select: { id: true, level: true },
+    });
+
+    // Transferir TODOS los tickets del usuario para esta visión
+    const transferredTickets = await prisma.$transaction(
+      allUserTickets.map((t) =>
+        prisma.ticket.update({
+          where: { id: t.id },
+          data: {
+            ownerId: recipient!.id,
+            status: 'TRANSFERRED',
+            isTransferable: false,
+            transferredAt: now,
+            transferredTo: recipient!.id,
+          },
+        })
+      )
+    );
+
+    // Obtener info del ticket principal actualizado para la respuesta
+    const updatedTicket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
       include: {
         owner: {
           select: {
@@ -146,29 +173,34 @@ export async function POST(request: Request) {
         },
         vision: {
           select: {
-            name: true,
+            nombre: true,
             startDate: true,
           },
         },
       },
     });
 
-    // TODO: Aquí deberías enviar un email al receptor notificándole que recibió un ticket
+    // Crear lista de niveles transferidos
+    const transferredLevels = allUserTickets.map(t => t.level);
+
+    // TODO: Aquí deberías enviar un email al receptor notificándole que recibió tickets
     // Ejemplo:
     // await sendTicketTransferNotification({
     //   recipientEmail: recipient.email,
     //   recipientName: recipient.nombre,
     //   senderName: currentUser.nombre,
-    //   ticketLevel: updatedTicket.level,
-    //   visionName: updatedTicket.vision.name,
-    //   visionDate: updatedTicket.vision.startDate,
+    //   ticketLevels: transferredLevels,
+    //   visionName: updatedTicket?.vision.nombre,
+    //   visionDate: updatedTicket?.vision.startDate,
     //   isNewUser: !recipient,
     // });
 
     return NextResponse.json({
       success: true,
-      message: 'Ticket transferido exitosamente',
-      ticket: {
+      message: `${transferredTickets.length} ticket(s) transferido(s) exitosamente`,
+      ticketsTransferred: transferredTickets.length,
+      levels: transferredLevels,
+      ticket: updatedTicket ? {
         id: updatedTicket.id,
         level: updatedTicket.level,
         newOwner: {
@@ -176,10 +208,10 @@ export async function POST(request: Request) {
           email: updatedTicket.owner.email,
         },
         vision: {
-          name: updatedTicket.vision.name,
+          name: updatedTicket.vision.nombre,
           startDate: updatedTicket.vision.startDate,
         },
-      },
+      } : null,
     });
   } catch (error) {
     console.error('Error executing transfer:', error);

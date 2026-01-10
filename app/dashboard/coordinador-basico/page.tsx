@@ -6,9 +6,11 @@ import { useRouter } from 'next/navigation';
 import {
   Users, Target, Ticket, BarChart3, Zap,
   AlertTriangle, Building2, GraduationCap, Star, Activity,
-  FileText, CheckCircle, Shield, Clock, Calendar
+  FileText, CheckCircle, Shield, Clock, Calendar, ClipboardList, Scan
 } from 'lucide-react';
 import Link from 'next/link';
+import MedicalAlertsWidget from '@/components/dashboard/MedicalAlertsWidget';
+import MedicalFormsListWidget from '@/components/dashboard/MedicalFormsListWidget';
 
 interface DashboardData {
   overview: {
@@ -198,7 +200,7 @@ export default function CoordinadorBasicoDashboard() {
         {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {/* Widget Comunidad */}
-          <div className="bg-gradient-to-br from-blue-900/40 via-cyan-900/30 to-slate-900 border-2 border-blue-500/30 rounded-2xl p-6 hover:border-blue-500/50 transition-all hover:scale-105 hover:shadow-2xl">
+          <div className="bg-gradient-to-br from-blue-900/40 via-cyan-900/30 to-slate-900 border-2 border-blue-500/30 rounded-2xl p-6 hover:border-blue-500/50 transition-all hover:scale-105 hover:shadow-2xl h-full">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-blue-500/20 rounded-xl transition-colors">
@@ -212,13 +214,14 @@ export default function CoordinadorBasicoDashboard() {
             </div>
             
             <div className="flex items-center justify-between">
-              <span className="text-slate-400 text-sm">Todos los usuarios que pertenecen la comunidad</span>
+              <span className="text-slate-400 text-sm">Todos los usuarios que pertenecen a la comunidad</span>
+              <div className="h-6"></div>
             </div>
           </div>
           
           {/* Widget Llamadas Pendientes con botón */}
-          <Link href="/dashboard/school-admin/vision/1/call-management?level=BASIC">
-            <div className="bg-gradient-to-br from-yellow-900/40 via-orange-900/30 to-slate-900 border-2 border-yellow-500/30 rounded-2xl p-6 hover:border-yellow-500/50 transition-all cursor-pointer group hover:scale-105 hover:shadow-2xl">
+          <Link href="/dashboard/school-admin/vision/1/call-management?level=BASIC" className="h-full">
+            <div className="bg-gradient-to-br from-yellow-900/40 via-orange-900/30 to-slate-900 border-2 border-yellow-500/30 rounded-2xl p-6 hover:border-yellow-500/50 transition-all cursor-pointer group hover:scale-105 hover:shadow-2xl h-full">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-yellow-500/20 group-hover:bg-yellow-500/30 rounded-xl transition-colors">
@@ -242,6 +245,16 @@ export default function CoordinadorBasicoDashboard() {
               </div>
             </div>
           </Link>
+        </div>
+
+        {/* Widget de Alertas Médicas */}
+        <div className="mt-8">
+          <MedicalAlertsWidget />
+        </div>
+
+        {/* Widget de Formularios Médicos */}
+        <div className="mt-8">
+          <MedicalFormsListWidget />
         </div>
 
         {/* Widget de Productos Activos */}
@@ -281,7 +294,7 @@ export default function CoordinadorBasicoDashboard() {
                   return (
                     <Link
                       key={producto.id}
-                      href={`/dashboard/school-admin/vision/${producto.visionId}`}
+                      href={`/dashboard/school-admin/vision/${producto.visionId}/manage`}
                       className="block"
                     >
                       <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-2 border-slate-700/50 rounded-xl p-5 hover:border-cyan-500/50 transition-all cursor-pointer group hover:scale-[1.02]">
@@ -364,10 +377,31 @@ export default function CoordinadorBasicoDashboard() {
                           )}
 
                           {hasStarted && (
-                            <div className="flex items-center gap-2 text-green-400 text-sm font-semibold">
-                              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                              En curso
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2 text-green-400 text-sm font-semibold">
+                                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                                En curso
+                              </div>
+                              <Link
+                                href={`/staff/check-in/${producto.id}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-cyan-500/20 to-purple-500/20 hover:from-cyan-500/30 hover:to-purple-500/30 border border-cyan-500/50 rounded-lg text-cyan-400 hover:text-cyan-300 text-sm font-semibold transition-all"
+                              >
+                                <Scan size={14} />
+                                Check-In
+                              </Link>
                             </div>
+                          )}
+
+                          {!hasStarted && !showCountdown && (
+                            <Link
+                              href={`/staff/check-in/${producto.id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-slate-600/20 to-slate-700/20 hover:from-cyan-500/20 hover:to-purple-500/20 border border-slate-500/50 hover:border-cyan-500/50 rounded-lg text-slate-400 hover:text-cyan-400 text-sm font-semibold transition-all"
+                            >
+                              <Scan size={14} />
+                              Check-In
+                            </Link>
                           )}
                         </div>
                       </div>

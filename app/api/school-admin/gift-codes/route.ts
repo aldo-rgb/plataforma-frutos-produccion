@@ -162,19 +162,19 @@ export async function POST(request: Request) {
     });
 
     if (type === 'GOLDEN') {
-      // Valor = precio de básico (100% - código gratis)
+      // GOLDEN = Solo Básico ($6,500)
       const basicPrice = defaultPrices.find(p => p.levelType === 'BASIC');
-      codeValue = basicPrice?.basePrice || 3500;
+      codeValue = Number(basicPrice?.basePrice) || 6500;
     } else if (type === 'GOLDEN_DISCOUNT') {
       // Valor = descuento aplicado (porcentaje del precio básico)
       const basicPrice = defaultPrices.find(p => p.levelType === 'BASIC');
-      const baseValue = Number(basicPrice?.basePrice) || 3500;
+      const baseValue = Number(basicPrice?.basePrice) || 6500;
       // El valor almacenado es el DESCUENTO (lo que se ahorra el usuario)
       codeValue = Math.round(baseValue * (discountPercentage / 100));
     } else {
-      // PLATINUM - Valor = precio de combo completo
+      // PLATINUM = COMBO_FULL (Básico + Avanzado + PL)
       const comboPrice = defaultPrices.find(p => p.levelType === 'COMBO_FULL');
-      codeValue = comboPrice?.basePrice || 12000;
+      codeValue = Number(comboPrice?.basePrice) || 27000;
     }
 
     // Crear códigos en batch

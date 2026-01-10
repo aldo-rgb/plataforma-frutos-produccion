@@ -2,7 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { CheckCircle, XCircle, X } from 'lucide-react';
+
+// Roles permitidos para acceder a esta página
+const ALLOWED_ROLES = [
+  'SCHOOL_ADMIN', 
+  'ADMINISTRADOR', 
+  'COORDINADOR', 
+  'COORDINATOR_BASIC', 
+  'COORDINATOR_ADVANCED'
+];
 
 interface Vision {
   id: number;
@@ -58,11 +68,28 @@ interface GameChanger {
 export default function VisionManagePage() {
   const params = useParams();
   const router = useRouter();
+  const { data: session, status } = useSession();
   const visionId = params.id as string;
 
   const [vision, setVision] = useState<Vision | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'info' | 'avanzado' | 'liderato' | 'fechas' | 'staff' | 'gamechangers' | 'qr'>('info');
+  
+  // Verificar autenticación y permisos
+  useEffect(() => {
+    if (status === 'loading') return;
+    
+    if (status === 'unauthenticated') {
+      router.push('/auth/signin');
+      return;
+    }
+    
+    const userRole = session?.user?.rol as string;
+    if (!ALLOWED_ROLES.includes(userRole)) {
+      router.push('/dashboard');
+      return;
+    }
+  }, [status, session, router]);
   
   // Toast notification state
   const [toast, setToast] = useState<{show: boolean; message: string; type: 'success' | 'error'}>({
@@ -84,14 +111,17 @@ export default function VisionManagePage() {
   // Estado para registros del nivel BÁSICO
   const [basicEnrollments, setBasicEnrollments] = useState<any[]>([]);
   const [loadingBasicEnrollments, setLoadingBasicEnrollments] = useState(false);
+  const [basicAttendanceFilter, setBasicAttendanceFilter] = useState<'ALL' | 'ATTENDED' | 'NOT_ATTENDED' | 'PENDING'>('ALL');
   
   // Estado para registros del nivel AVANZADO
   const [advancedEnrollments, setAdvancedEnrollments] = useState<any[]>([]);
   const [loadingAdvancedEnrollments, setLoadingAdvancedEnrollments] = useState(false);
+  const [advancedAttendanceFilter, setAdvancedAttendanceFilter] = useState<'ALL' | 'ATTENDED' | 'NOT_ATTENDED' | 'PENDING'>('ALL');
   
   // Estado para registros del nivel LIDERATO (PL)
   const [plEnrollments, setPlEnrollments] = useState<any[]>([]);
   const [loadingPlEnrollments, setLoadingPlEnrollments] = useState(false);
+  const [plAttendanceFilter, setPlAttendanceFilter] = useState<'ALL' | 'ATTENDED' | 'NOT_ATTENDED' | 'PENDING'>('ALL');
   
   // Estados para edición
   const [editingDates, setEditingDates] = useState(false);
@@ -506,12 +536,18 @@ export default function VisionManagePage() {
     setTimeout(() => setToast({show: false, message: '', type: 'success'}), 3000);
   };
 
-  if (loading) {
+  if (loading || status === 'loading') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
         <div className="text-white text-2xl">Cargando...</div>
       </div>
     );
+  }
+
+  // Verificar permisos antes de mostrar contenido
+  const userRole = session?.user?.rol as string;
+  if (!ALLOWED_ROLES.includes(userRole)) {
+    return null;
   }
 
   if (!vision) {
@@ -729,6 +765,50 @@ export default function VisionManagePage() {
                 </div>
                 
                 <div className="p-6">
+                  {/* Filtros de asistencia */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <button
+                      onClick={() => setBasicAttendanceFilter('ALL')}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        basicAttendanceFilter === 'ALL'
+                          ? 'bg-green-500 text-white'
+                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      Todos ({basicEnrollments.length})
+                    </button>
+                    <button
+                      onClick={() => setBasicAttendanceFilter('ATTENDED')}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        basicAttendanceFilter === 'ATTENDED'
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      ✅ Asistió ({basicEnrollments.filter(e => e.attendanceStatus === 'ATTENDED').length})
+                    </button>
+                    <button
+                      onClick={() => setBasicAttendanceFilter('NOT_ATTENDED')}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        basicAttendanceFilter === 'NOT_ATTENDED'
+                          ? 'bg-red-500 text-white'
+                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      ❌ No Asistió ({basicEnrollments.filter(e => e.attendanceStatus === 'NOT_ATTENDED').length})
+                    </button>
+                    <button
+                      onClick={() => setBasicAttendanceFilter('PENDING')}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        basicAttendanceFilter === 'PENDING'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      📋 Inscrito ({basicEnrollments.filter(e => !e.attendanceStatus || e.attendanceStatus === 'PENDING').length})
+                    </button>
+                  </div>
+
                   {loadingBasicEnrollments ? (
                     <div className="text-center py-8 text-slate-400">Cargando registros...</div>
                   ) : basicEnrollments.length === 0 ? (
@@ -743,14 +823,19 @@ export default function VisionManagePage() {
                         <thead>
                           <tr className="border-b border-green-500/20">
                             <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Usuario</th>
-                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Email</th>
-                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Organización</th>
+                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Teléfono</th>
                             <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Fecha de Registro</th>
-                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Estado</th>
+                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Asistencia</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {basicEnrollments.map((enrollment) => (
+                          {basicEnrollments
+                            .filter(enrollment => {
+                              if (basicAttendanceFilter === 'ALL') return true;
+                              if (basicAttendanceFilter === 'PENDING') return !enrollment.attendanceStatus || enrollment.attendanceStatus === 'PENDING';
+                              return enrollment.attendanceStatus === basicAttendanceFilter;
+                            })
+                            .map((enrollment) => (
                             <tr 
                               key={enrollment.id}
                               className="border-b border-slate-700/50 hover:bg-green-500/5 transition-colors"
@@ -767,21 +852,15 @@ export default function VisionManagePage() {
                                 </div>
                               </td>
                               <td className="py-4 px-4">
-                                <div className="text-slate-300 text-sm">{enrollment.Usuario?.email}</div>
-                              </td>
-                              <td className="py-4 px-4">
                                 <div className="text-slate-300 text-sm">
-                                  {enrollment.Usuario?.Organization?.name || 'N/A'}
-                                </div>
-                                <div className="text-slate-500 text-xs">
-                                  ID: {enrollment.Usuario?.organizationId}
+                                  {enrollment.Usuario?.telefono || <span className="text-slate-500 italic">Sin teléfono</span>}
                                 </div>
                               </td>
                               <td className="py-4 px-4">
                                 <div className="text-slate-300 text-sm">
                                   {new Date(enrollment.enrolledAt).toLocaleDateString('es-MX', {
                                     year: 'numeric',
-                                    month: 'long',
+                                    month: 'short',
                                     day: 'numeric'
                                   })}
                                 </div>
@@ -793,12 +872,18 @@ export default function VisionManagePage() {
                                 </div>
                               </td>
                               <td className="py-4 px-4">
-                                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
-                                  enrollment.enrollmentStatus === 'ENROLLED' 
-                                    ? 'bg-green-500/20 text-green-300 border border-green-500/30'
-                                    : 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+                                <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold ${
+                                  enrollment.attendanceStatus === 'ATTENDED' 
+                                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                    : enrollment.attendanceStatus === 'NOT_ATTENDED'
+                                    ? 'bg-red-500/20 text-red-300 border border-red-500/30'
+                                    : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                                 }`}>
-                                  {enrollment.enrollmentStatus === 'ENROLLED' ? '✅ Inscrito' : '⏳ Pendiente'}
+                                  {enrollment.attendanceStatus === 'ATTENDED' 
+                                    ? '✅ Asistió' 
+                                    : enrollment.attendanceStatus === 'NOT_ATTENDED'
+                                    ? '❌ No Asistió'
+                                    : '📋 Inscrito'}
                                 </span>
                               </td>
                             </tr>

@@ -130,12 +130,23 @@ export default function SignUpPageQuantum() {
 
   const fetchReferralUser = async (code: string) => {
     try {
-      const res = await fetch(`/api/public/referral/${code}`);
+      // Limpiar el código: tomar solo la parte alfanumérica antes de espacios/emojis
+      const cleanCode = code
+        .split(' ')[0]
+        .replace(/[^\w]/g, '')
+        .toUpperCase();
+      
+      if (!cleanCode || cleanCode.length < 5) {
+        console.warn('Invalid referral code:', code);
+        return;
+      }
+
+      const res = await fetch(`/api/public/referral/${encodeURIComponent(cleanCode)}`);
       const data = await res.json();
       
       if (data.success) {
         setReferralUser(data.user);
-        setFormData(prev => ({ ...prev, referralCode: code }));
+        setFormData(prev => ({ ...prev, referralCode: data.user.referralCode }));
         setReferralLocked(true);
       }
     } catch (error) {

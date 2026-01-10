@@ -4,9 +4,15 @@ import { FileText, Sparkles, ArrowRight, CheckCircle } from 'lucide-react';
 interface CartaWizardWidgetProps {
   hasCompletedCarta: boolean;
   cartaStatus?: 'BORRADOR' | 'EN_REVISION' | 'CAMBIOS_REQUERIDOS' | 'APROBADA';
+  userLevel?: 'BASIC' | 'ADVANCED' | 'PL' | 'LOBO_SOLITARIO';
 }
 
-export default function CartaWizardWidget({ hasCompletedCarta, cartaStatus }: CartaWizardWidgetProps) {
+export default function CartaWizardWidget({ hasCompletedCarta, cartaStatus, userLevel }: CartaWizardWidgetProps) {
+  // No mostrar para usuarios BASIC
+  if (userLevel === 'BASIC') {
+    return null;
+  }
+
   // Si ya completó la carta y está aprobada, no mostrar el widget
   if (hasCompletedCarta && cartaStatus === 'APROBADA') {
     return null;

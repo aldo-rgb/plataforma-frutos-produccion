@@ -39,6 +39,7 @@ interface SchoolProduct {
   isActive: boolean;
   location: string | null;
   videoUrl: string | null;
+  transferDeadline: string | null;
   createdAt: string;
   Organization?: {
     logoUrl: string | null;
@@ -78,6 +79,7 @@ export default function ProductosPage() {
     maxCapacity: 30,
     location: '',
     videoUrl: '',
+    transferDeadline: '',
   });
 
   useEffect(() => {
@@ -150,6 +152,7 @@ export default function ProductosPage() {
         maxCapacity: product.maxCapacity || 30,
         location: product.location || '',
         videoUrl: product.videoUrl || '',
+        transferDeadline: product.transferDeadline ? product.transferDeadline.split('T')[0] : '',
       });
     } else {
       setEditingProduct(null);
@@ -164,6 +167,9 @@ export default function ProductosPage() {
         startDate: '',
         endDate: '',
         maxCapacity: 30,
+        location: '',
+        videoUrl: '',
+        transferDeadline: '',
       });
     }
     setShowModal(true);
@@ -185,6 +191,7 @@ export default function ProductosPage() {
       maxCapacity: 30,
       location: '',
       videoUrl: '',
+      transferDeadline: '',
     });
   };
 
@@ -266,6 +273,9 @@ export default function ProductosPage() {
           : null,
         endDate: productForm.endDate
           ? new Date(productForm.endDate).toISOString()
+          : null,
+        transferDeadline: productForm.transferDeadline
+          ? new Date(productForm.transferDeadline).toISOString()
           : null,
       };
 
@@ -833,6 +843,24 @@ export default function ProductosPage() {
                   onChange={(e) => setProductForm({ ...productForm, videoUrl: e.target.value })}
                 />
                 <p className="text-slate-400 text-xs mt-2">URL del video promocional o informativo del taller</p>
+              </div>
+
+              {/* Transfer Deadline */}
+              <div>
+                <label className="text-white font-bold block mb-2">
+                  Fecha Límite de Transferencia
+                  <span className="text-slate-400 font-normal text-sm ml-2">(opcional)</span>
+                </label>
+                <input
+                  type="date"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg text-white"
+                  value={productForm.transferDeadline}
+                  onChange={(e) => setProductForm({ ...productForm, transferDeadline: e.target.value })}
+                />
+                <p className="text-slate-400 text-xs mt-2">
+                  Si configuras una fecha, los tickets serán transferibles hasta ese día. 
+                  <span className="text-yellow-400"> Sin fecha = No transferible</span>
+                </p>
               </div>
 
               {/* Warning for CORE products */}

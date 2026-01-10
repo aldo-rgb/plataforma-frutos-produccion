@@ -3,6 +3,15 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+// Roles permitidos para acceder a esta API
+const ALLOWED_ROLES = [
+  'SCHOOL_ADMIN', 
+  'ADMINISTRADOR', 
+  'COORDINADOR', 
+  'COORDINATOR_BASIC', 
+  'COORDINATOR_ADVANCED'
+];
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -10,7 +19,7 @@ export async function GET(
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.rol !== 'SCHOOL_ADMIN') {
+    if (!session?.user || !ALLOWED_ROLES.includes(session.user.rol as string)) {
       return NextResponse.json(
         { success: false, error: 'No autorizado' },
         { status: 401 }
@@ -104,7 +113,7 @@ export async function PUT(
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.rol !== 'SCHOOL_ADMIN') {
+    if (!session?.user || !ALLOWED_ROLES.includes(session.user.rol as string)) {
       return NextResponse.json(
         { success: false, error: 'No autorizado' },
         { status: 401 }

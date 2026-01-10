@@ -377,6 +377,90 @@ export default function SchoolAdminDashboard() {
           </div>
         </div>
 
+        {/* 🚨 ALERTA CRÍTICA - LICENCIAS EN NEGATIVO */}
+        {organization?.licensesAvailable < 0 && (
+          <div className="relative overflow-hidden bg-gradient-to-br from-red-900/80 via-red-800/60 to-orange-900/50 border-4 border-red-500 rounded-2xl p-6 shadow-2xl w-full animate-pulse">
+            {/* Efecto de brillo pulsante */}
+            <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 via-orange-500/20 to-red-500/20 animate-pulse"></div>
+            <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/20 rounded-full blur-3xl -mt-32 -mr-32"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-orange-500/20 rounded-full blur-3xl -mb-24 -ml-24"></div>
+            
+            <div className="relative z-10">
+              {/* Header con icono animado */}
+              <div className="flex items-start justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-50"></div>
+                    <div className="relative p-4 bg-red-500 rounded-full shadow-lg shadow-red-500/50">
+                      <AlertTriangle className="text-white" size={32} />
+                    </div>
+                  </div>
+                  <div>
+                    <h2 className="text-2xl md:text-3xl font-black text-white flex items-center gap-3">
+                      ⚠️ LICENCIAS INSUFICIENTES
+                    </h2>
+                    <p className="text-red-200 text-sm md:text-base mt-1">
+                      Tu organización tiene <span className="font-black text-red-400 text-lg">{Math.abs(organization.licensesAvailable)}</span> licencias en deuda
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <span className="px-4 py-2 bg-red-500/30 text-red-100 rounded-full text-sm font-black border-2 border-red-400 animate-bounce">
+                    🔴 CRÍTICO
+                  </span>
+                  <div className="flex items-center gap-2 text-yellow-300 text-sm font-bold">
+                    <Clock size={16} />
+                    48 HORAS PARA REGULARIZAR
+                  </div>
+                </div>
+              </div>
+
+              {/* Información detallada */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-slate-900/60 backdrop-blur rounded-xl p-4 border border-red-500/30">
+                  <div className="text-sm text-slate-400 mb-1">Licencias Totales</div>
+                  <div className="text-2xl font-black text-white">{organization.totalLicenses}</div>
+                </div>
+                <div className="bg-slate-900/60 backdrop-blur rounded-xl p-4 border border-red-500/30">
+                  <div className="text-sm text-slate-400 mb-1">En Uso</div>
+                  <div className="text-2xl font-black text-orange-400">{organization.activeLicenses}</div>
+                </div>
+                <div className="bg-red-900/60 backdrop-blur rounded-xl p-4 border-2 border-red-500">
+                  <div className="text-sm text-red-300 mb-1">Balance</div>
+                  <div className="text-3xl font-black text-red-400">{organization.licensesAvailable}</div>
+                </div>
+              </div>
+
+              {/* Mensaje de advertencia */}
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-yellow-500/20 rounded-lg">
+                    <Clock className="text-yellow-400" size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-yellow-300 font-bold">Tienes 48 horas para completar el pago</h4>
+                    <p className="text-yellow-200/80 text-sm mt-1">
+                      Se han registrado participantes sin licencia disponible. Para evitar la desactivación de cuentas, 
+                      adquiere las licencias faltantes antes del plazo límite.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botón de acción */}
+              <Link href="/dashboard/school-admin/licenses/request" className="block">
+                <button className="w-full py-4 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-black rounded-xl transition-all shadow-2xl shadow-red-500/30 flex items-center justify-center gap-3 text-lg">
+                  <ShoppingCart size={24} />
+                  COMPRAR LICENCIAS AHORA
+                  <span className="px-3 py-1 bg-white/20 rounded-lg text-sm">
+                    {Math.abs(organization.licensesAvailable)} necesarias
+                  </span>
+                </button>
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Banner de Alerta - Órdenes Pendientes */}
         {data.pendingOrders && data.pendingOrders.length > 0 && (() => {
           const hasProcessing = data.pendingOrders.some((o: any) => o.status === 'PROCESSING');

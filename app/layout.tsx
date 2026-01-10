@@ -17,6 +17,27 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Frutos Platform - Transforma tu Vida",
   description: "Plataforma de desarrollo personal con mentoría y seguimiento de metas",
+  manifest: "/manifest.json",
+  themeColor: "#050B14",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Quantum",
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
+  icons: {
+    icon: [
+      { url: "/quantum-logo.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [
+      { url: "/quantum-logo.png", sizes: "192x192", type: "image/png" },
+    ],
+  },
 };
 
 export default async function RootLayout({

@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import VisionesWidget from '@/components/dashboard/VisionesWidget';
+import MedicalAlertsWidget from '@/components/dashboard/MedicalAlertsWidget';
+import MedicalFormsListWidget from '@/components/dashboard/MedicalFormsListWidget';
 
 interface DashboardData {
   overview: {
@@ -201,6 +203,16 @@ export default function CoordinadorDashboard() {
             userRole="COORDINADOR" 
             loading={loadingVisiones}
           />
+        </div>
+
+        {/* Widget de Alertas Médicas */}
+        <div className="mt-8">
+          <MedicalAlertsWidget />
+        </div>
+
+        {/* Widget de Formularios Médicos */}
+        <div className="mt-8">
+          <MedicalFormsListWidget />
         </div>
 
         {/* Widgets de Acción - 2x3 Grid */}

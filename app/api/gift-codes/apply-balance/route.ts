@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
         where: { id: giftCode.id },
         data: {
           status: 'USED',
-          usedById: userId,
+          usedBy: userId,
           usedAt: new Date(),
         },
       });

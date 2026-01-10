@@ -15,10 +15,28 @@ export async function GET(
       );
     }
 
+    // Limpiar el código: remover espacios, emojis y texto extra
+    // El código real es solo la parte alfanumérica antes del primer espacio
+    const cleanCode = code
+      .split(' ')[0]  // Tomar solo la primera parte antes de espacios
+      .split('%20')[0]  // En caso de URL encoding parcial
+      .replace(/[^\w]/g, '')  // Remover cualquier carácter no alfanumérico
+      .toUpperCase();
+
+    console.log('🔍 Original code:', code);
+    console.log('🧹 Cleaned code:', cleanCode);
+
+    if (!cleanCode || cleanCode.length < 5) {
+      return NextResponse.json(
+        { success: false, error: 'Código de referido inválido' },
+        { status: 400 }
+      );
+    }
+
     // Buscar usuario por código de referido
     const user = await prisma.usuario.findUnique({
       where: {
-        referralCode: code.toUpperCase(),
+        referralCode: cleanCode,
       },
       select: {
         id: true,

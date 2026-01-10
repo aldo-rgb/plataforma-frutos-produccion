@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { MENU_ITEMS } from '@/config/menuPermissions';
+import InstallAppButton from '@/components/pwa/InstallAppButton';
 
 interface SidebarProps {
   usuario: {
@@ -887,6 +888,9 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
 
       {/* Logout Button */}
       <div className="p-4 border-t border-slate-800 space-y-2">
+        {/* Instalar App PWA */}
+        <InstallAppButton variant="sidebar" />
+        
         {/* Configuración */}
         <Link
           href="/dashboard/configuracion"

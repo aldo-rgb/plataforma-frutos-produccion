@@ -588,7 +588,7 @@ export default function TodayPage() {
           <div className="flex items-center justify-center py-20">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
           </div>
-        ) : tasks.length === 0 ? (
+        ) : tasks.length === 0 && personalTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <Sparkles size={48} className="text-gray-700 mb-4" />
             <h3 className="text-xl font-bold text-gray-400 mb-2">
@@ -602,6 +602,32 @@ export default function TodayPage() {
           </div>
         ) : (
           <div className="space-y-2">
+            {/* Tareas Personales - Siempre mostrar primero, pendientes arriba, completadas abajo */}
+            {personalTasks.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-purple-400 font-bold mb-3">
+                  <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                  Tareas Personales
+                </div>
+                <div className="space-y-3">
+                  {[...personalTasks]
+                    .sort((a, b) => {
+                      // Pendientes primero, completadas al final
+                      if (a.status === 'COMPLETED' && b.status !== 'COMPLETED') return 1;
+                      if (a.status !== 'COMPLETED' && b.status === 'COMPLETED') return -1;
+                      return 0;
+                    })
+                    .map(task => (
+                    <PersonalTaskCard 
+                      key={task.id} 
+                      task={task}
+                      onTaskUpdated={fetchPersonalTasks}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
             {/* Misiones Especiales (Extraordinarias y Eventos) */}
             {tasks.some(t => t.tipo === 'EXTRAORDINARIA' || t.tipo === 'EVENTO') && (
               <>
@@ -657,25 +683,6 @@ export default function TodayPage() {
                       onUploadEvidence={handleUploadEvidence}
                     />
                   ))}
-              </>
-            )}
-
-            {/* Tareas Personales */}
-            {personalTasks.length > 0 && (
-              <>
-                <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-purple-400 font-bold mt-6 mb-3">
-                  <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                  Tareas Personales
-                </div>
-                <div className="space-y-3">
-                  {personalTasks.map(task => (
-                    <PersonalTaskCard 
-                      key={task.id} 
-                      task={task}
-                      onTaskUpdated={fetchPersonalTasks}
-                    />
-                  ))}
-                </div>
               </>
             )}
 

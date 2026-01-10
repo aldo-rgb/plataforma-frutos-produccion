@@ -3,6 +3,15 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+// Roles permitidos para acceder a esta API
+const ALLOWED_ROLES = [
+  'SCHOOL_ADMIN', 
+  'ADMINISTRADOR', 
+  'COORDINADOR', 
+  'COORDINATOR_BASIC', 
+  'COORDINATOR_ADVANCED'
+];
+
 /**
  * GET /api/school-admin/coordinadores
  * Obtiene la lista de coordinadores de la organización del director
@@ -18,7 +27,7 @@ export async function GET() {
       );
     }
 
-    // Verificar que el usuario es director
+    // Verificar que el usuario tiene un rol permitido
     const user = await prisma.usuario.findUnique({
       where: { id: session.user.id },
       select: {
@@ -28,7 +37,7 @@ export async function GET() {
       },
     });
 
-    if (!user || user.rol !== 'SCHOOL_ADMIN') {
+    if (!user || !ALLOWED_ROLES.includes(user.rol)) {
       return NextResponse.json(
         { success: false, error: 'No autorizado' },
         { status: 403 }

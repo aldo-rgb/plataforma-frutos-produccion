@@ -1,0 +1,449 @@
+================================================================================
+📋 INSTRUCTIVO COMPLETO - PLATAFORMA FRUTOS QUANTUM
+================================================================================
+Fecha de creación: 9 de enero de 2026
+Última actualización: 9 de enero de 2026
+
+================================================================================
+🎯 CONTEXTO DEL PROYECTO
+================================================================================
+
+Nombre: Plataforma Frutos Quantum
+Stack: Next.js 14 (App Router) + Prisma ORM + PostgreSQL (Supabase) + NextAuth + Stripe
+Repositorio: plataforma-frutos-produccion (aldo-rgb/main)
+Ruta Local: /Users/aldokmps/plataforma-frutos-FINAL
+
+================================================================================
+👥 TIPOS DE USUARIO (CRÍTICO - MEMORIZAR)
+================================================================================
+
+TIPO 1: LOBO SOLITARIO
+-----------------------
+- Identificación: NO tiene vision_enrollments NI VisionParticipante
+- Acceso: COMPLETO a todo el software
+- Programa de Seguimiento: ✅ SÍ tiene acceso
+- Paga individualmente, no pertenece a ninguna escuela/visión
+
+TIPO 2: VISION ENROLLED (Acceso Progresivo)
+-------------------------------------------
+- Identificación: Tiene registro en vision_enrollments con enrollmentStatus: 'ENROLLED'
+- Se crea cuando: Usuario se registra vía /api/auth/register con visionId
+- Niveles: BASIC → ADVANCED → PL
+- Acceso BASIC: Ranking, Quantum, Llamadas Mentor
+- Acceso ADVANCED: + Carta, Metas
+- Acceso PL: + Tareas, Evidencias, Programa de Seguimiento (completo)
+
+TIPO 3: VISION PARTICIPANTE (Liderato Directo)
+----------------------------------------------
+- Identificación: Tiene registro en VisionParticipante (sin enrollment)
+- Se crea cuando: Coordinador agrega manualmente al usuario
+- Acceso: COMPLETO (igual que Lobo Solitario)
+- Programa de Seguimiento: ✅ SÍ tiene acceso
+- Típicamente: Líderes, invitados especiales, usuarios que entran directo a Liderato
+
+================================================================================
+📊 TABLA DE ACCESO POR MÓDULO
+================================================================================
+
+| Módulo              | BASIC | ADVANCED | PL | VisionParticipante | Lobo Solitario |
+|---------------------|-------|----------|----|--------------------|----------------|
+| Ranking             |  ✅   |    ✅    | ✅ |        ✅          |       ✅       |
+| Quantum             |  ✅   |    ✅    | ✅ |        ✅          |       ✅       |
+| Llamadas Mentor     |  ✅   |    ✅    | ✅ |        ✅          |       ✅       |
+| Carta               |  🔒   |    ✅    | ✅ |        ✅          |       ✅       |
+| Metas               |  🔒   |    ✅    | ✅ |        ✅          |       ✅       |
+| Tareas              |  🔒   |    🔒    | ✅ |        ✅          |       ✅       |
+| Evidencias          |  🔒   |    🔒    | ✅ |        ✅          |       ✅       |
+| Prog. Seguimiento   |  🔒   |    🔒    | ✅ |        ✅          |       ✅       |
+
+================================================================================
+🗄️ MODELOS DE BASE DE DATOS PRINCIPALES (PRISMA)
+================================================================================
+
+// Usuario principal
+model Usuario {
+  id                    Int
+  email                 String @unique
+  nombre                String
+  rol                   String // PARTICIPANTE, COORDINADOR, MENTOR, ADMIN, SCHOOL_ADMIN
+  organizationId        Int?
+  tier                  String // FREE, STANDARD, PREMIUM
+  suscripcion           String?
+  referralCode          String? @unique
+  invitedBy             Int?
+  currentVisionLevel    String? // BASIC, ADVANCED, PL
+  assignedMentorId      Int?
+  mentorId              Int?
+}
+
+// Enrollment progresivo en Vision (FUENTE DE ACCESO PROGRESIVO)
+model vision_enrollments {
+  id                Int @id @default(autoincrement())
+  userId            Int
+  visionId          Int
+  coordinatorId     Int?
+  level             String // BASIC, ADVANCED, PL
+  enrollmentStatus  String // ENROLLED, COMPLETED, DROPPED
+  enrolledAt        DateTime?
+  completedAt       DateTime?
+  graduatedAt       DateTime?
+}
+
+// Participante agregado por coordinador (ACCESO COMPLETO)
+model VisionParticipante {
+  id              Int @id @default(autoincrement())
+  visionId        Int
+  participanteId  Int
+  gameChangerId   Int?
+  createdAt       DateTime
+}
+
+// Formulario médico
+model MedicalForm {
+  id                      Int @id @default(autoincrement())
+  odooContactId           String?
+  userId                  Int @unique
+  hasCurrentIllness       Boolean
+  currentIllnessDetails   String?
+  hasCurrentTreatment     Boolean
+  currentTreatmentDetails String?
+  takesMedication         Boolean
+  medicationDetails       String?
+  hasAllergies            Boolean
+  allergiesDetails        String?
+  hadSurgery              Boolean
+  surgeryDetails          String?
+  emergencyContactName    String
+  emergencyContactPhone   String
+  emergencyContactRelation String
+  signatureData           String // Base64 de la firma
+  consentAccepted         Boolean
+  submittedAt             DateTime
+  reviewedAt              DateTime?
+  reviewedBy              Int?
+  isActive                Boolean @default(true)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+}
+
+// Tickets para eventos
+model Ticket {
+  id              Int @id @default(autoincrement())
+  eventId         Int
+  ownerId         Int
+  referrerId      Int?
+  status          String // RESERVED, PAID, USED, CANCELLED
+  qrCode          String @unique
+  pricePaid       Decimal
+  createdAt       DateTime
+}
+
+// Gift Codes (Códigos de Regalo)
+model GiftCode {
+  id              Int @id @default(autoincrement())
+  code            String @unique
+  type            String // FULL_PAYMENT, PARTIAL, BALANCE
+  value           Decimal?
+  percentage      Int?
+  maxUses         Int @default(1)
+  currentUses     Int @default(0)
+  validFrom       DateTime
+  validUntil      DateTime?
+  organizationId  Int
+  createdBy       Int
+  isActive        Boolean @default(true)
+}
+
+// Vision (Grupo/Cohorte)
+model Vision {
+  id              Int @id @default(autoincrement())
+  nombre          String
+  organizationId  Int
+  coordinadorId   Int?
+  startDate       DateTime?
+  endDate         DateTime?
+  maxParticipantes Int?
+}
+
+// Carta de Frutos
+model CartaFrutos {
+  id              Int @id @default(autoincrement())
+  usuarioId       Int @unique
+  status          String // DRAFT, PENDING_REVIEW, APPROVED, REJECTED
+  mentorId        Int?
+  finanzasMeta    String?
+  relacionesMeta  String?
+  talentosMeta    String?
+  pazMentalMeta   String?
+  ocioMeta        String?
+  saludMeta       String?
+  servicioComunMeta String?
+}
+
+================================================================================
+📁 ESTRUCTURA DE ARCHIVOS CLAVE
+================================================================================
+
+/app/api/
+├── user/
+│   └── vision-level/route.ts       # Determina tipo de usuario y acceso
+├── medical-form/route.ts           # GET/POST formulario médico
+├── coordinator/
+│   └── medical-alerts/route.ts     # Alertas médicas para coordinadores
+├── carta/
+│   └── submit/route.ts             # Envío de carta (requiere mentor para Vision)
+├── school-admin/
+│   └── gift-codes/route.ts         # CRUD de códigos de regalo
+├── gift-codes/
+│   ├── validate/route.ts           # Validar código
+│   ├── redeem/route.ts             # Canjear código
+│   └── apply-balance/route.ts      # Aplicar saldo
+├── auth/
+│   └── register/route.ts           # Registro (crea vision_enrollments si hay visionId)
+├── coordinador/
+│   └── visiones/[id]/
+│       ├── add-participante/route.ts  # Agrega VisionParticipante
+│       └── add-emails/route.ts        # Agrega por emails
+└── tickets/
+    └── ... (sistema de tickets)
+
+/contexts/
+└── VisionAccessContext.tsx         # Provider para control de acceso
+    - VisionAccessProvider (wrapper)
+    - useVisionAccess (hook)
+    - useCanAccess (hook simplificado)
+
+/components/ui/
+└── LockedModuleOverlay.tsx         # Overlay para módulos bloqueados
+    - LockedModuleOverlay (básico)
+    - LockedCard (para cards)
+    - ProtectedModulePage (para páginas completas)
+
+================================================================================
+📄 PÁGINAS PROTEGIDAS CON ProtectedModulePage
+================================================================================
+
+/app/dashboard/
+├── tareas/page.tsx                 # moduleKey="tareas" (Solo PL)
+├── evidencias/page.tsx             # moduleKey="evidencias" (Solo PL)
+├── metas-hoy/page.tsx              # moduleKey="metas" (ADVANCED+)
+├── definir-metas/page.tsx          # moduleKey="metas" (ADVANCED+)
+├── carta/
+│   ├── wizard-v2/page.tsx          # moduleKey="carta" (ADVANCED+)
+│   └── resumen/page.tsx            # moduleKey="carta" (ADVANCED+)
+├── program/
+│   └── enroll/page.tsx             # moduleKey="disciplina" (Solo PL/Lobo/VisionParticipante)
+├── medical-form/page.tsx           # Sin protección (todos pueden acceder)
+└── school-admin/
+    ├── medical-records/page.tsx    # Coordinadores ven formularios médicos
+    └── gift-codes/page.tsx         # Administración de códigos regalo
+
+================================================================================
+✅ FUNCIONALIDADES COMPLETADAS
+================================================================================
+
+1. SISTEMA DE ACCESO PROGRESIVO
+   - API /api/user/vision-level con lógica de 3 tipos de usuario
+   - VisionAccessContext con Provider y Hook useVisionAccess
+   - Componente LockedModuleOverlay para proteger páginas
+   - Protección aplicada a: tareas, evidencias, metas, carta, disciplina
+
+2. FORMULARIO MÉDICO
+   - Modelo MedicalForm en Prisma
+   - API /api/medical-form (GET/POST)
+   - Página /dashboard/medical-form con firma canvas
+   - API /api/coordinator/medical-alerts para alertas
+   - Página /dashboard/school-admin/medical-records para coordinadores
+
+3. SISTEMA DE GIFT CODES
+   - API /api/school-admin/gift-codes (CRUD)
+   - APIs de validación, canjeo y aplicación de saldo
+   - Página de administración para school-admin
+
+4. VALIDACIÓN DE MENTOR EN CARTA
+   - API /api/carta/submit requiere mentor para usuarios Vision
+   - CartaWizardRelacional.tsx maneja error de mentor requerido
+
+5. SISTEMA DE TICKETS QUANTUM
+   - Modelos: Ticket, TicketPriceConfig, PaymentGatewayConfig
+   - Sistema de referidos completo
+   - Checkout con Stripe + pagos parciales
+   - Countdown y precios dinámicos con FOMO
+   - i18n completo (ES/EN)
+
+================================================================================
+❌ PENDIENTE POR DESARROLLAR
+================================================================================
+
+1. QR VALIDATION PARA FORMULARIO MÉDICO
+   - Al escanear ticket, verificar si usuario tiene MedicalForm
+   - Si no tiene → Rechazar entrada, mostrar mensaje
+
+2. GRADUACIÓN AUTOMÁTICA DE NIVELES
+   - Sistema para graduar usuarios de BASIC → ADVANCED → PL
+   - APIs para coordinadores para graduar usuarios
+
+3. DASHBOARD ESPECÍFICO POR TIPO DE USUARIO
+   - Mostrar badges/indicadores según tipo (BASIC/ADVANCED/PL/Lobo/VisionParticipante)
+   - Mostrar progreso hacia siguiente nivel
+
+4. NOTIFICACIONES DE DESBLOQUEO
+   - Cuando usuario sube de nivel, notificar qué módulos se desbloquearon
+
+================================================================================
+🔧 CÓMO USAR EL SISTEMA DE ACCESO
+================================================================================
+
+PARA PROTEGER UNA PÁGINA NUEVA:
+-------------------------------
+'use client';
+
+import { ProtectedModulePage } from '@/components/ui/LockedModuleOverlay';
+
+export default function MiPaginaProtegida() {
+  return (
+    <ProtectedModulePage moduleKey="tareas">
+      {/* Contenido de la página */}
+    </ProtectedModulePage>
+  );
+}
+
+MÓDULOS DISPONIBLES PARA moduleKey:
+-----------------------------------
+- carta
+- metas
+- tareas
+- evidencias
+- quantum
+- llamadasMentor
+- disciplina
+- ranking
+
+PARA VERIFICAR ACCESO EN UN COMPONENTE:
+---------------------------------------
+import { useVisionAccess } from '@/contexts/VisionAccessContext';
+
+function MiComponente() {
+  const { canAccess, userType, currentLevel, isVisionParticipante } = useVisionAccess();
+  
+  if (!canAccess('tareas')) {
+    return <div>No tienes acceso a esta función</div>;
+  }
+  
+  return <div>Contenido...</div>;
+}
+
+================================================================================
+📝 NOTAS DE ESTILO DE CÓDIGO
+================================================================================
+
+1. Imports de Prisma: 
+   import { prisma } from '@/lib/prisma';
+
+2. Sesión de NextAuth: 
+   import { getServerSession } from 'next-auth';
+   import { authOptions } from '@/lib/auth';
+   const session = await getServerSession(authOptions);
+
+3. ID de usuario (siempre parsear):
+   const userId = typeof session.user.id === 'string' 
+     ? parseInt(session.user.id) 
+     : session.user.id;
+
+4. Componentes cliente:
+   'use client'; // Primera línea del archivo
+
+5. Relaciones Prisma con nombres largos:
+   vision_enrollments_vision_enrollments_userIdToUsuario
+
+6. Respuestas de API:
+   return NextResponse.json({ success: true, data: ... });
+   return NextResponse.json({ success: false, error: '...' }, { status: 400 });
+
+================================================================================
+🚀 COMANDOS ÚTILES
+================================================================================
+
+# Iniciar servidor de desarrollo
+npm run dev
+
+# Generar cliente Prisma después de cambios en schema
+npx prisma generate
+
+# Aplicar cambios de schema a la base de datos
+npx prisma db push
+
+# Ver estructura de la base de datos
+npx prisma studio
+
+# Matar proceso de desarrollo si está bloqueado
+pkill -f "next dev"
+
+================================================================================
+🔑 USUARIOS DE PRUEBA
+================================================================================
+
+| Email           | Tipo              | Nivel | Notas                          |
+|-----------------|-------------------|-------|--------------------------------|
+| v10@zero.com    | VISION_ENROLLED   | BASIC | Tiene vision_enrollments       |
+| (coordinador)   | VISION_PARTICIPANTE| FULL | Agregado por coordinador       |
+| (sin vision)    | LOBO_SOLITARIO    | FULL  | No tiene ninguno de los dos    |
+
+================================================================================
+📌 CÓMO CONTINUAR EN OTRA CONVERSACIÓN
+================================================================================
+
+Copia y pega esto al inicio de la nueva conversación:
+
+---INICIO DE PROMPT---
+
+Continúo el desarrollo de la Plataforma Frutos Quantum.
+
+CONTEXTO TÉCNICO:
+- Stack: Next.js 14 (App Router) + Prisma + PostgreSQL (Supabase) + NextAuth + Stripe
+- Ruta: /Users/aldokmps/plataforma-frutos-FINAL
+
+SISTEMA DE USUARIOS (3 TIPOS):
+1. VISION_ENROLLED (vision_enrollments) → Acceso PROGRESIVO (BASIC/ADVANCED/PL)
+2. VISION_PARTICIPANTE (VisionParticipante) → Acceso COMPLETO
+3. LOBO_SOLITARIO (ninguno) → Acceso COMPLETO
+
+YA IMPLEMENTADO:
+- Sistema de acceso progresivo con API /api/user/vision-level
+- VisionAccessContext y LockedModuleOverlay
+- Formulario médico completo
+- Sistema de Gift Codes
+- Validación de mentor en carta
+- Sistema de Tickets Quantum
+
+MI SIGUIENTE TAREA ES: [ESPECIFICAR]
+
+Formato de respuesta preferido:
+- Usa "Buscar y Reemplazar Exacto" para correcciones
+- Dame el bloque exacto a buscar y el bloque exacto a reemplazar
+- Si es código nuevo, indica la línea de arriba y de abajo donde pegar
+
+---FIN DE PROMPT---
+
+================================================================================
+📂 ARCHIVOS CLAVE PARA REFERENCIA
+================================================================================
+
+API de nivel de acceso:
+/app/api/user/vision-level/route.ts
+
+Contexto de acceso:
+/contexts/VisionAccessContext.tsx
+
+Componente de protección:
+/components/ui/LockedModuleOverlay.tsx
+
+Layout del dashboard (tiene VisionAccessProvider):
+/app/dashboard/layout.tsx
+
+Schema de Prisma:
+/prisma/schema.prisma
+
+================================================================================
+FIN DEL INSTRUCTIVO
+================================================================================

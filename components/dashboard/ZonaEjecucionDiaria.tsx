@@ -402,7 +402,7 @@ export default function ZonaEjecucionDiaria() {
                   className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-lg font-semibold transition-all shadow-lg shadow-purple-500/30"
                 >
                   <Zap size={18} />
-                  Ver mi Carta
+                  Ver mis Objetivos
                 </a>
               </div>
             </div>

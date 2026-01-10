@@ -32,31 +32,34 @@ export async function GET() {
     }
 
     // Buscar todos los productos activos de la organización (todos los niveles y tipos)
-    // para los próximos 60 días
+    // Un producto está activo si:
+    // 1. Aún no ha terminado (endDate >= ahora a las 23:59:59) O
+    // 2. Va a iniciar en los próximos 60 días
     const now = new Date();
     const in60Days = new Date(now);
     in60Days.setDate(in60Days.getDate() + 60);
     in60Days.setHours(23, 59, 59, 999);
 
+    // Establecer el inicio del día actual para comparar con endDate
+    const startOfToday = new Date(now);
+    startOfToday.setHours(0, 0, 0, 0);
+
     const productos = await prisma.schoolProduct.findMany({
       where: {
+        // Debe pertenecer a la organización
         OR: [
           {
-            // Productos vinculados a través de Vision
             Vision: {
               organizationId: usuario.organizationId
             }
           },
           {
-            // Productos vinculados directamente a la organización
             organizationId: usuario.organizationId
           }
         ],
         isActive: true,
-        startDate: { 
-          gte: now,
-          lte: in60Days
-        }
+        // Producto activo: endDate >= hoy (aún no termina hasta las 23:59 del último día)
+        endDate: { gte: startOfToday }
       },
       orderBy: {
         startDate: 'asc' // Más próximo primero

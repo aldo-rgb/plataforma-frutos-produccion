@@ -119,6 +119,7 @@ export async function POST(request: Request) {
       maxCapacity,
       location,
       videoUrl,
+      transferDeadline,
     } = body;
 
     // Validaciones
@@ -146,6 +147,7 @@ export async function POST(request: Request) {
         maxCapacity: maxCapacity ? parseInt(maxCapacity) : null,
         location: location || null,
         videoUrl: videoUrl || null,
+        transferDeadline: transferDeadline ? new Date(transferDeadline) : null,
         createdBy: session.user.id,
         updatedAt: new Date(),
       },
@@ -207,6 +209,7 @@ export async function PUT(request: Request) {
       location,
       videoUrl,
       isActive,
+      transferDeadline,
     } = body;
 
     if (!id) {
@@ -247,6 +250,7 @@ export async function PUT(request: Request) {
         location: location !== undefined ? (location || null) : undefined,
         videoUrl: videoUrl !== undefined ? (videoUrl || null) : undefined,
         isActive: isActive !== undefined ? isActive : undefined,
+        transferDeadline: transferDeadline !== undefined ? (transferDeadline ? new Date(transferDeadline) : null) : undefined,
         updatedAt: new Date(),
       },
     });

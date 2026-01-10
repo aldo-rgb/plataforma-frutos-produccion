@@ -30,28 +30,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Fecha requerida' }, { status: 400 });
     }
 
-    // Parsear fecha y calcular rango (inicio y fin del día en UTC)
-    const targetDate = new Date(dateParam);
-    const startOfDay = new Date(targetDate);
-    startOfDay.setUTCHours(6, 0, 0, 0); // 6AM UTC = midnight Mexico
-    
-    const endOfDay = new Date(targetDate);
-    endOfDay.setDate(endOfDay.getDate() + 1);
-    endOfDay.setUTCHours(6, 0, 0, 0);
+    // Para campos @db.Date, usar la fecha exacta sin hora
+    // PostgreSQL DATE type solo tiene año-mes-día
+    const targetDate = new Date(dateParam + 'T00:00:00.000Z');
 
-    // Obtener tareas personales del usuario para esa fecha
+    console.log('📝 GET personal-tasks:', {
+      userId: user.id,
+      dateParam,
+      targetDate: targetDate.toISOString()
+    });
+
+    // Obtener tareas personales del usuario para esa fecha exacta
     const personalTasks = await prisma.personalTask.findMany({
       where: {
         usuarioId: user.id,
-        dueDate: {
-          gte: startOfDay,
-          lt: endOfDay,
-        },
+        dueDate: targetDate,
       },
       orderBy: {
         createdAt: 'asc',
       },
     });
+
+    console.log('📝 Tareas encontradas:', personalTasks.length);
 
     return NextResponse.json({ personalTasks });
 
@@ -95,9 +95,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'La fecha es requerida' }, { status: 400 });
     }
 
-    // Formatear fecha a medianoche México (6AM UTC)
-    const targetDate = new Date(dueDate);
-    targetDate.setUTCHours(6, 0, 0, 0);
+    // Para campos @db.Date, usar fecha en UTC sin hora
+    const targetDate = new Date(dueDate + 'T00:00:00.000Z');
 
     // Crear tarea personal
     const newTask = await prisma.personalTask.create({
@@ -107,6 +106,7 @@ export async function POST(request: NextRequest) {
         descripcion: descripcion?.trim() || null,
         dueDate: targetDate,
         status: 'PENDING',
+        updatedAt: new Date(),
       },
     });
 

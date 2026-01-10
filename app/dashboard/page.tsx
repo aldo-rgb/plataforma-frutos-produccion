@@ -16,6 +16,8 @@ import QuantumPointsWidget from "@/components/dashboard/QuantumPointsWidget";
 import RankingWidget from "@/components/dashboard/RankingWidget";
 import PendingMentorReviewsWidget from "@/components/dashboard/PendingMentorReviewsWidget";
 import PersonalQRWidget from "@/components/dashboard/PersonalQRWidget";
+import MedicalFormWidget from "@/components/dashboard/MedicalFormWidget";
+import IdentityHeroSection from "@/components/dashboard/identity/IdentityHeroSection";
 
 export default async function DashboardPage() {
   // 1. Obtener sesión y datos frescos
@@ -305,7 +307,53 @@ export default async function DashboardPage() {
     }
   });
 
+  // Verificar vision_enrollment (acceso progresivo)
+  const visionEnrollment = await prisma.vision_enrollments.findFirst({
+    where: { userId: usuario.id }
+  });
+
+  // Verificar si el usuario ya llenó el formulario médico
+  let medicalForm: { id: number } | null = null;
+  try {
+    medicalForm = await prisma.medicalForm.findFirst({
+      where: { userId: usuario.id },
+      select: { id: true }
+    });
+  } catch (e) {
+    // Tabla MedicalForm puede no existir aún
+    console.log('MedicalForm table not available yet');
+  }
+
+  // El usuario es de Vision si tiene VisionParticipante o vision_enrollment
+  const isVisionUser = !!visionParticipante || !!visionEnrollment;
+
   const vision = visionParticipante?.Vision;
+
+  // ============================================
+  // DETERMINAR NIVEL DEL USUARIO (BASIC/ADVANCED/PL/LOBO_SOLITARIO)
+  // ============================================
+  type UserLevel = 'BASIC' | 'ADVANCED' | 'PL' | 'LOBO_SOLITARIO';
+  let userLevel: UserLevel = 'LOBO_SOLITARIO';
+  
+  if (visionEnrollment?.level) {
+    userLevel = visionEnrollment.level as UserLevel;
+  } else if (usuario.currentVisionLevel) {
+    userLevel = usuario.currentVisionLevel as UserLevel;
+  } else if (visionParticipante) {
+    userLevel = 'BASIC';
+  } else if (packageCredits) {
+    userLevel = 'LOBO_SOLITARIO';
+  }
+
+  // Preparar datos de la carta para IdentityHeroSection
+  const cartaDataForIdentity = {
+    hasCompletedCarta,
+    promises: carta ? {
+      finanzas: (carta as any).finanzasDeclaracion || undefined,
+      relaciones: (carta as any).relacionesDeclaracion || undefined,
+      salud: (carta as any).saludDeclaracion || undefined,
+    } : undefined,
+  };
 
   // Definir qué áreas están activas en la visión
   // Para Lobo Solitario (sin enrollment/visión), solo las 6 áreas personales
@@ -477,16 +525,31 @@ export default async function DashboardPage() {
       {/* ALERTA DE RE-AGENDAMIENTO */}
       <AlertaReagendamiento />
 
-      {/* WIDGET: CARTA F.R.U.T.O.S. */}
+      {/* WIDGET: CARTA F.R.U.T.O.S. - Solo para ADVANCED/PL/LOBO */}
       <CartaWizardWidget 
         hasCompletedCarta={hasCompletedCarta}
         cartaStatus={carta?.estado as any}
+        userLevel={userLevel}
       />
+
+      {/* WIDGET: FORMULARIO MÉDICO - Solo para usuarios de Vision */}
+      {isVisionUser && (
+        <MedicalFormWidget 
+          hasForm={!!medicalForm}
+        />
+      )}
 
       {/* WIDGET: NOTIFICACIONES DE CALIFICACIÓN DE MENTOR */}
       {(usuario.role === 'PARTICIPANTE' || usuario.role === 'LIDER') && (
         <PendingMentorReviewsWidget />
       )}
+
+      {/* ============================================ */}
+      {/* IDENTITY HERO SECTION: Badge + Progress Bar   */}
+      {/* Muestra nivel (BASIC/ADVANCED/PL/LOBO) y     */}
+      {/* progreso hacia siguiente nivel               */}
+      {/* ============================================ */}
+      <IdentityHeroSection cartaData={cartaDataForIdentity} />
 
       {/* ============================================ */}
       {/* ZONA SUPERIOR: Hero Section Condicional      */}

@@ -15,6 +15,7 @@ import OrganizationChangeModal from "@/components/OrganizationChangeModal";
 import QuantumPointsWidget from "@/components/dashboard/QuantumPointsWidget";
 import RankingWidget from "@/components/dashboard/RankingWidget";
 import MisParticipantesWidget from "@/components/dashboard/MisParticipantesWidget";
+import PersonalQRWidget from "@/components/dashboard/PersonalQRWidget";
 
 export default async function GameChangerDashboardPage() {
   // 1. Obtener sesión y datos frescos
@@ -306,6 +307,17 @@ export default async function GameChangerDashboardPage() {
         ) : (
           <MisParticipantesWidget />
         )}
+      </div>
+
+      {/* QR PERSONAL PARA INVITAR */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <PersonalQRWidget 
+          userName={usuario.nombre}
+          userId={usuario.id}
+          userEmail={usuario.email}
+          referralCode={usuario.referralCode || undefined}
+          organizationId={usuario.organizationId}
+        />
       </div>
 
       {/* ZONA DE EJECUCIÓN DIARIA */}

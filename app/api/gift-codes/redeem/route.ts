@@ -105,7 +105,7 @@ export async function POST(request: Request) {
         });
 
         // Crear transacción de registro
-        await tx.transaction.create({
+        await tx.ticketTransaction.create({
           data: {
             ticketId: ticket.id,
             gateway: 'GIFT_CODE',
