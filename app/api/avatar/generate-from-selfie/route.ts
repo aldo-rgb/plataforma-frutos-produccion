@@ -4,14 +4,16 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import Replicate from 'replicate';
 
-// Verificar que el token esté configurado
-if (!process.env.REPLICATE_API_TOKEN) {
-  console.error('❌ REPLICATE_API_TOKEN no está configurado en .env');
+// Inicialización lazy de Replicate - solo si hay API token
+let replicate: Replicate | null = null;
+function getReplicate(): Replicate | null {
+  if (!replicate && process.env.REPLICATE_API_TOKEN) {
+    replicate = new Replicate({
+      auth: process.env.REPLICATE_API_TOKEN,
+    });
+  }
+  return replicate;
 }
-
-const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN || '',
-});
 
 /**
  * POST /api/avatar/generate-from-selfie
@@ -248,11 +250,21 @@ REQUIRED - YES:
     console.log('Vibe:', vibe);
     console.log('Gender:', gender);
 
+    // Obtener instancia de Replicate
+    const replicateClient = getReplicate();
+    if (!replicateClient) {
+      console.error('❌ Replicate client no disponible');
+      return NextResponse.json({
+        error: 'Servicio de generación de avatares no disponible.',
+        hint: 'REPLICATE_API_TOKEN no está configurado'
+      }, { status: 503 });
+    }
+
     // IMPORTANTE: Usamos el método de predictions para obtener URLs directamente
     // PhotoMaker retorna ReadableStream con replicate.run(), necesitamos polling
     
     // Crear predicción en Replicate con parámetros optimizados para máxima preservación facial
-    const prediction = await replicate.predictions.create({
+    const prediction = await replicateClient.predictions.create({
       version: "ddfc2b08d209f9fa8c1eca692712918bd449f695dabb4a958da31802a9570fe4",
       input: {
         input_image: image, // base64 string
@@ -273,7 +285,7 @@ REQUIRED - YES:
     while (result.status !== 'succeeded' && result.status !== 'failed') {
       console.log('⏳ Estado:', result.status);
       await new Promise(resolve => setTimeout(resolve, 1000)); // Esperar 1 segundo
-      result = await replicate.predictions.get(prediction.id);
+      result = await replicateClient.predictions.get(prediction.id);
     }
 
     if (result.status === 'failed') {
