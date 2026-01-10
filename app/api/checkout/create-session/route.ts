@@ -1,18 +1,31 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
-import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2025-12-15.clover',
-});
+// Stripe se inicializa solo si hay API key
+let stripe: any = null;
+if (process.env.STRIPE_SECRET_KEY) {
+  const Stripe = require('stripe');
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2023-10-16',
+  });
+}
 
 /**
  * POST /api/checkout/create-session
  * Crea una sesión de checkout de Stripe
+ * NOTA: Actualmente deshabilitado - usar códigos de regalo en su lugar
  */
 export async function POST(request: Request) {
   try {
+    // Stripe deshabilitado temporalmente
+    if (!stripe) {
+      return NextResponse.json(
+        { success: false, error: 'Pasarela de pago no configurada. Por favor usa un código de regalo.' },
+        { status: 503 }
+      );
+    }
+
     const session = await getServerSession();
 
     if (!session?.user?.email) {

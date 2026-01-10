@@ -1,23 +1,30 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import Stripe from 'stripe';
+import type Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-11-20.acacia'
-});
+// Stripe se inicializa solo si hay API key
+let stripe: any = null;
+if (process.env.STRIPE_SECRET_KEY) {
+  const Stripe = require('stripe');
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2024-11-20.acacia'
+  });
+}
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET_MEMBERSHIP || '';
 
 /**
  * POST /api/mentor/membership/webhook
- * Webhook de Stripe para procesar eventos de membresías:
- * - invoice.payment_succeeded: Renovación exitosa
- * - invoice.payment_failed: Fallo en renovación
- * - customer.subscription.deleted: Cancelación de suscripción
- * - checkout.session.completed: Primera renovación manual
+ * Webhook de Stripe para procesar eventos de membresías
+ * NOTA: Actualmente deshabilitado - usar códigos de regalo
  */
 export async function POST(req: Request) {
   try {
+    // Stripe deshabilitado temporalmente
+    if (!stripe) {
+      return NextResponse.json({ error: 'Webhook no configurado' }, { status: 503 });
+    }
+
     const body = await req.text();
     const signature = req.headers.get('stripe-signature');
 
