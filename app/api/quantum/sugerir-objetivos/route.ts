@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// OpenAI se inicializa solo si hay API key
+let openai: any = null;
+if (process.env.OPENAI_API_KEY) {
+  const OpenAI = require('openai');
+  openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 const AREA_CONTEXTS: Record<string, string> = {
   finanzas: 'objetivos financieros como ingresos, ahorros, inversiones, eliminación de deudas, creación de activos',
@@ -31,6 +33,10 @@ const AREA_NAMES: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
+    if (!openai) {
+      return NextResponse.json({ error: 'Servicio de IA no configurado' }, { status: 503 });
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });

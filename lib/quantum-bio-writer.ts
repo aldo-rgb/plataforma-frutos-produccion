@@ -5,11 +5,12 @@
  * Entrevista al mentor y genera biografía profesional en estilo "Viaje del Héroe".
  */
 
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// OpenAI se inicializa solo si hay API key
+let openai: any = null;
+if (process.env.OPENAI_API_KEY) {
+  const OpenAI = require('openai');
+  openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 export type MentorStyle = 'HARDCORE' | 'EMPATHIC' | 'BALANCED';
 

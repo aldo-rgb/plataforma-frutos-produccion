@@ -1,10 +1,22 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// OpenAI se inicializa solo si hay API key
+let openai: any = null;
+if (process.env.OPENAI_API_KEY) {
+  const OpenAI = require('openai');
+  openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 export async function POST(req: Request) {
   try {
+    // Verificar que OpenAI está configurado
+    if (!openai) {
+      return NextResponse.json(
+        { error: 'Servicio de IA no configurado' },
+        { status: 503 }
+      );
+    }
+
     const { metas } = await req.json(); // Recibe: { salud: "Correr 5 veces", ... }
 
     // PROMPT DE INGENIERÍA: Convierte texto en JSON estructurado

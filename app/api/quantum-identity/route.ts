@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// OpenAI se inicializa solo si hay API key
+let openai: any = null;
+if (process.env.OPENAI_API_KEY) {
+  const OpenAI = require('openai');
+  openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 // Función para obtener cliente de Supabase (lazy initialization)
 function getSupabaseClient() {
@@ -79,6 +81,10 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🚀 POST /api/quantum-identity - Iniciando generación de identidad cuántica');
     
+    if (!openai) {
+      return NextResponse.json({ error: 'Servicio de IA no configurado' }, { status: 503 });
+    }
+
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
