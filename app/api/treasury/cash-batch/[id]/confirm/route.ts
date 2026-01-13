@@ -9,9 +9,10 @@ import { prisma } from '@/lib/prisma';
  */
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: batchId } = await params;
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
@@ -32,8 +33,6 @@ export async function POST(
         { status: 403 }
       );
     }
-
-    const batchId = parseInt(params.id);
 
     const existingBatch = await prisma.cashBatch.findUnique({
       where: { id: batchId },

@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
   Users, Ticket, AlertTriangle, Building2, GraduationCap, Activity,
-  Clock, Calendar, Scan
+  Clock, Calendar, Scan, Heart
 } from 'lucide-react';
 import Link from 'next/link';
 import MedicalAlertsWidget from '@/components/dashboard/MedicalAlertsWidget';
@@ -43,15 +43,17 @@ export default function CoordinadorBasicoDashboard() {
   const [productos, setProductos] = useState<any[]>([]);
   const [loadingProductos, setLoadingProductos] = useState(true);
   const [countdown, setCountdown] = useState<{[key: number]: string}>({});
+  const [medicalAlertsCount, setMedicalAlertsCount] = useState(0);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
-    } else if (session?.user?.rol !== 'COORDINATOR_BASIC') {
+    } else if (!['COORDINATOR_BASIC', 'TRAINER', 'COORDINATOR_ADVANCED'].includes(session?.user?.rol || '')) {
       router.push('/dashboard');
     } else {
       fetchDashboardData();
       fetchProductos();
+      fetchMedicalAlerts();
     }
   }, [status, session]);
 
@@ -81,6 +83,18 @@ export default function CoordinadorBasicoDashboard() {
       console.error('Error fetching productos:', error);
     } finally {
       setLoadingProductos(false);
+    }
+  };
+
+  const fetchMedicalAlerts = async () => {
+    try {
+      const res = await fetch('/api/coordinator/medical-alerts?onlyAlerts=true');
+      const result = await res.json();
+      if (res.ok && result.success) {
+        setMedicalAlertsCount(result.unreviewedAlertsCount || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching medical alerts:', error);
     }
   };
 
@@ -381,6 +395,40 @@ export default function CoordinadorBasicoDashboard() {
             )}
           </div>
         </div>
+
+        {/* Widget de Registros Médicos - Acceso Rápido */}
+        <Link href="/dashboard/coordinador/medical-records" className="block mt-8">
+          <div className="bg-gradient-to-br from-red-900/50 via-pink-900/30 to-slate-900 border-2 border-red-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-red-500/50 hover:shadow-lg hover:shadow-red-500/10 relative overflow-hidden">
+            {/* Badge de alertas */}
+            {medicalAlertsCount > 0 && (
+              <div className="absolute top-2 right-2">
+                <div className="relative">
+                  <div className="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-red-400 opacity-75"></div>
+                  <div className="relative inline-flex items-center justify-center h-6 w-6 rounded-full bg-red-500 border-2 border-slate-900">
+                    <span className="text-white font-bold text-xs">{medicalAlertsCount}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-red-500/20 group-hover:bg-red-500/30 rounded-xl transition-colors">
+                <Heart size={24} className="text-red-300" />
+              </div>
+              <div>
+                <h3 className="font-bold text-white text-sm uppercase">
+                  🏥 REGISTROS MÉDICOS
+                </h3>
+                <p className="text-xs text-red-300">
+                  {medicalAlertsCount > 0 ? `${medicalAlertsCount} alertas pendientes` : 'Ver formularios médicos'}
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-400">
+              Revisa los registros médicos de los participantes y alertas de condiciones especiales
+            </p>
+          </div>
+        </Link>
 
         {/* Widget de Formularios Médicos */}
         <div className="mt-8">

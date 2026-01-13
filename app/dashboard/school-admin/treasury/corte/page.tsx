@@ -62,6 +62,11 @@ export default function CorteCajaPage() {
   const [batchDetail, setBatchDetail] = useState<any>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   
+  // Generar código de confirmación
+  const [generatingCode, setGeneratingCode] = useState(false);
+  const [viewedEvidences, setViewedEvidences] = useState<Set<string>>(new Set());
+  const [viewingEvidence, setViewingEvidence] = useState<string | null>(null);
+  
   // Notificación
   const [notification, setNotification] = useState<{
     type: 'success' | 'error';
@@ -210,9 +215,62 @@ export default function CorteCajaPage() {
     }
   };
 
+  const handleGenerateConfirmationCode = async (batchId: string) => {
+    setGeneratingCode(true);
+    try {
+      const res = await fetch(`/api/treasury/director/batches/${batchId}/generate-code`, {
+        method: 'POST',
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setNotification({ 
+          type: 'success', 
+          message: `Código generado: ${data.confirmationCode}. Compártelo con el coordinador.` 
+        });
+        // Recargar detalle del batch
+        if (selectedBatch) {
+          fetchBatchDetail(selectedBatch.id);
+        }
+        fetchBatches();
+      } else {
+        setNotification({ type: 'error', message: data.error || 'Error al generar código' });
+      }
+    } catch (error) {
+      setNotification({ type: 'error', message: 'Error de conexión' });
+    } finally {
+      setGeneratingCode(false);
+    }
+  };
+
+  const markEvidenceViewed = (expenseId: string) => {
+    setViewedEvidences(prev => new Set([...prev, expenseId]));
+  };
+
+  const canGenerateCode = () => {
+    if (!batchDetail) return false;
+    if (batchDetail.confirmationCode) return false;
+    if (!batchDetail.expenses || batchDetail.expenses.length === 0) return true;
+    
+    // Verificar que todos los gastos tengan evidencia
+    const allHaveEvidence = batchDetail.expenses.every((e: any) => e.receiptUrl);
+    if (!allHaveEvidence) return false;
+    
+    // Verificar que se hayan visto todas las evidencias
+    const allViewed = batchDetail.expenses.every((e: any) => viewedEvidences.has(e.id));
+    return allViewed;
+  };
+
+  const getUnviewedCount = () => {
+    if (!batchDetail?.expenses) return 0;
+    return batchDetail.expenses.filter((e: any) => e.receiptUrl && !viewedEvidences.has(e.id)).length;
+  };
+
   const handleViewDetail = (batch: CashBatch) => {
     setSelectedBatch(batch);
     setShowDetailModal(true);
+    setViewedEvidences(new Set()); // Reset evidences viewed;
     fetchBatchDetail(batch.id);
   };
 
@@ -321,7 +379,7 @@ export default function CorteCajaPage() {
               <div>
                 <p className="text-slate-400 text-sm">Pendiente de Entrega</p>
                 <p className="text-2xl font-bold text-white">${summary.pendingDelivery.toLocaleString()}</p>
-                <p className="text-yellow-400 text-xs">Deuda con la escuela</p>
+                <p className="text-yellow-400 text-xs">Monto a entregar</p>
               </div>
             </div>
           </div>
@@ -383,16 +441,17 @@ export default function CorteCajaPage() {
             batches.map((batch) => (
               <div
                 key={batch.id}
-                className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 hover:border-slate-600 transition-colors"
+                onClick={() => handleViewDetail(batch)}
+                className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 hover:border-blue-500/50 hover:bg-slate-800/70 transition-all cursor-pointer group"
               >
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-xl bg-blue-500/20">
+                    <div className="p-3 rounded-xl bg-blue-500/20 group-hover:bg-blue-500/30 transition-colors">
                       <FileText className="w-6 h-6 text-blue-400" />
                     </div>
                     <div>
                       <div className="flex items-center gap-3">
-                        <h3 className="text-lg font-bold text-white">{batch.batchNumber}</h3>
+                        <h3 className="text-lg font-bold text-white group-hover:text-blue-300 transition-colors">{batch.batchNumber}</h3>
                         {getStatusBadge(batch.status)}
                       </div>
                       <div className="flex items-center gap-4 mt-1 text-sm text-slate-400">
@@ -423,23 +482,12 @@ export default function CorteCajaPage() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleViewDetail(batch)}
-                        className="p-2 hover:bg-slate-700 text-slate-400 rounded-lg transition-colors"
+                      <div
+                        className="p-2 hover:bg-slate-600 text-slate-400 hover:text-blue-400 rounded-lg transition-colors"
                         title="Ver detalle"
                       >
                         <Eye className="w-5 h-5" />
-                      </button>
-                      
-                      {isAdmin && batch.status === 'DELIVERED' && (
-                        <button
-                          onClick={() => handleConfirmBatch(batch.id)}
-                          className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg transition-colors flex items-center gap-2"
-                        >
-                          <Check className="w-4 h-4" />
-                          Confirmar
-                        </button>
-                      )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -707,21 +755,102 @@ export default function CorteCajaPage() {
                   </div>
                 )}
 
-                {/* Gastos */}
+                {/* Gastos con Evidencias */}
                 {batchDetail.expenses?.length > 0 && (
                   <div className="mb-6">
-                    <h3 className="text-white font-semibold mb-3">Gastos ({batchDetail.expenses.length})</h3>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {batchDetail.expenses.map((exp: any) => (
-                        <div key={exp.id} className="flex items-center justify-between bg-slate-900/50 rounded-lg p-3">
-                          <div>
-                            <span className="text-white">{exp.concept}</span>
-                            <span className="text-slate-400 text-sm ml-2">• {exp.category}</span>
+                    <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                      Gastos ({batchDetail.expenses.length})
+                      {isAdmin && getUnviewedCount() > 0 && (
+                        <span className="bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full">
+                          {getUnviewedCount()} por revisar
+                        </span>
+                      )}
+                    </h3>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {batchDetail.expenses.map((exp: any) => {
+                        const isViewed = viewedEvidences.has(exp.id);
+                        return (
+                          <div 
+                            key={exp.id} 
+                            className={`flex items-center justify-between bg-slate-900/50 rounded-lg p-3 ${
+                              isAdmin && !isViewed && exp.receiptUrl ? 'border border-orange-500/50' : ''
+                            }`}
+                          >
+                            <div className="flex-1">
+                              <span className="text-white">{exp.concept}</span>
+                              <span className="text-slate-400 text-sm ml-2">• {exp.category}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-red-400 font-medium">-${exp.amount.toLocaleString()}</span>
+                              {exp.receiptUrl ? (
+                                <button
+                                  onClick={() => {
+                                    setViewingEvidence(exp.receiptUrl);
+                                    markEvidenceViewed(exp.id);
+                                  }}
+                                  className={`px-2 py-1 rounded-lg text-xs font-medium flex items-center gap-1 ${
+                                    isViewed 
+                                      ? 'bg-green-500/20 text-green-400' 
+                                      : 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30'
+                                  }`}
+                                >
+                                  {isViewed ? <CheckCircle className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                  {isViewed ? 'Visto' : 'Ver'}
+                                </button>
+                              ) : (
+                                <span className="text-red-400 text-xs flex items-center gap-1">
+                                  <AlertTriangle className="w-3 h-3" />
+                                  Sin evidencia
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <span className="text-red-400 font-medium">-${exp.amount.toLocaleString()}</span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
+                  </div>
+                )}
+
+                {/* Código de confirmación (para admin) */}
+                {isAdmin && batchDetail.status === 'PENDING_DELIVERY' && (
+                  <div className="border-t border-slate-700 pt-6 mb-6">
+                    {batchDetail.confirmationCode ? (
+                      <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
+                        <p className="text-purple-400 text-sm mb-2">Código de confirmación generado:</p>
+                        <p className="text-3xl font-mono font-bold text-white tracking-widest text-center">
+                          {batchDetail.confirmationCode}
+                        </p>
+                        <p className="text-slate-400 text-sm mt-3 text-center">
+                          📱 Proporciona este código al coordinador para que confirme la entrega
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        {getUnviewedCount() > 0 ? (
+                          <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4 text-center">
+                            <AlertTriangle className="w-8 h-8 text-orange-400 mx-auto mb-2" />
+                            <p className="text-orange-400 font-medium">Revisa todas las evidencias</p>
+                            <p className="text-slate-400 text-sm mt-1">
+                              Debes ver {getUnviewedCount()} evidencia(s) de gastos antes de generar el código
+                            </p>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleGenerateConfirmationCode(batchDetail.id)}
+                            disabled={!canGenerateCode() || generatingCode}
+                            className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                          >
+                            {generatingCode ? (
+                              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                              <>
+                                🔑 Generar Código de Confirmación
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -741,6 +870,80 @@ export default function CorteCajaPage() {
                 <p className="text-slate-400">Error al cargar detalle</p>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ver Evidencia */}
+      {viewingEvidence && (
+        <div 
+          className="fixed inset-0 bg-black z-[100] flex items-center justify-center"
+          onClick={() => setViewingEvidence(null)}
+        >
+          {/* Botón cerrar */}
+          <button
+            onClick={() => setViewingEvidence(null)}
+            className="absolute top-4 right-4 text-white hover:text-red-400 p-3 bg-red-600/80 hover:bg-red-500 rounded-full z-20 transition-colors"
+          >
+            <X className="w-8 h-8" />
+          </button>
+          
+          {/* Contenedor de imagen a pantalla completa */}
+          <div 
+            className="w-full h-full flex items-center justify-center p-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Imagen con fondo para que se vea */}
+            <div className="bg-white/10 rounded-2xl p-4 max-w-[90vw] max-h-[85vh] overflow-auto">
+              <img
+                src={viewingEvidence}
+                alt="Evidencia de gasto"
+                className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+                style={{ minWidth: '200px', minHeight: '200px' }}
+                onLoad={(e) => {
+                  // Cuando carga, asegurar que sea visible
+                  (e.target as HTMLImageElement).style.opacity = '1';
+                }}
+                onError={(e) => {
+                  // Si falla, mostrar mensaje
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const container = target.parentElement;
+                  if (container) {
+                    container.innerHTML = `
+                      <div class="text-center p-8">
+                        <div class="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                          <svg class="w-12 h-12 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                          </svg>
+                        </div>
+                        <p class="text-white text-xl mb-4">No se pudo cargar la imagen</p>
+                        <a href="${viewingEvidence}" target="_blank" rel="noopener noreferrer" 
+                           class="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl inline-block mb-4">
+                          Abrir en nueva pestaña
+                        </a>
+                        <p class="text-slate-400 text-xs max-w-md break-all">${viewingEvidence}</p>
+                      </div>
+                    `;
+                  }
+                }}
+              />
+            </div>
+          </div>
+          
+          {/* URL de la imagen */}
+          <div className="absolute bottom-4 left-4 right-4 flex items-center justify-center gap-4">
+            <a 
+              href={viewingEvidence} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm flex items-center gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Eye className="w-4 h-4" />
+              Abrir en nueva pestaña
+            </a>
+            <span className="text-slate-500 text-xs">Clic fuera para cerrar</span>
           </div>
         </div>
       )}

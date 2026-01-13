@@ -20,20 +20,45 @@ interface PaymentCode {
   redeemedAt: string | null;
   cancelledAt?: string | null;
   cancellationReason?: string | null;
+  batchId?: string | null;
   vision?: {
     id: number;
     nombre: string;
   } | null;
 }
 
+interface BatchCode {
+  id: string;
+  code: string;
+  amount: number;
+  reference: string | null;
+  status: string;
+}
+
+interface BatchExpense {
+  id: string;
+  concept: string;
+  amount: number;
+  category: string;
+  receiptUrl: string | null;
+}
+
 interface CashBatch {
   id: string;
+  batchNumber: string;
   amount: number;
+  totalCollected: number;
+  totalExpenses: number;
   codesCount: number;
-  status: 'PENDING' | 'SUBMITTED' | 'CONFIRMED' | 'REJECTED';
+  expensesCount?: number;
+  status: 'PENDING_DELIVERY' | 'DELIVERED' | 'CONFIRMED' | 'REJECTED';
+  confirmationCode?: string | null;
+  hasConfirmationCode?: boolean;
   createdAt: string;
   confirmedAt: string | null;
   notes: string | null;
+  paymentCodes?: BatchCode[];
+  expenses?: BatchExpense[];
 }
 
 interface Expense {
@@ -45,6 +70,7 @@ interface Expense {
   receiptUrl: string | null;
   notes: string | null;
   createdAt: string;
+  batchId?: string | null;
   vision?: {
     id: number;
     nombre: string;
@@ -118,6 +144,12 @@ export default function CoordinatorTreasuryPage() {
   // Estado para ver evidencia en modal
   const [showViewEvidenceModal, setShowViewEvidenceModal] = useState(false);
   const [evidenceToView, setEvidenceToView] = useState<string | null>(null);
+  
+  // Estados para confirmar corte con código
+  const [showConfirmBatchModal, setShowConfirmBatchModal] = useState(false);
+  const [batchToConfirm, setBatchToConfirm] = useState<CashBatch | null>(null);
+  const [confirmationCode, setConfirmationCode] = useState('');
+  const [confirmingBatch, setConfirmingBatch] = useState(false);
 
   useEffect(() => {
     fetchTreasury();
@@ -167,11 +199,14 @@ export default function CoordinatorTreasuryPage() {
       'CANCELLED': { bg: 'bg-red-500/20', text: 'text-red-400', label: 'Cancelado' },
       'EXPIRED': { bg: 'bg-slate-500/20', text: 'text-slate-400', label: 'Expirado' },
       'PENDING': { bg: 'bg-yellow-500/20', text: 'text-yellow-400', label: 'Pendiente' },
+      'PENDING_DELIVERY': { bg: 'bg-yellow-500/20', text: 'text-yellow-400', label: 'Por entregar' },
+      'DELIVERED': { bg: 'bg-blue-500/20', text: 'text-blue-400', label: 'Entregado' },
       'SUBMITTED': { bg: 'bg-blue-500/20', text: 'text-blue-400', label: 'Enviado' },
       'CONFIRMED': { bg: 'bg-green-500/20', text: 'text-green-400', label: 'Confirmado' },
+      'APPROVED': { bg: 'bg-green-500/20', text: 'text-green-400', label: 'Aprobado' },
       'REJECTED': { bg: 'bg-red-500/20', text: 'text-red-400', label: 'Rechazado' },
     };
-    const badge = badges[status] || badges['ACTIVE'];
+    const badge = badges[status] || badges['PENDING'];
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-bold ${badge.bg} ${badge.text}`}>
         {badge.label}
@@ -191,19 +226,24 @@ export default function CoordinatorTreasuryPage() {
     c.status === 'ACTIVE' || c.status === 'REDEEMED'
   ) || [];
   
-  // Códigos que aún no han sido entregados en ningún batch
-  const unsubmittedCodes = availableForBatch.filter(c => {
-    // Excluir códigos que ya están en un batch confirmado o enviado
-    return !treasury?.batches.some(b => 
-      b.status === 'CONFIRMED' || b.status === 'SUBMITTED'
-    );
-  });
+  // Códigos que aún no han sido entregados (sin batchId)
+  const unsubmittedCodes = availableForBatch.filter(c => !c.batchId);
+
+  // Gastos pendientes sin batch (para incluir en el corte)
+  const pendingExpenses = treasury?.expenses.filter(
+    e => e.status === 'PENDING' && !e.batchId
+  ) || [];
 
   // Verificar si hay gastos pendientes sin evidencia
-  const expensesWithoutEvidence = treasury?.expenses.filter(
-    e => e.status === 'PENDING' && !e.receiptUrl
-  ) || [];
-  const canMakeBatch = unsubmittedCodes.length > 0 && expensesWithoutEvidence.length === 0;
+  const expensesWithoutEvidence = pendingExpenses.filter(e => !e.receiptUrl);
+  
+  // Puede hacer corte si hay códigos O gastos pendientes (y todos los gastos tienen evidencia)
+  const canMakeBatch = (unsubmittedCodes.length > 0 || pendingExpenses.length > 0) && expensesWithoutEvidence.length === 0;
+
+  // Calcular totales para el corte
+  const totalCodesAmount = unsubmittedCodes.reduce((sum, c) => sum + c.amount, 0);
+  const totalExpensesAmount = pendingExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const netAmountToBatch = totalCodesAmount - totalExpensesAmount;
 
   const toggleCodeSelection = (codeId: string) => {
     setSelectedCodes(prev => 
@@ -272,14 +312,15 @@ export default function CoordinatorTreasuryPage() {
   };
 
   const handleSubmitBatch = async () => {
-    if (selectedCodes.length === 0) {
-      showNotification('error', 'Selecciona al menos un código');
+    // Validar que haya al menos códigos o gastos
+    if (unsubmittedCodes.length === 0 && pendingExpenses.length === 0) {
+      showNotification('error', 'No hay códigos ni gastos para procesar');
       return;
     }
 
     setSubmitting(true);
     try {
-      // Enviar todos los códigos disponibles (no solo los seleccionados)
+      // Enviar todos los códigos disponibles (puede ser vacío si solo hay gastos)
       const allCodeIds = unsubmittedCodes.map(c => c.id);
       
       const res = await fetch('/api/treasury/coordinator/batch', {
@@ -293,7 +334,8 @@ export default function CoordinatorTreasuryPage() {
 
       const data = await res.json();
       if (data.success) {
-        showNotification('success', `Corte de caja enviado: ${formatMoney(data.batch.amount)}`);
+        const msg = `Corte ${data.batch.batchNumber} creado: ${formatMoney(data.batch.netAmount)} neto (${data.batch.codesCount} códigos, ${data.batch.expensesCount} gastos)`;
+        showNotification('success', msg);
         setShowBatchModal(false);
         setSelectedCodes([]);
         setBatchNotes('');
@@ -305,6 +347,37 @@ export default function CoordinatorTreasuryPage() {
       showNotification('error', 'Error de conexión');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleConfirmBatch = async () => {
+    if (!batchToConfirm || !confirmationCode.trim()) {
+      showNotification('error', 'Ingresa el código de confirmación');
+      return;
+    }
+
+    setConfirmingBatch(true);
+    try {
+      const res = await fetch(`/api/treasury/coordinator/batch/${batchToConfirm.id}/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmationCode: confirmationCode.trim() })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showNotification('success', `Corte ${batchToConfirm.batchNumber} confirmado exitosamente`);
+        setShowConfirmBatchModal(false);
+        setBatchToConfirm(null);
+        setConfirmationCode('');
+        fetchTreasury();
+      } else {
+        showNotification('error', data.error || 'Error al confirmar');
+      }
+    } catch (error) {
+      showNotification('error', 'Error de conexión');
+    } finally {
+      setConfirmingBatch(false);
     }
   };
 
@@ -519,7 +592,7 @@ export default function CoordinatorTreasuryPage() {
               <span className="text-slate-400 text-sm">Generados</span>
             </div>
             <p className="text-2xl font-bold text-white">{formatMoney(treasury?.totalGenerated || 0)}</p>
-            <p className="text-xs text-slate-500">{treasury?.codes.length || 0} códigos</p>
+            <p className="text-xs text-slate-500">{treasury?.codesCount || 0} códigos</p>
           </div>
 
           <div className="bg-slate-800/50 border border-orange-500/30 rounded-xl p-4">
@@ -775,31 +848,80 @@ export default function CoordinatorTreasuryPage() {
                 <Package className="mx-auto text-slate-500 mb-4" size={48} />
                 <p className="text-slate-400">No has realizado ningún corte de caja aún</p>
                 <p className="text-slate-500 text-sm mt-2">
-                  Cuando tengas códigos canjeados, podrás hacer un corte para entregar el dinero
+                  Cuando tengas códigos o gastos, podrás hacer un corte de caja
                 </p>
               </div>
             ) : (
               treasury?.batches.map((batch) => (
-                <div key={batch.id} className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
-                  <div className="flex items-center justify-between">
+                <div 
+                  key={batch.id} 
+                  onClick={() => {
+                    setBatchToConfirm(batch);
+                    setShowConfirmBatchModal(true);
+                  }}
+                  className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 cursor-pointer hover:bg-slate-700/50 hover:border-slate-600 transition-all"
+                >
+                  <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-4">
                       <div className="p-3 bg-green-500/20 rounded-xl">
                         <FileText className="text-green-400" size={24} />
                       </div>
                       <div>
-                        <p className="text-white font-bold text-lg">{formatMoney(batch.amount)}</p>
-                        <p className="text-slate-400 text-sm">{batch.codesCount} códigos</p>
+                        <p className="text-white font-bold">{batch.batchNumber}</p>
+                        <p className="text-slate-500 text-xs">{formatDate(batch.createdAt)}</p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex items-center gap-2">
                       {getStatusBadge(batch.status)}
-                      <p className="text-slate-500 text-xs mt-1">{formatDate(batch.createdAt)}</p>
+                      <Eye size={18} className="text-slate-500" />
                     </div>
                   </div>
-                  {batch.notes && (
-                    <p className="mt-3 text-slate-400 text-sm border-t border-slate-700 pt-3">
-                      📝 {batch.notes}
-                    </p>
+                  
+                  {/* Desglose del corte */}
+                  <div className="bg-slate-900/50 rounded-lg p-3 space-y-2">
+                    {batch.totalCollected > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-400">💰 Códigos ({batch.codesCount})</span>
+                        <span className="text-green-400 font-medium">+{formatMoney(batch.totalCollected)}</span>
+                      </div>
+                    )}
+                    {batch.totalExpenses > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-400">📋 Gastos ({batch.expensesCount || 0})</span>
+                        <span className="text-orange-400 font-medium">-{formatMoney(batch.totalExpenses)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm pt-2 border-t border-slate-700">
+                      <span className="text-slate-300 font-medium">Neto entregado</span>
+                      <span className={`font-bold ${batch.amount >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
+                        {formatMoney(batch.amount)}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Estado del código */}
+                  {batch.status === 'PENDING_DELIVERY' && (
+                    <div className="mt-3 pt-3 border-t border-slate-700">
+                      {batch.hasConfirmationCode ? (
+                        <p className="text-purple-400 text-sm text-center flex items-center justify-center gap-2">
+                          🔑 Click para ingresar código de confirmación
+                        </p>
+                      ) : (
+                        <p className="text-yellow-400 text-sm text-center flex items-center justify-center gap-2">
+                          <Clock size={16} />
+                          Esperando que el director revise y genere el código
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  
+                  {batch.status === 'CONFIRMED' && (
+                    <div className="mt-3 pt-3 border-t border-slate-700">
+                      <p className="text-green-400 text-sm text-center flex items-center justify-center gap-2">
+                        <CheckCircle size={16} />
+                        Corte confirmado
+                      </p>
+                    </div>
                   )}
                 </div>
               ))
@@ -815,7 +937,7 @@ export default function CoordinatorTreasuryPage() {
             <div className="p-6 border-b border-slate-700 flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-bold text-white">📦 Nuevo Corte de Caja</h3>
-                <p className="text-slate-400 text-sm">Selecciona los códigos a entregar</p>
+                <p className="text-slate-400 text-sm">Resumen del corte a entregar</p>
               </div>
               <button
                 onClick={() => setShowBatchModal(false)}
@@ -825,45 +947,92 @@ export default function CoordinatorTreasuryPage() {
               </button>
             </div>
 
-            <div className="p-6">
+            <div className="p-6 max-h-[80vh] overflow-y-auto">
               {/* Summary */}
-              <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 mb-6">
-                <div className="flex items-center justify-between">
-                  <span className="text-green-400">Total a entregar:</span>
-                  <span className="text-2xl font-bold text-white">
-                    {formatMoney(
-                      unsubmittedCodes.reduce((sum, c) => sum + c.amount, 0)
-                    )}
-                  </span>
+              <div className="space-y-3 mb-6">
+                <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-green-400">💰 Códigos generados:</span>
+                    <span className="text-xl font-bold text-green-400">
+                      +{formatMoney(totalCodesAmount)}
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-xs mt-1">
+                    {unsubmittedCodes.length} códigos
+                  </p>
                 </div>
-                <p className="text-slate-400 text-sm mt-1">
-                  {unsubmittedCodes.length} códigos en caja chica
-                </p>
+
+                {pendingExpenses.length > 0 && (
+                  <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-orange-400">📝 Gastos a descontar:</span>
+                      <span className="text-xl font-bold text-orange-400">
+                        -{formatMoney(totalExpensesAmount)}
+                      </span>
+                    </div>
+                    <p className="text-slate-400 text-xs mt-1">
+                      {pendingExpenses.length} gastos
+                    </p>
+                  </div>
+                )}
+
+                <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-cyan-400 font-bold">💵 Neto a entregar:</span>
+                    <span className="text-2xl font-bold text-white">
+                      {formatMoney(netAmountToBatch)}
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              {/* Codes List - Solo vista, sin checkboxes */}
-              <div className="max-h-48 overflow-y-auto space-y-2 mb-6">
-                {unsubmittedCodes.map((code) => (
-                  <div
-                    key={code.id}
-                    className="flex items-center justify-between p-3 rounded-lg bg-green-500/20 border border-green-500/50"
-                  >
-                    <div>
-                      <code className="text-green-400 font-mono text-sm">{code.code}</code>
-                      <p className="text-slate-400 text-xs">
-                        {code.reference || 'Sin referencia'}
-                        {code.status === 'ACTIVE' && (
-                          <span className="ml-2 text-yellow-400">• Pendiente</span>
-                        )}
-                        {code.status === 'REDEEMED' && (
-                          <span className="ml-2 text-green-400">• Canjeado</span>
-                        )}
-                      </p>
+              {/* Codes List */}
+              <div className="mb-4">
+                <h4 className="text-sm font-bold text-slate-400 mb-2">📋 Códigos incluidos ({unsubmittedCodes.length})</h4>
+                <div className="max-h-32 overflow-y-auto space-y-2">
+                  {unsubmittedCodes.map((code) => (
+                    <div
+                      key={code.id}
+                      className="flex items-center justify-between p-2 rounded-lg bg-slate-800/50 border border-slate-700"
+                    >
+                      <div>
+                        <code className="text-green-400 font-mono text-xs">{code.code}</code>
+                        <p className="text-slate-500 text-xs">
+                          {code.reference || 'Sin referencia'}
+                          {code.status === 'ACTIVE' && (
+                            <span className="ml-2 text-yellow-400">• Pendiente</span>
+                          )}
+                          {code.status === 'REDEEMED' && (
+                            <span className="ml-2 text-green-400">• Canjeado</span>
+                          )}
+                        </p>
+                      </div>
+                      <span className="text-white font-bold text-sm">{formatMoney(code.amount)}</span>
                     </div>
-                    <span className="text-white font-bold">{formatMoney(code.amount)}</span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
+
+              {/* Expenses List */}
+              {pendingExpenses.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="text-sm font-bold text-slate-400 mb-2">📝 Gastos incluidos ({pendingExpenses.length})</h4>
+                  <div className="max-h-32 overflow-y-auto space-y-2">
+                    {pendingExpenses.map((expense) => (
+                      <div
+                        key={expense.id}
+                        className="flex items-center justify-between p-2 rounded-lg bg-slate-800/50 border border-orange-500/30"
+                      >
+                        <div>
+                          <p className="text-orange-400 text-sm">{expense.concept}</p>
+                          <p className="text-slate-500 text-xs">{getCategoryLabel(expense.category).label}</p>
+                        </div>
+                        <span className="text-orange-400 font-bold text-sm">-{formatMoney(expense.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Notes */}
               <div className="mb-6">
@@ -887,7 +1056,7 @@ export default function CoordinatorTreasuryPage() {
                 </button>
                 <button
                   onClick={handleSubmitBatch}
-                  disabled={unsubmittedCodes.length === 0 || submitting}
+                  disabled={(unsubmittedCodes.length === 0 && pendingExpenses.length === 0) || submitting}
                   className="flex-1 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {submitting ? (
@@ -1293,6 +1462,213 @@ export default function CoordinatorTreasuryPage() {
               <Download size={18} />
               Abrir original
             </a>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Detalle y Confirmación del Corte */}
+      {showConfirmBatchModal && batchToConfirm && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-700 flex items-center justify-between sticky top-0 bg-slate-900 z-10">
+              <div>
+                <h3 className="text-xl font-bold text-white">📦 Detalle del Corte</h3>
+                <p className="text-slate-400 text-sm">{batchToConfirm.batchNumber}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                {getStatusBadge(batchToConfirm.status)}
+                <button
+                  onClick={() => {
+                    setShowConfirmBatchModal(false);
+                    setBatchToConfirm(null);
+                    setConfirmationCode('');
+                  }}
+                  className="text-slate-400 hover:text-white p-2"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Resumen financiero */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-3 text-center">
+                  <p className="text-green-400 text-xs mb-1">Códigos</p>
+                  <p className="text-xl font-bold text-green-400">+{formatMoney(batchToConfirm.totalCollected)}</p>
+                </div>
+                <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-3 text-center">
+                  <p className="text-orange-400 text-xs mb-1">Gastos</p>
+                  <p className="text-xl font-bold text-orange-400">-{formatMoney(batchToConfirm.totalExpenses)}</p>
+                </div>
+                <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-3 text-center">
+                  <p className="text-cyan-400 text-xs mb-1">Neto</p>
+                  <p className={`text-xl font-bold ${batchToConfirm.amount >= 0 ? 'text-cyan-400' : 'text-red-400'}`}>
+                    {formatMoney(batchToConfirm.amount)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Lista de códigos */}
+              {batchToConfirm.paymentCodes && batchToConfirm.paymentCodes.length > 0 && (
+                <div>
+                  <h4 className="text-white font-bold mb-3 flex items-center gap-2">
+                    <Receipt size={18} className="text-green-400" />
+                    Códigos Incluidos ({batchToConfirm.codesCount})
+                  </h4>
+                  <div className="bg-slate-800/50 rounded-xl overflow-hidden max-h-40 overflow-y-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-700/50 sticky top-0">
+                        <tr>
+                          <th className="text-left text-slate-400 px-3 py-2">Código</th>
+                          <th className="text-left text-slate-400 px-3 py-2">Referencia</th>
+                          <th className="text-right text-slate-400 px-3 py-2">Monto</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {batchToConfirm.paymentCodes.map((code) => (
+                          <tr key={code.id} className="border-t border-slate-700">
+                            <td className="px-3 py-2 font-mono text-green-400">{code.code}</td>
+                            <td className="px-3 py-2 text-slate-300">{code.reference || '-'}</td>
+                            <td className="px-3 py-2 text-right text-white">{formatMoney(code.amount)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Lista de gastos */}
+              {batchToConfirm.expenses && batchToConfirm.expenses.length > 0 && (
+                <div>
+                  <h4 className="text-white font-bold mb-3 flex items-center gap-2">
+                    <DollarSign size={18} className="text-orange-400" />
+                    Gastos Incluidos ({batchToConfirm.expensesCount})
+                  </h4>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {batchToConfirm.expenses.map((expense) => {
+                      const category = EXPENSE_CATEGORIES.find(c => c.value === expense.category);
+                      return (
+                        <div key={expense.id} className="bg-slate-800/50 rounded-lg p-3 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="text-xl">{category?.icon || '📋'}</span>
+                            <div>
+                              <p className="text-white font-medium">{expense.concept}</p>
+                              <p className="text-slate-500 text-xs">{category?.label || 'Otro'}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-orange-400 font-bold">-{formatMoney(expense.amount)}</span>
+                            {expense.receiptUrl && (
+                              <button
+                                onClick={() => {
+                                  setEvidenceToView(expense.receiptUrl);
+                                  setShowViewEvidenceModal(true);
+                                }}
+                                className="p-1.5 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30"
+                              >
+                                <Image size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Fecha y estado */}
+              <div className="bg-slate-800/50 rounded-xl p-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-400">Fecha del corte:</span>
+                  <span className="text-white">{formatDate(batchToConfirm.createdAt)}</span>
+                </div>
+                {batchToConfirm.confirmedAt && (
+                  <div className="flex items-center justify-between text-sm mt-2">
+                    <span className="text-slate-400">Fecha confirmación:</span>
+                    <span className="text-green-400">{formatDate(batchToConfirm.confirmedAt)}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Sección para ingresar código (solo si está pendiente y tiene código generado) */}
+              {batchToConfirm.status === 'PENDING_DELIVERY' && (
+                <div className="border-t border-slate-700 pt-6">
+                  {batchToConfirm.hasConfirmationCode ? (
+                    <>
+                      <h4 className="text-white font-bold mb-3 flex items-center gap-2">
+                        🔑 Confirmar Entrega
+                      </h4>
+                      <p className="text-slate-400 text-sm mb-4">
+                        El director ha revisado tu corte. Ingresa el código que te proporcionó para confirmar la entrega del efectivo.
+                      </p>
+                      <div className="space-y-4">
+                        <input
+                          type="text"
+                          value={confirmationCode}
+                          onChange={(e) => setConfirmationCode(e.target.value.toUpperCase())}
+                          placeholder="Ej: NEBULA42"
+                          maxLength={20}
+                          className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-xl text-white text-center text-2xl font-mono tracking-widest placeholder:text-slate-500 placeholder:text-base placeholder:tracking-normal focus:outline-none focus:border-purple-500"
+                        />
+                        <button
+                          onClick={handleConfirmBatch}
+                          disabled={confirmationCode.length < 4 || confirmingBatch}
+                          className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          {confirmingBatch ? (
+                            <>
+                              <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-white"></div>
+                              Confirmando...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle size={18} />
+                              Confirmar Entrega
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 text-center">
+                      <Clock size={32} className="text-yellow-400 mx-auto mb-2" />
+                      <p className="text-yellow-400 font-medium">Esperando revisión del director</p>
+                      <p className="text-slate-400 text-sm mt-1">
+                        El director debe revisar las evidencias y generar el código de confirmación
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Si ya está confirmado */}
+              {batchToConfirm.status === 'CONFIRMED' && (
+                <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-center">
+                  <CheckCircle size={32} className="text-green-400 mx-auto mb-2" />
+                  <p className="text-green-400 font-medium">Corte confirmado</p>
+                  <p className="text-slate-400 text-sm mt-1">
+                    Este corte fue confirmado el {formatDate(batchToConfirm.confirmedAt!)}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-700 bg-slate-900/50">
+              <button
+                onClick={() => {
+                  setShowConfirmBatchModal(false);
+                  setBatchToConfirm(null);
+                  setConfirmationCode('');
+                }}
+                className="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-lg transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
       )}

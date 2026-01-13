@@ -2204,6 +2204,7 @@ model Usuario {
   ExpensesApproved                                                       Expense[]                       @relation("ExpenseApprover")
   CashBatchesCoordinator                                                 CashBatch[]                     @relation("CashBatchCoordinator")
   CashBatchesReceived                                                    CashBatch[]                     @relation("CashBatchReceiver")
+  CashBatchesCodeGenerated                                               CashBatch[]                     @relation("CashBatchCodeGenerator")
   
   // Quantum Squads Relations
   SmallGroupsLed                                                         SmallGroup[]                    @relation("SmallGroupLeader")
@@ -3578,6 +3579,11 @@ model CashBatch {
   totalExpenses     Decimal          @db.Decimal(10, 2) // Total gastos aprobados
   netAmount         Decimal          @db.Decimal(10, 2) // Neto a entregar
   
+  // Código de confirmación (generado por director)
+  confirmationCode  String?          // Código que genera el director al revisar
+  codeGeneratedAt   DateTime?        // Cuando se generó el código
+  codeGeneratedById Int?             // Director que generó el código
+  
   // Estado del corte
   status            CashBatchStatus  @default(PENDING_DELIVERY)
   deliveryMethod    DeliveryMethod?  // Cómo se entregó el dinero
@@ -3600,6 +3606,7 @@ model CashBatch {
   vision            Vision?          @relation("CashBatchVision", fields: [visionId], references: [id])
   coordinator       Usuario          @relation("CashBatchCoordinator", fields: [coordinatorId], references: [id])
   receivedBy        Usuario?         @relation("CashBatchReceiver", fields: [receivedById], references: [id])
+  codeGeneratedBy   Usuario?         @relation("CashBatchCodeGenerator", fields: [codeGeneratedById], references: [id])
   paymentCodes      PaymentCode[]
   expenses          Expense[]
   

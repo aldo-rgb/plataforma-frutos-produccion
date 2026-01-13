@@ -8,6 +8,7 @@ const ALLOWED_ROLES = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED
 /**
  * POST /api/treasury/coordinator/batch
  * Crea un nuevo corte de caja (entrega de efectivo)
+ * Incluye códigos de pago y gastos pendientes
  */
 export async function POST(request: Request) {
   try {
@@ -31,31 +32,55 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { codeIds, notes } = body;
+    const { codeIds = [], notes } = body;
 
-    if (!codeIds || !Array.isArray(codeIds) || codeIds.length === 0) {
-      return NextResponse.json({ error: 'Selecciona al menos un código' }, { status: 400 });
+    // Verificar que codeIds sea un array (puede estar vacío)
+    if (!Array.isArray(codeIds)) {
+      return NextResponse.json({ error: 'Formato de códigos inválido' }, { status: 400 });
     }
 
-    // Verificar que todos los códigos existen y pertenecen al coordinador
-    // Acepta códigos ACTIVE (pendientes) y REDEEMED (canjeados)
-    const codes = await prisma.paymentCode.findMany({
+    let codes: any[] = [];
+    
+    // Si hay códigos, verificar que existen y pertenecen al coordinador
+    if (codeIds.length > 0) {
+      codes = await prisma.paymentCode.findMany({
+        where: {
+          id: { in: codeIds },
+          createdById: user.id,
+          status: { in: ['ACTIVE', 'REDEEMED'] },
+          batchId: null // Solo códigos sin batch asignado
+        }
+      });
+
+      if (codes.length !== codeIds.length) {
+        return NextResponse.json(
+          { error: 'Algunos códigos no son válidos o ya fueron procesados' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Obtener gastos pendientes del coordinador (sin batch asignado)
+    const pendingExpenses = await prisma.expense.findMany({
       where: {
-        id: { in: codeIds },
-        createdById: user.id,
-        status: { in: ['ACTIVE', 'REDEEMED'] }
+        userId: user.id,
+        status: 'PENDING',
+        batchId: null
       }
     });
 
-    if (codes.length !== codeIds.length) {
+    // Validar que haya al menos códigos o gastos para procesar
+    if (codes.length === 0 && pendingExpenses.length === 0) {
       return NextResponse.json(
-        { error: 'Algunos códigos no son válidos o ya fueron cancelados' },
+        { error: 'Debe haber al menos un código o gasto para hacer el corte' },
         { status: 400 }
       );
     }
 
-    // Calcular el total
-    const totalAmount = codes.reduce((sum, c) => sum + Number(c.amount), 0);
+    // Calcular totales
+    const totalCollected = codes.reduce((sum, c) => sum + Number(c.amount), 0);
+    const totalExpenses = pendingExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+    const netAmount = totalCollected - totalExpenses;
 
     // Generar número de batch único
     const year = new Date().getFullYear();
@@ -70,24 +95,34 @@ export async function POST(request: Request) {
     });
     const batchNumber = `BATCH-${year}-${String(count + 1).padStart(3, '0')}`;
 
-    // Crear el batch
+    // Crear el batch con códigos y gastos
     const batch = await prisma.cashBatch.create({
       data: {
         batchNumber,
-        totalCollected: totalAmount,
-        totalExpenses: 0,
-        netAmount: totalAmount,
+        totalCollected,
+        totalExpenses,
+        netAmount,
         status: 'PENDING_DELIVERY',
         organizationId: user.organizationId,
         coordinatorId: user.id
       }
     });
 
-    // Asociar los códigos al batch
-    await prisma.paymentCode.updateMany({
-      where: { id: { in: codeIds } },
-      data: { batchId: batch.id }
-    });
+    // Asociar los códigos al batch (solo si hay códigos)
+    if (codeIds.length > 0) {
+      await prisma.paymentCode.updateMany({
+        where: { id: { in: codeIds } },
+        data: { batchId: batch.id }
+      });
+    }
+
+    // Asociar los gastos al batch (solo si hay gastos)
+    if (pendingExpenses.length > 0) {
+      await prisma.expense.updateMany({
+        where: { id: { in: pendingExpenses.map(e => e.id) } },
+        data: { batchId: batch.id }
+      });
+    }
 
     return NextResponse.json({
       success: true,
@@ -95,8 +130,11 @@ export async function POST(request: Request) {
       batch: {
         id: batch.id,
         batchNumber: batch.batchNumber,
-        amount: Number(batch.netAmount),
+        totalCollected,
+        totalExpenses,
+        netAmount,
         codesCount: codes.length,
+        expensesCount: pendingExpenses.length,
         status: batch.status
       }
     });

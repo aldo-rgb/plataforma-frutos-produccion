@@ -9,9 +9,10 @@ import { prisma } from '@/lib/prisma';
  */
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: batchId } = await params;
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
@@ -33,10 +34,8 @@ export async function GET(
       );
     }
 
-    const batchId = parseInt(params.id);
-
     const cashBatch = await prisma.cashBatch.findUnique({
-      where: { id: batchId },
+      where: { id: batchId }, // batchId es string (UUID)
       include: {
         coordinator: {
           select: { id: true, nombre: true, email: true },
@@ -96,6 +95,8 @@ export async function GET(
         createdAt: cashBatch.createdAt,
         closedAt: cashBatch.closedAt,
         confirmedAt: cashBatch.confirmedAt,
+        confirmationCode: cashBatch.confirmationCode,
+        confirmationCodeGeneratedAt: cashBatch.confirmationCodeGeneratedAt,
         coordinator: cashBatch.coordinator,
         receivedBy: cashBatch.receivedBy,
         vision: cashBatch.vision,
@@ -134,9 +135,10 @@ export async function GET(
  */
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id: batchId } = await params;
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
@@ -157,14 +159,12 @@ export async function PATCH(
         { status: 404 }
       );
     }
-
-    const batchId = parseInt(params.id);
     const body = await request.json();
     const { deliveryMethod, depositProofUrl, bankReference } = body;
 
     // Verificar que el batch existe y pertenece al usuario
     const existingBatch = await prisma.cashBatch.findUnique({
-      where: { id: batchId },
+      where: { id: batchId }, // batchId es string (UUID)
     });
 
     if (!existingBatch) {

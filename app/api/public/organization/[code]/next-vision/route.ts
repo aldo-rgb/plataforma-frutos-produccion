@@ -18,7 +18,11 @@ export async function GET(
       );
     }
 
-    // Buscar la próxima visión de nivel BASIC que esté activa y tenga fecha futura
+    // Buscar visión activa de nivel BASIC:
+    // 1. Primero buscar visiones que aún no han terminado (endDate >= hoy o sin endDate)
+    // 2. Si ya empezó pero no ha terminado, es válida para inscripción
+    const today = new Date();
+    
     const nextVision = await prisma.vision.findFirst({
       where: {
         organizationId: organizationId,
@@ -26,9 +30,13 @@ export async function GET(
         enabledLevels: {
           has: 'BASIC'
         },
-        startDate: {
-          gte: new Date()
-        }
+        // La visión es válida si:
+        // - No tiene endDate (visión sin fecha de fin definida)
+        // - O su endDate es mayor o igual a hoy
+        OR: [
+          { endDate: null },
+          { endDate: { gte: today } }
+        ]
       },
       orderBy: {
         startDate: 'asc'

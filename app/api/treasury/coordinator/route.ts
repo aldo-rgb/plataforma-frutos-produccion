@@ -26,9 +26,12 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
-    // Obtener códigos generados por este coordinador
+    // Obtener códigos generados por este coordinador (solo los que NO han sido procesados en un corte)
     const codes = await prisma.paymentCode.findMany({
-      where: { createdById: user.id },
+      where: { 
+        createdById: user.id,
+        batchId: null // Solo códigos sin procesar
+      },
       include: {
         vision: {
           select: { id: true, nombre: true }
@@ -37,18 +40,39 @@ export async function GET() {
       orderBy: { createdAt: 'desc' }
     });
 
-    // Obtener cortes de caja del coordinador
+    // Obtener cortes de caja del coordinador con detalle de códigos y gastos
     const batches = await prisma.cashBatch.findMany({
       where: { coordinatorId: user.id },
       include: {
-        _count: { select: { paymentCodes: true } }
+        _count: { select: { paymentCodes: true, expenses: true } },
+        paymentCodes: {
+          select: {
+            id: true,
+            code: true,
+            amount: true,
+            reference: true,
+            status: true
+          }
+        },
+        expenses: {
+          select: {
+            id: true,
+            concept: true,
+            amount: true,
+            category: true,
+            receiptUrl: true
+          }
+        }
       },
       orderBy: { createdAt: 'desc' }
     });
 
-    // Obtener gastos del coordinador
+    // Obtener gastos del coordinador (solo los que NO han sido procesados en un corte)
     const expenses = await prisma.expense.findMany({
-      where: { userId: user.id },
+      where: { 
+        userId: user.id,
+        batchId: null // Solo gastos sin procesar
+      },
       include: {
         vision: {
           select: { id: true, nombre: true }
@@ -57,8 +81,11 @@ export async function GET() {
       orderBy: { createdAt: 'desc' }
     });
 
-    // Calcular totales
-    const totalGenerated = codes.reduce((sum, c) => sum + Number(c.amount), 0);
+    // Calcular totales - EXCLUIR cancelados del total generado
+    const activeCodes = codes.filter(c => c.status !== 'CANCELLED');
+    const totalGenerated = activeCodes.reduce((sum, c) => sum + Number(c.amount), 0);
+    const codesCount = activeCodes.length;
+    
     const totalRedeemed = codes
       .filter(c => c.status === 'REDEEMED')
       .reduce((sum, c) => sum + Number(c.amount), 0);
@@ -69,8 +96,8 @@ export async function GET() {
       .filter(c => c.status === 'CANCELLED')
       .reduce((sum, c) => sum + Number(c.amount), 0);
 
-    // Caja Chica = Total generado - Cancelados (lo que realmente está en juego)
-    const cajaChica = totalGenerated - totalCancelled;
+    // Caja Chica = Total generado (ya excluye cancelados)
+    const cajaChica = totalGenerated;
 
     // Calcular deuda pendiente (canjeados no entregados)
     const confirmedBatchAmount = batches
@@ -89,6 +116,7 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       totalGenerated,
+      codesCount, // Cantidad de códigos activos (no cancelados)
       totalRedeemed,
       totalPending,
       totalCancelled,
@@ -106,6 +134,7 @@ export async function GET() {
         redeemedAt: c.redeemedAt?.toISOString() || null,
         cancelledAt: c.cancelledAt?.toISOString() || null,
         cancellationReason: c.cancellationReason || null,
+        batchId: c.batchId || null,
         vision: c.vision
       })),
       batches: batches.map(b => ({
@@ -115,10 +144,26 @@ export async function GET() {
         totalCollected: Number(b.totalCollected),
         totalExpenses: Number(b.totalExpenses),
         codesCount: b._count.paymentCodes,
+        expensesCount: b._count.expenses,
         status: b.status,
+        hasConfirmationCode: !!b.confirmationCode,
         createdAt: b.createdAt.toISOString(),
         confirmedAt: b.confirmedAt?.toISOString() || null,
-        notes: null
+        notes: null,
+        paymentCodes: b.paymentCodes.map(pc => ({
+          id: pc.id,
+          code: pc.code,
+          amount: Number(pc.amount),
+          reference: pc.reference,
+          status: pc.status
+        })),
+        expenses: b.expenses.map(ex => ({
+          id: ex.id,
+          concept: ex.concept,
+          amount: Number(ex.amount),
+          category: ex.category,
+          receiptUrl: ex.receiptUrl
+        }))
       })),
       expenses: expenses.map(e => ({
         id: e.id,
@@ -129,6 +174,7 @@ export async function GET() {
         receiptUrl: e.receiptUrl,
         notes: e.notes,
         createdAt: e.createdAt.toISOString(),
+        batchId: e.batchId || null,
         vision: e.vision
       }))
     });

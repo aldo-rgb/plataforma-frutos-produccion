@@ -226,17 +226,23 @@ export function RegistrationForm({
               </div>
             </div>
           ) : (
-            <div className="bg-slate-800/50 border-2 border-slate-700/30 rounded-xl p-6 mt-4">
-              <div className="text-slate-400 text-sm font-medium mb-2">
-                📅 {locale === 'es' ? 'Próximas Convocatorias' : 'Next Sessions'}
+            <div className="bg-red-900/30 border-2 border-red-500/50 rounded-xl p-6 mt-4">
+              <div className="text-red-400 text-sm font-medium mb-2">
+                ⚠️ {locale === 'es' ? 'Sin Programa Disponible' : 'No Program Available'}
               </div>
               <h2 className="text-xl font-bold text-white mb-2">
-                {locale === 'es' ? 'Aún no hay fechas programadas' : 'No scheduled dates yet'}
+                {locale === 'es' ? 'No hay entrenamientos activos' : 'No active training programs'}
               </h2>
-              <p className="text-slate-400 text-sm">
+              <p className="text-red-300 text-sm mb-3">
                 {locale === 'es' 
-                  ? 'Te notificaremos cuando se abran nuevos grupos básicos'
-                  : 'We will notify you when new basic groups open'
+                  ? 'Actualmente no hay programas de entrenamiento disponibles en esta sede. Por favor, contacta al coordinador para más información.'
+                  : 'There are currently no training programs available at this location. Please contact the coordinator for more information.'
+                }
+              </p>
+              <p className="text-slate-400 text-xs">
+                {locale === 'es' 
+                  ? '💡 El registro solo está disponible cuando hay un programa activo.'
+                  : '💡 Registration is only available when there is an active program.'
                 }
               </p>
             </div>
@@ -673,20 +679,26 @@ export function RegistrationForm({
           {/* Submit */}
           <motion.button
             type="submit"
-            disabled={submitting || ageWarning === 'too_young'}
-            whileHover={{ scale: submitting || ageWarning === 'too_young' ? 1 : 1.02 }}
-            whileTap={{ scale: submitting || ageWarning === 'too_young' ? 1 : 0.98 }}
+            disabled={submitting || ageWarning === 'too_young' || !nextVision}
+            whileHover={{ scale: submitting || ageWarning === 'too_young' || !nextVision ? 1 : 1.02 }}
+            whileTap={{ scale: submitting || ageWarning === 'too_young' || !nextVision ? 1 : 0.98 }}
             className="w-full py-4 rounded-xl font-bold text-lg text-[#050B14] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
-              background: ageWarning === 'too_young' 
+              background: (ageWarning === 'too_young' || !nextVision)
                 ? 'linear-gradient(135deg, #666 0%, #444 100%)'
                 : 'linear-gradient(135deg, #00F0FF 0%, #0099CC 100%)',
-              boxShadow: ageWarning === 'too_young' 
+              boxShadow: (ageWarning === 'too_young' || !nextVision)
                 ? 'none'
                 : '0 0 30px rgba(0, 240, 255, 0.4)',
             }}
           >
-            {submitting ? t('submitting') : ageWarning === 'too_young' ? (locale === 'es' ? '🚫 Registro no disponible' : '🚫 Registration unavailable') : t('submit')}
+            {submitting 
+              ? t('submitting') 
+              : !nextVision 
+                ? (locale === 'es' ? '🚫 Sin programa disponible' : '🚫 No program available')
+                : ageWarning === 'too_young' 
+                  ? (locale === 'es' ? '🚫 Registro no disponible' : '🚫 Registration unavailable') 
+                  : t('submit')}
           </motion.button>
         </form>
       </motion.div>
