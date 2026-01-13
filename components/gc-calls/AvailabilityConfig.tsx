@@ -47,15 +47,15 @@ export default function AvailabilityConfig({
   existingBlocks = [] 
 }: AvailabilityConfigProps) {
   const [blocks, setBlocks] = useState<TimeBlock[]>(existingBlocks.length > 0 ? existingBlocks : [
-    { startTime: '06:00', endTime: '07:00', slotDuration: 10 }
+    { startTime: '06:00', endTime: '08:00', slotDuration: 10 }
   ]);
   const [mode, setMode] = useState<'weekly' | 'specific'>('weekly');
-  const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4, 5]); // Lun-Vie por defecto
+  const [selectedDays, setSelectedDays] = useState<number[]>([1, 2, 3, 4]); // Lun-Mar-Mié-Jue por defecto
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const addBlock = () => {
-    setBlocks(prev => [...prev, { startTime: '06:00', endTime: '07:00', slotDuration: 10 }]);
+    setBlocks(prev => [...prev, { startTime: '07:00', endTime: '09:00', slotDuration: 10 }]);
   };
 
   const removeBlock = (index: number) => {
@@ -209,6 +209,7 @@ export default function AvailabilityConfig({
                     onChange={(e) => updateBlock(index, 'slotDuration', parseInt(e.target.value))}
                     className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm"
                   >
+                    <option value={5} className="text-gray-900">5 min</option>
                     <option value={10} className="text-gray-900">10 min</option>
                     <option value={15} className="text-gray-900">15 min</option>
                     <option value={20} className="text-gray-900">20 min</option>
@@ -243,20 +244,6 @@ export default function AvailabilityConfig({
             <Plus className="w-4 h-4" />
             Agregar otro bloque
           </button>
-        </div>
-
-        {/* Resumen */}
-        <div className="p-4 rounded-lg bg-purple-500/20 border border-purple-500/30">
-          <h4 className="text-sm font-medium text-purple-300 mb-2">Resumen de disponibilidad</h4>
-          <div className="text-white/80 text-sm">
-            <p>
-              <strong>{selectedDays.length}</strong> días por semana × {' '}
-              <strong>{blocks.reduce((acc, b) => acc + calculateSlots(b.startTime, b.endTime, b.slotDuration), 0)}</strong> citas por día = {' '}
-              <strong className="text-purple-300">
-                {selectedDays.length * blocks.reduce((acc, b) => acc + calculateSlots(b.startTime, b.endTime, b.slotDuration), 0)}
-              </strong> citas semanales
-            </p>
-          </div>
         </div>
 
         {/* Botones de acción */}

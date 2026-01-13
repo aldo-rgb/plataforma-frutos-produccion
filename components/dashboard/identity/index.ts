@@ -10,3 +10,4 @@ export { default as BuddySystemWidget } from './widgets/BuddySystemWidget';
 export { default as TribeManagementWidget } from './widgets/TribeManagementWidget';
 export { default as PromiseWidget } from './widgets/PromiseWidget';
 export { default as JoinVisionWidget } from './widgets/JoinVisionWidget';
+export { default as GCCallWidget } from './widgets/GCCallWidget';

@@ -8,7 +8,7 @@ import {
   ArrowRight,
   Ticket,
   Crown,
-  Gift,
+  Banknote,
   CreditCard,
   Building2,
   QrCode,
@@ -46,7 +46,7 @@ interface RegistrationData {
 
 interface GiftCodeData {
   code: string;
-  type: 'GOLDEN' | 'GOLDEN_DISCOUNT' | 'PLATINUM';
+  type: 'GOLDEN' | 'GOLDEN_DISCOUNT' | 'PLATINUM' | 'CASH_PAYMENT';
   value: number;
   discountPercentage?: number;
   organizationName: string;
@@ -54,13 +54,15 @@ interface GiftCodeData {
   tickets: { level: string; name: string }[];
   ticketsIncluded?: string[];
   description?: string;
+  isCashPayment?: boolean;
+  reference?: string;
 }
 
 interface AppliedPayment {
   id: string;
-  type: 'GIFT_CODE' | 'CARD';
+  type: 'GIFT_CODE' | 'CARD' | 'CASH_PAYMENT';
   code?: string;
-  codeType?: 'GOLDEN' | 'GOLDEN_DISCOUNT' | 'PLATINUM';
+  codeType?: 'GOLDEN' | 'GOLDEN_DISCOUNT' | 'PLATINUM' | 'CASH_PAYMENT';
   amount: number;
   description: string;
   discountPercentage?: number;
@@ -219,12 +221,23 @@ function CheckoutContent() {
       description = '👑 Platinum Ticket - Visión Completa';
       // Auto-switch to FULL_VISION if PLATINUM
       setTicketSelection('FULL_VISION');
+    } else if (validatedCode.type === 'CASH_PAYMENT') {
+      // CASH_PAYMENT - applies the value directly as payment
+      const totalPrice = ticketSelection === 'FULL_VISION' ? prices.FULL_VISION : prices.BASIC;
+      const remaining = totalPrice - currentPaid;
+      codeValue = Math.min(validatedCode.value || 0, Math.max(0, remaining));
+      description = `💵 Pago en Efectivo - $${(validatedCode.value || 0).toLocaleString('es-MX')} MXN`;
     }
+
+    // Determinar el tipo de pago
+    const paymentType = validatedCode.type === 'CASH_PAYMENT' || validatedCode.isCashPayment 
+      ? 'CASH_PAYMENT' 
+      : 'GIFT_CODE';
 
     // Add to applied payments
     setAppliedPayments(prev => [...prev, {
       id: `code-${Date.now()}`,
-      type: 'GIFT_CODE',
+      type: paymentType,
       code: validatedCode.code,
       codeType: validatedCode.type,
       amount: codeValue,
@@ -257,6 +270,8 @@ function CheckoutContent() {
 
   const handlePayment = async () => {
     if (!registrationData) return;
+    
+    console.log('[CHECKOUT] registrationData:', registrationData);
     
     setProcessing(true);
     setError('');
@@ -291,9 +306,13 @@ function CheckoutContent() {
         throw new Error('No se pudo obtener el ID del usuario registrado');
       }
 
-      // Redeem all gift codes
-      for (const payment of giftCodes) {
+      // Redeem all gift codes and cash payment codes
+      const codesToRedeem = appliedPayments.filter(p => p.type === 'GIFT_CODE' || p.type === 'CASH_PAYMENT');
+      console.log('[CHECKOUT] Códigos a canjear:', codesToRedeem.map(p => ({ code: p.code, type: p.type })));
+      
+      for (const payment of codesToRedeem) {
         if (payment.code) {
+          console.log('[CHECKOUT] Canjeando código:', payment.code, 'tipo:', payment.type);
           const redeemRes = await fetch('/api/gift-codes/redeem', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -301,10 +320,12 @@ function CheckoutContent() {
               code: payment.code,
               userId: userId,
               visionId: registrationData.visionId,
+              isCashPayment: payment.type === 'CASH_PAYMENT',
             }),
           });
 
           const redeemData = await redeemRes.json();
+          console.log('[CHECKOUT] Respuesta redeem:', redeemData);
 
           if (!redeemData.success) {
             console.error(`Error redeeming code ${payment.code}:`, redeemData.error);
@@ -326,7 +347,7 @@ function CheckoutContent() {
       sessionStorage.removeItem('pendingRegistration');
 
       // Calculate total tickets created
-      const ticketsCreated = giftCodes.reduce((sum, p) => {
+      const ticketsCreated = codesToRedeem.reduce((sum, p) => {
         if (p.codeType === 'PLATINUM') return sum + 3;
         return sum + 1;
       }, 0);
@@ -650,8 +671,8 @@ function CheckoutContent() {
                     {appliedPayments.map((payment) => (
                       <div key={payment.id} className="flex items-center justify-between bg-slate-800/50 rounded-lg p-3">
                         <div className="flex items-center gap-3">
-                          {payment.type === 'GIFT_CODE' ? (
-                            <Gift className="text-yellow-400" size={18} />
+                          {payment.type === 'GIFT_CODE' || payment.type === 'CASH_PAYMENT' ? (
+                            <Banknote className="text-green-400" size={18} />
                           ) : (
                             <CreditCard className="text-cyan-400" size={18} />
                           )}
@@ -683,13 +704,13 @@ function CheckoutContent() {
                   onClick={() => setPaymentMethod('GIFT_CODE')}
                   className={`p-4 rounded-xl border-2 transition-all ${
                     paymentMethod === 'GIFT_CODE'
-                      ? 'border-yellow-500 bg-yellow-500/10'
+                      ? 'border-green-500 bg-green-500/10'
                       : 'border-slate-700 hover:border-slate-600 bg-slate-900/50'
                   }`}
                 >
-                  <Gift className={`mx-auto mb-2 ${paymentMethod === 'GIFT_CODE' ? 'text-yellow-400' : 'text-slate-400'}`} size={24} />
-                  <span className={`text-sm font-medium ${paymentMethod === 'GIFT_CODE' ? 'text-yellow-400' : 'text-slate-300'}`}>
-                    + Código
+                  <Banknote className={`mx-auto mb-2 ${paymentMethod === 'GIFT_CODE' ? 'text-green-400' : 'text-slate-400'}`} size={24} />
+                  <span className={`text-sm font-medium ${paymentMethod === 'GIFT_CODE' ? 'text-green-400' : 'text-slate-300'}`}>
+                    Pago en Efectivo
                   </span>
                 </button>
 
@@ -752,8 +773,8 @@ function CheckoutContent() {
               {paymentMethod === 'GIFT_CODE' && (
                 <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-6">
                   <h3 className="font-bold text-white mb-4 flex items-center gap-2">
-                    <Gift className="text-yellow-400" size={20} />
-                    Agregar Código de Regalo
+                    <Banknote className="text-green-400" size={20} />
+                    Agregar Código de Referencia
                   </h3>
                   
                   <div className="flex gap-3">
@@ -810,15 +831,19 @@ function CheckoutContent() {
                             <span className="text-yellow-400 font-bold">🎫 GOLDEN TICKET</span>
                           ) : validatedCode.type === 'GOLDEN_DISCOUNT' ? (
                             <span className="text-green-400 font-bold">🎫 GOLDEN TICKET {validatedCode.discountPercentage}% OFF</span>
+                          ) : validatedCode.type === 'CASH_PAYMENT' || validatedCode.isCashPayment ? (
+                            <span className="text-emerald-400 font-bold">💵 CÓDIGO DE REFERENCIA</span>
                           ) : (
                             <span className="text-purple-400 font-bold">👑 PLATINUM TICKET</span>
                           )}
                         </p>
                         <p className="text-slate-300">
                           <span className="text-slate-500">Incluye:</span>{' '}
-                          {validatedCode.ticketsIncluded?.map((t: string) => 
-                            t === 'BASIC' ? 'Básico' : t === 'ADVANCED' ? 'Avanzado' : 'Tu Vida'
-                          ).join(', ') || validatedCode.description}
+                          {validatedCode.type === 'CASH_PAYMENT' || validatedCode.isCashPayment 
+                            ? 'Pago en Efectivo'
+                            : validatedCode.ticketsIncluded?.map((t: string) => 
+                                t === 'BASIC' ? 'Básico' : t === 'ADVANCED' ? 'Avanzado' : 'Tu Vida'
+                              ).join(', ') || validatedCode.description}
                         </p>
                         <p className="text-slate-300">
                           <span className="text-slate-500">{validatedCode.type === 'GOLDEN_DISCOUNT' ? 'Descuento:' : 'Valor:'}</span>{' '}
@@ -915,8 +940,8 @@ function CheckoutContent() {
                       {appliedPayments.map((payment) => (
                         <div key={payment.id} className="flex justify-between items-center pb-4 border-b border-slate-700">
                           <div className="flex items-center gap-3">
-                            {payment.type === 'GIFT_CODE' ? (
-                              <Gift className="text-green-400" size={24} />
+                            {payment.type === 'GIFT_CODE' || payment.type === 'CASH_PAYMENT' ? (
+                              <Banknote className="text-green-400" size={24} />
                             ) : (
                               <CreditCard className="text-cyan-400" size={24} />
                             )}

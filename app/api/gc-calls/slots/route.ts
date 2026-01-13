@@ -2,10 +2,12 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { ensureDefaultAvailability } from '@/lib/gcDefaultAvailability';
 
 /**
  * GET /api/gc-calls/slots
  * Obtener slots disponibles de un GC para una fecha
+ * Si el GC no tiene disponibilidad, se crea la por defecto (Lun-Jue 6-8 AM)
  * Query: gameChangerId, date, squadId (opcional)
  */
 export async function GET(request: Request) {
@@ -27,13 +29,22 @@ export async function GET(request: Request) {
       }, { status: 400 });
     }
 
-    const targetDate = new Date(dateStr);
-    const dayOfWeek = targetDate.getDay(); // 0=Domingo
+    const gcId = parseInt(gameChangerId);
+
+    // Asegurar que el GC tenga disponibilidad por defecto
+    await ensureDefaultAvailability(gcId);
+
+    // Parsear la fecha correctamente para evitar problemas de timezone
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const targetDate = new Date(year, month - 1, day); // Mes es 0-indexed
+    const dayOfWeek = targetDate.getDay(); // 0=Domingo, 1=Lunes, etc.
+    
+    console.log(`📅 Slots request: date=${dateStr}, dayOfWeek=${dayOfWeek}, gcId=${gcId}`);
 
     // Buscar disponibilidad por día de la semana O fecha específica
     const availabilities = await prisma.gCAvailability.findMany({
       where: {
-        gameChangerId: parseInt(gameChangerId),
+        gameChangerId: gcId,
         isActive: true,
         ...(squadId && { squadId }),
         OR: [
@@ -52,7 +63,13 @@ export async function GET(request: Request) {
       },
     });
 
+    console.log(`📅 Found ${availabilities.length} availabilities for GC ${gcId}, dayOfWeek ${dayOfWeek}`);
+    if (availabilities.length > 0) {
+      console.log(`📅 Times:`, availabilities.map(a => `${a.startTime}-${a.endTime}`));
+    }
+
     if (availabilities.length === 0) {
+      console.log(`📅 No availabilities found for dayOfWeek=${dayOfWeek}`);
       return NextResponse.json({
         success: true,
         availableSlots: [],
@@ -150,13 +167,20 @@ export async function POST(request: Request) {
       }, { status: 404 });
     }
 
-    // Verificar que el slot no esté ya tomado
+    // Parsear la fecha correctamente para evitar problemas de timezone
+    const [year, month, day] = date.split('-').map(Number);
+    const scheduledDate = new Date(year, month - 1, day);
+
+    // Verificar que el slot no esté ya tomado para este GC en esta fecha/hora
+    // Verificamos por gameChangerId para cubrir el caso de múltiples disponibilidades
     const existingSlot = await prisma.gCCallSlot.findFirst({
       where: {
-        availabilityId,
-        scheduledDate: new Date(date),
+        scheduledDate,
         scheduledTime: time,
         status: { in: ['SCHEDULED', 'CONFIRMED'] },
+        availability: {
+          gameChangerId: availability.gameChangerId,
+        },
       },
     });
 
@@ -171,7 +195,7 @@ export async function POST(request: Request) {
     const existingBooking = await prisma.gCCallSlot.findFirst({
       where: {
         participantId: user.id,
-        scheduledDate: new Date(date),
+        scheduledDate,
         status: { in: ['SCHEDULED', 'CONFIRMED'] },
         availability: {
           gameChangerId: availability.gameChangerId,
@@ -199,7 +223,7 @@ export async function POST(request: Request) {
         availabilityId,
         participantId: user.id,
         squadId: squadId || availability.squadId,
-        scheduledDate: new Date(date),
+        scheduledDate,
         scheduledTime: time,
         endTime,
         status: 'SCHEDULED',

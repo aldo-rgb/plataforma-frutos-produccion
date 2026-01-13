@@ -246,16 +246,16 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">Panel Game Changer</p>
             
             <Link 
-              href="/dashboard/game-changer"
+              href="/dashboard/mis-atomos"
               onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
-                pathname === '/dashboard/game-changer' || pathname.startsWith('/dashboard/game-changer/participante')
+                pathname === '/dashboard/mis-atomos' || pathname.startsWith('/dashboard/mis-atomos')
                   ? 'bg-gradient-to-r from-cyan-600 to-purple-600 text-white'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
               <Users size={18} className="text-cyan-400" />
-              <span>Mis Participantes</span>
+              <span>Mis Átomos</span>
             </Link>
           </div>
         )}

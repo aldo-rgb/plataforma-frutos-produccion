@@ -16,6 +16,7 @@ import QuantumPointsWidget from "@/components/dashboard/QuantumPointsWidget";
 import RankingWidget from "@/components/dashboard/RankingWidget";
 import MisParticipantesWidget from "@/components/dashboard/MisParticipantesWidget";
 import PersonalQRWidget from "@/components/dashboard/PersonalQRWidget";
+import SquadManagerWidget from "@/components/dashboard/SquadManagerWidget";
 
 export default async function GameChangerDashboardPage() {
   // 1. Obtener sesión y datos frescos
@@ -277,6 +278,19 @@ export default async function GameChangerDashboardPage() {
         cartaStatus={carta?.estado as any}
       />
 
+      {/* ============================================ */}
+      {/* QR PERSONAL - WIDGET PARA INVITAR            */}
+      {/* ============================================ */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <PersonalQRWidget 
+          userName={usuario.nombre}
+          userId={usuario.id}
+          userEmail={usuario.email}
+          referralCode={usuario.referralCode || undefined}
+          organizationId={usuario.organizationId}
+        />
+      </div>
+
       {/* ZONA SUPERIOR: Hero Section */}
       {isAuthorized && (
         <GlobalProgressHero 
@@ -309,15 +323,9 @@ export default async function GameChangerDashboardPage() {
         )}
       </div>
 
-      {/* QR PERSONAL PARA INVITAR */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <PersonalQRWidget 
-          userName={usuario.nombre}
-          userId={usuario.id}
-          userEmail={usuario.email}
-          referralCode={usuario.referralCode || undefined}
-          organizationId={usuario.organizationId}
-        />
+      {/* SQUAD MANAGER */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <SquadManagerWidget />
       </div>
 
       {/* ZONA DE EJECUCIÓN DIARIA */}

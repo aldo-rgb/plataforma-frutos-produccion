@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-const ALLOWED_ROLES = ['SCHOOL_ADMIN', 'COORDINADOR', 'GAME_CHANGER', 'STAFF', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
+const ALLOWED_ROLES = ['SCHOOL_ADMIN', 'COORDINADOR', 'GAMECHANGER', 'STAFF', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
 
 /**
  * GET /api/squads/[id]
@@ -120,9 +120,11 @@ export async function GET(
  */
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+    
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
@@ -137,15 +139,16 @@ export async function PATCH(
       select: { id: true, rol: true },
     });
 
-    if (!user || !ALLOWED_ROLES.includes(user.rol)) {
+    // Permitir a cualquier usuario autenticado si es el líder del squad
+    if (!user) {
       return NextResponse.json(
-        { success: false, error: 'No tienes permisos' },
-        { status: 403 }
+        { success: false, error: 'Usuario no encontrado' },
+        { status: 404 }
       );
     }
 
     const squad = await prisma.smallGroup.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!squad) {
@@ -157,8 +160,18 @@ export async function PATCH(
 
     // Solo el líder o admins pueden editar
     const isLeader = squad.leaderId === user.id;
-    const isAdmin = ['SCHOOL_ADMIN', 'COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'].includes(user.rol);
+    const isAdmin = ['SCHOOL_ADMIN', 'COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'ADMINISTRADOR', 'SUPER_ADMIN'].includes(user.rol);
     
+    console.log('🔧 PATCH Squad - Permisos:', {
+      squadId: id,
+      squadLeaderId: squad.leaderId,
+      userId: user.id,
+      userRol: user.rol,
+      isLeader,
+      isAdmin,
+    });
+    
+    // El líder (Game Changer) siempre puede editar su propio squad
     if (!isLeader && !isAdmin) {
       return NextResponse.json(
         { success: false, error: 'No tienes permisos para editar este escuadrón' },
@@ -170,7 +183,7 @@ export async function PATCH(
     const { name, maxSize, isActive } = body;
 
     const updatedSquad = await prisma.smallGroup.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(name && { name }),
         ...(maxSize && { maxSize }),

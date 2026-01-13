@@ -1,0 +1,1225 @@
+================================================================================
+    PROMPT DE CONTINUACIÓN - PLATAFORMA QUANTUM MATTER (FRUTOS)
+    Fecha de generación: 12 de enero de 2026
+    Versión: Producción Activa v2.0 (ACTUALIZADO)
+================================================================================
+
+INSTRUCCIONES: Copia y pega TODO este documento al inicio de tu nueva 
+conversación con la IA para continuar el desarrollo.
+
+================================================================================
+🎯 CONTEXTO DE TRABAJO
+================================================================================
+
+Soy el desarrollador principal de **Plataforma Quantum Matter** (anteriormente 
+"Plataforma Frutos"). Estamos en una sesión de desarrollo continuo. 
+
+FORMA DE RESPONDER:
+1. Directo y técnico - sin rodeos innecesarios
+2. Código en formato "Buscar y Reemplazar Exacto":
+   - Bloque exacto a BUSCAR (con 3-5 líneas de contexto antes/después)
+   - Bloque exacto a REEMPLAZAR
+   - Para código NUEVO: indicar línea de arriba y línea de abajo donde pegar
+3. Emojis ocasionales: ✅🔥💰🚀 pero profesional
+4. Siempre verificar errores después de cambios
+5. Nunca asumir - siempre leer archivos primero si no tienes contexto
+
+================================================================================
+🏗️ ARQUITECTURA TÉCNICA COMPLETA
+================================================================================
+
+STACK TECNOLÓGICO:
+--------------------------------------------------------------------------------
+- Framework: Next.js 16.1.1 (App Router, Turbopack)
+- Base de Datos: PostgreSQL via Supabase
+- ORM: Prisma 5.22.0
+- Auth: NextAuth.js 4.24.13
+- UI: Tailwind CSS 3.4.17 + Radix UI
+- i18n: next-intl 4.7.0 (ES/EN)
+- Pagos: Stripe 20.1.2 + MercadoPago 2.11.0 + PayPal (PAUSADO)
+- AI: OpenAI 6.10.0 + AI SDK 5.0.110
+- Avatares: Replicate API 1.4.0
+- Charts: Recharts 3.6.0 + Chart.js 4.5.1
+- Realtime: Socket.io 4.8.1 + Redis 5.10.0
+- Animaciones: Framer Motion 12.24.12
+- QR/Barcode: html5-qrcode, react-qr-code, react-barcode
+- Webcam: react-webcam 7.2.0
+- Deploy: Vercel
+- Dominio: https://quantummatter.app
+
+ESTRUCTURA DE CARPETAS:
+--------------------------------------------------------------------------------
+/Users/aldokmps/plataforma-frutos-FINAL/
+├── app/
+│   ├── api/                    # APIs del backend (80+ carpetas)
+│   │   ├── access-codes/      # Códigos de acceso
+│   │   ├── admin/             # Super admin
+│   │   ├── arena/             # Sistema duelos
+│   │   ├── avatar/            # Generación avatares
+│   │   ├── calls/             # Sistema llamadas mentor
+│   │   ├── carta/             # Carta Frutos
+│   │   ├── collections/       # Sistema colecciones
+│   │   ├── coordinator/       # APIs coordinadores
+│   │   ├── el-cruce/          # Pre-registro avanzado
+│   │   ├── gc-calls/          # Llamadas Game Changers
+│   │   ├── gift-codes/        # Códigos de regalo
+│   │   ├── medical-form/      # Formulario médico
+│   │   ├── mentor/            # APIs mentores
+│   │   ├── quantum-ia/        # IA Quantum
+│   │   ├── school-admin/      # APIs school admin
+│   │   ├── social/            # Sistema social
+│   │   ├── squads/            # Quantum Squads
+│   │   ├── staff/             # Check-in staff
+│   │   ├── tickets/           # Sistema tickets
+│   │   └── treasury/          # Quantum Treasury
+│   ├── dashboard/
+│   │   ├── admin/             # Panel super admin
+│   │   ├── carta/             # Wizard carta frutos
+│   │   ├── coordinador/       # Panel coordinador
+│   │   ├── director/          # Panel director
+│   │   ├── gamechanger/       # Panel Game Changer
+│   │   ├── lider/             # Panel líder
+│   │   ├── mentor/            # Panel mentor
+│   │   ├── participante/      # Panel participante
+│   │   ├── school-admin/      # Panel school admin
+│   │   └── staff/             # Panel staff
+│   ├── checkout/              # Flujo de pago
+│   ├── el-cruce/              # Landing El Cruce
+│   ├── formulario-medico/     # Formulario médico público
+│   ├── mentores/              # Marketplace mentores
+│   ├── registro/              # Registro usuarios
+│   └── staff/                 # Estación check-in
+├── components/
+│   ├── admin/                 # Componentes admin
+│   ├── arena/                 # Componentes duelos
+│   ├── carta/                 # Componentes carta (AreaCard, MetaCard)
+│   ├── check-in/              # Componentes check-in (QRScanner, BadgePreview, etc.)
+│   ├── el-cruce/              # Componentes El Cruce
+│   ├── gc-calls/              # Componentes GC Calls
+│   ├── lobo-solitario/        # Sistema lobo solitario
+│   ├── mentor/                # Componentes mentor
+│   ├── mentorias/             # Componentes mentorías
+│   ├── phoenix/               # Protocolo Fénix
+│   ├── quantum/               # UI base quantum (7 componentes)
+│   ├── social/                # Componentes sociales
+│   ├── ui/                    # Componentes base UI
+│   └── vault/                 # Sistema vault
+├── lib/
+│   ├── auth.ts                # Config NextAuth
+│   ├── prisma.ts              # Cliente Prisma
+│   ├── socket.ts              # Config Socket.io
+│   ├── arena-*.ts             # Sistema Arena (matchmaker, narrator, referee)
+│   ├── commission-engine.ts   # Motor de comisiones
+│   ├── dynamicPricing.ts      # Precios dinámicos
+│   ├── levelUpSystem.ts       # Sistema de niveles
+│   ├── qpc-engine.ts          # Motor Quantum Points
+│   ├── quantum-bio-writer.ts  # Generador bios AI
+│   ├── quantum-engine.ts      # Motor quantum
+│   ├── rewardEngine.ts        # Motor recompensas
+│   ├── taskGenerator.ts       # Generador de tareas
+│   └── validaciones-carta.ts  # Validaciones carta
+├── messages/
+│   ├── es.json                # Traducciones español
+│   └── en.json                # Traducciones inglés
+├── i18n.ts                    # Config next-intl
+└── prisma/
+    └── schema.prisma          # Schema DB (4002 líneas)
+
+================================================================================
+📊 BASE DE DATOS - MODELOS PRINCIPALES
+================================================================================
+
+ROLES DE USUARIO (enum Rol):
+--------------------------------------------------------------------------------
+enum Rol {
+  LIDER
+  PARTICIPANTE
+  MENTOR
+  COORDINADOR
+  COORDINATOR_BASIC
+  COORDINATOR_ADVANCED
+  TRAINER
+  ADMINISTRADOR
+  GAMECHANGER
+  SCHOOL_ADMIN
+  SUPER_ADMIN
+}
+
+NIVELES DE VISIÓN (enum VisionLevel):
+--------------------------------------------------------------------------------
+enum VisionLevel {
+  BASIC      // Entrenamiento Básico (12 sesiones)
+  ADVANCED   // Entrenamiento Avanzado (12 sesiones)
+  PL         // Programa Liderato (3 fines de semana)
+}
+
+MODELOS CLAVE:
+--------------------------------------------------------------------------------
+
+1. Usuario - Usuarios del sistema (120+ campos)
+   - id: Int (PK)
+   - nombre: String
+   - email: String @unique
+   - password: String?
+   - imagen: String?
+   - rol: Rol @default(PARTICIPANTE)
+   - organizationId: Int?
+   - puntosCuanticos: Int @default(0)
+   - experienciaXP: Int @default(0)
+   - nivelActual: Int @default(1)
+   - rangoActual: String @default("NOVATO_RASTREADOR")
+   - tier: UserTier @default(FREE)
+   - referralCode: String? @unique
+   - invitedBy: Int?
+   - invitedCount: Int @default(0)
+   - currentVisionLevel: VisionLevel?
+   - telefono: String?
+   - apodo: String?
+   - horarioLlamada: String?
+   - profession: String?
+   - birthdate: DateTime?
+   - wizardCompleted: Boolean @default(false)
+   - requirePasswordChange: Boolean @default(false)
+   // Magic Links
+   - magicLinkToken: String? @unique
+   - magicLinkExpiry: DateTime?
+   - temporaryPassword: String?
+   - onboardingOrigin: String? @default("ORGANIC_SIGNUP")
+   // Cambio de Organización
+   - pendingOrganizationChange: Boolean @default(false)
+   - newOrganizationId: Int?
+   - newVisionId: Int?
+   - changeRequestedAt: DateTime?
+   - changeRequestedBy: Int?
+   // Graduación
+   - graduatedFromBasic: DateTime?
+   - graduatedFromAdvanced: DateTime?
+   - studentStatus: StudentStatus?
+   // Mentor
+   - mentorId: Int?
+   - assignedMentorId: Int?
+   - mentorMarketplaceApproved: Boolean
+   - visibleInMentorshipMarketplace: Boolean
+   // Streaks y Gamificación
+   - completionStreak: Int @default(0)
+   - lastCompletionDate: DateTime?
+   - collectionsCompleted: String[]
+   - badges: String[]
+   // Llamadas
+   - missedCallsCount: Int @default(0)
+   - accumulatedMissedCalls: Int @default(0)
+   - lastStrikeDate: DateTime?
+   // Avatar
+   - lastAvatarChangeDate: DateTime?
+   // Social
+   - socialVisibility: SocialVisibility @default(COMMUNITY)
+   - timezone: String @default("America/Mexico_City")
+
+2. Organization - Escuelas/Instituciones
+   - id: Int (PK)
+   - name: String
+   - slug: String @unique
+   - logoUrl: String?
+   - brandColor: String @default("#6366F1")
+   - contactEmail: String
+   - status: OrganizationStatus @default(ACTIVE)
+   - schoolAdminId: Int @unique
+   - totalLicenses: Int @default(0)
+   - activeLicenses: Int @default(0)
+   - licensesAvailable: Int @default(0)
+   - totalStudents: Int @default(0)
+   - premiumLicensePrice: Float @default(1250)
+   - standardLicensePrice: Float @default(600)
+   - renewalOfferDiscount: Float @default(50)
+   - renewalOfferEnabled: Boolean @default(true)
+   - visionCycleDuration: Int @default(6)
+   // Geofencing
+   - isGeofenced: Boolean @default(false)
+   - campusLatitude: Float?
+   - campusLongitude: Float?
+   - geofenceRadius: Int @default(100)
+   - address: String?
+   // Jerarquía
+   - masterOrganizationId: Int?
+
+3. Vision - Grupos de entrenamiento
+   - id: Int (PK)
+   - nombre: String
+   - descripcion: String?
+   - coordinadorId: Int
+   - organizationId: Int?
+   - isActive: Boolean @default(true)
+   - maxParticipantes: Int?
+   - licensesAllocated: Int @default(0)
+   - enabledLevels: VisionLevel[] @default([PL])
+   // Fechas Básico
+   - startDate: DateTime?
+   - endDate: DateTime?
+   // Fechas Avanzado
+   - advancedStartDate: DateTime?
+   - advancedEndDate: DateTime?
+   // Fechas PL (3 fines de semana)
+   - plWeekend1StartDate/EndDate: DateTime?
+   - plWeekend2StartDate/EndDate: DateTime?
+   - plWeekend3StartDate/EndDate: DateTime?
+   // Áreas Obligatorias
+   - forceFinanzasArea: Boolean @default(true)
+   - forceRelacionesArea: Boolean @default(true)
+   - forceTalentosArea: Boolean @default(true)
+   - forceSaludArea: Boolean @default(true)
+   - forcePazMentalArea: Boolean @default(true)
+   - forceOcioArea: Boolean @default(true)
+   - forceTransformationArea: Boolean @default(true)
+   - forceCommunityServiceArea: Boolean @default(true)
+   - transformationGuestsTarget: Int? @default(4)
+   // Finanzas
+   - platformFeePercent: Float @default(0)
+   - financialConfigId: String?
+
+4. vision_enrollments - Inscripciones a visiones
+   - id: Int (PK)
+   - userId: Int
+   - visionId: Int
+   - coordinatorId: Int
+   - level: VisionLevel
+   - enrollmentStatus: String @default("ENROLLED")
+   - attendanceStatus: String?
+   - paymentStatus: String?
+   - invitedBy: Int?
+   - enrolledAt: DateTime @default(now())
+   - completedAt: DateTime?
+   - graduatedAt: DateTime?
+   - droppedAt: DateTime?
+   @@unique([userId, visionId, level])
+
+5. SchoolProduct - Productos/Entrenamientos
+   - id: Int (PK)
+   - organizationId: Int
+   - visionId: Int?
+   - name: String
+   - description: String?
+   - imageUrl: String?
+   - type: ProductType
+   - levelType: ProductLevelType @default(NONE)
+   - basePrice: Float
+   - promoPrice: Float?
+   - promoDeadline: DateTime?
+   - startDate: DateTime?
+   - endDate: DateTime?
+   // Fechas PL
+   - plWeekend1StartDate/EndDate: DateTime?
+   - plWeekend2StartDate/EndDate: DateTime?
+   - plWeekend3StartDate/EndDate: DateTime?
+   - maxCapacity: Int?
+   - currentEnrollment: Int @default(0)
+   - isActive: Boolean @default(true)
+   - location: String?
+   - videoUrl: String?
+   - coordinatorId: Int?
+   - trainerId: Int?
+   - transferDeadline: DateTime?
+   - createdBy: Int
+
+6. Ticket - Sistema de Tickets Quantum
+   - id: String @id @default(uuid())
+   - ownerId: Int
+   - organizationId: Int
+   - visionId: Int
+   - level: VisionLevel
+   - type: TicketType @default(STANDARD)
+   - status: TicketStatus @default(PENDING_PAYMENT)
+   - isTransferable: Boolean @default(true)
+   - validUntil: DateTime?
+   - paymentStatus: TicketPaymentStatus @default(UNPAID)
+   - costAtPurchase: Decimal?
+   - amountPaid: Decimal @default(0)
+   - purchasePrice: Decimal? (deprecated → usar costAtPurchase)
+   - giftCodeId: Int?
+   - transferredAt: DateTime?
+   - transferredTo: Int?
+
+7. GiftCode - Códigos de Regalo
+   - id: Int (PK)
+   - code: String @unique
+   - type: GiftCodeType
+   - organizationId: Int
+   - visionId: Int?
+   - status: GiftCodeStatus @default(ACTIVE)
+   - value: Decimal?
+   - discountPercentage: Int?
+   - createdBy: Int
+   - usedBy: Int?
+   - usedAt: DateTime?
+   - expiresAt: DateTime?
+   - notes: String?
+
+   Tipos de GiftCode:
+   - GOLDEN: 1 entrada a básico (gratis)
+   - GOLDEN_DISCOUNT: 1 entrada con descuento personalizado
+   - PLATINUM: 1 entrada a cada nivel (3 tickets)
+
+8. TicketPriceConfig - Configuración de precios por nivel
+   - id: Int (PK)
+   - organizationId: Int
+   - level: VisionLevel
+   - regularPrice: Decimal
+   - promoPrice: Decimal?
+   - promoValidUntil: DateTime?
+   - comboAdvPL: Decimal?
+   - partialPayment: Decimal?
+
+9. SmallGroup - Quantum Squads (mini-grupos)
+   - id: String @id @default(uuid())
+   - name: String?
+   - visionId: Int
+   - leaderId: Int
+   - organizationId: Int
+   - productId: Int?
+   - level: VisionLevel @default(BASIC)
+   - maxSize: Int @default(10)
+   - isActive: Boolean @default(true)
+   - closedAt: DateTime?
+   @@unique([visionId, leaderId, level])
+
+10. SmallGroupMember - Miembros de squads
+    - id: String @id @default(uuid())
+    - groupId: String
+    - userId: Int
+    - enrollmentId: Int?
+    - joinedAt: DateTime @default(now())
+    - removedAt: DateTime?
+    - removedReason: String?
+    - isActive: Boolean @default(true)
+    - previousGroupId: String?
+    - movedAt: DateTime?
+    - movedBy: Int?
+    @@unique([groupId, userId])
+
+11. GCAvailability - Disponibilidad Game Changer (5am-10am)
+    - id: String @id @default(uuid())
+    - gameChangerId: Int
+    - squadId: String?
+    - dayOfWeek: Int
+    - specificDate: DateTime?
+    - startTime: String
+    - endTime: String
+    - slotDuration: Int @default(10)
+    - isActive: Boolean @default(true)
+
+12. GCCallSlot - Slots de llamada agendados
+    - id: String @id @default(uuid())
+    - availabilityId: String
+    - participantId: Int
+    - squadId: String?
+    - scheduledDate: DateTime
+    - scheduledTime: String
+    - endTime: String
+    - status: CallSlotStatus @default(SCHEDULED)
+    - bookedAt: DateTime @default(now())
+    - confirmedAt: DateTime?
+    - cancelledAt: DateTime?
+    - cancelledBy: Int?
+    - cancelReason: String?
+    @@unique([availabilityId, scheduledDate, scheduledTime])
+
+13. GCCallLog - Log de llamadas realizadas
+    - id: String @id @default(uuid())
+    - slotId: String @unique
+    - gameChangerId: Int
+    - participantId: Int
+    - squadId: String?
+    - trainingType: TrainingType
+    - trainingDay: Int
+    - visionId: Int
+    - callStatus: CallStatus
+    - callStartedAt: DateTime?
+    - callEndedAt: DateTime?
+    - duration: Int?
+    - potentialRating: Int?
+    - commitment: CommitmentLevel?
+    - notes: String?
+    - isAtRisk: Boolean @default(false)
+    - riskReason: String?
+    - requiresIntervention: Boolean @default(false)
+    - followUpNeeded: Boolean @default(false)
+    - followUpNote: String?
+
+14. TrainerIntervention - Intervenciones del trainer
+    - id: String @id @default(uuid())
+    - callLogId: String
+    - trainerId: Int
+    - type: InterventionType
+    - notes: String?
+    - actionTaken: String?
+    - outcome: String?
+    - resolvedAt: DateTime?
+
+15. MedicalForm - Formulario Médico
+    - id: Int (PK)
+    - userId: Int @unique
+    - visionId: Int?
+    // Condiciones Médicas (10 campos Boolean + Details)
+    - hasCurrentIllness/Details
+    - hasCurrentTreatment/Details
+    - takesMedication/Details
+    - hasAllergies/Details
+    - hadSurgery/Details
+    - wasHospitalized/Details
+    - hasChronicIllness/Details
+    - hasPhysicalInjury/Details
+    - hasActivityRestrictions/Details
+    - hasPsychologicalCondition/Details
+    // Contacto Emergencia
+    - emergencyContactName: String
+    - emergencyContactRelation: String
+    - emergencyContactPhone: String
+    // Consentimiento
+    - consentAccepted: Boolean @default(false)
+    - signatureData: String?
+    - signedAt: DateTime?
+    // Alertas
+    - hasAlerts: Boolean @default(false)
+    - alertsReviewedAt: DateTime?
+    - alertsReviewedBy: Int?
+
+16. MedicalFormAcknowledgment - Coordinadores enterados
+    - id: Int (PK)
+    - medicalFormId: Int
+    - coordinatorId: Int
+    - productId: Int?
+    - acknowledgedAt: DateTime @default(now())
+    @@unique([medicalFormId, coordinatorId, productId])
+
+17. CheckInRecord - Registros de check-in
+    - id: Int (PK)
+    - userId: Int
+    - organizationId: Int
+    - productId: Int
+    - visionId: Int
+    - enrollmentId: Int?
+    - checkInTime: DateTime @default(now())
+    - checkInMethod: CheckInMethod @default(QR_STATION)
+    - checkedInBy: Int?
+    // Validaciones
+    - ticketValidated: Boolean @default(false)
+    - medicalFormValidated: Boolean @default(false)
+    - photoValidated: Boolean @default(false)
+    // Gafete
+    - badgePrinted: Boolean @default(false)
+    - badgePrintedAt: DateTime?
+    - badgeNumber: String?
+    // Licencia
+    - licenseConsumed: Boolean @default(false)
+    - userLicenseId: Int?
+    // Metadata
+    - deviceInfo: String?
+    - ipAddress: String?
+    - notes: String?
+
+18. PaymentCode - Códigos de pago en efectivo (Treasury)
+    - id: String @id @default(uuid())
+    - code: String @unique
+    - amount: Decimal
+    - reference: String?
+    - status: PaymentCodeStatus @default(ACTIVE)
+    - organizationId: Int
+    - visionId: Int?
+    - createdById: Int
+    - redeemedById: Int?
+    - batchId: String?
+    - redeemedAt: DateTime?
+    - cancelledAt: DateTime?
+
+19. Expense - Gastos operativos
+    - id: String @id @default(uuid())
+    - concept: String
+    - amount: Decimal
+    - category: ExpenseCategory
+    - receiptUrl: String?
+    - notes: String?
+    - deductedFromCash: Boolean @default(true)
+    - status: ExpenseStatus @default(PENDING)
+    - organizationId: Int
+    - visionId: Int?
+    - userId: Int
+    - approvedById: Int?
+    - batchId: String?
+    - approvedAt: DateTime?
+    - rejectedAt: DateTime?
+    - rejectionReason: String?
+
+20. CashBatch - Cortes de caja
+    - id: String @id @default(uuid())
+    - batchNumber: String @unique
+    - totalCollected: Decimal
+    - totalExpenses: Decimal
+    - netAmount: Decimal
+    - status: CashBatchStatus @default(PENDING_DELIVERY)
+    - deliveryMethod: DeliveryMethod?
+    - depositProofUrl: String?
+    - bankReference: String?
+    - organizationId: Int
+    - visionId: Int?
+    - coordinatorId: Int
+    - receivedById: Int?
+    - closedAt: DateTime?
+    - confirmedAt: DateTime?
+
+21. AdvancedPreRegistration - Pre-registro El Cruce
+    - id: String @id @default(cuid())
+    - userId: Int
+    - currentProductId: Int
+    - targetProductId: Int
+    - enrollmentId: Int?
+    - scannedByStaffId: Int
+    - scannedAt: DateTime @default(now())
+    - scanMethod: ScanMethod @default(QR)
+    - status: PreRegistrationStatus @default(PENDING)
+    - promoPrice: Float
+    - regularPrice: Float
+    - promoDeadline: DateTime
+    - paidAt: DateTime?
+    - paymentAmount: Float?
+    - paymentMethod: String?
+    - transactionId: String?
+    @@unique([userId, targetProductId])
+
+22. CrossingSession - Sesiones El Cruce en vivo
+    - id: String @id @default(cuid())
+    - productId: Int
+    - targetLevel: ProductLevelType
+    - targetProductId: Int?
+    - status: CrossingSessionStatus @default(WAITING)
+    - startedAt: DateTime?
+    - endedAt: DateTime?
+    - totalParticipants: Int @default(0)
+    - crossedCount: Int @default(0)
+    - soundEnabled: Boolean @default(true)
+    - visualTheme: String @default("quantum_fire")
+    - createdBy: Int
+
+23. CartaFrutos - Carta de compromiso
+    - id: Int (PK)
+    - usuarioId: Int
+    - estado: EstadoCarta @default(BORRADOR)
+    - autorizadoMentor: Boolean @default(false)
+    - autorizadoCoord: Boolean @default(false)
+    - autorizadoPorId: Int?
+    - feedbackMentor: String?
+    - approvedAt: DateTime?
+    // 8 Áreas de Vida (cada una con meta, avance, declaración, status, feedback)
+    - finanzasMeta/Avance/Declaracion/DeclaracionStatus/DeclaracionFeedback
+    - relacionesMeta/Avance/Declaracion/DeclaracionStatus/DeclaracionFeedback
+    - talentosMeta/Avance/Declaracion/DeclaracionStatus/DeclaracionFeedback
+    - saludMeta/Avance/Declaracion/DeclaracionStatus/DeclaracionFeedback
+    - pazMentalMeta/Avance/Declaracion/DeclaracionStatus/DeclaracionFeedback
+    - ocioMeta/Avance/Declaracion/DeclaracionStatus/DeclaracionFeedback
+    - servicioTransMeta/Avance/Declaracion/DeclaracionStatus/DeclaracionFeedback
+    - servicioComunMeta/Avance/Declaracion/DeclaracionStatus/DeclaracionFeedback
+    // Área de Enrolamiento
+    - enrolamientoMeta: String? @default("Invitar a 4 personas")
+    - enrolamientoAvance: Int @default(0)
+    - invitadosInscritos: Int @default(0)
+
+24. Meta - Metas por área
+    - id: Int (PK)
+    - cartaId: Int
+    - categoria: String
+    - orden: Int @default(1)
+    - declaracionPoder: String?
+    - metaPrincipal: String
+    - avance: Int @default(0)
+    - status: EstadoItem @default(PENDING)
+    - mentorFeedback: String?
+
+25. Accion - Acciones/tareas para cada meta
+    - id: Int (PK)
+    - metaId: Int
+    - texto: String
+    - diasProgramados: String?
+    - frequency: String?
+    - assignedDays: Int[]
+    - specificDate: DateTime?
+    - rarity: TaskRarity @default(COMMON)
+    - completada: Boolean @default(false)
+    - enRevision: Boolean @default(false)
+    - requiereEvidencia: Boolean @default(true)
+    - lastCompletedDate: DateTime?
+
+26. TaskInstance - Instancias diarias de tareas
+    - id: Int (PK)
+    - accionId: Int
+    - usuarioId: Int
+    - dueDate: DateTime
+    - originalDueDate: DateTime?
+    - status: TaskStatus @default(PENDING)
+    - postponeCount: Int @default(0)
+    - completedAt: DateTime?
+    - evidenceUrl: String?
+    - evidenceStatus: EvidenceStatus @default(NONE)
+    - evidenciaId: Int?
+    // Gamificación
+    - dayOfWeek: Int?
+    - timeSlot: TimeSlot?
+    - streakContext: Int?
+    - completionSpeed: Int?
+    - moodTag: String?
+    - energyLevel: Int?
+
+27. PerfilMentor - Perfil de mentores (50+ campos)
+    - id: Int (PK)
+    - usuarioId: Int @unique
+    - nivel: NivelMentor @default(JUNIOR)
+    - especialidad: String
+    - especialidadesSecundarias: String[]
+    - biografia: String?
+    - biografiaCorta: String?
+    - biografiaCompleta: String?
+    - experienciaAnios: Int @default(0)
+    - titulo: String?
+    - tagline: String?
+    - promiseStatement: String?
+    - idealClientDescription: String?
+    - heroJourneyBio: String?
+    - expertiseTags: String[]
+    - logros: String[]
+    - methodologyStyle: MentorStyle?
+    - videoIntroUrl: String?
+    // Precios
+    - precioBase: Float @default(1000)
+    - precioDisciplina: Float @default(90)
+    // Ratings
+    - calificacionPromedio: Float @default(0)
+    - totalResenas: Int @default(0)
+    - totalSesiones: Int @default(0)
+    - completedSessionsCount: Int @default(0)
+    - ratingSum: Decimal @default(0)
+    - ratingCount: Int @default(0)
+    // Disponibilidad
+    - disponible: Boolean @default(true)
+    - acceptingNewClients: Boolean @default(true)
+    - maxDisciplineClients: Int? @default(10)
+    - horarioInicio: String? @default("09:00")
+    - horarioFin: String? @default("18:00")
+    - diasDisponibles: Int[] @default([1,2,3,4,5])
+    // Comisiones
+    - comisionMentor: Int @default(85)
+    - comisionPlataforma: Int @default(15)
+    // Métricas
+    - mentoradosActivos: Int @default(0)
+    - mentoradosTotales: Int @default(0)
+    - evidenciasHighQuality: Int @default(0)
+    - porcentajeHighQuality: Float @default(0)
+    - promedioXPPorMentorado: Float @default(0)
+    - puntosTotales: Int @default(0)
+    - xpTotalMentorados: Int @default(0)
+    - lastMetricsUpdate: DateTime?
+    // AI
+    - aiGeneratedBio: Boolean @default(false)
+    - lastAiInterviewAt: DateTime?
+    // Membresía
+    - membershipActive: Boolean @default(false)
+    - membershipStartDate: DateTime?
+    - membershipExpiryDate: DateTime?
+    - membershipApprovedAt: DateTime?
+    - membershipApprovedBy: Int?
+    - autoRenewalEnabled: Boolean @default(true)
+    - lastRenewalAttempt: DateTime?
+    - renewalFailureReason: String?
+    // Stripe
+    - stripeCustomerId: String?
+    - stripeSubscriptionId: String?
+    // Aprobación
+    - profileApprovalStatus: ProfileApprovalStatus @default(DRAFT)
+    - profileSubmittedAt: DateTime?
+    - destacado: Boolean @default(false)
+    // Video Llamada
+    - enlaceVideoLlamada: String?
+    - tipoVideoLlamada: String? @default("zoom")
+
+ENUMS IMPORTANTES:
+--------------------------------------------------------------------------------
+enum ProductLevelType {
+  BASIC, ADVANCED, PL, COMBO_FULL, COMBO_ADV_PL, NONE
+}
+
+enum TicketType {
+  STANDARD, PROMO_50, SCHOLARSHIP, COMBO_PARTIAL
+}
+
+enum TicketStatus {
+  ACTIVE, PENDING_PAYMENT, TRANSFERRED, EXPIRED, CANCELLED
+}
+
+enum TicketPaymentStatus {
+  PAID, PARTIAL, GIFT, PENDING, UNPAID
+}
+
+enum GiftCodeType {
+  GOLDEN, GOLDEN_DISCOUNT, PLATINUM
+}
+
+enum CallSlotStatus {
+  SCHEDULED, CONFIRMED, COMPLETED, NO_SHOW, CANCELLED, RESCHEDULED
+}
+
+enum CallStatus {
+  ANSWERED, NO_ANSWER, WRONG_NUMBER, BUSY, RESCHEDULED
+}
+
+enum CommitmentLevel {
+  VERY_LOW, LOW, MEDIUM, HIGH, VERY_HIGH
+}
+
+enum PaymentGateway {
+  STRIPE, MERCADOPAGO, PAYPAL, GIFT_CODE, CASH_MANUAL
+}
+
+enum CheckInMethod {
+  QR_STATION, MANUAL_SEARCH, BADGE_SCAN, TABLET_SCAN
+}
+
+enum ExpenseCategory {
+  LOGISTICS, FOOD, VENUE, TRANSPORT, MARKETING, SUPPLIES, EQUIPMENT, OTHER
+}
+
+enum ExpenseStatus {
+  PENDING, APPROVED, REJECTED, REIMBURSED
+}
+
+enum CashBatchStatus {
+  PENDING_DELIVERY, DELIVERED, CONFIRMED, DISPUTED
+}
+
+enum DeliveryMethod {
+  CASH_HANDOFF, BANK_DEPOSIT, BANK_TRANSFER, PENDING
+}
+
+enum PaymentCodeStatus {
+  ACTIVE, REDEEMED, CANCELLED, EXPIRED
+}
+
+enum ScanMethod {
+  QR, NFC, MANUAL
+}
+
+enum PreRegistrationStatus {
+  PENDING, PAID, EXPIRED, CANCELLED
+}
+
+enum CrossingSessionStatus {
+  WAITING, ACTIVE, PAUSED, COMPLETED
+}
+
+enum InterventionType {
+  PHONE_CALL, WHATSAPP, VIDEO_CALL, IN_PERSON, EMAIL, REASSIGNMENT, ESCALATION
+}
+
+enum TaskRarity {
+  COMMON, RARE, EPIC, LEGENDARY
+}
+
+enum UserTier {
+  FREE, STANDARD, PREMIUM
+}
+
+enum MentorStyle {
+  HARDCORE, EMPATHIC, BALANCED
+}
+
+enum NivelMentor {
+  JUNIOR, SENIOR, MASTER
+}
+
+================================================================================
+✅ FUNCIONALIDADES COMPLETADAS (95%+)
+================================================================================
+
+1. Sistema de Visiones Multi-Nivel
+   ✅ Creación de visiones con 3 niveles (BASIC, ADVANCED, PL)
+   ✅ Fechas independientes por nivel
+   ✅ Auto-creación de productos al crear visión
+   ✅ Staff por nivel (coordinador + trainer por nivel)
+
+2. Sistema de Carta Frutos
+   ✅ Wizard de 8 áreas de vida + área de enrolamiento
+   ✅ Declaraciones de poder por área
+   ✅ Metas y acciones con frecuencia y rareza
+   ✅ Sistema de aprobación por mentor con feedback
+   ✅ Instancias de tareas diarias con postergación
+   ✅ Evidencias con aprobación y quality score
+
+3. Sistema de Mentorías
+   ✅ Marketplace de mentores con filtros
+   ✅ Perfil mentor con AI interview y bio generator
+   ✅ Sistema de llamadas discipline (5am-8am)
+   ✅ Validación de evidencias con feedback
+   ✅ Comisiones y payroll con CommissionLedger
+   ✅ Membresía anual de mentores con auto-renewal
+   ✅ Ratings y reviews con promedios
+
+4. Sistema de Tickets Quantum
+   ✅ Tickets por nivel (BASIC, ADVANCED, PL)
+   ✅ Pagos parciales con tracking
+   ✅ Códigos de regalo (GOLDEN, GOLDEN_DISCOUNT, PLATINUM)
+   ✅ Transferencias de tickets (con deadline)
+   ✅ Precios dinámicos con countdown
+   ✅ TicketPriceConfig por organización
+
+5. Quantum Squads
+   ✅ Mini-grupos con Game Changers (máx 10)
+   ✅ Asignación automática/manual
+   ✅ Reasignación de miembros con tracking
+   ✅ Historial de movimientos
+
+6. Sistema de Llamadas GC (5am-10am)
+   ✅ Disponibilidad por bloques de tiempo
+   ✅ Slots de 10 minutos configurables
+   ✅ Formulario de evaluación (potencial 1-5)
+   ✅ Sistema de riesgo (isAtRisk, riskReason)
+   ✅ Intervenciones de trainer con tipos
+   ✅ Tracking de follow-up
+
+7. Quantum Treasury
+   ✅ Códigos de pago en efectivo (Q-XXXX-MONTO)
+   ✅ Control de gastos con 8 categorías
+   ✅ Cortes de caja con métodos de entrega
+   ✅ Dashboard de finanzas coordinador
+   ✅ Comprobantes de depósito
+
+8. Check-In Station
+   ✅ Escaneo QR/NFC/búsqueda manual
+   ✅ Validación de tickets
+   ✅ Verificación formulario médico
+   ✅ Generación de gafetes (badgeNumber)
+   ✅ Consumo de licencias
+   ✅ Tracking por dispositivo
+
+9. El Cruce (Pre-registro Avanzado)
+   ✅ Sesión de escaneo en tiempo real
+   ✅ Dashboard con contadores live
+   ✅ Registro de pre-inscripciones
+   ✅ Precios promocionales con snapshot
+   ✅ Temas visuales configurables
+
+10. Sistema de Gamificación
+    ✅ Puntos cuánticos (puntosCuanticos)
+    ✅ XP y niveles (experienciaXP, nivelActual)
+    ✅ Rangos (rangoActual: NOVATO_RASTREADOR → ...)
+    ✅ Colecciones (collectionsCompleted)
+    ✅ Arena de duelos 1v1 (ArenaDuel, ArenaStats)
+    ✅ Badges (badges[])
+    ✅ Streaks (completionStreak)
+
+11. Sistema de Referidos
+    ✅ Códigos únicos por usuario (referralCode)
+    ✅ Tracking de invitaciones (invitedBy, invitedCount)
+    ✅ Wallet con transferencias
+
+12. Formulario Médico
+    ✅ 10 campos de condiciones con detalles
+    ✅ Contacto de emergencia
+    ✅ Firma digital (signatureData)
+    ✅ Sistema de alertas (hasAlerts)
+    ✅ Acknowledgment por coordinadores por producto
+    ✅ Review tracking (alertsReviewedBy/At)
+
+13. i18n (Internacionalización)
+    ✅ Español completo
+    ✅ Inglés completo
+    ✅ next-intl configurado (@/messages/${locale}.json)
+
+14. Sistema Social
+    ✅ Visibilidad configurable (PRIVATE, COMMUNITY, PUBLIC)
+    ✅ Reacciones sociales
+    ✅ Compartir evidencias
+
+15. Sistema de Organizaciones
+    ✅ Jerarquía (MasterOrganization)
+    ✅ Geofencing con radio configurable
+    ✅ Cambio de organización con aprobación
+
+================================================================================
+🔄 EN DESARROLLO / PENDIENTE
+================================================================================
+
+1. Pasarelas de Pago (PAUSADO)
+   ⏸️ Stripe integración completa
+   ⏸️ MercadoPago integración
+   ⏸️ PayPal integración
+   NOTA: "de momento no requiero que funcione las pasarelas, 
+         vamos a trabajar con codigos"
+
+2. Sistema de Notificaciones Push
+   ✅ WebSockets funcionando (Socket.io + Redis)
+   ⏳ Push notifications móvil
+
+3. App Móvil PWA
+   ✅ Manifest configurado
+   ⏳ Service worker completo
+
+4. Reportes Avanzados
+   ✅ Dashboard básico
+   ⏳ Exportación a Excel/PDF
+   ⏳ Métricas avanzadas
+
+================================================================================
+🔧 VARIABLES DE ENTORNO REQUERIDAS
+================================================================================
+
+# Base de datos
+DATABASE_URL="postgresql://..."
+DIRECT_URL="postgresql://..."
+
+# NextAuth
+NEXTAUTH_URL="https://quantummatter.app"
+NEXTAUTH_SECRET="..."
+
+# APIs externas
+OPENAI_API_KEY="sk-..."
+REPLICATE_API_TOKEN="r8_..."
+STRIPE_SECRET_KEY="sk_..."
+STRIPE_PUBLISHABLE_KEY="pk_..."
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL="..."
+SUPABASE_SERVICE_ROLE_KEY="..."
+
+# Redis (opcional para Socket.io escalado)
+REDIS_URL="redis://..."
+
+================================================================================
+📁 ARCHIVOS IMPORTANTES
+================================================================================
+
+Configuración i18n:
+- /i18n.ts - Config de next-intl (usa @/messages/${locale}.json)
+- /messages/es.json - Traducciones español
+- /messages/en.json - Traducciones inglés
+
+APIs Críticas:
+- /app/api/auth/[...nextauth]/route.ts - Autenticación
+- /app/api/tickets/ - Sistema tickets (my-balance, my-tickets, transfer, validate)
+- /app/api/gc-calls/ - Llamadas GC (availability, dashboard, intervention, log, slots)
+- /app/api/el-cruce/ - Pre-registro (pre-registration, scan, session)
+- /app/api/staff/check-in/ - Sistema check-in
+- /app/api/school-admin/ - APIs school admin
+- /app/api/treasury/ - Quantum Treasury (cash-batch, dashboard, expenses, payment-codes)
+- /app/api/squads/ - Quantum Squads
+- /app/api/gift-codes/ - Códigos de regalo
+- /app/api/medical-form/ - Formulario médico
+- /app/api/arena/ - Sistema duelos
+- /app/api/collections/ - Colecciones
+
+Componentes Clave:
+- /components/gc-calls/ - AvailabilityConfig, ScheduleCallWidget
+- /components/el-cruce/ - AdvancedPreRegistrationAlert, ElCruceControlWidget
+- /components/check-in/ - BadgePreview, NFCWriter, OmniScanner, QRScanner, WebcamCapture
+- /components/quantum/ - QuantumCheckIn, QuantumIdentityModal, SelfieAvatarCapture, etc.
+- /components/carta/ - AreaCard, MetaCard
+- /components/arena/ - Componentes duelos
+- /components/phoenix/ - Protocolo Fénix
+- /components/lobo-solitario/ - Sistema lobo solitario
+
+Dashboards:
+- /app/dashboard/admin/ - Panel super admin
+- /app/dashboard/school-admin/ - Panel school admin
+- /app/dashboard/mentor/ - Panel mentor
+- /app/dashboard/participante/ - Panel participante
+- /app/dashboard/gamechanger/ - Panel game changer
+- /app/dashboard/coordinador/ - Panel coordinador
+- /app/dashboard/lider/ - Panel líder
+- /app/dashboard/director/ - Panel director
+- /app/dashboard/staff/ - Panel staff
+
+Lib (Motores):
+- /lib/arena-matchmaker.ts - Matchmaking duelos
+- /lib/arena-narrator.ts - Narrador AI duelos
+- /lib/arena-referee.ts - Árbitro duelos
+- /lib/commission-engine.ts - Motor comisiones
+- /lib/dynamicPricing.ts - Precios dinámicos
+- /lib/levelUpSystem.ts - Sistema niveles
+- /lib/qpc-engine.ts - Motor Quantum Points
+- /lib/quantum-bio-writer.ts - Generador bios AI
+- /lib/rewardEngine.ts - Motor recompensas
+- /lib/taskGenerator.ts - Generador tareas
+
+================================================================================
+🐛 PROBLEMAS CONOCIDOS Y SOLUCIONES
+================================================================================
+
+1. Replicate API en build
+   Problema: Error al inicializar Replicate en build time
+   Solución: Lazy initialization con getReplicate() function
+   Archivos afectados:
+   - /app/api/avatar/generate-from-selfie/route.ts
+   - /app/api/mentor/generate-avatar-from-selfie/route.ts
+
+2. i18n messages path
+   Problema: 404 en producción por path incorrecto
+   Solución: Usar @/messages/${locale}.json en /i18n.ts
+
+3. Prisma en Vercel
+   Problema: Cliente no generado
+   Solución: "postinstall": "prisma generate" en package.json
+
+4. Build con errores de tipos
+   Solución: Ejecutar npx prisma generate antes de build
+
+5. Socket.io con múltiples instancias
+   Solución: Redis adapter configurado (@socket.io/redis-adapter)
+
+================================================================================
+🚀 DEPLOYMENT
+================================================================================
+
+- Plataforma: Vercel
+- Repositorio: github.com/aldo-rgb/plataforma-frutos-produccion
+- Branch: main
+- Dominio: https://quantummatter.app
+- DNS: GoDaddy → Vercel
+
+Comandos de deploy:
+  git add .
+  git commit -m "descripción"
+  git push origin main
+  (Vercel hace deploy automático)
+
+================================================================================
+📝 CONVENCIONES DE CÓDIGO
+================================================================================
+
+1. ESPAÑOL para:
+   - Nombres de modelos legacy (Usuario, CartaFrutos, Meta, Accion, etc.)
+   - Comentarios de negocio
+   - UI texto (via i18n)
+
+2. INGLÉS para:
+   - Modelos nuevos (Ticket, GiftCode, SmallGroup, etc.)
+   - Variables técnicas
+   - Funciones y APIs
+
+3. Formato de edición:
+   
+   // BUSCAR:
+   [código exacto con 3+ líneas contexto arriba]
+   [línea a cambiar]
+   [código exacto con 3+ líneas contexto abajo]
+   
+   // REEMPLAZAR CON:
+   [código nuevo completo]
+   
+   // O PARA NUEVO CÓDIGO:
+   // Después de línea: [línea completa de arriba]
+   // Antes de línea: [línea completa de abajo]
+   // INSERTAR:
+   [código nuevo]
+
+================================================================================
+🎯 CONTEXTO ACTUAL DE DESARROLLO
+================================================================================
+
+Fecha: 12 de enero de 2026
+Último trabajo: DNS configurado, dominio quantummatter.app funcionando
+Estado: Producción activa
+Schema Prisma: 4002 líneas
+
+================================================================================
+📋 PACKAGE.JSON - DEPENDENCIAS COMPLETAS
+================================================================================
+
+{
+  "name": "plataforma-frutos",
+  "version": "0.1.0",
+  "dependencies": {
+    "@ai-sdk/openai": "^2.0.80",
+    "@next-auth/prisma-adapter": "^1.0.7",
+    "@paypal/checkout-server-sdk": "^1.0.3",
+    "@prisma/client": "^5.22.0",
+    "@radix-ui/react-label": "^2.1.8",
+    "@radix-ui/react-separator": "^1.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@radix-ui/react-toast": "^1.2.15",
+    "@socket.io/redis-adapter": "^8.3.0",
+    "@stripe/stripe-js": "^8.6.1",
+    "@supabase/supabase-js": "^2.89.0",
+    "ai": "^5.0.110",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
+    "canvas-confetti": "^1.9.4",
+    "chart.js": "^4.5.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
+    "dotenv": "^17.2.3",
+    "html5-qrcode": "^2.3.8",
+    "jsonwebtoken": "^9.0.3",
+    "lucide-react": "^0.556.0",
+    "mercadopago": "^2.11.0",
+    "next": "^16.1.1",
+    "next-auth": "^4.24.13",
+    "next-intl": "^4.7.0",
+    "openai": "^6.10.0",
+    "pg": "^8.16.3",
+    "prisma": "^5.22.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.2.3",
+    "react-barcode": "^1.6.1",
+    "react-chartjs-2": "^5.3.1",
+    "react-dom": "^19.2.3",
+    "react-hot-toast": "^2.6.0",
+    "react-qr-code": "^2.0.18",
+    "react-qr-reader": "^3.0.0-beta-1",
+    "react-qr-scanner": "^1.0.0-alpha.11",
+    "react-webcam": "^7.2.0",
+    "recharts": "^3.6.0",
+    "redis": "^5.10.0",
+    "replicate": "^1.4.0",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "stripe": "^20.1.2",
+    "tailwind-merge": "^3.4.0",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/bcrypt": "^6.0.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/canvas-confetti": "^1.9.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^20.19.27",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "autoprefixer": "^10.4.19",
+    "eslint": "^9",
+    "eslint-config-next": "16.0.8",
+    "framer-motion": "^12.24.12",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.17",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "dev:socket": "ts-node --project tsconfig.server.json server.ts",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "start:socket": "node server.ts",
+    "start:pm2": "pm2 start ecosystem.config.js --env production",
+    "stop:pm2": "pm2 stop plataforma-frutos",
+    "restart:pm2": "pm2 restart plataforma-frutos",
+    "logs:pm2": "pm2 logs plataforma-frutos",
+    "lint": "eslint",
+    "postinstall": "prisma generate",
+    "migrate:multimeta": "npx ts-node --compiler-options '{\"module\":\"commonjs\"}' prisma/migrate-to-multimeta.ts",
+    "toggle-modo": "npx ts-node --compiler-options '{\"module\":\"commonjs\"}' scripts/toggle-modo-mentorias.ts"
+  }
+}
+
+================================================================================
+FIN DEL DOCUMENTO - COPIA TODO PARA CONTINUAR
+================================================================================

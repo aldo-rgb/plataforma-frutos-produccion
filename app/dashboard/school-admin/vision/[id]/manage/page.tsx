@@ -755,12 +755,20 @@ export default function VisionManagePage() {
                         </p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/call-management?level=BASIC`)}
-                      className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
-                    >
-                      <span>📞</span> Gestión de Llamadas
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/badges?level=BASIC`)}
+                        className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white px-5 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                      >
+                        <span>🪪</span> Gafetes
+                      </button>
+                      <button
+                        onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/call-management?level=BASIC`)}
+                        className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                      >
+                        <span>📞</span> Llamadas
+                      </button>
+                    </div>
                   </div>
                 </div>
                 
@@ -978,12 +986,20 @@ export default function VisionManagePage() {
                         </p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/call-management?level=ADVANCED`)}
-                      className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
-                    >
-                      <span>📞</span> Gestión de Llamadas
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/badges?level=ADVANCED`)}
+                        className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white px-5 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                      >
+                        <span>🪪</span> Gafetes
+                      </button>
+                      <button
+                        onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/call-management?level=ADVANCED`)}
+                        className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                      >
+                        <span>📞</span> Llamadas
+                      </button>
+                    </div>
                   </div>
                 </div>
                 
@@ -1152,12 +1168,20 @@ export default function VisionManagePage() {
                         </p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/call-management?level=PL`)}
-                      className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
-                    >
-                      <span>📞</span> Gestión de Llamadas
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/badges?level=PL`)}
+                        className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-5 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                      >
+                        <span>🪪</span> Gafetes
+                      </button>
+                      <button
+                        onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/call-management?level=PL`)}
+                        className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                      >
+                        <span>📞</span> Llamadas
+                      </button>
+                    </div>
                   </div>
                 </div>
                 

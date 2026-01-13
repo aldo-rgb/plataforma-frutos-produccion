@@ -24,7 +24,12 @@ export async function POST(request: Request) {
 
     const user = await prisma.usuario.findUnique({
       where: { email: session.user.email },
-      select: { id: true, rol: true, organizationId: true, nombre: true },
+      select: { 
+        id: true, 
+        rol: true, 
+        organizationId: true, 
+        nombre: true
+      },
     });
 
     if (!user || !ALLOWED_ROLES.includes(user.rol)) {
@@ -41,8 +46,20 @@ export async function POST(request: Request) {
       );
     }
 
+    // Obtener organización para branding
+    const organization = await prisma.organization.findUnique({
+      where: { id: user.organizationId },
+      select: {
+        name: true,
+        logoUrl: true,
+        brandColor: true
+      }
+    });
+
     const body = await request.json();
     const { amount, reference, visionId } = body;
+
+    console.log('Creating PaymentCode with:', { amount, reference, visionId, organizationId: user.organizationId, createdById: user.id });
 
     if (!amount || amount <= 0) {
       return NextResponse.json(
@@ -51,9 +68,55 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generar código único: Q-XXXX-MONTO
-    const randomPart = crypto.randomBytes(4).toString('hex').toUpperCase().slice(0, 4);
-    const code = `CASH-${randomPart}-${amount}`;
+    // Generar código único: CASH-XXXXXX-MONTO (más caracteres para evitar colisiones)
+    const generateUniqueCode = async (): Promise<string> => {
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const randomPart = crypto.randomBytes(4).toString('hex').toUpperCase().slice(0, 6);
+        const code = `CASH-${randomPart}-${amount}`;
+        
+        // Verificar que no exista
+        const existing = await prisma.paymentCode.findUnique({
+          where: { code },
+          select: { id: true }
+        });
+        
+        if (!existing) {
+          return code;
+        }
+      }
+      // Si después de 5 intentos no se puede, usar timestamp
+      const timestamp = Date.now().toString(36).toUpperCase();
+      return `CASH-${timestamp}-${amount}`;
+    };
+
+    const code = await generateUniqueCode();
+
+    // Validar visionId si se proporciona
+    let parsedVisionId: number | null = null;
+    if (visionId) {
+      parsedVisionId = parseInt(visionId);
+      if (isNaN(parsedVisionId)) {
+        return NextResponse.json(
+          { success: false, error: 'ID de visión inválido' },
+          { status: 400 }
+        );
+      }
+      
+      // Verificar que la visión existe y pertenece a la organización
+      const vision = await prisma.vision.findFirst({
+        where: { 
+          id: parsedVisionId,
+          organizationId: user.organizationId
+        }
+      });
+      
+      if (!vision) {
+        return NextResponse.json(
+          { success: false, error: 'Visión no encontrada o no pertenece a tu organización' },
+          { status: 400 }
+        );
+      }
+    }
 
     // Crear el código de pago
     const paymentCode = await prisma.paymentCode.create({
@@ -63,7 +126,7 @@ export async function POST(request: Request) {
         reference: reference || null,
         status: 'ACTIVE',
         organizationId: user.organizationId,
-        visionId: visionId ? parseInt(visionId) : null,
+        visionId: parsedVisionId,
         createdById: user.id,
       },
     });
@@ -74,16 +137,30 @@ export async function POST(request: Request) {
       paymentCode: {
         id: paymentCode.id,
         code: paymentCode.code,
-        amount: paymentCode.amount,
+        amount: Number(paymentCode.amount),
         reference: paymentCode.reference,
         status: paymentCode.status,
-        createdAt: paymentCode.createdAt,
+        createdAt: paymentCode.createdAt.toISOString(),
+      },
+      organization: {
+        nombre: organization?.name || 'Organización',
+        logoUrl: organization?.logoUrl || null,
+        brandColor: organization?.brandColor || '#10B981',
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating payment code:', error);
+    
+    // Si es un error de Prisma de código duplicado
+    if (error?.code === 'P2002') {
+      return NextResponse.json(
+        { success: false, error: 'Error: código duplicado, intenta de nuevo' },
+        { status: 409 }
+      );
+    }
+    
     return NextResponse.json(
-      { success: false, error: 'Error al generar código' },
+      { success: false, error: error?.message || 'Error al generar código' },
       { status: 500 }
     );
   }

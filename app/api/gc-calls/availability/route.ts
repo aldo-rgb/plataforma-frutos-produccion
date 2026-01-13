@@ -2,12 +2,15 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { ensureDefaultAvailability } from '@/lib/gcDefaultAvailability';
 
 const GC_ROLES = ['GAMECHANGER', 'TRAINER', 'SCHOOL_ADMIN', 'COORDINADOR'];
 
 /**
  * GET /api/gc-calls/availability
  * Obtener bloques de disponibilidad del GC
+ * Si el GC no tiene disponibilidad configurada, se crea automáticamente
+ * la configuración por defecto (Lunes a Jueves, 6-8 AM)
  * Query params: squadId (opcional), date (opcional)
  */
 export async function GET(request: Request) {
@@ -32,6 +35,11 @@ export async function GET(request: Request) {
 
     // Determinar qué GC consultar
     const targetGCId = gameChangerId ? parseInt(gameChangerId) : user.id;
+
+    // Asegurar que el GC tenga disponibilidad por defecto si no tiene ninguna
+    if (GC_ROLES.includes(user.rol)) {
+      await ensureDefaultAvailability(targetGCId);
+    }
 
     const availability = await prisma.gCAvailability.findMany({
       where: {

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Html5Qrcode } from 'html5-qrcode';
 import { 
   Users, 
   UserPlus, 
@@ -20,7 +21,9 @@ import {
   ArrowLeft,
   Loader2,
   Crown,
-  Sparkles
+  Sparkles,
+  Camera,
+  ImageIcon
 } from 'lucide-react';
 
 interface Member {
@@ -52,6 +55,12 @@ interface Squad {
 interface Vision {
   id: number;
   nombre: string;
+  assignedLevels?: string[]; // Niveles asignados al GC para esta visión
+}
+
+interface OrgInfo {
+  name: string;
+  logoUrl: string | null;
 }
 
 type ScannerMode = 'idle' | 'scanning' | 'processing';
@@ -75,11 +84,13 @@ export default function SquadBuilderPage() {
   const [manualCode, setManualCode] = useState('');
   const [lastScanned, setLastScanned] = useState<{name: string; success: boolean} | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showQRScanner, setShowQRScanner] = useState(false);
   const [conflictData, setConflictData] = useState<{
     currentGroup: { id: string; name: string; leaderName: string };
     user: { id: number; nombre: string; };
     referralCode?: string;
   } | null>(null);
+  const [orgInfo, setOrgInfo] = useState<OrgInfo>({ name: '', logoUrl: null });
   
   // Vibration helper
   const vibrate = (pattern: number | number[]) => {
@@ -87,6 +98,29 @@ export default function SquadBuilderPage() {
       navigator.vibrate(pattern);
     }
   };
+
+  // Load organization info
+  useEffect(() => {
+    const fetchOrgInfo = async () => {
+      try {
+        // Obtener la organización del usuario directamente
+        const res = await fetch('/api/organization/me');
+        if (res.ok) {
+          const org = await res.json();
+          console.log('🏢 Org data:', org);
+          if (org && org.name) {
+            setOrgInfo({
+              name: org.name || '',
+              logoUrl: org.logoUrl || null,
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching org info:', err);
+      }
+    };
+    fetchOrgInfo();
+  }, []);
 
   // Load available visions
   useEffect(() => {
@@ -116,14 +150,17 @@ export default function SquadBuilderPage() {
       setError(null);
       
       try {
-        // Try to get existing squad
-        const res = await fetch(`/api/squads?visionId=${selectedVisionId}&level=${selectedLevel}`);
+        // Try to get existing squad with members
+        const res = await fetch(`/api/squads?visionId=${selectedVisionId}&level=${selectedLevel}&includeMembers=true`);
         const data = await res.json();
+        
+        console.log('📦 Squad data:', data);
         
         if (data.success && data.squads?.length > 0) {
           // Find my squad (as leader)
           const mySquad = data.squads.find((s: Squad) => s.leader?.id === session?.user?.id);
           if (mySquad) {
+            console.log('✅ My squad found:', mySquad);
             setSquad(mySquad);
             setMembers(mySquad.members || []);
           } else {
@@ -151,6 +188,8 @@ export default function SquadBuilderPage() {
     if (squad) return squad;
     
     try {
+      console.log('Creating squad with:', { visionId: selectedVisionId, level: selectedLevel });
+      
       const res = await fetch('/api/squads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -161,13 +200,19 @@ export default function SquadBuilderPage() {
       });
       
       const data = await res.json();
+      console.log('Squad creation response:', data);
+      
       if (data.success) {
         setSquad(data.squad);
         return data.squad;
+      } else {
+        // Mostrar el error específico del servidor
+        setError(data.error || 'Error al crear escuadrón');
+        return null;
       }
-      return null;
     } catch (err) {
       console.error('Error creating squad:', err);
+      setError('Error de conexión al crear escuadrón');
       return null;
     }
   };
@@ -290,7 +335,7 @@ export default function SquadBuilderPage() {
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-black flex items-center justify-center">
         <div className="text-center text-white">
           <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
-          <p>Cargando Quantum Squads...</p>
+          <p>Cargando Átomos...</p>
         </div>
       </div>
     );
@@ -303,19 +348,38 @@ export default function SquadBuilderPage() {
         <div className="max-w-lg mx-auto pt-8">
           <Card className="bg-white/10 border-white/20 backdrop-blur-lg">
             <CardHeader className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Shield className="w-8 h-8 text-white" />
-              </div>
-              <CardTitle className="text-2xl text-white">Quantum Squads</CardTitle>
+              {orgInfo.logoUrl ? (
+                <img 
+                  src={orgInfo.logoUrl} 
+                  alt={orgInfo.name}
+                  className="w-16 h-16 rounded-full object-cover mx-auto mb-4"
+                />
+              ) : (
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Shield className="w-8 h-8 text-white" />
+                </div>
+              )}
+              <CardTitle className="text-2xl text-white">{orgInfo.name ? `${orgInfo.name} Átomos` : 'Átomos'}</CardTitle>
               <CardDescription className="text-white/70">
-                Selecciona una Visión para armar tu escuadrón
+                Selecciona una Visión para armar tu Átomo
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <select
                 className="w-full p-3 rounded-lg bg-white/10 border border-white/20 text-white"
                 value={selectedVisionId}
-                onChange={(e) => setSelectedVisionId(e.target.value)}
+                onChange={(e) => {
+                  const newVisionId = e.target.value;
+                  setSelectedVisionId(newVisionId);
+                  // Auto-seleccionar el primer nivel disponible para esta visión
+                  if (newVisionId) {
+                    const vision = visions.find(v => v.id.toString() === newVisionId);
+                    const levels = vision?.assignedLevels || ['BASIC'];
+                    const levelOrder = ['BASIC', 'ADVANCED', 'PL'];
+                    const firstAvailable = levelOrder.find(l => levels.includes(l)) || 'BASIC';
+                    setSelectedLevel(firstAvailable);
+                  }
+                }}
               >
                 <option value="" className="text-gray-900">Seleccionar Visión...</option>
                 {visions.map((v) => (
@@ -325,21 +389,46 @@ export default function SquadBuilderPage() {
                 ))}
               </select>
 
-              <div className="grid grid-cols-3 gap-2">
-                {['BASIC', 'ADVANCED', 'PL'].map((lvl) => (
-                  <button
-                    key={lvl}
-                    onClick={() => setSelectedLevel(lvl)}
-                    className={`p-3 rounded-lg text-sm font-medium transition-all ${
-                      selectedLevel === lvl
-                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-                        : 'bg-white/10 text-white/70 hover:bg-white/20'
-                    }`}
-                  >
-                    {lvl === 'BASIC' ? 'Básico' : lvl === 'ADVANCED' ? 'Avanzado' : 'PL'}
-                  </button>
-                ))}
-              </div>
+              {(() => {
+                // Si no hay visión seleccionada, no mostrar botones de nivel
+                if (!selectedVisionId) {
+                  return null;
+                }
+                
+                // Obtener los niveles asignados para la visión seleccionada
+                const selectedVision = visions.find(v => v.id.toString() === selectedVisionId);
+                const availableLevels = selectedVision?.assignedLevels || [];
+                
+                // Si no hay niveles asignados, no mostrar nada
+                if (availableLevels.length === 0) {
+                  return (
+                    <div className="text-center text-amber-400 text-sm p-3 bg-amber-500/10 rounded-lg">
+                      No tienes niveles asignados para esta visión
+                    </div>
+                  );
+                }
+                
+                const levelOrder = ['BASIC', 'ADVANCED', 'PL'];
+                const sortedLevels = levelOrder.filter(l => availableLevels.includes(l));
+                
+                return (
+                  <div className={`grid gap-2 ${sortedLevels.length === 1 ? 'grid-cols-1' : sortedLevels.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                    {sortedLevels.map((lvl) => (
+                      <button
+                        key={lvl}
+                        onClick={() => setSelectedLevel(lvl)}
+                        className={`p-3 rounded-lg text-sm font-medium transition-all ${
+                          selectedLevel === lvl
+                            ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+                            : 'bg-white/10 text-white/70 hover:bg-white/20'
+                        }`}
+                      >
+                        {lvl === 'BASIC' ? 'Básico' : lvl === 'ADVANCED' ? 'Avanzado' : 'PL'}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })()}
 
               {selectedVisionId && (
                 <Button
@@ -347,7 +436,7 @@ export default function SquadBuilderPage() {
                   onClick={() => router.push(`/dashboard/game-changer/squads?visionId=${selectedVisionId}&level=${selectedLevel}`)}
                 >
                   <Zap className="w-5 h-5 mr-2" />
-                  Iniciar Squad Builder
+                  Iniciar Átomo Builder
                 </Button>
               )}
             </CardContent>
@@ -372,18 +461,30 @@ export default function SquadBuilderPage() {
           <div className="text-center">
             <h1 className="text-lg font-bold text-white flex items-center gap-2">
               <Shield className="w-5 h-5 text-purple-400" />
-              {squad?.name || 'Mi Escuadrón'}
+              {squad?.name || 'Mi Átomo'}
             </h1>
             <p className="text-xs text-white/60">
               {selectedLevel === 'BASIC' ? 'Básico' : selectedLevel === 'ADVANCED' ? 'Avanzado' : 'PL'}
             </p>
           </div>
 
-          <div className="flex items-center gap-1 text-white">
-            <Users className="w-5 h-5" />
-            <span className="font-mono font-bold">
-              {squad?.membersCount || members.length}/{squad?.maxSize || 10}
-            </span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 text-white">
+              <Users className="w-5 h-5" />
+              <span className="font-mono font-bold">
+                {squad?.membersCount || members.length}/{squad?.maxSize || 10}
+              </span>
+            </div>
+            
+            {/* Botón Terminar */}
+            <Button
+              size="sm"
+              onClick={() => router.push('/dashboard/gamechanger')}
+              className="bg-green-600 hover:bg-green-700 text-white text-xs px-3"
+            >
+              <CheckCircle2 className="w-4 h-4 mr-1" />
+              Listo
+            </Button>
           </div>
         </div>
       </div>
@@ -425,13 +526,13 @@ export default function SquadBuilderPage() {
             <Card className="w-full max-w-sm bg-gradient-to-br from-orange-500 to-red-600 border-none">
               <CardContent className="p-6 text-center text-white">
                 <Zap className="w-16 h-16 mx-auto mb-4 text-yellow-300" />
-                <h3 className="text-xl font-bold mb-2">¡Robo de Jugador!</h3>
+                <h3 className="text-xl font-bold mb-2">¡Cambio de Jugador!</h3>
                 <p className="text-white/90 mb-4">
-                  <strong>{conflictData.user.nombre}</strong> está en el escuadrón de{' '}
+                  <strong>{conflictData.user.nombre}</strong> está en el Átomo de{' '}
                   <strong>{conflictData.currentGroup.leaderName}</strong>
                 </p>
                 <p className="text-sm text-white/70 mb-6">
-                  ¿Quieres moverlo a tu escuadrón?
+                  ¿Quieres transferirlo a tu Átomo?
                 </p>
                 <div className="flex gap-3">
                   <Button
@@ -446,7 +547,7 @@ export default function SquadBuilderPage() {
                     onClick={handleForceMove}
                   >
                     <Zap className="w-4 h-4 mr-1" />
-                    ¡Robarlo!
+                    ¡Transferirlo!
                   </Button>
                 </div>
               </CardContent>
@@ -458,7 +559,7 @@ export default function SquadBuilderPage() {
         <div className="space-y-3 mb-6">
           <h2 className="text-white/80 font-medium flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-purple-400" />
-            Miembros del Escuadrón
+            Miembros del Átomo
           </h2>
           
           {members.length === 0 ? (
@@ -491,7 +592,7 @@ export default function SquadBuilderPage() {
                     {member.wasMoved && (
                       <Badge variant="outline" className="text-xs bg-yellow-500/20 text-yellow-300 border-yellow-500/50">
                         <Zap className="w-3 h-3 mr-1" />
-                        Robado
+                        Transferido
                       </Badge>
                     )}
                   </div>
@@ -518,7 +619,7 @@ export default function SquadBuilderPage() {
           <form onSubmit={handleManualSubmit} className="flex gap-2">
             <Input
               type="text"
-              placeholder="Código de referido..."
+              placeholder="Código de participante..."
               value={manualCode}
               onChange={(e) => setManualCode(e.target.value.toUpperCase())}
               className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/40 uppercase"
@@ -542,7 +643,7 @@ export default function SquadBuilderPage() {
             <Button
               variant="outline"
               className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-              onClick={() => {/* TODO: Implement QR scanner */}}
+              onClick={() => setShowQRScanner(true)}
             >
               <QrCode className="w-5 h-5 mr-2" />
               Escanear QR
@@ -561,11 +662,227 @@ export default function SquadBuilderPage() {
           {squad && squad.membersCount >= squad.maxSize && (
             <div className="text-center py-2 px-4 rounded-lg bg-orange-500/20 border border-orange-500/50">
               <p className="text-orange-300 text-sm font-medium">
-                ⚠️ Escuadrón lleno - Inicia uno nuevo para seguir agregando
+                ⚠️ Átomo lleno - Inicia uno nuevo para seguir agregando
               </p>
             </div>
           )}
         </div>
+      </div>
+
+      {/* QR Scanner Modal */}
+      {showQRScanner && (
+        <QRScannerModal 
+          onScan={(code) => {
+            setShowQRScanner(false);
+            addMemberByCode(code);
+          }}
+          onClose={() => setShowQRScanner(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Componente de Scanner QR con fallback para iOS
+function QRScannerModal({ onScan, onClose }: { onScan: (code: string) => void; onClose: () => void }) {
+  const [mode, setMode] = useState<'camera' | 'file'>('camera');
+  const [error, setError] = useState<string | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [processingFile, setProcessingFile] = useState(false);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Iniciar cámara
+  useEffect(() => {
+    if (mode === 'camera') {
+      startCamera();
+    }
+    return () => {
+      stopCamera();
+    };
+  }, [mode]);
+
+  const startCamera = async () => {
+    setError(null);
+    try {
+      // Esperar a que el DOM esté listo
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      const scanner = new Html5Qrcode('qr-reader-modal');
+      scannerRef.current = scanner;
+
+      await scanner.start(
+        { facingMode: 'environment' },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1,
+        },
+        (decodedText) => {
+          // Éxito - vibrar y callback
+          if (navigator.vibrate) navigator.vibrate(100);
+          stopCamera();
+          onScan(decodedText);
+        },
+        () => {} // Ignorar errores de frames sin QR
+      );
+
+      setIsScanning(true);
+    } catch (err: any) {
+      console.error('Camera error:', err);
+      // En iOS/Safari sin HTTPS, mostrar opción de archivo
+      if (err.name === 'NotAllowedError' || err.message?.includes('Permission') || err.message?.includes('https')) {
+        setError('No se pudo acceder a la cámara. Usa la opción de foto.');
+        setMode('file');
+      } else {
+        setError('Error al iniciar cámara: ' + (err.message || 'Error desconocido'));
+      }
+    }
+  };
+
+  const stopCamera = async () => {
+    if (scannerRef.current) {
+      try {
+        await scannerRef.current.stop();
+        scannerRef.current = null;
+      } catch (e) {}
+    }
+    setIsScanning(false);
+  };
+
+  // Manejar selección de archivo/foto
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setProcessingFile(true);
+    setError(null);
+
+    try {
+      const scanner = new Html5Qrcode('qr-file-scanner');
+      const result = await scanner.scanFile(file, true);
+      
+      if (navigator.vibrate) navigator.vibrate(100);
+      onScan(result);
+    } catch (err) {
+      console.error('QR scan error:', err);
+      setError('No se encontró un código QR válido en la imagen');
+    } finally {
+      setProcessingFile(false);
+      // Limpiar input para permitir re-selección del mismo archivo
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-white/20">
+        <h2 className="text-white text-lg font-semibold">Escanear Código QR</h2>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-white hover:bg-white/20"
+          onClick={onClose}
+        >
+          <X className="w-6 h-6" />
+        </Button>
+      </div>
+
+      {/* Mode Toggle */}
+      <div className="flex justify-center gap-2 p-4">
+        <Button
+          variant={mode === 'camera' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setMode('camera')}
+          className={mode === 'camera' ? 'bg-purple-600' : 'bg-white/10 border-white/20 text-white'}
+        >
+          <Camera className="w-4 h-4 mr-2" />
+          Cámara
+        </Button>
+        <Button
+          variant={mode === 'file' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => { stopCamera(); setMode('file'); }}
+          className={mode === 'file' ? 'bg-purple-600' : 'bg-white/10 border-white/20 text-white'}
+        >
+          <ImageIcon className="w-4 h-4 mr-2" />
+          Foto
+        </Button>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 flex flex-col items-center justify-center p-4">
+        {mode === 'camera' ? (
+          <div className="w-full max-w-sm">
+            {/* Camera viewer */}
+            <div 
+              id="qr-reader-modal" 
+              className="w-full rounded-2xl overflow-hidden bg-slate-900"
+              style={{ minHeight: '300px' }}
+            />
+            
+            {error && (
+              <div className="mt-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
+                <p className="text-red-300 text-sm text-center">{error}</p>
+              </div>
+            )}
+            
+            {!isScanning && !error && (
+              <div className="mt-4 text-center">
+                <Loader2 className="w-8 h-8 animate-spin text-purple-400 mx-auto" />
+                <p className="text-white/70 text-sm mt-2">Iniciando cámara...</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="w-full max-w-sm text-center">
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleFileChange}
+              className="hidden"
+              id="qr-file-input"
+            />
+            
+            {/* Div oculto para el scanner de archivo */}
+            <div id="qr-file-scanner" className="hidden" />
+
+            {/* Photo capture button */}
+            <label 
+              htmlFor="qr-file-input"
+              className="block cursor-pointer"
+            >
+              <div className="w-48 h-48 mx-auto rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-2 border-dashed border-purple-400/50 flex flex-col items-center justify-center hover:border-purple-400 transition-colors">
+                {processingFile ? (
+                  <>
+                    <Loader2 className="w-12 h-12 text-purple-400 animate-spin" />
+                    <p className="text-white/70 text-sm mt-3">Analizando...</p>
+                  </>
+                ) : (
+                  <>
+                    <Camera className="w-12 h-12 text-purple-400" />
+                    <p className="text-white text-sm mt-3 font-medium">Tomar Foto</p>
+                    <p className="text-white/50 text-xs mt-1">o seleccionar imagen</p>
+                  </>
+                )}
+              </div>
+            </label>
+
+            {error && (
+              <div className="mt-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
+                <p className="text-red-300 text-sm">{error}</p>
+              </div>
+            )}
+
+            <p className="text-white/50 text-xs mt-6">
+              📱 En iPhone: toca para abrir la cámara y toma una foto del código QR
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

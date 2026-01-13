@@ -2217,6 +2217,8 @@ model Usuario {
   GCCallLogsAsGC                                                         GCCallLog[]                     @relation("GCCallLogGC")
   GCCallLogsAsParticipant                                                GCCallLog[]                     @relation("GCCallLogParticipant")
   TrainerInterventions                                                   TrainerIntervention[]           @relation("TrainerInterventions")
+  GCCallAttempts                                                         GCCallAttempt[]                 @relation("GCCallAttempts")
+  ParticipantCallAttempts                                                GCCallAttempt[]                 @relation("ParticipantCallAttempts")
   
   // El Cruce - Pre-Registro Avanzado
   AdvancedPreRegistrations                                               AdvancedPreRegistration[]
@@ -2292,6 +2294,7 @@ model Vision {
   
   // Quantum GC Calls Relations
   GCCallLogs                    GCCallLog[]
+  GCCallAttempts                GCCallAttempt[]                @relation("VisionCallAttempts")
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -3470,6 +3473,7 @@ model PaymentCode {
   amount        Decimal           @db.Decimal(10, 2)
   reference     String?           // "Abono de Juan Pérez"
   status        PaymentCodeStatus @default(ACTIVE)
+  cancellationReason String?      // Motivo de cancelación
   
   // Relaciones
   organizationId Int
@@ -3660,6 +3664,7 @@ model SmallGroup {
   gcAvailabilities GCAvailability[]
   gcCallSlots     GCCallSlot[]
   gcCallLogs      GCCallLog[]
+  gcCallAttempts  GCCallAttempt[]
   
   @@unique([visionId, leaderId, level]) // Un GC solo puede tener un grupo por nivel/visión
   @@index([visionId])
@@ -3749,6 +3754,7 @@ model GCCallSlot {
   
   // Estado del slot
   status          CallSlotStatus  @default(SCHEDULED)
+  assignedByGC    Boolean         @default(false) // Si fue asignado por el GC (no editable por participante)
   
   // Tracking
   bookedAt        DateTime        @default(now())
@@ -3850,6 +3856,41 @@ model TrainerIntervention {
   @@index([callLogId])
   @@index([trainerId])
   @@index([type])
+}
+
+// Registro de intentos de llamada (tracking múltiple por día)
+model GCCallAttempt {
+  id              String          @id @default(uuid())
+  gameChangerId   Int
+  participantId   Int
+  squadId         String?
+  visionId        Int
+  
+  // Contexto
+  trainingType    TrainingType    // BASIC, ADVANCED
+  trainingDay     Int             // Día del entrenamiento
+  attemptNumber   Int             @default(1) // Número de intento del día
+  
+  // Resultado
+  completed       Boolean         @default(false) // Si se realizó la llamada
+  potentialRating Int?            // 1-5 calificación de potencial
+  notes           String?         @db.Text
+  
+  // Timestamps
+  attemptedAt     DateTime        @default(now())
+  
+  // Relations
+  gameChanger     Usuario         @relation("GCCallAttempts", fields: [gameChangerId], references: [id])
+  participant     Usuario         @relation("ParticipantCallAttempts", fields: [participantId], references: [id])
+  squad           SmallGroup?     @relation(fields: [squadId], references: [id])
+  vision          Vision          @relation("VisionCallAttempts", fields: [visionId], references: [id])
+  
+  @@index([gameChangerId])
+  @@index([participantId])
+  @@index([squadId])
+  @@index([visionId])
+  @@index([trainingDay])
+  @@index([attemptedAt])
 }
 
 // Enums para el sistema de llamadas

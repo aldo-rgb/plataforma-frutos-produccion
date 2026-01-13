@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
-  Users, Target, Ticket, BarChart3, Zap,
-  AlertTriangle, Building2, GraduationCap, Star, Activity,
-  FileText, CheckCircle, Shield, Clock, Calendar, ClipboardList, Scan
+  Users, Ticket, AlertTriangle, Building2, GraduationCap, Activity,
+  Clock, Calendar, Scan
 } from 'lucide-react';
 import Link from 'next/link';
 import MedicalAlertsWidget from '@/components/dashboard/MedicalAlertsWidget';
 import MedicalFormsListWidget from '@/components/dashboard/MedicalFormsListWidget';
+import GCCallsMonitorWidget from '@/components/dashboard/GCCallsMonitorWidget';
+import TreasuryQuickWidget from '@/components/dashboard/TreasuryQuickWidget';
 
 interface DashboardData {
   overview: {
@@ -34,26 +35,11 @@ interface DashboardData {
   availableCredits: number;
 }
 
-interface ActionStats {
-  cartasPendientes: number;
-  cartasAutorizadas: number;
-  alertasActivas: number;
-  participantesRiesgo: number;
-}
-
 export default function CoordinadorBasicoDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
-  const [stats, setStats] = useState<ActionStats>({
-    cartasPendientes: 0,
-    cartasAutorizadas: 0,
-    alertasActivas: 0,
-    participantesRiesgo: 0
-  });
   const [loading, setLoading] = useState(true);
-  const [consejoQuantum, setConsejoQuantum] = useState<any>(null);
-  const [loadingConsejo, setLoadingConsejo] = useState(true);
   const [productos, setProductos] = useState<any[]>([]);
   const [loadingProductos, setLoadingProductos] = useState(true);
   const [countdown, setCountdown] = useState<{[key: number]: string}>({});
@@ -65,8 +51,6 @@ export default function CoordinadorBasicoDashboard() {
       router.push('/dashboard');
     } else {
       fetchDashboardData();
-      fetchActionStats();
-      fetchConsejoQuantum();
       fetchProductos();
     }
   }, [status, session]);
@@ -83,32 +67,6 @@ export default function CoordinadorBasicoDashboard() {
       console.error('Error fetching dashboard:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchActionStats = async () => {
-    try {
-      const res = await fetch('/api/coordinador/action-stats');
-      const result = await res.json();
-      if (res.ok && result.success) {
-        setStats(result.stats);
-      }
-    } catch (error) {
-      console.error('Error fetching action stats:', error);
-    }
-  };
-
-  const fetchConsejoQuantum = async () => {
-    try {
-      const res = await fetch('/api/quantum/consejo-vision');
-      const result = await res.json();
-      if (res.ok && result.success) {
-        setConsejoQuantum(result.consejo);
-      }
-    } catch (error) {
-      console.error('Error fetching consejo quantum:', error);
-    } finally {
-      setLoadingConsejo(false);
     }
   };
 
@@ -252,9 +210,14 @@ export default function CoordinadorBasicoDashboard() {
           <MedicalAlertsWidget />
         </div>
 
-        {/* Widget de Formularios Médicos */}
+        {/* Widget Monitor de Llamadas GC */}
         <div className="mt-8">
-          <MedicalFormsListWidget />
+          <GCCallsMonitorWidget />
+        </div>
+
+        {/* Widget de Tesorería Express */}
+        <div className="mt-8">
+          <TreasuryQuickWidget />
         </div>
 
         {/* Widget de Productos Activos */}
@@ -266,7 +229,7 @@ export default function CoordinadorBasicoDashboard() {
                   <Calendar className="text-cyan-400" size={24} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-white">Productos Activos</h2>
+                  <h2 className="text-xl font-bold text-white">Entrenamientos Activos</h2>
                   <p className="text-sm text-slate-400">Ordenados por fecha de inicio</p>
                 </div>
               </div>
@@ -382,26 +345,32 @@ export default function CoordinadorBasicoDashboard() {
                                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                                 En curso
                               </div>
-                              <Link
-                                href={`/staff/check-in/${producto.id}`}
-                                onClick={(e) => e.stopPropagation()}
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  window.location.href = `/staff/check-in/${producto.id}`;
+                                }}
                                 className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-cyan-500/20 to-purple-500/20 hover:from-cyan-500/30 hover:to-purple-500/30 border border-cyan-500/50 rounded-lg text-cyan-400 hover:text-cyan-300 text-sm font-semibold transition-all"
                               >
                                 <Scan size={14} />
                                 Check-In
-                              </Link>
+                              </button>
                             </div>
                           )}
 
                           {!hasStarted && !showCountdown && (
-                            <Link
-                              href={`/staff/check-in/${producto.id}`}
-                              onClick={(e) => e.stopPropagation()}
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                window.location.href = `/staff/check-in/${producto.id}`;
+                              }}
                               className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-slate-600/20 to-slate-700/20 hover:from-cyan-500/20 hover:to-purple-500/20 border border-slate-500/50 hover:border-cyan-500/50 rounded-lg text-slate-400 hover:text-cyan-400 text-sm font-semibold transition-all"
                             >
                               <Scan size={14} />
                               Check-In
-                            </Link>
+                            </button>
                           )}
                         </div>
                       </div>
@@ -413,180 +382,14 @@ export default function CoordinadorBasicoDashboard() {
           </div>
         </div>
 
-        {/* Widgets de Acción - 2x3 Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          
-          {/* Widget 1: Cartas Pendientes */}
-          <Link href="/dashboard/coordinador/cartas-pendientes">
-            <div className="bg-gradient-to-br from-yellow-900/40 to-slate-900 border-2 border-yellow-500/30 rounded-3xl p-8 hover:border-yellow-500/50 transition-all cursor-pointer group">
-              <div className="flex items-center justify-between mb-6">
-                <div className="p-3 bg-yellow-500/20 group-hover:bg-yellow-500/30 rounded-xl transition-colors">
-                  <FileText size={32} className="text-yellow-400" />
-                </div>
-                <Clock size={20} className="text-yellow-400/60" />
-              </div>
-              <p className="text-6xl font-black text-white mb-2">{stats.cartasPendientes}</p>
-              <p className="text-lg font-bold text-white mb-1">Cartas Pendientes</p>
-              <p className="text-xs text-slate-400">Esperando autorización</p>
-            </div>
-          </Link>
-
-          {/* Widget 2: Cartas Autorizadas */}
-          <Link href="/dashboard/coordinador/cartas-pendientes?filter=APROBADA">
-            <div className="bg-gradient-to-br from-green-900/40 to-slate-900 border-2 border-green-500/30 rounded-3xl p-8 hover:border-green-500/50 transition-all cursor-pointer group">
-              <div className="flex items-center justify-between mb-6">
-                <div className="p-3 bg-green-500/20 group-hover:bg-green-500/30 rounded-xl transition-colors">
-                  <CheckCircle size={32} className="text-green-400" />
-                </div>
-                <Shield size={20} className="text-green-400/60" />
-              </div>
-              <p className="text-6xl font-black text-white mb-2">{stats.cartasAutorizadas}</p>
-              <p className="text-lg font-bold text-white mb-1">Cartas Autorizadas</p>
-              <p className="text-xs text-slate-400">Total aprobadas</p>
-            </div>
-          </Link>
-
-          {/* Widget 3: Alertas Activas */}
-          <Link href="/dashboard/coordinador/alertas-activas">
-            <div className="bg-gradient-to-br from-red-900/40 to-slate-900 border-2 border-red-500/30 rounded-3xl p-8 hover:border-red-500/50 transition-all cursor-pointer group">
-              <div className="flex items-center justify-between mb-6">
-                <div className="p-3 bg-red-500/20 group-hover:bg-red-500/30 rounded-xl transition-colors">
-                  <AlertTriangle size={32} className="text-red-400" />
-                </div>
-                <Zap size={20} className="text-red-400/60" />
-              </div>
-              <p className="text-6xl font-black text-white mb-2">{stats.alertasActivas}</p>
-              <p className="text-lg font-bold text-white mb-1">Alertas Activas</p>
-              <p className="text-xs text-slate-400">Requieren atención</p>
-            </div>
-          </Link>
-
-          {/* Widget 4: En Riesgo + Gestión de Strikes (FUSIONADO) */}
-          <div className="bg-gradient-to-br from-orange-900/40 via-purple-900/30 to-slate-900 border-2 border-orange-500/30 rounded-3xl p-8 hover:border-orange-500/50 transition-all group">
-            <div className="flex items-center justify-between mb-6">
-              <div className="p-3 bg-gradient-to-br from-orange-500/20 to-purple-500/20 group-hover:from-orange-500/30 group-hover:to-purple-500/30 rounded-xl transition-colors">
-                <Shield size={32} className="text-orange-400" />
-              </div>
-              <Target size={20} className="text-orange-400/60" />
-            </div>
-            <p className="text-6xl font-black text-white mb-2">{stats.participantesRiesgo}</p>
-            <p className="text-lg font-bold text-white mb-1">En Riesgo</p>
-            <p className="text-xs text-slate-400 mb-4">Participantes con 2+ faltas</p>
-            
-            {/* Botón de acceso a Strikes */}
-            <Link href="/dashboard/coordinador/strikes">
-              <button className="w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 flex items-center justify-center gap-2">
-                <Shield size={18} />
-                Gestionar Strikes
-              </button>
-            </Link>
-          </div>
-
-          {/* Widget 5: Misiones & Tareas Extraordinarias (NUEVO - DOBLE ESPACIO) */}
-          <div className="lg:col-span-2 bg-gradient-to-br from-orange-900/40 via-yellow-900/30 to-orange-900/40 border-2 border-orange-600/40 rounded-3xl p-8">
-            <h3 className="text-2xl font-black text-white mb-6 flex items-center gap-3">
-              <Zap className="text-yellow-400" size={28} />
-              Misiones & Tareas Extraordinarias
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Misiones con Quantum IA */}
-              <Link 
-                href="/dashboard/admin/tareas/nueva?quantum=true"
-                className="block p-5 bg-slate-900/60 border border-purple-600/30 rounded-xl hover:border-purple-500/60 hover:shadow-lg hover:shadow-purple-500/20 transition-all group"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-start gap-3">
-                    <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg">
-                      <FileText size={24} className="text-white" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-white text-lg group-hover:text-purple-300 transition-colors">
-                        🧠 Misiones con Quantum IA
-                      </h4>
-                      <p className="text-xs text-slate-400 mt-1">
-                        Crea misiones personalizadas con IA
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-purple-400 group-hover:translate-x-1 transition-transform text-2xl">→</div>
-                </div>
-              </Link>
-
-              {/* Tareas Extraordinarias */}
-              <Link 
-                href="/dashboard/admin/tareas/nueva"
-                className="block p-5 bg-slate-900/60 border border-orange-600/30 rounded-xl hover:border-orange-500/60 hover:shadow-lg hover:shadow-orange-500/20 transition-all group"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-start gap-3">
-                    <div className="p-3 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg">
-                      <Shield size={24} className="text-white" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-white text-lg group-hover:text-orange-300 transition-colors">
-                        ⚡ Tareas Extraordinarias
-                      </h4>
-                      <p className="text-xs text-slate-400 mt-1">
-                        Asigna tareas para activar visión
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-orange-400 group-hover:translate-x-1 transition-transform text-2xl">→</div>
-                </div>
-              </Link>
-            </div>
-
-            {/* Tip de Quantum IA */}
-            <div className="mt-5 p-5 bg-gradient-to-r from-cyan-900/20 to-blue-900/20 border border-cyan-600/30 rounded-xl">
-              <div className="flex items-start gap-3">
-                <div className="text-3xl">{loadingConsejo ? '⏳' : consejoQuantum?.emoji || '🧬'}</div>
-                <div className="flex-1">
-                  <p className="text-sm text-cyan-200 font-semibold mb-2">
-                    💡 Consejo de Quantum IA {consejoQuantum?.tipo && `- ${consejoQuantum.tipo}`}
-                  </p>
-                  {loadingConsejo ? (
-                    <p className="text-sm text-cyan-100/60 animate-pulse">
-                      Cargando consejo de activación...
-                    </p>
-                  ) : (
-                    <div 
-                      className="text-sm text-cyan-100/80"
-                      dangerouslySetInnerHTML={{ __html: consejoQuantum?.consejo || 'No hay consejo disponible' }}
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
+        {/* Widget de Formularios Médicos */}
+        <div className="mt-8">
+          <MedicalFormsListWidget />
         </div>
 
         {/* Sección de acciones adicionales */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* Revisar Evidencias de Tareas Extraordinarias */}
-          <Link href="/dashboard/admin/evidencias" className="block h-full">
-            <div className="h-full bg-gradient-to-br from-amber-900/50 to-slate-900 border-2 border-amber-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-500/10 flex flex-col">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-amber-500/20 group-hover:bg-amber-500/30 rounded-xl transition-colors">
-                  <Zap size={24} className="text-amber-300" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-white text-sm uppercase">
-                    Revisar Evidencias
-                  </h3>
-                  <p className="text-xs text-amber-300">
-                    Tareas extraordinarias y eventos
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-slate-400 mt-auto">
-                Revisa y aprueba evidencias de misiones y tareas especiales
-              </p>
-            </div>
-          </Link>
-
           {/* Gestionar Visiones */}
           <Link href="/dashboard/coordinador/visiones" className="block h-full">
             <div className="h-full bg-gradient-to-br from-emerald-900/50 to-slate-900 border-2 border-emerald-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/10 flex flex-col">

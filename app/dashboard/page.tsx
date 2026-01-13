@@ -473,6 +473,10 @@ export default async function DashboardPage() {
     redirect("/dashboard/coordinador-basico");
   }
 
+  if (usuario.rol === "TRAINER") {
+    redirect("/dashboard/coordinador-basico");
+  }
+
   if (usuario.rol === "GAMECHANGER") {
     redirect("/dashboard/gamechanger");
   }
@@ -550,6 +554,21 @@ export default async function DashboardPage() {
       {/* progreso hacia siguiente nivel               */}
       {/* ============================================ */}
       <IdentityHeroSection cartaData={cartaDataForIdentity} />
+
+      {/* ============================================ */}
+      {/* QR PERSONAL - WIDGET PARA INVITAR            */}
+      {/* ============================================ */}
+      {(usuario.rol === 'PARTICIPANTE' || usuario.rol === 'LIDER' || usuario.rol === 'GAMECHANGER') && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <PersonalQRWidget 
+            userName={usuario.nombre}
+            userId={usuario.id}
+            userEmail={usuario.email}
+            referralCode={usuario.referralCode || undefined}
+            organizationId={usuario.organizationId}
+          />
+        </div>
+      )}
 
       {/* ============================================ */}
       {/* ZONA SUPERIOR: Hero Section Condicional      */}
@@ -673,21 +692,6 @@ export default async function DashboardPage() {
           </div>
         )}
       </div>
-
-      {/* ============================================ */}
-      {/* WIDGETS ADICIONALES                          */}
-      {/* ============================================ */}
-      {(usuario.rol === 'PARTICIPANTE' || usuario.rol === 'LIDER' || usuario.rol === 'GAMECHANGER') && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <PersonalQRWidget 
-            userName={usuario.nombre}
-            userId={usuario.id}
-            userEmail={usuario.email}
-            referralCode={usuario.referralCode || undefined}
-            organizationId={usuario.organizationId}
-          />
-        </div>
-      )}
 
       {/* ============================================ */}
       {/* ZONA DE EJECUCIÓN DIARIA (Siempre visible)  */}

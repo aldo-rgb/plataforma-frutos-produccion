@@ -9,6 +9,7 @@ import BuddySystemWidget from './widgets/BuddySystemWidget';
 import TribeManagementWidget from './widgets/TribeManagementWidget';
 import PromiseWidget from './widgets/PromiseWidget';
 import JoinVisionWidget from './widgets/JoinVisionWidget';
+import GCCallWidget from './widgets/GCCallWidget';
 
 interface DashboardStatsResponse {
   success: boolean;
@@ -130,13 +131,10 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
 
       {/* Level-Specific Widgets */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* BASIC: Mostrar PromiseWidget + UpgradeToAdvancedWidget */}
+        {/* BASIC: Mostrar solo GCCallWidget + UpgradeToAdvancedWidget (sin PromiseWidget) */}
         {level === 'BASIC' && (
           <>
-            <PromiseWidget 
-              hasCompletedCarta={cartaData?.hasCompletedCarta}
-              promises={cartaData?.promises}
-            />
+            <GCCallWidget />
             {currentLevelInfo.nextMilestone?.isLocked && (
               <UpgradeToAdvancedWidget
                 advancedStartDate={currentLevelInfo.nextMilestone.deadline}
@@ -146,7 +144,7 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
           </>
         )}
 
-        {/* ADVANCED: Mostrar BuddySystemWidget + PromiseWidget */}
+        {/* ADVANCED: Mostrar BuddySystemWidget + PromiseWidget + GCCallWidget */}
         {level === 'ADVANCED' && (
           <>
             <BuddySystemWidget buddy={buddyInfo} />
@@ -154,6 +152,7 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
               hasCompletedCarta={cartaData?.hasCompletedCarta}
               promises={cartaData?.promises}
             />
+            <GCCallWidget />
           </>
         )}
 

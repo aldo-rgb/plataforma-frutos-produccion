@@ -10,6 +10,7 @@ import {
   Shield, BookOpen, GraduationCap, Star, Phone, Heart
 } from 'lucide-react';
 import Link from 'next/link';
+import TreasuryQuickWidget from '@/components/dashboard/TreasuryQuickWidget';
 
 interface DashboardData {
   overview: {
@@ -840,6 +841,11 @@ export default function SchoolAdminDashboard() {
               <span className="hidden sm:inline">Acciones Rápidas</span>
               <span className="sm:hidden">Acciones</span>
             </h2>
+
+            {/* Widget de Tesorería Express */}
+            <div className="mb-6">
+              <TreasuryQuickWidget isAdmin={true} />
+            </div>
 
             {/* Widget de QR de Organización */}
             <div 

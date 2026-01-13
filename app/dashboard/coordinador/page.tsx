@@ -12,6 +12,8 @@ import Link from 'next/link';
 import VisionesWidget from '@/components/dashboard/VisionesWidget';
 import MedicalAlertsWidget from '@/components/dashboard/MedicalAlertsWidget';
 import MedicalFormsListWidget from '@/components/dashboard/MedicalFormsListWidget';
+import GCCallsMonitorWidget from '@/components/dashboard/GCCallsMonitorWidget';
+import TreasuryQuickWidget from '@/components/dashboard/TreasuryQuickWidget';
 
 interface DashboardData {
   overview: {
@@ -205,14 +207,24 @@ export default function CoordinadorDashboard() {
           />
         </div>
 
+        {/* Widget de Formularios Médicos */}
+        <div className="mt-8">
+          <MedicalFormsListWidget />
+        </div>
+
         {/* Widget de Alertas Médicas */}
         <div className="mt-8">
           <MedicalAlertsWidget />
         </div>
 
-        {/* Widget de Formularios Médicos */}
+        {/* Widget Monitor de Llamadas GC */}
         <div className="mt-8">
-          <MedicalFormsListWidget />
+          <GCCallsMonitorWidget />
+        </div>
+
+        {/* Widget de Tesorería Express */}
+        <div className="mt-8">
+          <TreasuryQuickWidget />
         </div>
 
         {/* Widgets de Acción - 2x3 Grid */}

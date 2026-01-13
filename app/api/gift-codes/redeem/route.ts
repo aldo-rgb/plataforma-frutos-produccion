@@ -1,22 +1,43 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// POST - Canjear código de regalo (crear tickets)
+// POST - Canjear código de regalo o pago en efectivo
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { code, userId, visionId } = body;
+    const { code, userId, visionId, isCashPayment } = body;
 
-    if (!code || !userId || !visionId) {
+    console.log('[REDEEM] Recibido:', { code, userId, visionId, isCashPayment });
+
+    if (!code || !userId) {
       return NextResponse.json(
-        { success: false, error: 'Datos incompletos' },
+        { success: false, error: 'Código y userId son requeridos' },
         { status: 400 }
       );
     }
 
-    // Buscar código
+    const normalizedCode = code.toUpperCase().trim();
+    
+    // Si es un código CASH (pago en efectivo), procesarlo diferente
+    const isCashCode = isCashPayment || normalizedCode.startsWith('CASH-');
+    console.log('[REDEEM] Es código CASH:', isCashCode, 'Código normalizado:', normalizedCode);
+    
+    if (isCashCode) {
+      // Para códigos CASH no necesitamos visionId
+      return await redeemPaymentCode(normalizedCode, userId, visionId);
+    }
+
+    // Para gift codes sí necesitamos visionId
+    if (!visionId) {
+      return NextResponse.json(
+        { success: false, error: 'visionId es requerido para códigos de regalo' },
+        { status: 400 }
+      );
+    }
+
+    // Buscar código de regalo
     const giftCode = await prisma.giftCode.findUnique({
-      where: { code: code.toUpperCase().trim() },
+      where: { code: normalizedCode },
     });
 
     if (!giftCode) {
@@ -149,6 +170,86 @@ export async function POST(request: Request) {
     console.error('Error redeeming gift code:', error);
     return NextResponse.json(
       { success: false, error: 'Error al canjear código' },
+      { status: 500 }
+    );
+  }
+}
+
+// Función para canjear códigos de pago en efectivo (PaymentCode)
+async function redeemPaymentCode(code: string, userId: string | number, visionId: string | number) {
+  try {
+    console.log('[REDEEM CASH] Buscando código:', code);
+    
+    // Buscar el código de pago
+    const paymentCode = await prisma.paymentCode.findUnique({
+      where: { code },
+      include: {
+        organization: true,
+        vision: true,
+      },
+    });
+
+    console.log('[REDEEM CASH] Código encontrado:', paymentCode ? { id: paymentCode.id, status: paymentCode.status } : null);
+
+    if (!paymentCode) {
+      return NextResponse.json(
+        { success: false, error: 'Código de pago no encontrado' },
+        { status: 404 }
+      );
+    }
+
+    if (paymentCode.status !== 'ACTIVE') {
+      const statusMessages: Record<string, string> = {
+        'REDEEMED': 'Este código ya fue utilizado',
+        'CANCELLED': 'Este código fue cancelado',
+        'EXPIRED': 'Este código ha expirado',
+      };
+      return NextResponse.json(
+        { success: false, error: statusMessages[paymentCode.status] || 'Código no válido' },
+        { status: 400 }
+      );
+    }
+
+    // Verificar usuario
+    const user = await prisma.usuario.findUnique({
+      where: { id: parseInt(String(userId)) },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Usuario no encontrado' },
+        { status: 404 }
+      );
+    }
+
+    // Actualizar el código como REDEEMED
+    console.log('[REDEEM CASH] Actualizando código a REDEEMED para usuario:', user.id);
+    
+    const updatedCode = await prisma.paymentCode.update({
+      where: { id: paymentCode.id },
+      data: {
+        status: 'REDEEMED',
+        redeemedById: user.id,
+        redeemedAt: new Date(),
+      },
+    });
+
+    console.log('[REDEEM CASH] Código actualizado:', { id: updatedCode.id, status: updatedCode.status });
+
+    return NextResponse.json({
+      success: true,
+      message: `💵 Código de pago canjeado: $${Number(paymentCode.amount).toLocaleString()} MXN`,
+      paymentCode: {
+        id: paymentCode.id,
+        code: paymentCode.code,
+        amount: Number(paymentCode.amount),
+        status: 'REDEEMED',
+      },
+    });
+  } catch (error) {
+    console.error('[REDEEM CASH] Error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Error al canjear código de pago' },
       { status: 500 }
     );
   }

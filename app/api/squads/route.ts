@@ -7,7 +7,7 @@ const ALLOWED_ROLES = ['SCHOOL_ADMIN', 'COORDINADOR', 'GAMECHANGER', 'TRAINER', 
 
 /**
  * POST /api/squads
- * Crea un nuevo escuadrón
+ * Crea un nuevo Átomo (mini-grupo)
  */
 export async function POST(request: Request) {
   try {
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 
     if (!user || !ALLOWED_ROLES.includes(user.rol)) {
       return NextResponse.json(
-        { success: false, error: 'No tienes permisos para crear escuadrones' },
+        { success: false, error: 'No tienes permisos para crear Átomos' },
         { status: 403 }
       );
     }
@@ -42,6 +42,8 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { visionId, productId, name, level = 'BASIC', maxSize = 10 } = body;
 
+    console.log('📦 Creating squad request:', { visionId, level, userId: user.id, orgId: user.organizationId });
+
     if (!visionId) {
       return NextResponse.json(
         { success: false, error: 'visionId es requerido' },
@@ -49,11 +51,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verificar que la visión existe y pertenece a la organización
+    // Validar que level sea válido
+    const validLevels = ['BASIC', 'ADVANCED', 'PL'];
+    if (!validLevels.includes(level)) {
+      return NextResponse.json(
+        { success: false, error: `Nivel inválido: ${level}. Debe ser BASIC, ADVANCED o PL` },
+        { status: 400 }
+      );
+    }
+
+    // Verificar que la visión existe
     const vision = await prisma.vision.findFirst({
       where: {
         id: parseInt(visionId),
-        organizationId: user.organizationId,
       },
     });
 
@@ -62,6 +72,32 @@ export async function POST(request: Request) {
         { success: false, error: 'Visión no encontrada' },
         { status: 404 }
       );
+    }
+
+    // Para Game Changers, verificar que tienen enrollment en esa visión
+    if (user.rol === 'GAMECHANGER') {
+      // Buscar en VisionGameChanger
+      const gcEnrollment = await prisma.visionGameChanger.findFirst({
+        where: {
+          gameChangerId: user.id,
+          visionId: parseInt(visionId),
+        },
+      });
+
+      if (!gcEnrollment) {
+        return NextResponse.json(
+          { success: false, error: 'No tienes asignación como Game Changer en esta visión' },
+          { status: 403 }
+        );
+      }
+    } else {
+      // Para otros roles, verificar organización
+      if (vision.organizationId !== user.organizationId) {
+        return NextResponse.json(
+          { success: false, error: 'Visión no pertenece a tu organización' },
+          { status: 403 }
+        );
+      }
     }
 
     // Verificar si ya existe un grupo para este GC en esta visión/nivel
@@ -84,7 +120,7 @@ export async function POST(request: Request) {
     }
 
     // Generar nombre automático si no se proporciona
-    const groupName = name || `Escuadrón ${user.nombre?.split(' ')[0] || 'GC'}`;
+    const groupName = name || `Átomo ${user.nombre?.split(' ')[0] || 'GC'}`;
 
     // Crear el grupo
     const squad = await prisma.smallGroup.create({
@@ -112,7 +148,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Escuadrón "${groupName}" creado exitosamente`,
+      message: `Átomo "${groupName}" creado exitosamente`,
       squad: {
         id: squad.id,
         name: squad.name,
@@ -124,10 +160,20 @@ export async function POST(request: Request) {
         createdAt: squad.createdAt,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating squad:', error);
+    console.error('Error details:', error?.message, error?.code);
+    
+    // Devolver mensaje más específico
+    let errorMessage = 'Error al crear Átomo';
+    if (error?.code === 'P2002') {
+      errorMessage = 'Ya tienes un grupo activo para esta visión y nivel';
+    } else if (error?.message) {
+      errorMessage = `Error: ${error.message}`;
+    }
+    
     return NextResponse.json(
-      { success: false, error: 'Error al crear escuadrón' },
+      { success: false, error: errorMessage },
       { status: 500 }
     );
   }
@@ -135,7 +181,7 @@ export async function POST(request: Request) {
 
 /**
  * GET /api/squads
- * Lista los escuadrones
+ * Lista los Átomos
  */
 export async function GET(request: Request) {
   try {
@@ -169,15 +215,18 @@ export async function GET(request: Request) {
 
     // Construir filtros
     const where: any = {
-      organizationId: user.organizationId,
       isActive: true,
     };
 
-    // Si es GC, solo ver sus grupos (a menos que sea admin/coordinador)
+    // Si es GC, solo ver sus grupos
     if (user.rol === 'GAMECHANGER' || user.rol === 'TRAINER') {
       where.leaderId = user.id;
-    } else if (leaderId) {
-      where.leaderId = parseInt(leaderId);
+    } else {
+      // Para otros roles, filtrar por organización
+      where.organizationId = user.organizationId;
+      if (leaderId) {
+        where.leaderId = parseInt(leaderId);
+      }
     }
 
     if (visionId) where.visionId = parseInt(visionId);
@@ -235,7 +284,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error('Error fetching squads:', error);
     return NextResponse.json(
-      { success: false, error: 'Error al obtener escuadrones' },
+      { success: false, error: 'Error al obtener Átomos' },
       { status: 500 }
     );
   }

@@ -7,14 +7,17 @@ const ALLOWED_ROLES = ['SCHOOL_ADMIN', 'COORDINADOR', 'GAMECHANGER', 'TRAINER', 
 
 /**
  * POST /api/squads/[id]/add-member
- * Agrega un miembro al escuadrón (por scan QR/NFC o manual)
+ * Agrega un miembro al Átomo (por scan QR/NFC o manual)
  * Maneja la lógica de "robo de jugador" si ya está en otro grupo
  */
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Await params en Next.js 14+
+    const { id: squadId } = await context.params;
+    
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
@@ -36,7 +39,6 @@ export async function POST(
       );
     }
 
-    const squadId = params.id;
     const body = await request.json();
     const { userId, referralCode, forceMove = false } = body;
 
@@ -51,7 +53,7 @@ export async function POST(
 
     if (!squad) {
       return NextResponse.json(
-        { success: false, error: 'Escuadrón no encontrado' },
+        { success: false, error: 'Átomo no encontrado' },
         { status: 404 }
       );
     }
@@ -101,24 +103,27 @@ export async function POST(
     }
 
     // Verificar que el participante tiene enrollment en la misma visión
+    // Buscar enrollment con cualquier level válido para esta visión
     const enrollment = await prisma.vision_enrollments.findFirst({
       where: {
         userId: targetUser.id,
         visionId: squad.visionId,
-        level: squad.level,
-        enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] },
+        enrollmentStatus: { in: ['ENROLLED', 'ACTIVE', 'COMPLETED'] },
       },
     });
 
+    console.log('📋 Enrollment check:', { 
+      userId: targetUser.id, 
+      visionId: squad.visionId, 
+      squadLevel: squad.level,
+      enrollmentFound: !!enrollment,
+      enrollmentLevel: enrollment?.level 
+    });
+
+    // Permitir agregar aunque no tenga enrollment exacto (el GC puede agregar participantes pendientes)
+    // Solo advertir si no hay ningún enrollment
     if (!enrollment) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: `${targetUser.nombre} no está inscrito en esta visión/nivel`,
-          code: 'NOT_ENROLLED' 
-        },
-        { status: 400 }
-      );
+      console.log('⚠️ No enrollment found, but allowing add');
     }
 
     // Verificar si ya está en ESTE grupo
@@ -133,7 +138,7 @@ export async function POST(
     if (existingInThisGroup) {
       return NextResponse.json({
         success: true,
-        message: `${targetUser.nombre} ya está en tu escuadrón`,
+        message: `${targetUser.nombre} ya está en tu Átomo`,
         member: {
           id: existingInThisGroup.id,
           user: targetUser,
@@ -167,7 +172,7 @@ export async function POST(
     if (existingInOtherGroup && !forceMove) {
       return NextResponse.json({
         success: false,
-        error: `${targetUser.nombre} ya está en el grupo de ${existingInOtherGroup.group.leader.nombre}. ¿Moverlo a tu grupo?`,
+        error: `${targetUser.nombre} ya está en el Átomo de ${existingInOtherGroup.group.leader.nombre}. ¿Moverlo a tu Átomo?`,
         code: 'ALREADY_IN_GROUP',
         conflictData: {
           currentGroup: {
@@ -199,7 +204,7 @@ export async function POST(
         data: {
           groupId: squadId,
           userId: targetUser!.id,
-          enrollmentId: enrollment.id,
+          enrollmentId: enrollment?.id || null,
           previousGroupId: existingInOtherGroup?.groupId || null,
           movedAt: existingInOtherGroup ? new Date() : null,
           movedBy: existingInOtherGroup ? user.id : null,
@@ -222,8 +227,8 @@ export async function POST(
     return NextResponse.json({
       success: true,
       message: existingInOtherGroup 
-        ? `${targetUser.nombre} movido a tu escuadrón` 
-        : `${targetUser.nombre} agregado al escuadrón`,
+        ? `${targetUser.nombre} movido a tu Átomo` 
+        : `${targetUser.nombre} agregado al Átomo`,
       member: {
         id: result.id,
         user: result.user,
@@ -235,10 +240,19 @@ export async function POST(
         isFull: updatedCount >= squad.maxSize,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error adding member to squad:', error);
+    console.error('Error details:', error?.message, error?.code);
+    
+    let errorMessage = 'Error al agregar miembro';
+    if (error?.code === 'P2002') {
+      errorMessage = 'Este participante ya está en el grupo';
+    } else if (error?.message) {
+      errorMessage = `Error: ${error.message}`;
+    }
+    
     return NextResponse.json(
-      { success: false, error: 'Error al agregar miembro' },
+      { success: false, error: errorMessage },
       { status: 500 }
     );
   }
