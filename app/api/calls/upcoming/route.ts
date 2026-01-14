@@ -28,8 +28,8 @@ export async function GET(request: Request) {
     const startDate = startOfDay(targetDate);
     const endDate = endOfDay(addDays(targetDate, 7));
 
-    // Buscar llamadas programadas
-    const upcomingCalls = await prisma.callBooking.findMany({
+    // 1. Buscar llamadas de mentoría (CallBooking)
+    const mentorCalls = await prisma.callBooking.findMany({
       where: {
         studentId: user.id,
         scheduledAt: {
@@ -55,15 +55,54 @@ export async function GET(request: Request) {
       }
     });
 
-    console.log(`📞 Llamadas encontradas para usuario ${user.id}:`, upcomingCalls.length);
+    // 2. Buscar llamadas con Game Changer (GCCallSlot)
+    const gcCalls = await prisma.gCCallSlot.findMany({
+      where: {
+        participantId: user.id,
+        scheduledDate: {
+          gte: startDate,
+          lte: endDate
+        },
+        status: {
+          in: ['SCHEDULED', 'CONFIRMED']
+        }
+      },
+      include: {
+        availability: {
+          include: {
+            gameChanger: {
+              select: {
+                id: true,
+                nombre: true,
+                profileImage: true,
+                telefono: true
+              }
+            }
+          }
+        },
+        squad: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      },
+      orderBy: {
+        scheduledDate: 'asc'
+      }
+    });
 
-    // Formatear respuesta
-    const formattedCalls = upcomingCalls.map((call: any) => {
+    console.log(`📞 Llamadas mentoría para usuario ${user.id}:`, mentorCalls.length);
+    console.log(`📞 Llamadas GC para usuario ${user.id}:`, gcCalls.length);
+
+    // Formatear llamadas de mentoría
+    const formattedMentorCalls = mentorCalls.map((call: any) => {
       const scheduledDate = new Date(call.scheduledAt);
       
       return {
         id: call.id,
         type: call.type || 'DISCIPLINE',
+        callType: 'MENTOR',
         scheduledDate: scheduledDate.toISOString().split('T')[0],
         scheduledTime: scheduledDate.toISOString().split('T')[1].substring(0, 5),
         status: call.status,
@@ -78,9 +117,44 @@ export async function GET(request: Request) {
       };
     });
 
+    // Formatear llamadas de GC
+    const formattedGCCalls = gcCalls.map((slot: any) => {
+      // Combinar scheduledDate con scheduledTime para crear la fecha completa
+      const dateStr = new Date(slot.scheduledDate).toISOString().split('T')[0];
+      
+      return {
+        id: slot.id,
+        type: 'GC_CALL',
+        callType: 'GAME_CHANGER',
+        scheduledDate: dateStr,
+        scheduledTime: slot.scheduledTime,
+        endTime: slot.endTime,
+        status: slot.status,
+        assignedByGC: slot.assignedByGC,
+        gameChanger: slot.availability?.gameChanger ? {
+          id: slot.availability.gameChanger.id,
+          nombre: slot.availability.gameChanger.nombre,
+          imagen: slot.availability.gameChanger.profileImage,
+          telefono: slot.availability.gameChanger.telefono
+        } : null,
+        squad: slot.squad
+      };
+    });
+
+    // Combinar y ordenar por fecha
+    const allCalls = [...formattedMentorCalls, ...formattedGCCalls].sort((a, b) => {
+      const dateA = new Date(`${a.scheduledDate}T${a.scheduledTime}`);
+      const dateB = new Date(`${b.scheduledDate}T${b.scheduledTime}`);
+      return dateA.getTime() - dateB.getTime();
+    });
+
     return NextResponse.json({
-      calls: formattedCalls,
-      total: formattedCalls.length
+      calls: allCalls,
+      total: allCalls.length,
+      breakdown: {
+        mentorCalls: formattedMentorCalls.length,
+        gcCalls: formattedGCCalls.length
+      }
     });
 
   } catch (error) {

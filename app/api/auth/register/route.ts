@@ -69,6 +69,33 @@ export async function POST(request: Request) {
       }
     }
 
+    // VALIDACIÓN CRÍTICA: Verificar que haya una visión BASIC disponible
+    // Solo permite el registro si hay una visión que aún no ha iniciado
+    if (finalOrganizationId && !visionId) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const availableVision = await prisma.vision.findFirst({
+        where: {
+          organizationId: finalOrganizationId,
+          isActive: true,
+          enabledLevels: { has: 'BASIC' },
+          OR: [
+            { startDate: null },
+            { startDate: { gt: today } }
+          ]
+        },
+        select: { id: true }
+      });
+
+      if (!availableVision) {
+        return NextResponse.json(
+          { success: false, error: 'No hay programa disponible para inscripción en esta sucursal. Por favor intenta más tarde o contacta a la organización.' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Hashear contraseña
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -147,12 +174,43 @@ export async function POST(request: Request) {
       }
     });
 
-    // Si hay visionId, inscribir al usuario en la visión
-    if (visionId && finalOrganizationId) {
+    // Buscar la próxima visión BASIC disponible para inscribir al usuario
+    // Si viene visionId explícito lo usamos, si no, buscamos automáticamente
+    let finalVisionId = visionId;
+    
+    if (!finalVisionId && finalOrganizationId) {
+      // Buscar la próxima visión BASIC que aún no ha iniciado
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const nextVision = await prisma.vision.findFirst({
+        where: {
+          organizationId: finalOrganizationId,
+          isActive: true,
+          enabledLevels: { has: 'BASIC' },
+          OR: [
+            { startDate: null },
+            { startDate: { gt: today } }
+          ]
+        },
+        orderBy: { startDate: 'asc' },
+        select: { id: true, coordinadorId: true, nombre: true }
+      });
+
+      if (nextVision) {
+        finalVisionId = nextVision.id;
+        console.log(`🎯 Visión BASIC encontrada automáticamente: ${nextVision.nombre} (ID: ${nextVision.id})`);
+      } else {
+        console.warn(`⚠️ No hay visión BASIC disponible para organización ${finalOrganizationId}`);
+      }
+    }
+
+    // Inscribir al usuario en la visión
+    if (finalVisionId && finalOrganizationId) {
       try {
         // Buscar el coordinador de la visión
         const vision = await prisma.vision.findUnique({
-          where: { id: visionId },
+          where: { id: finalVisionId },
           select: { coordinadorId: true }
         });
 
@@ -160,7 +218,7 @@ export async function POST(request: Request) {
           await prisma.vision_enrollments.create({
             data: {
               userId: newUser.id,
-              visionId: visionId,
+              visionId: finalVisionId,
               coordinatorId: vision.coordinadorId,
               level: 'BASIC',
               enrollmentStatus: 'ENROLLED',
@@ -168,9 +226,9 @@ export async function POST(request: Request) {
             }
           });
 
-          console.log(`✅ Usuario ${newUser.id} inscrito en visión ${visionId}`);
+          console.log(`✅ Usuario ${newUser.id} inscrito en visión ${finalVisionId}`);
         } else {
-          console.warn(`⚠️ Visión ${visionId} no tiene coordinador asignado`);
+          console.warn(`⚠️ Visión ${finalVisionId} no tiene coordinador asignado`);
         }
       } catch (error) {
         console.error('Error al inscribir usuario en visión:', error);

@@ -13,18 +13,26 @@ export const dynamic = 'force-dynamic';
 const ALLOWED_ROLES = ['SCHOOL_ADMIN', 'COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'ADMINISTRADOR'];
 
 // Badge dimensions in points (72 per inch)
-const BADGE_WIDTH = 252; // 3.5 inches
-const BADGE_HEIGHT = 180; // 2.5 inches
-const MARGIN = 36; // 0.5 inch
+// Formato: 4 badges plegables por hoja carta (2 columnas x 2 filas)
+// Cada badge plegable = frente + reverso (pegados verticalmente)
+// MAXIMIZADO para llenar la hoja
+const BADGE_WIDTH = 280; // ~3.9 inches (máximo para 2 columnas)
+const BADGE_HEIGHT = 180; // ~2.5 inches por lado (máximo para 2 filas plegables)
+const FOLDABLE_BADGE_HEIGHT = BADGE_HEIGHT * 2; // 5 inches total (frente + reverso)
+const MARGIN_X = 18; // 0.25 inch horizontal margin
+const MARGIN_Y = 18; // 0.25 inch vertical margin
+const GAP_X = 16; // Gap between columns
+const GAP_Y = 16; // Gap between rows
 const BADGES_PER_ROW = 2;
-const BADGES_PER_COL = 4;
-const BADGES_PER_PAGE = BADGES_PER_ROW * BADGES_PER_COL;
+const BADGES_PER_COL = 2; // 2 filas de badges plegables
+const BADGES_PER_PAGE = BADGES_PER_ROW * BADGES_PER_COL; // 4 badges por página
 
 interface Participant {
   id: number;
   nombre: string;
   email: string;
   referralCode: string | null;
+  rol: string; // Rol del usuario
 }
 
 /**
@@ -93,13 +101,41 @@ export async function GET(
             nombre: true,
             email: true,
             referralCode: true,
+            rol: true, // Incluir rol del usuario
           },
         },
       },
     });
 
+    // Mapear participantes con su rol determinado por nivel o rol de usuario
     const participants: Participant[] = enrollments
-      .map(e => e.Usuario_vision_enrollments_userIdToUsuario)
+      .map(e => {
+        const user = e.Usuario_vision_enrollments_userIdToUsuario;
+        if (!user) return null;
+        
+        // Determinar rol: usar rol del usuario si es especial, si no usar nivel
+        let displayRole = 'PARTICIPANTE';
+        const userRol = user.rol?.toUpperCase() || '';
+        
+        // Roles especiales que van en rojo
+        if (['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'COORDINATOR'].includes(userRol)) {
+          displayRole = 'COORDINADOR';
+        } else if (['GAMECHANGER', 'GAME_CHANGER'].includes(userRol)) {
+          displayRole = 'GAMECHANGER';
+        } else if (['TRAINER', 'COACH', 'MENTOR'].includes(userRol)) {
+          displayRole = 'TRAINER';
+        } else if (level === 'ADVANCED' || level === 'PL') {
+          displayRole = 'GAMECHANGER';
+        }
+        
+        return {
+          id: user.id,
+          nombre: user.nombre,
+          email: user.email,
+          referralCode: user.referralCode,
+          rol: displayRole,
+        };
+      })
       .filter((p): p is Participant => p !== null);
 
     if (participants.length === 0) {
@@ -113,9 +149,6 @@ export async function GET(
     const orgName = vision.Organization?.name || 'Impacto Cuántico';
     const brandColor = vision.Organization?.brandColor || '#00BFFF'; // Cyan default
     const logoUrl = vision.Organization?.logoUrl;
-    
-    // Default role based on level
-    const role = level === 'BASIC' ? 'PARTICIPANTE' : 'GAMECHANGER';
 
     // Generate PDF with jsPDF
     const pdfBuffer = await generateBadgesPDF(
@@ -123,7 +156,6 @@ export async function GET(
       orgName,
       brandColor,
       logoUrl,
-      role,
       vision.nombre
     );
 
@@ -151,18 +183,52 @@ function hexToRgb(hex: string): [number, number, number] {
     : [0, 191, 255]; // Default cyan
 }
 
+// Helper: Get display name (first name only)
+function getDisplayName(fullName: string): string {
+  return fullName.split(' ')[0].toUpperCase();
+}
+
+// Helper: Get role label
+function getRoleLabel(role: string): string {
+  switch (role) {
+    case 'COORDINADOR': return 'COORDINADOR';
+    case 'GAMECHANGER': return 'GAME CHANGER';
+    case 'TRAINER': return 'TRAINER';
+    default: return 'PARTICIPANTE';
+  }
+}
+
+// Helper: Check if role should be red
+function isRedRole(role: string): boolean {
+  return ['COORDINADOR', 'GAMECHANGER', 'TRAINER'].includes(role);
+}
+
+// Load logo as base64 from URL
+async function loadLogoAsBase64(logoUrl: string): Promise<string | null> {
+  try {
+    const response = await fetch(logoUrl);
+    if (!response.ok) return null;
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString('base64');
+    const mimeType = response.headers.get('content-type') || 'image/png';
+    return `data:${mimeType};base64,${base64}`;
+  } catch (error) {
+    console.error('Error loading logo:', error);
+    return null;
+  }
+}
+
 async function generateBadgesPDF(
   participants: Participant[],
   orgName: string,
   brandColor: string,
   logoUrl: string | null | undefined,
-  role: string,
   visionName: string
 ): Promise<Buffer> {
-  // Create jsPDF document (Letter size: 215.9 x 279.4 mm)
+  // Create jsPDF document (Letter size: 612 x 792 points)
   const doc = new jsPDF({
     orientation: 'portrait',
-    unit: 'pt', // points (72 per inch)
+    unit: 'pt',
     format: 'letter',
   });
 
@@ -178,49 +244,49 @@ async function generateBadgesPDF(
     qrCodes.set(participant.id, qrDataUrl);
   }
 
-  // Calculate total pages needed
-  const totalFrontPages = Math.ceil(participants.length / BADGES_PER_PAGE);
+  // Load logo if available
+  let logoBase64: string | null = null;
+  if (logoUrl) {
+    logoBase64 = await loadLogoAsBase64(logoUrl);
+  }
 
-  // Parse colors
+  // Calculate total pages needed (4 badges per page)
+  const totalPages = Math.ceil(participants.length / BADGES_PER_PAGE);
+
+  // Parse brand color
   const accentColor = hexToRgb(brandColor);
-  const darkBlue: [number, number, number] = [0, 82, 147];
 
-  // ====== INTERLEAVED PAGES: Front then Back for each page ======
-  for (let pageNum = 0; pageNum < totalFrontPages; pageNum++) {
-    // Add new page if not the first
+  // Generate pages with foldable badges
+  for (let pageNum = 0; pageNum < totalPages; pageNum++) {
     if (pageNum > 0) doc.addPage();
 
     const startIdx = pageNum * BADGES_PER_PAGE;
     const endIdx = Math.min(startIdx + BADGES_PER_PAGE, participants.length);
     const pageParticipants = participants.slice(startIdx, endIdx);
 
-    // ====== FRONT PAGE (Names) ======
+    // Draw each foldable badge (front + back stacked vertically)
     for (let i = 0; i < pageParticipants.length; i++) {
       const participant = pageParticipants[i];
       const col = i % BADGES_PER_ROW;
       const row = Math.floor(i / BADGES_PER_ROW);
-      
-      const x = MARGIN + col * (BADGE_WIDTH + 10);
-      const y = MARGIN + row * (BADGE_HEIGHT + 10);
 
-      drawBadgeFront(doc, x, y, participant, orgName, accentColor, darkBlue, role);
-    }
-
-    // ====== BACK PAGE (QR Codes) - immediately after front ======
-    doc.addPage();
-
-    for (let i = 0; i < pageParticipants.length; i++) {
-      const participant = pageParticipants[i];
-      const col = i % BADGES_PER_ROW;
-      const row = Math.floor(i / BADGES_PER_ROW);
-      
-      // Mirror horizontally for duplex printing
-      const mirroredCol = BADGES_PER_ROW - 1 - col;
-      const x = MARGIN + mirroredCol * (BADGE_WIDTH + 10);
-      const y = MARGIN + row * (BADGE_HEIGHT + 10);
+      const x = MARGIN_X + col * (BADGE_WIDTH + GAP_X);
+      const y = MARGIN_Y + row * (FOLDABLE_BADGE_HEIGHT + GAP_Y);
 
       const qrDataUrl = qrCodes.get(participant.id);
-      drawBadgeBack(doc, x, y, participant, orgName, accentColor, qrDataUrl);
+
+      // Draw front (top half)
+      drawBadgeFront(doc, x, y, participant, orgName, accentColor, logoBase64);
+
+      // Draw back (bottom half, rotated 180°)
+      drawBadgeBackRotated(doc, x, y + BADGE_HEIGHT, participant, orgName, accentColor, logoBase64, qrDataUrl);
+
+      // Fold line (dashed line between front and back)
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineWidth(0.5);
+      doc.setLineDashPattern([4, 4], 0);
+      doc.line(x, y + BADGE_HEIGHT, x + BADGE_WIDTH, y + BADGE_HEIGHT);
+      doc.setLineDashPattern([], 0);
     }
   }
 
@@ -236,129 +302,169 @@ function drawBadgeFront(
   participant: Participant,
   orgName: string,
   accentColor: [number, number, number],
-  darkBlue: [number, number, number],
-  role: string
+  logoBase64: string | null
 ) {
   // White background
   doc.setFillColor(255, 255, 255);
   doc.rect(x, y, BADGE_WIDTH, BADGE_HEIGHT, 'F');
-  
-  // Top accent bar
-  doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
-  doc.rect(x, y, BADGE_WIDTH, 50, 'F');
-  
-  // Dark blue diagonal stripe (triangle)
-  doc.setFillColor(darkBlue[0], darkBlue[1], darkBlue[2]);
-  doc.triangle(
-    x + BADGE_WIDTH - 80, y,
-    x + BADGE_WIDTH, y,
-    x + BADGE_WIDTH, y + 60,
-    'F'
-  );
 
-  // Bottom curved accent (simplified as rectangle)
+  // Top bar with brand color
+  const topBarHeight = 42;
   doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
-  doc.rect(x, y + BADGE_HEIGHT - 35, BADGE_WIDTH, 35, 'F');
+  doc.rect(x, y, BADGE_WIDTH, topBarHeight, 'F');
 
-  // Organization name at top
+  // Logo in top bar (if available)
+  if (logoBase64) {
+    try {
+      doc.addImage(logoBase64, 'PNG', x + 10, y + 6, 30, 30);
+    } catch (err) {
+      console.error('Error adding logo:', err);
+    }
+  }
+
+  // Organization name in top bar
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(8);
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text(orgName.toUpperCase(), x + 10, y + 18);
+  doc.text(orgName.toUpperCase(), x + (logoBase64 ? 48 : 12), y + 27);
+
+  // Participant first name (LARGE)
+  const displayName = getDisplayName(participant.nombre);
   
-  // Participant first name (as large as possible)
-  const firstName = participant.nombre.split(' ')[0].toUpperCase();
-  doc.setTextColor(220, 38, 38); // Red
-  doc.setFont('helvetica', 'bold');
-  
-  // Calculate optimal font size to fit the badge width
-  const maxWidth = BADGE_WIDTH - 20; // 10px padding on each side
-  let fontSize = 72; // Start with very large font
-  doc.setFontSize(fontSize);
-  let nameWidth = doc.getTextWidth(firstName);
-  
-  // Reduce font size until it fits
-  while (nameWidth > maxWidth && fontSize > 20) {
-    fontSize -= 2;
-    doc.setFontSize(fontSize);
-    nameWidth = doc.getTextWidth(firstName);
+  // Color based on role: black for PARTICIPANTE, red for others
+  const isRed = isRedRole(participant.rol);
+  if (isRed) {
+    doc.setTextColor(220, 38, 38); // Red
+  } else {
+    doc.setTextColor(0, 0, 0); // Black
   }
   
-  // Center the name vertically in the available space (between top bar and bottom bar)
-  const verticalCenter = y + 55 + (BADGE_HEIGHT - 55 - 35) / 2 + fontSize / 3;
-  doc.text(firstName, x + (BADGE_WIDTH - nameWidth) / 2, verticalCenter);
-  
-  // Role text at bottom
-  const roleText = role === 'GAMECHANGER' ? 'GAME CHANGER' : 
-                   role === 'STAFF' ? 'STAFF' : 
-                   role === 'COACH' ? 'COACH' : 'PARTICIPANTE';
-  doc.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2]);
-  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
+
+  // Calculate optimal font size - start bigger
+  const maxWidth = BADGE_WIDTH - 20;
+  let fontSize = 72;
+  doc.setFontSize(fontSize);
+  let nameWidth = doc.getTextWidth(displayName);
+
+  while (nameWidth > maxWidth && fontSize > 24) {
+    fontSize -= 2;
+    doc.setFontSize(fontSize);
+    nameWidth = doc.getTextWidth(displayName);
+  }
+
+  // Center the name
+  const nameY = y + topBarHeight + (BADGE_HEIGHT - topBarHeight - 36) / 2 + fontSize / 3;
+  doc.text(displayName, x + (BADGE_WIDTH - nameWidth) / 2, nameY);
+
+  // Bottom bar with role
+  const bottomBarHeight = 34;
+  doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
+  doc.rect(x, y + BADGE_HEIGHT - bottomBarHeight, BADGE_WIDTH, bottomBarHeight, 'F');
+
+  // Role text
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  const roleText = getRoleLabel(participant.rol);
   const roleWidth = doc.getTextWidth(roleText);
-  doc.text(roleText, x + (BADGE_WIDTH - roleWidth) / 2, y + BADGE_HEIGHT - 12);
-  
-  // Cut line (dashed border)
+  doc.text(roleText, x + (BADGE_WIDTH - roleWidth) / 2, y + BADGE_HEIGHT - 11);
+
+  // Border
   doc.setDrawColor(200, 200, 200);
   doc.setLineWidth(0.5);
-  doc.setLineDashPattern([3, 3], 0);
   doc.rect(x, y, BADGE_WIDTH, BADGE_HEIGHT, 'S');
-  doc.setLineDashPattern([], 0);
 }
 
-function drawBadgeBack(
+function drawBadgeBackRotated(
   doc: jsPDF,
   x: number,
   y: number,
   participant: Participant,
   orgName: string,
   accentColor: [number, number, number],
+  logoBase64: string | null,
   qrDataUrl: string | undefined
 ) {
+  // Draw badge back ROTATED 180° - all content upside down
+  // When folded, this will align correctly with the front
+  
   // White background
   doc.setFillColor(255, 255, 255);
   doc.rect(x, y, BADGE_WIDTH, BADGE_HEIGHT, 'F');
-  
-  // Top accent bar
+
+  // Top bar (will be bottom when rotated/folded)
+  const topBarHeight = 42;
   doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
-  doc.rect(x, y, BADGE_WIDTH, 30, 'F');
-  
-  // Organization name at top
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  const orgWidth = doc.getTextWidth(orgName.toUpperCase());
-  doc.text(orgName.toUpperCase(), x + (BADGE_WIDTH - orgWidth) / 2, y + 18);
-  
-  // QR Code in center
-  if (qrDataUrl) {
+  doc.rect(x, y, BADGE_WIDTH, topBarHeight, 'F');
+
+  // Logo in top bar - at right side
+  if (logoBase64) {
     try {
-      doc.addImage(qrDataUrl, 'PNG', x + (BADGE_WIDTH - 100) / 2, y + 40, 100, 100);
+      doc.addImage(logoBase64, 'PNG', x + BADGE_WIDTH - 40, y + 6, 30, 30);
     } catch (err) {
-      console.error('Error adding QR to PDF:', err);
+      console.error('Error adding logo:', err);
     }
   }
-  
-  // Participant name below QR
-  doc.setTextColor(51, 51, 51);
-  doc.setFontSize(10);
+
+  // Organization name in top bar - ROTATED 180° (positioned to not overlap with logo)
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  const nameWidth = doc.getTextWidth(participant.nombre);
-  doc.text(participant.nombre, x + (BADGE_WIDTH - nameWidth) / 2, y + 150);
+  // Position text away from logo (logo is at right, text starts from left of logo area)
+  doc.text(orgName.toUpperCase(), x + BADGE_WIDTH - (logoBase64 ? 50 : 12), y + 27, { angle: 180 });
+
+  // QR Code - larger size
+  const qrSize = 95;
+  const qrX = x + 15;
+  const qrY = y + topBarHeight + 10;
   
-  // Referral code
-  if (participant.referralCode) {
-    doc.setTextColor(102, 102, 102);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    const codeWidth = doc.getTextWidth(participant.referralCode);
-    doc.text(participant.referralCode, x + (BADGE_WIDTH - codeWidth) / 2, y + 165);
+  if (qrDataUrl) {
+    try {
+      doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+    } catch (err) {
+      console.error('Error adding QR:', err);
+    }
   }
+
+  // Info section - right side of QR - all text ROTATED 180°
+  const infoX = x + BADGE_WIDTH - 15;
+  const infoY = y + topBarHeight + 30;
+
+  // Full name - rotated 180°
+  const isRed = isRedRole(participant.rol);
+  if (isRed) {
+    doc.setTextColor(220, 38, 38); // Red
+  } else {
+    doc.setTextColor(30, 64, 175); // Dark blue
+  }
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
   
-  // Cut line (dashed border)
+  // Truncate name if too long
+  let fullName = participant.nombre;
+  const maxNameWidth = BADGE_WIDTH - qrSize - 50;
+  while (doc.getTextWidth(fullName) > maxNameWidth && fullName.length > 10) {
+    fullName = fullName.slice(0, -1);
+  }
+  doc.text(fullName, infoX, infoY, { angle: 180 });
+
+  // Referral code - rotated 180°
+  if (participant.referralCode) {
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(participant.referralCode, infoX, infoY + 18, { angle: 180 });
+  }
+
+  // Role label - rotated 180°
+  doc.setTextColor(51, 51, 51);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text(getRoleLabel(participant.rol), infoX, infoY + 38, { angle: 180 });
+
+  // Border
   doc.setDrawColor(200, 200, 200);
   doc.setLineWidth(0.5);
-  doc.setLineDashPattern([3, 3], 0);
   doc.rect(x, y, BADGE_WIDTH, BADGE_HEIGHT, 'S');
-  doc.setLineDashPattern([], 0);
 }

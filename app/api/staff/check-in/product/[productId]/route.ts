@@ -74,7 +74,8 @@ export async function GET(
         startDate: product.startDate?.toISOString() || null,
         organizationId: product.organizationId,
         organizationName: product.Organization?.name || 'Sin organización',
-        logoUrl: product.Organization?.logo || null
+        logoUrl: product.Organization?.logoUrl || null,
+        brandColor: product.Organization?.brandColor || '#1E40AF'
       },
       stats: {
         enrolled: enrolledCount,      // Total de participantes inscritos

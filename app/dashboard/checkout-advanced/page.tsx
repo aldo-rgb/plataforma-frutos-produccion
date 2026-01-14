@@ -8,7 +8,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Rocket,
-  Gift,
+  Banknote,
   CreditCard,
   Building2,
   Calendar,
@@ -23,6 +23,18 @@ import {
   Wallet,
 } from 'lucide-react';
 
+interface PriceConfig {
+  ADVANCED: number;
+  ADVANCED_BASE: number;
+  PL: number;
+  PL_BASE: number;
+  COMBO: number;
+  COMBO_BASE: number;
+  APARTADO: number;
+}
+
+type PackageType = 'ADVANCED_ONLY' | 'COMBO' | 'APARTADO';
+
 interface UpgradeData {
   type: string;
   userId: string;
@@ -35,6 +47,9 @@ interface UpgradeData {
   targetVisionName: string;
   advancedStartDate: string;
   price: number;
+  packageType?: PackageType;
+  pendingDebt?: number;
+  prices?: PriceConfig;
 }
 
 interface GiftCodeData {
@@ -203,25 +218,27 @@ export default function CheckoutAdvancedPage() {
     setError('');
 
     try {
-      // First, redeem all gift codes
+      // First, redeem all gift codes (payment codes)
       const giftCodes = appliedPayments.filter(p => p.type === 'GIFT_CODE');
       
       for (const payment of giftCodes) {
         if (payment.code) {
-          const redeemRes = await fetch('/api/gift-codes/redeem-upgrade', {
+          // Usar la API correcta de redeem
+          const redeemRes = await fetch('/api/gift-codes/redeem', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               code: payment.code,
               userId: upgradeData.userId,
               visionId: upgradeData.targetVisionId,
-              level: 'ADVANCED',
+              isCashPayment: payment.code.startsWith('CASH-'),
             }),
           });
 
           const redeemData = await redeemRes.json();
           if (!redeemData.success) {
             console.error(`Error redeeming code ${payment.code}:`, redeemData.error);
+            throw new Error(redeemData.error || 'Error al canjear código');
           }
         }
       }
@@ -236,6 +253,9 @@ export default function CheckoutAdvancedPage() {
           paymentMethod: paymentMethod,
           amountPaid: totalPaid,
           appliedCodes: giftCodes.map(p => p.code),
+          packageType: upgradeData.packageType || 'ADVANCED_ONLY',
+          pendingDebt: upgradeData.pendingDebt || 0,
+          prices: upgradeData.prices,
         }),
       });
 
@@ -244,6 +264,17 @@ export default function CheckoutAdvancedPage() {
       if (!enrollData.success) {
         throw new Error(enrollData.error || 'Error al procesar inscripción');
       }
+
+      // Store success data with package type for success page
+      sessionStorage.setItem('advancedEnrollmentSuccess', JSON.stringify({
+        level: enrollData.enrollment?.level || 'ADVANCED',
+        organizationName: upgradeData.targetOrganizationName,
+        startDate: upgradeData.advancedStartDate,
+        visionName: upgradeData.targetVisionName,
+        packageType: upgradeData.packageType || 'ADVANCED_ONLY',
+        pendingDebt: upgradeData.pendingDebt || 0,
+        plPrice: upgradeData.prices?.PL || 0,
+      }));
 
       // Clear session storage
       sessionStorage.removeItem('pendingUpgrade');
@@ -318,7 +349,11 @@ export default function CheckoutAdvancedPage() {
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-white">
-                      Entrenamiento Avanzado
+                      {upgradeData.packageType === 'COMBO' 
+                        ? 'Combo Avanzado + PL' 
+                        : upgradeData.packageType === 'APARTADO'
+                        ? 'Apartado - Avanzado + PL'
+                        : 'Entrenamiento Avanzado'}
                     </h2>
                     <p className="text-slate-400 flex items-center gap-2 mt-1">
                       <Building2 className="w-4 h-4" />
@@ -332,13 +367,58 @@ export default function CheckoutAdvancedPage() {
                 </div>
               </div>
 
-              <div className="p-6">
+              <div className="p-6 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Inversión Total</span>
-                  <span className="text-2xl font-bold text-white">
-                    ${totalPrice.toLocaleString()} MXN
+                  <span className="text-slate-400">
+                    {upgradeData.packageType === 'COMBO' 
+                      ? 'Inversión Combo (Avanzado + PL)'
+                      : upgradeData.packageType === 'APARTADO'
+                      ? 'Apartado hoy'
+                      : 'Inversión Avanzado'}
                   </span>
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-2xl font-bold text-white">
+                      ${totalPrice.toLocaleString()} MXN
+                    </span>
+                    {upgradeData.prices && (
+                      <span className="text-lg text-slate-500 line-through">
+                        ${(upgradeData.packageType === 'COMBO' 
+                          ? upgradeData.prices.COMBO_BASE 
+                          : upgradeData.prices.ADVANCED_BASE
+                        ).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
                 </div>
+
+                {/* Mostrar desglose si es COMBO */}
+                {upgradeData.packageType === 'COMBO' && upgradeData.prices && (
+                  <div className="pt-2 border-t border-slate-700 text-sm">
+                    <div className="flex justify-between text-slate-400">
+                      <span>• Avanzado</span>
+                      <span>${upgradeData.prices.ADVANCED.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-400">
+                      <span>• Participación Libre (PL)</span>
+                      <span>${upgradeData.prices.PL.toLocaleString()}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Mostrar deuda pendiente si es APARTADO */}
+                {upgradeData.packageType === 'APARTADO' && upgradeData.pendingDebt && upgradeData.pendingDebt > 0 && (
+                  <div className="p-3 bg-orange-500/10 border border-orange-500/30 rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-orange-400 font-medium text-sm">⚠️ Deuda pendiente</p>
+                        <p className="text-xs text-slate-400">Deberás pagar antes del inicio del Avanzado</p>
+                      </div>
+                      <span className="text-xl font-bold text-orange-400">
+                        ${upgradeData.pendingDebt.toLocaleString()} MXN
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </motion.div>
 
@@ -363,9 +443,9 @@ export default function CheckoutAdvancedPage() {
                       : 'border-slate-700 hover:border-slate-600'
                   }`}
                 >
-                  <Gift className={`w-6 h-6 mx-auto mb-2 ${paymentMethod === 'GIFT_CODE' ? 'text-purple-400' : 'text-slate-400'}`} />
+                  <Banknote className={`w-6 h-6 mx-auto mb-2 ${paymentMethod === 'GIFT_CODE' ? 'text-purple-400' : 'text-slate-400'}`} />
                   <p className={`text-sm font-medium ${paymentMethod === 'GIFT_CODE' ? 'text-white' : 'text-slate-400'}`}>
-                    Código de Regalo
+                    Código de Referencia
                   </p>
                 </button>
                 <button
@@ -391,7 +471,7 @@ export default function CheckoutAdvancedPage() {
                       type="text"
                       value={giftCode}
                       onChange={(e) => setGiftCode(e.target.value.toUpperCase())}
-                      placeholder="CODIGO-REGALO"
+                      placeholder="CODIGO-REFERENCIA"
                       className="flex-1 px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
                     />
                     <button
@@ -451,7 +531,7 @@ export default function CheckoutAdvancedPage() {
                           className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl"
                         >
                           <div className="flex items-center gap-3">
-                            <Gift className="w-5 h-5 text-purple-400" />
+                            <Banknote className="w-5 h-5 text-purple-400" />
                             <div>
                               <p className="text-white font-medium">{payment.code}</p>
                               <p className="text-xs text-slate-400">{payment.description}</p>
@@ -498,12 +578,7 @@ export default function CheckoutAdvancedPage() {
               </div>
 
               <div className="p-6 space-y-4">
-                <div className="flex justify-between text-slate-400">
-                  <span>Entrenamiento Avanzado</span>
-                  <span>${totalPrice.toLocaleString()}</span>
-                </div>
-
-                {appliedPayments.map((payment) => (
+                {appliedPayments.length > 0 && appliedPayments.map((payment) => (
                   <div key={payment.id} className="flex justify-between text-green-400">
                     <span>- {payment.code}</span>
                     <span>-${payment.amount.toLocaleString()}</span>

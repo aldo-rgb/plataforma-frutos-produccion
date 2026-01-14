@@ -20,7 +20,17 @@ export async function GET() {
       }
     });
 
-    if (!usuario || usuario.rol !== 'COORDINATOR_BASIC') {
+    // Roles permitidos para ver productos activos
+    const allowedRoles = [
+      'COORDINATOR_BASIC',
+      'COORDINATOR_ADVANCED', 
+      'COORDINADOR',
+      'TRAINER',
+      'SCHOOL_ADMIN',
+      'ADMINISTRADOR'
+    ];
+
+    if (!usuario || !allowedRoles.includes(usuario.rol)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 

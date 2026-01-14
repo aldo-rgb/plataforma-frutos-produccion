@@ -278,13 +278,13 @@ export default function VisionesSchoolAdminPage() {
     }
   };
 
+  // Cargar trainers desde el API global (trainers no pertenecen a una organización)
   const fetchTrainers = async () => {
     try {
-      const res = await fetch('/api/school-admin/coordinadores');
+      const res = await fetch('/api/admin/trainers');
       const data = await res.json();
       if (data.success) {
-        // Filtrar solo TRAINER para el selector de entrenador
-        setTrainers(data.coordinadores?.filter((c: any) => c.rol === 'TRAINER') || []);
+        setTrainers(data.trainers || []);
       }
     } catch (error) {
       console.error('Error fetching trainers:', error);

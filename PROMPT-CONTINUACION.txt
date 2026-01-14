@@ -1,0 +1,395 @@
+# 📋 PROMPT DE CONTINUACIÓN - PLATAFORMA FRUTOS
+
+## 🎯 INSTRUCCIONES PARA EL NUEVO ASISTENTE
+
+Eres GitHub Copilot trabajando en la **Plataforma Frutos**, un sistema de gestión educativa/entrenamiento para organizaciones tipo "escuela de vida". El usuario es **Aldo**, desarrollador principal. Responde en español, sé directo y técnico.
+
+**REGLA CRÍTICA DE EDICIÓN**: Siempre que hagas cambios en archivos, usa el formato "Buscar y Reemplazar Exacto":
+- Muestra el bloque exacto a buscar/borrar
+- Muestra el bloque exacto a pegar en su lugar
+- Si es código nuevo, indica la línea completa de arriba y abajo donde debe ir
+
+---
+
+## 🏗️ ARQUITECTURA GENERAL
+
+### Stack Tecnológico
+- **Framework**: Next.js 16.1.1 (App Router) con Turbopack
+- **Base de datos**: PostgreSQL con Prisma 5.22.0
+- **Auth**: NextAuth.js
+- **UI**: TailwindCSS + Framer Motion
+- **Storage**: Supabase (imágenes/archivos)
+- **Hosting**: El repositorio está en GitHub: `aldo-rgb/plataforma-frutos-produccion`
+
+### Estructura de Carpetas Principal
+```
+/app
+  /api                    # API Routes
+  /auth                   # Páginas de autenticación
+  /checkout               # Flujo de compra/registro
+  /dashboard              # Dashboards por rol
+    /coordinador          # Dashboard coordinador avanzado
+    /coordinador-basico   # Dashboard coordinador básico y trainers
+    /school-admin         # Dashboard admin de escuela
+    /participante         # Dashboard participante (alumno)
+/components               # Componentes React
+/lib                      # Utilidades, prisma client, auth config
+/prisma                   # Schema de base de datos
+```
+
+---
+
+## 👥 ROLES DEL SISTEMA
+
+| Rol | Descripción |
+|-----|-------------|
+| `PARTICIPANTE` | Alumno inscrito en entrenamientos |
+| `GAME_CHANGER` | Líder de pequeño grupo (squad) |
+| `MENTOR` | Mentor de participantes |
+| `TRAINER` | Entrenador de visiones |
+| `COORDINATOR_BASIC` | Coordinador de entrenamiento básico |
+| `COORDINATOR_ADVANCED` | Coordinador de entrenamiento avanzado |
+| `SCHOOL_ADMIN` | Administrador de escuela/sede |
+| `SUPER_ADMIN` | Administrador global |
+
+---
+
+## 🗄️ MODELOS PRINCIPALES DE BASE DE DATOS
+
+### Organizaciones
+```prisma
+model MasterOrganization {
+  id        Int    @id @default(autoincrement())
+  name      String
+  logoUrl   String?
+  organizations Organization[]  # Sedes hijas
+}
+
+model Organization {
+  id                  Int     @id @default(autoincrement())
+  name                String
+  slug                String  @unique
+  logoUrl             String?
+  brandColor          String?
+  masterOrganizationId Int?
+  schoolAdminId       Int?
+  status              OrganizationStatus @default(ACTIVE)
+}
+```
+
+### Usuarios
+```prisma
+model Usuario {
+  id              Int      @id @default(autoincrement())
+  email           String   @unique
+  password        String
+  nombre          String
+  apodo           String?
+  telefono        String?
+  rol             Rol      @default(PARTICIPANTE)
+  organizationId  Int?
+  invitedBy       Int?     # ID del usuario que lo invitó
+  invitedByText   String?  # Texto del código de referido
+  referralCode    String?  @unique  # Código para invitar otros
+  tier            Tier     @default(FREE)
+  isActive        Boolean  @default(true)
+  profileImage    String?
+  // ... más campos
+}
+```
+
+### Visiones (Programas de Entrenamiento)
+```prisma
+model Vision {
+  id                Int      @id @default(autoincrement())
+  nombre            String
+  organizationId    Int
+  coordinadorId     Int?
+  isActive          Boolean  @default(true)
+  startDate         DateTime?
+  endDate           DateTime?
+  advancedStartDate DateTime?
+  advancedEndDate   DateTime?
+  enabledLevels     String[] # ['BASIC', 'ADVANCED', 'PL']
+  maxParticipantes  Int?
+}
+```
+
+### Inscripciones a Visiones
+```prisma
+model vision_enrollments {
+  id               Int      @id @default(autoincrement())
+  userId           Int
+  visionId         Int
+  coordinatorId    Int?
+  level            VisionLevel  # BASIC, ADVANCED, PL
+  enrollmentStatus EnrollmentStatus  # ENROLLED, COMPLETED, DROPPED
+  enrolledAt       DateTime?
+  completedAt      DateTime?
+  graduatedAt      DateTime?
+}
+```
+
+### Sistema de Tesorería
+```prisma
+model PaymentCode {
+  id              String   @id @default(uuid())
+  code            String   @unique  # Ej: "QUARK42", "NEBULA88"
+  amount          Decimal
+  reference       String?
+  status          PaymentCodeStatus  # ACTIVE, REDEEMED, CANCELLED
+  organizationId  Int
+  visionId        Int?     # Opcional - la visión viene del registro
+  createdById     Int
+  redeemedById    Int?
+  batchId         String?
+  createdAt       DateTime
+  redeemedAt      DateTime?
+}
+
+model Expense {
+  id              String   @id @default(uuid())
+  concept         String
+  amount          Decimal
+  category        ExpenseCategory
+  receiptUrl      String?
+  status          ExpenseStatus  # PENDING, APPROVED, REJECTED
+  organizationId  Int
+  userId          Int      # Quien registró el gasto
+  approvedById    Int?
+  batchId         String?
+}
+
+model CashBatch {
+  id                  String   @id @default(uuid())
+  organizationId      Int
+  coordinatorId       Int
+  totalCash           Decimal
+  totalExpenses       Decimal
+  netAmount           Decimal
+  status              BatchStatus  # PENDING, CONFIRMED, DELIVERED
+  confirmationCode    String?  # Código quantum generado por director
+  confirmedAt         DateTime?
+  receivedById        Int?
+  codeGeneratedById   Int?
+}
+```
+
+### Squads (Pequeños Grupos)
+```prisma
+model SmallGroup {
+  id              Int      @id @default(autoincrement())
+  name            String
+  visionId        Int?
+  leaderId        Int?     # Game Changer líder
+  organizationId  Int
+  level           VisionLevel
+  maxSize         Int      @default(10)
+  isActive        Boolean  @default(true)
+}
+
+model SmallGroupMember {
+  id           Int      @id @default(autoincrement())
+  groupId      Int
+  userId       Int
+  enrollmentId Int?
+  isActive     Boolean  @default(true)
+}
+```
+
+### Formularios Médicos
+```prisma
+model MedicalForm {
+  id                    Int      @id @default(autoincrement())
+  userId                Int      @unique
+  visionId              Int?
+  hasAlerts             Boolean  @default(false)
+  hasCurrentIllness     Boolean  @default(false)
+  currentIllnessDetails String?
+  // ... muchos más campos médicos
+  emergencyContactName  String?
+  emergencyContactPhone String?
+}
+```
+
+---
+
+## ✅ FUNCIONALIDADES COMPLETADAS
+
+### 1. Sistema de Tesorería (Treasury)
+- **Códigos de Pago**: Generación con palabras quantum (QUARK, NEBULA, PHOTON, etc.)
+- **Gastos**: Registro, aprobación, rechazo con comprobantes
+- **Cortes de Caja (CashBatch)**: 
+  - Coordinador crea corte con códigos + gastos
+  - Director genera código de confirmación quantum
+  - Director de tesorería confirma con el código
+- **Dashboard Treasury** para coordinadores y school-admin
+- **Widgets**: Códigos generados, canjeados, gastos pendientes
+
+### 2. Sistema de Registro/Signup
+- Flujo: Selección de sede → Formulario → Checkout → Pago
+- **Validación**: Si no hay visión activa, NO permite registro
+- **Referidos**: Sistema de códigos de invitación
+- **Códigos de pago**: Se canjean en checkout
+
+### 3. Sistema de Visiones
+- Inscripciones (vision_enrollments)
+- Niveles: BASIC → ADVANCED → PL
+- Búsqueda de visión activa corregida (no solo futuras, también en curso)
+
+### 4. Formularios Médicos
+- Widget de alertas médicas para coordinadores
+- Listado de formularios con alertas
+- Acknowledgment de coordinadores
+
+### 5. Squads (Pequeños Grupos)
+- Creación y gestión de grupos
+- Asignación de Game Changers como líderes
+- Miembros de grupo
+
+### 6. Dashboards por Rol
+- `/dashboard/participante` - Vista de participante
+- `/dashboard/coordinador` - Coordinador avanzado
+- `/dashboard/coordinador-basico` - Coordinador básico, trainer, coordinator_advanced
+- `/dashboard/school-admin` - Admin de escuela
+
+---
+
+## 🔧 CORRECCIONES RECIENTES (Sesión 12 Enero 2026)
+
+### 1. Bug de "Lobo Solitario"
+**Problema**: Usuario "jerry estrada" pagó con código pero quedó sin visión
+**Causa**: Query de `next-vision` buscaba solo visiones futuras (`startDate >= now()`)
+**Solución**: Cambiar a buscar visiones activas que no hayan terminado
+
+**Archivo**: `/app/api/public/organization/[code]/next-vision/route.ts`
+```typescript
+// ANTES (mal):
+startDate: { gte: new Date() }
+
+// DESPUÉS (correcto):
+OR: [
+  { endDate: null },
+  { endDate: { gte: today } }
+]
+```
+
+### 2. Bloqueo de Registro sin Visión
+**Archivo**: `/app/auth/signup/components/RegistrationForm.tsx`
+- Botón de submit deshabilitado si `!nextVision`
+- Mensaje claro: "⚠️ Sin Programa Disponible" en rojo
+
+### 3. Códigos de Confirmación Quantum
+**Archivo**: `/app/api/treasury/director/batches/[batchId]/generate-code/route.ts`
+```typescript
+const QUANTUM_WORDS = [
+  'QUARK', 'PHOTON', 'NEBULA', 'PULSAR', 'COSMOS', 'STELLAR', 
+  'NOVA', 'QUANTUM', 'VORTEX', 'PLASMA', 'FUSION', 'AXIOM',
+  'ZENITH', 'PRISM', 'HELIX', 'CIPHER', 'MATRIX', 'FLUX'
+];
+// Genera: QUARK42, NEBULA88, etc.
+```
+
+### 4. Exclusión de Códigos Cancelados
+**Archivo**: `/app/api/treasury/coordinator/route.ts`
+- Widget "Generados" excluye códigos con status CANCELLED
+
+---
+
+## 🚧 PENDIENTE POR DESARROLLAR
+
+### Alta Prioridad
+1. **Integración Stripe** para pagos con tarjeta
+2. **Sistema de Tareas** - TaskInstance tiene errores de schema (`scheduledDate` no existe)
+3. **API Ranking Widget** - Usa campo deprecado `ParticipanteEnVisiones`
+
+### Media Prioridad
+4. **Sistema de Llamadas GC** - Game Changers llamando a sus átomos
+5. **Phoenix Sessions** - Sesiones especiales
+6. **Notificaciones push**
+
+### Errores Conocidos en Logs
+```
+Unknown argument `scheduledDate` - TaskInstance
+Unknown field `ParticipanteEnVisiones` - Usuario include
+```
+Estos son campos deprecados del schema que necesitan migración.
+
+---
+
+## 📁 ARCHIVOS CLAVE PARA REFERENCIA
+
+| Archivo | Propósito |
+|---------|-----------|
+| `/lib/prisma.ts` | Cliente Prisma singleton |
+| `/lib/auth.ts` | Configuración NextAuth |
+| `/prisma/schema.prisma` | Schema completo de BD |
+| `/app/api/auth/register/route.ts` | Registro de usuarios |
+| `/app/checkout/page.tsx` | Flujo de checkout |
+| `/app/auth/signup/page.tsx` | Página de registro |
+| `/app/api/treasury/*` | APIs de tesorería |
+| `/app/api/public/organization/[code]/next-vision/route.ts` | Obtener próxima visión |
+
+---
+
+## 💡 CONTEXTO IMPORTANTE
+
+1. **Organización actual de pruebas**: "Zero Gdl" (ID: 2)
+2. **Visión activa**: "v1 gdl" (ID: 2)
+3. **Usuario de prueba corregido**: "jerry estrada" (ID: 39) - ahora tiene enrollment
+
+---
+
+## 🎯 PRÓXIMAS ACCIONES PENDIENTES
+
+El usuario pidió:
+> "asigna todos los usuarios de Zero gdl a V1gdl para seguir con las pruebas"
+
+Script necesario:
+```javascript
+// Buscar usuarios PARTICIPANTE de org 2 sin enrollment en vision 2
+// Crear vision_enrollments para cada uno
+```
+
+---
+
+## 📝 FORMATO DE RESPUESTA ESPERADO
+
+Cuando el usuario pida cambios en código, responde así:
+
+**Archivo**: `/ruta/al/archivo.ts`
+
+**BUSCAR (borrar esto)**:
+```
+código exacto a buscar
+```
+
+**REEMPLAZAR CON (pegar esto)**:
+```
+código nuevo
+```
+
+---
+
+O si es código nuevo:
+
+**Archivo**: `/ruta/al/archivo.ts`
+
+**INSERTAR DESPUÉS DE LA LÍNEA**:
+```
+línea existente arriba
+```
+
+**CÓDIGO NUEVO**:
+```
+código a insertar
+```
+
+**ANTES DE LA LÍNEA**:
+```
+línea existente abajo
+```
+
+---
+
+**Copia este prompt completo y pégalo al inicio de tu nueva conversación.**

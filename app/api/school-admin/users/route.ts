@@ -46,7 +46,7 @@ export async function GET(req: Request) {
         experienciaXP: true,
         isActive: true,
         createdAt: true,
-        tickets_TicketOwner: {
+        Ticket_TicketOwner: {
           select: {
             id: true,
             level: true,
@@ -87,7 +87,7 @@ export async function GET(req: Request) {
         experienciaXP: true,
         isActive: true,
         createdAt: true,
-        tickets_TicketOwner: {
+        Ticket_TicketOwner: {
           select: {
             id: true,
             level: true,
@@ -109,7 +109,7 @@ export async function GET(req: Request) {
     const uniqueUsersMap = new Map(allUsers.map(u => [u.id, u]));
     const uniqueUsers = Array.from(uniqueUsersMap.values()).map(u => {
       // Determinar el estado de pago general del usuario
-      const tickets = (u as any).tickets_TicketOwner || [];
+      const tickets = (u as any).Ticket_TicketOwner || [];
       let overallPaymentStatus = 'NO_TICKET';
       
       if (tickets.length > 0) {

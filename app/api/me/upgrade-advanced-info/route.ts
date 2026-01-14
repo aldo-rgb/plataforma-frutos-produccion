@@ -21,7 +21,7 @@ export async function GET() {
       where: {
         userId: userId,
         level: 'BASIC',
-        enrollmentStatus: 'ACTIVE',
+        enrollmentStatus: { in: ['ACTIVE', 'ENROLLED'] },
       },
       include: {
         Vision: {
@@ -72,6 +72,9 @@ export async function GET() {
       organizationName: currentEnrollment.Vision.Organization?.name || 'Organización',
       advancedStartDate: currentEnrollment.Vision.advancedStartDate,
       advancedEndDate: currentEnrollment.Vision.advancedEndDate,
+      // Fecha de fin del entrenamiento básico para calcular promo
+      basicEndDate: currentEnrollment.Vision.endDate,
+      basicStartDate: currentEnrollment.Vision.startDate,
     } : null;
 
     // Get all organizations with upcoming ADVANCED events
@@ -162,16 +165,38 @@ export async function GET() {
     }) : [];
 
     const priceMap: Record<string, number> = {};
+    const basePriceMap: Record<string, number> = {};
     defaultPrices.forEach((p) => {
       priceMap[p.levelType] = p.promoPrice ?? p.basePrice;
+      basePriceMap[p.levelType] = p.basePrice;
     });
+
+    // Precios individuales
+    const advancedPromoPrice = priceMap['ADVANCED'] || 7500;  // Precio promo del avanzado
+    const plPromoPrice = priceMap['PL'] || 5500;              // Precio promo del PL
+    const advancedBasePrice = basePriceMap['ADVANCED'] || 9000; // Costo base avanzado
+    const plBasePrice = basePriceMap['PL'] || 11000;           // Costo base PL
+    
+    // Combo Avanzado + PL - usar precio configurado de COMBO si existe, sino calcular
+    const comboConfigured = priceMap['COMBO'] || basePriceMap['COMBO'];
+    const comboPrice = comboConfigured || (advancedBasePrice + plPromoPrice); // Precio del combo
+    const comboBasePrice = advancedBasePrice + plBasePrice; // Suma de precios base (tachado)
+    
+    // Apartado: paga el costo base del avanzado, queda debiendo el promo del PL
+    const apartadoPrice = advancedBasePrice;
 
     return NextResponse.json({
       success: true,
       currentVision,
       availableOrganizations: orgsWithVisions.filter(o => o.nextAdvancedVision !== null || o.id === currentVision?.organizationId),
       prices: {
-        ADVANCED: priceMap['ADVANCED'] || 4500,
+        ADVANCED: advancedPromoPrice,        // Precio promo avanzado solo
+        ADVANCED_BASE: advancedBasePrice,    // Precio base avanzado
+        PL: plPromoPrice,                    // Precio promo PL
+        PL_BASE: plBasePrice,                // Precio base PL  
+        COMBO: comboPrice,                   // Precio del combo
+        COMBO_BASE: comboBasePrice,          // Suma de bases (para tachar)
+        APARTADO: apartadoPrice,             // Lo que paga hoy en apartado
       },
     });
   } catch (error) {

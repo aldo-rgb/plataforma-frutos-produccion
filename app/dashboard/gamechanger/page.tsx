@@ -17,6 +17,7 @@ import RankingWidget from "@/components/dashboard/RankingWidget";
 import MisParticipantesWidget from "@/components/dashboard/MisParticipantesWidget";
 import PersonalQRWidget from "@/components/dashboard/PersonalQRWidget";
 import SquadManagerWidget from "@/components/dashboard/SquadManagerWidget";
+import { ElCruceAccessWidget } from "@/components/el-cruce";
 
 export default async function GameChangerDashboardPage() {
   // 1. Obtener sesión y datos frescos
@@ -323,9 +324,13 @@ export default async function GameChangerDashboardPage() {
         )}
       </div>
 
-      {/* SQUAD MANAGER */}
+      {/* SQUAD MANAGER + EL CRUCE */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <SquadManagerWidget />
+        <ElCruceAccessWidget 
+          userRole={usuario.rol}
+          organizationId={usuario.organizationId || undefined}
+        />
       </div>
 
       {/* ZONA DE EJECUCIÓN DIARIA */}

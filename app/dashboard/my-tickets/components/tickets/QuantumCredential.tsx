@@ -2,16 +2,22 @@
 
 import { motion } from 'framer-motion';
 import QRCode from 'react-qr-code';
+import { CreditCard, AlertTriangle, XCircle } from 'lucide-react';
+import Link from 'next/link';
 
 interface QuantumCredentialProps {
   ticket: {
     id: string;
     level: string;
     status: string;
+    paymentStatus?: string;
+    costAtPurchase?: number;
+    amountPaid?: number;
     createdAt: string;
     vision: {
       nombre: string;
       startDate: string;
+      advancedStartDate?: string | null;
     };
     organization: {
       name: string;
@@ -21,6 +27,20 @@ interface QuantumCredentialProps {
   userName: string;
   userInitials: string;
   userPhoto?: string | null;
+}
+
+// Helper function to check if payment deadline has passed
+// Payment deadline is 12:00 PM on the day of advancedStartDate
+function isPaymentDeadlinePassed(advancedStartDate: string | null | undefined): boolean {
+  if (!advancedStartDate) return false;
+  
+  const advancedDate = new Date(advancedStartDate);
+  // Set deadline to 12:00 PM (noon) on the advanced start date
+  const deadline = new Date(advancedDate);
+  deadline.setHours(12, 0, 0, 0);
+  
+  const now = new Date();
+  return now >= deadline;
 }
 
 // Configuración de colores y niveles
@@ -49,8 +69,15 @@ const levelConfig = {
 
 export function QuantumCredential({ ticket, userName, userInitials, userPhoto }: QuantumCredentialProps) {
   const isActive = ticket.status === 'ACTIVE';
+  const isPendingPaymentBase = ticket.status === 'PENDING_PAYMENT' || ticket.paymentStatus === 'PENDING' || ticket.paymentStatus === 'PARTIAL';
+  
+  // Check if it's a PL ticket with pending payment and deadline has passed
+  const isExpiredPayment = isPendingPaymentBase && ticket.level === 'PL' && isPaymentDeadlinePassed(ticket.vision.advancedStartDate);
+  const isPendingPayment = isPendingPaymentBase && !isExpiredPayment;
+  
   const config = levelConfig[ticket.level as keyof typeof levelConfig] || levelConfig.BASIC;
-  const primaryColor = isActive ? config.color : '#64748b';
+  const primaryColor = isActive ? config.color : isPendingPayment ? '#f97316' : isExpiredPayment ? '#ef4444' : '#64748b';
+  const pendingAmount = (ticket.costAtPurchase || 0) - (ticket.amountPaid || 0);
   
   return (
     <motion.div
@@ -105,8 +132,8 @@ export function QuantumCredential({ ticket, userName, userInitials, userPhoto }:
           <div 
             className={`text-center py-1.5 px-3 rounded-lg`}
             style={{
-              background: isActive ? `${primaryColor}15` : 'rgba(71, 85, 105, 0.3)',
-              border: `1px solid ${isActive ? `${primaryColor}40` : '#475569'}`,
+              background: isActive ? `${primaryColor}15` : isPendingPayment ? 'rgba(249, 115, 22, 0.15)' : isExpiredPayment ? 'rgba(239, 68, 68, 0.15)' : 'rgba(71, 85, 105, 0.3)',
+              border: `1px solid ${isActive ? `${primaryColor}40` : isPendingPayment ? '#f9731540' : isExpiredPayment ? '#ef444440' : '#475569'}`,
             }}
           >
             <p 
@@ -116,7 +143,7 @@ export function QuantumCredential({ ticket, userName, userInitials, userPhoto }:
                 color: primaryColor,
               }}
             >
-              {isActive ? '▸ ACCESS GRANTED ◂' : '▸ ACCESS EXPIRED ◂'}
+              {isActive ? '▸ ACCESS GRANTED ◂' : isPendingPayment ? '▸ PAGO PENDIENTE ◂' : isExpiredPayment ? '▸ TICKET EXPIRADO ◂' : '▸ ACCESS EXPIRED ◂'}
             </p>
           </div>
         </div>
@@ -191,40 +218,114 @@ export function QuantumCredential({ ticket, userName, userInitials, userPhoto }:
 
         {/* User Data */}
         <div className="relative z-10 px-4 space-y-1.5">
-          <DataRow label="CODENAME" value={userName.split(' ')[0].toUpperCase()} color={primaryColor} isActive={isActive} />
-          <DataRow label="LEVEL" value={config.levelText} color={primaryColor} isActive={isActive} />
-          <DataRow label="STATUS" value={config.status} color={primaryColor} isActive={isActive} />
-          <DataRow label="VISION" value={ticket.vision.nombre.substring(0, 12)} color={primaryColor} isActive={isActive} />
+          <DataRow label="CODENAME" value={userName.split(' ')[0].toUpperCase()} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment} />
+          <DataRow label="LEVEL" value={config.levelText} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment} />
+          <DataRow label="STATUS" value={isPendingPayment ? 'PAGO PENDIENTE' : isExpiredPayment ? 'EXPIRADO' : config.status} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment} />
+          <DataRow label="VISION" value={ticket.vision.nombre.substring(0, 12)} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment} />
         </div>
 
-        {/* Bottom Section with QR */}
+        {/* Bottom Section - QR, Payment Button, or Expired Message */}
         <div className="absolute bottom-0 left-0 right-0 p-3">
-          <div className="flex justify-center">
-            <div 
-              className="p-2 rounded-lg"
-              style={{
-                background: isActive ? '#000' : '#1e293b',
-                border: `1px solid ${isActive ? primaryColor : '#475569'}`,
-              }}
-            >
-              <QRCode
-                value={`TICKET:${ticket.id}`}
-                size={70}
-                bgColor="transparent"
-                fgColor={primaryColor}
-                level="M"
-              />
+          {isExpiredPayment ? (
+            /* Expired Payment Section */
+            <div className="space-y-2">
+              <div 
+                className="p-2 rounded-lg text-center"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                }}
+              >
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <XCircle className="w-3 h-3 text-red-400" />
+                  <span className="text-[10px] text-red-400 font-bold tracking-wide" style={{ fontFamily: 'monospace' }}>
+                    PLAZO VENCIDO
+                  </span>
+                </div>
+                <p className="text-xs text-red-400/80 mt-1" style={{ fontFamily: 'monospace' }}>
+                  El plazo para pagar este ticket ha expirado
+                </p>
+              </div>
+              
+              <div
+                className="w-full py-2 rounded-lg font-bold text-sm flex items-center justify-center gap-2 text-gray-500 bg-gray-800/50"
+                style={{ fontFamily: 'Orbitron, sans-serif' }}
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>NO DISPONIBLE</span>
+              </div>
             </div>
-          </div>
-          <p 
-            className="text-center text-[9px] mt-1.5 tracking-widest"
-            style={{ 
-              fontFamily: 'monospace',
-              color: isActive ? `${primaryColor}99` : '#64748b',
-            }}
-          >
-            ID: {ticket.id.substring(0, 8).toUpperCase()}
-          </p>
+          ) : isPendingPayment ? (
+            /* Payment Section for Pending Tickets */
+            <div className="space-y-2">
+              <div 
+                className="p-2 rounded-lg text-center"
+                style={{
+                  background: 'rgba(249, 115, 22, 0.1)',
+                  border: '1px solid rgba(249, 115, 22, 0.3)',
+                }}
+              >
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <AlertTriangle className="w-3 h-3 text-orange-400" />
+                  <span className="text-[10px] text-orange-400 font-bold tracking-wide" style={{ fontFamily: 'monospace' }}>
+                    PAGO PENDIENTE
+                  </span>
+                </div>
+                <p className="text-lg font-black text-orange-400" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                  ${pendingAmount.toLocaleString()} MXN
+                </p>
+              </div>
+              
+              <Link 
+                href={`/dashboard/checkout-ticket?ticketId=${ticket.id}`}
+                className="block w-full"
+              >
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full py-2 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer text-white"
+                  style={{
+                    background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                    boxShadow: '0 4px 15px rgba(249, 115, 22, 0.4)',
+                    fontFamily: 'Orbitron, sans-serif',
+                  }}
+                >
+                  <CreditCard className="w-4 h-4" />
+                  <span>PAGAR AHORA</span>
+                </motion.div>
+              </Link>
+            </div>
+          ) : (
+            /* QR Section for Active/Expired Tickets */
+            <>
+              <div className="flex justify-center">
+                <div 
+                  className="p-2 rounded-lg"
+                  style={{
+                    background: isActive ? '#000' : '#1e293b',
+                    border: `1px solid ${isActive ? primaryColor : '#475569'}`,
+                  }}
+                >
+                  <QRCode
+                    value={`TICKET:${ticket.id}`}
+                    size={70}
+                    bgColor="transparent"
+                    fgColor={primaryColor}
+                    level="M"
+                  />
+                </div>
+              </div>
+              <p 
+                className="text-center text-[9px] mt-1.5 tracking-widest"
+                style={{ 
+                  fontFamily: 'monospace',
+                  color: isActive ? `${primaryColor}99` : '#64748b',
+                }}
+              >
+                ID: {ticket.id.substring(0, 8).toUpperCase()}
+              </p>
+            </>
+          )}
         </div>
 
         {/* Glowing Edge Effect */}

@@ -6,9 +6,10 @@ import { useRouter } from 'next/navigation';
 import {
   Users, Search, Filter, ArrowLeft, Trophy, Flame, Star,
   TrendingUp, Calendar, Award, Shield, Zap, Target,
-  CreditCard, AlertTriangle, CheckCircle, Clock
+  CreditCard, AlertTriangle, CheckCircle, Clock, FileText
 } from 'lucide-react';
 import Link from 'next/link';
+import TopFileModal from '@/components/el-cruce/TopFileModal';
 
 interface User {
   id: number;
@@ -32,6 +33,17 @@ export default function UsersListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
   const [paymentFilter, setPaymentFilter] = useState<string>('ALL');
+  
+  // Estado para TOP FILE modal
+  const [topFileModal, setTopFileModal] = useState<{ isOpen: boolean; userId: number; userName: string }>({
+    isOpen: false,
+    userId: 0,
+    userName: ''
+  });
+
+  const openTopFile = (userId: number, userName: string) => {
+    setTopFileModal({ isOpen: true, userId, userName });
+  };
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -308,6 +320,15 @@ export default function UsersListPage() {
                       <p className="text-xs text-slate-400">{user.isActive ? 'Activo' : 'Inactivo'}</p>
                     </div>
 
+                    {/* Botón TOP FILE */}
+                    <button
+                      onClick={() => openTopFile(user.id, user.nombre)}
+                      className="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 rounded-lg font-semibold text-sm transition-colors flex items-center gap-2"
+                    >
+                      <FileText size={16} />
+                      TOP FILE
+                    </button>
+
                     {/* Ver Detalles */}
                     <Link
                       href={`/dashboard/school-admin/users/${user.id}`}
@@ -424,6 +445,14 @@ export default function UsersListPage() {
           </div>
         </div>
       </div>
+
+      {/* TOP FILE Modal */}
+      <TopFileModal
+        userId={topFileModal.userId}
+        userName={topFileModal.userName}
+        isOpen={topFileModal.isOpen}
+        onClose={() => setTopFileModal({ isOpen: false, userId: 0, userName: '' })}
+      />
     </div>
   );
 }

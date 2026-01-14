@@ -26,9 +26,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // Solo coordinadores pueden ver esto
-    const coordinatorRoles = ['COORDINADOR', 'COORDINATOR_BASIC', 'SCHOOL_ADMIN', 'ADMINISTRADOR'];
-    if (!coordinatorRoles.includes(user.rol)) {
+    // Coordinadores y Trainers pueden ver alertas médicas
+    const allowedRoles = ['COORDINADOR', 'COORDINATOR_BASIC', 'SCHOOL_ADMIN', 'ADMINISTRADOR', 'TRAINER'];
+    if (!allowedRoles.includes(user.rol)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
@@ -294,9 +294,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // Solo coordinadores pueden marcar como enterado
-    const coordinatorRoles = ['COORDINADOR', 'COORDINATOR_BASIC', 'SCHOOL_ADMIN', 'ADMINISTRADOR'];
-    if (!coordinatorRoles.includes(user.rol)) {
+    // Coordinadores y Trainers pueden marcar como enterado
+    const allowedRoles = ['COORDINADOR', 'COORDINATOR_BASIC', 'SCHOOL_ADMIN', 'ADMINISTRADOR', 'TRAINER'];
+    if (!allowedRoles.includes(user.rol)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 

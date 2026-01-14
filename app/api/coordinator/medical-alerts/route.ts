@@ -24,7 +24,7 @@ export async function GET(request: Request) {
       }
     });
 
-    if (!usuario || !['SCHOOL_ADMIN', 'COORDINATOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'ADMIN'].includes(usuario.rol)) {
+    if (!usuario || !['SCHOOL_ADMIN', 'COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER', 'ADMIN', 'SUPER_ADMIN'].includes(usuario.rol)) {
       return NextResponse.json(
         { success: false, error: 'No tiene permisos para ver esta información' },
         { status: 403 }
@@ -47,13 +47,33 @@ export async function GET(request: Request) {
       whereClause.hasAlerts = true;
     }
 
-    // Si es coordinador, filtrar por sus visiones
-    if (usuario.rol.includes('COORDINATOR')) {
+    // Filtrar según el rol del usuario
+    if (usuario.rol === 'SCHOOL_ADMIN' || usuario.rol === 'COORDINADOR' || usuario.rol === 'ADMIN') {
+      // School Admin, Coordinador principal y Admin ven todos los registros de su organización
+      if (usuario.organizationId) {
+        // Obtener visiones de la organización
+        const visionesOrg = await prisma.vision.findMany({
+          where: { organizationId: usuario.organizationId },
+          select: { id: true }
+        });
+        if (visionesOrg.length > 0) {
+          whereClause.visionId = { in: visionesOrg.map(v => v.id) };
+        }
+      }
+    } else if (['COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER'].includes(usuario.rol)) {
+      // Estos roles ven registros de visiones donde son coordinadores o de su organización
       const coordinadorVisiones = await prisma.vision.findMany({
-        where: { coordinadorId: parseInt(session.user.id) },
+        where: { 
+          OR: [
+            { coordinadorId: parseInt(session.user.id) },
+            { organizationId: usuario.organizationId }
+          ]
+        },
         select: { id: true }
       });
-      whereClause.visionId = { in: coordinadorVisiones.map(v => v.id) };
+      if (coordinadorVisiones.length > 0) {
+        whereClause.visionId = { in: coordinadorVisiones.map(v => v.id) };
+      }
     }
 
     const medicalForms = await prisma.medicalForm.findMany({
@@ -77,9 +97,9 @@ export async function GET(request: Request) {
         }
       },
       orderBy: [
-        { hasAlerts: 'desc' },
-        { alertsReviewedAt: 'asc' },
-        { createdAt: 'desc' }
+        { hasAlerts: 'desc' },           // Primero los que tienen alertas
+        { alertsReviewedAt: { sort: 'asc', nulls: 'first' } },  // Los no revisados (null) primero
+        { createdAt: 'desc' }            // Los más recientes primero
       ]
     });
 

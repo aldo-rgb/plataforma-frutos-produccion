@@ -7,6 +7,7 @@ declare module "next-auth" {
     requirePasswordChange?: boolean
     wizardCompleted?: boolean
     onboardingOrigin?: string
+    organizationId?: number
   }
 
   interface Session {
@@ -16,6 +17,7 @@ declare module "next-auth" {
       requirePasswordChange?: boolean
       wizardCompleted?: boolean
       onboardingOrigin?: string
+      organizationId?: number
     }
   }
 }
@@ -27,5 +29,6 @@ declare module "next-auth/jwt" {
     requirePasswordChange?: boolean
     wizardCompleted?: boolean
     onboardingOrigin?: string
+    organizationId?: number
   }
 }

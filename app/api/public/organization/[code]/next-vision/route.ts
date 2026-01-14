@@ -19,9 +19,10 @@ export async function GET(
     }
 
     // Buscar visión activa de nivel BASIC:
-    // 1. Primero buscar visiones que aún no han terminado (endDate >= hoy o sin endDate)
-    // 2. Si ya empezó pero no ha terminado, es válida para inscripción
+    // Solo visiones que AÚN NO HAN INICIADO (startDate > hoy o sin startDate)
+    // Si una visión ya inició, no se aceptan nuevos registros
     const today = new Date();
+    today.setHours(0, 0, 0, 0); // Inicio del día
     
     const nextVision = await prisma.vision.findFirst({
       where: {
@@ -30,12 +31,12 @@ export async function GET(
         enabledLevels: {
           has: 'BASIC'
         },
-        // La visión es válida si:
-        // - No tiene endDate (visión sin fecha de fin definida)
-        // - O su endDate es mayor o igual a hoy
+        // La visión es válida para registro si:
+        // - No tiene startDate definido (inscripción siempre abierta)
+        // - O su startDate es mayor a hoy (aún no ha iniciado)
         OR: [
-          { endDate: null },
-          { endDate: { gte: today } }
+          { startDate: null },
+          { startDate: { gt: today } }
         ]
       },
       orderBy: {

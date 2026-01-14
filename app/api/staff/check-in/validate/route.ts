@@ -15,6 +15,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { identifier, productId } = body;
 
+    console.log('🔍 Check-in validate request:', { identifier, productId });
+
     if (!productId) {
       return NextResponse.json({ 
         valid: false,
@@ -70,7 +72,19 @@ export async function POST(request: NextRequest) {
       if (user) participantId = user.id;
     }
 
-    // 4. Buscar por nombre (normalizar espacios múltiples)
+    // 4. Intentar como referralCode (código QR del usuario)
+    if (!participantId) {
+      const upperIdentifier = identifier.toUpperCase().trim();
+      user = await prisma.usuario.findUnique({
+        where: { referralCode: upperIdentifier }
+      });
+      if (user) {
+        participantId = user.id;
+        console.log(`✅ Usuario encontrado por referralCode: ${user.nombre} (ID: ${user.id})`);
+      }
+    }
+
+    // 5. Buscar por nombre (normalizar espacios múltiples)
     if (!participantId) {
       const normalizedSearch = identifier.trim().replace(/\s+/g, ' ');
       // Separar en palabras para búsqueda más flexible
@@ -235,7 +249,9 @@ export async function POST(request: NextRequest) {
         apodo: user.apodo,
         email: user.email,
         profileImage: user.imagen || user.profileImage,
-        hasPhoto: hasProfilePhoto
+        hasPhoto: hasProfilePhoto,
+        referralCode: user.referralCode,
+        rol: user.rol
       },
       enrollment: enrollment ? {
         id: enrollment.id,

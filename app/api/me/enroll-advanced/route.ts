@@ -16,7 +16,16 @@ export async function POST(request: Request) {
 
     const userId = typeof session.user.id === 'string' ? parseInt(session.user.id) : session.user.id;
     const body = await request.json();
-    const { visionId, organizationId, paymentMethod, amountPaid, appliedCodes } = body;
+    const { 
+      visionId, 
+      organizationId, 
+      paymentMethod, 
+      amountPaid, 
+      appliedCodes,
+      packageType = 'ADVANCED_ONLY',
+      pendingDebt = 0,
+      prices
+    } = body;
 
     if (!visionId || !organizationId) {
       return NextResponse.json(
@@ -46,7 +55,7 @@ export async function POST(request: Request) {
       where: {
         userId: userId,
         level: 'BASIC',
-        enrollmentStatus: 'ACTIVE',
+        enrollmentStatus: { in: ['ACTIVE', 'ENROLLED'] },
       },
     });
 
@@ -65,6 +74,8 @@ export async function POST(request: Request) {
         enabledLevels: true,
         advancedStartDate: true,
         advancedEndDate: true,
+        plWeekend1StartDate: true,
+        plWeekend3EndDate: true, // Use last PL weekend end date
       },
     });
 
@@ -82,11 +93,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create enrollment in a transaction
+    // Create enrollment and tickets in a transaction
     const result = await prisma.$transaction(async (tx) => {
       // Create the ADVANCED enrollment
-      // Use the coordinatorId from the basic enrollment
-      const enrollment = await tx.vision_enrollments.create({
+      const advancedEnrollment = await tx.vision_enrollments.create({
         data: {
           userId: userId,
           visionId: visionId,
@@ -99,7 +109,61 @@ export async function POST(request: Request) {
         },
       });
 
-      // Update user's currentVisionLevel if they didn't have one higher
+      // Create ADVANCED ticket (always paid for all package types)
+      const advancedTicket = await tx.ticket.create({
+        data: {
+          ownerId: userId,
+          organizationId: organizationId,
+          visionId: visionId,
+          level: 'ADVANCED',
+          type: 'STANDARD',
+          status: 'ACTIVE',
+          paymentStatus: 'PAID',
+          costAtPurchase: prices?.ADVANCED_BASE || amountPaid,
+          amountPaid: packageType === 'APARTADO' ? (prices?.ADVANCED_BASE || amountPaid) : amountPaid,
+          isTransferable: false,
+          validUntil: vision.advancedEndDate || null,
+        },
+      });
+
+      let plEnrollment = null;
+      let plTicket = null;
+
+      // If COMBO or APARTADO, also create PL enrollment and ticket
+      if (packageType === 'COMBO' || packageType === 'APARTADO') {
+        // Create PL enrollment
+        plEnrollment = await tx.vision_enrollments.create({
+          data: {
+            userId: userId,
+            visionId: visionId,
+            coordinatorId: basicEnrollment.coordinatorId,
+            level: 'PL',
+            enrollmentStatus: packageType === 'COMBO' ? 'ACTIVE' : 'PENDING', // APARTADO = pending
+            paymentStatus: packageType === 'COMBO' ? 'PAID' : 'PENDING',
+            enrolledAt: new Date(),
+            updatedAt: new Date(),
+          },
+        });
+
+        // Create PL ticket
+        plTicket = await tx.ticket.create({
+          data: {
+            ownerId: userId,
+            organizationId: organizationId,
+            visionId: visionId,
+            level: 'PL',
+            type: 'STANDARD',
+            status: packageType === 'COMBO' ? 'ACTIVE' : 'PENDING_PAYMENT', // APARTADO = pending payment
+            paymentStatus: packageType === 'COMBO' ? 'PAID' : 'PENDING', // APARTADO = pending payment
+            costAtPurchase: prices?.PL || pendingDebt,
+            amountPaid: packageType === 'COMBO' ? (prices?.PL || 0) : 0, // APARTADO hasn't paid PL yet
+            isTransferable: false,
+            validUntil: vision.plWeekend3EndDate || null,
+          },
+        });
+      }
+
+      // Update user's currentVisionLevel
       const user = await tx.usuario.findUnique({
         where: { id: userId },
         select: { currentVisionLevel: true },
@@ -107,13 +171,14 @@ export async function POST(request: Request) {
 
       const levelHierarchy = ['BASIC', 'ADVANCED', 'PL'];
       const currentLevelIndex = levelHierarchy.indexOf(user?.currentVisionLevel || 'BASIC');
-      const newLevelIndex = levelHierarchy.indexOf('ADVANCED');
+      const targetLevel = (packageType === 'COMBO') ? 'PL' : 'ADVANCED';
+      const newLevelIndex = levelHierarchy.indexOf(targetLevel);
 
       if (newLevelIndex > currentLevelIndex) {
         await tx.usuario.update({
           where: { id: userId },
           data: {
-            currentVisionLevel: 'ADVANCED',
+            currentVisionLevel: targetLevel,
           },
         });
       }
@@ -133,16 +198,35 @@ export async function POST(request: Request) {
         });
       }
 
-      return enrollment;
+      return {
+        advancedEnrollment,
+        advancedTicket,
+        plEnrollment,
+        plTicket,
+        packageType,
+      };
     });
+
+    // Build response message based on package type
+    let message = '¡Inscripción exitosa al entrenamiento Avanzado!';
+    if (packageType === 'COMBO') {
+      message = '¡Inscripción exitosa al Combo Avanzado + Liderato!';
+    } else if (packageType === 'APARTADO') {
+      message = '¡Tu lugar en Liderato ha sido apartado! Recuerda pagar antes del inicio del Avanzado.';
+    }
 
     return NextResponse.json({
       success: true,
-      message: '¡Inscripción exitosa al entrenamiento Avanzado!',
+      message,
       enrollment: {
-        id: result.id,
-        level: result.level,
-        status: result.enrollmentStatus,
+        id: result.advancedEnrollment.id,
+        level: result.advancedEnrollment.level,
+        status: result.advancedEnrollment.enrollmentStatus,
+        packageType: packageType,
+      },
+      tickets: {
+        advanced: result.advancedTicket ? { id: result.advancedTicket.id, status: result.advancedTicket.status } : null,
+        pl: result.plTicket ? { id: result.plTicket.id, status: result.plTicket.status, paymentStatus: result.plTicket.paymentStatus } : null,
       },
     });
   } catch (error) {

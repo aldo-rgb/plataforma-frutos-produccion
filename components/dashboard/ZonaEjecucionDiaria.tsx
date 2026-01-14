@@ -211,7 +211,16 @@ export default function ZonaEjecucionDiaria() {
     }
 
     // Si tiene evidencia en revisión (SUBMITTED)
+    // Para misiones del trainer, SUBMITTED = Terminada (el participante ya hizo su parte)
     if (tarea.status === 'SUBMITTED') {
+      if (tarea.tipo === 'TRAINER_MISSION') {
+        return (
+          <div className="flex items-center gap-2 px-3 py-1 bg-green-500/20 border border-green-500 text-green-300 rounded-full text-xs font-bold">
+            <CheckCircle className="w-3 h-3" />
+            Terminada
+          </div>
+        );
+      }
       return (
         <div className="flex items-center gap-2 px-3 py-1 bg-blue-500/20 border border-blue-500 text-blue-300 rounded-full text-xs font-bold">
           <Clock className="w-3 h-3" />
@@ -253,7 +262,19 @@ export default function ZonaEjecucionDiaria() {
     }
 
     // Si tiene evidencia en revisión (SUBMITTED)
+    // Para misiones del trainer, SUBMITTED = completada, mostrar botón de "Ver Evidencia"
     if (tarea.status === 'SUBMITTED') {
+      if (tarea.tipo === 'TRAINER_MISSION') {
+        return (
+          <button
+            onClick={() => openViewEvidenceModal(tarea)}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-lg transition-all shadow-lg shadow-emerald-500/20"
+          >
+            <Eye className="w-4 h-4" />
+            Ver Evidencia
+          </button>
+        );
+      }
       return (
         <button
           disabled

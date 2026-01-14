@@ -5,19 +5,21 @@ import { format, addDays, subDays, isToday, startOfWeek, endOfWeek, eachDayOfInt
 import { es } from 'date-fns/locale';
 import SmartTask from '@/components/dashboard/SmartTask';
 import SpecialMissionTask from '@/components/dashboard/SpecialMissionTask';
+import TrainerMissionCard from '@/components/dashboard/TrainerMissionCard';
 import EvidenceModal from '@/components/dashboard/EvidenceModal';
 import PersonalTaskModal from '@/components/dashboard/PersonalTaskModal';
 import PersonalTaskCard from '@/components/dashboard/PersonalTaskCard';
 import DashboardCalendarHeader from '@/components/dashboard/DashboardCalendarHeader';
 import UserLevelBadge from '@/components/dashboard/UserLevelBadge';
 import UpcomingCallCard from '@/components/dashboard/UpcomingCallCard';
-import { ChevronLeft, ChevronRight, Calendar, Sparkles, TrendingUp, Check, Zap, Phone, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Sparkles, TrendingUp, Check, Zap, Phone, Plus, Target } from 'lucide-react';
 
 interface Task {
-  id: string | number; // Puede ser number (carta) o string (admin)
+  id: string | number; // Puede ser number (carta) o string (admin/trainer)
   taskId?: number;
   submissionId?: number;
-  tipo: 'CARTA' | 'EXTRAORDINARIA' | 'EVENTO';
+  missionId?: number;
+  tipo: 'CARTA' | 'EXTRAORDINARIA' | 'EVENTO' | 'TRAINER_MISSION';
   texto: string;
   area: string;
   areaIcon: string;
@@ -37,6 +39,22 @@ interface Task {
   metaId?: number;
   postponeCount?: number;
   completedAt?: string | null;
+  // Campos específicos de TRAINER_MISSION
+  trainerMessage?: string;
+  trainer?: {
+    id: number;
+    nombre: string;
+    imagen?: string;
+  };
+  template?: {
+    id: number;
+    title: string;
+    type: string;
+    instructions?: string;
+    hasQuestions: boolean;
+    questionsCount: number;
+    tags: string[];
+  };
 }
 
 interface Stats {
@@ -49,12 +67,15 @@ interface Stats {
 }
 
 interface UpcomingCall {
-  id: number;
-  type: 'DISCIPLINE' | 'VISION';
+  id: number | string;
+  type: 'DISCIPLINE' | 'VISION' | 'GC_CALL';
+  callType?: 'MENTOR' | 'GAME_CHANGER';
   scheduledDate: string;
   scheduledTime?: string;
+  endTime?: string;
   status: string;
   meetingUrl?: string;
+  meetingLink?: string;
   discipline?: {
     id: number;
     name: string;
@@ -69,7 +90,14 @@ interface UpcomingCall {
     nombre: string;
     imagen?: string;
   };
+  gameChanger?: {
+    id: number;
+    nombre: string;
+    imagen?: string;
+    telefono?: string;
+  } | null;
   weekNumber?: number;
+  assignedByGC?: boolean;
 }
 
 interface PersonalTask {
@@ -642,6 +670,28 @@ export default function TodayPage() {
                       key={task.id} 
                       task={adaptTaskForSmartTask(task)} 
                       onUploadEvidence={handleUploadEvidence}
+                    />
+                  ))}
+              </>
+            )}
+
+            {/* Misiones del Entrenador */}
+            {tasks.some(t => t.tipo === 'TRAINER_MISSION') && (
+              <>
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-emerald-400 font-bold mt-6 mb-3">
+                  <Target size={14} />
+                  Misiones del Entrenador
+                </div>
+                {tasks
+                  .filter(t => t.tipo === 'TRAINER_MISSION')
+                  .map(task => (
+                    <TrainerMissionCard 
+                      key={task.id} 
+                      task={task}
+                      onOpenMission={(t) => {
+                        // Abrir página de detalle de la misión
+                        window.location.href = `/dashboard/mision/${t.submissionId}`;
+                      }}
                     />
                   ))}
               </>

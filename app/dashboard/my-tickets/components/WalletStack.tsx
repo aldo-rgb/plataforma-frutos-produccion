@@ -10,6 +10,8 @@ interface Ticket {
   level: string;
   status: string;
   paymentStatus: string;
+  costAtPurchase?: number;
+  amountPaid?: number;
   isTransferable: boolean;
   validUntil: string | null;
   purchasePrice: number | null;
@@ -58,9 +60,52 @@ export function WalletStack({ tickets, user, onTransfer }: WalletStackProps) {
     'PL': 3,
     'WORKSHOP': 4,
   };
+
+  // Orden de status: ACTIVE y PENDING_PAYMENT primero, USED y otros al final
+  const statusOrder: Record<string, number> = {
+    'ACTIVE': 1,
+    'PENDING_PAYMENT': 2,
+    'RESERVED': 3,
+    'PENDING': 4,
+    'USED': 10,
+    'EXPIRED': 11,
+    'CANCELLED': 12,
+    'TRANSFERRED': 13,
+  };
+
+  // Función para verificar si un ticket ya fue "usado" (evento ya pasó)
+  const isTicketUsed = (ticket: Ticket): boolean => {
+    // Si el status ya es USED, EXPIRED, etc., ya está marcado como usado
+    if (statusOrder[ticket.status] >= 10) return true;
+    
+    // Si la fecha de fin de la visión ya pasó, el ticket ya fue usado
+    if (ticket.vision?.endDate) {
+      const endDate = new Date(ticket.vision.endDate);
+      const now = new Date();
+      if (endDate < now) return true;
+    }
+    
+    return false;
+  };
   
-  // Ordenar tickets por nivel
+  // Ordenar tickets: primero por si fue usado (no usados arriba), luego por nivel
   const sortedTickets = [...tickets].sort((a, b) => {
+    // Primero ordenar por si fue usado (considerando fecha de visión)
+    const usedA = isTicketUsed(a);
+    const usedB = isTicketUsed(b);
+    
+    if (usedA !== usedB) {
+      return usedA ? 1 : -1; // No usados primero
+    }
+    
+    // Si ambos tienen el mismo estado de uso, ordenar por status
+    const statusA = statusOrder[a.status] || 5;
+    const statusB = statusOrder[b.status] || 5;
+    if (statusA !== statusB) {
+      return statusA - statusB;
+    }
+    
+    // Si tienen el mismo status, ordenar por nivel
     const orderA = levelOrder[a.level] || 99;
     const orderB = levelOrder[b.level] || 99;
     return orderA - orderB;

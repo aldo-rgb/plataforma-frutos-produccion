@@ -344,14 +344,6 @@ export default function ElCruceControlWidget({ currentProductId, products }: Pro
               )}
               
               {session.status === "ACTIVE" && (
-                <>
-                  <button
-                    onClick={() => handleChangeStatus("PAUSED")}
-                    className="flex-1 py-2 bg-yellow-500 text-white rounded-lg font-medium flex items-center justify-center gap-2"
-                  >
-                    <Pause className="w-4 h-4" />
-                    Pausar
-                  </button>
                   <button
                     onClick={() => handleChangeStatus("COMPLETED")}
                     className="flex-1 py-2 bg-red-500 text-white rounded-lg font-medium flex items-center justify-center gap-2"
@@ -359,26 +351,6 @@ export default function ElCruceControlWidget({ currentProductId, products }: Pro
                     <StopCircle className="w-4 h-4" />
                     Terminar
                   </button>
-                </>
-              )}
-              
-              {session.status === "PAUSED" && (
-                <>
-                  <button
-                    onClick={() => handleChangeStatus("ACTIVE")}
-                    className="flex-1 py-2 bg-green-500 text-white rounded-lg font-medium flex items-center justify-center gap-2"
-                  >
-                    <Play className="w-4 h-4" />
-                    Reanudar
-                  </button>
-                  <button
-                    onClick={() => handleChangeStatus("COMPLETED")}
-                    className="flex-1 py-2 bg-red-500 text-white rounded-lg font-medium flex items-center justify-center gap-2"
-                  >
-                    <StopCircle className="w-4 h-4" />
-                    Terminar
-                  </button>
-                </>
               )}
             </div>
 

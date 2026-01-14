@@ -5,13 +5,13 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
   Users, Ticket, AlertTriangle, Building2, GraduationCap, Activity,
-  Clock, Calendar, Scan, Heart
+  Clock, Calendar, Scan, Heart, ChevronRight
 } from 'lucide-react';
 import Link from 'next/link';
 import MedicalAlertsWidget from '@/components/dashboard/MedicalAlertsWidget';
-import MedicalFormsListWidget from '@/components/dashboard/MedicalFormsListWidget';
 import GCCallsMonitorWidget from '@/components/dashboard/GCCallsMonitorWidget';
 import TreasuryQuickWidget from '@/components/dashboard/TreasuryQuickWidget';
+import { ElCruceAccessWidget } from '@/components/el-cruce';
 
 interface DashboardData {
   overview: {
@@ -44,16 +44,20 @@ export default function CoordinadorBasicoDashboard() {
   const [loadingProductos, setLoadingProductos] = useState(true);
   const [countdown, setCountdown] = useState<{[key: number]: string}>({});
   const [medicalAlertsCount, setMedicalAlertsCount] = useState(0);
+  const [callsData, setCallsData] = useState<{ completed: number; total: number }>({ completed: 0, total: 0 });
+  const [preRegistros, setPreRegistros] = useState<{ pending: number; paid: number; total: number }>({ pending: 0, paid: 0, total: 0 });
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
-    } else if (!['COORDINATOR_BASIC', 'TRAINER', 'COORDINATOR_ADVANCED'].includes(session?.user?.rol || '')) {
+    } else if (session?.user?.rol !== 'COORDINATOR_BASIC') {
       router.push('/dashboard');
     } else {
       fetchDashboardData();
       fetchProductos();
       fetchMedicalAlerts();
+      fetchCallsData();
+      fetchPreRegistros();
     }
   }, [status, session]);
 
@@ -95,6 +99,40 @@ export default function CoordinadorBasicoDashboard() {
       }
     } catch (error) {
       console.error('Error fetching medical alerts:', error);
+    }
+  };
+
+  const fetchCallsData = async () => {
+    try {
+      const res = await fetch('/api/gc-calls/today-stats?level=BASIC');
+      const result = await res.json();
+      if (res.ok && result.success) {
+        setCallsData({
+          completed: result.completed || 0,
+          total: result.total || 0
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching calls data:', error);
+    }
+  };
+
+  const fetchPreRegistros = async () => {
+    try {
+      const res = await fetch('/api/coordinador/training-stats');
+      const result = await res.json();
+      console.log('Training stats response:', result);
+      if (res.ok && result.success) {
+        setPreRegistros({
+          pending: result.stats?.preRegistros?.pending || 0,
+          paid: result.stats?.preRegistros?.paid || 0,
+          total: result.stats?.preRegistros?.total || 0,
+        });
+      } else {
+        console.error('Training stats error:', result.error);
+      }
+    } catch (error) {
+      console.error('Error fetching pre-registros:', error);
     }
   };
 
@@ -170,27 +208,7 @@ export default function CoordinadorBasicoDashboard() {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {/* Widget Comunidad */}
-          <div className="bg-gradient-to-br from-blue-900/40 via-cyan-900/30 to-slate-900 border-2 border-blue-500/30 rounded-2xl p-6 hover:border-blue-500/50 transition-all hover:scale-105 hover:shadow-2xl h-full">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-blue-500/20 rounded-xl transition-colors">
-                  <Building2 className="text-blue-400" size={32} />
-                </div>
-                <div>
-                  <div className="text-blue-400 text-sm font-medium uppercase tracking-wider">Comunidad</div>
-                  <div className="text-white text-4xl font-black mt-1">{data.overview.totalCommunityMembers || 0}</div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <span className="text-slate-400 text-sm">Todos los usuarios que pertenecen a la comunidad</span>
-              <div className="h-6"></div>
-            </div>
-          </div>
-          
+        <div className="grid grid-cols-1 gap-6">
           {/* Widget Llamadas Pendientes con botón */}
           <Link href="/dashboard/school-admin/vision/1/call-management?level=BASIC" className="h-full">
             <div className="bg-gradient-to-br from-yellow-900/40 via-orange-900/30 to-slate-900 border-2 border-yellow-500/30 rounded-2xl p-6 hover:border-yellow-500/50 transition-all cursor-pointer group hover:scale-105 hover:shadow-2xl h-full">
@@ -201,7 +219,7 @@ export default function CoordinadorBasicoDashboard() {
                   </div>
                   <div>
                     <div className="text-yellow-400 text-sm font-medium uppercase tracking-wider">Llamadas Pendientes</div>
-                    <div className="text-white text-4xl font-black mt-1">0/50</div>
+                    <div className="text-white text-4xl font-black mt-1">{callsData.completed}/{callsData.total}</div>
                   </div>
                 </div>
               </div>
@@ -213,6 +231,53 @@ export default function CoordinadorBasicoDashboard() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
+                </div>
+              </div>
+            </div>
+          </Link>
+        </div>
+
+        {/* Widgets de Pre-Registros e Inscritos */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Widget de Pre-registros */}
+          <Link href="/dashboard/coordinador/pre-registros" className="block">
+            <div className="bg-gradient-to-br from-amber-900/40 to-slate-900/80 border-2 border-amber-500/30 rounded-2xl p-6 hover:border-amber-500/50 transition-all group cursor-pointer">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-amber-500/20 rounded-xl">
+                  <Users className="w-6 h-6 text-amber-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-1">
+                    DECLARADOS
+                  </p>
+                  <p className="text-4xl font-black text-white mb-2">
+                    {preRegistros.pending}
+                  </p>
+                  <p className="text-sm text-slate-400">
+                    Participantes pendientes de pago
+                  </p>
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          {/* Widget de Inscritos */}
+          <Link href="/dashboard/coordinador/pre-registros?filter=PAID" className="block">
+            <div className="bg-gradient-to-br from-emerald-900/40 to-slate-900/80 border-2 border-emerald-500/30 rounded-2xl p-6 hover:border-emerald-500/50 transition-all group cursor-pointer">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-emerald-500/20 rounded-xl">
+                  <GraduationCap className="w-6 h-6 text-emerald-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-1">
+                    INSCRITOS
+                  </p>
+                  <p className="text-4xl font-black text-white mb-2">
+                    {preRegistros.paid}
+                  </p>
+                  <p className="text-sm text-slate-400">
+                    Participantes pagados
+                  </p>
                 </div>
               </div>
             </div>
@@ -232,6 +297,11 @@ export default function CoordinadorBasicoDashboard() {
         {/* Widget de Tesorería Express */}
         <div className="mt-8">
           <TreasuryQuickWidget />
+        </div>
+
+        {/* Widget de El Atravezar */}
+        <div className="mt-8">
+          <ElCruceAccessWidget />
         </div>
 
         {/* Widget de Productos Activos */}
@@ -274,7 +344,11 @@ export default function CoordinadorBasicoDashboard() {
                       href={`/dashboard/school-admin/vision/${producto.visionId}/manage`}
                       className="block"
                     >
-                      <div className="bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-2 border-slate-700/50 rounded-xl p-5 hover:border-cyan-500/50 transition-all cursor-pointer group hover:scale-[1.02]">
+                      <div className={`rounded-xl p-5 transition-all cursor-pointer group hover:scale-[1.02] ${
+                        hasStarted 
+                          ? 'bg-gradient-to-br from-green-900/40 via-emerald-900/30 to-slate-900 border-2 border-green-500/50 shadow-lg shadow-green-500/10'
+                          : 'bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-2 border-slate-700/50 hover:border-cyan-500/50'
+                      }`}>
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1">
                             <h3 className="text-white font-bold text-lg mb-1 group-hover:text-cyan-400 transition-colors">
@@ -430,37 +504,8 @@ export default function CoordinadorBasicoDashboard() {
           </div>
         </Link>
 
-        {/* Widget de Formularios Médicos */}
+        {/* Ver Participantes */}
         <div className="mt-8">
-          <MedicalFormsListWidget />
-        </div>
-
-        {/* Sección de acciones adicionales */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Gestionar Visiones */}
-          <Link href="/dashboard/coordinador/visiones" className="block h-full">
-            <div className="h-full bg-gradient-to-br from-emerald-900/50 to-slate-900 border-2 border-emerald-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/10 flex flex-col">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-emerald-500/20 group-hover:bg-emerald-500/30 rounded-xl transition-colors">
-                  <Users size={24} className="text-emerald-300" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-white text-sm uppercase">
-                    Gestionar Visiones
-                  </h3>
-                  <p className="text-xs text-emerald-300">
-                    Crea y asigna licencias
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-slate-400 mt-auto">
-                Crea visiones/grupos y gestiona las licencias de tus participantes
-              </p>
-            </div>
-          </Link>
-
-          {/* Ver Participantes */}
           <Link href="/dashboard/coordinador/participantes" className="block h-full">
             <div className="h-full bg-gradient-to-br from-cyan-900/50 to-slate-900 border-2 border-cyan-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10 flex flex-col">
               <div className="flex items-center gap-3 mb-4">
@@ -481,7 +526,6 @@ export default function CoordinadorBasicoDashboard() {
               </p>
             </div>
           </Link>
-
         </div>
       </div>
     </div>

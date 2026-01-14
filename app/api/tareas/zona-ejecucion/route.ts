@@ -168,6 +168,47 @@ export async function GET(req: Request) {
       }
     });
 
+    // ========== 4. MISIONES DEL ENTRENADOR (TrainerMission) ==========
+    const misionesTrainer = await prisma.missionSubmission.findMany({
+      where: {
+        userId: userId,
+        status: {
+          in: ['PENDING', 'SUBMITTED', 'REJECTED']
+        },
+        Mission: {
+          status: 'ACTIVE',
+          releaseAt: {
+            lte: new Date() // Solo misiones ya liberadas
+          }
+        }
+      },
+      include: {
+        Mission: {
+          include: {
+            Template: {
+              include: {
+                Questions: true
+              }
+            },
+            Trainer: {
+              select: {
+                id: true,
+                nombre: true,
+                imagen: true
+              }
+            },
+            Vision: {
+              select: {
+                id: true,
+                nombre: true
+              }
+            }
+          }
+        }
+      }
+    });
+    console.log(`📦 Misiones de trainer encontradas: ${misionesTrainer.length}`);
+
     const ahora = new Date();
     
     // Eventos: Mostrar si es del día de hoy O está dentro de las próximas 72 horas (recordatorio)
@@ -373,11 +414,69 @@ export async function GET(req: Request) {
       };
     };
 
+    // ========== FORMATEAR MISIONES DEL TRAINER ==========
+    const formatTrainerMission = (submission: any) => {
+      const mission = submission.Mission;
+      const template = mission.Template;
+      const trainer = mission.Trainer;
+      
+      return {
+        id: `trainer-${submission.id}`,
+        submissionId: submission.id,
+        missionId: mission.id,
+        tipo: 'TRAINER_MISSION' as const,
+        texto: template.title,
+        area: 'Misión del Entrenador',
+        areaIcon: '🎯',
+        metaContext: mission.Vision?.nombre 
+          ? `${trainer?.nombre || 'Entrenador'} • ${mission.Vision.nombre}`
+          : trainer?.nombre || 'Asignado por Entrenador',
+        fechaProgramada: mission.releaseAt.toISOString(),
+        status: submission.status,
+        evidenceStatus: submission.status === 'SUBMITTED' ? 'PENDING' : 'NONE',
+        evidenciaUrl: submission.evidenceUrl,
+        feedbackMentor: submission.reviewNote,
+        pointsReward: template.pointsReward || 0,
+        requiereEvidencia: template.requiresEvidence || false,
+        deadline: mission.deadlineAt,
+        trainerMessage: mission.trainerMessage,
+        trainer: trainer ? {
+          id: trainer.id,
+          nombre: trainer.nombre,
+          imagen: trainer.imagen
+        } : null,
+        template: {
+          id: template.id,
+          title: template.title,
+          type: template.type,
+          instructions: template.instructions,
+          hasQuestions: template.Questions?.length > 0,
+          questionsCount: template.Questions?.length || 0,
+          tags: template.tags || []
+        }
+      };
+    };
+
+    // Filtrar misiones del trainer que son de HOY o tienen deadline pronto
+    const misionesTrainerHoy = misionesTrainer.filter(m => {
+      // Si no tiene deadline, siempre mostrar
+      if (!m.Mission.deadlineAt) return true;
+      
+      const deadline = new Date(m.Mission.deadlineAt);
+      const horasHastaDeadline = (deadline.getTime() - ahora.getTime()) / (1000 * 60 * 60);
+      
+      // Mostrar si el deadline es en las próximas 72 horas
+      return horasHastaDeadline > 0 && horasHastaDeadline <= 72;
+    });
+
+    console.log(`📦 Misiones trainer para mostrar hoy: ${misionesTrainerHoy.length}`);
+
     // ========== COMBINAR Y ORDENAR POR PRIORIDAD ==========
     const tareasHoy = [
       ...eventosHoy.map(formatAdminTask), // Prioridad 1: Eventos
-      ...tareasExtraordinarias.map(formatAdminTask), // Prioridad 2: Extraordinarias
-      ...tareasCartaHoy.map(formatTaskInstance) // Prioridad 3: Carta
+      ...misionesTrainerHoy.map(formatTrainerMission), // Prioridad 2: Misiones del Trainer
+      ...tareasExtraordinarias.map(formatAdminTask), // Prioridad 3: Extraordinarias
+      ...tareasCartaHoy.map(formatTaskInstance) // Prioridad 4: Carta
     ];
 
     const tareasRetrasadas = [
@@ -396,6 +495,7 @@ export async function GET(req: Request) {
 
     console.log('✅ Tareas procesadas:', {
       eventosHoy: eventosHoy.length,
+      misionesTrainer: misionesTrainerHoy.length,
       extraordinarias: tareasExtraordinarias.length,
       cartaHoy: tareasCartaHoy.length,
       retrasadasExtra: tareasExtraordinariasRetrasadas.length,
@@ -411,6 +511,7 @@ export async function GET(req: Request) {
       totalRetrasadas: tareasRetrasadas.length,
       breakdown: {
         eventos: eventosHoy.length,
+        misionesTrainer: misionesTrainerHoy.length,
         extraordinarias: tareasExtraordinarias.length,
         carta: tareasCartaHoy.length,
         retrasadasExtraordinarias: tareasExtraordinariasRetrasadas.length,

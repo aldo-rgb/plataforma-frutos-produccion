@@ -51,6 +51,7 @@ export async function GET() {
             nombre: true,
             startDate: true,
             endDate: true,
+            advancedStartDate: true,
           },
         },
         organization: {
@@ -92,6 +93,8 @@ export async function GET() {
           level: ticket.level,
           status: ticket.status,
           paymentStatus: ticket.paymentStatus,
+          costAtPurchase: ticket.costAtPurchase ? parseFloat(ticket.costAtPurchase.toString()) : 0,
+          amountPaid: ticket.amountPaid ? parseFloat(ticket.amountPaid.toString()) : 0,
           isTransferable: ticket.isTransferable,
           validUntil: ticket.validUntil?.toISOString() || null,
           purchasePrice: ticket.purchasePrice ? parseFloat(ticket.purchasePrice.toString()) : null,
@@ -101,6 +104,7 @@ export async function GET() {
             nombre: ticket.vision.nombre,
             startDate: ticket.vision.startDate?.toISOString() || '',
             endDate: ticket.vision.endDate?.toISOString() || null,
+            advancedStartDate: ticket.vision.advancedStartDate?.toISOString() || null,
           },
           organization: {
             name: ticket.organization.name,

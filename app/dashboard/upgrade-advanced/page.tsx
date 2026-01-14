@@ -18,6 +18,10 @@ import {
   Sparkles,
   Shield,
   AlertCircle,
+  Timer,
+  Package,
+  Crown,
+  Zap,
 } from 'lucide-react';
 
 interface VisionInfo {
@@ -27,6 +31,8 @@ interface VisionInfo {
   organizationName: string;
   advancedStartDate: string | null;
   advancedEndDate: string | null;
+  basicEndDate: string | null;
+  basicStartDate: string | null;
 }
 
 interface OrganizationOption {
@@ -44,7 +50,15 @@ interface OrganizationOption {
 
 interface PriceConfig {
   ADVANCED: number;
+  ADVANCED_BASE: number;
+  PL: number;
+  PL_BASE: number;
+  COMBO: number;
+  COMBO_BASE: number;
+  APARTADO: number;
 }
+
+type PackageType = 'ADVANCED_ONLY' | 'COMBO' | 'APARTADO';
 
 export default function UpgradeAdvancedPage() {
   const router = useRouter();
@@ -60,6 +74,11 @@ export default function UpgradeAdvancedPage() {
   const [selectedOrgId, setSelectedOrgId] = useState<number | null>(null);
   const [showOrgSelector, setShowOrgSelector] = useState(false);
   const [prices, setPrices] = useState<PriceConfig | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState<PackageType>('ADVANCED_ONLY');
+  
+  // Countdown state - hasta las 9 PM del último día del entrenamiento
+  const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
+  const [promoExpired, setPromoExpired] = useState(false);
   
   // Check authentication
   useEffect(() => {
@@ -67,6 +86,51 @@ export default function UpgradeAdvancedPage() {
       router.push('/auth/signin?callbackUrl=/dashboard/upgrade-advanced');
     }
   }, [status, router]);
+
+  // Countdown timer - hasta las 9 PM del último día del entrenamiento básico
+  useEffect(() => {
+    if (!currentVision?.basicEndDate) return;
+
+    const calculateCountdown = () => {
+      const now = new Date();
+      
+      // Fecha límite del cronómetro: último día del entrenamiento a las 9 PM
+      const endDate = new Date(currentVision.basicEndDate!);
+      endDate.setHours(21, 0, 0, 0); // 9:00 PM
+      
+      // Fecha límite real del precio promo: 11:59 PM del último día
+      const promoDeadline = new Date(currentVision.basicEndDate!);
+      promoDeadline.setHours(23, 59, 59, 999);
+      
+      // Verificar si la promo ya expiró (después de las 11:59 PM)
+      if (now > promoDeadline) {
+        setPromoExpired(true);
+        setCountdown(null);
+        return;
+      }
+      
+      // Calcular tiempo restante hasta las 9 PM
+      const diff = endDate.getTime() - now.getTime();
+      
+      if (diff <= 0) {
+        // Después de las 9 PM pero antes de las 11:59 PM - mostrar 00:00:00
+        setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        return;
+      }
+      
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      setCountdown({ days, hours, minutes, seconds });
+    };
+
+    calculateCountdown();
+    const interval = setInterval(calculateCountdown, 1000);
+    
+    return () => clearInterval(interval);
+  }, [currentVision?.basicEndDate]);
 
   // Fetch user's current vision and available organizations
   useEffect(() => {
@@ -105,6 +169,29 @@ export default function UpgradeAdvancedPage() {
   const selectedOrg = organizations.find(o => o.id === selectedOrgId);
   const selectedVision = selectedOrg?.nextAdvancedVision;
 
+  // Calcular precio según el paquete seleccionado
+  const getPackagePrice = () => {
+    if (!prices) return 0;
+    switch (selectedPackage) {
+      case 'ADVANCED_ONLY':
+        return prices.ADVANCED; // Precio promo del avanzado solo
+      case 'COMBO':
+        return prices.COMBO; // Precio configurado del combo
+      case 'APARTADO':
+        // Apartado = paga el costo base del Avanzado
+        return prices.ADVANCED_BASE;
+      default:
+        return prices.ADVANCED;
+    }
+  };
+
+  // Calcular deuda pendiente (solo para APARTADO)
+  const getPendingDebt = () => {
+    if (!prices || selectedPackage !== 'APARTADO') return 0;
+    // Deuda = precio promocional del PL (debe pagarse antes del inicio del Avanzado)
+    return prices.PL;
+  };
+
   const handleConfirm = async () => {
     if (!selectedOrgId || !selectedVision) {
       setError('Selecciona una sede con evento disponible');
@@ -125,7 +212,10 @@ export default function UpgradeAdvancedPage() {
       targetVisionId: selectedVision.id,
       targetVisionName: selectedVision.nombre,
       advancedStartDate: selectedVision.startDate,
-      price: prices?.ADVANCED || 4500,
+      price: getPackagePrice(),
+      packageType: selectedPackage,
+      pendingDebt: getPendingDebt(),
+      prices: prices, // Pasar todos los precios para referencia
     };
     
     sessionStorage.setItem('pendingUpgrade', JSON.stringify(upgradeData));
@@ -300,9 +390,6 @@ export default function UpgradeAdvancedPage() {
                             <p className="text-sm text-slate-400">
                               <Calendar className="w-3 h-3 inline mr-1" />
                               {formatDate(org.nextAdvancedVision.startDate)}
-                              <span className="ml-2 text-purple-400">
-                                ({org.nextAdvancedVision.availableSpots} lugares)
-                              </span>
                             </p>
                           ) : (
                             <p className="text-sm text-slate-500">Sin evento programado</p>
@@ -341,7 +428,7 @@ export default function UpgradeAdvancedPage() {
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
-              { icon: Star, text: 'Introspección profunda y sanación' },
+              { icon: Star, text: 'Introspección profunda' },
               { icon: Shield, text: 'Trabajo en relaciones familiares' },
               { icon: Rocket, text: 'Liberación de bloqueos emocionales' },
               { icon: Sparkles, text: 'Conexión con tu propósito de vida' },
@@ -356,24 +443,147 @@ export default function UpgradeAdvancedPage() {
           </div>
         </motion.div>
 
-        {/* Price Summary */}
+        {/* Package Selection */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 mb-6"
+          className="mb-6"
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-slate-400 text-sm">Inversión</p>
-              <p className="text-3xl font-bold text-white">
-                ${(prices?.ADVANCED || 4500).toLocaleString()} <span className="text-lg text-slate-400">MXN</span>
-              </p>
+          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <Package className="w-5 h-5 text-purple-400" />
+            Selecciona tu Paquete
+          </h3>
+
+          {/* Countdown Timer */}
+          {!promoExpired && countdown && (
+            <div className="bg-gradient-to-r from-amber-900/40 to-orange-900/30 border border-amber-500/30 rounded-xl p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Timer className="w-5 h-5 text-amber-400" />
+                  <span className="text-amber-400 font-bold">🔥 PRECIO ESPECIAL - Termina en:</span>
+                </div>
+                <div className="flex items-center gap-1 font-mono">
+                  {countdown.days > 0 && (
+                    <>
+                      <span className="bg-amber-500/20 px-2 py-1 rounded text-white font-bold">{countdown.days.toString().padStart(2, '0')}d</span>
+                      <span className="text-amber-400">:</span>
+                    </>
+                  )}
+                  <span className="bg-amber-500/20 px-2 py-1 rounded text-white font-bold">{countdown.hours.toString().padStart(2, '0')}h</span>
+                  <span className="text-amber-400">:</span>
+                  <span className="bg-amber-500/20 px-2 py-1 rounded text-white font-bold">{countdown.minutes.toString().padStart(2, '0')}m</span>
+                  <span className="text-amber-400">:</span>
+                  <span className="bg-amber-500/20 px-2 py-1 rounded text-white font-bold">{countdown.seconds.toString().padStart(2, '0')}s</span>
+                </div>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-slate-400">Fin de semana completo</p>
-              <p className="text-xs text-purple-400">Incluye materiales y alimentación</p>
-            </div>
+          )}
+
+          <div className="space-y-3">
+            {/* Opción 1: Solo Avanzado */}
+            <button
+              onClick={() => setSelectedPackage('ADVANCED_ONLY')}
+              className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                selectedPackage === 'ADVANCED_ONLY'
+                  ? 'border-purple-500 bg-purple-500/10'
+                  : 'border-slate-700 hover:border-purple-500/50 bg-slate-800/30'
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-3">
+                  <div className={`p-2 rounded-lg ${selectedPackage === 'ADVANCED_ONLY' ? 'bg-purple-500/20' : 'bg-slate-700'}`}>
+                    <Rocket className={`w-5 h-5 ${selectedPackage === 'ADVANCED_ONLY' ? 'text-purple-400' : 'text-slate-400'}`} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-white">Solo Avanzado</p>
+                    <p className="text-sm text-slate-400">Entrenamiento Avanzado completo</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-black text-white">${(prices?.ADVANCED || 7500).toLocaleString()}</p>
+                  {!promoExpired && prices?.ADVANCED_BASE && prices.ADVANCED_BASE > (prices?.ADVANCED || 0) && (
+                    <p className="text-sm text-slate-500 line-through">${prices.ADVANCED_BASE.toLocaleString()}</p>
+                  )}
+                </div>
+              </div>
+              {selectedPackage === 'ADVANCED_ONLY' && (
+                <div className="mt-2 pt-2 border-t border-purple-500/30">
+                  <p className="text-xs text-emerald-400">✓ Pago único • Acceso inmediato</p>
+                </div>
+              )}
+            </button>
+
+            {/* Opción 2: Combo Avanzado + PL */}
+            <button
+              onClick={() => setSelectedPackage('COMBO')}
+              className={`w-full p-4 rounded-xl border-2 transition-all text-left relative overflow-hidden ${
+                selectedPackage === 'COMBO'
+                  ? 'border-amber-500 bg-gradient-to-r from-amber-900/30 to-purple-900/20'
+                  : 'border-slate-700 hover:border-amber-500/50 bg-slate-800/30'
+              }`}
+            >
+              {/* Badge Recomendado */}
+              <div className="absolute top-0 right-0 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">
+                ⭐ RECOMENDADO
+              </div>
+              <div className="flex items-start justify-between pt-2">
+                <div className="flex items-start gap-3">
+                  <div className={`p-2 rounded-lg ${selectedPackage === 'COMBO' ? 'bg-amber-500/20' : 'bg-slate-700'}`}>
+                    <Crown className={`w-5 h-5 ${selectedPackage === 'COMBO' ? 'text-amber-400' : 'text-slate-400'}`} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-white">Combo Avanzado + PL</p>
+                    <p className="text-sm text-slate-400">Visión completa: Avanzado + Participación Libre</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-black text-amber-400">${(prices?.COMBO || 14500).toLocaleString()}</p>
+                  {prices?.ADVANCED_BASE && prices?.PL_BASE && (
+                    <p className="text-sm text-slate-500 line-through">${(prices.ADVANCED_BASE + prices.PL_BASE).toLocaleString()}</p>
+                  )}
+                </div>
+              </div>
+              {selectedPackage === 'COMBO' && (
+                <div className="mt-3 pt-2 border-t border-amber-500/30 space-y-1">
+                  <p className="text-xs text-emerald-400">✓ Incluye Avanzado (${(prices?.ADVANCED || 7500).toLocaleString()}) + PL (${(prices?.PL || 7000).toLocaleString()})</p>
+                  <p className="text-xs text-amber-400">✓ Mejor precio garantizado • Sin preocupaciones</p>
+                </div>
+              )}
+            </button>
+
+            {/* Opción 3: Apartado */}
+            <button
+              onClick={() => setSelectedPackage('APARTADO')}
+              className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                selectedPackage === 'APARTADO'
+                  ? 'border-cyan-500 bg-cyan-500/10'
+                  : 'border-slate-700 hover:border-cyan-500/50 bg-slate-800/30'
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-3">
+                  <div className={`p-2 rounded-lg ${selectedPackage === 'APARTADO' ? 'bg-cyan-500/20' : 'bg-slate-700'}`}>
+                    <Zap className={`w-5 h-5 ${selectedPackage === 'APARTADO' ? 'text-cyan-400' : 'text-slate-400'}`} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-white">Aparta tu lugar con este precio</p>
+                    <p className="text-sm text-slate-400">Paga el Avanzado hoy y el PL promocional antes del inicio</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-black text-cyan-400">${(prices?.ADVANCED_BASE || 9000).toLocaleString()}</p>
+                  <p className="text-xs text-slate-500">Pagas hoy</p>
+                </div>
+              </div>
+              {selectedPackage === 'APARTADO' && (
+                <div className="mt-3 pt-2 border-t border-cyan-500/30 space-y-1">
+                  <p className="text-xs text-emerald-400">✓ Pagas hoy: Avanzado ${(prices?.ADVANCED_BASE || 9000).toLocaleString()} MXN</p>
+                  <p className="text-xs text-orange-400">⚠️ Pendiente: PL ${(prices?.PL || 5500).toLocaleString()} MXN (antes del inicio del Avanzado)</p>
+                  <p className="text-xs text-cyan-400">✓ Precio promocional del PL asegurado</p>
+                </div>
+              )}
+            </button>
           </div>
         </motion.div>
 

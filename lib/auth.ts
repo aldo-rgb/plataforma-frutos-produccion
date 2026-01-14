@@ -63,6 +63,7 @@ export const authOptions: NextAuthOptions = {
           requirePasswordChange: user.requirePasswordChange || false,
           wizardCompleted: user.wizardCompleted || false,
           onboardingOrigin: user.onboardingOrigin || 'ORGANIC_SIGNUP',
+          organizationId: user.organizacionId || undefined,
         }
       }
     })
@@ -76,6 +77,7 @@ export const authOptions: NextAuthOptions = {
         token.requirePasswordChange = user.requirePasswordChange || false
         token.wizardCompleted = user.wizardCompleted || false
         token.onboardingOrigin = user.onboardingOrigin || 'ORGANIC_SIGNUP'
+        token.organizationId = user.organizationId
       }
       return token
     },
@@ -87,6 +89,7 @@ export const authOptions: NextAuthOptions = {
         session.user.requirePasswordChange = token.requirePasswordChange as boolean
         session.user.wizardCompleted = token.wizardCompleted as boolean
         session.user.onboardingOrigin = token.onboardingOrigin as string
+        session.user.organizationId = token.organizationId as number | undefined
       }
       return session
     }

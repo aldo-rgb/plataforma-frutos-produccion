@@ -53,6 +53,7 @@ export default function StaffScanPage() {
   const [scanning, setScanning] = useState(false)
   const [totalScanned, setTotalScanned] = useState(0)
   const [sessionActive, setSessionActive] = useState(false)
+  const [cameraError, setCameraError] = useState<string | null>(null)
   
   const qrScannerRef = useRef<Html5Qrcode | null>(null)
   const videoRef = useRef<HTMLDivElement>(null)
@@ -98,19 +99,38 @@ export default function StaffScanPage() {
       const html5QrCode = new Html5Qrcode("qr-reader")
       qrScannerRef.current = html5QrCode
 
+      // Usar configuración más flexible para evitar OverconstrainedError
       await html5QrCode.start(
         { facingMode: "environment" },
         {
           fps: 10,
-          qrbox: { width: 250, height: 250 }
+          qrbox: { width: 200, height: 200 },
+          aspectRatio: 1.0
         },
         (decodedText) => {
           handleScan(decodedText, "QR")
         },
         () => {} // Ignorar errores de escaneo continuo
-      )
-    } catch (err) {
+      ).catch(async (err) => {
+        // Si falla con environment, intentar con cualquier cámara
+        console.log("Intentando con cámara frontal...")
+        await html5QrCode.start(
+          { facingMode: "user" },
+          {
+            fps: 10,
+            qrbox: { width: 200, height: 200 }
+          },
+          (decodedText) => {
+            handleScan(decodedText, "QR")
+          },
+          () => {}
+        )
+      })
+    } catch (err: any) {
       console.error("Error iniciando cámara:", err)
+      setCameraError(err?.message || "La cámara no está disponible")
+      // Cambiar automáticamente a modo manual
+      setScanMode("manual")
     }
   }, [])
 
@@ -349,8 +369,26 @@ export default function StaffScanPage() {
 
             {/* Área de escaneo */}
             {scanMode === "qr" && (
-              <div className="bg-black rounded-2xl overflow-hidden aspect-square">
+              <div className="bg-black rounded-2xl overflow-hidden aspect-square relative">
                 <div id="qr-reader" ref={videoRef} className="w-full h-full" />
+                {cameraError && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/95 p-6">
+                    <Camera className="w-16 h-16 text-slate-600 mb-4" />
+                    <p className="text-white text-lg font-medium text-center mb-2">
+                      Cámara no disponible
+                    </p>
+                    <p className="text-slate-400 text-sm text-center mb-4">
+                      {cameraError}
+                    </p>
+                    <button
+                      onClick={() => setScanMode("manual")}
+                      className="px-6 py-3 bg-amber-500 text-white rounded-xl font-bold flex items-center gap-2"
+                    >
+                      <Keyboard className="w-5 h-5" />
+                      Usar entrada manual
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 

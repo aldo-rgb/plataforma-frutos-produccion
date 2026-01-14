@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import TreasuryQuickWidget from '@/components/dashboard/TreasuryQuickWidget';
+import DirectorTrainingWidgets from '@/components/dashboard/DirectorTrainingWidgets';
 
 interface DashboardData {
   overview: {
@@ -667,6 +668,9 @@ export default function SchoolAdminDashboard() {
             color="cyan"
           />
         </div>
+
+        {/* WIDGETS DE DECLARADOS E INSCRITOS */}
+        <DirectorTrainingWidgets />
 
         {/* WIDGET DE VISIONES ACTIVAS */}
         <div className="bg-slate-900 border border-white/10 rounded-3xl p-6 mt-8 w-full">

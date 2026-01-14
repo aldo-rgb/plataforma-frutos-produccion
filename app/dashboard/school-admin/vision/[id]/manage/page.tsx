@@ -158,6 +158,7 @@ export default function VisionManagePage() {
   useEffect(() => {
     fetchVisionData();
     fetchCoordinadores();
+    fetchTrainers(); // Cargar trainers globales (de todo el sistema)
     fetchParticipantes();
     fetchGameChangers();
     fetchStaffData(); // Cargar staff existente
@@ -213,13 +214,27 @@ export default function VisionManagePage() {
       const data = await res.json();
       
       if (data.success) {
+        // Solo coordinadores (no trainers, esos vienen del API global)
         setCoordinadores(data.coordinadores.filter((u: Usuario) => 
           ['COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'COORDINADOR'].includes(u.rol)
         ));
-        setTrainers(data.coordinadores.filter((u: Usuario) => u.rol === 'TRAINER'));
       }
     } catch (error) {
       console.error('Error fetching coordinadores:', error);
+    }
+  };
+
+  // Cargar trainers desde el API global (trainers no pertenecen a una organización)
+  const fetchTrainers = async () => {
+    try {
+      const res = await fetch('/api/admin/trainers');
+      const data = await res.json();
+      
+      if (data.success) {
+        setTrainers(data.trainers || []);
+      }
+    } catch (error) {
+      console.error('Error fetching trainers:', error);
     }
   };
 
@@ -1262,142 +1277,6 @@ export default function VisionManagePage() {
                           ))}
                         </tbody>
                       </table>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Tab: Fechas */}
-          {activeTab === 'fechas' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-black text-white mb-4">📅 Gestión de Fechas</h2>
-              
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
-                  <label className="text-slate-400 text-xs font-medium mb-1 block">Nombre de la Visión</label>
-                  <div className="text-white text-lg font-bold">{vision.nombre}</div>
-                </div>
-
-                <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
-                  <label className="text-slate-400 text-xs font-medium mb-1 block">Fecha de Inicio</label>
-                  <div className="text-white text-lg font-bold">
-                    {vision.startDate ? new Date(vision.startDate).toLocaleDateString('es-MX') : 'No definida'}
-                  </div>
-                </div>
-
-                <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
-                  <label className="text-slate-400 text-xs font-medium mb-1 block">Fecha de Finalización</label>
-                  <div className="text-white text-lg font-bold">
-                    {vision.endDate ? new Date(vision.endDate).toLocaleDateString('es-MX') : 'No definida'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Lista de Participantes */}
-              <div className="bg-gradient-to-br from-blue-900/30 to-slate-900/50 rounded-xl border-2 border-blue-500/30 overflow-hidden">
-                <div className="bg-blue-900/40 p-6 border-b border-blue-500/30">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center text-2xl">
-                        👥
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-black text-blue-300">Participantes</h3>
-                        <p className="text-blue-400/60 text-sm">
-                          {participantes.length} usuarios inscritos
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="p-6">
-                  {loadingParticipantes ? (
-                    <div className="text-center py-8 text-slate-400">Cargando participantes...</div>
-                  ) : participantes.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="text-6xl mb-4">👥</div>
-                      <p className="text-slate-400 text-lg">No hay participantes inscritos</p>
-                      <p className="text-slate-500 text-sm mt-2">Los participantes aparecerán aquí una vez inscritos</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {participantes.map((p) => (
-                        <div
-                          key={p.id}
-                          className="bg-slate-900/50 rounded-lg p-4 border-2 border-blue-500/30 hover:border-blue-500/50 transition-all"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                              {p.usuario.nombre.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-white font-bold truncate text-lg">{p.usuario.nombre}</div>
-                              <div className="text-slate-400 text-xs truncate">{p.usuario.email}</div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Lista de Game Changers */}
-              <div className="bg-gradient-to-br from-yellow-900/30 to-slate-900/50 rounded-xl border-2 border-yellow-500/30 overflow-hidden">
-                <div className="bg-yellow-900/40 p-6 border-b border-yellow-500/30">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center text-2xl">
-                        ⭐
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-black text-yellow-300">Game Changers</h3>
-                        <p className="text-yellow-400/60 text-sm">
-                          {gameChangers.length} participantes destacados
-                        </p>
-                      </div>
-                    </div>
-                    <button className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-bold text-sm transition-all">
-                      ➕ Registrar Game Changer
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="p-6">
-                  {loadingGameChangers ? (
-                    <div className="text-center py-8 text-slate-400">Cargando game changers...</div>
-                  ) : gameChangers.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="text-6xl mb-4">⭐</div>
-                      <p className="text-slate-400 text-lg">No hay Game Changers registrados aún</p>
-                      <p className="text-slate-500 text-sm mt-2">Los Game Changers son participantes destacados de la visión</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {gameChangers.map((gc) => (
-                        <div
-                          key={gc.id}
-                          className="bg-slate-900/50 rounded-lg p-4 border-2 border-yellow-500/30 hover:border-yellow-500/50 transition-all relative overflow-hidden"
-                        >
-                          <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-500/10 rounded-bl-full"></div>
-                          <div className="absolute top-2 right-2 text-2xl">⭐</div>
-                          <div className="flex items-center gap-3">
-                            <div className="w-14 h-14 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                              {gc.usuario.nombre.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-white font-bold truncate text-lg">{gc.usuario.nombre}</div>
-                              <div className="text-slate-400 text-xs truncate">{gc.usuario.email}</div>
-                              <div className="text-yellow-400 text-xs mt-1">
-                                {new Date(gc.assignedAt).toLocaleDateString('es-MX')}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
                     </div>
                   )}
                 </div>

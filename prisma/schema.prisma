@@ -46,8 +46,8 @@ model BasicCallTracking {
   lastInteractionAt      DateTime?
   createdAt              DateTime             @default(now())
   updatedAt              DateTime
-  vision_enrollments     vision_enrollments   @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
   Usuario                Usuario?             @relation(fields: [coordinatorId], references: [id])
+  vision_enrollments     vision_enrollments   @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
   CallInteractionLog     CallInteractionLog[]
 
   @@index([enrollmentId])
@@ -63,8 +63,8 @@ model CallInteractionLog {
   callResult        CallResult
   comments          String?
   createdAt         DateTime          @default(now())
-  BasicCallTracking BasicCallTracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
   Usuario           Usuario           @relation(fields: [coordinatorId], references: [id])
+  BasicCallTracking BasicCallTracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
 
   @@index([trackingId])
   @@index([coordinatorId])
@@ -618,7 +618,6 @@ model InstitutionalOrder {
   nombreOrganizacion String
   emailCoordinador   String
   logoUrl            String?
-  address            String?
   geofencing         String?
   cantidadLicencias  Int
   totalAmount        Float
@@ -630,6 +629,7 @@ model InstitutionalOrder {
   processedAt        DateTime?
   createdAt          DateTime      @default(now())
   updatedAt          DateTime
+  address            String?
   Organization       Organization? @relation(fields: [organizationId], references: [id])
   Usuario            Usuario       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1006,11 +1006,9 @@ model Organization {
   campusLatitude                                        Float?
   campusLongitude                                       Float?
   geofenceRadius                                        Int                             @default(100)
-  address                                               String?
   schoolAdminId                                         Int                             @unique
   totalLicenses                                         Int                             @default(0)
   activeLicenses                                        Int                             @default(0)
-  licensesAvailable                                     Int                             @default(0)  // Licencias disponibles para asignar
   totalStudents                                         Int                             @default(0)
   createdAt                                             DateTime                        @default(now())
   updatedAt                                             DateTime
@@ -1020,7 +1018,13 @@ model Organization {
   renewalOfferEnabled                                   Boolean                         @default(true)
   visionCycleDuration                                   Int                             @default(6)
   masterOrganizationId                                  Int?
+  address                                               String?
+  licensesAvailable                                     Int                             @default(0)
+  CashBatches                                           CashBatch[]
+  CheckInRecord                                         CheckInRecord[]
   DefaultPrice                                          DefaultPrice[]
+  Expenses                                              Expense[]
+  GiftCode                                              GiftCode[]
   InstitutionalOrder                                    InstitutionalOrder[]
   License                                               License[]
   LicenseAssignment                                     LicenseAssignment[]
@@ -1030,31 +1034,23 @@ model Organization {
   MasterOrganization                                    MasterOrganization?             @relation(fields: [masterOrganizationId], references: [id])
   Usuario_Organization_schoolAdminIdToUsuario           Usuario                         @relation("Organization_schoolAdminIdToUsuario", fields: [schoolAdminId], references: [id])
   OrganizationWallet                                    OrganizationWallet?
+  PaymentCodes                                          PaymentCode[]
+  PaymentGatewayConfig                                  PaymentGatewayConfig?
   RefundRequest                                         RefundRequest[]
   SchoolCredit                                          SchoolCredit[]
   SchoolProduct                                         SchoolProduct[]
+  SmallGroups                                           SmallGroup[]
   StaffCommissionsLog                                   StaffCommissionsLog[]
   StripeConnectConfig                                   StripeConnectConfig?
+  Ticket                                                Ticket[]
+  TicketPriceConfig                                     TicketPriceConfig[]
+  UserLicense                                           UserLicense[]
   Usuario_Usuario_communityOrganizationIdToOrganization Usuario[]                       @relation("Usuario_communityOrganizationIdToOrganization")
   Usuario_Usuario_organizationIdToOrganization          Usuario[]                       @relation("Usuario_organizationIdToOrganization")
   Vision                                                Vision[]
-  Ticket                                                Ticket[]
-  TicketPriceConfig                                     TicketPriceConfig[]
-  PaymentGatewayConfig                                  PaymentGatewayConfig?
-  GiftCode                                              GiftCode[]
   coordinator_commission_config                         coordinator_commission_config[]
   coordinator_commissions                               coordinator_commissions[]
   weekly_payout_summary                                 weekly_payout_summary[]
-  UserLicense                                           UserLicense[]
-  CheckInRecord                                         CheckInRecord[]
-  
-  // Quantum Treasury Relations
-  PaymentCodes                                          PaymentCode[]
-  Expenses                                              Expense[]
-  CashBatches                                           CashBatch[]
-  
-  // Quantum Squads Relations
-  SmallGroups                                           SmallGroup[]
 
   @@index([masterOrganizationId])
   @@index([slug])
@@ -1554,55 +1550,50 @@ model SchoolCredit {
 }
 
 model SchoolProduct {
-  id                  Int              @id @default(autoincrement())
-  organizationId      Int
-  visionId            Int?
-  name                String
-  description         String?
-  imageUrl            String?
-  type                ProductType
-  levelType           ProductLevelType @default(NONE)
-  basePrice           Float
-  promoPrice          Float?
-  promoDeadline       DateTime?
-  startDate           DateTime?
-  endDate             DateTime?
-  // Fechas de Programa Liderato (3 fines de semana)
-  plWeekend1StartDate DateTime?
-  plWeekend1EndDate   DateTime?
-  plWeekend2StartDate DateTime?
-  plWeekend2EndDate   DateTime?
-  plWeekend3StartDate DateTime?
-  plWeekend3EndDate   DateTime?
-  maxCapacity         Int?
-  currentEnrollment   Int              @default(0)
-  isActive            Boolean          @default(true)
-  location            String?
-  videoUrl            String?
-  coordinatorId       Int?
-  trainerId           Int?
-  // Fecha límite para transferir tickets (null = no transferible)
-  transferDeadline    DateTime?
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime
-  createdBy           Int
-  Usuario             Usuario          @relation(fields: [createdBy], references: [id])
-  Organization        Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  Vision              Vision?          @relation(fields: [visionId], references: [id], onDelete: Cascade)
-  Coordinator         Usuario?         @relation("ProductCoordinator", fields: [coordinatorId], references: [id])
-  Trainer             Usuario?         @relation("ProductTrainer", fields: [trainerId], references: [id])
+  id                         Int                         @id @default(autoincrement())
+  organizationId             Int
+  visionId                   Int?
+  name                       String
+  description                String?
+  imageUrl                   String?
+  type                       ProductType
+  levelType                  ProductLevelType            @default(NONE)
+  basePrice                  Float
+  promoPrice                 Float?
+  promoDeadline              DateTime?
+  startDate                  DateTime?
+  endDate                    DateTime?
+  plWeekend1StartDate        DateTime?
+  plWeekend1EndDate          DateTime?
+  plWeekend2StartDate        DateTime?
+  plWeekend2EndDate          DateTime?
+  plWeekend3StartDate        DateTime?
+  plWeekend3EndDate          DateTime?
+  maxCapacity                Int?
+  currentEnrollment          Int                         @default(0)
+  isActive                   Boolean                     @default(true)
+  location                   String?
+  coordinatorId              Int?
+  trainerId                  Int?
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime
+  createdBy                  Int
+  videoUrl                   String?
+  transferDeadline           DateTime?
+  PreRegistrationsAsCurrent  AdvancedPreRegistration[]   @relation("CurrentProduct")
+  PreRegistrationsAsTarget   AdvancedPreRegistration[]   @relation("TargetProduct")
+  CheckInRecord              CheckInRecord[]
+  CrossingSessions           CrossingSession[]
   MedicalFormAcknowledgments MedicalFormAcknowledgment[]
-  ProductAttendance   ProductAttendance[]
-  UserLicense         UserLicense[]
-  CheckInRecord       CheckInRecord[]
-  
-  // Quantum Squads Relations
-  SmallGroups         SmallGroup[]
-  
-  // El Cruce - Pre-Registro Relations
-  PreRegistrationsAsCurrent     AdvancedPreRegistration[]       @relation("CurrentProduct")
-  PreRegistrationsAsTarget      AdvancedPreRegistration[]       @relation("TargetProduct")
-  CrossingSessions              CrossingSession[]
+  ProductAttendance          ProductAttendance[]
+  Coordinator                Usuario?                    @relation("ProductCoordinator", fields: [coordinatorId], references: [id])
+  Usuario                    Usuario                     @relation(fields: [createdBy], references: [id])
+  Organization               Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Trainer                    Usuario?                    @relation("ProductTrainer", fields: [trainerId], references: [id])
+  Vision                     Vision?                     @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  SmallGroups                SmallGroup[]
+  TrainerMissions            TrainerMission[]            @relation("MissionProduct")
+  UserLicense                UserLicense[]
 
   @@index([isActive])
   @@index([levelType])
@@ -1613,22 +1604,20 @@ model SchoolProduct {
   @@index([trainerId])
 }
 
-// Modelo para registrar asistencia a sesiones de entrenamiento
 model ProductAttendance {
-  id                  Int           @id @default(autoincrement())
-  productId           Int
-  enrollmentId        Int           // ID de vision_enrollments
-  sessionNumber       Int           // Número de sesión (1-12 típicamente)
-  attended            Boolean       @default(false)
-  attendedAt          DateTime?     // Fecha/hora en que se marcó asistencia
-  markedBy            Int?          // Usuario que registró la asistencia
-  notes               String?       // Notas adicionales
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  
-  SchoolProduct       SchoolProduct      @relation(fields: [productId], references: [id], onDelete: Cascade)
-  Enrollment          vision_enrollments @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
-  MarkedByUser        Usuario?           @relation("AttendanceMarkedBy", fields: [markedBy], references: [id])
+  id            Int                @id @default(autoincrement())
+  productId     Int
+  enrollmentId  Int
+  sessionNumber Int
+  attended      Boolean            @default(false)
+  attendedAt    DateTime?
+  markedBy      Int?
+  notes         String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  Enrollment    vision_enrollments @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  MarkedByUser  Usuario?           @relation("AttendanceMarkedBy", fields: [markedBy], references: [id])
+  SchoolProduct SchoolProduct      @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@unique([productId, enrollmentId, sessionNumber])
   @@index([productId])
@@ -2033,20 +2022,6 @@ model Usuario {
   subscriptionPlan                                                       SubscriptionPlan?               @default(NONE)
   subscriptionStartDate                                                  DateTime?
   telefono                                                               String?
-  apodo                                                                  String?
-  horarioLlamada                                                         String?
-  profession                                                             String?
-  birthdate                                                              DateTime?
-  children                                                               Int?
-  goals                                                                  String?
-  expectations                                                           String?
-  angelEnrrolamiento                                                     String?
-  visionAngel                                                            String?
-  responsableSeguimiento                                                 String?
-  referralCode                                                           String?                         @unique
-  invitedCount                                                           Int                             @default(0)
-  invitedBy                                                              Int?
-  invitedByText                                                          String?
   requirePasswordChange                                                  Boolean                         @default(false)
   changeRequestedAt                                                      DateTime?
   changeRequestedBy                                                      Int?
@@ -2071,9 +2046,25 @@ model Usuario {
   graduatedFromAdvanced                                                  DateTime?
   graduatedFromBasic                                                     DateTime?
   studentStatus                                                          StudentStatus?
+  angelEnrrolamiento                                                     String?
+  apodo                                                                  String?
+  horarioLlamada                                                         String?
+  responsableSeguimiento                                                 String?
+  visionAngel                                                            String?
+  invitedBy                                                              Int?
+  invitedCount                                                           Int                             @default(0)
+  referralCode                                                           String?                         @unique
+  birthdate                                                              DateTime?
+  children                                                               Int?
+  goals                                                                  String?
+  profession                                                             String?
+  expectations                                                           String?
+  invitedByText                                                          String?
   AccessCode_AccessCode_generatedByToUsuario                             AccessCode[]                    @relation("AccessCode_generatedByToUsuario")
   AccessCode_AccessCode_usedByToUsuario                                  AccessCode[]                    @relation("AccessCode_usedByToUsuario")
   AdminTask                                                              AdminTask[]
+  StaffScannedPreRegistrations                                           AdvancedPreRegistration[]       @relation("ScannedByStaff")
+  AdvancedPreRegistrations                                               AdvancedPreRegistration[]
   AreaConfig                                                             AreaConfig[]
   ArenaDuel_ArenaDuel_player1IdToUsuario                                 ArenaDuel[]                     @relation("ArenaDuel_player1IdToUsuario")
   ArenaDuel_ArenaDuel_player2IdToUsuario                                 ArenaDuel[]                     @relation("ArenaDuel_player2IdToUsuario")
@@ -2083,22 +2074,41 @@ model Usuario {
   ArenaTaunt_ArenaTaunt_receiverIdToUsuario                              ArenaTaunt[]                    @relation("ArenaTaunt_receiverIdToUsuario")
   ArenaTaunt_ArenaTaunt_senderIdToUsuario                                ArenaTaunt[]                    @relation("ArenaTaunt_senderIdToUsuario")
   AvatarGenerationAttempt                                                AvatarGenerationAttempt[]
+  BasicCallTracking                                                      BasicCallTracking[]
   CallAvailability                                                       CallAvailability[]
   CallBooking_CallBooking_mentorIdToUsuario                              CallBooking[]                   @relation("CallBooking_mentorIdToUsuario")
   CallBooking_CallBooking_studentIdToUsuario                             CallBooking[]                   @relation("CallBooking_studentIdToUsuario")
+  CallInteractionLog                                                     CallInteractionLog[]
   CallLog_CallLog_mentorIdToUsuario                                      CallLog[]                       @relation("CallLog_mentorIdToUsuario")
   CallLog_CallLog_studentIdToUsuario                                     CallLog[]                       @relation("CallLog_studentIdToUsuario")
   CartaFrutos                                                            CartaFrutos[]
+  CashBatchesCodeGenerated                                               CashBatch[]                     @relation("CashBatchCodeGenerator")
+  CashBatchesCoordinator                                                 CashBatch[]                     @relation("CashBatchCoordinator")
+  CashBatchesReceived                                                    CashBatch[]                     @relation("CashBatchReceiver")
   CheckIn                                                                CheckIn[]
+  CheckInStaffRecords                                                    CheckInRecord[]                 @relation("CheckInStaff")
+  CheckInRecords                                                         CheckInRecord[]                 @relation("CheckInUser")
   CodigoAcceso                                                           CodigoAcceso[]
   CommissionLedger_CommissionLedger_mentorIdToUsuario                    CommissionLedger[]              @relation("CommissionLedger_mentorIdToUsuario")
   CommissionLedger_CommissionLedger_studentIdToUsuario                   CommissionLedger[]              @relation("CommissionLedger_studentIdToUsuario")
+  CrossingSessionsCreated                                                CrossingSession[]
   DisciplineConfig                                                       DisciplineConfig?
   DisciplineSchedule                                                     DisciplineSchedule?
   DisciplineSubscription_DisciplineSubscription_mentorIdToUsuario        DisciplineSubscription[]        @relation("DisciplineSubscription_mentorIdToUsuario")
   DisciplineSubscription_DisciplineSubscription_studentIdToUsuario       DisciplineSubscription?         @relation("DisciplineSubscription_studentIdToUsuario")
   Evidencia                                                              Evidencia[]
   EvidenciaAccion                                                        EvidenciaAccion[]
+  ExpensesApproved                                                       Expense[]                       @relation("ExpenseApprover")
+  ExpensesCreated                                                        Expense[]                       @relation("ExpenseCreator")
+  GCAvailabilities                                                       GCAvailability[]                @relation("GCAvailabilityGC")
+  GCCallAttempts                                                         GCCallAttempt[]                 @relation("GCCallAttempts")
+  ParticipantCallAttempts                                                GCCallAttempt[]                 @relation("ParticipantCallAttempts")
+  GCCallLogsAsGC                                                         GCCallLog[]                     @relation("GCCallLogGC")
+  GCCallLogsAsParticipant                                                GCCallLog[]                     @relation("GCCallLogParticipant")
+  GCCallSlotsCancelled                                                   GCCallSlot[]                    @relation("GCCallSlotCancelledBy")
+  GCCallSlotsAsParticipant                                               GCCallSlot[]                    @relation("GCCallSlotParticipant")
+  GiftCode_Creator                                                       GiftCode[]                      @relation("GiftCodeCreator")
+  GiftCode_User                                                          GiftCode[]                      @relation("GiftCodeUser")
   InstitutionalOrder                                                     InstitutionalOrder[]
   LicenseAssignment_LicenseAssignment_assignedByToUsuario                LicenseAssignment[]             @relation("LicenseAssignment_assignedByToUsuario")
   LicenseAssignment_LicenseAssignment_userIdToUsuario                    LicenseAssignment[]             @relation("LicenseAssignment_userIdToUsuario")
@@ -2106,6 +2116,9 @@ model Usuario {
   LicenseCode_LicenseCode_usedByToUsuario                                LicenseCode[]                   @relation("LicenseCode_usedByToUsuario")
   LicenseOrder                                                           LicenseOrder[]
   MasterOrganization                                                     MasterOrganization[]
+  MedicalFormReviewed                                                    MedicalForm[]                   @relation("MedicalFormReviewer")
+  MedicalForm                                                            MedicalForm?
+  MedicalFormAcknowledgments                                             MedicalFormAcknowledgment[]     @relation("MedicalFormAcknowledger")
   MensajeChat                                                            MensajeChat[]
   MentorAbsenceReport_MentorAbsenceReport_mentorIdToUsuario              MentorAbsenceReport[]           @relation("MentorAbsenceReport_mentorIdToUsuario")
   MentorAbsenceReport_MentorAbsenceReport_reviewedByToUsuario            MentorAbsenceReport[]           @relation("MentorAbsenceReport_reviewedByToUsuario")
@@ -2118,11 +2131,16 @@ model Usuario {
   MentorPackageOrder_MentorPackageOrder_usuarioIdToUsuario               MentorPackageOrder[]            @relation("MentorPackageOrder_usuarioIdToUsuario")
   MentorPayout                                                           MentorPayout[]
   MentorPayrollItem                                                      MentorPayrollItem[]
+  MissionReviews                                                         MissionSubmission[]             @relation("MissionReviewer")
+  MissionSubmissions                                                     MissionSubmission[]             @relation("MissionSubmissions")
   Notification                                                           Notification[]
   Organization_Organization_schoolAdminIdToUsuario                       Organization?                   @relation("Organization_schoolAdminIdToUsuario")
+  PaymentCodesCreated                                                    PaymentCode[]                   @relation("PaymentCodeCreator")
+  PaymentCodesRedeemed                                                   PaymentCode[]                   @relation("PaymentCodeRedeemer")
   PerfilMentor                                                           PerfilMentor?
   PersonalTask                                                           PersonalTask[]
   PhoenixSession                                                         PhoenixSession[]
+  AttendanceMarkedBy                                                     ProductAttendance[]             @relation("AttendanceMarkedBy")
   ProgramEnrollment_ProgramEnrollment_mentorIdToUsuario                  ProgramEnrollment[]             @relation("ProgramEnrollment_mentorIdToUsuario")
   ProgramEnrollment_ProgramEnrollment_userIdToUsuario                    ProgramEnrollment[]             @relation("ProgramEnrollment_userIdToUsuario")
   QuantumIdentity                                                        QuantumIdentity[]
@@ -2135,8 +2153,13 @@ model Usuario {
   ReporteAnonimo_ReporteAnonimo_mentorIdToUsuario                        ReporteAnonimo[]                @relation("ReporteAnonimo_mentorIdToUsuario")
   ResenasMentoria                                                        ResenasMentoria[]
   RewardHistory                                                          RewardHistory[]
+  ProductCoordinator                                                     SchoolProduct[]                 @relation("ProductCoordinator")
   SchoolProduct                                                          SchoolProduct[]
+  ProductTrainer                                                         SchoolProduct[]                 @relation("ProductTrainer")
   ServiceLadderProgress                                                  ServiceLadderProgress?
+  SmallGroupsLed                                                         SmallGroup[]                    @relation("SmallGroupLeader")
+  SmallGroupMembersMoved                                                 SmallGroupMember[]              @relation("SmallGroupMemberMovedBy")
+  SmallGroupMemberships                                                  SmallGroupMember[]              @relation("SmallGroupMemberUser")
   SocialReaction                                                         SocialReaction[]
   SolicitudMentoria                                                      SolicitudMentoria[]
   StaffCommissionsLog_StaffCommissionsLog_relatedUserIdToUsuario         StaffCommissionsLog[]           @relation("StaffCommissionsLog_relatedUserIdToUsuario")
@@ -2146,9 +2169,15 @@ model Usuario {
   TaskInstance                                                           TaskInstance[]
   TaskSubmission_TaskSubmission_reviewedByToUsuario                      TaskSubmission[]                @relation("TaskSubmission_reviewedByToUsuario")
   TaskSubmission_TaskSubmission_usuarioIdToUsuario                       TaskSubmission[]                @relation("TaskSubmission_usuarioIdToUsuario")
+  Ticket_TicketOwner                                                     Ticket[]                        @relation("TicketOwner")
+  Ticket_TicketReferrer                                                  Ticket[]                        @relation("TicketReferrer")
   TicketPurchase                                                         TicketPurchase[]
+  TrainerInterventions                                                   TrainerIntervention[]           @relation("TrainerInterventions")
+  TrainerMissionsCreated                                                 TrainerMission[]                @relation("TrainerMissions")
+  TrainerTaskTemplates                                                   TrainerTaskTemplate[]           @relation("TrainerTemplates")
   Transaccion                                                            Transaccion[]
   UserCollectionProgress                                                 UserCollectionProgress[]
+  UserLicenses                                                           UserLicense[]
   UserServiceContribution_UserServiceContribution_reviewedByToUsuario    UserServiceContribution[]       @relation("UserServiceContribution_reviewedByToUsuario")
   UserServiceContribution_UserServiceContribution_usuarioIdToUsuario     UserServiceContribution[]       @relation("UserServiceContribution_usuarioIdToUsuario")
   Usuario_Usuario_assignedMentorIdToUsuario                              Usuario?                        @relation("Usuario_assignedMentorIdToUsuario", fields: [assignedMentorId], references: [id], onUpdate: NoAction)
@@ -2172,9 +2201,6 @@ model Usuario {
   VisionParticipante_VisionParticipante_participanteIdToUsuario          VisionParticipante[]            @relation("VisionParticipante_participanteIdToUsuario")
   VisionStaff_VisionStaff_assignedByToUsuario                            VisionStaff[]                   @relation("VisionStaff_assignedByToUsuario")
   VisionStaff_VisionStaff_userIdToUsuario                                VisionStaff[]                   @relation("VisionStaff_userIdToUsuario")
-  ProductCoordinator                                                     SchoolProduct[]                 @relation("ProductCoordinator")
-  ProductTrainer                                                         SchoolProduct[]                 @relation("ProductTrainer")
-  AttendanceMarkedBy                                                     ProductAttendance[]             @relation("AttendanceMarkedBy")
   coordinator_commission_config                                          coordinator_commission_config[]
   coordinator_commissions_coordinator_commissions_coordinatorIdToUsuario coordinator_commissions[]       @relation("coordinator_commissions_coordinatorIdToUsuario")
   coordinator_commissions_coordinator_commissions_relatedUserIdToUsuario coordinator_commissions[]       @relation("coordinator_commissions_relatedUserIdToUsuario")
@@ -2184,47 +2210,6 @@ model Usuario {
   vision_enrollments_vision_enrollments_userIdToUsuario                  vision_enrollments[]            @relation("vision_enrollments_userIdToUsuario")
   weekly_payout_summary_weekly_payout_summary_approvedByToUsuario        weekly_payout_summary[]         @relation("weekly_payout_summary_approvedByToUsuario")
   weekly_payout_summary_weekly_payout_summary_generatedByToUsuario       weekly_payout_summary[]         @relation("weekly_payout_summary_generatedByToUsuario")
-  BasicCallTracking                                                      BasicCallTracking[]
-  CallInteractionLog                                                     CallInteractionLog[]
-  Ticket_TicketOwner                                                     Ticket[]                        @relation("TicketOwner")
-  Ticket_TicketReferrer                                                  Ticket[]                        @relation("TicketReferrer")
-  GiftCode_Creator                                                       GiftCode[]                      @relation("GiftCodeCreator")
-  GiftCode_User                                                          GiftCode[]                      @relation("GiftCodeUser")
-  MedicalForm                                                            MedicalForm?
-  MedicalFormReviewed                                                    MedicalForm[]                   @relation("MedicalFormReviewer")
-  MedicalFormAcknowledgments                                             MedicalFormAcknowledgment[]     @relation("MedicalFormAcknowledger")
-  UserLicenses                                                           UserLicense[]
-  CheckInRecords                                                         CheckInRecord[]                 @relation("CheckInUser")
-  CheckInStaffRecords                                                    CheckInRecord[]                 @relation("CheckInStaff")
-  
-  // Quantum Treasury Relations
-  PaymentCodesCreated                                                    PaymentCode[]                   @relation("PaymentCodeCreator")
-  PaymentCodesRedeemed                                                   PaymentCode[]                   @relation("PaymentCodeRedeemer")
-  ExpensesCreated                                                        Expense[]                       @relation("ExpenseCreator")
-  ExpensesApproved                                                       Expense[]                       @relation("ExpenseApprover")
-  CashBatchesCoordinator                                                 CashBatch[]                     @relation("CashBatchCoordinator")
-  CashBatchesReceived                                                    CashBatch[]                     @relation("CashBatchReceiver")
-  CashBatchesCodeGenerated                                               CashBatch[]                     @relation("CashBatchCodeGenerator")
-  
-  // Quantum Squads Relations
-  SmallGroupsLed                                                         SmallGroup[]                    @relation("SmallGroupLeader")
-  SmallGroupMemberships                                                  SmallGroupMember[]              @relation("SmallGroupMemberUser")
-  SmallGroupMembersMoved                                                 SmallGroupMember[]              @relation("SmallGroupMemberMovedBy")
-  
-  // Quantum GC Calls Relations
-  GCAvailabilities                                                       GCAvailability[]                @relation("GCAvailabilityGC")
-  GCCallSlotsAsParticipant                                               GCCallSlot[]                    @relation("GCCallSlotParticipant")
-  GCCallSlotsCancelled                                                   GCCallSlot[]                    @relation("GCCallSlotCancelledBy")
-  GCCallLogsAsGC                                                         GCCallLog[]                     @relation("GCCallLogGC")
-  GCCallLogsAsParticipant                                                GCCallLog[]                     @relation("GCCallLogParticipant")
-  TrainerInterventions                                                   TrainerIntervention[]           @relation("TrainerInterventions")
-  GCCallAttempts                                                         GCCallAttempt[]                 @relation("GCCallAttempts")
-  ParticipantCallAttempts                                                GCCallAttempt[]                 @relation("ParticipantCallAttempts")
-  
-  // El Cruce - Pre-Registro Avanzado
-  AdvancedPreRegistrations                                               AdvancedPreRegistration[]
-  StaffScannedPreRegistrations                                           AdvancedPreRegistration[]       @relation("ScannedByStaff")
-  CrossingSessionsCreated                                                CrossingSession[]
 
   @@index([communityOrganizationId])
 }
@@ -2262,10 +2247,22 @@ model Vision {
   enabledLevels                 VisionLevel[]                  @default([PL])
   financialConfigId             String?
   platformFeePercent            Float                          @default(0)
+  CashBatches                   CashBatch[]                    @relation("CashBatchVision")
+  CheckInRecord                 CheckInRecord[]
+  Expenses                      Expense[]                      @relation("ExpenseVision")
+  GCCallAttempts                GCCallAttempt[]                @relation("VisionCallAttempts")
+  GCCallLogs                    GCCallLog[]
+  GiftCode                      GiftCode[]
   LicenseAssignment             LicenseAssignment[]
+  MedicalForm                   MedicalForm[]
   MentorPackageOrder            MentorPackageOrder[]
+  PaymentCodes                  PaymentCode[]                  @relation("PaymentCodeVision")
   RefundRequest                 RefundRequest[]
+  SchoolProduct                 SchoolProduct[]
+  SmallGroups                   SmallGroup[]
   StaffCommissionsLog           StaffCommissionsLog[]
+  Ticket                        Ticket[]
+  TrainerMissions               TrainerMission[]
   Usuario                       Usuario                        @relation(fields: [coordinadorId], references: [id], onDelete: Cascade)
   Organization                  Organization?                  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   VisionCommissionConfig        VisionCommissionConfig?
@@ -2275,27 +2272,10 @@ model Vision {
   VisionParticipante            VisionParticipante[]
   VisionStaff                   VisionStaff[]
   VisionTicket                  VisionTicket[]
-  SchoolProduct                 SchoolProduct[]
   coordinator_commission_config coordinator_commission_config?
   coordinator_commissions       coordinator_commissions[]
   vision_enrollments            vision_enrollments[]
   weekly_payout_summary         weekly_payout_summary[]
-  Ticket                        Ticket[]
-  GiftCode                      GiftCode[]
-  MedicalForm                   MedicalForm[]
-  CheckInRecord                 CheckInRecord[]
-  
-  // Quantum Treasury Relations
-  PaymentCodes                  PaymentCode[]                  @relation("PaymentCodeVision")
-  Expenses                      Expense[]                      @relation("ExpenseVision")
-  CashBatches                   CashBatch[]                    @relation("CashBatchVision")
-  
-  // Quantum Squads Relations
-  SmallGroups                   SmallGroup[]
-  
-  // Quantum GC Calls Relations
-  GCCallLogs                    GCCallLog[]
-  GCCallAttempts                GCCallAttempt[]                @relation("VisionCallAttempts")
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -2553,20 +2533,16 @@ model vision_enrollments {
   createdAt                                         DateTime                  @default(now())
   updatedAt                                         DateTime
   level                                             VisionLevel
-  coordinator_commissions                           coordinator_commissions[]
+  AdvancedPreRegistrations                          AdvancedPreRegistration[]
   BasicCallTracking                                 BasicCallTracking?
-  ProductAttendance                                 ProductAttendance[]
   CheckInRecord                                     CheckInRecord[]
+  ProductAttendance                                 ProductAttendance[]
+  SmallGroupMemberships                             SmallGroupMember[]
+  coordinator_commissions                           coordinator_commissions[]
   Usuario_vision_enrollments_coordinatorIdToUsuario Usuario                   @relation("vision_enrollments_coordinatorIdToUsuario", fields: [coordinatorId], references: [id])
   Usuario_vision_enrollments_invitedByToUsuario     Usuario?                  @relation("vision_enrollments_invitedByToUsuario", fields: [invitedBy], references: [id])
   Usuario_vision_enrollments_userIdToUsuario        Usuario                   @relation("vision_enrollments_userIdToUsuario", fields: [userId], references: [id], onDelete: Cascade)
   Vision                                            Vision                    @relation(fields: [visionId], references: [id], onDelete: Cascade)
-  
-  // Quantum Squads Relations
-  SmallGroupMemberships                             SmallGroupMember[]
-  
-  // El Cruce - Pre-Registro Relations
-  AdvancedPreRegistrations                          AdvancedPreRegistration[]
 
   @@unique([userId, visionId, level])
   @@index([coordinatorId])
@@ -2608,31 +2584,30 @@ model weekly_payout_summary {
 }
 
 model Ticket {
-  id              String              @id @default(uuid())
-  ownerId         Int
-  organizationId  Int
-  visionId        Int
-  level           VisionLevel
-  type            TicketType          @default(STANDARD)
-  status          TicketStatus        @default(PENDING_PAYMENT)
-  isTransferable  Boolean             @default(true)
-  validUntil      DateTime?
-  paymentStatus   TicketPaymentStatus @default(UNPAID)
-  costAtPurchase  Decimal?            @db.Decimal(10, 2)  // Precio congelado al momento de compra
-  amountPaid      Decimal             @default(0) @db.Decimal(10, 2)  // Total pagado
-  purchasePrice   Decimal?            @db.Decimal(10, 2)  // Deprecated, usar costAtPurchase
-  giftCodeId      Int?                // Si fue adquirido con código de regalo
-  transferredAt   DateTime?
-  transferredTo   Int?
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-
-  owner        Usuario             @relation("TicketOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  referrer     Usuario?            @relation("TicketReferrer", fields: [transferredTo], references: [id])
-  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  vision       Vision              @relation(fields: [visionId], references: [id], onDelete: Cascade)
-  giftCode     GiftCode?           @relation(fields: [giftCodeId], references: [id])
-  transactions TicketTransaction[]
+  id             String              @id @default(uuid())
+  ownerId        Int
+  organizationId Int
+  visionId       Int
+  level          VisionLevel
+  type           TicketType          @default(STANDARD)
+  status         TicketStatus        @default(PENDING_PAYMENT)
+  isTransferable Boolean             @default(true)
+  validUntil     DateTime?
+  paymentStatus  TicketPaymentStatus @default(UNPAID)
+  purchasePrice  Decimal?            @db.Decimal(10, 2)
+  transferredAt  DateTime?
+  transferredTo  Int?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  amountPaid     Decimal             @default(0) @db.Decimal(10, 2)
+  costAtPurchase Decimal?            @db.Decimal(10, 2)
+  giftCodeId     Int?
+  giftCode       GiftCode?           @relation(fields: [giftCodeId], references: [id])
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner          Usuario             @relation("TicketOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  referrer       Usuario?            @relation("TicketReferrer", fields: [transferredTo], references: [id])
+  vision         Vision              @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  transactions   TicketTransaction[]
 
   @@index([ownerId])
   @@index([organizationId])
@@ -2643,29 +2618,27 @@ model Ticket {
   @@index([validUntil])
 }
 
-// Códigos de regalo para tickets
 model GiftCode {
   id                 Int            @id @default(autoincrement())
-  code               String         @unique  // Ej: GOLDEN-ABC123, PLATINUM-XYZ789
-  type               GiftCodeType   // GOLDEN (1 básico) o PLATINUM (los 3 niveles)
+  code               String         @unique
+  type               GiftCodeType
   organizationId     Int
-  visionId           Int?           // Opcional: si es específico para una visión
+  visionId           Int?
   status             GiftCodeStatus @default(ACTIVE)
-  value              Decimal?       @db.Decimal(10, 2)  // Valor monetario (para parciales)
-  discountPercentage Int?           // Porcentaje de descuento (solo para GOLDEN_DISCOUNT)
-  createdBy          Int            // Admin que lo creó
-  usedBy             Int?           // Usuario que lo usó
+  value              Decimal?       @db.Decimal(10, 2)
+  createdBy          Int
+  usedBy             Int?
   usedAt             DateTime?
   expiresAt          DateTime?
-  notes              String?        // Notas del admin
+  notes              String?
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  vision       Vision?      @relation(fields: [visionId], references: [id])
-  creator      Usuario      @relation("GiftCodeCreator", fields: [createdBy], references: [id])
-  user         Usuario?     @relation("GiftCodeUser", fields: [usedBy], references: [id])
-  tickets      Ticket[]
+  discountPercentage Int?
+  creator            Usuario        @relation("GiftCodeCreator", fields: [createdBy], references: [id])
+  organization       Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user               Usuario?       @relation("GiftCodeUser", fields: [usedBy], references: [id])
+  vision             Vision?        @relation(fields: [visionId], references: [id])
+  tickets            Ticket[]
 
   @@index([code])
   @@index([organizationId])
@@ -2673,20 +2646,18 @@ model GiftCode {
   @@index([type])
 }
 
-// Historial de transacciones de pago para tickets
 model TicketTransaction {
   id             String            @id @default(uuid())
   ticketId       String
   gateway        PaymentGateway
-  transactionRef String?           // ID de transacción externa (Stripe/MP/PayPal)
+  transactionRef String?
   amount         Decimal           @db.Decimal(10, 2)
   currency       Currency          @default(MXN)
   status         TransactionStatus @default(PENDING)
-  metadata       Json?             // Datos adicionales del gateway
+  metadata       Json?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
-
-  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticket         Ticket            @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([ticketId])
   @@index([gateway])
@@ -2695,19 +2666,18 @@ model TicketTransaction {
 }
 
 model TicketPriceConfig {
-  id              Int         @id @default(autoincrement())
+  id              Int          @id @default(autoincrement())
   organizationId  Int
   level           VisionLevel
-  regularPrice    Decimal     @db.Decimal(10, 2)
-  promoPrice      Decimal?    @db.Decimal(10, 2)
+  regularPrice    Decimal      @db.Decimal(10, 2)
+  promoPrice      Decimal?     @db.Decimal(10, 2)
   promoValidUntil DateTime?
-  comboAdvPL      Decimal?    @db.Decimal(10, 2)
-  partialPayment  Decimal?    @db.Decimal(10, 2)
-  isActive        Boolean     @default(true)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  comboAdvPL      Decimal?     @db.Decimal(10, 2)
+  partialPayment  Decimal?     @db.Decimal(10, 2)
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, level])
   @@index([organizationId])
@@ -2715,20 +2685,604 @@ model TicketPriceConfig {
 }
 
 model PaymentGatewayConfig {
-  id             Int      @id @default(autoincrement())
-  organizationId Int      @unique
+  id             Int          @id @default(autoincrement())
+  organizationId Int          @unique
   provider       String
   publicKey      String?
   secretKey      String?
   webhookSecret  String?
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId])
   @@index([provider])
+}
+
+model MedicalForm {
+  id                            Int                         @id @default(autoincrement())
+  userId                        Int                         @unique
+  visionId                      Int?
+  hasCurrentIllness             Boolean                     @default(false)
+  currentIllnessDetails         String?
+  hasCurrentTreatment           Boolean                     @default(false)
+  currentTreatmentDetails       String?
+  takesMedication               Boolean                     @default(false)
+  medicationDetails             String?
+  hasAllergies                  Boolean                     @default(false)
+  allergyDetails                String?
+  hadSurgery                    Boolean                     @default(false)
+  surgeryDetails                String?
+  wasHospitalized               Boolean                     @default(false)
+  hospitalizationDetails        String?
+  hasChronicIllness             Boolean                     @default(false)
+  chronicIllnessDetails         String?
+  hasPhysicalInjury             Boolean                     @default(false)
+  physicalInjuryDetails         String?
+  hasActivityRestrictions       Boolean                     @default(false)
+  activityRestrictionDetails    String?
+  hasPsychologicalCondition     Boolean                     @default(false)
+  psychologicalConditionDetails String?
+  emergencyContactName          String
+  emergencyContactRelation      String
+  emergencyContactPhone         String
+  consentAccepted               Boolean                     @default(false)
+  signatureData                 String?
+  signedAt                      DateTime?
+  hasAlerts                     Boolean                     @default(false)
+  alertsReviewedAt              DateTime?
+  alertsReviewedBy              Int?
+  createdAt                     DateTime                    @default(now())
+  updatedAt                     DateTime                    @updatedAt
+  ReviewedBy                    Usuario?                    @relation("MedicalFormReviewer", fields: [alertsReviewedBy], references: [id])
+  Usuario                       Usuario                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Vision                        Vision?                     @relation(fields: [visionId], references: [id])
+  CoordinatorAcknowledgments    MedicalFormAcknowledgment[]
+
+  @@index([userId])
+  @@index([visionId])
+  @@index([hasAlerts])
+}
+
+model MedicalFormAcknowledgment {
+  id             Int            @id @default(autoincrement())
+  medicalFormId  Int
+  coordinatorId  Int
+  acknowledgedAt DateTime       @default(now())
+  productId      Int?
+  Coordinator    Usuario        @relation("MedicalFormAcknowledger", fields: [coordinatorId], references: [id], onDelete: Cascade)
+  MedicalForm    MedicalForm    @relation(fields: [medicalFormId], references: [id], onDelete: Cascade)
+  Product        SchoolProduct? @relation(fields: [productId], references: [id])
+
+  @@unique([medicalFormId, coordinatorId, productId])
+  @@index([coordinatorId])
+  @@index([medicalFormId])
+  @@index([productId])
+}
+
+model UserLicense {
+  id             Int            @id @default(autoincrement())
+  userId         Int
+  organizationId Int
+  productId      Int?
+  type           LicenseType    @default(BASIC_ACCESS)
+  status         LicenseStatus  @default(ACTIVE)
+  assignedAt     DateTime       @default(now())
+  validFrom      DateTime       @default(now())
+  validUntil     DateTime?
+  consumedAt     DateTime?
+  revokedAt      DateTime?
+  revokedReason  String?
+  Organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Product        SchoolProduct? @relation(fields: [productId], references: [id])
+  Usuario        Usuario        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([organizationId])
+  @@index([productId])
+  @@index([status])
+}
+
+model CheckInRecord {
+  id                   Int                 @id @default(autoincrement())
+  userId               Int
+  organizationId       Int
+  productId            Int
+  visionId             Int
+  enrollmentId         Int?
+  checkInTime          DateTime            @default(now())
+  checkInMethod        CheckInMethod       @default(QR_STATION)
+  checkedInBy          Int?
+  ticketValidated      Boolean             @default(false)
+  medicalFormValidated Boolean             @default(false)
+  photoValidated       Boolean             @default(false)
+  badgePrinted         Boolean             @default(false)
+  badgePrintedAt       DateTime?
+  badgeNumber          String?
+  licenseConsumed      Boolean             @default(false)
+  userLicenseId        Int?
+  deviceInfo           String?
+  ipAddress            String?
+  notes                String?
+  CheckedInByUser      Usuario?            @relation("CheckInStaff", fields: [checkedInBy], references: [id])
+  Enrollment           vision_enrollments? @relation(fields: [enrollmentId], references: [id])
+  Organization         Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Product              SchoolProduct       @relation(fields: [productId], references: [id])
+  Usuario              Usuario             @relation("CheckInUser", fields: [userId], references: [id], onDelete: Cascade)
+  Vision               Vision              @relation(fields: [visionId], references: [id])
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([productId])
+  @@index([visionId])
+  @@index([checkInTime])
+}
+
+model PaymentCode {
+  id                 String            @id @default(uuid())
+  code               String            @unique
+  amount             Decimal           @db.Decimal(10, 2)
+  reference          String?
+  status             PaymentCodeStatus @default(ACTIVE)
+  organizationId     Int
+  visionId           Int?
+  createdById        Int
+  redeemedById       Int?
+  batchId            String?
+  createdAt          DateTime          @default(now())
+  redeemedAt         DateTime?
+  cancelledAt        DateTime?
+  cancellationReason String?
+  cashBatch          CashBatch?        @relation(fields: [batchId], references: [id])
+  createdBy          Usuario           @relation("PaymentCodeCreator", fields: [createdById], references: [id])
+  organization       Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  redeemedBy         Usuario?          @relation("PaymentCodeRedeemer", fields: [redeemedById], references: [id])
+  vision             Vision?           @relation("PaymentCodeVision", fields: [visionId], references: [id])
+
+  @@index([code])
+  @@index([organizationId])
+  @@index([visionId])
+  @@index([createdById])
+  @@index([status])
+  @@index([batchId])
+}
+
+model Expense {
+  id               String          @id @default(uuid())
+  concept          String
+  amount           Decimal         @db.Decimal(10, 2)
+  category         ExpenseCategory
+  receiptUrl       String?
+  notes            String?
+  deductedFromCash Boolean         @default(true)
+  status           ExpenseStatus   @default(PENDING)
+  organizationId   Int
+  visionId         Int?
+  userId           Int
+  approvedById     Int?
+  batchId          String?
+  createdAt        DateTime        @default(now())
+  approvedAt       DateTime?
+  rejectedAt       DateTime?
+  rejectionReason  String?
+  approvedBy       Usuario?        @relation("ExpenseApprover", fields: [approvedById], references: [id])
+  cashBatch        CashBatch?      @relation(fields: [batchId], references: [id])
+  organization     Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user             Usuario         @relation("ExpenseCreator", fields: [userId], references: [id])
+  vision           Vision?         @relation("ExpenseVision", fields: [visionId], references: [id])
+
+  @@index([organizationId])
+  @@index([visionId])
+  @@index([userId])
+  @@index([status])
+  @@index([category])
+  @@index([batchId])
+}
+
+model CashBatch {
+  id                String          @id @default(uuid())
+  batchNumber       String          @unique
+  totalCollected    Decimal         @db.Decimal(10, 2)
+  totalExpenses     Decimal         @db.Decimal(10, 2)
+  netAmount         Decimal         @db.Decimal(10, 2)
+  status            CashBatchStatus @default(PENDING_DELIVERY)
+  deliveryMethod    DeliveryMethod?
+  depositProofUrl   String?
+  bankReference     String?
+  organizationId    Int
+  visionId          Int?
+  coordinatorId     Int
+  receivedById      Int?
+  createdAt         DateTime        @default(now())
+  closedAt          DateTime?
+  confirmedAt       DateTime?
+  codeGeneratedAt   DateTime?
+  codeGeneratedById Int?
+  confirmationCode  String?
+  codeGeneratedBy   Usuario?        @relation("CashBatchCodeGenerator", fields: [codeGeneratedById], references: [id])
+  coordinator       Usuario         @relation("CashBatchCoordinator", fields: [coordinatorId], references: [id])
+  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  receivedBy        Usuario?        @relation("CashBatchReceiver", fields: [receivedById], references: [id])
+  vision            Vision?         @relation("CashBatchVision", fields: [visionId], references: [id])
+  expenses          Expense[]
+  paymentCodes      PaymentCode[]
+
+  @@index([organizationId])
+  @@index([visionId])
+  @@index([coordinatorId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SmallGroup {
+  id               String             @id @default(uuid())
+  name             String?
+  visionId         Int
+  leaderId         Int
+  organizationId   Int
+  productId        Int?
+  maxSize          Int                @default(10)
+  level            VisionLevel        @default(BASIC)
+  isActive         Boolean            @default(true)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  closedAt         DateTime?
+  gcAvailabilities GCAvailability[]
+  gcCallAttempts   GCCallAttempt[]
+  gcCallLogs       GCCallLog[]
+  gcCallSlots      GCCallSlot[]
+  leader           Usuario            @relation("SmallGroupLeader", fields: [leaderId], references: [id])
+  organization     Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  product          SchoolProduct?     @relation(fields: [productId], references: [id])
+  vision           Vision             @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  members          SmallGroupMember[]
+  TrainerMissions  TrainerMission[]
+
+  @@unique([visionId, leaderId, level])
+  @@index([visionId])
+  @@index([leaderId])
+  @@index([organizationId])
+  @@index([productId])
+  @@index([level])
+  @@index([isActive])
+}
+
+model SmallGroupMember {
+  id              String              @id @default(uuid())
+  groupId         String
+  userId          Int
+  enrollmentId    Int?
+  joinedAt        DateTime            @default(now())
+  removedAt       DateTime?
+  removedReason   String?
+  isActive        Boolean             @default(true)
+  previousGroupId String?
+  movedAt         DateTime?
+  movedBy         Int?
+  enrollment      vision_enrollments? @relation(fields: [enrollmentId], references: [id])
+  group           SmallGroup          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  movedByUser     Usuario?            @relation("SmallGroupMemberMovedBy", fields: [movedBy], references: [id])
+  user            Usuario             @relation("SmallGroupMemberUser", fields: [userId], references: [id])
+
+  @@unique([groupId, userId])
+  @@index([groupId])
+  @@index([userId])
+  @@index([enrollmentId])
+  @@index([isActive])
+}
+
+model GCAvailability {
+  id            String       @id @default(uuid())
+  gameChangerId Int
+  squadId       String?
+  dayOfWeek     Int
+  specificDate  DateTime?    @db.Date
+  startTime     String
+  endTime       String
+  slotDuration  Int          @default(10)
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  gameChanger   Usuario      @relation("GCAvailabilityGC", fields: [gameChangerId], references: [id], onDelete: Cascade)
+  squad         SmallGroup?  @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  bookedSlots   GCCallSlot[]
+
+  @@index([gameChangerId])
+  @@index([squadId])
+  @@index([specificDate])
+  @@index([dayOfWeek])
+}
+
+model GCCallSlot {
+  id              String         @id @default(uuid())
+  availabilityId  String
+  participantId   Int
+  squadId         String?
+  scheduledDate   DateTime       @db.Date
+  scheduledTime   String
+  endTime         String
+  status          CallSlotStatus @default(SCHEDULED)
+  bookedAt        DateTime       @default(now())
+  confirmedAt     DateTime?
+  cancelledAt     DateTime?
+  cancelledBy     Int?
+  cancelReason    String?
+  assignedByGC    Boolean        @default(false)
+  callLog         GCCallLog?
+  availability    GCAvailability @relation(fields: [availabilityId], references: [id], onDelete: Cascade)
+  cancelledByUser Usuario?       @relation("GCCallSlotCancelledBy", fields: [cancelledBy], references: [id])
+  participant     Usuario        @relation("GCCallSlotParticipant", fields: [participantId], references: [id], onDelete: Cascade)
+  squad           SmallGroup?    @relation(fields: [squadId], references: [id])
+
+  @@unique([availabilityId, scheduledDate, scheduledTime])
+  @@index([participantId])
+  @@index([squadId])
+  @@index([scheduledDate])
+  @@index([status])
+}
+
+model GCCallLog {
+  id                   String                @id @default(uuid())
+  slotId               String                @unique
+  gameChangerId        Int
+  participantId        Int
+  squadId              String?
+  trainingType         TrainingType
+  trainingDay          Int
+  visionId             Int
+  callStatus           CallStatus
+  callStartedAt        DateTime?
+  callEndedAt          DateTime?
+  duration             Int?
+  potentialRating      Int?
+  commitment           CommitmentLevel?
+  notes                String?
+  isAtRisk             Boolean               @default(false)
+  riskReason           String?
+  requiresIntervention Boolean               @default(false)
+  followUpNeeded       Boolean               @default(false)
+  followUpNote         String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  gameChanger          Usuario               @relation("GCCallLogGC", fields: [gameChangerId], references: [id])
+  participant          Usuario               @relation("GCCallLogParticipant", fields: [participantId], references: [id])
+  slot                 GCCallSlot            @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  squad                SmallGroup?           @relation(fields: [squadId], references: [id])
+  vision               Vision                @relation(fields: [visionId], references: [id])
+  interventions        TrainerIntervention[]
+
+  @@index([gameChangerId])
+  @@index([participantId])
+  @@index([squadId])
+  @@index([visionId])
+  @@index([trainingDay])
+  @@index([callStatus])
+  @@index([potentialRating])
+  @@index([isAtRisk])
+  @@index([createdAt])
+}
+
+model TrainerIntervention {
+  id          String           @id @default(uuid())
+  callLogId   String
+  trainerId   Int
+  type        InterventionType
+  notes       String?
+  actionTaken String?
+  outcome     String?
+  createdAt   DateTime         @default(now())
+  resolvedAt  DateTime?
+  callLog     GCCallLog        @relation(fields: [callLogId], references: [id], onDelete: Cascade)
+  trainer     Usuario          @relation("TrainerInterventions", fields: [trainerId], references: [id])
+
+  @@index([callLogId])
+  @@index([trainerId])
+  @@index([type])
+}
+
+model GCCallAttempt {
+  id              String       @id @default(uuid())
+  gameChangerId   Int
+  participantId   Int
+  squadId         String?
+  visionId        Int
+  trainingType    TrainingType
+  trainingDay     Int
+  attemptNumber   Int          @default(1)
+  completed       Boolean      @default(false)
+  potentialRating Int?
+  notes           String?
+  attemptedAt     DateTime     @default(now())
+  gameChanger     Usuario      @relation("GCCallAttempts", fields: [gameChangerId], references: [id])
+  participant     Usuario      @relation("ParticipantCallAttempts", fields: [participantId], references: [id])
+  squad           SmallGroup?  @relation(fields: [squadId], references: [id])
+  vision          Vision       @relation("VisionCallAttempts", fields: [visionId], references: [id])
+
+  @@index([gameChangerId])
+  @@index([participantId])
+  @@index([squadId])
+  @@index([visionId])
+  @@index([trainingDay])
+  @@index([attemptedAt])
+}
+
+model AdvancedPreRegistration {
+  id               String                @id @default(cuid())
+  userId           Int
+  currentProductId Int
+  targetProductId  Int
+  enrollmentId     Int?
+  scannedByStaffId Int
+  scannedAt        DateTime              @default(now())
+  scanMethod       ScanMethod            @default(QR)
+  status           PreRegistrationStatus @default(PENDING)
+  promoPrice       Float
+  regularPrice     Float
+  promoDeadline    DateTime
+  paidAt           DateTime?
+  paymentAmount    Float?
+  paymentMethod    String?
+  transactionId    String?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  currentProduct   SchoolProduct         @relation("CurrentProduct", fields: [currentProductId], references: [id])
+  enrollment       vision_enrollments?   @relation(fields: [enrollmentId], references: [id])
+  scannedByStaff   Usuario               @relation("ScannedByStaff", fields: [scannedByStaffId], references: [id])
+  targetProduct    SchoolProduct         @relation("TargetProduct", fields: [targetProductId], references: [id])
+  user             Usuario               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetProductId])
+  @@index([userId])
+  @@index([currentProductId])
+  @@index([targetProductId])
+  @@index([status])
+  @@index([scannedAt])
+  @@index([promoDeadline])
+}
+
+model CrossingSession {
+  id                String                @id @default(cuid())
+  productId         Int
+  targetLevel       ProductLevelType
+  targetProductId   Int?
+  status            CrossingSessionStatus @default(WAITING)
+  startedAt         DateTime?
+  endedAt           DateTime?
+  totalParticipants Int                   @default(0)
+  crossedCount      Int                   @default(0)
+  soundEnabled      Boolean               @default(true)
+  visualTheme       String                @default("quantum_fire")
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  createdBy         Int
+  creator           Usuario               @relation(fields: [createdBy], references: [id])
+  product           SchoolProduct         @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+  @@index([status])
+}
+
+model TrainerTaskTemplate {
+  id               Int                   @id @default(autoincrement())
+  trainerId        Int
+  title            String
+  description      String?
+  type             TrainerTaskType
+  tags             String[]
+  requiresEvidence Boolean               @default(true)
+  evidenceType     String?
+  contentUrl       String?
+  contentTitle     String?
+  pointsReward     Int                   @default(10)
+  estimatedMinutes Int?
+  isActive         Boolean               @default(true)
+  usageCount       Int                   @default(0)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  Missions         TrainerMission[]
+  Questions        TrainerTaskQuestion[]
+  Trainer          Usuario               @relation("TrainerTemplates", fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@index([trainerId])
+  @@index([type])
+  @@index([isActive])
+}
+
+model TrainerTaskQuestion {
+  id            Int                     @id @default(autoincrement())
+  templateId    Int
+  questionText  String
+  questionType  QuestionType
+  isRequired    Boolean                 @default(true)
+  orderIndex    Int                     @default(0)
+  options       String[]
+  scaleMin      Int?                    @default(1)
+  scaleMax      Int?                    @default(10)
+  scaleMinLabel String?
+  scaleMaxLabel String?
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  Answers       MissionQuestionAnswer[]
+  Template      TrainerTaskTemplate     @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@index([orderIndex])
+}
+
+model TrainerMission {
+  id             Int                 @id @default(autoincrement())
+  templateId     Int
+  trainerId      Int
+  visionId       Int?
+  productId      Int?
+  squadId        String?
+  releaseType    String
+  releaseAt      DateTime
+  deadlineAt     DateTime?
+  status         MissionStatus       @default(SCHEDULED)
+  trainerMessage String?
+  bonusPoints    Int?
+  bonusDeadline  DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  Submissions    MissionSubmission[]
+  Product        SchoolProduct?      @relation("MissionProduct", fields: [productId], references: [id])
+  Squad          SmallGroup?         @relation(fields: [squadId], references: [id])
+  Template       TrainerTaskTemplate @relation(fields: [templateId], references: [id])
+  Trainer        Usuario             @relation("TrainerMissions", fields: [trainerId], references: [id])
+  Vision         Vision?             @relation(fields: [visionId], references: [id])
+
+  @@index([trainerId])
+  @@index([visionId])
+  @@index([productId])
+  @@index([status])
+  @@index([releaseAt])
+}
+
+model MissionSubmission {
+  id              Int                     @id @default(autoincrement())
+  missionId       Int
+  userId          Int
+  status          SubmissionStatus        @default(PENDING)
+  textResponse    String?
+  evidenceUrl     String?
+  learningNote    String?
+  submittedAt     DateTime?
+  reviewedAt      DateTime?
+  reviewedBy      Int?
+  reviewNote      String?
+  pointsEarned    Int                     @default(0)
+  earnedBonus     Boolean                 @default(false)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  QuestionAnswers MissionQuestionAnswer[]
+  Mission         TrainerMission          @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  Reviewer        Usuario?                @relation("MissionReviewer", fields: [reviewedBy], references: [id])
+  User            Usuario                 @relation("MissionSubmissions", fields: [userId], references: [id])
+
+  @@unique([missionId, userId])
+  @@index([missionId])
+  @@index([userId])
+  @@index([status])
+}
+
+model MissionQuestionAnswer {
+  id              Int                 @id @default(autoincrement())
+  submissionId    Int
+  questionId      Int
+  textAnswer      String?
+  selectedOptions String[]
+  scaleValue      Int?
+  booleanAnswer   Boolean?
+  createdAt       DateTime            @default(now())
+  Question        TrainerTaskQuestion @relation(fields: [questionId], references: [id])
+  Submission      MissionSubmission   @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@unique([submissionId, questionId])
+  @@index([submissionId])
+  @@index([questionId])
 }
 
 enum AbsenceReportStatus {
@@ -3120,6 +3674,7 @@ enum SubmissionStatus {
   APPROVED
   REJECTED
   EXPIRED
+  REVIEWED
 }
 
 enum SubscriptionPlan {
@@ -3223,11 +3778,10 @@ enum TicketPaymentStatus {
   UNPAID
 }
 
-// Tipos de código de regalo
 enum GiftCodeType {
-  GOLDEN          // 1 entrada a básico (gratis)
-  GOLDEN_DISCOUNT // 1 entrada a básico con descuento personalizado
-  PLATINUM        // 1 entrada a cada nivel (3 tickets)
+  GOLDEN
+  PLATINUM
+  GOLDEN_DISCOUNT
 }
 
 enum GiftCodeStatus {
@@ -3272,126 +3826,6 @@ enum CallResult {
   CONFIRMED
 }
 
-// ========================================
-// FORMULARIO MÉDICO - Medical Form
-// ========================================
-
-model MedicalForm {
-  id                      Int       @id @default(autoincrement())
-  userId                  Int       @unique
-  visionId                Int?
-  
-  // Sección 1: Condiciones Médicas
-  hasCurrentIllness       Boolean   @default(false)
-  currentIllnessDetails   String?
-  
-  hasCurrentTreatment     Boolean   @default(false)
-  currentTreatmentDetails String?
-  
-  takesMedication         Boolean   @default(false)
-  medicationDetails       String?
-  
-  hasAllergies            Boolean   @default(false)
-  allergyDetails          String?
-  
-  hadSurgery              Boolean   @default(false)
-  surgeryDetails          String?
-  
-  wasHospitalized         Boolean   @default(false)
-  hospitalizationDetails  String?
-  
-  hasChronicIllness       Boolean   @default(false)  // diabetes, hipertensión, epilepsia, asma
-  chronicIllnessDetails   String?
-  
-  hasPhysicalInjury       Boolean   @default(false)
-  physicalInjuryDetails   String?
-  
-  hasActivityRestrictions Boolean   @default(false)
-  activityRestrictionDetails String?
-  
-  hasPsychologicalCondition Boolean @default(false)
-  psychologicalConditionDetails String?
-  
-  // Sección 2: Contacto de Emergencia
-  emergencyContactName    String
-  emergencyContactRelation String
-  emergencyContactPhone   String
-  
-  // Sección 3: Consentimiento
-  consentAccepted         Boolean   @default(false)
-  signatureData           String?   // Base64 de la firma digital
-  signedAt                DateTime?
-  
-  // Control de alertas
-  hasAlerts               Boolean   @default(false)  // True si cualquier condición es Sí
-  alertsReviewedAt        DateTime?
-  alertsReviewedBy        Int?
-  
-  // Metadata
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
-  
-  // Relaciones
-  Usuario                 Usuario   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Vision                  Vision?   @relation(fields: [visionId], references: [id])
-  ReviewedBy              Usuario?  @relation("MedicalFormReviewer", fields: [alertsReviewedBy], references: [id])
-  CoordinatorAcknowledgments MedicalFormAcknowledgment[]
-  
-  @@index([userId])
-  @@index([visionId])
-  @@index([hasAlerts])
-}
-
-// Registro de coordinadores que han visto formularios médicos con alertas
-// El acknowledgment es por producto, así cuando el usuario pasa a un nuevo nivel
-// los coordinadores deben volver a confirmar que están enterados
-model MedicalFormAcknowledgment {
-  id              Int       @id @default(autoincrement())
-  medicalFormId   Int
-  coordinatorId   Int
-  productId       Int?      // ID del producto para el cual se marcó como enterado
-  acknowledgedAt  DateTime  @default(now())
-  
-  MedicalForm     MedicalForm   @relation(fields: [medicalFormId], references: [id], onDelete: Cascade)
-  Coordinator     Usuario       @relation("MedicalFormAcknowledger", fields: [coordinatorId], references: [id], onDelete: Cascade)
-  Product         SchoolProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
-  
-  @@unique([medicalFormId, coordinatorId, productId])
-  @@index([coordinatorId])
-  @@index([medicalFormId])
-  @@index([productId])
-}
-
-// ============================================
-// QUANTUM CHECK-IN STATION - Modelos
-// ============================================
-
-// Licencias asignadas a usuarios
-model UserLicense {
-  id              Int             @id @default(autoincrement())
-  userId          Int
-  organizationId  Int
-  productId       Int?            // Producto al que está vinculada la licencia
-  type            LicenseType     @default(BASIC_ACCESS)
-  status          LicenseStatus   @default(ACTIVE)
-  assignedAt      DateTime        @default(now())
-  validFrom       DateTime        @default(now())
-  validUntil      DateTime?       // Fecha fin del entrenamiento
-  consumedAt      DateTime?       // Fecha en que se "usó" la licencia en check-in
-  revokedAt       DateTime?
-  revokedReason   String?
-  
-  Usuario         Usuario         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  Product         SchoolProduct?  @relation(fields: [productId], references: [id])
-  
-  @@unique([userId, productId])  // Un usuario solo puede tener una licencia por producto
-  @@index([userId])
-  @@index([organizationId])
-  @@index([productId])
-  @@index([status])
-}
-
 enum LicenseType {
   BASIC_ACCESS
   INTERMEDIATE_ACCESS
@@ -3408,54 +3842,6 @@ enum LicenseStatus {
   CONSUMED
 }
 
-// Registro de Check-In
-model CheckInRecord {
-  id                  Int             @id @default(autoincrement())
-  userId              Int
-  organizationId      Int
-  productId           Int
-  visionId            Int
-  enrollmentId        Int?            // Referencia al enrollment
-  
-  // Datos del check-in
-  checkInTime         DateTime        @default(now())
-  checkInMethod       CheckInMethod   @default(QR_STATION)
-  checkedInBy         Int?            // Staff que hizo el check-in
-  
-  // Validaciones pasadas
-  ticketValidated     Boolean         @default(false)
-  medicalFormValidated Boolean        @default(false)
-  photoValidated      Boolean         @default(false)
-  
-  // Gafete
-  badgePrinted        Boolean         @default(false)
-  badgePrintedAt      DateTime?
-  badgeNumber         String?         // Número único de gafete
-  
-  // Licencia consumida
-  licenseConsumed     Boolean         @default(false)
-  userLicenseId       Int?
-  
-  // Metadata
-  deviceInfo          String?         // Info del dispositivo usado
-  ipAddress           String?
-  notes               String?
-  
-  // Relaciones
-  Usuario             Usuario         @relation("CheckInUser", fields: [userId], references: [id], onDelete: Cascade)
-  Organization        Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  Product             SchoolProduct   @relation(fields: [productId], references: [id])
-  Vision              Vision          @relation(fields: [visionId], references: [id])
-  CheckedInByUser     Usuario?        @relation("CheckInStaff", fields: [checkedInBy], references: [id])
-  Enrollment          vision_enrollments? @relation(fields: [enrollmentId], references: [id])
-  
-  @@index([userId])
-  @@index([organizationId])
-  @@index([productId])
-  @@index([visionId])
-  @@index([checkInTime])
-}
-
 enum CheckInMethod {
   QR_STATION
   MANUAL_SEARCH
@@ -3463,459 +3849,60 @@ enum CheckInMethod {
   TABLET_SCAN
 }
 
-// ============================================
-// QUANTUM TREASURY & EXPENSE SYSTEM
-// ============================================
-
-// Códigos de Pago en Efectivo (Cash Codes)
-model PaymentCode {
-  id            String            @id @default(uuid())
-  code          String            @unique // Q-8A2F-500
-  amount        Decimal           @db.Decimal(10, 2)
-  reference     String?           // "Abono de Juan Pérez"
-  status        PaymentCodeStatus @default(ACTIVE)
-  cancellationReason String?      // Motivo de cancelación
-  
-  // Relaciones
-  organizationId Int
-  visionId       Int?
-  createdById    Int              // Coordinador que lo generó
-  redeemedById   Int?             // Usuario que lo canjeó
-  batchId        String?          // ID del Corte de Caja
-  
-  // Timestamps
-  createdAt     DateTime          @default(now())
-  redeemedAt    DateTime?
-  cancelledAt   DateTime?
-  
-  // Relations
-  organization  Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  vision        Vision?           @relation("PaymentCodeVision", fields: [visionId], references: [id])
-  createdBy     Usuario           @relation("PaymentCodeCreator", fields: [createdById], references: [id])
-  redeemedBy    Usuario?          @relation("PaymentCodeRedeemer", fields: [redeemedById], references: [id])
-  cashBatch     CashBatch?        @relation(fields: [batchId], references: [id])
-  
-  @@index([code])
-  @@index([organizationId])
-  @@index([visionId])
-  @@index([createdById])
-  @@index([status])
-  @@index([batchId])
-}
-
 enum PaymentCodeStatus {
-  ACTIVE      // Disponible para usar
-  REDEEMED    // Ya fue canjeado
-  CANCELLED   // Cancelado
-  EXPIRED     // Expirado
-}
-
-// Gastos Operativos
-model Expense {
-  id                String          @id @default(uuid())
-  concept           String          // "Compra de plumones"
-  amount            Decimal         @db.Decimal(10, 2)
-  category          ExpenseCategory
-  receiptUrl        String?         // Foto del ticket/factura
-  notes             String?
-  
-  // Control de origen del dinero
-  deductedFromCash  Boolean         @default(true) // TRUE = de caja, FALSE = reembolso
-  status            ExpenseStatus   @default(PENDING)
-  
-  // Relaciones
-  organizationId    Int
-  visionId          Int?
-  userId            Int             // Quién registró el gasto
-  approvedById      Int?            // Admin que aprobó
-  batchId           String?         // Corte de caja donde se liquidó
-  
-  // Timestamps
-  createdAt         DateTime        @default(now())
-  approvedAt        DateTime?
-  rejectedAt        DateTime?
-  rejectionReason   String?
-  
-  // Relations
-  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  vision            Vision?         @relation("ExpenseVision", fields: [visionId], references: [id])
-  user              Usuario         @relation("ExpenseCreator", fields: [userId], references: [id])
-  approvedBy        Usuario?        @relation("ExpenseApprover", fields: [approvedById], references: [id])
-  cashBatch         CashBatch?      @relation(fields: [batchId], references: [id])
-  
-  @@index([organizationId])
-  @@index([visionId])
-  @@index([userId])
-  @@index([status])
-  @@index([category])
-  @@index([batchId])
+  ACTIVE
+  REDEEMED
+  CANCELLED
+  EXPIRED
 }
 
 enum ExpenseCategory {
-  LOGISTICS     // Logística general
-  FOOD          // Alimentos y bebidas
-  VENUE         // Local/Renta
-  TRANSPORT     // Gasolina, Uber, etc.
-  MARKETING     // Publicidad, materiales
-  SUPPLIES      // Materiales de oficina
-  EQUIPMENT     // Equipo
-  OTHER         // Otros
+  LOGISTICS
+  FOOD
+  VENUE
+  TRANSPORT
+  MARKETING
+  SUPPLIES
+  EQUIPMENT
+  OTHER
 }
 
 enum ExpenseStatus {
-  PENDING       // Esperando aprobación
-  APPROVED      // Aprobado
-  REJECTED      // Rechazado
-  REIMBURSED    // Reembolsado (si fue de su bolsa)
-}
-
-// Corte de Caja (Cash Batch)
-model CashBatch {
-  id                String           @id @default(uuid())
-  batchNumber       String           @unique // BATCH-2026-001
-  
-  // Totales calculados
-  totalCollected    Decimal          @db.Decimal(10, 2) // Total códigos generados
-  totalExpenses     Decimal          @db.Decimal(10, 2) // Total gastos aprobados
-  netAmount         Decimal          @db.Decimal(10, 2) // Neto a entregar
-  
-  // Código de confirmación (generado por director)
-  confirmationCode  String?          // Código que genera el director al revisar
-  codeGeneratedAt   DateTime?        // Cuando se generó el código
-  codeGeneratedById Int?             // Director que generó el código
-  
-  // Estado del corte
-  status            CashBatchStatus  @default(PENDING_DELIVERY)
-  deliveryMethod    DeliveryMethod?  // Cómo se entregó el dinero
-  depositProofUrl   String?          // Foto de ficha de depósito
-  bankReference     String?          // Referencia bancaria
-  
-  // Relaciones
-  organizationId    Int
-  visionId          Int?
-  coordinatorId     Int              // Quién hace el corte
-  receivedById      Int?             // Admin que recibe
-  
-  // Timestamps
-  createdAt         DateTime         @default(now())
-  closedAt          DateTime?        // Cuando el coordinador cierra
-  confirmedAt       DateTime?        // Cuando el admin confirma recepción
-  
-  // Relations
-  organization      Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  vision            Vision?          @relation("CashBatchVision", fields: [visionId], references: [id])
-  coordinator       Usuario          @relation("CashBatchCoordinator", fields: [coordinatorId], references: [id])
-  receivedBy        Usuario?         @relation("CashBatchReceiver", fields: [receivedById], references: [id])
-  codeGeneratedBy   Usuario?         @relation("CashBatchCodeGenerator", fields: [codeGeneratedById], references: [id])
-  paymentCodes      PaymentCode[]
-  expenses          Expense[]
-  
-  @@index([organizationId])
-  @@index([visionId])
-  @@index([coordinatorId])
-  @@index([status])
-  @@index([createdAt])
+  PENDING
+  APPROVED
+  REJECTED
+  REIMBURSED
 }
 
 enum CashBatchStatus {
-  PENDING_DELIVERY   // Coordinador tiene el dinero
-  DELIVERED          // Coordinador entregó/depositó
-  CONFIRMED          // Admin confirmó recepción
-  DISPUTED           // Hay discrepancia
+  PENDING_DELIVERY
+  DELIVERED
+  CONFIRMED
+  DISPUTED
 }
 
 enum DeliveryMethod {
-  CASH_HANDOFF       // Entrega en mano
-  BANK_DEPOSIT       // Depósito bancario
-  BANK_TRANSFER      // Transferencia
-  PENDING            // Pendiente
+  CASH_HANDOFF
+  BANK_DEPOSIT
+  BANK_TRANSFER
+  PENDING
 }
 
-// Saldo en Custodia del Coordinador (Vista calculada)
-// No es un modelo, se calcula sumando PaymentCodes - Expenses - CashBatches confirmados
-
-// ============================================
-// QUANTUM SQUADS - Mini-Groups System
-// ============================================
-
-model SmallGroup {
-  id              String              @id @default(uuid())
-  name            String?             // "Escuadrón Alfa", auto-generado si no se proporciona
-  
-  // Relaciones
-  visionId        Int
-  leaderId        Int                 // Game Changer responsable
-  organizationId  Int
-  productId       Int?                // Producto específico (básico/avanzado)
-  
-  // Configuración
-  maxSize         Int                 @default(10)
-  level           VisionLevel         @default(BASIC) // BASIC, ADVANCED, PL
-  
-  // Estado
-  isActive        Boolean             @default(true)
-  
-  // Timestamps
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  closedAt        DateTime?           // Cuando se cierra el grupo
-  
-  // Relations
-  vision          Vision              @relation(fields: [visionId], references: [id], onDelete: Cascade)
-  leader          Usuario             @relation("SmallGroupLeader", fields: [leaderId], references: [id])
-  organization    Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  product         SchoolProduct?      @relation(fields: [productId], references: [id])
-  members         SmallGroupMember[]
-  
-  // GC Calls Relations
-  gcAvailabilities GCAvailability[]
-  gcCallSlots     GCCallSlot[]
-  gcCallLogs      GCCallLog[]
-  gcCallAttempts  GCCallAttempt[]
-  
-  @@unique([visionId, leaderId, level]) // Un GC solo puede tener un grupo por nivel/visión
-  @@index([visionId])
-  @@index([leaderId])
-  @@index([organizationId])
-  @@index([productId])
-  @@index([level])
-  @@index([isActive])
-}
-
-model SmallGroupMember {
-  id              String              @id @default(uuid())
-  groupId         String
-  userId          Int
-  enrollmentId    Int?                // Referencia al enrollment de la visión
-  
-  // Tracking
-  joinedAt        DateTime            @default(now())
-  removedAt       DateTime?
-  removedReason   String?
-  
-  // Estado
-  isActive        Boolean             @default(true)
-  
-  // Metadata para tracking de cambios
-  previousGroupId String?             // De qué grupo vino si fue movido
-  movedAt         DateTime?
-  movedBy         Int?                // Quién lo movió
-  
-  // Relations
-  group           SmallGroup          @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user            Usuario             @relation("SmallGroupMemberUser", fields: [userId], references: [id])
-  enrollment      vision_enrollments? @relation(fields: [enrollmentId], references: [id])
-  movedByUser     Usuario?            @relation("SmallGroupMemberMovedBy", fields: [movedBy], references: [id])
-  
-  @@unique([groupId, userId]) // Un usuario solo puede estar en un grupo una vez
-  @@index([groupId])
-  @@index([userId])
-  @@index([enrollmentId])
-  @@index([isActive])
-}
-
-// ============================================
-// QUANTUM GC CALLS - Sistema de Llamadas de Seguimiento
-// ============================================
-
-// Disponibilidad del Game Changer (bloques de tiempo disponibles 5am-10am)
-model GCAvailability {
-  id              String          @id @default(uuid())
-  gameChangerId   Int
-  squadId         String?         // Disponibilidad específica para un squad (opcional)
-  
-  // Configuración del bloque
-  dayOfWeek       Int             // 0=Domingo, 1=Lunes, etc. (para recurrencia)
-  specificDate    DateTime?       @db.Date // Para fechas específicas
-  startTime       String          // "05:00", "06:30" - formato HH:mm
-  endTime         String          // "07:00", "10:00"
-  slotDuration    Int             @default(10) // minutos por cita
-  
-  // Estado
-  isActive        Boolean         @default(true)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  
-  // Relations
-  gameChanger     Usuario         @relation("GCAvailabilityGC", fields: [gameChangerId], references: [id], onDelete: Cascade)
-  squad           SmallGroup?     @relation(fields: [squadId], references: [id], onDelete: Cascade)
-  bookedSlots     GCCallSlot[]
-  
-  @@index([gameChangerId])
-  @@index([squadId])
-  @@index([specificDate])
-  @@index([dayOfWeek])
-}
-
-// Slots de llamada agendados
-model GCCallSlot {
-  id              String          @id @default(uuid())
-  availabilityId  String
-  participantId   Int
-  squadId         String?
-  
-  // Horario
-  scheduledDate   DateTime        @db.Date
-  scheduledTime   String          // "06:30" formato HH:mm
-  endTime         String          // "06:40"
-  
-  // Estado del slot
-  status          CallSlotStatus  @default(SCHEDULED)
-  assignedByGC    Boolean         @default(false) // Si fue asignado por el GC (no editable por participante)
-  
-  // Tracking
-  bookedAt        DateTime        @default(now())
-  confirmedAt     DateTime?
-  cancelledAt     DateTime?
-  cancelledBy     Int?
-  cancelReason    String?
-  
-  // Relations
-  availability    GCAvailability  @relation(fields: [availabilityId], references: [id], onDelete: Cascade)
-  participant     Usuario         @relation("GCCallSlotParticipant", fields: [participantId], references: [id], onDelete: Cascade)
-  squad           SmallGroup?     @relation(fields: [squadId], references: [id])
-  cancelledByUser Usuario?        @relation("GCCallSlotCancelledBy", fields: [cancelledBy], references: [id])
-  callLog         GCCallLog?
-  
-  @@unique([availabilityId, scheduledDate, scheduledTime]) // No duplicar slots
-  @@index([participantId])
-  @@index([squadId])
-  @@index([scheduledDate])
-  @@index([status])
-}
-
-// Log de llamadas realizadas (formulario del GC)
-model GCCallLog {
-  id              String          @id @default(uuid())
-  slotId          String          @unique
-  gameChangerId   Int
-  participantId   Int
-  squadId         String?
-  
-  // Contexto del entrenamiento
-  trainingType    TrainingType    // BASIC, ADVANCED
-  trainingDay     Int             // Día 2, 3, 4 del entrenamiento
-  visionId        Int
-  
-  // Resultado de la llamada
-  callStatus      CallStatus
-  callStartedAt   DateTime?
-  callEndedAt     DateTime?
-  duration        Int?            // segundos
-  
-  // Evaluación del participante
-  potentialRating Int?            // 1-5 (1=nula posibilidad, 5=totalmente listo)
-  commitment      CommitmentLevel? // Nivel de compromiso observado
-  notes           String?         @db.Text // Comentarios cualitativos
-  
-  // Flags de riesgo
-  isAtRisk        Boolean         @default(false)
-  riskReason      String?
-  requiresIntervention Boolean    @default(false)
-  
-  // Seguimiento
-  followUpNeeded  Boolean         @default(false)
-  followUpNote    String?
-  
-  // Metadata
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  
-  // Relations
-  slot            GCCallSlot      @relation(fields: [slotId], references: [id], onDelete: Cascade)
-  gameChanger     Usuario         @relation("GCCallLogGC", fields: [gameChangerId], references: [id])
-  participant     Usuario         @relation("GCCallLogParticipant", fields: [participantId], references: [id])
-  squad           SmallGroup?     @relation(fields: [squadId], references: [id])
-  vision          Vision          @relation(fields: [visionId], references: [id])
-  interventions   TrainerIntervention[]
-  
-  @@index([gameChangerId])
-  @@index([participantId])
-  @@index([squadId])
-  @@index([visionId])
-  @@index([trainingDay])
-  @@index([callStatus])
-  @@index([potentialRating])
-  @@index([isAtRisk])
-  @@index([createdAt])
-}
-
-// Intervenciones del Trainer cuando hay riesgo
-model TrainerIntervention {
-  id              String          @id @default(uuid())
-  callLogId       String
-  trainerId       Int
-  
-  // Tipo de intervención
-  type            InterventionType
-  notes           String?         @db.Text
-  actionTaken     String?         @db.Text
-  outcome         String?
-  
-  // Timestamps
-  createdAt       DateTime        @default(now())
-  resolvedAt      DateTime?
-  
-  // Relations
-  callLog         GCCallLog       @relation(fields: [callLogId], references: [id], onDelete: Cascade)
-  trainer         Usuario         @relation("TrainerInterventions", fields: [trainerId], references: [id])
-  
-  @@index([callLogId])
-  @@index([trainerId])
-  @@index([type])
-}
-
-// Registro de intentos de llamada (tracking múltiple por día)
-model GCCallAttempt {
-  id              String          @id @default(uuid())
-  gameChangerId   Int
-  participantId   Int
-  squadId         String?
-  visionId        Int
-  
-  // Contexto
-  trainingType    TrainingType    // BASIC, ADVANCED
-  trainingDay     Int             // Día del entrenamiento
-  attemptNumber   Int             @default(1) // Número de intento del día
-  
-  // Resultado
-  completed       Boolean         @default(false) // Si se realizó la llamada
-  potentialRating Int?            // 1-5 calificación de potencial
-  notes           String?         @db.Text
-  
-  // Timestamps
-  attemptedAt     DateTime        @default(now())
-  
-  // Relations
-  gameChanger     Usuario         @relation("GCCallAttempts", fields: [gameChangerId], references: [id])
-  participant     Usuario         @relation("ParticipantCallAttempts", fields: [participantId], references: [id])
-  squad           SmallGroup?     @relation(fields: [squadId], references: [id])
-  vision          Vision          @relation("VisionCallAttempts", fields: [visionId], references: [id])
-  
-  @@index([gameChangerId])
-  @@index([participantId])
-  @@index([squadId])
-  @@index([visionId])
-  @@index([trainingDay])
-  @@index([attemptedAt])
-}
-
-// Enums para el sistema de llamadas
 enum CallSlotStatus {
-  SCHEDULED       // Agendado, pendiente
-  CONFIRMED       // Participante confirmó
-  COMPLETED       // Llamada realizada
-  NO_SHOW         // Participante no se presentó
-  CANCELLED       // Cancelado
-  RESCHEDULED     // Reagendado
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  NO_SHOW
+  CANCELLED
+  RESCHEDULED
 }
 
 enum CallStatus {
-  ANSWERED        // Contestó
-  NO_ANSWER       // No contestó (buzón)
-  WRONG_NUMBER    // Teléfono equivocado
-  BUSY            // Ocupado
-  RESCHEDULED     // Pidió reagendar
+  ANSWERED
+  NO_ANSWER
+  WRONG_NUMBER
+  BUSY
+  RESCHEDULED
 }
 
 enum TrainingType {
@@ -3924,126 +3911,59 @@ enum TrainingType {
 }
 
 enum CommitmentLevel {
-  VERY_LOW        // Muy bajo - dudoso, desinteresado
-  LOW             // Bajo - algunos obstáculos
-  MEDIUM          // Medio - neutral
-  HIGH            // Alto - interesado
-  VERY_HIGH       // Muy alto - totalmente comprometido
+  VERY_LOW
+  LOW
+  MEDIUM
+  HIGH
+  VERY_HIGH
 }
 
 enum InterventionType {
-  PHONE_CALL      // Llamada directa del trainer
-  WHATSAPP        // Mensaje de WhatsApp
-  IN_PERSON       // Intervención presencial
-  REASSIGNMENT    // Reasignación a otro GC
-  ESCALATION      // Escalado a coordinador
-}
-
-// =====================================================
-// SISTEMA "EL CRUCE" - Pre-Registro Avanzado Real-Time
-// =====================================================
-
-model AdvancedPreRegistration {
-  id                  String              @id @default(cuid())
-  
-  // Relaciones principales
-  userId              Int
-  user                Usuario             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  currentProductId    Int                 // Producto BASIC actual del participante
-  currentProduct      SchoolProduct       @relation("CurrentProduct", fields: [currentProductId], references: [id])
-  
-  targetProductId     Int                 // Producto ADVANCED al que se pre-registra
-  targetProduct       SchoolProduct       @relation("TargetProduct", fields: [targetProductId], references: [id])
-  
-  enrollmentId        Int?                // Enrollment actual en Básico
-  enrollment          vision_enrollments? @relation(fields: [enrollmentId], references: [id])
-  
-  // Datos del escaneo
-  scannedByStaffId    Int                 // Staff que escaneó el gafete
-  scannedByStaff      Usuario             @relation("ScannedByStaff", fields: [scannedByStaffId], references: [id])
-  scannedAt           DateTime            @default(now())
-  scanMethod          ScanMethod          @default(QR)
-  
-  // Estado y pago
-  status              PreRegistrationStatus @default(PENDING)
-  
-  // Precios al momento del registro (snapshot)
-  promoPrice          Float               // Precio promocional capturado
-  regularPrice        Float               // Precio regular capturado
-  promoDeadline       DateTime            // Deadline para precio promo (11:59pm último día)
-  
-  // Si ya pagó
-  paidAt              DateTime?
-  paymentAmount       Float?
-  paymentMethod       String?
-  transactionId       String?
-  
-  // Metadata
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-  
-  @@unique([userId, targetProductId])
-  @@index([userId])
-  @@index([currentProductId])
-  @@index([targetProductId])
-  @@index([status])
-  @@index([scannedAt])
-  @@index([promoDeadline])
-}
-
-// Sesión de El Cruce (evento en vivo)
-model CrossingSession {
-  id                  String              @id @default(cuid())
-  
-  // Producto/Evento activo
-  productId           Int
-  product             SchoolProduct       @relation(fields: [productId], references: [id])
-  
-  // Configuración
-  targetLevel         ProductLevelType    // ADVANCED o PL
-  targetProductId     Int?                // Producto destino específico (opcional)
-  
-  // Estado de la sesión
-  status              CrossingSessionStatus @default(WAITING)
-  startedAt           DateTime?
-  endedAt             DateTime?
-  
-  // Contadores en tiempo real
-  totalParticipants   Int                 @default(0)
-  crossedCount        Int                 @default(0)
-  
-  // Audio/Visual config
-  soundEnabled        Boolean             @default(true)
-  visualTheme         String              @default("quantum_fire")
-  
-  // Metadata
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-  createdBy           Int
-  creator             Usuario             @relation(fields: [createdBy], references: [id])
-  
-  @@index([productId])
-  @@index([status])
+  PHONE_CALL
+  WHATSAPP
+  IN_PERSON
+  REASSIGNMENT
+  ESCALATION
 }
 
 enum ScanMethod {
-  QR                  // Escaneo QR
-  NFC                 // Escaneo NFC
-  MANUAL              // Ingreso manual de código
+  QR
+  NFC
+  MANUAL
 }
 
 enum PreRegistrationStatus {
-  PENDING             // Esperando pago
-  PAID                // Pagado - confirmado
-  EXPIRED             // Deadline expirado sin pago
-  CANCELLED           // Cancelado por usuario/admin
+  PENDING
+  PAID
+  EXPIRED
+  CANCELLED
 }
 
 enum CrossingSessionStatus {
-  WAITING             // Esperando inicio
-  ACTIVE              // En progreso - escaneando
-  PAUSED              // Pausado temporalmente
-  COMPLETED           // Finalizado
+  WAITING
+  ACTIVE
+  PAUSED
+  COMPLETED
 }
 
+enum TrainerTaskType {
+  QUESTIONNAIRE
+  CONTENT
+  ACTION
+  REFLECTION
+}
+
+enum QuestionType {
+  OPEN
+  MULTIPLE_CHOICE
+  MULTIPLE_SELECT
+  SCALE
+  YES_NO
+}
+
+enum MissionStatus {
+  SCHEDULED
+  ACTIVE
+  EXPIRED
+  COMPLETED
+}

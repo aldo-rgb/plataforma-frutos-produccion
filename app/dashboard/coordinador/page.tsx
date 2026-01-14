@@ -14,6 +14,8 @@ import MedicalAlertsWidget from '@/components/dashboard/MedicalAlertsWidget';
 import MedicalFormsListWidget from '@/components/dashboard/MedicalFormsListWidget';
 import GCCallsMonitorWidget from '@/components/dashboard/GCCallsMonitorWidget';
 import TreasuryQuickWidget from '@/components/dashboard/TreasuryQuickWidget';
+import TrainingStatsWidgets from '@/components/dashboard/TrainingStatsWidgets';
+import { ElCruceAccessWidget } from '@/components/el-cruce';
 
 interface DashboardData {
   overview: {
@@ -212,6 +214,15 @@ export default function CoordinadorDashboard() {
           />
         </div>
 
+        {/* Widgets de Estadísticas de Entrenamiento */}
+        <div className="mt-8">
+          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <Activity className="w-5 h-5 text-amber-400" />
+            Entrenamiento en Curso
+          </h2>
+          <TrainingStatsWidgets />
+        </div>
+
         {/* Widget de Visiones */}
         <div className="mt-8">
           <VisionesWidget 
@@ -273,6 +284,11 @@ export default function CoordinadorDashboard() {
         {/* Widget de Tesorería Express */}
         <div className="mt-8">
           <TreasuryQuickWidget />
+        </div>
+
+        {/* Widget de El Atravezar */}
+        <div className="mt-8">
+          <ElCruceAccessWidget />
         </div>
 
         {/* Widgets de Acción - 2x3 Grid */}

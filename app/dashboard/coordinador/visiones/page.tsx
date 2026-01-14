@@ -41,7 +41,13 @@ export default function VisionesCoordinadorPage() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
-    } else if (session?.user?.rol !== 'COORDINADOR' && session?.user?.rol !== 'SCHOOL_ADMIN') {
+    } else if (
+      session?.user?.rol !== 'COORDINADOR' && 
+      session?.user?.rol !== 'SCHOOL_ADMIN' &&
+      session?.user?.rol !== 'COORDINATOR_BASIC' &&
+      session?.user?.rol !== 'COORDINATOR_ADVANCED' &&
+      session?.user?.rol !== 'TRAINER'
+    ) {
       router.push('/dashboard');
     } else {
       fetchVisiones();

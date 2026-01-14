@@ -24,6 +24,8 @@ interface ValidationResult {
     email: string;
     profileImage?: string;
     hasPhoto: boolean;
+    referralCode?: string;
+    rol?: string;
   };
   enrollment?: {
     id: number;
@@ -58,6 +60,7 @@ interface ProductInfo {
   organizationId: number;
   organizationName: string;
   logoUrl?: string;
+  brandColor?: string;
 }
 
 export default function CheckInStationPage({ params }: { params: Promise<{ productId: string }> }) {
@@ -204,9 +207,37 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
   const verifyParticipantQR = async (scanData: string) => {
     if (!validationResult?.user) return;
 
+    const trimmedData = scanData.trim();
+    console.log('🔍 Verificando scan:', trimmedData, 'para usuario:', validationResult.user.id, validationResult.user.referralCode);
+
     try {
+      // Caso 0: Formato FRUTOS:ID:REFERRALCODE (nuestro QR del gafete)
+      if (trimmedData.startsWith('FRUTOS:')) {
+        const parts = trimmedData.split(':');
+        const qrUserId = parseInt(parts[1]);
+        const qrReferralCode = parts[2];
+        
+        if (qrUserId === validationResult.user.id) {
+          playSound('success');
+          completeCheckIn(false);
+          return;
+        } else {
+          playSound('error');
+          alert(`QR inválido. Este gafete pertenece a otro participante (ID: ${qrUserId}). Se esperaba el gafete de ${validationResult.user.nombre}.`);
+          return;
+        }
+      }
+
+      // Caso 0.5: ReferralCode directo (ej: EMIMKCJPFBWZGFM)
+      const upperData = trimmedData.toUpperCase();
+      if (validationResult.user.referralCode && upperData === validationResult.user.referralCode.toUpperCase()) {
+        playSound('success');
+        completeCheckIn(false);
+        return;
+      }
+
       // Caso 1: Token NFC (empieza con FRT.)
-      if (scanData.startsWith('FRT.')) {
+      if (trimmedData.startsWith('FRT.')) {
         // Validar token NFC en el servidor
         const res = await fetch(`/api/staff/check-in/nfc-token?token=${encodeURIComponent(scanData)}`);
         const data = await res.json();
@@ -657,12 +688,14 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
                   id: validationResult.user.id,
                   name: validationResult.user.nombre,
                   nickname: validationResult.user.apodo,
-                  role: productInfo.levelType === 'BASIC' ? 'Participante Básico' : 'Participante Avanzado',
-                  photoUrl: validationResult.user.profileImage
+                  role: validationResult.user.rol || (productInfo.levelType === 'BASIC' ? 'PARTICIPANTE' : 'ADVANCED'),
+                  photoUrl: validationResult.user.profileImage,
+                  referralCode: validationResult.user.referralCode
                 }}
                 organization={{
                   name: productInfo.organizationName,
-                  logoUrl: productInfo.logoUrl
+                  logoUrl: productInfo.logoUrl,
+                  brandColor: productInfo.brandColor
                 }}
                 product={{
                   id: productInfo.id,
@@ -757,25 +790,26 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
                 <p className="text-slate-400 mt-2">Asistencia registrada correctamente</p>
               </div>
 
-              {/* Gafete con botones para descargar/imprimir */}
+              {/* Gafete SIN botones - solo preview */}
               <div className="mb-6">
-                <p className="text-slate-400 mb-4">Descarga o imprime el gafete del participante:</p>
                 <BadgePreview
                   participant={{
                     id: validationResult.user.id,
                     name: validationResult.user.nombre,
                     nickname: validationResult.user.apodo,
-                    role: productInfo.levelType === 'BASIC' ? 'Participante Básico' : 'Participante Avanzado',
-                    photoUrl: validationResult.user.profileImage
+                    role: validationResult.user.rol || (productInfo.levelType === 'BASIC' ? 'PARTICIPANTE' : 'ADVANCED'),
+                    photoUrl: validationResult.user.profileImage,
+                    referralCode: validationResult.user.referralCode
                   }}
                   organization={{
                     name: productInfo.organizationName,
-                    logoUrl: productInfo.logoUrl
+                    logoUrl: productInfo.logoUrl,
+                    brandColor: productInfo.brandColor
                   }}
                   product={{
                     name: productInfo.visionName || productInfo.name
                   }}
-                  showButtons={true}
+                  showButtons={false}
                 />
               </div>
 
