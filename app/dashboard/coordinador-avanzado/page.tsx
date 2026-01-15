@@ -12,6 +12,7 @@ import MedicalAlertsWidget from '@/components/dashboard/MedicalAlertsWidget';
 import GCCallsMonitorWidget from '@/components/dashboard/GCCallsMonitorWidget';
 import TreasuryQuickWidget from '@/components/dashboard/TreasuryQuickWidget';
 import TrainingStatsWidgets from '@/components/dashboard/TrainingStatsWidgets';
+import BacklogsDropsWidget from '@/components/dashboard/BacklogsDropsWidget';
 import { ElCruceAccessWidget } from '@/components/el-cruce';
 
 interface DashboardData {
@@ -440,6 +441,11 @@ export default function CoordinadorAvanzadoDashboard() {
         {/* Widget de Tesorería Express */}
         <div className="mt-8">
           <TreasuryQuickWidget />
+        </div>
+
+        {/* Widget de Backlogs y Drops */}
+        <div className="mt-8">
+          <BacklogsDropsWidget />
         </div>
 
         {/* Widget de El Atravezar */}

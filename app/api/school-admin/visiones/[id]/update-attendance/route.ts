@@ -120,38 +120,23 @@ export async function POST(
     });
 
     // ========================================
-    // NOTIFICACIÓN AL PARTICIPANTE (solo si es DROP)
+    // TICKET PARA SIGUIENTE BÁSICO (si es BACKLOG o DROP y nivel BASIC)
+    // Tanto BACKLOG como DROP generan ticket de cortesía con las mismas reglas
     // ========================================
-    if (attendanceStatus === 'DROP') {
-      await prisma.notification.create({
-        data: {
-          userId: updatedEnrollment.userId, // El participante afectado
-          type: 'SYSTEM_ALERT',
-          title: 'Estado de Inscripción Actualizado',
-          message: `Tu inscripción en ${visionName} (${updatedEnrollment.level}) ha sido marcada como DROP. Contacta a tu coordinador para más información.`,
-          relatedId: enrollmentId
-        }
-      });
-      
-      console.log(`📧 Notificación DROP enviada a usuario ${updatedEnrollment.userId}`);
-    }
-
-    // ========================================
-    // TICKET PARA SIGUIENTE BÁSICO (solo si es BACKLOG y nivel BASIC)
-    // ========================================
-    let backlogTicketResult = null;
-    if (attendanceStatus === 'BACKLOG' && updatedEnrollment.level === 'BASIC' && organizationId) {
-      console.log(`🎫 Creando ticket BACKLOG para usuario ${updatedEnrollment.userId}...`);
-      backlogTicketResult = await createBacklogTicket(
+    let courtesyTicketResult = null;
+    if ((attendanceStatus === 'BACKLOG' || attendanceStatus === 'DROP') && updatedEnrollment.level === 'BASIC' && organizationId) {
+      console.log(`🎫 Creando ticket ${attendanceStatus} para usuario ${updatedEnrollment.userId}...`);
+      courtesyTicketResult = await createBacklogTicket(
         updatedEnrollment.userId,
         visionId,
-        organizationId
+        organizationId,
+        attendanceStatus as 'BACKLOG' | 'DROP'
       );
       
-      if (backlogTicketResult.success) {
-        console.log(`✅ Ticket BACKLOG creado: ${backlogTicketResult.ticketId} -> ${backlogTicketResult.visionName}`);
+      if (courtesyTicketResult.success) {
+        console.log(`✅ Ticket ${attendanceStatus} creado: ${courtesyTicketResult.ticketId} -> ${courtesyTicketResult.visionName}`);
       } else {
-        console.log(`⚠️ No se pudo crear ticket BACKLOG: ${backlogTicketResult.error}`);
+        console.log(`⚠️ No se pudo crear ticket ${attendanceStatus}: ${courtesyTicketResult.error}`);
       }
     }
 
@@ -170,8 +155,7 @@ export async function POST(
         usuario: updatedEnrollment.Usuario_vision_enrollments_userIdToUsuario
       },
       historyLogged: true,
-      dropNotificationSent: attendanceStatus === 'DROP',
-      backlogTicket: backlogTicketResult
+      courtesyTicket: courtesyTicketResult
     });
 
   } catch (error: any) {

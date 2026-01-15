@@ -1,44 +1,50 @@
 import { prisma } from '@/lib/prisma';
 
+// Tipos de situación que generan ticket de cortesía
+export type TicketReasonType = 'BACKLOG' | 'DROP';
+
 interface BacklogTicketResult {
   success: boolean;
   ticketId?: string;
   visionName?: string;
   isPendingAssignment?: boolean; // True si no hay próxima visión y está pendiente de asignar
   error?: string;
-  alreadyUsedBacklog?: boolean; // True si ya usó su oportunidad de BACKLOG
+  alreadyUsedBacklog?: boolean; // True si ya usó su oportunidad de reposición
 }
 
 /**
- * Genera un ticket BACKLOG para el siguiente básico vigente.
+ * Genera un ticket de cortesía para el siguiente básico vigente.
+ * Funciona tanto para BACKLOG como para DROP.
  * Si no hay próximo básico, crea un ticket "pendiente de asignar" como comprobante.
  * 
  * REGLAS:
- * - Solo se puede generar 1 ticket BACKLOG por usuario (oportunidad única)
+ * - Solo se puede generar 1 ticket de cortesía por usuario (oportunidad única)
  * - El ticket NO es transferible
- * - Si ya usó su oportunidad BACKLOG previamente, no se genera nuevo ticket
+ * - Si ya usó su oportunidad previamente (por BACKLOG o DROP), no se genera nuevo ticket
  * 
- * @param userId - ID del usuario que fue marcado como BACKLOG
+ * @param userId - ID del usuario que fue marcado como BACKLOG o DROP
  * @param currentVisionId - ID de la visión actual del enrollment
  * @param organizationId - ID de la organización del usuario
+ * @param reasonType - Tipo de razón: 'BACKLOG' o 'DROP'
  * @returns Resultado con el ticket creado o error
  */
 export async function createBacklogTicket(
   userId: number,
   currentVisionId: number,
-  organizationId: number
+  organizationId: number,
+  reasonType: TicketReasonType = 'BACKLOG'
 ): Promise<BacklogTicketResult> {
   try {
     const now = new Date();
     
     // ========================================
-    // VERIFICAR SI YA USÓ SU OPORTUNIDAD BACKLOG
-    // Un usuario solo puede tener 1 ticket BACKLOG en su vida
+    // VERIFICAR SI YA USÓ SU OPORTUNIDAD DE REPOSICIÓN
+    // Un usuario solo puede tener 1 ticket de cortesía en su vida (ya sea por BACKLOG o DROP)
     // ========================================
     const existingBacklogTicket = await prisma.ticket.findFirst({
       where: {
         ownerId: userId,
-        type: 'SCHOLARSHIP', // Usamos SCHOLARSHIP para tickets BACKLOG
+        type: 'SCHOLARSHIP', // Usamos SCHOLARSHIP para tickets de cortesía (BACKLOG/DROP)
         level: 'BASIC',
         // Verificar que sea un ticket de cortesía (amountPaid = 0)
         amountPaid: 0
@@ -46,15 +52,15 @@ export async function createBacklogTicket(
     });
 
     if (existingBacklogTicket) {
-      console.log(`⚠️ Usuario ${userId} ya usó su oportunidad BACKLOG (ticket ${existingBacklogTicket.id})`);
+      console.log(`⚠️ Usuario ${userId} ya usó su oportunidad de reposición (ticket ${existingBacklogTicket.id})`);
       
-      // Notificar al usuario que ya no tiene derecho a otro ticket BACKLOG
+      // Notificar al usuario que ya no tiene derecho a otro ticket
       await prisma.notification.create({
         data: {
           userId: userId,
           type: 'SYSTEM_ALERT',
           title: '⚠️ Oportunidad de Reposición Agotada',
-          message: 'Ya utilizaste tu única oportunidad de reposición por BACKLOG anteriormente. Esta vez no se generará un nuevo ticket. Contacta a tu coordinador si necesitas ayuda.',
+          message: `Ya utilizaste tu única oportunidad de reposición anteriormente. Esta vez (${reasonType}) no se generará un nuevo ticket. Contacta a tu coordinador si necesitas ayuda.`,
           relatedId: currentVisionId
         }
       });
@@ -62,7 +68,7 @@ export async function createBacklogTicket(
       return {
         success: false,
         alreadyUsedBacklog: true,
-        error: 'Ya utilizaste tu única oportunidad de ticket BACKLOG'
+        error: 'Ya utilizaste tu única oportunidad de ticket de cortesía'
       };
     }
 
@@ -134,6 +140,8 @@ export async function createBacklogTicket(
     // ========================================
     // NOTIFICACIONES AL USUARIO
     // ========================================
+    const reasonLabel = reasonType === 'DROP' ? 'DROP (baja)' : 'BACKLOG';
+    
     if (isPendingAssignment) {
       // No hay próxima visión - Ticket pendiente de asignar
       await prisma.notification.create({
@@ -141,7 +149,7 @@ export async function createBacklogTicket(
           userId: userId,
           type: 'OTHER',
           title: '🎫 Ticket de Reposición Generado',
-          message: `Se te ha generado un ticket de cortesía por tu situación de BACKLOG. Actualmente no hay un próximo entrenamiento básico programado, pero tu ticket está guardado y podrás usarlo cuando se programe uno nuevo. ⚠️ IMPORTANTE: Este ticket NO es transferible y solo puedes obtenerlo UNA VEZ.`,
+          message: `Se te ha generado un ticket de cortesía por tu situación de ${reasonLabel}. Actualmente no hay un próximo entrenamiento básico programado, pero tu ticket está guardado y podrás usarlo cuando se programe uno nuevo. ⚠️ IMPORTANTE: Este ticket NO es transferible y solo puedes obtenerlo UNA VEZ.`,
           relatedId: parseInt(newTicket.id.replace(/-/g, '').slice(0, 8), 16)
         }
       });
@@ -151,7 +159,7 @@ export async function createBacklogTicket(
         data: {
           userId: userId,
           type: 'SYSTEM_ALERT',
-          title: '📋 Instrucciones de tu Ticket BACKLOG',
+          title: `📋 Instrucciones de tu Ticket (${reasonType})`,
           message: 'Tu ticket de reposición aparecerá en la sección "Mis Tickets" de tu perfil. Cuando se programe el próximo entrenamiento básico, contacta a tu coordinador para que te asigne a esa visión. Recuerda: si vuelves a no asistir, NO se generará otro ticket de cortesía.',
           relatedId: parseInt(newTicket.id.replace(/-/g, '').slice(0, 8), 16)
         }
@@ -172,7 +180,7 @@ export async function createBacklogTicket(
           userId: userId,
           type: 'OTHER',
           title: '🎫 Ticket para Siguiente Entrenamiento',
-          message: `Se te ha asignado un ticket de cortesía para "${targetVision.nombre}" que inicia el ${startDateFormatted}. ⚠️ IMPORTANTE: Este ticket NO es transferible y es tu ÚNICA oportunidad de reposición por BACKLOG.`,
+          message: `Se te ha asignado un ticket de cortesía para "${targetVision.nombre}" que inicia el ${startDateFormatted}. ⚠️ IMPORTANTE: Este ticket NO es transferible y es tu ÚNICA oportunidad de reposición (${reasonLabel}).`,
           relatedId: parseInt(newTicket.id.replace(/-/g, '').slice(0, 8), 16)
         }
       });
@@ -189,7 +197,7 @@ export async function createBacklogTicket(
       });
     }
 
-    console.log(`✅ Ticket BACKLOG creado: ${newTicket.id} para usuario ${userId} -> ${isPendingAssignment ? 'PENDIENTE DE ASIGNAR' : targetVision.nombre}`);
+    console.log(`✅ Ticket ${reasonType} creado: ${newTicket.id} para usuario ${userId} -> ${isPendingAssignment ? 'PENDIENTE DE ASIGNAR' : targetVision.nombre}`);
 
     return {
       success: true,
