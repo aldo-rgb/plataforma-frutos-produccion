@@ -221,14 +221,31 @@ export async function GET(request: Request) {
     let currentLevel = '';
     let nextLevel = '';
     
+    // Variables para widgets correctos
+    // Declarados: pre-registros pendientes / total del nivel actual
+    // Inscritos: pagados del siguiente nivel / total pre-registros
+    let declaradosNumerator = 0;
+    let declaradosDenominator = 0;
+    let inscritosNumerator = 0;
+    let inscritosDenominator = 0;
+    
     if (currentProduct) {
       currentVisionName = currentProduct.Vision?.nombre || currentProduct.name;
       currentLevel = currentProduct.levelType === 'BASIC' ? 'BÁSICO' : 'AVANZADO';
       
       if (currentProduct.levelType === 'BASIC' && currentProduct.visionId) {
-        // ESTOY EN BÁSICO → Mostrar estadísticas de AVANZADO de la misma visión
+        // ESTOY EN BÁSICO → Mostrar estadísticas de pase a AVANZADO
         nextLevel = 'AVANZADO';
         nextLevelName = currentVisionName;
+        
+        // Obtener total de inscritos en BÁSICO (denominador para declarados)
+        const basicEnrolledCount = await prisma.vision_enrollments.count({
+          where: {
+            visionId: currentProduct.visionId,
+            level: 'BASIC',
+            enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+          }
+        });
         
         // Buscar el producto AVANZADO de la misma visión
         const advancedProductForVision = activeProducts.find(
@@ -236,7 +253,7 @@ export async function GET(request: Request) {
         );
         
         if (advancedProductForVision) {
-          // Pre-registros PENDING para ese AVANZADO específico
+          // Pre-registros PENDING para ese AVANZADO específico (numerador declarados)
           const advPending = await prisma.advancedPreRegistration.count({
             where: {
               OR: [
@@ -268,24 +285,45 @@ export async function GET(request: Request) {
           });
           
           const enrolled = Math.max(advEnrolled, advPaid);
+          const totalPreRegistros = advPending + advPaid;
+          
+          // Widget DECLARADOS: pre-registros pendientes / inscritos en básico
+          declaradosNumerator = advPending;
+          declaradosDenominator = basicEnrolledCount;
+          
+          // Widget INSCRITOS: pagados de avanzado / total pre-registros
+          inscritosNumerator = enrolled;
+          inscritosDenominator = totalPreRegistros > 0 ? totalPreRegistros : advPending;
           
           nextLevelStats = {
             pending: advPending,
             enrolled: enrolled,
-            total: advPending + enrolled
+            total: totalPreRegistros
           };
           
           console.log('[training-stats] NEXT LEVEL (AVANZADO) Stats:', nextLevelStats);
+          console.log('[training-stats] Declarados:', declaradosNumerator, '/', declaradosDenominator);
+          console.log('[training-stats] Inscritos:', inscritosNumerator, '/', inscritosDenominator);
         } else {
-          // No hay producto ADVANCED para esta visión, usar advancedStats global
-          nextLevelStats = advancedStats;
-          console.log('[training-stats] NEXT LEVEL usando advancedStats global:', nextLevelStats);
+          // No hay producto ADVANCED para esta visión
+          declaradosDenominator = basicEnrolledCount;
+          nextLevelStats = { pending: 0, enrolled: 0, total: 0 };
+          console.log('[training-stats] No hay producto ADVANCED para esta visión');
         }
         
       } else if (currentProduct.levelType === 'ADVANCED') {
-        // ESTOY EN AVANZADO → Mostrar estadísticas de PASE A LIDERATO (PL)
-        nextLevel = 'PASE A LIDERATO';
+        // ESTOY EN AVANZADO → Mostrar estadísticas de pase a LIDERATO (PL)
+        nextLevel = 'TU VIDA';
         nextLevelName = currentVisionName;
+        
+        // Obtener total de inscritos en AVANZADO (denominador para declarados)
+        const advancedEnrolledCount = await prisma.vision_enrollments.count({
+          where: {
+            visionId: currentProduct.visionId,
+            level: 'ADVANCED',
+            enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+          }
+        });
         
         // Buscar producto PL de la misma visión
         const plProduct = activeProducts.find(
@@ -327,16 +365,29 @@ export async function GET(request: Request) {
           }
           
           const enrolled = Math.max(plEnrolled, plPaid);
+          const totalPreRegistros = plPending + plPaid;
+          
+          // Widget DECLARADOS: pre-registros pendientes / inscritos en avanzado
+          declaradosNumerator = plPending;
+          declaradosDenominator = advancedEnrolledCount;
+          
+          // Widget INSCRITOS: pagados de PL / total pre-registros
+          inscritosNumerator = enrolled;
+          inscritosDenominator = totalPreRegistros > 0 ? totalPreRegistros : plPending;
           
           nextLevelStats = {
             pending: plPending,
             enrolled: enrolled,
-            total: plPending + enrolled
+            total: totalPreRegistros
           };
           
           console.log('[training-stats] NEXT LEVEL (PL) Stats:', nextLevelStats);
+          console.log('[training-stats] Declarados:', declaradosNumerator, '/', declaradosDenominator);
+          console.log('[training-stats] Inscritos:', inscritosNumerator, '/', inscritosDenominator);
         } else {
-          // No hay producto PL, mostrar 0s
+          // No hay producto PL
+          declaradosDenominator = advancedEnrolledCount;
+          nextLevelStats = { pending: 0, enrolled: 0, total: 0 };
           console.log('[training-stats] No hay producto PL para esta visión');
         }
       }
@@ -482,7 +533,20 @@ export async function GET(request: Request) {
         // Si AVANZADO en curso → stats de LIDERATO
         nextLevelStats,
         nextLevel,
-        nextLevelName
+        nextLevelName,
+        // Widgets con numerador/denominador correctos
+        // Declarados: pre-registros pendientes / total del nivel actual
+        // Inscritos: pagados del siguiente nivel / total pre-registros
+        widgetStats: {
+          declarados: {
+            numerator: declaradosNumerator,
+            denominator: declaradosDenominator
+          },
+          inscritos: {
+            numerator: inscritosNumerator,
+            denominator: inscritosDenominator
+          }
+        }
       }
     });
 

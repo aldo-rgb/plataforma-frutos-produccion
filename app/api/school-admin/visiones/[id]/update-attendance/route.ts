@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { createBacklogTicket } from '@/lib/backlog-ticket';
 
 // Roles permitidos para actualizar asistencia
 const ALLOWED_ROLES = [
@@ -58,6 +59,13 @@ export async function POST(
       where: {
         id: enrollmentId,
         visionId: visionId
+      },
+      include: {
+        Vision: {
+          select: {
+            organizationId: true
+          }
+        }
       }
     });
 
@@ -66,6 +74,8 @@ export async function POST(
         error: 'Enrollment no encontrado para esta visión' 
       }, { status: 404 });
     }
+
+    const organizationId = enrollment.Vision?.organizationId;
 
     // Guardar el estado anterior para el historial
     const previousStatus = enrollment.attendanceStatus || 'PENDING';
@@ -126,6 +136,25 @@ export async function POST(
       console.log(`📧 Notificación DROP enviada a usuario ${updatedEnrollment.userId}`);
     }
 
+    // ========================================
+    // TICKET PARA SIGUIENTE BÁSICO (solo si es BACKLOG y nivel BASIC)
+    // ========================================
+    let backlogTicketResult = null;
+    if (attendanceStatus === 'BACKLOG' && updatedEnrollment.level === 'BASIC' && organizationId) {
+      console.log(`🎫 Creando ticket BACKLOG para usuario ${updatedEnrollment.userId}...`);
+      backlogTicketResult = await createBacklogTicket(
+        updatedEnrollment.userId,
+        visionId,
+        organizationId
+      );
+      
+      if (backlogTicketResult.success) {
+        console.log(`✅ Ticket BACKLOG creado: ${backlogTicketResult.ticketId} -> ${backlogTicketResult.visionName}`);
+      } else {
+        console.log(`⚠️ No se pudo crear ticket BACKLOG: ${backlogTicketResult.error}`);
+      }
+    }
+
     console.log(`✅ Asistencia actualizada: Enrollment ${enrollmentId} -> ${attendanceStatus} (antes: ${previousStatus})`);
     console.log(`📝 Historial guardado por usuario ${usuario.id}`);
 
@@ -141,7 +170,8 @@ export async function POST(
         usuario: updatedEnrollment.Usuario_vision_enrollments_userIdToUsuario
       },
       historyLogged: true,
-      dropNotificationSent: attendanceStatus === 'DROP'
+      dropNotificationSent: attendanceStatus === 'DROP',
+      backlogTicket: backlogTicketResult
     });
 
   } catch (error: any) {

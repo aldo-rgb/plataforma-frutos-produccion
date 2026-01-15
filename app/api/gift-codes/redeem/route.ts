@@ -93,7 +93,13 @@ export async function POST(request: Request) {
       ? ['BASIC', 'ADVANCED', 'PL']
       : ['BASIC'];
 
-    // Crear tickets en transacción
+    // Obtener coordinador de la visión para los enrollments
+    const visionWithCoordinator = await prisma.vision.findUnique({
+      where: { id: parseInt(visionId) },
+      select: { coordinadorId: true }
+    });
+
+    // Crear tickets y enrollments en transacción
     const result = await prisma.$transaction(async (tx) => {
       // Marcar código como usado
       await tx.giftCode.update({
@@ -146,6 +152,38 @@ export async function POST(request: Request) {
           level: ticket.level,
           status: ticket.status,
         });
+      }
+
+      // Si es PLATINUM, crear enrollments para ADVANCED y PL
+      // (BASIC se crea en el registro del usuario)
+      if (giftCode.type === 'PLATINUM') {
+        const advancedAndPLLevels: ('ADVANCED' | 'PL')[] = ['ADVANCED', 'PL'];
+        
+        for (const level of advancedAndPLLevels) {
+          // Verificar si ya existe el enrollment para evitar duplicados
+          const existingEnrollment = await tx.vision_enrollments.findFirst({
+            where: {
+              userId: user.id,
+              visionId: parseInt(visionId),
+              level: level
+            }
+          });
+
+          if (!existingEnrollment) {
+            await tx.vision_enrollments.create({
+              data: {
+                userId: user.id,
+                visionId: parseInt(visionId),
+                coordinatorId: visionWithCoordinator?.coordinadorId || null,
+                level: level,
+                enrollmentStatus: 'ENROLLED',
+                paymentStatus: 'PAID',
+                updatedAt: new Date()
+              }
+            });
+            console.log(`✅ Enrollment ${level} creado para usuario ${user.id} en visión ${visionId}`);
+          }
+        }
       }
 
       return createdTickets;

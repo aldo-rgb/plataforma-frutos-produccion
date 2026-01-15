@@ -19,7 +19,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // Obtener enrollment de visión
+    // Obtener enrollment de visión (incluyendo attendanceStatus para detectar DROP)
     const visionEnrollment = await prisma.vision_enrollments.findFirst({
       where: { userId: usuario.id },
       include: {
@@ -37,6 +37,9 @@ export async function GET() {
         }
       }
     });
+
+    // Verificar si el usuario está marcado como DROP
+    const isDropped = visionEnrollment?.attendanceStatus === 'DROP';
 
     // Obtener participación en visión (para gamechangers, participantes)
     const visionParticipante = await prisma.visionParticipante.findFirst({
@@ -277,6 +280,7 @@ export async function GET() {
         tribeStats,
         isLoboSolitario: currentLevel === 'LOBO_SOLITARIO',
         hasVision: !!vision,
+        isDropped, // Indica si el usuario fue marcado como DROP
       }
     });
 

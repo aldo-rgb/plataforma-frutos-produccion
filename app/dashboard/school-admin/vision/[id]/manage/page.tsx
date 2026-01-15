@@ -127,6 +127,13 @@ export default function VisionManagePage() {
   const [loadingPlEnrollments, setLoadingPlEnrollments] = useState(false);
   const [plAttendanceFilter, setPlAttendanceFilter] = useState<'ALL' | 'ATTENDED' | 'NOT_ATTENDED' | 'PENDING' | 'DROP' | 'BACKLOG'>('ALL');
   
+  // Estado para productos (para mostrar coordinador y trainer de cada nivel)
+  const [productos, setProductos] = useState<any>({
+    basic: null,
+    advanced: null,
+    pl: null
+  });
+  
   // Estados para edición
   const [editingDates, setEditingDates] = useState(false);
   const [dateData, setDateData] = useState({
@@ -192,6 +199,13 @@ export default function VisionManagePage() {
         const basicProduct = data.productos?.find((p: any) => p.levelType === 'BASIC');
         const advancedProduct = data.productos?.find((p: any) => p.levelType === 'ADVANCED');
         const plProduct = data.productos?.find((p: any) => p.levelType === 'PL');
+        
+        // Guardar productos en el estado para mostrar coordinador y trainer
+        setProductos({
+          basic: basicProduct || null,
+          advanced: advancedProduct || null,
+          pl: plProduct || null
+        });
         
         // Helper para formatear datetime-local
         const formatDateTimeLocal = (isoString: string | null) => {
@@ -774,9 +788,9 @@ export default function VisionManagePage() {
           {/* Tab: Información */}
           {activeTab === 'info' && (
             <div className="space-y-6">
-              <h2 className="text-2xl font-black text-white mb-4">📋 Información General</h2>
+              <h2 className="text-2xl font-black text-white mb-4">📋 Información General - Nivel Básico</h2>
               
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
                   <label className="text-slate-400 text-xs font-medium mb-1 block">Nombre de la Visión</label>
                   <div className="text-white text-lg font-bold">{vision.nombre}</div>
@@ -793,6 +807,20 @@ export default function VisionManagePage() {
                   <label className="text-slate-400 text-xs font-medium mb-1 block">Fecha de Finalización</label>
                   <div className="text-white text-lg font-bold">
                     {vision.endDate ? new Date(vision.endDate).toLocaleDateString('es-MX') : 'No definida'}
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/50 rounded-lg p-4 border border-green-500/30">
+                  <label className="text-slate-400 text-xs font-medium mb-1 block">👤 Coordinador Asignado</label>
+                  <div className="text-green-400 text-lg font-bold">
+                    {productos.basic?.Coordinator?.nombre || 'Sin asignar'}
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/50 rounded-lg p-4 border border-cyan-500/30">
+                  <label className="text-slate-400 text-xs font-medium mb-1 block">🎯 Trainer Asignado</label>
+                  <div className="text-cyan-400 text-lg font-bold">
+                    {productos.basic?.Trainer?.nombre || 'Sin asignar'}
                   </div>
                 </div>
               </div>
@@ -970,6 +998,7 @@ export default function VisionManagePage() {
                           <tr className="border-b border-green-500/20">
                             <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Usuario</th>
                             <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Teléfono</th>
+                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Email</th>
                             <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Game Changer</th>
                             <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Fecha de Registro</th>
                             <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Asistencia</th>
@@ -1001,6 +1030,11 @@ export default function VisionManagePage() {
                               <td className="py-4 px-4">
                                 <div className="text-slate-300 text-sm">
                                   {enrollment.Usuario?.telefono || <span className="text-slate-500 italic">Sin teléfono</span>}
+                                </div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <div className="text-slate-300 text-sm">
+                                  {enrollment.Usuario?.email || <span className="text-slate-500 italic">Sin email</span>}
                                 </div>
                               </td>
                               <td className="py-4 px-4">
@@ -1073,6 +1107,37 @@ export default function VisionManagePage() {
           {activeTab === 'avanzado' && (
             <div className="space-y-6">
               <h2 className="text-2xl font-black text-white mb-4">🔥 Nivel Avanzado</h2>
+              
+              {/* Información General - Avanzado */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                  <label className="text-slate-400 text-xs font-medium mb-1 block">Fecha de Inicio</label>
+                  <div className="text-white text-lg font-bold">
+                    {vision.advancedStartDate ? new Date(vision.advancedStartDate).toLocaleDateString('es-MX') : 'No definida'}
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                  <label className="text-slate-400 text-xs font-medium mb-1 block">Fecha de Finalización</label>
+                  <div className="text-white text-lg font-bold">
+                    {vision.advancedEndDate ? new Date(vision.advancedEndDate).toLocaleDateString('es-MX') : 'No definida'}
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/50 rounded-lg p-4 border border-orange-500/30">
+                  <label className="text-slate-400 text-xs font-medium mb-1 block">👤 Coordinador Asignado</label>
+                  <div className="text-orange-400 text-lg font-bold">
+                    {productos.advanced?.Coordinator?.nombre || 'Sin asignar'}
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/50 rounded-lg p-4 border border-cyan-500/30">
+                  <label className="text-slate-400 text-xs font-medium mb-1 block">🎯 Trainer Asignado</label>
+                  <div className="text-cyan-400 text-lg font-bold">
+                    {productos.advanced?.Trainer?.nombre || 'Sin asignar'}
+                  </div>
+                </div>
+              </div>
               
               {/* Game Changers AVANZADO - Agregar aquí */}
               <div className="bg-gradient-to-br from-orange-900/30 to-slate-900/50 rounded-xl border-2 border-orange-500/30 overflow-hidden">
@@ -1168,6 +1233,70 @@ export default function VisionManagePage() {
                 </div>
                 
                 <div className="p-6">
+                  {/* Filtros de Asistencia AVANZADO */}
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    <button
+                      onClick={() => setAdvancedAttendanceFilter('ALL')}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        advancedAttendanceFilter === 'ALL'
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      Todos ({advancedEnrollments.length})
+                    </button>
+                    <button
+                      onClick={() => setAdvancedAttendanceFilter('ATTENDED')}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        advancedAttendanceFilter === 'ATTENDED'
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      ✅ Asistió ({advancedEnrollments.filter(e => e.attendanceStatus === 'ATTENDED').length})
+                    </button>
+                    <button
+                      onClick={() => setAdvancedAttendanceFilter('NOT_ATTENDED')}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        advancedAttendanceFilter === 'NOT_ATTENDED'
+                          ? 'bg-red-500 text-white'
+                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      ❌ No Asistió ({advancedEnrollments.filter(e => e.attendanceStatus === 'NOT_ATTENDED').length})
+                    </button>
+                    <button
+                      onClick={() => setAdvancedAttendanceFilter('PENDING')}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        advancedAttendanceFilter === 'PENDING'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      📋 Inscrito ({advancedEnrollments.filter(e => !e.attendanceStatus || e.attendanceStatus === 'PENDING').length})
+                    </button>
+                    <button
+                      onClick={() => setAdvancedAttendanceFilter('DROP')}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        advancedAttendanceFilter === 'DROP'
+                          ? 'bg-gray-500 text-white'
+                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      🚫 Drop ({advancedEnrollments.filter(e => e.attendanceStatus === 'DROP').length})
+                    </button>
+                    <button
+                      onClick={() => setAdvancedAttendanceFilter('BACKLOG')}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        advancedAttendanceFilter === 'BACKLOG'
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      ⏳ Backlog ({advancedEnrollments.filter(e => e.attendanceStatus === 'BACKLOG').length})
+                    </button>
+                  </div>
+
                   {loadingAdvancedEnrollments ? (
                     <div className="text-center py-8 text-slate-400">Cargando registros...</div>
                   ) : advancedEnrollments.length === 0 ? (
@@ -1182,6 +1311,7 @@ export default function VisionManagePage() {
                         <thead>
                           <tr className="border-b border-orange-500/20">
                             <th className="text-left py-3 px-4 text-orange-300 font-bold text-sm">Usuario</th>
+                            <th className="text-left py-3 px-4 text-orange-300 font-bold text-sm">Teléfono</th>
                             <th className="text-left py-3 px-4 text-orange-300 font-bold text-sm">Email</th>
                             <th className="text-left py-3 px-4 text-orange-300 font-bold text-sm">Game Changer</th>
                             <th className="text-left py-3 px-4 text-orange-300 font-bold text-sm">Fecha de Registro</th>
@@ -1189,7 +1319,13 @@ export default function VisionManagePage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {advancedEnrollments.map((enrollment) => (
+                          {advancedEnrollments
+                            .filter(enrollment => {
+                              if (advancedAttendanceFilter === 'ALL') return true;
+                              if (advancedAttendanceFilter === 'PENDING') return !enrollment.attendanceStatus || enrollment.attendanceStatus === 'PENDING';
+                              return enrollment.attendanceStatus === advancedAttendanceFilter;
+                            })
+                            .map((enrollment) => (
                             <tr 
                               key={enrollment.id}
                               className="border-b border-slate-700/50 hover:bg-orange-500/5 transition-colors"
@@ -1206,7 +1342,14 @@ export default function VisionManagePage() {
                                 </div>
                               </td>
                               <td className="py-4 px-4">
-                                <div className="text-slate-300 text-sm">{enrollment.Usuario?.email}</div>
+                                <div className="text-slate-300 text-sm">
+                                  {enrollment.Usuario?.telefono || <span className="text-slate-500 italic">Sin teléfono</span>}
+                                </div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <div className="text-slate-300 text-sm">
+                                  {enrollment.Usuario?.email || <span className="text-slate-500 italic">Sin email</span>}
+                                </div>
                               </td>
                               <td className="py-4 px-4">
                                 {enrollment.gameChanger ? (
@@ -1229,7 +1372,7 @@ export default function VisionManagePage() {
                                 <div className="text-slate-300 text-sm">
                                   {new Date(enrollment.enrolledAt).toLocaleDateString('es-MX', {
                                     year: 'numeric',
-                                    month: 'long',
+                                    month: 'short',
                                     day: 'numeric'
                                   })}
                                 </div>
@@ -1253,10 +1396,10 @@ export default function VisionManagePage() {
                                       ? 'bg-gray-500/20 text-gray-300 border-gray-500/30 hover:bg-gray-500/30'
                                       : enrollment.attendanceStatus === 'BACKLOG'
                                       ? 'bg-amber-500/20 text-amber-300 border-amber-500/30 hover:bg-amber-500/30'
-                                      : 'bg-orange-500/20 text-orange-300 border-orange-500/30 hover:bg-orange-500/30'
+                                      : 'bg-blue-500/20 text-blue-300 border-blue-500/30 hover:bg-blue-500/30'
                                   }`}
                                 >
-                                  <option value="PENDING" className="bg-slate-800 text-orange-300">📋 Inscrito</option>
+                                  <option value="PENDING" className="bg-slate-800 text-blue-300">📋 Inscrito</option>
                                   <option value="ATTENDED" className="bg-slate-800 text-emerald-300">✅ Asistió</option>
                                   <option value="NOT_ATTENDED" className="bg-slate-800 text-red-300">❌ No Asistió</option>
                                   <option value="DROP" className="bg-slate-800 text-gray-300">🚫 Drop</option>
@@ -1278,6 +1421,47 @@ export default function VisionManagePage() {
           {activeTab === 'liderato' && (
             <div className="space-y-6">
               <h2 className="text-2xl font-black text-white mb-4">👑 Nivel Liderato</h2>
+              
+              {/* Información General - Liderato */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                  <label className="text-slate-400 text-xs font-medium mb-1 block">📅 Fin de Semana 1</label>
+                  <div className="text-white text-sm font-bold">
+                    {vision.plWeekend1StartDate ? new Date(vision.plWeekend1StartDate).toLocaleDateString('es-MX') : 'No definida'}
+                    {vision.plWeekend1EndDate && ` - ${new Date(vision.plWeekend1EndDate).toLocaleDateString('es-MX')}`}
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                  <label className="text-slate-400 text-xs font-medium mb-1 block">📅 Fin de Semana 2</label>
+                  <div className="text-white text-sm font-bold">
+                    {vision.plWeekend2StartDate ? new Date(vision.plWeekend2StartDate).toLocaleDateString('es-MX') : 'No definida'}
+                    {vision.plWeekend2EndDate && ` - ${new Date(vision.plWeekend2EndDate).toLocaleDateString('es-MX')}`}
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700">
+                  <label className="text-slate-400 text-xs font-medium mb-1 block">🎓 Graduación</label>
+                  <div className="text-white text-sm font-bold">
+                    {vision.plWeekend3StartDate ? new Date(vision.plWeekend3StartDate).toLocaleDateString('es-MX') : 'No definida'}
+                    {vision.plWeekend3EndDate && ` - ${new Date(vision.plWeekend3EndDate).toLocaleDateString('es-MX')}`}
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/50 rounded-lg p-4 border border-purple-500/30">
+                  <label className="text-slate-400 text-xs font-medium mb-1 block">👤 Coordinador Asignado</label>
+                  <div className="text-purple-400 text-lg font-bold">
+                    {productos.pl?.Coordinator?.nombre || 'Sin asignar'}
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/50 rounded-lg p-4 border border-cyan-500/30 col-span-2">
+                  <label className="text-slate-400 text-xs font-medium mb-1 block">🎯 Trainer Asignado</label>
+                  <div className="text-cyan-400 text-lg font-bold">
+                    {productos.pl?.Trainer?.nombre || 'Sin asignar'}
+                  </div>
+                </div>
+              </div>
               
               {/* Game Changers LIDERATO */}
               <div className="bg-gradient-to-br from-purple-900/30 to-slate-900/50 rounded-xl border-2 border-purple-500/30 overflow-hidden">
@@ -1373,6 +1557,70 @@ export default function VisionManagePage() {
                 </div>
                 
                 <div className="p-6">
+                  {/* Filtros de Asistencia PL */}
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    <button
+                      onClick={() => setPlAttendanceFilter('ALL')}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        plAttendanceFilter === 'ALL'
+                          ? 'bg-purple-500 text-white'
+                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      Todos ({plEnrollments.length})
+                    </button>
+                    <button
+                      onClick={() => setPlAttendanceFilter('ATTENDED')}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        plAttendanceFilter === 'ATTENDED'
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      ✅ Asistió ({plEnrollments.filter(e => e.attendanceStatus === 'ATTENDED').length})
+                    </button>
+                    <button
+                      onClick={() => setPlAttendanceFilter('NOT_ATTENDED')}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        plAttendanceFilter === 'NOT_ATTENDED'
+                          ? 'bg-red-500 text-white'
+                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      ❌ No Asistió ({plEnrollments.filter(e => e.attendanceStatus === 'NOT_ATTENDED').length})
+                    </button>
+                    <button
+                      onClick={() => setPlAttendanceFilter('PENDING')}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        plAttendanceFilter === 'PENDING'
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      📋 Inscrito ({plEnrollments.filter(e => !e.attendanceStatus || e.attendanceStatus === 'PENDING').length})
+                    </button>
+                    <button
+                      onClick={() => setPlAttendanceFilter('DROP')}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        plAttendanceFilter === 'DROP'
+                          ? 'bg-gray-500 text-white'
+                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      🚫 Drop ({plEnrollments.filter(e => e.attendanceStatus === 'DROP').length})
+                    </button>
+                    <button
+                      onClick={() => setPlAttendanceFilter('BACKLOG')}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                        plAttendanceFilter === 'BACKLOG'
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      ⏳ Backlog ({plEnrollments.filter(e => e.attendanceStatus === 'BACKLOG').length})
+                    </button>
+                  </div>
+
                   {loadingPlEnrollments ? (
                     <div className="text-center py-8 text-slate-400">Cargando registros...</div>
                   ) : plEnrollments.length === 0 ? (
@@ -1387,6 +1635,7 @@ export default function VisionManagePage() {
                         <thead>
                           <tr className="border-b border-purple-500/20">
                             <th className="text-left py-3 px-4 text-purple-300 font-bold text-sm">Usuario</th>
+                            <th className="text-left py-3 px-4 text-purple-300 font-bold text-sm">Teléfono</th>
                             <th className="text-left py-3 px-4 text-purple-300 font-bold text-sm">Email</th>
                             <th className="text-left py-3 px-4 text-purple-300 font-bold text-sm">Game Changer</th>
                             <th className="text-left py-3 px-4 text-purple-300 font-bold text-sm">Fecha de Registro</th>
@@ -1394,7 +1643,13 @@ export default function VisionManagePage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {plEnrollments.map((enrollment) => (
+                          {plEnrollments
+                            .filter(enrollment => {
+                              if (plAttendanceFilter === 'ALL') return true;
+                              if (plAttendanceFilter === 'PENDING') return !enrollment.attendanceStatus || enrollment.attendanceStatus === 'PENDING';
+                              return enrollment.attendanceStatus === plAttendanceFilter;
+                            })
+                            .map((enrollment) => (
                             <tr 
                               key={enrollment.id}
                               className="border-b border-slate-700/50 hover:bg-purple-500/5 transition-colors"
@@ -1411,7 +1666,14 @@ export default function VisionManagePage() {
                                 </div>
                               </td>
                               <td className="py-4 px-4">
-                                <div className="text-slate-300 text-sm">{enrollment.Usuario?.email}</div>
+                                <div className="text-slate-300 text-sm">
+                                  {enrollment.Usuario?.telefono || <span className="text-slate-500 italic">Sin teléfono</span>}
+                                </div>
+                              </td>
+                              <td className="py-4 px-4">
+                                <div className="text-slate-300 text-sm">
+                                  {enrollment.Usuario?.email || <span className="text-slate-500 italic">Sin email</span>}
+                                </div>
                               </td>
                               <td className="py-4 px-4">
                                 {enrollment.gameChanger ? (
@@ -1434,7 +1696,7 @@ export default function VisionManagePage() {
                                 <div className="text-slate-300 text-sm">
                                   {new Date(enrollment.enrolledAt).toLocaleDateString('es-MX', {
                                     year: 'numeric',
-                                    month: 'long',
+                                    month: 'short',
                                     day: 'numeric'
                                   })}
                                 </div>
@@ -1458,10 +1720,10 @@ export default function VisionManagePage() {
                                       ? 'bg-gray-500/20 text-gray-300 border-gray-500/30 hover:bg-gray-500/30'
                                       : enrollment.attendanceStatus === 'BACKLOG'
                                       ? 'bg-amber-500/20 text-amber-300 border-amber-500/30 hover:bg-amber-500/30'
-                                      : 'bg-purple-500/20 text-purple-300 border-purple-500/30 hover:bg-purple-500/30'
+                                      : 'bg-blue-500/20 text-blue-300 border-blue-500/30 hover:bg-blue-500/30'
                                   }`}
                                 >
-                                  <option value="PENDING" className="bg-slate-800 text-purple-300">📋 Inscrito</option>
+                                  <option value="PENDING" className="bg-slate-800 text-blue-300">📋 Inscrito</option>
                                   <option value="ATTENDED" className="bg-slate-800 text-emerald-300">✅ Asistió</option>
                                   <option value="NOT_ATTENDED" className="bg-slate-800 text-red-300">❌ No Asistió</option>
                                   <option value="DROP" className="bg-slate-800 text-gray-300">🚫 Drop</option>

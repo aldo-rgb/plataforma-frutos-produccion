@@ -49,6 +49,7 @@ interface DashboardStatsResponse {
     } | null;
     isLoboSolitario: boolean;
     hasVision: boolean;
+    isDropped?: boolean; // Indica si el usuario fue marcado como DROP
   };
 }
 
@@ -102,7 +103,7 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
 
   if (!data) return null;
 
-  const { currentLevelInfo, buddyInfo, tribeStats, isLoboSolitario } = data;
+  const { currentLevelInfo, buddyInfo, tribeStats, isLoboSolitario, isDropped } = data;
   const level = currentLevelInfo.levelName;
 
   const handleUpgradeClick = () => {
@@ -126,16 +127,18 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
           currentLevel={level}
           nextMilestone={currentLevelInfo.nextMilestone || undefined}
           onUpgradeClick={handleUpgradeClick}
+          isDropped={isDropped}
         />
       </motion.div>
 
       {/* Level-Specific Widgets */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* BASIC: Mostrar solo GCCallWidget + UpgradeToAdvancedWidget (sin PromiseWidget) */}
+        {/* Si el usuario está en DROP, NO mostrar el widget de upgrade */}
         {level === 'BASIC' && (
           <>
             <GCCallWidget />
-            {currentLevelInfo.nextMilestone?.isLocked && (
+            {!isDropped && currentLevelInfo.nextMilestone?.isLocked && (
               <UpgradeToAdvancedWidget
                 advancedStartDate={currentLevelInfo.nextMilestone.deadline}
                 onUpgradeClick={handleUpgradeClick}

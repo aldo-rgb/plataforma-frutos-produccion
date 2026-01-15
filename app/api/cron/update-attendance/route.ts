@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { createBacklogTicket } from '@/lib/backlog-ticket';
 
 // API para actualizar automáticamente los estados de asistencia
 // Puede ser llamado por Vercel Cron Jobs o manualmente
@@ -27,6 +28,9 @@ export async function POST(request: NextRequest) {
     const results = {
       markedNotAttended: 0,
       markedBacklog: 0,
+      backlogTicketsCreated: 0,
+      backlogTicketsFailed: 0,
+      backlogTicketsAlreadyUsed: 0,
       errors: [] as string[]
     };
 
@@ -205,20 +209,53 @@ export async function POST(request: NextRequest) {
           lte: yesterdayEnd
         }
       },
-      select: { id: true, nombre: true }
+      select: { id: true, nombre: true, organizationId: true }
     });
 
     for (const vision of visionesBasicFinalizadas) {
       try {
-        const updated = await prisma.vision_enrollments.updateMany({
+        // Obtener enrollments individuales para poder crear tickets
+        const enrollmentsToBacklog = await prisma.vision_enrollments.findMany({
           where: {
             visionId: vision.id,
             level: 'BASIC',
             attendanceStatus: 'NOT_ATTENDED'
           },
-          data: { attendanceStatus: 'BACKLOG' }
+          select: { id: true, userId: true }
         });
-        results.markedBacklog += updated.count;
+
+        // Marcar todos como BACKLOG
+        if (enrollmentsToBacklog.length > 0) {
+          await prisma.vision_enrollments.updateMany({
+            where: {
+              id: { in: enrollmentsToBacklog.map(e => e.id) }
+            },
+            data: { attendanceStatus: 'BACKLOG' }
+          });
+          results.markedBacklog += enrollmentsToBacklog.length;
+
+          // Crear tickets para el siguiente básico
+          for (const enrollment of enrollmentsToBacklog) {
+            const ticketResult = await createBacklogTicket(
+              enrollment.userId,
+              vision.id,
+              vision.organizationId
+            );
+            
+            if (ticketResult.success && ticketResult.ticketId) {
+              results.backlogTicketsCreated++;
+              console.log(`🎫 Ticket BACKLOG creado para usuario ${enrollment.userId} -> ${ticketResult.visionName}${ticketResult.isPendingAssignment ? ' (PENDIENTE)' : ''}`);
+            } else if (ticketResult.alreadyUsedBacklog) {
+              results.backlogTicketsAlreadyUsed++;
+              console.log(`⚠️ Usuario ${enrollment.userId} ya usó su oportunidad BACKLOG`);
+            } else {
+              results.backlogTicketsFailed++;
+              if (ticketResult.error) {
+                results.errors.push(`Ticket BACKLOG usuario ${enrollment.userId}: ${ticketResult.error}`);
+              }
+            }
+          }
+        }
       } catch (error: any) {
         results.errors.push(`Error backlog BASIC visión ${vision.id}: ${error.message}`);
       }

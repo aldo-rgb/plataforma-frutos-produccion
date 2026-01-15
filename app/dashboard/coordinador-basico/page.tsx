@@ -48,6 +48,10 @@ export default function CoordinadorBasicoDashboard() {
   const [preRegistros, setPreRegistros] = useState<{ pending: number; paid: number; total: number }>({ pending: 0, paid: 0, total: 0 });
   const [visionInfo, setVisionInfo] = useState<{ nombre: string; level: string } | null>(null);
   const [advancedStats, setAdvancedStats] = useState<{ pending: number; enrolled: number; total: number }>({ pending: 0, enrolled: 0, total: 0 });
+  const [widgetStats, setWidgetStats] = useState<{ 
+    declarados: { numerator: number; denominator: number }; 
+    inscritos: { numerator: number; denominator: number } 
+  }>({ declarados: { numerator: 0, denominator: 0 }, inscritos: { numerator: 0, denominator: 0 } });
   
   // Estados para modales de Declarados e Inscritos
   const [showDeclaradosModal, setShowDeclaradosModal] = useState(false);
@@ -139,15 +143,22 @@ export default function CoordinadorBasicoDashboard() {
         const nextLevel = result.stats?.nextLevel;
         const nextLevelName = result.stats?.nextLevelName;
         const currentProduct = result.stats?.currentProduct;
+        const widgetStatsData = result.stats?.widgetStats;
         
         console.log('[Coordinador Básico] Current product:', currentProduct);
         console.log('[Coordinador Básico] Next level:', nextLevel, 'Stats:', nextLevelStats);
+        console.log('[Coordinador Básico] Widget stats:', widgetStatsData);
         
         setPreRegistros({
           pending: result.stats?.preRegistros?.pending || 0,
           paid: result.stats?.preRegistros?.paid || 0,
           total: result.stats?.preRegistros?.total || 0,
         });
+        
+        // Guardar estadísticas de widgets con numerador/denominador correctos
+        if (widgetStatsData) {
+          setWidgetStats(widgetStatsData);
+        }
         
         // Mostrar información del SIGUIENTE NIVEL
         if (nextLevel && nextLevelStats) {
@@ -352,9 +363,9 @@ export default function CoordinadorBasicoDashboard() {
                   </p>
                   <div className="flex items-baseline gap-1">
                     <p className="text-4xl font-black text-white">
-                      {advancedStats.pending}
+                      {widgetStats.declarados.numerator}
                     </p>
-                    <span className="text-xl text-slate-500 font-bold">/{advancedStats.total}</span>
+                    <span className="text-xl text-slate-500 font-bold">/{widgetStats.declarados.denominator}</span>
                   </div>
                   <p className="text-sm text-slate-400 mt-1">
                     Participantes comprometidos
@@ -385,9 +396,9 @@ export default function CoordinadorBasicoDashboard() {
                   </p>
                   <div className="flex items-baseline gap-1">
                     <p className="text-4xl font-black text-white">
-                      {advancedStats.enrolled}
+                      {widgetStats.inscritos.numerator}
                     </p>
-                    <span className="text-xl text-slate-500 font-bold">/{advancedStats.total}</span>
+                    <span className="text-xl text-slate-500 font-bold">/{widgetStats.inscritos.denominator}</span>
                   </div>
                   <p className="text-sm text-slate-400 mt-1">
                     Participantes pagados
@@ -536,12 +547,19 @@ export default function CoordinadorBasicoDashboard() {
                           </div>
 
                           {showCountdown && !hasStarted && !isCompleted && (
-                            <div className="flex items-center gap-2 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/50 px-4 py-2 rounded-lg animate-pulse">
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                window.location.href = `/staff/check-in/${producto.id}`;
+                              }}
+                              className="flex items-center gap-2 bg-gradient-to-r from-orange-500/20 to-red-500/20 hover:from-orange-500/30 hover:to-red-500/30 border border-orange-500/50 px-4 py-2 rounded-lg animate-pulse cursor-pointer transition-all"
+                            >
                               <Clock size={16} className="text-orange-400" />
                               <span className="text-orange-400 font-bold font-mono text-sm">
                                 {countdown[producto.id]}
                               </span>
-                            </div>
+                            </button>
                           )}
 
                           {isCompleted && (

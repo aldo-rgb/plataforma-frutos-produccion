@@ -31,6 +31,7 @@ interface ZonaEjecucionData {
   tareasRetrasadas: Tarea[];
   totalHoy: number;
   totalRetrasadas: number;
+  isDropped?: boolean; // Usuario marcado como DROP
 }
 
 export default function ZonaEjecucionDiaria() {
@@ -350,6 +351,23 @@ export default function ZonaEjecucionDiaria() {
         <div className="flex items-center justify-center">
           <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
           <span className="ml-3 text-slate-400">Cargando misiones...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Si el usuario está marcado como DROP, mostrar mensaje especial y ocultar tareas
+  if (data?.isDropped) {
+    return (
+      <div className="w-full rounded-2xl bg-slate-900 border border-red-900/50 shadow-2xl mb-6 overflow-hidden">
+        <div className="px-6 py-8 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/20 flex items-center justify-center">
+            <AlertCircle className="w-8 h-8 text-red-400" />
+          </div>
+          <h3 className="text-white font-bold text-xl mb-2">Acceso Suspendido</h3>
+          <p className="text-slate-400 text-sm max-w-md mx-auto">
+            Tu participación en el programa ha sido pausada. Contacta a tu coordinador para más información.
+          </p>
         </div>
       </div>
     );

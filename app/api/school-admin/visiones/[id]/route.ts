@@ -348,6 +348,9 @@ export async function GET(
       cicloInfo,
       productos: productos.map(p => ({
         ...p,
+        // Incluir explícitamente Trainer y Coordinator
+        Trainer: p.Trainer,
+        Coordinator: p.Coordinator,
         // Si es producto PL, agregar los 3 trainers
         plTrainers: p.levelType === 'PL' ? plTrainersData.map(pt => pt.Usuario_VisionStaff_userIdToUsuario) : undefined,
         startDate: p.startDate ? p.startDate.toISOString() : null,

@@ -10,9 +10,11 @@ interface QuantumCredentialProps {
     id: string;
     level: string;
     status: string;
+    type?: string;
     paymentStatus?: string;
     costAtPurchase?: number;
     amountPaid?: number;
+    isTransferable?: boolean;
     createdAt: string;
     vision: {
       nombre: string;
@@ -70,6 +72,10 @@ const levelConfig = {
 export function QuantumCredential({ ticket, userName, userInitials, userPhoto }: QuantumCredentialProps) {
   const isActive = ticket.status === 'ACTIVE';
   const isPendingPaymentBase = ticket.status === 'PENDING_PAYMENT' || ticket.paymentStatus === 'PENDING' || ticket.paymentStatus === 'PARTIAL';
+  
+  // Check if it's a BACKLOG ticket (SCHOLARSHIP type with GIFT payment - cortesía)
+  const isBacklogTicket = ticket.type === 'SCHOLARSHIP' && ticket.paymentStatus === 'GIFT';
+  const isNonTransferable = ticket.isTransferable === false;
   
   // Check if it's a PL ticket with pending payment and deadline has passed
   const isExpiredPayment = isPendingPaymentBase && ticket.level === 'PL' && isPaymentDeadlinePassed(ticket.vision.advancedStartDate);
@@ -146,6 +152,49 @@ export function QuantumCredential({ ticket, userName, userInitials, userPhoto }:
               {isActive ? '▸ ACCESS GRANTED ◂' : isPendingPayment ? '▸ PAGO PENDIENTE ◂' : isExpiredPayment ? '▸ TICKET EXPIRADO ◂' : '▸ ACCESS EXPIRED ◂'}
             </p>
           </div>
+          
+          {/* BACKLOG Badge - Ticket de Reposición */}
+          {isBacklogTicket && (
+            <div 
+              className="mt-2 text-center py-1 px-2 rounded"
+              style={{
+                background: 'rgba(34, 197, 94, 0.15)',
+                border: '1px solid rgba(34, 197, 94, 0.4)',
+              }}
+            >
+              <p 
+                className="text-[9px] tracking-wider font-bold"
+                style={{ 
+                  fontFamily: 'monospace',
+                  color: '#22c55e',
+                }}
+              >
+                🎫 TICKET DE REPOSICIÓN
+              </p>
+            </div>
+          )}
+          
+          {/* Non-Transferable Warning */}
+          {isNonTransferable && (
+            <div 
+              className="mt-1 text-center py-0.5 px-2 rounded"
+              style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+              }}
+            >
+              <p 
+                className="text-[8px] tracking-wider font-bold flex items-center justify-center gap-1"
+                style={{ 
+                  fontFamily: 'monospace',
+                  color: '#ef4444',
+                }}
+              >
+                <AlertTriangle className="w-2.5 h-2.5" />
+                NO TRANSFERIBLE
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Organization Logo / Hexagon */}

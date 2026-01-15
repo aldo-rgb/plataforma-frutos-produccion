@@ -21,6 +21,7 @@ interface Ticket {
     nombre: string;
     startDate: string;
     endDate: string | null;
+    advancedStartDate?: string | null;
   };
   organization: {
     name: string;

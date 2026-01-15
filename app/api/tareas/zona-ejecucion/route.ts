@@ -20,6 +20,23 @@ export async function GET(req: Request) {
     const userId = session.user.id;
     console.log('🔍 Cargando tareas para usuario:', userId);
 
+    // Verificar si el usuario está marcado como DROP
+    const visionEnrollment = await prisma.vision_enrollments.findFirst({
+      where: { userId },
+      select: { attendanceStatus: true }
+    });
+
+    if (visionEnrollment?.attendanceStatus === 'DROP') {
+      console.log('⚠️ Usuario marcado como DROP - retornando vacío');
+      return NextResponse.json({
+        tareasHoy: [],
+        tareasRetrasadas: [],
+        tareasAdmin: [],
+        misionesTrainer: [],
+        isDropped: true
+      });
+    }
+
     // Obtener fecha del query param o usar hoy por defecto
     const url = new URL(req.url);
     const dateParam = url.searchParams.get('date');

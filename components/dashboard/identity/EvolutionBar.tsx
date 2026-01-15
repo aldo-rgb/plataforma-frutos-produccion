@@ -16,6 +16,7 @@ interface EvolutionBarProps {
   currentLevel: UserLevel;
   nextMilestone?: NextMilestone;
   onUpgradeClick?: () => void;
+  isDropped?: boolean; // Si el usuario está marcado como DROP, ocultar botón de upgrade
 }
 
 const levelOrder: UserLevel[] = ['BASIC', 'ADVANCED', 'PL'];
@@ -55,7 +56,7 @@ const nextLevelConfig = {
   },
 };
 
-export default function EvolutionBar({ currentLevel, nextMilestone, onUpgradeClick }: EvolutionBarProps) {
+export default function EvolutionBar({ currentLevel, nextMilestone, onUpgradeClick, isDropped }: EvolutionBarProps) {
   const config = nextLevelConfig[currentLevel];
   const Icon = config.icon;
 
@@ -228,7 +229,8 @@ export default function EvolutionBar({ currentLevel, nextMilestone, onUpgradeCli
           )}
         </div>
         
-        {nextMilestone?.isLocked && config.cta && (
+        {/* No mostrar botón de upgrade si el usuario está en DROP */}
+        {!isDropped && nextMilestone?.isLocked && config.cta && (
           <motion.button
             onClick={onUpgradeClick}
             className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${

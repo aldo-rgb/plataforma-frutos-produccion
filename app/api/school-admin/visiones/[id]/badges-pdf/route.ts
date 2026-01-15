@@ -107,36 +107,95 @@ export async function GET(
       },
     });
 
+    // Obtener el SchoolProduct para este nivel y visión para incluir Trainer y Coordinador
+    const schoolProduct = await prisma.schoolProduct.findFirst({
+      where: {
+        visionId,
+        levelType: level === 'BASIC' ? 'BASIC' : level === 'ADVANCED' ? 'ADVANCED' : 'PL',
+        isActive: true,
+      },
+      include: {
+        Trainer: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+            referralCode: true,
+            rol: true,
+          },
+        },
+        Coordinator: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+            referralCode: true,
+            rol: true,
+          },
+        },
+      },
+    });
+
     // Mapear participantes con su rol determinado por nivel o rol de usuario
-    const participants: Participant[] = enrollments
-      .map(e => {
-        const user = e.Usuario_vision_enrollments_userIdToUsuario;
-        if (!user) return null;
-        
-        // Determinar rol: usar rol del usuario si es especial, si no usar nivel
-        let displayRole = 'PARTICIPANTE';
-        const userRol = user.rol?.toUpperCase() || '';
-        
-        // Roles especiales que van en rojo
-        if (['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'COORDINATOR'].includes(userRol)) {
-          displayRole = 'COORDINADOR';
-        } else if (['GAMECHANGER', 'GAME_CHANGER'].includes(userRol)) {
-          displayRole = 'GAMECHANGER';
-        } else if (['TRAINER', 'COACH', 'MENTOR'].includes(userRol)) {
-          displayRole = 'TRAINER';
-        } else if (level === 'ADVANCED' || level === 'PL') {
-          displayRole = 'GAMECHANGER';
-        }
-        
-        return {
-          id: user.id,
-          nombre: user.nombre,
-          email: user.email,
-          referralCode: user.referralCode,
-          rol: displayRole,
-        };
-      })
-      .filter((p): p is Participant => p !== null);
+    const participants: Participant[] = [];
+    
+    // Agregar Trainer primero (si existe y no está filtrado por userIds)
+    if (schoolProduct?.Trainer && (!userIds || userIds.includes(schoolProduct.Trainer.id))) {
+      participants.push({
+        id: schoolProduct.Trainer.id,
+        nombre: schoolProduct.Trainer.nombre,
+        email: schoolProduct.Trainer.email,
+        referralCode: schoolProduct.Trainer.referralCode,
+        rol: 'TRAINER',
+      });
+    }
+    
+    // Agregar Coordinador segundo (si existe y no está filtrado por userIds)
+    if (schoolProduct?.Coordinator && (!userIds || userIds.includes(schoolProduct.Coordinator.id))) {
+      // Evitar duplicado si el coordinador también es trainer
+      if (!participants.find(p => p.id === schoolProduct.Coordinator!.id)) {
+        participants.push({
+          id: schoolProduct.Coordinator.id,
+          nombre: schoolProduct.Coordinator.nombre,
+          email: schoolProduct.Coordinator.email,
+          referralCode: schoolProduct.Coordinator.referralCode,
+          rol: 'COORDINADOR',
+        });
+      }
+    }
+
+    // Agregar enrollments (Game Changers y Participantes)
+    enrollments.forEach(e => {
+      const enrolledUser = e.Usuario_vision_enrollments_userIdToUsuario;
+      if (!enrolledUser) return;
+      
+      // Evitar duplicados (por si el trainer o coordinador también tiene enrollment)
+      if (participants.find(p => p.id === enrolledUser.id)) return;
+      
+      // Determinar rol: usar rol del usuario si es especial, si no usar nivel
+      let displayRole = 'PARTICIPANTE';
+      const userRol = enrolledUser.rol?.toUpperCase() || '';
+      
+      // Roles especiales que van en rojo (EQUIPO)
+      if (['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'COORDINATOR'].includes(userRol)) {
+        displayRole = 'COORDINADOR';
+      } else if (['GAMECHANGER', 'GAME_CHANGER'].includes(userRol)) {
+        displayRole = 'GAME CHANGER';
+      } else if (['TRAINER', 'COACH', 'MENTOR'].includes(userRol)) {
+        displayRole = 'TRAINER';
+      } else if (level === 'ADVANCED' || level === 'PL') {
+        // En avanzado/PL los participantes son Game Changers
+        displayRole = 'GAME CHANGER';
+      }
+      
+      participants.push({
+        id: enrolledUser.id,
+        nombre: enrolledUser.nombre,
+        email: enrolledUser.email,
+        referralCode: enrolledUser.referralCode,
+        rol: displayRole,
+      });
+    });
 
     if (participants.length === 0) {
       return NextResponse.json({ 
@@ -192,15 +251,18 @@ function getDisplayName(fullName: string): string {
 function getRoleLabel(role: string): string {
   switch (role) {
     case 'COORDINADOR': return 'COORDINADOR';
+    case 'GAME CHANGER': return 'GAME CHANGER';
     case 'GAMECHANGER': return 'GAME CHANGER';
     case 'TRAINER': return 'TRAINER';
     default: return 'PARTICIPANTE';
   }
 }
 
-// Helper: Check if role should be red
+// Helper: Check if role is EQUIPO (should be red)
+// EQUIPO = Trainer, Coordinador, Game Changer
+// PARTICIPANTE = letra negra
 function isRedRole(role: string): boolean {
-  return ['COORDINADOR', 'GAMECHANGER', 'TRAINER'].includes(role);
+  return ['COORDINADOR', 'GAME CHANGER', 'GAMECHANGER', 'TRAINER'].includes(role);
 }
 
 // Load logo as base64 from URL
