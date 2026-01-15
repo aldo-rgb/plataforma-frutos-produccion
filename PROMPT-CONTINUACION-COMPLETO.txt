@@ -1,0 +1,530 @@
+# PROMPT DE CONTINUACIÓN - PLATAFORMA FRUTOS
+# ============================================
+# Copia este archivo completo en una nueva conversación para continuar el desarrollo
+
+## CONTEXTO GENERAL
+
+Estás trabajando en **Plataforma Frutos**, una aplicación Next.js 14 con App Router para gestión de entrenamientos de transformación personal. La plataforma maneja inscripciones, tickets, llamadas de seguimiento, y múltiples roles de usuario.
+
+---
+
+## STACK TECNOLÓGICO
+
+- **Framework**: Next.js 14 (App Router)
+- **Base de datos**: PostgreSQL con Prisma ORM
+- **Autenticación**: NextAuth.js
+- **UI**: TailwindCSS, Framer Motion, Lucide Icons
+- **Deployment**: Vercel (rama main)
+- **Repositorio**: `aldo-rgb/plataforma-frutos-produccion`
+- **Directorio local**: `/Users/aldokmps/plataforma-frutos-FINAL`
+
+---
+
+## ESTRUCTURA DE ROLES
+
+```
+PARTICIPANTE - Usuario inscrito en entrenamientos
+GAMECHANGER - Líder de grupo pequeño (squad), hace llamadas de seguimiento
+MENTOR - Supervisa grupos y participantes
+COORDINATOR_BASIC - Coordina nivel básico
+COORDINATOR_ADVANCED - Coordina nivel avanzado
+TRAINER - Entrenador principal
+SCHOOL_ADMIN - Administrador de escuela
+DIRECTOR - Director de organización
+```
+
+---
+
+## NIVELES DE ENTRENAMIENTO
+
+```
+BASIC - Entrenamiento básico (4 días)
+ADVANCED - Entrenamiento avanzado (3 días)
+PL - Programa de Liderato (3 fines de semana)
+```
+
+---
+
+## MODELOS PRINCIPALES DE PRISMA
+
+### Usuario
+```prisma
+model Usuario {
+  id              Int
+  email           String @unique
+  nombre          String
+  telefono        String?
+  rol             Rol
+  organizationId  Int
+  referralCode    String? @unique
+  isActive        Boolean
+  profileImage    String?
+  // ... relaciones
+}
+```
+
+### Vision (Cohorte/Generación)
+```prisma
+model Vision {
+  id                Int
+  nombre            String
+  organizationId    Int
+  startDate         DateTime  // Inicio básico
+  endDate           DateTime  // Fin básico
+  advancedStartDate DateTime? // Inicio avanzado
+  advancedEndDate   DateTime? // Fin avanzado
+  plWeekend1StartDate/EndDate // PL fin de semana 1
+  plWeekend2StartDate/EndDate // PL fin de semana 2
+  plWeekend3StartDate/EndDate // PL fin de semana 3 (graduación)
+  enabledLevels     VisionLevel[] // ['BASIC', 'ADVANCED', 'PL']
+}
+```
+
+### vision_enrollments
+```prisma
+model vision_enrollments {
+  id               Int
+  userId           Int
+  visionId         Int
+  coordinatorId    Int
+  level            VisionLevel  // BASIC, ADVANCED, PL
+  enrollmentStatus String       // ENROLLED, ACTIVE, PENDING, DROPPED
+  attendanceStatus String?
+  paymentStatus    String?
+  enrolledAt       DateTime
+  
+  // Relaciones (nombres largos de Prisma)
+  Usuario_vision_enrollments_userIdToUsuario        Usuario
+  Usuario_vision_enrollments_coordinatorIdToUsuario Usuario
+  Vision                                            Vision
+}
+```
+
+### Ticket
+```prisma
+model Ticket {
+  id             String @id @default(uuid())
+  ownerId        Int
+  visionId       Int
+  level          VisionLevel  // BASIC, ADVANCED, PL
+  status         TicketStatus // ACTIVE, PENDING_PAYMENT, TRANSFERRED, EXPIRED, CANCELLED
+  paymentStatus  TicketPaymentStatus // PAID, PARTIAL, PENDING, UNPAID, GIFT
+  costAtPurchase Decimal
+  amountPaid     Decimal
+  type           TicketType   // STANDARD, PROMO, GIFT
+  
+  // Relaciones (minúsculas)
+  owner          Usuario @relation("TicketOwner")
+  vision         Vision
+  organization   Organization
+}
+```
+
+### SchoolProduct
+```prisma
+model SchoolProduct {
+  id            String
+  organizationId Int
+  visionId      Int
+  name          String
+  levelType     ProductLevelType // BASIC, ADVANCED, PL
+  basePrice     Decimal
+  promoPrice    Decimal?
+  startDate     DateTime
+  endDate       DateTime
+  isActive      Boolean
+}
+```
+
+### GCCallSlot / GCCallLog
+```prisma
+model GCCallSlot {
+  id            String
+  availabilityId String
+  participantId Int
+  scheduledDate DateTime
+  scheduledTime String
+  status        CallSlotStatus // SCHEDULED, COMPLETED, NO_SHOW, RESCHEDULED
+}
+
+model GCCallLog {
+  id            String
+  gameChangerId Int
+  participantId Int
+  trainingType  TrainingType // BASIC, ADVANCED
+  trainingDay   Int
+  callStatus    CallStatus // ANSWERED, NO_ANSWER, BUSY, etc
+  visionId      Int
+}
+```
+
+### SmallGroup (Squad)
+```prisma
+model SmallGroup {
+  id             String
+  name           String
+  visionId       Int
+  leaderId       Int  // GameChanger
+  level          VisionLevel
+  organizationId Int
+}
+```
+
+---
+
+## FUNCIONALIDADES COMPLETADAS ✅
+
+### 1. Sistema de Tickets
+- **Creación de tickets** al inscribirse
+- **Pago de tickets** con códigos de referencia (GiftCodes)
+- **Deadline de pago para PL**: 12:00 PM del día de advancedStartDate
+- **Estados**: PENDING_PAYMENT → ACTIVE (cuando se paga)
+- **Wallet visual** con QuantumCredential (tarjetas holográficas)
+
+**Archivos clave:**
+```
+/app/api/tickets/[ticketId]/route.ts - GET ticket individual
+/app/api/tickets/[ticketId]/pay/route.ts - POST pagar ticket
+/app/api/tickets/my-tickets/route.ts - GET tickets del usuario
+/app/api/tickets/pending-payment/route.ts - GET tickets pendientes
+/app/dashboard/checkout-ticket/page.tsx - UI de pago
+/app/dashboard/my-tickets/components/tickets/QuantumCredential.tsx - Tarjeta visual
+```
+
+### 2. Dashboard Coordinador Avanzado
+- Widget simplificado mostrando solo "Llamadas Pendientes"
+- Muestra llamadas de usuarios ADVANCED pagados e inscritos
+
+**Archivos clave:**
+```
+/app/dashboard/coordinador-avanzado/page.tsx
+/app/api/gc-calls/today-stats/route.ts - Estadísticas filtradas por nivel
+```
+
+### 3. Dashboard Coordinador Básico
+- Muestra inscripciones correctas contando vision_enrollments
+- TrainingStatsWidgets con conteo real
+
+**Archivos clave:**
+```
+/app/dashboard/coordinador-basico/page.tsx
+/app/api/coordinador/training-stats/route.ts
+/components/dashboard/TrainingStatsWidgets.tsx
+```
+
+### 4. Sistema El Cruce (Check-in de llegada)
+- Escaneo de gafetes con QR
+- Registro de asistencia (CheckInRecord)
+- Historial de check-ins
+- Top File modal con información del participante
+
+**Archivos clave:**
+```
+/app/api/el-cruce/scan/route.ts
+/app/api/el-cruce/session/route.ts
+/app/api/el-cruce/historial/route.ts
+/app/api/el-cruce/participantes-pendientes/route.ts
+/app/api/el-cruce/top-file/[userId]/route.ts
+/app/el-cruce/[sessionId]/page.tsx
+/components/el-cruce/ElCruceAccessWidget.tsx
+/components/el-cruce/TopFileModal.tsx
+```
+
+### 5. Sistema de Llamadas GC
+- GameChangers llaman a participantes de su squad
+- Slots de disponibilidad programables
+- Registro de intentos y resultados
+- Monitor para coordinadores
+
+**Archivos clave:**
+```
+/app/api/gc-calls/today-stats/route.ts
+/app/api/coordinator/gc-calls-monitor/route.ts
+/components/dashboard/GCCallsMonitorWidget.tsx
+```
+
+### 6. Inscripción a Avanzado (Upgrade)
+- Desde básico, usuario puede pre-registrarse a avanzado
+- Modal de pago con código de referencia
+- Creación de ticket + enrollment
+
+**Archivos clave:**
+```
+/app/dashboard/upgrade-advanced/page.tsx
+/app/api/me/upgrade-advanced-info/route.ts
+/app/api/me/enroll-advanced/route.ts
+/components/payment/UpgradePaymentModal.tsx
+```
+
+### 7. School Admin - Gestión de Visiones
+- Ver participantes por nivel (BASIC, ADVANCED, PL)
+- Ver enrollments desde vision_enrollments
+- Asignar staff (coordinadores, trainers)
+- Generar gafetes PDF
+
+**Archivos clave:**
+```
+/app/dashboard/school-admin/vision/[id]/manage/page.tsx
+/app/api/school-admin/visiones/[id]/route.ts
+/app/api/school-admin/visiones/[id]/advanced-enrollments/route.ts
+/app/api/school-admin/visiones/[id]/basic-enrollments/route.ts
+/app/api/school-admin/visiones/[id]/pl-enrollments/route.ts
+/app/api/school-admin/visiones/[id]/badges-pdf/route.ts
+```
+
+### 8. Alertas Médicas
+- Formulario médico con detección de alertas
+- Widget para coordinadores mostrando alertas pendientes
+- Revisión de alertas por staff
+
+**Archivos clave:**
+```
+/app/api/medical-alerts/route.ts
+/app/api/coordinator/medical-alerts/route.ts
+/components/dashboard/MedicalAlertsWidget.tsx
+```
+
+### 9. Sistema de Tareas
+- Zona de ejecución diaria para participantes
+- Misiones con fechas de inicio/fin
+- Evidencias con revisión
+
+**Archivos clave:**
+```
+/app/api/tareas/zona-ejecucion/route.ts
+/app/api/participante/mis-tareas/route.ts
+/app/api/participante/mision/[id]/route.ts
+/components/dashboard/ZonaEjecucionDiaria.tsx
+```
+
+---
+
+## LÓGICAS IMPORTANTES
+
+### Deadline de Pago PL
+```typescript
+// El deadline es 12:00 PM del día de advancedStartDate
+function isPaymentDeadlinePassed(advancedStartDate: string | null): boolean {
+  if (!advancedStartDate) return false;
+  const deadline = new Date(advancedStartDate);
+  deadline.setHours(12, 0, 0, 0);
+  return new Date() >= deadline;
+}
+```
+
+### Filtrar Llamadas ADVANCED (usuarios pagados)
+```typescript
+// 1. Obtener usuarios con tickets ADVANCED pagados
+const paidTickets = await prisma.ticket.findMany({
+  where: {
+    level: 'ADVANCED',
+    status: 'ACTIVE',
+    paymentStatus: 'PAID',
+    visionId: { in: visionIds }
+  },
+  select: { ownerId: true }
+});
+
+// 2. Filtrar enrollments de esos usuarios
+const enrollments = await prisma.vision_enrollments.findMany({
+  where: {
+    level: 'ADVANCED',
+    enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] },
+    userId: { in: paidTickets.map(t => t.ownerId) }
+  }
+});
+```
+
+### Conteo de Inscripciones
+```typescript
+// Contar vision_enrollments, NO VisionParticipante
+const count = await prisma.vision_enrollments.count({
+  where: {
+    visionId,
+    level: 'BASIC', // o 'ADVANCED'
+    enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+  }
+});
+```
+
+---
+
+## CONVENCIONES DE CÓDIGO - MUY IMPORTANTE
+
+### Prisma - Nombres de campos (CRÍTICO)
+```typescript
+// ✅ CORRECTO - usar minúsculas para relaciones
+ticket.vision
+ticket.organization
+enrollment.Usuario_vision_enrollments_userIdToUsuario
+
+// ❌ INCORRECTO - NO usar mayúsculas
+ticket.Vision  // Error: Property 'Vision' does not exist
+ticket.Organization  // Error: Property 'Organization' does not exist
+```
+
+### API Routes con params dinámicos (Next.js 14)
+```typescript
+// Los params son Promise en Next.js 14
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const resolvedParams = await params;
+  const id = resolvedParams.id;
+  // ...
+}
+```
+
+### Fechas en formato español México
+```typescript
+date.toLocaleDateString('es-MX', {
+  weekday: 'long',
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric'
+});
+```
+
+### Modelo vision_enrollments (plural)
+```typescript
+// ✅ CORRECTO
+prisma.vision_enrollments.findMany(...)
+
+// ❌ INCORRECTO
+prisma.vision_enrollment.findMany(...) // No existe
+```
+
+---
+
+## ESTADO ACTUAL DE LA BASE DE DATOS
+
+```
+Organizaciones:
+- Org 1: Master organization
+- Org 2: Escuela activa con visiones
+
+Visiones activas:
+- Vision 1: 4 enrollments BASIC
+- Vision 2: 15 enrollments BASIC, 5 enrollments ADVANCED, 3 enrollments PL
+- Vision 3: 0 enrollments (nueva, sin participantes)
+
+Tickets ADVANCED pagados: 4 (todos en Vision 2)
+
+SchoolProducts activos: 6
+- Vision 2: BASIC, ADVANCED
+- Vision 3: BASIC, ADVANCED, PL
+```
+
+---
+
+## PENDIENTES POR DESARROLLAR
+
+1. **Sistema de Pagos Completo**
+   - Integración con pasarela de pagos (Stripe/PayPal)
+   - Pagos parciales
+   - Recibos/facturas
+
+2. **Dashboard Trainer**
+   - Vista de entrenamientos asignados
+   - Biblioteca de contenido
+   - Lanzador de contenido en vivo
+
+3. **Sistema de Notificaciones**
+   - Push notifications
+   - Emails automáticos
+   - Recordatorios de llamadas
+
+4. **Reportes y Analytics**
+   - Dashboard con métricas
+   - Exportación de datos
+   - Gráficas de progreso
+
+5. **App Móvil PWA**
+   - Service workers
+   - Offline support
+   - Push notifications nativas
+
+---
+
+## COMANDOS ÚTILES
+
+```bash
+# Desarrollo
+cd /Users/aldokmps/plataforma-frutos-FINAL
+npm run dev
+
+# Ver errores de TypeScript
+npx tsc --noEmit
+
+# Generar cliente Prisma
+npx prisma generate
+
+# Push schema a DB
+npx prisma db push
+
+# Deploy (automático al push a main)
+git add -A && git commit -m "mensaje" && git push origin main
+```
+
+---
+
+## FORMATO DE RESPUESTAS ESPERADO
+
+Cuando pidas cambios, respondo en formato **Buscar y Reemplazar Exacto**:
+
+```
+📍 ARCHIVO: /ruta/del/archivo.tsx
+
+🔍 BUSCAR (bloque exacto a reemplazar):
+[código exacto actual con 3-5 líneas de contexto arriba y abajo]
+
+✅ REEMPLAZAR CON:
+[código nuevo completo]
+```
+
+---
+
+Si es código NUEVO a insertar:
+```
+📍 ARCHIVO: /ruta/del/archivo.tsx
+
+⬆️ LÍNEA ANTERIOR (buscar esta línea): 
+`contenido exacto de la línea de arriba`
+
+⬇️ LÍNEA SIGUIENTE (debe quedar debajo): 
+`contenido exacto de la línea de abajo`
+
+➕ INSERTAR ENTRE ELLAS:
+[código nuevo a insertar]
+```
+
+---
+
+## ERRORES COMUNES Y SOLUCIONES
+
+### Error: Property 'Vision' does not exist on type
+**Causa**: Usando mayúscula en relación de Prisma
+**Solución**: Usar `vision` en minúscula
+
+### Error: Property 'vision_enrollment' does not exist
+**Causa**: Usando singular en lugar de plural
+**Solución**: Usar `vision_enrollments` (plural)
+
+### Error: params.id is a Promise
+**Causa**: Next.js 14 cambió params a Promise
+**Solución**: `const { id } = await params;`
+
+---
+
+## INSTRUCCIONES PARA CONTINUAR
+
+1. Copia este archivo completo en una nueva conversación
+2. Adjunta los archivos relevantes al problema que quieras resolver
+3. Describe qué funcionalidad necesitas o qué error tienes
+4. Recibirás respuestas en formato Buscar/Reemplazar exacto
+
+**Repositorio**: `aldo-rgb/plataforma-frutos-produccion`
+**Rama**: `main`
+**Deploy**: Vercel (automático al push)
+**Directorio**: `/Users/aldokmps/plataforma-frutos-FINAL`

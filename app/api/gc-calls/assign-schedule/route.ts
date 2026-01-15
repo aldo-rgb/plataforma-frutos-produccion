@@ -146,6 +146,7 @@ export async function POST(request: Request) {
           endTime: endTime,
           bookedAt: new Date(),
           assignedByGC: true,
+          callType: 'TRAINING',
         }
       });
     } else {
@@ -160,6 +161,7 @@ export async function POST(request: Request) {
           endTime: endTime,
           bookedAt: new Date(),
           assignedByGC: true,
+          callType: 'TRAINING',
         }
       });
     }

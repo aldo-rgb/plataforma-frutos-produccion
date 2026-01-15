@@ -276,7 +276,7 @@ export default function CoordinadorDashboard() {
           <MedicalAlertsWidget />
         </div>
 
-        {/* Widget Monitor de Llamadas GC */}
+        {/* Widget Monitor de Llamadas */}
         <div className="mt-8">
           <GCCallsMonitorWidget />
         </div>

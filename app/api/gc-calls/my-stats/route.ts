@@ -89,12 +89,30 @@ export async function GET() {
       }
 
       // Determinar si el átomo debe mostrarse en el dashboard
-      // Se muestra solo si estamos dentro del período de entrenamiento
-      // o hasta 7 días después de que termine (para cerrar pendientes)
+      // Para BASIC: se muestra hasta que inicie el Avanzado (o 14 días después si no hay Avanzado)
+      // Para ADVANCED: se muestra hasta 14 días después de que termine
       let showInDashboard = true;
-      if (currentDay !== null && currentDay > totalDays + 7) {
-        // Más de 7 días después del entrenamiento - ocultar del dashboard
-        showInDashboard = false;
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      
+      if (level === 'BASIC') {
+        // Si hay fecha de inicio de Avanzado, mostrar hasta que inicie
+        if (vision?.advancedStartDate) {
+          const advStartDate = new Date(vision.advancedStartDate);
+          advStartDate.setHours(0, 0, 0, 0);
+          if (now >= advStartDate) {
+            // El Avanzado ya inició - ocultar widget de Básico
+            showInDashboard = false;
+          }
+        } else if (currentDay !== null && currentDay > totalDays + 14) {
+          // No hay Avanzado programado - usar lógica de 14 días después
+          showInDashboard = false;
+        }
+      } else {
+        // ADVANCED: ocultar 14 días después de que termine
+        if (currentDay !== null && currentDay > totalDays + 14) {
+          showInDashboard = false;
+        }
       }
 
       squadTrainingInfo[squad.id] = {

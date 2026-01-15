@@ -1580,6 +1580,17 @@ model SchoolProduct {
   createdBy                  Int
   videoUrl                   String?
   transferDeadline           DateTime?
+  // Campos de control de entrenamiento
+  registrationOpenDate       DateTime?                   // Fecha cuando se abre el registro
+  trainingStartTime          String?                     @default("09:00") // Hora inicio (BASIC: 09:00, ADVANCED: 15:00)
+  // Horarios específicos para cada fin de semana de PL
+  plWeekend1StartTime        String?                     @default("18:00") // 6:00 PM - 1er fin de semana
+  plWeekend2StartTime        String?                     @default("18:00") // 6:00 PM - 2do fin de semana  
+  plWeekend3StartTime        String?                     @default("13:00") // 1:00 PM - 3er fin de semana (Graduación)
+  trainingStatus             TrainingStatus              @default(PENDING)
+  finishedAt                 DateTime?                   // Cuando el TRAINER finalizó
+  finishedBy                 Int?                        // ID del TRAINER que finalizó
+  registrationNotifiedAt     DateTime?                   // Cuando se envió notificación de apertura
   PreRegistrationsAsCurrent  AdvancedPreRegistration[]   @relation("CurrentProduct")
   PreRegistrationsAsTarget   AdvancedPreRegistration[]   @relation("TargetProduct")
   CheckInRecord              CheckInRecord[]
@@ -1590,10 +1601,17 @@ model SchoolProduct {
   Usuario                    Usuario                     @relation(fields: [createdBy], references: [id])
   Organization               Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   Trainer                    Usuario?                    @relation("ProductTrainer", fields: [trainerId], references: [id])
+  FinishedByUser             Usuario?                    @relation("ProductFinishedBy", fields: [finishedBy], references: [id])
   Vision                     Vision?                     @relation(fields: [visionId], references: [id], onDelete: Cascade)
   SmallGroups                SmallGroup[]
   TrainerMissions            TrainerMission[]            @relation("MissionProduct")
   UserLicense                UserLicense[]
+  
+  // Relaciones de Encuestas de Cierre
+  TrainerSurveys             TrainerSurvey[]             @relation("TrainerSurveyProduct")
+  GameChangerSurveys         GameChangerSurvey[]         @relation("GCSurveyProduct")
+  GameChangerLocks           GameChangerLockStatus[]     @relation("GCLockProduct")
+  DirectorAudit              DirectorAudit?              @relation("DirectorAuditProduct")
 
   @@index([isActive])
   @@index([levelType])
@@ -1602,6 +1620,7 @@ model SchoolProduct {
   @@index([visionId])
   @@index([coordinatorId])
   @@index([trainerId])
+  @@index([trainingStatus])
 }
 
 model ProductAttendance {
@@ -2156,6 +2175,7 @@ model Usuario {
   ProductCoordinator                                                     SchoolProduct[]                 @relation("ProductCoordinator")
   SchoolProduct                                                          SchoolProduct[]
   ProductTrainer                                                         SchoolProduct[]                 @relation("ProductTrainer")
+  ProductFinishedBy                                                      SchoolProduct[]                 @relation("ProductFinishedBy")
   ServiceLadderProgress                                                  ServiceLadderProgress?
   SmallGroupsLed                                                         SmallGroup[]                    @relation("SmallGroupLeader")
   SmallGroupMembersMoved                                                 SmallGroupMember[]              @relation("SmallGroupMemberMovedBy")
@@ -2210,6 +2230,12 @@ model Usuario {
   vision_enrollments_vision_enrollments_userIdToUsuario                  vision_enrollments[]            @relation("vision_enrollments_userIdToUsuario")
   weekly_payout_summary_weekly_payout_summary_approvedByToUsuario        weekly_payout_summary[]         @relation("weekly_payout_summary_approvedByToUsuario")
   weekly_payout_summary_weekly_payout_summary_generatedByToUsuario       weekly_payout_summary[]         @relation("weekly_payout_summary_generatedByToUsuario")
+  
+  // Relaciones de Encuestas de Cierre de Entrenamiento
+  TrainerSurveys                                                         TrainerSurvey[]                 @relation("TrainerSurveys")
+  GameChangerSurveys                                                     GameChangerSurvey[]             @relation("GameChangerSurveys")
+  GameChangerLocks                                                       GameChangerLockStatus[]         @relation("GameChangerLocks")
+  DirectorAudits                                                         DirectorAudit[]                 @relation("DirectorAudits")
 
   @@index([communityOrganizationId])
 }
@@ -3004,6 +3030,7 @@ model GCCallSlot {
   scheduledTime   String
   endTime         String
   status          CallSlotStatus @default(SCHEDULED)
+  callType        GCCallType     @default(TRAINING)
   bookedAt        DateTime       @default(now())
   confirmedAt     DateTime?
   cancelledAt     DateTime?
@@ -3552,6 +3579,13 @@ enum ProductType {
   EXTRA_WORKSHOP
 }
 
+enum TrainingStatus {
+  PENDING          // Entrenamiento creado, registro aún no abre
+  REGISTRATION_OPEN // Registro abierto, aceptando inscripciones
+  IN_PROGRESS      // Entrenamiento en curso
+  COMPLETED        // Entrenamiento finalizado
+}
+
 enum Currency {
   MXN
   USD
@@ -3897,6 +3931,11 @@ enum CallSlotStatus {
   RESCHEDULED
 }
 
+enum GCCallType {
+  TRAINING      // Llamadas durante el entrenamiento
+  POST_TRAINING // Llamadas post-entrenamiento (seguimiento)
+}
+
 enum CallStatus {
   ANSWERED
   NO_ANSWER
@@ -3966,4 +4005,137 @@ enum MissionStatus {
   ACTIVE
   EXPIRED
   COMPLETED
+}
+
+// ============================================
+// SISTEMA DE CIERRE DE ENTRENAMIENTO (SURVEYS)
+// ============================================
+
+// Encuesta del Trainer al finalizar entrenamiento
+model TrainerSurvey {
+  id                Int      @id @default(autoincrement())
+  productId         Int
+  trainerId         Int
+  
+  // Valoraciones 1-5 estrellas
+  salonAmbiente     Int      // 1-5
+  instalaciones     Int      // 1-5
+  staff             Int      // 1-5
+  
+  // Observaciones
+  audioUrl          String?  // URL del audio grabado
+  observaciones     String?  @db.Text
+  
+  createdAt         DateTime @default(now())
+  
+  Product           SchoolProduct @relation("TrainerSurveyProduct", fields: [productId], references: [id])
+  Trainer           Usuario       @relation("TrainerSurveys", fields: [trainerId], references: [id])
+  
+  @@unique([productId, trainerId])
+  @@index([productId])
+  @@index([trainerId])
+}
+
+// Encuesta del Game Changer al finalizar entrenamiento
+model GameChangerSurvey {
+  id                  Int      @id @default(autoincrement())
+  productId           Int
+  gameChangerId       Int
+  
+  // Sección A: Instalaciones
+  aireAcondicionado   String   // 'CONGELADO' | 'PERFECTO' | 'CALOR'
+  limpiezaBanos       Int      // 0-100 slider
+  coffeBreak          String   // 'A_TIEMPO' | 'TARDE_FALTANTE'
+  
+  // Sección B: Evaluación Humana
+  entrenadorEstrellas Int      // 1-5
+  entrenadorInspiro   Boolean  // Toggle Sí/No
+  coordinadorRespaldo Int      // 0-100 slider (Abandonado a Totalmente apoyado)
+  
+  createdAt           DateTime @default(now())
+  
+  Product             SchoolProduct @relation("GCSurveyProduct", fields: [productId], references: [id])
+  GameChanger         Usuario       @relation("GameChangerSurveys", fields: [gameChangerId], references: [id])
+  
+  @@unique([productId, gameChangerId])
+  @@index([productId])
+  @@index([gameChangerId])
+}
+
+// Estado de bloqueo del Game Changer
+model GameChangerLockStatus {
+  id              Int       @id @default(autoincrement())
+  productId       Int
+  gameChangerId   Int
+  
+  isLocked        Boolean   @default(true)
+  unlockedAt      DateTime?
+  surveyCompleted Boolean   @default(false)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  Product         SchoolProduct @relation("GCLockProduct", fields: [productId], references: [id])
+  GameChanger     Usuario       @relation("GameChangerLocks", fields: [gameChangerId], references: [id])
+  
+  @@unique([productId, gameChangerId])
+  @@index([productId])
+  @@index([gameChangerId])
+}
+
+// Auditoría del Director
+model DirectorAudit {
+  id                    Int      @id @default(autoincrement())
+  productId             Int      @unique
+  directorId            Int
+  
+  // Tarjeta 1: Momentos de Verdad (Toggles)
+  auditRegistro         Boolean?
+  auditRegistroNota     String?
+  auditConcentracion    Boolean?
+  auditConcentracionNota String?
+  auditBreakLargo       Boolean?
+  auditBreakLargoNota   String?
+  auditEnrolamiento     Boolean?
+  auditEnrolamientoNota String?
+  auditSalaActiva       Boolean?
+  auditSalaActivaNota   String?
+  auditBreakCorto       Boolean?
+  auditBreakCortoNota   String?
+  
+  // Tarjeta 2: Excelencia del Salón (3 estados: EXCELENTE, ACEPTABLE, FALLA)
+  limpiezaGeneral       String?  // 'EXCELENTE' | 'ACEPTABLE' | 'FALLA'
+  equipoSonido          String?
+  visualesPantalla      String?
+  materialesRotafolio   String?
+  insumosBaul           String?
+  cumplimientoTareas    String?
+  mesaControl           String?
+  
+  // Tarjeta 3: Excelencia de Instalaciones
+  climaAire             String?
+  banosLimpieza         String?
+  sillasEstado          String?
+  pinturaParedes        String?
+  brandingVinilos       String?
+  
+  // Tarjeta 4: Imagen Profesional (1-10 o 3 estados)
+  liderazgoCapitanias   Int?     // 1-10
+  disciplinaPuntualidad String?  // 3 estados
+  imagenStaff           String?  // 3 estados
+  imagenCoordinador     String?  // 3 estados
+  contextoAlineamiento  String?  // 3 estados
+  
+  // Cierre
+  observaciones         String?  @db.Text
+  
+  certifiedAt           DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  Product               SchoolProduct @relation("DirectorAuditProduct", fields: [productId], references: [id])
+  Director              Usuario       @relation("DirectorAudits", fields: [directorId], references: [id])
+  
+  @@index([productId])
+  @@index([directorId])
 }

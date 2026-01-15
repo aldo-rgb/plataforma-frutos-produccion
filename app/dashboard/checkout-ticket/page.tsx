@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
@@ -88,13 +88,7 @@ function CheckoutTicketContent() {
   const [validatingCode, setValidatingCode] = useState(false);
   const [appliedCode, setAppliedCode] = useState<GiftCodeData | null>(null);
 
-  useEffect(() => {
-    if (ticketId) {
-      fetchTicketDetails();
-    }
-  }, [ticketId]);
-
-  const fetchTicketDetails = async () => {
+  const fetchTicketDetails = useCallback(async () => {
     try {
       const res = await fetch(`/api/tickets/${ticketId}`);
       const data = await res.json();
@@ -116,7 +110,21 @@ function CheckoutTicketContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [ticketId]);
+
+  // Verificar autenticación
+  useEffect(() => {
+    if (session === null) {
+      router.push('/login');
+    }
+  }, [session, router]);
+
+  // Cargar detalles del ticket
+  useEffect(() => {
+    if (ticketId && session) {
+      fetchTicketDetails();
+    }
+  }, [ticketId, session, fetchTicketDetails]);
 
   // Check if deadline is approaching (for PL tickets)
   const isDeadlineApproaching = ticket?.level === 'PL' && ticket?.vision?.advancedStartDate;
@@ -221,6 +229,15 @@ function CheckoutTicketContent() {
     };
     return labels[level] || level;
   };
+
+  // Mostrar loading mientras se verifica la sesión
+  if (session === undefined) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#0d1117] via-[#161b22] to-[#0d1117] flex items-center justify-center">
+        <Loader2 className="w-12 h-12 text-orange-500 animate-spin" />
+      </div>
+    );
+  }
 
   if (loading) {
     return (

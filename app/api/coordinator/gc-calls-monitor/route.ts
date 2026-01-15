@@ -81,11 +81,52 @@ export async function GET(request: Request) {
       filter,
     });
 
-    // Obtener todos los átomos (filtrados por organización si no es admin)
+    // Obtener visiones con entrenamientos activos (no terminados)
+    // Filtrar también por organización si no es admin
+    const productFilter: any = {
+      isActive: true,
+      trainingStatus: { not: 'COMPLETED' }
+    };
+    
+    // Si es TRAINER, filtrar solo por los productos donde él es trainer
+    if (coordinator.rol === 'TRAINER') {
+      productFilter.trainerId = coordinator.id;
+    }
+    // Si no es admin, filtrar por organización
+    else if (!isAdmin && coordinator.organizationId) {
+      productFilter.organizationId = coordinator.organizationId;
+    }
+
+    const visionesActivas = await prisma.schoolProduct.findMany({
+      where: productFilter,
+      select: { visionId: true }
+    });
+    const visionIdsSet = new Set(visionesActivas.filter(v => v.visionId).map(v => v.visionId!));
+    const visionIdsActivas = Array.from(visionIdsSet);
+
+    console.log('📊 Visiones activas encontradas:', visionIdsActivas);
+
+    // Si no hay visiones activas, retornar vacío
+    if (visionIdsActivas.length === 0) {
+      return NextResponse.json({
+        success: true,
+        atoms: [],
+        summary: {
+          totalAtoms: 0,
+          totalCalls: 0,
+          completedCalls: 0,
+          missedCalls: 0,
+          avgRating: 0,
+        },
+      });
+    }
+
+    // Obtener solo átomos de visiones con entrenamientos activos
     const squads = await prisma.smallGroup.findMany({
       where: {
         ...organizationFilter,
         isActive: true,
+        visionId: { in: visionIdsActivas }
       },
       include: {
         leader: {
@@ -105,43 +146,59 @@ export async function GET(request: Request) {
 
     console.log('📊 Squads encontrados:', squads.length);
 
+    // Si no hay squads, retornar vacío
+    if (squads.length === 0) {
+      return NextResponse.json({
+        success: true,
+        atoms: [],
+        summary: {
+          totalAtoms: 0,
+          totalCalls: 0,
+          completedCalls: 0,
+          missedCalls: 0,
+          avgRating: 0,
+        },
+      });
+    }
+
     // Para cada átomo, obtener los intentos de llamada
     const atomsWithAttempts = await Promise.all(
       squads.map(async (squad) => {
-        const attempts = await (prisma as any).gCCallAttempt.findMany({
-          where: {
-            squadId: squad.id,
-            ...dateFilter,
-          },
-          include: {
-            participant: {
-              select: {
-                id: true,
-                nombre: true,
-                imagen: true,
+        try {
+          const attempts = await (prisma as any).gCCallAttempt.findMany({
+            where: {
+              squadId: squad.id,
+              ...dateFilter,
+            },
+            include: {
+              participant: {
+                select: {
+                  id: true,
+                  nombre: true,
+                  imagen: true,
+                },
               },
             },
-          },
-          orderBy: { attemptedAt: 'desc' },
-          take: 20, // Limitar para no sobrecargar
-        });
+            orderBy: { attemptedAt: 'desc' },
+            take: 20, // Limitar para no sobrecargar
+          });
 
-        // Calcular estadísticas
-        const completedCalls = attempts.filter((a: any) => a.completed).length;
-        const missedCalls = attempts.filter((a: any) => !a.completed).length;
-        const ratingsWithValue = attempts.filter((a: any) => a.potentialRating);
-        const avgRating = ratingsWithValue.length > 0
-          ? ratingsWithValue.reduce((sum: number, a: any) => sum + (a.potentialRating || 0), 0) / ratingsWithValue.length
-          : 0;
+          // Calcular estadísticas
+          const completedCalls = attempts.filter((a: any) => a.completed).length;
+          const missedCalls = attempts.filter((a: any) => !a.completed).length;
+          const ratingsWithValue = attempts.filter((a: any) => a.potentialRating);
+          const avgRating = ratingsWithValue.length > 0
+            ? ratingsWithValue.reduce((sum: number, a: any) => sum + (a.potentialRating || 0), 0) / ratingsWithValue.length
+            : 0;
 
-        return {
-          id: squad.id,
-          name: squad.name,
-          level: squad.level,
-          gameChanger: squad.leader,
-          membersCount: squad.members.length,
-          attempts: attempts.map((a: any) => ({
-            id: a.id,
+          return {
+            id: squad.id,
+            name: squad.name,
+            level: squad.level,
+            gameChanger: squad.leader,
+            membersCount: squad.members.length,
+            attempts: attempts.map((a: any) => ({
+              id: a.id,
             participantId: a.participantId,
             completed: a.completed,
             potentialRating: a.potentialRating,
@@ -158,6 +215,23 @@ export async function GET(request: Request) {
             avgRating,
           },
         };
+        } catch (err) {
+          console.error(`Error fetching attempts for squad ${squad.id}:`, err);
+          return {
+            id: squad.id,
+            name: squad.name,
+            level: squad.level,
+            gameChanger: squad.leader,
+            membersCount: squad.members.length,
+            attempts: [],
+            stats: {
+              totalCalls: 0,
+              completedCalls: 0,
+              missedCalls: 0,
+              avgRating: 0,
+            },
+          };
+        }
       })
     );
 

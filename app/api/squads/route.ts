@@ -221,6 +221,40 @@ export async function GET(request: Request) {
     // Si es GC, solo ver sus grupos
     if (user.rol === 'GAMECHANGER' || user.rol === 'TRAINER') {
       where.leaderId = user.id;
+      
+      // Para GC: obtener visiones donde tiene asignación y el entrenamiento está activo
+      // O el entrenamiento terminó hace menos de 15 días (para completar llamadas de seguimiento)
+      const fifteenDaysAgo = new Date();
+      fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+      
+      // Buscar productos activos o terminados hace menos de 15 días
+      const validProducts = await prisma.schoolProduct.findMany({
+        where: {
+          OR: [
+            // Productos activos (no completados)
+            { trainingStatus: { not: 'COMPLETED' } },
+            // Productos completados en los últimos 15 días
+            {
+              trainingStatus: 'COMPLETED',
+              updatedAt: { gte: fifteenDaysAgo }
+            }
+          ]
+        },
+        select: { visionId: true }
+      });
+      
+      const validVisionIds = [...new Set(validProducts.filter(p => p.visionId).map(p => p.visionId!))];
+      
+      if (validVisionIds.length > 0) {
+        where.visionId = { in: validVisionIds };
+      } else {
+        // Si no hay visiones válidas, retornar vacío
+        return NextResponse.json({
+          success: true,
+          squads: [],
+          total: 0,
+        });
+      }
     } else {
       // Para otros roles, filtrar por organización
       where.organizationId = user.organizationId;
@@ -250,7 +284,10 @@ export async function GET(request: Request) {
             where: { isActive: true },
             include: {
               user: {
-                select: { id: true, nombre: true, imagen: true, email: true },
+                select: { id: true, nombre: true, imagen: true, email: true, telefono: true },
+              },
+              enrollment: {
+                select: { id: true, attendanceStatus: true, level: true },
               },
             },
             orderBy: { joinedAt: 'asc' },
@@ -262,6 +299,47 @@ export async function GET(request: Request) {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    // Si se incluyen miembros, obtener la próxima llamada de cada participante
+    let nextCallsByParticipant: Record<number, { scheduledDate: Date; scheduledTime: string } | null> = {};
+    
+    if (includeMembers) {
+      const allParticipantIds = squads.flatMap(squad => 
+        (squad.members || []).map(m => m.userId)
+      );
+      
+      if (allParticipantIds.length > 0) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const upcomingCalls = await prisma.gCCallSlot.findMany({
+          where: {
+            participantId: { in: allParticipantIds },
+            scheduledDate: { gte: today },
+            status: { in: ['SCHEDULED', 'CONFIRMED'] }
+          },
+          select: {
+            participantId: true,
+            scheduledDate: true,
+            scheduledTime: true
+          },
+          orderBy: [
+            { scheduledDate: 'asc' },
+            { scheduledTime: 'asc' }
+          ]
+        });
+        
+        // Agrupar por participante y tomar solo la próxima llamada
+        for (const call of upcomingCalls) {
+          if (!nextCallsByParticipant[call.participantId]) {
+            nextCallsByParticipant[call.participantId] = {
+              scheduledDate: call.scheduledDate,
+              scheduledTime: call.scheduledTime
+            };
+          }
+        }
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -276,7 +354,10 @@ export async function GET(request: Request) {
         product: squad.product,
         membersCount: squad._count.members,
         isFull: squad._count.members >= squad.maxSize,
-        members: includeMembers ? squad.members : undefined,
+        members: includeMembers ? squad.members?.map(member => ({
+          ...member,
+          nextCall: nextCallsByParticipant[member.userId] || null
+        })) : undefined,
         createdAt: squad.createdAt,
       })),
       total: squads.length,

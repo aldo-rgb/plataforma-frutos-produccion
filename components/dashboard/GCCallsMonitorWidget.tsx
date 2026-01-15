@@ -228,7 +228,7 @@ export default function GCCallsMonitorWidget() {
               <Phone className="w-5 h-5 text-indigo-400" />
             </div>
             <div>
-              <CardTitle className="text-base text-white">Monitor de Llamadas GC</CardTitle>
+              <CardTitle className="text-base text-white">Monitor de Llamadas</CardTitle>
               <p className="text-xs text-slate-400">Seguimiento de llamadas por átomo</p>
             </div>
           </div>

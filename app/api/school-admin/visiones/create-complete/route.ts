@@ -3,6 +3,23 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+/**
+ * Convierte una fecha string a Date de forma segura, evitando problemas de timezone.
+ * Cuando se usa solo fecha (YYYY-MM-DD), JavaScript interpreta como medianoche UTC,
+ * lo cual puede resultar en el día anterior en zonas horarias negativas (ej: México UTC-6).
+ * 
+ * Esta función agrega T12:00:00 (mediodía) para evitar este problema.
+ */
+function toSafeDate(dateStr: string | null | undefined): Date | null {
+  if (!dateStr) return null;
+  // Si ya tiene hora, usarlo directamente
+  if (dateStr.includes('T')) {
+    return new Date(dateStr);
+  }
+  // Si es solo fecha (YYYY-MM-DD), agregar mediodía para evitar problemas de timezone
+  return new Date(`${dateStr}T12:00:00`);
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -71,19 +88,19 @@ export async function POST(req: NextRequest) {
     }
 
     // Determinar fechas (usar las del nivel básico como base)
-    const startDate = basicConfig?.startDate ? new Date(basicConfig.startDate) : new Date();
+    const startDate = toSafeDate(basicConfig?.startDate) || new Date();
     
     // Calcular endDate: usar el último fin de semana de PL si existe, si no usar avanzado, si no usar básico
-    let endDate = new Date();
+    let endDate: Date | null = new Date();
     if (plConfig?.weekends && plConfig.weekends.length > 0) {
       const lastWeekend = plConfig.weekends[plConfig.weekends.length - 1];
       if (lastWeekend.endDate) {
-        endDate = new Date(lastWeekend.endDate);
+        endDate = toSafeDate(lastWeekend.endDate);
       }
     } else if (advancedConfig?.endDate) {
-      endDate = new Date(advancedConfig.endDate);
+      endDate = toSafeDate(advancedConfig.endDate);
     } else if (basicConfig?.endDate) {
-      endDate = new Date(basicConfig.endDate);
+      endDate = toSafeDate(basicConfig.endDate);
     }
 
     // Crear la visión
@@ -98,20 +115,20 @@ export async function POST(req: NextRequest) {
         enabledLevels: enabledLevels || ['BASIC', 'ADVANCED', 'PL'],
         
         // Fechas del Nivel Básico
-        startDate: basicConfig?.startDate ? new Date(basicConfig.startDate) : startDate,
-        endDate: basicConfig?.endDate ? new Date(basicConfig.endDate) : endDate,
+        startDate: toSafeDate(basicConfig?.startDate) || startDate,
+        endDate: toSafeDate(basicConfig?.endDate) || endDate,
         
         // Fechas del Nivel Avanzado
-        advancedStartDate: advancedConfig?.startDate ? new Date(advancedConfig.startDate) : null,
-        advancedEndDate: advancedConfig?.endDate ? new Date(advancedConfig.endDate) : null,
+        advancedStartDate: toSafeDate(advancedConfig?.startDate),
+        advancedEndDate: toSafeDate(advancedConfig?.endDate),
         
         // Fechas de los 3 fines de semana de Liderato
-        plWeekend1StartDate: plConfig?.weekends?.[0]?.startDate ? new Date(plConfig.weekends[0].startDate) : null,
-        plWeekend1EndDate: plConfig?.weekends?.[0]?.endDate ? new Date(plConfig.weekends[0].endDate) : null,
-        plWeekend2StartDate: plConfig?.weekends?.[1]?.startDate ? new Date(plConfig.weekends[1].startDate) : null,
-        plWeekend2EndDate: plConfig?.weekends?.[1]?.endDate ? new Date(plConfig.weekends[1].endDate) : null,
-        plWeekend3StartDate: plConfig?.weekends?.[2]?.startDate ? new Date(plConfig.weekends[2].startDate) : null,
-        plWeekend3EndDate: plConfig?.weekends?.[2]?.endDate ? new Date(plConfig.weekends[2].endDate) : null,
+        plWeekend1StartDate: toSafeDate(plConfig?.weekends?.[0]?.startDate),
+        plWeekend1EndDate: toSafeDate(plConfig?.weekends?.[0]?.endDate),
+        plWeekend2StartDate: toSafeDate(plConfig?.weekends?.[1]?.startDate),
+        plWeekend2EndDate: toSafeDate(plConfig?.weekends?.[1]?.endDate),
+        plWeekend3StartDate: toSafeDate(plConfig?.weekends?.[2]?.startDate),
+        plWeekend3EndDate: toSafeDate(plConfig?.weekends?.[2]?.endDate),
         
         updatedAt: new Date(),
         
@@ -147,8 +164,8 @@ export async function POST(req: NextRequest) {
           basePrice: basicConfig.price || 3500,
           promoPrice: null,
           promoDeadline: null,
-          startDate: basicConfig.startDate ? new Date(basicConfig.startDate) : null,
-          endDate: basicConfig.endDate ? new Date(basicConfig.endDate) : null,
+          startDate: toSafeDate(basicConfig.startDate),
+          endDate: toSafeDate(basicConfig.endDate),
           maxCapacity: maxParticipantes || 100,
           currentEnrollment: 0,
           isActive: true,
@@ -177,8 +194,8 @@ export async function POST(req: NextRequest) {
           basePrice: advancedConfig.price || 5000,
           promoPrice: null,
           promoDeadline: null,
-          startDate: advancedConfig.startDate ? new Date(advancedConfig.startDate) : null,
-          endDate: advancedConfig.endDate ? new Date(advancedConfig.endDate) : null,
+          startDate: toSafeDate(advancedConfig.startDate),
+          endDate: toSafeDate(advancedConfig.endDate),
           maxCapacity: maxParticipantes || 100,
           currentEnrollment: 0,
           isActive: true,
@@ -201,9 +218,9 @@ export async function POST(req: NextRequest) {
       let plDescription = `Programa de Liderato de la visión ${nombre}. Formación intensiva de líderes en 3 fines de semana:\n`;
       if (plConfig.weekends && plConfig.weekends.length > 0) {
         plConfig.weekends.forEach((weekend: any, index: number) => {
-          const startDate = weekend.startDate ? new Date(weekend.startDate).toLocaleDateString('es-MX') : 'Por definir';
-          const endDate = weekend.endDate ? new Date(weekend.endDate).toLocaleDateString('es-MX') : 'Por definir';
-          plDescription += `\n• ${weekend.name}: ${startDate} - ${endDate}`;
+          const startDateStr = weekend.startDate ? toSafeDate(weekend.startDate)?.toLocaleDateString('es-MX') : 'Por definir';
+          const endDateStr = weekend.endDate ? toSafeDate(weekend.endDate)?.toLocaleDateString('es-MX') : 'Por definir';
+          plDescription += `\n• ${weekend.name}: ${startDateStr} - ${endDateStr}`;
           if (weekend.location) plDescription += ` en ${weekend.location}`;
         });
       }
@@ -214,8 +231,8 @@ export async function POST(req: NextRequest) {
       if (plConfig.weekends && plConfig.weekends.length > 0) {
         const firstWeekend = plConfig.weekends[0];
         const lastWeekend = plConfig.weekends[plConfig.weekends.length - 1];
-        plStartDate = firstWeekend.startDate ? new Date(firstWeekend.startDate) : null;
-        plEndDate = lastWeekend.endDate ? new Date(lastWeekend.endDate) : null;
+        plStartDate = toSafeDate(firstWeekend.startDate);
+        plEndDate = toSafeDate(lastWeekend.endDate);
       }
 
       // 🆕 Extraer las fechas de los 3 fines de semana
@@ -236,12 +253,12 @@ export async function POST(req: NextRequest) {
           startDate: plStartDate,
           endDate: plEndDate,
           // 🆕 Guardar las fechas de los 3 fines de semana
-          plWeekend1StartDate: weekend1?.startDate ? new Date(weekend1.startDate) : null,
-          plWeekend1EndDate: weekend1?.endDate ? new Date(weekend1.endDate) : null,
-          plWeekend2StartDate: weekend2?.startDate ? new Date(weekend2.startDate) : null,
-          plWeekend2EndDate: weekend2?.endDate ? new Date(weekend2.endDate) : null,
-          plWeekend3StartDate: weekend3?.startDate ? new Date(weekend3.startDate) : null,
-          plWeekend3EndDate: weekend3?.endDate ? new Date(weekend3.endDate) : null,
+          plWeekend1StartDate: toSafeDate(weekend1?.startDate),
+          plWeekend1EndDate: toSafeDate(weekend1?.endDate),
+          plWeekend2StartDate: toSafeDate(weekend2?.startDate),
+          plWeekend2EndDate: toSafeDate(weekend2?.endDate),
+          plWeekend3StartDate: toSafeDate(weekend3?.startDate),
+          plWeekend3EndDate: toSafeDate(weekend3?.endDate),
           maxCapacity: maxParticipantes || 100,
           currentEnrollment: 0,
           isActive: true,

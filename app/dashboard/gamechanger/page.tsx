@@ -14,10 +14,11 @@ import IntensiveProgramInvite from "@/components/dashboard/IntensiveProgramInvit
 import OrganizationChangeModal from "@/components/OrganizationChangeModal";
 import QuantumPointsWidget from "@/components/dashboard/QuantumPointsWidget";
 import RankingWidget from "@/components/dashboard/RankingWidget";
-import MisParticipantesWidget from "@/components/dashboard/MisParticipantesWidget";
 import PersonalQRWidget from "@/components/dashboard/PersonalQRWidget";
 import SquadManagerWidget from "@/components/dashboard/SquadManagerWidget";
 import { ElCruceAccessWidget } from "@/components/el-cruce";
+import VisionHistoryWidget from "@/components/widgets/VisionHistoryWidget";
+import GCPendingSurveyBanner from "@/components/dashboard/GCPendingSurveyBanner";
 
 export default async function GameChangerDashboardPage() {
   // 1. Obtener sesión y datos frescos
@@ -270,6 +271,9 @@ export default async function GameChangerDashboardPage() {
       {/* NOTIFICACIONES IMPORTANTES */}
       <NotificationBanner />
 
+      {/* BANNER DE ENCUESTAS PENDIENTES */}
+      <GCPendingSurveyBanner />
+
       {/* ALERTA DE RE-AGENDAMIENTO */}
       <AlertaReagendamiento />
 
@@ -319,10 +323,11 @@ export default async function GameChangerDashboardPage() {
           />
         ) : isAuthorized && !hasDisciplineProgram ? (
           <IntensiveProgramInvite totalWeeks={totalWeeks} totalCalls={totalCalls} />
-        ) : (
-          <MisParticipantesWidget />
-        )}
+        ) : null}
       </div>
+
+      {/* HISTORIAL DE VISIONES (MIS ÁTOMOS) */}
+      <VisionHistoryWidget />
 
       {/* SQUAD MANAGER + EL CRUCE */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

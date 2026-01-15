@@ -43,8 +43,9 @@ export async function GET() {
 
     // Buscar todos los productos activos de la organización (todos los niveles y tipos)
     // Un producto está activo si:
-    // 1. Aún no ha terminado (endDate >= ahora a las 23:59:59) O
-    // 2. Va a iniciar en los próximos 60 días
+    // 1. Aún no ha terminado (endDate >= ahora) O
+    // 2. Va a iniciar en los próximos 60 días O
+    // 3. Está COMPLETED pero el siguiente nivel de su visión aún no ha iniciado
     const now = new Date();
     const in60Days = new Date(now);
     in60Days.setDate(in60Days.getDate() + 60);
@@ -54,9 +55,9 @@ export async function GET() {
     const startOfToday = new Date(now);
     startOfToday.setHours(0, 0, 0, 0);
 
-    const productos = await prisma.schoolProduct.findMany({
+    // Primero obtener productos no completados (en curso o próximos)
+    const productosActivos = await prisma.schoolProduct.findMany({
       where: {
-        // Debe pertenecer a la organización
         OR: [
           {
             Vision: {
@@ -68,11 +69,11 @@ export async function GET() {
           }
         ],
         isActive: true,
-        // Producto activo: endDate >= hoy (aún no termina hasta las 23:59 del último día)
+        trainingStatus: { not: 'COMPLETED' },
         endDate: { gte: startOfToday }
       },
       orderBy: {
-        startDate: 'asc' // Más próximo primero
+        startDate: 'asc'
       },
       select: {
         id: true,
@@ -86,15 +87,132 @@ export async function GET() {
         currentEnrollment: true,
         visionId: true,
         location: true,
-        videoUrl: true
+        videoUrl: true,
+        trainingStatus: true
       }
     });
 
-    console.log('📦 Productos encontrados:', productos.length, productos);
+    // Obtener productos COMPLETADOS cuyo siguiente nivel aún no ha iniciado
+    const productosCompletados = await prisma.schoolProduct.findMany({
+      where: {
+        OR: [
+          {
+            Vision: {
+              organizationId: usuario.organizationId
+            }
+          },
+          {
+            organizationId: usuario.organizationId
+          }
+        ],
+        isActive: true,
+        trainingStatus: 'COMPLETED'
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        type: true,
+        levelType: true,
+        startDate: true,
+        endDate: true,
+        maxCapacity: true,
+        currentEnrollment: true,
+        visionId: true,
+        location: true,
+        videoUrl: true,
+        trainingStatus: true
+      }
+    });
+
+    // Filtrar productos completados: solo mostrar si el siguiente nivel no ha iniciado
+    const productosCompletadosVisibles = [];
+    
+    for (const producto of productosCompletados) {
+      if (!producto.visionId) continue;
+      
+      // Determinar el siguiente nivel
+      let siguienteNivel: string | null = null;
+      if (producto.levelType === 'BASIC') {
+        siguienteNivel = 'ADVANCED';
+      } else if (producto.levelType === 'ADVANCED') {
+        siguienteNivel = 'PL';
+      }
+      // Si es PL, no hay siguiente nivel, no se muestra después de completado
+      
+      if (!siguienteNivel) continue;
+      
+      // Buscar si existe el producto del siguiente nivel para esta visión
+      const siguienteProducto = await prisma.schoolProduct.findFirst({
+        where: {
+          visionId: producto.visionId,
+          levelType: siguienteNivel,
+          isActive: true
+        },
+        select: { startDate: true }
+      });
+      
+      // Si no hay siguiente producto o aún no ha iniciado, mostrar el completado
+      if (!siguienteProducto || !siguienteProducto.startDate || siguienteProducto.startDate > now) {
+        productosCompletadosVisibles.push(producto);
+      }
+    }
+
+    // Combinar productos activos y completados visibles
+    const productos = [...productosActivos, ...productosCompletadosVisibles];
+    
+    // Ordenar por fecha de inicio
+    productos.sort((a, b) => {
+      const dateA = a.startDate ? new Date(a.startDate).getTime() : 0;
+      const dateB = b.startDate ? new Date(b.startDate).getTime() : 0;
+      return dateA - dateB;
+    });
+
+    // Calcular el conteo real de inscripciones pagadas por cada producto
+    const productosConConteoReal = await Promise.all(
+      productos.map(async (producto) => {
+        // Si no tiene visionId o levelType, no podemos contar tickets
+        if (!producto.visionId || !producto.levelType) {
+          return { ...producto, currentEnrollment: 0 };
+        }
+
+        // Mapear levelType del producto al nivel de enrollment
+        const validLevels = ['BASIC', 'ADVANCED', 'PL'];
+        const levelMap: Record<string, string> = {
+          'BASIC': 'BASIC',
+          'ADVANCED': 'ADVANCED',
+          'PL': 'PL',
+          'INTERMEDIATE': 'ADVANCED',
+        };
+        const enrollmentLevel = levelMap[producto.levelType] || producto.levelType;
+
+        // Si el nivel no es válido para tickets, retornar 0
+        if (!validLevels.includes(enrollmentLevel)) {
+          return { ...producto, currentEnrollment: 0 };
+        }
+
+        // Contar tickets pagados para esta visión y nivel
+        const paidTicketsCount = await prisma.ticket.count({
+          where: {
+            visionId: producto.visionId,
+            level: enrollmentLevel as any,
+            status: 'ACTIVE',
+            paymentStatus: { in: ['PAID', 'PARTIAL'] }
+          }
+        });
+
+        return {
+          ...producto,
+          currentEnrollment: paidTicketsCount
+        };
+      })
+    );
+
+    console.log('📦 Productos encontrados:', productosConConteoReal.length, productosConConteoReal);
 
     return NextResponse.json({
       success: true,
-      productos
+      productos: productosConConteoReal
     });
 
   } catch (error: any) {

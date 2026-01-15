@@ -18,6 +18,7 @@ import {
   Clock
 } from 'lucide-react';
 import Link from 'next/link';
+import VisionHistoryWidget from '@/components/widgets/VisionHistoryWidget';
 
 interface Participante {
   id: number;
@@ -169,6 +170,11 @@ export default function GameChangerDashboard() {
             </div>
             <p className="text-slate-400 text-sm">Tareas Completadas</p>
           </div>
+        </div>
+
+        {/* Vision History Widget */}
+        <div className="mb-8">
+          <VisionHistoryWidget />
         </div>
 
         {/* Filter by Vision */}

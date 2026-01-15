@@ -196,6 +196,18 @@ export async function POST(request: NextRequest) {
           }
         });
       }
+
+      // *** MARCAR ASISTENCIA AUTOMÁTICAMENTE EN VISION_ENROLLMENTS ***
+      // Cuando el participante escanea su gafete, se marca como ATTENDED
+      if (enrollment.attendanceStatus !== 'ATTENDED') {
+        await prisma.vision_enrollments.update({
+          where: { id: enrollment.id },
+          data: { 
+            attendanceStatus: 'ATTENDED'
+          }
+        });
+        console.log(`✅ Asistencia marcada automáticamente para enrollment ${enrollment.id} - Usuario: ${user.nombre}`);
+      }
     }
 
     // *** CREAR CHECKINRECORD ***

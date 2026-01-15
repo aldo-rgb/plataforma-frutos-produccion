@@ -6,13 +6,16 @@ import { useRouter } from 'next/navigation';
 import {
   Users, Ticket, AlertTriangle, Building2, GraduationCap, Activity,
   Clock, Calendar, Scan, Heart, Mic, BookOpen, Rocket, ChevronRight,
-  X, Loader2, Phone, Mail, CreditCard, FileText
+  X, Loader2, Phone, Mail, CreditCard, FileText, CheckCircle, Flag,
+  CheckCircle2
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import MedicalAlertsWidget from '@/components/dashboard/MedicalAlertsWidget';
 import GCCallsMonitorWidget from '@/components/dashboard/GCCallsMonitorWidget';
 import { ElCruceAccessWidget, TopFileModal } from '@/components/el-cruce';
+import { TrainerSurveyModal } from '@/components/training-closure';
+import VisionHistoryWidget from '@/components/widgets/VisionHistoryWidget';
 
 interface PreRegistro {
   id: string;
@@ -34,6 +37,7 @@ interface PreRegistro {
   currentProduct: { id: number; name: string; levelType: string } | null;
   targetProduct: { id: number; name: string; levelType: string } | null;
   scannedBy: { id: number; nombre: string } | null;
+  gameChanger: { id: number; nombre: string; imagen: string | null } | null;
 }
 
 interface Entrenamiento {
@@ -50,6 +54,9 @@ interface Entrenamiento {
   estado: string;
   inscritos: number;
   checkedIn: number;
+  declarados?: number;
+  preRegistrosPendientes?: number;
+  participantesPagados?: number;
   Vision?: { id: number; nombre: string; };
   Organization?: { id: number; name: string; logo?: string; };
 }
@@ -69,6 +76,10 @@ interface TrainerData {
     totalPreRegistrosPendientes?: number;
     totalParticipantesPagados?: number;
     totalInscritos?: number;
+    // Nuevos stats
+    totalInscritosVision?: number;
+    totalDeclarados?: number;
+    totalConfirmadosAvanzado?: number;
   };
 }
 
@@ -89,6 +100,15 @@ export default function TrainerDashboard() {
   // Estado para TOP FILE
   const [selectedUserForTopFile, setSelectedUserForTopFile] = useState<{id: number, nombre: string} | null>(null);
   const [showTopFile, setShowTopFile] = useState(false);
+  
+  // Estados para finalizar entrenamiento
+  const [showFinalizarModal, setShowFinalizarModal] = useState(false);
+  const [productoAFinalizar, setProductoAFinalizar] = useState<Entrenamiento | null>(null);
+  const [finalizandoEntrenamiento, setFinalizandoEntrenamiento] = useState(false);
+  
+  // Estados para encuesta de cierre
+  const [showTrainerSurvey, setShowTrainerSurvey] = useState(false);
+  const [productoParaEncuesta, setProductoParaEncuesta] = useState<Entrenamiento | null>(null);
 
   // Combinar todos los productos para mostrar (memoizado para evitar re-renders infinitos)
   const productos = useMemo(() => {
@@ -180,6 +200,66 @@ export default function TrainerDashboard() {
     setShowTopFile(true);
   };
 
+  // Verificar si es el último día del entrenamiento
+  const esUltimoDia = (endDate: string | undefined): boolean => {
+    if (!endDate) return false;
+    const end = new Date(endDate);
+    const now = new Date();
+    // Comparar solo las fechas (sin hora)
+    return end.toDateString() === now.toDateString();
+  };
+
+  // Abrir modal para finalizar entrenamiento
+  const abrirModalFinalizar = (producto: Entrenamiento) => {
+    setProductoAFinalizar(producto);
+    setShowFinalizarModal(true);
+  };
+
+  // Finalizar entrenamiento
+  const finalizarEntrenamiento = async () => {
+    if (!productoAFinalizar) return;
+    
+    setFinalizandoEntrenamiento(true);
+    try {
+      const res = await fetch(`/api/trainer/finish-training`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: productoAFinalizar.id })
+      });
+      
+      const result = await res.json();
+      
+      if (res.ok && result.success) {
+        // Cerrar modal de confirmación
+        setShowFinalizarModal(false);
+        
+        // Si el API indica mostrar encuesta, abrirla
+        if (result.showSurvey) {
+          setProductoParaEncuesta(productoAFinalizar);
+          setShowTrainerSurvey(true);
+        }
+        
+        setProductoAFinalizar(null);
+        // Recargar datos
+        await fetchMisEntrenamientos();
+      } else {
+        alert(result.error || 'Error al finalizar entrenamiento');
+      }
+    } catch (error) {
+      console.error('Error finalizando entrenamiento:', error);
+      alert('Error al finalizar entrenamiento');
+    } finally {
+      setFinalizandoEntrenamiento(false);
+    }
+  };
+  
+  // Cerrar encuesta del trainer
+  const handleSurveyComplete = () => {
+    setShowTrainerSurvey(false);
+    setProductoParaEncuesta(null);
+    fetchMisEntrenamientos();
+  };
+
   // Actualizar countdown cada segundo
   useEffect(() => {
     if (productos.length === 0) return;
@@ -259,9 +339,9 @@ export default function TrainerDashboard() {
           </div>
         </div>
 
-        {/* KPI Cards - Pre-registros e Inscritos */}
+        {/* KPI Cards - Declarados y Confirmados */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {/* Widget Pre-registros Pendientes */}
+          {/* Widget Declarados */}
           <div 
             onClick={() => openPreRegistrosModal('PENDING')}
             className="bg-gradient-to-br from-amber-900/40 via-orange-900/30 to-slate-900 border-2 border-amber-500/30 rounded-2xl p-6 hover:border-amber-500/50 transition-all hover:scale-105 hover:shadow-2xl h-full cursor-pointer"
@@ -272,21 +352,24 @@ export default function TrainerDashboard() {
                   <Users className="text-amber-400" size={32} />
                 </div>
                 <div>
-                  <div className="text-amber-400 text-sm font-medium uppercase tracking-wider">Pre-registros</div>
-                  <div className="text-white text-4xl font-black mt-1">{data.stats.totalPreRegistrosPendientes || 0}</div>
+                  <div className="text-amber-400 text-sm font-medium uppercase tracking-wider">Declarados</div>
+                  <div className="flex items-baseline gap-1 mt-1">
+                    <span className="text-white text-4xl font-black">{data.stats.totalDeclarados || 0}</span>
+                    <span className="text-slate-500 text-xl font-bold">/{data.stats.totalInscritosVision || 0}</span>
+                  </div>
                 </div>
               </div>
             </div>
             
             <div className="flex items-center justify-between">
               <span className="text-slate-400 text-sm">
-                Participantes pendientes de pago
+                Pre-registros / Inscritos en visión
               </span>
               <span className="text-amber-400 text-xs">Click para ver →</span>
             </div>
           </div>
           
-          {/* Widget Inscritos */}
+          {/* Widget Confirmados */}
           <div 
             onClick={() => openPreRegistrosModal('PAID')}
             className="bg-gradient-to-br from-green-900/40 via-emerald-900/30 to-slate-900 border-2 border-green-500/30 rounded-2xl p-6 hover:border-green-500/50 transition-all hover:scale-105 hover:shadow-2xl h-full cursor-pointer"
@@ -295,20 +378,23 @@ export default function TrainerDashboard() {
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-green-500/20 rounded-xl transition-colors relative">
                   <GraduationCap className="text-green-400" size={32} />
-                  {(data.stats.totalInscritos || 0) > 0 && (
+                  {(data.stats.totalConfirmadosAvanzado || 0) > 0 && (
                     <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
                   )}
                 </div>
                 <div>
-                  <div className="text-green-400 text-sm font-medium uppercase tracking-wider">Inscritos</div>
-                  <div className="text-white text-4xl font-black mt-1">{data.stats.totalInscritos || 0}</div>
+                  <div className="text-green-400 text-sm font-medium uppercase tracking-wider">Confirmados</div>
+                  <div className="flex items-baseline gap-1 mt-1">
+                    <span className="text-white text-4xl font-black">{data.stats.totalConfirmadosAvanzado || 0}</span>
+                    <span className="text-slate-500 text-xl font-bold">/{data.stats.totalDeclarados || 0}</span>
+                  </div>
                 </div>
               </div>
             </div>
             
             <div className="flex items-center justify-between">
               <span className="text-slate-400 text-sm">
-                Participantes registrados y pagados
+                Pagados avanzado / Pre-registros
               </span>
               <span className="text-green-400 text-xs">Click para ver →</span>
             </div>
@@ -382,7 +468,7 @@ export default function TrainerDashboard() {
           </div>
         </div>
 
-        {/* Widget Monitor de Llamadas GC */}
+        {/* Widget Monitor de Llamadas */}
         <div className="mt-8">
           <GCCallsMonitorWidget />
         </div>
@@ -392,20 +478,25 @@ export default function TrainerDashboard() {
           <ElCruceAccessWidget />
         </div>
 
+        {/* Widget de Historial de Visiones */}
+        <div className="mt-8">
+          <VisionHistoryWidget />
+        </div>
+
         {/* Widget de Mis Entrenamientos Asignados */}
         <div className="mt-8">
-          <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-500/20 rounded-lg">
-                  <Calendar className="text-purple-400" size={24} />
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-slate-700">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 bg-purple-500/20 rounded-lg">
+                  <Calendar className="text-purple-400 w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold text-white">Mis Entrenamientos Asignados</h2>
-                  <p className="text-sm text-slate-400">Solo los entrenamientos donde eres trainer</p>
+                <div className="min-w-0">
+                  <h2 className="text-base sm:text-xl font-bold text-white truncate">Mis Entrenamientos Asignados</h2>
+                  <p className="text-xs sm:text-sm text-slate-400 hidden sm:block">Solo los entrenamientos donde eres trainer</p>
                 </div>
               </div>
-              <div className="text-purple-400 font-bold text-lg">{productos.length}</div>
+              <div className="text-purple-400 font-bold text-base sm:text-lg flex-shrink-0 ml-2">{productos.length}</div>
             </div>
 
             {productos.length === 0 ? (
@@ -418,41 +509,46 @@ export default function TrainerDashboard() {
               <div className="space-y-4">
                 {productos.map((producto: Entrenamiento) => {
                   const startDate = producto.startDate ? new Date(producto.startDate) : null;
+                  const endDate = producto.endDate ? new Date(producto.endDate) : null;
                   const now = new Date();
                   const hasStarted = producto.estado === 'EN_CURSO';
                   const showCountdown = countdown[producto.id];
+                  
+                  // Determinar si es el último día del entrenamiento
+                  const isLastDay = endDate && 
+                    endDate.toDateString() === now.toDateString();
 
                   return (
                     <div
                       key={producto.id}
-                      className={`rounded-xl p-5 transition-all ${
+                      className={`rounded-xl p-4 sm:p-5 transition-all ${
                         hasStarted 
                           ? 'bg-gradient-to-br from-green-900/40 via-emerald-900/30 to-slate-900 border-2 border-green-500/50 shadow-lg shadow-green-500/10'
                           : 'bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-2 border-slate-700/50 hover:border-purple-500/50'
                       }`}
                     >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
+                        <div className="flex-1 min-w-0">
                           {/* Organización */}
                           {producto.Organization && (
                             <div className="flex items-center gap-1 text-xs text-slate-500 mb-1">
-                              <Building2 className="w-3 h-3" />
-                              <span>{producto.Organization.name}</span>
+                              <Building2 className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate">{producto.Organization.name}</span>
                             </div>
                           )}
-                          <h3 className="text-white font-bold text-lg mb-1">
+                          <h3 className="text-white font-bold text-base sm:text-lg mb-1 truncate">
                             {producto.name}
                           </h3>
                           {producto.Vision && (
-                            <p className="text-purple-400/80 text-sm">
+                            <p className="text-purple-400/80 text-sm truncate">
                               Visión: {producto.Vision.nombre}
                             </p>
                           )}
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           {/* Badge de Tipo (Workshop/Training) */}
                           {producto.type && (
-                            <div className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+                            <div className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${
                               producto.type === 'WORKSHOP' 
                                 ? 'bg-purple-500/20 text-purple-400 border-purple-500/50'
                                 : producto.type === 'EXTRA_WORKSHOP'
@@ -466,7 +562,7 @@ export default function TrainerDashboard() {
                           )}
                           {/* Badge de Nivel */}
                           {producto.levelType && producto.levelType !== 'NONE' && (
-                            <div className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+                            <div className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${
                               producto.levelType === 'BASIC' 
                                 ? 'bg-green-500/20 text-green-400 border-green-500/50'
                                 : producto.levelType === 'INTERMEDIATE'
@@ -487,10 +583,10 @@ export default function TrainerDashboard() {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4 text-sm">
-                          <div className="flex items-center gap-2">
-                            <Calendar size={14} className="text-slate-400" />
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm">
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            <Calendar size={14} className="text-slate-400 flex-shrink-0" />
                             <span className="text-slate-300">
                               {startDate ? new Date(startDate).toLocaleDateString('es-ES', { 
                                 day: 'numeric', 
@@ -499,57 +595,96 @@ export default function TrainerDashboard() {
                               }) : 'Sin fecha'}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Users size={14} className="text-slate-400" />
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            <Users size={14} className="text-slate-400 flex-shrink-0" />
                             <span className="text-slate-300">
                               {producto.inscritos || 0} inscritos
                             </span>
                           </div>
-                          {hasStarted && (
-                            <div className="flex items-center gap-2">
-                              <Scan size={14} className="text-green-400" />
-                              <span className="text-green-400">
-                                {producto.checkedIn || 0} check-in
-                              </span>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            <Users size={14} className="text-amber-400 flex-shrink-0" />
+                            <span className="text-amber-400">
+                              {producto.preRegistrosPendientes || 0} declarados
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            <GraduationCap size={14} className="text-emerald-400 flex-shrink-0" />
+                            <span className="text-emerald-400">
+                              {producto.participantesPagados || 0} pagados
+                            </span>
+                          </div>
                         </div>
 
                         {showCountdown && !hasStarted && (
-                          <div className="flex items-center gap-2 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/50 px-4 py-2 rounded-lg animate-pulse">
-                            <Clock size={16} className="text-orange-400" />
-                            <span className="text-orange-400 font-bold font-mono text-sm">
+                          <div className="flex items-center gap-2 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/50 px-3 sm:px-4 py-2 rounded-lg animate-pulse self-start sm:self-auto">
+                            <Clock size={16} className="text-orange-400 flex-shrink-0" />
+                            <span className="text-orange-400 font-bold font-mono text-xs sm:text-sm">
                               {countdown[producto.id]}
                             </span>
                           </div>
                         )}
 
                         {hasStarted && (
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2 text-green-400 text-sm font-semibold">
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                            <div className="flex items-center gap-2 text-green-400 text-xs sm:text-sm font-semibold">
                               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                               En curso
                             </div>
-                            <button
-                              onClick={() => window.location.href = `/staff/check-in/${producto.id}`}
-                              className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 border border-purple-500/50 rounded-lg text-purple-400 hover:text-purple-300 text-sm font-semibold transition-all"
-                            >
-                              <Scan size={14} />
-                              Check-In
-                            </button>
+                            
+                            {/* Botón Finalizar - Solo visible el último día */}
+                            {isLastDay && (
+                              <button
+                                onClick={() => abrirModalFinalizar(producto)}
+                                disabled={finalizandoEntrenamiento}
+                                className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-red-500/20 to-orange-500/20 hover:from-red-500/30 hover:to-orange-500/30 border border-red-500/50 rounded-lg text-red-400 hover:text-red-300 text-xs sm:text-sm font-semibold transition-all disabled:opacity-50"
+                              >
+                                <CheckCircle2 size={14} />
+                                {finalizandoEntrenamiento ? 'Finalizando...' : 'Finalizar'}
+                              </button>
+                            )}
                           </div>
                         )}
 
                         {!hasStarted && !showCountdown && (
-                          <button
-                            onClick={() => window.location.href = `/staff/check-in/${producto.id}`}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-slate-600/20 to-slate-700/20 hover:from-purple-500/20 hover:to-pink-500/20 border border-slate-500/50 hover:border-purple-500/50 rounded-lg text-slate-400 hover:text-purple-400 text-sm font-semibold transition-all"
-                          >
-                            <Scan size={14} />
-                            Check-In
-                          </button>
+                          <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 bg-slate-700/30 border border-slate-600/50 rounded-lg text-slate-400 text-xs sm:text-sm self-start sm:self-auto">
+                            <Calendar size={14} />
+                            Próximo
+                          </div>
                         )}
                       </div>
+
+                      {/* Barra de Porcentaje de Pase - Solo para entrenamientos en curso o finalizados con check-ins */}
+                      {hasStarted && producto.checkedIn > 0 && (
+                        <div className="mt-3 pt-3 border-t border-slate-700/50">
+                          <div className="flex items-center justify-between text-xs sm:text-sm text-slate-300 mb-1.5">
+                            <span className="flex items-center gap-1.5">
+                              <span className="font-medium">📈 Porcentaje de Pase</span>
+                              <span className="text-slate-400">({producto.participantesPagados || 0} pagados / {producto.checkedIn} asistieron)</span>
+                            </span>
+                            <span className={`font-bold ${
+                              ((producto.participantesPagados || 0) / producto.checkedIn) * 100 >= 70 
+                                ? 'text-emerald-400' 
+                                : ((producto.participantesPagados || 0) / producto.checkedIn) * 100 >= 40 
+                                  ? 'text-amber-400' 
+                                  : 'text-red-400'
+                            }`}>
+                              {Math.round(((producto.participantesPagados || 0) / producto.checkedIn) * 100)}%
+                            </span>
+                          </div>
+                          <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${
+                                ((producto.participantesPagados || 0) / producto.checkedIn) * 100 >= 70 
+                                  ? 'bg-gradient-to-r from-emerald-500 to-green-400' 
+                                  : ((producto.participantesPagados || 0) / producto.checkedIn) * 100 >= 40 
+                                    ? 'bg-gradient-to-r from-amber-500 to-yellow-400' 
+                                    : 'bg-gradient-to-r from-red-500 to-orange-400'
+                              }`}
+                              style={{ width: `${Math.min(((producto.participantesPagados || 0) / producto.checkedIn) * 100, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -591,30 +726,6 @@ export default function TrainerDashboard() {
             </p>
           </div>
         </Link>
-
-        {/* Ver Participantes */}
-        <div className="mt-8">
-          <Link href="/dashboard/coordinador/participantes" className="block h-full">
-            <div className="h-full bg-gradient-to-br from-purple-900/50 to-slate-900 border-2 border-purple-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10 flex flex-col">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-purple-500/20 group-hover:bg-purple-500/30 rounded-xl transition-colors">
-                  <GraduationCap size={24} className="text-purple-300" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-white text-sm uppercase">
-                    Ver Participantes
-                  </h3>
-                  <p className="text-xs text-purple-300">
-                    De mis entrenamientos
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-slate-400 mt-auto">
-                Lista de participantes de los entrenamientos donde eres facilitador
-              </p>
-            </div>
-          </Link>
-        </div>
       </div>
 
       {/* Modal de Pre-registros */}
@@ -654,12 +765,12 @@ export default function TrainerDashboard() {
                   </div>
                   <div>
                     <h3 className="font-bold text-white">
-                      {preRegistrosFilter === 'PENDING' ? 'Pre-registros Pendientes' : 'Participantes Inscritos'}
+                      {preRegistrosFilter === 'PENDING' ? 'Declarados - Pendientes de Pago' : 'Confirmados - Ya Pagaron'}
                     </h3>
                     <p className={`text-xs ${preRegistrosFilter === 'PENDING' ? 'text-amber-400/70' : 'text-green-400/70'}`}>
                       {preRegistrosFilter === 'PENDING' 
-                        ? 'Participantes que aún no han pagado' 
-                        : 'Participantes que ya pagaron su inscripción'}
+                        ? 'Pre-registros para avanzado' 
+                        : 'Participantes inscritos en avanzado'}
                     </p>
                   </div>
                 </div>
@@ -685,7 +796,7 @@ export default function TrainerDashboard() {
                   }`}
                 >
                   <Users className="w-4 h-4 inline mr-2" />
-                  Pendientes de Pago
+                  Declarados
                 </button>
                 <button
                   onClick={() => {
@@ -699,7 +810,7 @@ export default function TrainerDashboard() {
                   }`}
                 >
                   <GraduationCap className="w-4 h-4 inline mr-2" />
-                  Ya Pagaron
+                  Confirmados
                 </button>
               </div>
 
@@ -765,7 +876,7 @@ export default function TrainerDashboard() {
                             )}
                           </div>
                           
-                          {/* Estado y precio */}
+                          {/* Estado */}
                           <div className="text-right flex-shrink-0">
                             <span className={`text-xs px-2 py-1 rounded-full ${
                               pr.status === 'PENDING' 
@@ -774,20 +885,31 @@ export default function TrainerDashboard() {
                             }`}>
                               {pr.status === 'PENDING' ? 'Pendiente' : 'Pagado'}
                             </span>
-                            {pr.promoPrice && pr.status === 'PENDING' && (
-                              <div className="mt-2">
-                                <p className="text-lg font-bold text-amber-400">${pr.promoPrice}</p>
-                                <p className="text-xs text-slate-500 line-through">${pr.regularPrice}</p>
-                              </div>
-                            )}
-                            {pr.paymentAmount && pr.status === 'PAID' && (
-                              <div className="mt-2 flex items-center gap-1 text-green-400">
-                                <CreditCard className="w-3 h-3" />
-                                <span className="text-sm font-medium">${pr.paymentAmount}</span>
-                              </div>
-                            )}
                           </div>
                         </div>
+
+                        {/* Game Changer */}
+                        {pr.gameChanger && (
+                          <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-violet-500/10 border border-violet-500/20 rounded-lg">
+                            <div className="w-6 h-6 rounded-full bg-violet-500/30 flex-shrink-0 overflow-hidden">
+                              {pr.gameChanger.imagen ? (
+                                <img 
+                                  src={pr.gameChanger.imagen} 
+                                  alt={pr.gameChanger.nombre} 
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-violet-400 text-xs font-bold">
+                                  {pr.gameChanger.nombre?.charAt(0) || '?'}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 text-xs">
+                              <span className="text-slate-400">Game Changer:</span>
+                              <span className="text-violet-400 font-medium">{pr.gameChanger.nombre}</span>
+                            </div>
+                          </div>
+                        )}
                         
                         {/* Productos y fecha */}
                         <div className="mt-3 pt-3 border-t border-slate-600/30 flex flex-wrap items-center gap-2 text-xs">
@@ -817,21 +939,6 @@ export default function TrainerDashboard() {
                             TOP FILE
                           </span>
                         </div>
-
-                        {/* Deadline de promo */}
-                        {pr.promoDeadline && pr.status === 'PENDING' && (
-                          <div className="mt-2 flex items-center gap-2 text-xs">
-                            <Clock className="w-3 h-3 text-amber-400" />
-                            <span className="text-amber-400/70">
-                              Promo válida hasta: {new Date(pr.promoDeadline).toLocaleDateString('es-MX', {
-                                day: 'numeric',
-                                month: 'short',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </span>
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -854,6 +961,130 @@ export default function TrainerDashboard() {
           }}
         />
       )}
+
+      {/* Modal de Confirmación - Finalizar Entrenamiento */}
+      <AnimatePresence>
+        {showFinalizarModal && productoAFinalizar && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setShowFinalizarModal(false);
+              setProductoAFinalizar(null);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-2 border-red-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {(() => {
+                const asistieron = productoAFinalizar.checkedIn || 0;
+                const pagados = productoAFinalizar.participantesPagados || 0;
+                const porcentajePase = asistieron > 0 ? Math.round((pagados / asistieron) * 100) : 0;
+                
+                return (
+                  <>
+                    <div className="text-center mb-6">
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/20 flex items-center justify-center">
+                        <CheckCircle2 className="w-8 h-8 text-red-400" />
+                      </div>
+                      <h3 className="text-xl font-bold text-white mb-2">
+                        Finalizar Entrenamiento
+                      </h3>
+                      <p className="text-slate-400">
+                        ¿Estás seguro de que deseas finalizar el entrenamiento con
+                      </p>
+                      <p className={`text-2xl font-bold mt-2 ${
+                        porcentajePase >= 70 ? 'text-emerald-400' :
+                        porcentajePase >= 40 ? 'text-amber-400' : 'text-red-400'
+                      }`}>
+                        {porcentajePase}% de pase?
+                      </p>
+                      <p className="text-sm text-slate-500 mt-1">
+                        ({pagados} pagados de {asistieron} que asistieron)
+                      </p>
+                      <p className="text-lg font-semibold text-purple-400 mt-3">
+                        &ldquo;{productoAFinalizar.name}&rdquo;
+                      </p>
+                    </div>
+
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mb-4">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                        <p className="text-amber-400/80 text-sm">
+                          Esta acción marcará el entrenamiento como completado y no se puede deshacer.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Botón para ver participantes pendientes */}
+                    <button
+                      onClick={() => {
+                        setShowFinalizarModal(false);
+                        setProductoAFinalizar(null);
+                        openPreRegistrosModal('PENDING');
+                      }}
+                      className="w-full mb-4 px-4 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-xl text-amber-400 font-semibold transition-all flex items-center justify-center gap-2"
+                    >
+                      <Users size={18} />
+                      Ver Participantes Pendientes de Pago
+                    </button>
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          setShowFinalizarModal(false);
+                          setProductoAFinalizar(null);
+                        }}
+                        className="flex-1 px-4 py-3 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-xl text-slate-300 font-semibold transition-all"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={() => finalizarEntrenamiento()}
+                        disabled={finalizandoEntrenamiento}
+                        className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 rounded-xl text-white font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {finalizandoEntrenamiento ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Finalizando...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 size={18} />
+                            Confirmar
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Encuesta del Trainer */}
+      <AnimatePresence>
+        {showTrainerSurvey && productoParaEncuesta && (
+          <TrainerSurveyModal
+            productId={productoParaEncuesta.id}
+            productName={productoParaEncuesta.name}
+            onComplete={handleSurveyComplete}
+            onClose={() => {
+              setShowTrainerSurvey(false);
+              setProductoParaEncuesta(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

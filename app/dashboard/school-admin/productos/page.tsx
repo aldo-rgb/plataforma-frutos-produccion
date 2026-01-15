@@ -21,6 +21,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
+import { toSafeISODate } from '@/lib/utils';
 
 interface SchoolProduct {
   id: number;
@@ -265,18 +266,10 @@ export default function ProductosPage() {
       const payload = {
         ...productForm,
         promoPrice: productForm.promoPrice || null,
-        promoDeadline: productForm.promoDeadline
-          ? new Date(productForm.promoDeadline).toISOString()
-          : null,
-        startDate: productForm.startDate
-          ? new Date(productForm.startDate).toISOString()
-          : null,
-        endDate: productForm.endDate
-          ? new Date(productForm.endDate).toISOString()
-          : null,
-        transferDeadline: productForm.transferDeadline
-          ? new Date(productForm.transferDeadline).toISOString()
-          : null,
+        promoDeadline: toSafeISODate(productForm.promoDeadline),
+        startDate: toSafeISODate(productForm.startDate),
+        endDate: toSafeISODate(productForm.endDate),
+        transferDeadline: toSafeISODate(productForm.transferDeadline),
       };
 
       const url = editingProduct

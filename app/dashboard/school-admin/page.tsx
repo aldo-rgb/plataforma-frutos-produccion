@@ -12,6 +12,7 @@ import {
 import Link from 'next/link';
 import TreasuryQuickWidget from '@/components/dashboard/TreasuryQuickWidget';
 import DirectorTrainingWidgets from '@/components/dashboard/DirectorTrainingWidgets';
+import DirectorPendingAuditBanner from '@/components/dashboard/DirectorPendingAuditBanner';
 
 interface DashboardData {
   overview: {
@@ -348,6 +349,9 @@ export default function SchoolAdminDashboard() {
             </button>
           </div>
         )}
+
+        {/* Banner de Auditoría Pendiente */}
+        <DirectorPendingAuditBanner />
 
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-3 md:gap-6 border-b border-white/10 pb-3 md:pb-6 w-full">
@@ -770,75 +774,8 @@ export default function SchoolAdminDashboard() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8 w-full">
-          {/* Columna Izquierda: Distribución de Planes */}
-          <div className="lg:col-span-2 space-y-4 md:space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg md:text-xl font-black text-white uppercase flex items-center gap-2">
-                <BarChart3 className="text-purple-400" size={18} /> 
-                <span className="hidden sm:inline">Distribución de Estudiantes</span>
-                <span className="sm:hidden">Estudiantes</span>
-              </h2>
-            </div>
-
-            <div className="bg-slate-900/50 backdrop-blur border border-slate-800 rounded-2xl md:rounded-3xl p-4 md:p-6">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-6 w-full">
-                {data.tierDistribution.filter((tier) => tier.tier !== 'FREE').map((tier) => (
-                  <div
-                    key={tier.tier}
-                    className="bg-slate-800/50 rounded-lg md:rounded-xl p-3 md:p-4 border border-slate-700"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs md:text-sm font-bold text-slate-400">{tier.tier}</span>
-                      <span className="text-xl md:text-2xl font-black text-white">{tier.count}</span>
-                    </div>
-                    <div className="h-1.5 md:h-2 bg-slate-700 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full ${
-                          tier.tier === 'PREMIUM'
-                            ? 'bg-purple-500'
-                            : tier.tier === 'ELITE'
-                            ? 'bg-yellow-500'
-                            : 'bg-cyan-500'
-                        }`}
-                        style={{ width: `${tier.percentage}%` }}
-                      />
-                    </div>
-                    <span className="text-[10px] md:text-xs text-slate-500 mt-1 block">{tier.percentage}%</span>
-                  </div>
-                ))}
-              </div>
-
-              <h3 className="text-xs md:text-sm font-bold text-white mb-2 md:mb-3 flex items-center gap-2 mt-4 md:mt-8">
-                <Star className="text-yellow-400" size={14} />
-                Top Estudiantes
-              </h3>
-              <div className="space-y-2 md:space-y-3">
-                {data.topStudents.slice(0, 5).map((student, index) => (
-                  <div
-                    key={student.id}
-                    className="flex items-center justify-between p-2 md:p-3 bg-slate-800/30 rounded-lg md:rounded-xl border border-slate-700/50 hover:border-purple-500/30 transition-colors"
-                  >
-                    <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
-                      <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-xs md:text-sm flex-shrink-0">
-                        {index + 1}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-white font-semibold text-xs md:text-sm truncate">{student.nombre}</p>
-                        <p className="text-[10px] md:text-xs text-slate-400">{student.tier}</p>
-                      </div>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-white font-bold text-xs md:text-sm">{student.puntosCultivo} pts</p>
-                      <p className="text-[10px] md:text-xs text-yellow-400">🔥 {student.racha}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Columna Derecha: Acciones Rápidas */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8 w-full">
+          {/* Columna: Acciones Rápidas */}
           <div className="space-y-4 md:space-y-6">
             <h2 className="text-lg md:text-xl font-black text-white uppercase flex items-center gap-2">
               <Zap className="text-yellow-400" size={18} /> 
@@ -1007,6 +944,31 @@ export default function SchoolAdminDashboard() {
                 </div>
                 <p className="text-xs text-slate-400">
                   Crea visiones/grupos y gestiona las licencias de tus participantes
+                </p>
+              </div>
+            </Link>
+
+            {/* Widget de Resultados de Encuestas */}
+            <Link href="/dashboard/school-admin/survey-results" className="block mt-6">
+              <div className="bg-gradient-to-br from-violet-900/50 via-purple-900/30 to-slate-900 border-2 border-violet-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/10 relative overflow-hidden">
+                {/* Decorative elements */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/5 rounded-full blur-2xl -z-10"></div>
+                
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-violet-500/20 group-hover:bg-violet-500/30 rounded-xl transition-colors">
+                    <BarChart3 size={24} className="text-violet-300" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm uppercase">
+                      📊 Resultados de Encuestas
+                    </h3>
+                    <p className="text-xs text-violet-300">
+                      Ver retroalimentación de entrenamientos
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Consulta las encuestas de entrenadores, GameChangers y auditorías de directores
                 </p>
               </div>
             </Link>

@@ -21,6 +21,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import PostEntrenoScheduleModal from './PostEntrenoScheduleModal';
 
 interface Squad {
   id: string;
@@ -39,10 +40,20 @@ interface SquadMember {
     nombre: string;
     imagen: string | null;
     email: string;
+    telefono?: string | null;
   };
   joinedAt: string;
   scheduledTime?: string | null;
   assignedByGC?: boolean;
+  enrollment?: {
+    id: number;
+    attendanceStatus: string | null;
+    level: string;
+  } | null;
+  nextCall?: {
+    scheduledDate: string;
+    scheduledTime: string;
+  } | null;
 }
 
 interface AvailableSlot {
@@ -118,8 +129,16 @@ export default function SquadManagerWidget() {
 
   // Estado para editar nombre del átomo
   const [showRenameModal, setShowRenameModal] = useState(false);
+
+  // Estado para marcar DROP
+  const [markingDrop, setMarkingDrop] = useState(false);
+  const [showDropConfirm, setShowDropConfirm] = useState(false);
+  const [dropReason, setDropReason] = useState('');
   const [newAtomName, setNewAtomName] = useState('');
   const [savingName, setSavingName] = useState(false);
+  
+  // Estado para el modal de Post Entreno
+  const [showPostEntrenoModal, setShowPostEntrenoModal] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -337,6 +356,44 @@ export default function SquadManagerWidget() {
     }
   };
 
+  // Función para marcar participante como DROP
+  const handleMarkDrop = async () => {
+    if (!callForm.participantId) return;
+    
+    // Buscar el miembro para obtener su id de SmallGroupMember
+    const member = allMembers.find(m => m.user.id === callForm.participantId);
+    if (!member) return;
+
+    setMarkingDrop(true);
+    try {
+      const res = await fetch('/api/game-changer/mark-drop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          memberId: member.id,
+          reason: dropReason || 'Abandonó el entrenamiento'
+        }),
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        setShowCallModal(false);
+        setShowDropConfirm(false);
+        setDropReason('');
+        loadData(); // Recargar datos
+      } else {
+        console.error('Error:', data.error);
+        alert(data.error || 'Error al marcar como DROP');
+      }
+    } catch (error) {
+      console.error('Error marking drop:', error);
+      alert('Error al marcar como DROP');
+    } finally {
+      setMarkingDrop(false);
+    }
+  };
+
   if (loading) {
     return (
       <Card className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border-indigo-500/20">
@@ -463,13 +520,18 @@ export default function SquadManagerWidget() {
                 const callStatus = todayCallStatus[member.user.id];
                 const isCompleted = callStatus?.status === 'completed';
                 const needsRetry = callStatus?.status === 'pending_retry';
+                const isDrop = member.enrollment?.attendanceStatus === 'DROP';
                 
                 return (
                   <div 
                     key={member.id}
-                    className={`bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-colors ${
-                      isCompleted ? 'border-l-2 border-emerald-500' : 
-                      needsRetry ? 'border-l-2 border-amber-500' : ''
+                    className={`rounded-lg p-3 transition-colors ${
+                      isDrop 
+                        ? 'bg-gray-800/50 opacity-60 grayscale border-l-2 border-gray-500' 
+                        : `bg-white/5 hover:bg-white/10 ${
+                            isCompleted ? 'border-l-2 border-emerald-500' : 
+                            needsRetry ? 'border-l-2 border-amber-500' : ''
+                          }`
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -479,7 +541,7 @@ export default function SquadManagerWidget() {
                             <img 
                               src={member.user.imagen} 
                               alt={member.user.nombre}
-                              className="w-8 h-8 rounded-full object-cover"
+                              className={`w-8 h-8 rounded-full object-cover ${isDrop ? 'grayscale' : ''}`}
                             />
                           ) : (
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
@@ -487,67 +549,114 @@ export default function SquadManagerWidget() {
                             </div>
                           )}
                           {/* Indicador de estado */}
-                          {isCompleted && (
+                          {isDrop && (
+                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gray-500 rounded-full flex items-center justify-center">
+                              <X className="w-3 h-3 text-white" />
+                            </div>
+                          )}
+                          {isCompleted && !isDrop && (
                             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
                               <Check className="w-3 h-3 text-white" />
                             </div>
                           )}
-                          {needsRetry && (
+                          {needsRetry && !isDrop && (
                             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center">
                               <RefreshCw className="w-3 h-3 text-white" />
                             </div>
                           )}
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-white flex items-center gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-medium flex items-center gap-2 ${isDrop ? 'text-gray-400 line-through' : 'text-white'}`}>
                             {member.user.nombre}
-                            {isCompleted && callStatus?.rating && (
+                            {isDrop && (
+                              <span className="text-xs text-gray-500 no-underline">(DROP)</span>
+                            )}
+                            {isCompleted && !isDrop && callStatus?.rating && (
                               <span className="flex items-center text-xs text-amber-400">
                                 <Star className="w-3 h-3 mr-0.5 fill-amber-400" />
                                 {callStatus.rating}
                               </span>
                             )}
+                            {/* Teléfono clickable */}
+                            {member.user.telefono && !isDrop && (
+                              <a 
+                                href={`tel:${member.user.telefono}`}
+                                className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 transition-colors no-underline"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Phone className="w-3 h-3" />
+                              </a>
+                            )}
                           </p>
                           <p className="text-xs text-gray-400 flex items-center gap-1">
-                            {schedule ? formatTime(schedule) : 'Sin horario'}
-                            {isCompleted && (
-                              <span className="text-emerald-400 ml-1">• Llamada del día ✓</span>
-                            )}
-                            {needsRetry && (
-                              <span className="text-amber-400 ml-1">• Reintentar ({callStatus?.attempts || 1})</span>
+                            {isDrop ? (
+                              <span className="text-gray-500">Abandonó el entrenamiento</span>
+                            ) : (
+                              <>
+                                {member.nextCall ? (
+                                  <span className="text-purple-300">
+                                    📅 {new Date(member.nextCall.scheduledDate).toLocaleDateString('es-MX', { 
+                                      weekday: 'short', 
+                                      day: 'numeric', 
+                                      month: 'short' 
+                                    })} - {member.nextCall.scheduledTime}
+                                  </span>
+                                ) : schedule ? (
+                                  formatTime(schedule)
+                                ) : (
+                                  'Sin horario'
+                                )}
+                                {member.user.telefono && (
+                                  <a 
+                                    href={`tel:${member.user.telefono}`}
+                                    className="ml-2 text-emerald-400 hover:text-emerald-300 hover:underline transition-colors"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {member.user.telefono}
+                                  </a>
+                                )}
+                                {isCompleted && (
+                                  <span className="text-emerald-400 ml-1">• ✓</span>
+                                )}
+                                {needsRetry && (
+                                  <span className="text-amber-400 ml-1">• Reintentar</span>
+                                )}
+                              </>
                             )}
                           </p>
                         </div>
                       </div>
-                      {/* Botón registrar llamada */}
-                      <Button
-                        size="sm"
-                        onClick={() => openCallModal(member)}
-                        className={`${
-                          isCompleted 
-                            ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30' 
-                            : needsRetry
-                            ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30'
-                            : 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30'
-                        }`}
-                      >
-                        {isCompleted ? (
-                          <>
-                            <CheckCircle2 className="w-3 h-3 mr-1" />
-                            Listo
-                          </>
-                        ) : needsRetry ? (
-                          <>
-                            <RefreshCw className="w-3 h-3 mr-1" />
-                            Reintentar
-                          </>
-                        ) : (
-                          <>
-                            <Phone className="w-3 h-3 mr-1" />
-                            Registrar
-                          </>
-                        )}
-                      </Button>
+                      {/* Botón registrar llamada - oculto para DROP */}
+                      {!isDrop && (
+                        <Button
+                          size="sm"
+                          onClick={() => openCallModal(member)}
+                          className={`${
+                            isCompleted 
+                              ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30' 
+                              : needsRetry
+                              ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30'
+                              : 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30'
+                          }`}
+                        >
+                          {isCompleted ? (
+                            <>
+                              <CheckCircle2 className="w-3 h-3 mr-1" />
+                              Listo
+                            </>
+                          ) : needsRetry ? (
+                            <>
+                              <RefreshCw className="w-3 h-3 mr-1" />
+                              Reintentar
+                            </>
+                          ) : (
+                            <>
+                              <Phone className="w-3 h-3 mr-1" />
+                              Registrar
+                            </>
+                          )}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );
@@ -593,12 +702,14 @@ export default function SquadManagerWidget() {
               <Phone className="w-4 h-4 mr-1" />
               Agendar
             </Button>
-            <Link href="/dashboard/game-changer/calls" className="block">
-              <Button variant="outline" className="w-full border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10 text-xs px-2">
-                <CalendarPlus className="w-4 h-4 mr-1" />
-                Post Entreno
-              </Button>
-            </Link>
+            <Button 
+              variant="outline" 
+              className="w-full border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10 text-xs px-2"
+              onClick={() => setShowPostEntrenoModal(true)}
+            >
+              <CalendarPlus className="w-4 h-4 mr-1" />
+              Post Entreno
+            </Button>
           </div>
         )}
       </CardContent>
@@ -768,12 +879,55 @@ export default function SquadManagerWidget() {
                   )}
                 </div>
               </div>
+
+              {/* Botón para marcar como DROP */}
+              {!showDropConfirm ? (
+                <button
+                  onClick={() => setShowDropConfirm(true)}
+                  className="w-full p-3 rounded-xl flex items-center justify-center gap-2 bg-gray-800/50 text-gray-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/30 border border-gray-700/50 transition-all text-sm"
+                >
+                  <AlertCircle className="w-4 h-4" />
+                  Abandonó el entrenamiento
+                </button>
+              ) : (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 space-y-3">
+                  <p className="text-sm text-red-300 font-medium flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" />
+                    ¿Confirmar que abandonó el entrenamiento?
+                  </p>
+                  <input
+                    type="text"
+                    value={dropReason}
+                    onChange={(e) => setDropReason(e.target.value)}
+                    placeholder="Razón (opcional)"
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-red-500/50"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => { setShowDropConfirm(false); setDropReason(''); }}
+                      className="flex-1 text-xs"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleMarkDrop}
+                      disabled={markingDrop}
+                      className="flex-1 bg-red-500 hover:bg-red-600 text-white text-xs"
+                    >
+                      {markingDrop ? 'Marcando...' : 'Confirmar DROP'}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Footer */}
             <div className="p-4 border-t border-slate-800 flex gap-2">
               <Button
-                onClick={() => setShowCallModal(false)}
+                onClick={() => { setShowCallModal(false); setShowDropConfirm(false); setDropReason(''); }}
                 variant="outline"
                 className="flex-1"
               >
@@ -958,6 +1112,24 @@ export default function SquadManagerWidget() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Modal de Post Entreno */}
+      {showPostEntrenoModal && squads.length > 0 && (
+        <PostEntrenoScheduleModal
+          isOpen={showPostEntrenoModal}
+          onClose={() => setShowPostEntrenoModal(false)}
+          squadId={squads[0]?.id}
+          squadName={squads[0]?.name || 'Mi Átomo'}
+          members={allMembers.map(m => ({
+            odId: m.user.id,
+            odName: m.user.nombre,
+            odImage: m.user.imagen
+          }))}
+          onScheduled={() => {
+            loadData(); // Recargar datos después de agendar
+          }}
+        />
       )}
     </Card>
   );

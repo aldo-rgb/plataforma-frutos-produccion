@@ -62,8 +62,31 @@ export async function GET(request: Request) {
       }
     } else if (['COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER'].includes(usuario.rol)) {
       // Estos roles ven registros de visiones donde son coordinadores o de su organización
+      // PERO solo si el entrenamiento no ha terminado
+      
+      // Primero obtener visiones con entrenamientos activos
+      const visionesConEntrenamientoActivo = await prisma.schoolProduct.findMany({
+        where: {
+          isActive: true,
+          trainingStatus: { not: 'COMPLETED' }
+        },
+        select: { visionId: true }
+      });
+      const visionIdsSet = new Set(visionesConEntrenamientoActivo.filter(v => v.visionId).map(v => v.visionId!));
+      const visionIdsActivas = Array.from(visionIdsSet);
+
+      // Si no hay visiones activas, retornar respuesta vacía temprana
+      if (visionIdsActivas.length === 0) {
+        return NextResponse.json({
+          success: true,
+          records: [],
+          totalAlerts: 0
+        });
+      }
+
       const coordinadorVisiones = await prisma.vision.findMany({
         where: { 
+          id: { in: visionIdsActivas }, // Solo visiones con entrenamientos activos
           OR: [
             { coordinadorId: parseInt(session.user.id) },
             { organizationId: usuario.organizationId }
@@ -71,9 +94,17 @@ export async function GET(request: Request) {
         },
         select: { id: true }
       });
-      if (coordinadorVisiones.length > 0) {
-        whereClause.visionId = { in: coordinadorVisiones.map(v => v.id) };
+      
+      if (coordinadorVisiones.length === 0) {
+        // Si no hay visiones para este coordinador, retornar vacío
+        return NextResponse.json({
+          success: true,
+          records: [],
+          totalAlerts: 0
+        });
       }
+      
+      whereClause.visionId = { in: coordinadorVisiones.map(v => v.id) };
     }
 
     const medicalForms = await prisma.medicalForm.findMany({

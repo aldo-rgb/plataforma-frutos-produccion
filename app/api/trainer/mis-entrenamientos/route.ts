@@ -28,11 +28,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Solo trainers pueden acceder" }, { status: 403 })
     }
 
-    // 1. Obtener productos donde este usuario es trainer directo
+    // 1. Obtener productos donde este usuario es trainer directo (NO terminados)
     const productosDirectos = await prisma.schoolProduct.findMany({
       where: {
         trainerId: usuario.id,
-        isActive: true
+        isActive: true,
+        trainingStatus: { not: 'COMPLETED' }
       },
       include: {
         Vision: {
@@ -87,6 +88,7 @@ export async function GET(request: NextRequest) {
             visionId: { in: visionIds },
             isActive: true,
             trainerId: null, // Solo productos sin trainer directo asignado
+            trainingStatus: { not: 'COMPLETED' }, // No mostrar terminados
             OR: levelConditions
           },
           include: {
@@ -154,6 +156,60 @@ export async function GET(request: NextRequest) {
     const pagadosPorProducto = new Map(
       preRegistrosPagados.map(p => [p.targetProductId, p._count.id])
     )
+
+    // Obtener inscritos por visión (vision_enrollments nivel BASIC)
+    const visionIdsFromProducts = [...new Set(productos.filter(p => p.visionId).map(p => p.visionId!))]
+    const inscritosPorVision = new Map<number, number>()
+    const inscritosAdvancedPorVision = new Map<number, number>()
+    const asistieronPorVision = new Map<number, number>()
+    
+    if (visionIdsFromProducts.length > 0) {
+      // Inscritos en BASIC
+      const enrollmentCounts = await prisma.vision_enrollments.groupBy({
+        by: ['visionId'],
+        where: {
+          visionId: { in: visionIdsFromProducts },
+          level: 'BASIC',
+          enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+        },
+        _count: { id: true }
+      })
+      
+      enrollmentCounts.forEach(e => {
+        inscritosPorVision.set(e.visionId, e._count.id)
+      })
+
+      // Asistieron en BASIC (attendanceStatus = 'ATTENDED')
+      const attendedCounts = await prisma.vision_enrollments.groupBy({
+        by: ['visionId'],
+        where: {
+          visionId: { in: visionIdsFromProducts },
+          level: 'BASIC',
+          enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] },
+          attendanceStatus: 'ATTENDED'
+        },
+        _count: { id: true }
+      })
+      
+      attendedCounts.forEach(e => {
+        asistieronPorVision.set(e.visionId, e._count.id)
+      })
+
+      // Inscritos en ADVANCED (los que ya pagaron avanzado)
+      const advancedEnrollmentCounts = await prisma.vision_enrollments.groupBy({
+        by: ['visionId'],
+        where: {
+          visionId: { in: visionIdsFromProducts },
+          level: 'ADVANCED',
+          enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+        },
+        _count: { id: true }
+      })
+      
+      advancedEnrollmentCounts.forEach(e => {
+        inscritosAdvancedPorVision.set(e.visionId, e._count.id)
+      })
+    }
     
     const productosConEstado = productos.map(p => {
       let estado = 'PROXIMO'
@@ -172,13 +228,25 @@ export async function GET(request: NextRequest) {
         }
       }
 
+      // Para productos BASIC: participantesPagados = inscritos en ADVANCED de la misma visión
+      // Para productos ADVANCED: usar el conteo de pre-registros pagados
+      const esBASIC = p.levelType === 'BASIC'
+      const pagadosAvanzado = esBASIC && p.visionId 
+        ? (inscritosAdvancedPorVision.get(p.visionId) || 0)
+        : (pagadosPorProducto.get(p.id) || 0)
+      
+      // Asistieron = vision_enrollments con attendanceStatus = 'ATTENDED'
+      const asistieron = esBASIC && p.visionId
+        ? (asistieronPorVision.get(p.visionId) || 0)
+        : p._count.CheckInRecord
+
       return {
         ...p,
         estado,
-        inscritos: p.currentEnrollment || 0,
-        checkedIn: p._count.CheckInRecord,
+        inscritos: p.visionId ? (inscritosPorVision.get(p.visionId) || 0) : (p.currentEnrollment || 0),
+        checkedIn: asistieron,
         preRegistrosPendientes: pendientesPorProducto.get(p.id) || 0,
-        participantesPagados: pagadosPorProducto.get(p.id) || 0
+        participantesPagados: pagadosAvanzado
       }
     })
 
@@ -191,6 +259,51 @@ export async function GET(request: NextRequest) {
     const totalPreRegistrosPendientes = enCurso.reduce((acc, p) => acc + p.preRegistrosPendientes, 0)
     const totalParticipantesPagados = [...enCurso, ...proximos].reduce((acc, p) => acc + p.participantesPagados, 0)
     const totalInscritos = enCurso.reduce((acc, p) => acc + p.inscritos, 0)
+
+    // Obtener visionIds de los productos
+    const productVisionIds = new Set<number>()
+    productos.forEach(p => {
+      if (p.visionId) productVisionIds.add(p.visionId)
+    })
+    const allVisionIds = Array.from(productVisionIds)
+
+    // Total inscritos en la visión (BASIC - todos los que están en el entrenamiento actual)
+    let totalInscritosVision = 0
+    if (allVisionIds.length > 0) {
+      totalInscritosVision = await prisma.vision_enrollments.count({
+        where: {
+          visionId: { in: allVisionIds },
+          level: 'BASIC',
+          enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+        }
+      })
+    }
+
+    // Total confirmados en ADVANCED (ya pagaron avanzado)
+    let totalConfirmadosAvanzado = 0
+    if (allVisionIds.length > 0) {
+      totalConfirmadosAvanzado = await prisma.vision_enrollments.count({
+        where: {
+          visionId: { in: allVisionIds },
+          level: 'ADVANCED',
+          enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+        }
+      })
+    }
+
+    // Total pre-registros para avanzado (declarados)
+    let totalDeclarados = 0
+    if (productIds.length > 0) {
+      totalDeclarados = await prisma.advancedPreRegistration.count({
+        where: {
+          OR: [
+            { currentProductId: { in: productIds } },
+            { targetProductId: { in: productIds } }
+          ],
+          status: 'PENDING'
+        }
+      })
+    }
 
     return NextResponse.json({
       success: true,
@@ -210,7 +323,11 @@ export async function GET(request: NextRequest) {
         finalizados: finalizados.length,
         totalPreRegistrosPendientes,
         totalParticipantesPagados,
-        totalInscritos
+        totalInscritos,
+        // Nuevos stats para widgets
+        totalInscritosVision,      // Inscritos en BASIC de la visión
+        totalDeclarados,           // Pre-registros PENDING para avanzado
+        totalConfirmadosAvanzado   // Ya inscritos en ADVANCED
       }
     })
 

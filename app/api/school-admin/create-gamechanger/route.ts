@@ -8,7 +8,9 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.rol !== 'SCHOOL_ADMIN') {
+    // Permitir SCHOOL_ADMIN y otros roles autorizados
+    const allowedRoles = ['SCHOOL_ADMIN', 'ADMINISTRADOR', 'COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
+    if (!session?.user || !allowedRoles.includes(session.user.rol as string)) {
       return NextResponse.json(
         { success: false, error: 'No autorizado' },
         { status: 401 }
@@ -16,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { nombre, email, visionId } = body;
+    const { nombre, email, telefono, visionId, createNewUser } = body;
 
     if (!nombre || !email) {
       return NextResponse.json(
@@ -150,11 +152,13 @@ export async function POST(request: NextRequest) {
         data: {
           nombre,
           email: email.toLowerCase(),
+          telefono: telefono || null,
           password: hashedPassword,
           rol: 'GAMECHANGER',
           tier: 'STANDARD',
           organizationId: director.organizationId,
           isActive: true,
+          requirePasswordChange: true, // ✅ Forzar cambio de contraseña al iniciar sesión
         },
       });
 

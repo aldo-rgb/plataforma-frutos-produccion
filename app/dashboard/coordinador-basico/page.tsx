@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
   Users, Ticket, AlertTriangle, Building2, GraduationCap, Activity,
-  Clock, Calendar, Scan, Heart, ChevronRight
+  Clock, Calendar, Scan, Heart, ChevronRight, X, Phone, Mail, Loader2, History
 } from 'lucide-react';
 import Link from 'next/link';
 import MedicalAlertsWidget from '@/components/dashboard/MedicalAlertsWidget';
@@ -46,6 +46,16 @@ export default function CoordinadorBasicoDashboard() {
   const [medicalAlertsCount, setMedicalAlertsCount] = useState(0);
   const [callsData, setCallsData] = useState<{ completed: number; total: number }>({ completed: 0, total: 0 });
   const [preRegistros, setPreRegistros] = useState<{ pending: number; paid: number; total: number }>({ pending: 0, paid: 0, total: 0 });
+  const [visionInfo, setVisionInfo] = useState<{ nombre: string; level: string } | null>(null);
+  const [advancedStats, setAdvancedStats] = useState<{ pending: number; enrolled: number; total: number }>({ pending: 0, enrolled: 0, total: 0 });
+  
+  // Estados para modales de Declarados e Inscritos
+  const [showDeclaradosModal, setShowDeclaradosModal] = useState(false);
+  const [showInscritosModal, setShowInscritosModal] = useState(false);
+  const [declaradosList, setDeclaradosList] = useState<any[]>([]);
+  const [inscritosList, setInscritosList] = useState<any[]>([]);
+  const [loadingDeclarados, setLoadingDeclarados] = useState(false);
+  const [loadingInscritos, setLoadingInscritos] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -121,19 +131,101 @@ export default function CoordinadorBasicoDashboard() {
     try {
       const res = await fetch('/api/coordinador/training-stats');
       const result = await res.json();
-      console.log('Training stats response:', result);
+      console.log('[Coordinador Básico] Training stats response:', result);
+      
       if (res.ok && result.success) {
+        // Usar estadísticas del SIGUIENTE NIVEL
+        const nextLevelStats = result.stats?.nextLevelStats;
+        const nextLevel = result.stats?.nextLevel;
+        const nextLevelName = result.stats?.nextLevelName;
+        const currentProduct = result.stats?.currentProduct;
+        
+        console.log('[Coordinador Básico] Current product:', currentProduct);
+        console.log('[Coordinador Básico] Next level:', nextLevel, 'Stats:', nextLevelStats);
+        
         setPreRegistros({
           pending: result.stats?.preRegistros?.pending || 0,
           paid: result.stats?.preRegistros?.paid || 0,
           total: result.stats?.preRegistros?.total || 0,
         });
+        
+        // Mostrar información del SIGUIENTE NIVEL
+        if (nextLevel && nextLevelStats) {
+          setVisionInfo({
+            nombre: nextLevelName || currentProduct?.visionName || 'Visión',
+            level: nextLevel
+          });
+          setAdvancedStats(nextLevelStats);
+        } else if (currentProduct) {
+          setVisionInfo({
+            nombre: currentProduct.visionName || currentProduct.name,
+            level: currentProduct.level || (currentProduct.levelType === 'BASIC' ? 'BÁSICO' : 'AVANZADO')
+          });
+          if (result.stats?.advancedStats) {
+            setAdvancedStats(result.stats.advancedStats);
+          }
+        } else {
+          // Fallback
+          const advancedProduct = result.stats?.activeProducts?.find((p: any) => p.levelType === 'ADVANCED');
+          if (advancedProduct?.visionName) {
+            setVisionInfo({
+              nombre: advancedProduct.visionName,
+              level: 'AVANZADO'
+            });
+          }
+          if (result.stats?.advancedStats) {
+            setAdvancedStats(result.stats.advancedStats);
+          }
+        }
       } else {
         console.error('Training stats error:', result.error);
       }
     } catch (error) {
       console.error('Error fetching pre-registros:', error);
     }
+  };
+
+  // Cargar lista de declarados (pendientes de pago)
+  const fetchDeclaradosList = async () => {
+    setLoadingDeclarados(true);
+    try {
+      const res = await fetch('/api/coordinador/participantes-lista?status=PENDING&level=ADVANCED');
+      const result = await res.json();
+      if (res.ok && result.success) {
+        setDeclaradosList(result.participantes || []);
+      }
+    } catch (error) {
+      console.error('Error fetching declarados:', error);
+    } finally {
+      setLoadingDeclarados(false);
+    }
+  };
+
+  // Cargar lista de inscritos (pagados)
+  const fetchInscritosList = async () => {
+    setLoadingInscritos(true);
+    try {
+      const res = await fetch('/api/coordinador/participantes-lista?status=ENROLLED&level=ADVANCED');
+      const result = await res.json();
+      if (res.ok && result.success) {
+        setInscritosList(result.participantes || []);
+      }
+    } catch (error) {
+      console.error('Error fetching inscritos:', error);
+    } finally {
+      setLoadingInscritos(false);
+    }
+  };
+
+  // Handlers para abrir modales
+  const handleOpenDeclarados = () => {
+    fetchDeclaradosList();
+    setShowDeclaradosModal(true);
+  };
+
+  const handleOpenInscritos = () => {
+    fetchInscritosList();
+    setShowInscritosModal(true);
   };
 
   // Actualizar countdown cada segundo
@@ -237,11 +329,19 @@ export default function CoordinadorBasicoDashboard() {
           </Link>
         </div>
 
-        {/* Widgets de Pre-Registros e Inscritos */}
+        {/* Widgets de Declarados e Inscritos */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Widget de Pre-registros */}
-          <Link href="/dashboard/coordinador/pre-registros" className="block">
-            <div className="bg-gradient-to-br from-amber-900/40 to-slate-900/80 border-2 border-amber-500/30 rounded-2xl p-6 hover:border-amber-500/50 transition-all group cursor-pointer">
+          {/* Widget de Declarados */}
+          <div onClick={handleOpenDeclarados} className="cursor-pointer">
+            <div className="bg-gradient-to-br from-amber-900/40 to-slate-900/80 border-2 border-amber-500/30 rounded-2xl p-6 hover:border-amber-500/50 transition-all group">
+              {/* Header con nombre de visión y nivel */}
+              {visionInfo && (
+                <div className="mb-3 pb-3 border-b border-amber-500/20">
+                  <p className="text-xs text-amber-300/70 font-medium">
+                    📍 {visionInfo.nombre} • <span className="text-orange-400">Nivel {visionInfo.level}</span>
+                  </p>
+                </div>
+              )}
               <div className="flex items-start gap-4">
                 <div className="p-3 bg-amber-500/20 rounded-xl">
                   <Users className="w-6 h-6 text-amber-400" />
@@ -250,20 +350,31 @@ export default function CoordinadorBasicoDashboard() {
                   <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-1">
                     DECLARADOS
                   </p>
-                  <p className="text-4xl font-black text-white mb-2">
-                    {preRegistros.pending}
-                  </p>
-                  <p className="text-sm text-slate-400">
-                    Participantes pendientes de pago
+                  <div className="flex items-baseline gap-1">
+                    <p className="text-4xl font-black text-white">
+                      {advancedStats.pending}
+                    </p>
+                    <span className="text-xl text-slate-500 font-bold">/{advancedStats.total}</span>
+                  </div>
+                  <p className="text-sm text-slate-400 mt-1">
+                    Participantes comprometidos
                   </p>
                 </div>
               </div>
             </div>
-          </Link>
+          </div>
 
           {/* Widget de Inscritos */}
-          <Link href="/dashboard/coordinador/pre-registros?filter=PAID" className="block">
-            <div className="bg-gradient-to-br from-emerald-900/40 to-slate-900/80 border-2 border-emerald-500/30 rounded-2xl p-6 hover:border-emerald-500/50 transition-all group cursor-pointer">
+          <div onClick={handleOpenInscritos} className="cursor-pointer">
+            <div className="bg-gradient-to-br from-emerald-900/40 to-slate-900/80 border-2 border-emerald-500/30 rounded-2xl p-6 hover:border-emerald-500/50 transition-all group">
+              {/* Header con nombre de visión y nivel */}
+              {visionInfo && (
+                <div className="mb-3 pb-3 border-b border-emerald-500/20">
+                  <p className="text-xs text-emerald-300/70 font-medium">
+                    📍 {visionInfo.nombre} • <span className="text-green-400">Nivel {visionInfo.level}</span>
+                  </p>
+                </div>
+              )}
               <div className="flex items-start gap-4">
                 <div className="p-3 bg-emerald-500/20 rounded-xl">
                   <GraduationCap className="w-6 h-6 text-emerald-400" />
@@ -272,16 +383,19 @@ export default function CoordinadorBasicoDashboard() {
                   <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-1">
                     INSCRITOS
                   </p>
-                  <p className="text-4xl font-black text-white mb-2">
-                    {preRegistros.paid}
-                  </p>
-                  <p className="text-sm text-slate-400">
+                  <div className="flex items-baseline gap-1">
+                    <p className="text-4xl font-black text-white">
+                      {advancedStats.enrolled}
+                    </p>
+                    <span className="text-xl text-slate-500 font-bold">/{advancedStats.total}</span>
+                  </div>
+                  <p className="text-sm text-slate-400 mt-1">
                     Participantes pagados
                   </p>
                 </div>
               </div>
             </div>
-          </Link>
+          </div>
         </div>
 
         {/* Widget de Alertas Médicas */}
@@ -289,7 +403,7 @@ export default function CoordinadorBasicoDashboard() {
           <MedicalAlertsWidget />
         </div>
 
-        {/* Widget Monitor de Llamadas GC */}
+        {/* Widget Monitor de Llamadas */}
         <div className="mt-8">
           <GCCallsMonitorWidget />
         </div>
@@ -336,6 +450,7 @@ export default function CoordinadorBasicoDashboard() {
                   const startDate = producto.startDate ? new Date(producto.startDate) : null;
                   const now = new Date();
                   const hasStarted = startDate && startDate <= now;
+                  const isCompleted = producto.trainingStatus === 'COMPLETED';
                   const showCountdown = countdown[producto.id];
 
                   return (
@@ -345,7 +460,9 @@ export default function CoordinadorBasicoDashboard() {
                       className="block"
                     >
                       <div className={`rounded-xl p-5 transition-all cursor-pointer group hover:scale-[1.02] ${
-                        hasStarted 
+                        isCompleted
+                          ? 'bg-gradient-to-br from-slate-800/60 via-slate-800/40 to-slate-900 border-2 border-slate-600/50'
+                          : hasStarted 
                           ? 'bg-gradient-to-br from-green-900/40 via-emerald-900/30 to-slate-900 border-2 border-green-500/50 shadow-lg shadow-green-500/10'
                           : 'bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-2 border-slate-700/50 hover:border-cyan-500/50'
                       }`}>
@@ -418,7 +535,7 @@ export default function CoordinadorBasicoDashboard() {
                             </div>
                           </div>
 
-                          {showCountdown && !hasStarted && (
+                          {showCountdown && !hasStarted && !isCompleted && (
                             <div className="flex items-center gap-2 bg-gradient-to-r from-orange-500/20 to-red-500/20 border border-orange-500/50 px-4 py-2 rounded-lg animate-pulse">
                               <Clock size={16} className="text-orange-400" />
                               <span className="text-orange-400 font-bold font-mono text-sm">
@@ -427,7 +544,16 @@ export default function CoordinadorBasicoDashboard() {
                             </div>
                           )}
 
-                          {hasStarted && (
+                          {isCompleted && (
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2 text-slate-400 text-sm font-semibold">
+                                <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
+                                Completado
+                              </div>
+                            </div>
+                          )}
+
+                          {hasStarted && !isCompleted && (
                             <div className="flex items-center gap-3">
                               <div className="flex items-center gap-2 text-green-400 text-sm font-semibold">
                                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
@@ -447,7 +573,7 @@ export default function CoordinadorBasicoDashboard() {
                             </div>
                           )}
 
-                          {!hasStarted && !showCountdown && (
+                          {!hasStarted && !showCountdown && !isCompleted && (
                             <button
                               onClick={(e) => {
                                 e.preventDefault();
@@ -504,30 +630,242 @@ export default function CoordinadorBasicoDashboard() {
           </div>
         </Link>
 
-        {/* Ver Participantes */}
-        <div className="mt-8">
-          <Link href="/dashboard/coordinador/participantes" className="block h-full">
-            <div className="h-full bg-gradient-to-br from-cyan-900/50 to-slate-900 border-2 border-cyan-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10 flex flex-col">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-cyan-500/20 group-hover:bg-cyan-500/30 rounded-xl transition-colors">
-                  <GraduationCap size={24} className="text-cyan-300" />
+        {/* Widget de Historial de Entrenamientos */}
+        <Link href="/dashboard/coordinator/training-history" className="block mt-8">
+          <div className="bg-gradient-to-br from-indigo-900/50 via-purple-900/30 to-slate-900 border-2 border-indigo-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-indigo-500/20 group-hover:bg-indigo-500/30 rounded-xl transition-colors">
+                <History size={24} className="text-indigo-300" />
+              </div>
+              <div>
+                <h3 className="font-bold text-white text-sm uppercase">
+                  📋 HISTORIAL DE ENTRENAMIENTOS
+                </h3>
+                <p className="text-xs text-indigo-300">
+                  Todos los entrenamientos
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-400">
+              Ver entrenamientos activos, próximos y completados de tu organización
+            </p>
+          </div>
+        </Link>
+      </div>
+
+      {/* Modal de Declarados */}
+      {showDeclaradosModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-amber-500/30 rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-500/20 rounded-lg">
+                  <Users className="text-amber-400" size={24} />
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-white text-sm uppercase">
-                    Ver Mis Participantes
-                  </h3>
-                  <p className="text-xs text-cyan-300">
-                    Detalle y avances
-                  </p>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Declarados - Pendientes de Pago</h2>
+                  <p className="text-sm text-slate-400">Nivel {visionInfo?.level || 'Avanzado'}</p>
                 </div>
               </div>
-              <p className="text-xs text-slate-400 mt-auto">
-                Lista completa: Participantes, Game Changers, Coordinadores y Mentores
+              <button
+                onClick={() => setShowDeclaradosModal(false)}
+                className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+              >
+                <X className="text-slate-400" size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {loadingDeclarados ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="animate-spin text-amber-400" size={32} />
+                </div>
+              ) : declaradosList.length === 0 ? (
+                <div className="text-center py-12">
+                  <Users className="mx-auto text-slate-600 mb-4" size={48} />
+                  <p className="text-slate-400">No hay participantes pendientes de pago</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {declaradosList.map((participante: any) => (
+                    <div
+                      key={participante.id}
+                      className="bg-slate-800/50 rounded-xl p-4 border border-slate-700 hover:border-amber-500/30 transition-all"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center">
+                            <span className="text-amber-400 font-bold">
+                              {participante.nombre?.charAt(0) || '?'}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-white">{participante.nombre}</p>
+                            <p className="text-sm text-slate-400">{participante.email}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {participante.telefono && (
+                            <a
+                              href={`tel:${participante.telefono}`}
+                              className="p-2 bg-green-500/20 hover:bg-green-500/30 rounded-lg transition-colors"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Phone className="text-green-400" size={16} />
+                            </a>
+                          )}
+                          <a
+                            href={`mailto:${participante.email}`}
+                            className="p-2 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Mail className="text-blue-400" size={16} />
+                          </a>
+                        </div>
+                      </div>
+                      {participante.telefono && (
+                        <p className="text-xs text-slate-500 mt-2 ml-13">📱 {participante.telefono}</p>
+                      )}
+                      {/* Información del invitador */}
+                      {participante.invitador && (
+                        <div className="mt-3 pt-3 border-t border-slate-700/50">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-purple-400 font-medium">👤 Invitado por:</span>
+                              <span className="text-xs text-white">{participante.invitador.nombre}</span>
+                            </div>
+                            {participante.invitador.telefono && (
+                              <a
+                                href={`tel:${participante.invitador.telefono}`}
+                                className="flex items-center gap-1 text-xs text-purple-300 hover:text-purple-200 transition-colors"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Phone size={12} />
+                                <span>{participante.invitador.telefono}</span>
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 border-t border-slate-700 bg-slate-800/50">
+              <p className="text-center text-sm text-slate-400">
+                Total: <span className="text-amber-400 font-bold">{declaradosList.length}</span> participantes pendientes
               </p>
             </div>
-          </Link>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Modal de Inscritos */}
+      {showInscritosModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-slate-700">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-500/20 rounded-lg">
+                  <GraduationCap className="text-emerald-400" size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Inscritos - Participantes Pagados</h2>
+                  <p className="text-sm text-slate-400">Nivel {visionInfo?.level || 'Avanzado'}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowInscritosModal(false)}
+                className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+              >
+                <X className="text-slate-400" size={20} />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {loadingInscritos ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="animate-spin text-emerald-400" size={32} />
+                </div>
+              ) : inscritosList.length === 0 ? (
+                <div className="text-center py-12">
+                  <GraduationCap className="mx-auto text-slate-600 mb-4" size={48} />
+                  <p className="text-slate-400">No hay participantes inscritos aún</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {inscritosList.map((participante: any) => (
+                    <div
+                      key={participante.id}
+                      className="bg-slate-800/50 rounded-xl p-4 border border-slate-700 hover:border-emerald-500/30 transition-all"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-emerald-500/20 rounded-full flex items-center justify-center">
+                            <span className="text-emerald-400 font-bold">
+                              {participante.nombre?.charAt(0) || '?'}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-white">{participante.nombre}</p>
+                            <p className="text-sm text-slate-400">{participante.email}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded-full">
+                            ✓ PAGADO
+                          </span>
+                          {participante.telefono && (
+                            <a
+                              href={`tel:${participante.telefono}`}
+                              className="p-2 bg-green-500/20 hover:bg-green-500/30 rounded-lg transition-colors"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Phone className="text-green-400" size={16} />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                      {participante.telefono && (
+                        <p className="text-xs text-slate-500 mt-2 ml-13">📱 {participante.telefono}</p>
+                      )}
+                      {/* Información del invitador */}
+                      {participante.invitador && (
+                        <div className="mt-3 pt-3 border-t border-slate-700/50">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-purple-400 font-medium">👤 Invitado por:</span>
+                              <span className="text-xs text-white">{participante.invitador.nombre}</span>
+                            </div>
+                            {participante.invitador.telefono && (
+                              <a
+                                href={`tel:${participante.invitador.telefono}`}
+                                className="flex items-center gap-1 text-xs text-purple-300 hover:text-purple-200 transition-colors"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Phone size={12} />
+                                <span>{participante.invitador.telefono}</span>
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 border-t border-slate-700 bg-slate-800/50">
+              <p className="text-center text-sm text-slate-400">
+                Total: <span className="text-emerald-400 font-bold">{inscritosList.length}</span> participantes inscritos
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,6 +3,23 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+/**
+ * Convierte una fecha string a Date de forma segura, evitando problemas de timezone.
+ * Cuando se usa solo fecha (YYYY-MM-DD), JavaScript interpreta como medianoche UTC,
+ * lo cual puede resultar en el día anterior en zonas horarias negativas (ej: México UTC-6).
+ * 
+ * Esta función agrega T12:00:00 (mediodía) para evitar este problema.
+ */
+function toSafeDate(dateStr: string | null | undefined): Date | null {
+  if (!dateStr) return null;
+  // Si ya tiene hora, usarlo directamente
+  if (dateStr.includes('T')) {
+    return new Date(dateStr);
+  }
+  // Si es solo fecha (YYYY-MM-DD), agregar mediodía para evitar problemas de timezone
+  return new Date(`${dateStr}T12:00:00`);
+}
+
 // Roles permitidos para acceder a esta API
 const ALLOWED_ROLES = [
   'SCHOOL_ADMIN', 
@@ -316,6 +333,14 @@ export async function GET(
         ...vision,
         startDate: vision.startDate ? vision.startDate.toISOString() : null,
         endDate: vision.endDate ? vision.endDate.toISOString() : null,
+        advancedStartDate: vision.advancedStartDate ? vision.advancedStartDate.toISOString() : null,
+        advancedEndDate: vision.advancedEndDate ? vision.advancedEndDate.toISOString() : null,
+        plWeekend1StartDate: vision.plWeekend1StartDate ? vision.plWeekend1StartDate.toISOString() : null,
+        plWeekend1EndDate: vision.plWeekend1EndDate ? vision.plWeekend1EndDate.toISOString() : null,
+        plWeekend2StartDate: vision.plWeekend2StartDate ? vision.plWeekend2StartDate.toISOString() : null,
+        plWeekend2EndDate: vision.plWeekend2EndDate ? vision.plWeekend2EndDate.toISOString() : null,
+        plWeekend3StartDate: vision.plWeekend3StartDate ? vision.plWeekend3StartDate.toISOString() : null,
+        plWeekend3EndDate: vision.plWeekend3EndDate ? vision.plWeekend3EndDate.toISOString() : null,
       },
       participantes,
       gameChangers,
@@ -329,10 +354,18 @@ export async function GET(
         endDate: p.endDate ? p.endDate.toISOString() : null,
         plWeekend1StartDate: p.plWeekend1StartDate ? p.plWeekend1StartDate.toISOString() : null,
         plWeekend1EndDate: p.plWeekend1EndDate ? p.plWeekend1EndDate.toISOString() : null,
+        plWeekend1StartTime: p.plWeekend1StartTime,
         plWeekend2StartDate: p.plWeekend2StartDate ? p.plWeekend2StartDate.toISOString() : null,
         plWeekend2EndDate: p.plWeekend2EndDate ? p.plWeekend2EndDate.toISOString() : null,
+        plWeekend2StartTime: p.plWeekend2StartTime,
         plWeekend3StartDate: p.plWeekend3StartDate ? p.plWeekend3StartDate.toISOString() : null,
         plWeekend3EndDate: p.plWeekend3EndDate ? p.plWeekend3EndDate.toISOString() : null,
+        plWeekend3StartTime: p.plWeekend3StartTime,
+        // Training control fields
+        trainingStartTime: p.trainingStartTime,
+        trainingStatus: p.trainingStatus,
+        registrationOpenDate: p.registrationOpenDate ? p.registrationOpenDate.toISOString() : null,
+        finishedAt: p.finishedAt ? p.finishedAt.toISOString() : null,
         createdAt: p.createdAt.toISOString(),
         updatedAt: p.updatedAt.toISOString(),
         promoDeadline: p.promoDeadline ? p.promoDeadline.toISOString() : null
@@ -380,13 +413,47 @@ export async function PUT(
       updatedAt: new Date(),
     };
 
-    // Si vienen fechas de básico, actualizamos la visión principal
+    // Fechas de Básico - usar toSafeDate para evitar problemas de timezone
     if (body.startDate !== undefined) {
-      visionUpdateData.startDate = body.startDate;
+      visionUpdateData.startDate = toSafeDate(body.startDate);
     }
     if (body.endDate !== undefined) {
-      visionUpdateData.endDate = body.endDate;
+      visionUpdateData.endDate = toSafeDate(body.endDate);
     }
+
+    // Fechas de Avanzado
+    if (body.advancedStartDate !== undefined) {
+      visionUpdateData.advancedStartDate = toSafeDate(body.advancedStartDate);
+    }
+    if (body.advancedEndDate !== undefined) {
+      visionUpdateData.advancedEndDate = toSafeDate(body.advancedEndDate);
+    }
+
+    // Fechas de PL - Fin de Semana 1
+    if (body.plWeekend1StartDate !== undefined) {
+      visionUpdateData.plWeekend1StartDate = toSafeDate(body.plWeekend1StartDate);
+    }
+    if (body.plWeekend1EndDate !== undefined) {
+      visionUpdateData.plWeekend1EndDate = toSafeDate(body.plWeekend1EndDate);
+    }
+
+    // Fechas de PL - Fin de Semana 2
+    if (body.plWeekend2StartDate !== undefined) {
+      visionUpdateData.plWeekend2StartDate = toSafeDate(body.plWeekend2StartDate);
+    }
+    if (body.plWeekend2EndDate !== undefined) {
+      visionUpdateData.plWeekend2EndDate = toSafeDate(body.plWeekend2EndDate);
+    }
+
+    // Fechas de PL - Fin de Semana 3
+    if (body.plWeekend3StartDate !== undefined) {
+      visionUpdateData.plWeekend3StartDate = toSafeDate(body.plWeekend3StartDate);
+    }
+    if (body.plWeekend3EndDate !== undefined) {
+      visionUpdateData.plWeekend3EndDate = toSafeDate(body.plWeekend3EndDate);
+    }
+
+    console.log('📅 Vision Update Data:', visionUpdateData);
 
     await prisma.vision.update({
       where: { id: visionId },
@@ -408,8 +475,11 @@ export async function PUT(
     const basicProduct = productos.find(p => p.levelType === 'BASIC');
     if (basicProduct) {
       const basicUpdateData: any = { updatedAt: new Date() };
-      if (body.startDate !== undefined) basicUpdateData.startDate = body.startDate;
-      if (body.endDate !== undefined) basicUpdateData.endDate = body.endDate;
+      if (body.startDate !== undefined) basicUpdateData.startDate = toSafeDate(body.startDate);
+      if (body.endDate !== undefined) basicUpdateData.endDate = toSafeDate(body.endDate);
+      // Nuevos campos de control de entrenamiento
+      if (body.basicStartTime !== undefined) basicUpdateData.trainingStartTime = body.basicStartTime;
+      if (body.basicRegistrationOpenDate !== undefined) basicUpdateData.registrationOpenDate = toSafeDate(body.basicRegistrationOpenDate);
       
       await prisma.schoolProduct.update({
         where: { id: basicProduct.id },
@@ -421,8 +491,11 @@ export async function PUT(
     const advancedProduct = productos.find(p => p.levelType === 'ADVANCED');
     if (advancedProduct) {
       const advancedUpdateData: any = { updatedAt: new Date() };
-      if (body.advancedStartDate !== undefined) advancedUpdateData.startDate = body.advancedStartDate;
-      if (body.advancedEndDate !== undefined) advancedUpdateData.endDate = body.advancedEndDate;
+      if (body.advancedStartDate !== undefined) advancedUpdateData.startDate = toSafeDate(body.advancedStartDate);
+      if (body.advancedEndDate !== undefined) advancedUpdateData.endDate = toSafeDate(body.advancedEndDate);
+      // Nuevos campos de control de entrenamiento
+      if (body.advancedStartTime !== undefined) advancedUpdateData.trainingStartTime = body.advancedStartTime;
+      if (body.advancedRegistrationOpenDate !== undefined) advancedUpdateData.registrationOpenDate = toSafeDate(body.advancedRegistrationOpenDate);
       
       await prisma.schoolProduct.update({
         where: { id: advancedProduct.id },
@@ -438,16 +511,23 @@ export async function PUT(
       const plUpdateData: any = { updatedAt: new Date() };
       
       // Fin de Semana 1
-      if (body.plWeekend1StartDate !== undefined) plUpdateData.plWeekend1StartDate = body.plWeekend1StartDate;
-      if (body.plWeekend1EndDate !== undefined) plUpdateData.plWeekend1EndDate = body.plWeekend1EndDate;
+      if (body.plWeekend1StartDate !== undefined) plUpdateData.plWeekend1StartDate = toSafeDate(body.plWeekend1StartDate);
+      if (body.plWeekend1EndDate !== undefined) plUpdateData.plWeekend1EndDate = toSafeDate(body.plWeekend1EndDate);
+      if (body.plWeekend1StartTime !== undefined) plUpdateData.plWeekend1StartTime = body.plWeekend1StartTime;
       
       // Fin de Semana 2
-      if (body.plWeekend2StartDate !== undefined) plUpdateData.plWeekend2StartDate = body.plWeekend2StartDate;
-      if (body.plWeekend2EndDate !== undefined) plUpdateData.plWeekend2EndDate = body.plWeekend2EndDate;
+      if (body.plWeekend2StartDate !== undefined) plUpdateData.plWeekend2StartDate = toSafeDate(body.plWeekend2StartDate);
+      if (body.plWeekend2EndDate !== undefined) plUpdateData.plWeekend2EndDate = toSafeDate(body.plWeekend2EndDate);
+      if (body.plWeekend2StartTime !== undefined) plUpdateData.plWeekend2StartTime = body.plWeekend2StartTime;
       
       // Fin de Semana 3 (Graduación)
-      if (body.plWeekend3StartDate !== undefined) plUpdateData.plWeekend3StartDate = body.plWeekend3StartDate;
-      if (body.plWeekend3EndDate !== undefined) plUpdateData.plWeekend3EndDate = body.plWeekend3EndDate;
+      if (body.plWeekend3StartDate !== undefined) plUpdateData.plWeekend3StartDate = toSafeDate(body.plWeekend3StartDate);
+      if (body.plWeekend3EndDate !== undefined) plUpdateData.plWeekend3EndDate = toSafeDate(body.plWeekend3EndDate);
+      if (body.plWeekend3StartTime !== undefined) plUpdateData.plWeekend3StartTime = body.plWeekend3StartTime;
+      
+      // Nuevos campos de control de entrenamiento
+      if (body.plStartTime !== undefined) plUpdateData.trainingStartTime = body.plStartTime;
+      if (body.plRegistrationOpenDate !== undefined) plUpdateData.registrationOpenDate = toSafeDate(body.plRegistrationOpenDate);
       
       console.log('💾 Datos a actualizar en PL:', plUpdateData);
       

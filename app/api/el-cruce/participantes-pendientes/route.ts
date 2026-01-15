@@ -18,13 +18,15 @@ export async function GET(request: NextRequest) {
     const productId = searchParams.get("productId")
     const organizationId = searchParams.get("organizationId")
 
-    // Obtener productos BASIC en curso (ya iniciados y no terminados)
+    // Obtener productos BASIC en curso (ya iniciados, no terminados, y NO completados)
     const now = new Date()
     
     const whereProduct: any = {
       levelType: "BASIC",
       isActive: true,
-      startDate: { lte: now }
+      startDate: { lte: now },
+      // Excluir entrenamientos que ya terminaron (COMPLETED)
+      trainingStatus: { not: 'COMPLETED' }
     }
     
     if (productId) {

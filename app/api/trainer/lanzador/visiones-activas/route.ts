@@ -28,11 +28,12 @@ export async function GET(request: NextRequest) {
 
     const now = new Date()
     
-    // Obtener productos donde es trainer directo y están EN CURSO
+    // Obtener productos donde es trainer directo y están EN CURSO (no terminados)
     const productsAsTrainer = await prisma.schoolProduct.findMany({
       where: {
         trainerId: userId,
         isActive: true,
+        trainingStatus: { not: 'COMPLETED' }, // No mostrar visiones terminadas
         // Producto en curso: startDate <= now <= endDate (con margen de 1 día)
         startDate: { lte: new Date(now.getTime() + 24 * 60 * 60 * 1000) },
         endDate: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) }
