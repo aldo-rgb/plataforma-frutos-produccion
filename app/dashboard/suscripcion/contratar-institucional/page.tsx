@@ -163,22 +163,25 @@ export default function ContratarInstitucionalPage() {
     }
   }, [status, router]);
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  // Función separada para procesar el archivo
+  const processFile = async (file: File) => {
+    console.log('📄 Processing file:', file.name, file.type, file.size);
+    
     // Validar tipo de archivo
-    if (!file.type.startsWith('image/')) {
+    if (!file.type.startsWith('image/') && !file.type.includes('image')) {
+      console.log('❌ Invalid file type:', file.type);
       setError('Por favor selecciona una imagen válida');
       return;
     }
 
     // Validar tamaño (máximo 5MB)
     if (file.size > 5 * 1024 * 1024) {
+      console.log('❌ File too large:', file.size);
       setError('La imagen no debe superar los 5MB');
       return;
     }
 
+    console.log('✅ File validation passed, starting upload...');
     setLogoFile(file);
     setUploadingLogo(true);
     setError('');
@@ -188,24 +191,45 @@ export default function ContratarInstitucionalPage() {
       formData.append('file', file);
       formData.append('folder', 'organizations');
 
+      console.log('📤 Sending to /api/upload...');
       const res = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
 
+      console.log('📥 Response status:', res.status);
       const data = await res.json();
+      console.log('📥 Response data:', data);
 
       if (data.success) {
+        console.log('✅ Upload successful:', data.url);
         setLogoUrl(data.url);
       } else {
+        console.log('❌ Upload failed:', data.error);
         setError(data.error || 'Error al subir el logo');
       }
     } catch (err) {
-      console.error('Error uploading logo:', err);
+      console.error('❌ Error uploading logo:', err);
       setError('Error al subir el logo');
     } finally {
       setUploadingLogo(false);
+      // Reset input para permitir seleccionar el mismo archivo de nuevo
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('🖼️ handleLogoUpload triggered, files:', e.target.files?.length);
+    const file = e.target.files?.[0];
+    
+    if (!file) {
+      console.log('❌ No file in event');
+      return;
+    }
+
+    await processFile(file);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -633,28 +657,36 @@ export default function ContratarInstitucionalPage() {
                         <Image src={logoUrl} alt="Logo" width={96} height={96} className="object-cover w-full h-full" />
                       </div>
                     )}
-                    <label className="flex-1 cursor-pointer group">
-                      <div className="px-5 py-4 bg-black/40 border border-white/10 rounded-2xl text-gray-400 group-hover:border-purple-500/50 group-hover:bg-black/60 transition-all flex items-center justify-center gap-3">
-                        {uploadingLogo ? (
-                          <>
-                            <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
-                            <span className="text-sm">Subiendo...</span>
-                          </>
-                        ) : (
-                          <>
+                    <div className="flex-1">
+                      {uploadingLogo ? (
+                        <div className="w-full px-5 py-4 bg-black/40 border border-white/10 rounded-2xl text-gray-400 flex items-center justify-center gap-3 min-h-[56px]">
+                          <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
+                          <span className="text-sm">Subiendo...</span>
+                        </div>
+                      ) : (
+                        <div>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                processFile(file);
+                              }
+                            }}
+                            className="hidden"
+                            id="logo-file-upload"
+                          />
+                          <label
+                            htmlFor="logo-file-upload"
+                            className="flex items-center justify-center gap-3 w-full px-5 py-4 bg-black/40 border border-white/10 rounded-2xl text-gray-400 hover:border-purple-500/50 hover:bg-black/60 active:border-purple-500 active:bg-black/60 transition-all min-h-[56px] cursor-pointer"
+                          >
                             <Upload className="w-5 h-5 text-purple-400" />
                             <span className="text-sm">{logoUrl ? 'Cambiar Logo' : 'Subir Logo'}</span>
-                          </>
-                        )}
-                      </div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleLogoUpload}
-                        className="hidden"
-                        disabled={uploadingLogo}
-                      />
-                    </label>
+                          </label>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <p className="mt-2 text-xs text-gray-600">Formatos: JPG, PNG. Máximo 5MB</p>
                 </div>
