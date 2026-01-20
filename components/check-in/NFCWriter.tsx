@@ -106,16 +106,19 @@ export default function NFCWriter({ userId, userName, token, onSuccess, onCancel
       setStatus('writing');
       await ndef.write(message);
 
+      // Importante: Vibrar inmediatamente para que el usuario sepa que debe retirar la tarjeta
       if (navigator.vibrate) {
-        navigator.vibrate([100, 50, 100]);
+        navigator.vibrate([100, 50, 100, 50, 100]); // Vibración más larga para indicar "retira la tarjeta"
       }
 
       playSuccessSound();
       setStatus('success');
 
+      // Delay más largo antes de llamar onSuccess para dar tiempo a retirar la tarjeta
+      // Si el usuario no retira la tarjeta, Android la detectará y mostrará el diálogo
       setTimeout(() => {
         onSuccess();
-      }, 2000);
+      }, 3000); // 3 segundos para dar tiempo a retirar
 
     } catch (error: any) {
       console.error('Error writing NFC:', error);
@@ -274,7 +277,8 @@ export default function NFCWriter({ userId, userName, token, onSuccess, onCancel
             </div>
             <h3 className="text-2xl font-bold text-green-400 mb-2">¡Tarjeta Grabada!</h3>
             <p className="text-slate-300 mb-2">Asignada a: <span className="text-green-400">{userName}</span></p>
-            <p className="text-slate-500 text-sm">Redirigiendo a verificación...</p>
+            <p className="text-amber-400 text-lg font-semibold animate-pulse mb-2">⚠️ RETIRA LA TARJETA AHORA ⚠️</p>
+            <p className="text-slate-500 text-sm">Continuando en 3 segundos...</p>
           </div>
         </div>
       )}
