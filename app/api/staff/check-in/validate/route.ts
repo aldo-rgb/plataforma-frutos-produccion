@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar Bitácora de Inicio para productos ADVANCED
-    if (product.level === 'ADVANCED') {
+    if (product.levelType === 'ADVANCED') {
       const advancedQuestionnaire = await prisma.advancedQuestionnaire.findUnique({
         where: { userId: participantId }
       });
