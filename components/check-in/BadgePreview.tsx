@@ -464,36 +464,91 @@ export default function BadgePreview({
     }
   };
 
-  // Grabar NFC directamente
+  // Ref para cancelar el scan NFC
+  const nfcAbortRef = useRef<AbortController | null>(null);
+
+  // Grabar NFC - Versión corregida que hace scan primero para activar el lector
   const handleWriteNFC = async () => {
     if (!('NDEFReader' in window)) {
       alert('Tu dispositivo no soporta NFC');
       return;
     }
 
+    // Cancelar cualquier operación anterior
+    if (nfcAbortRef.current) {
+      nfcAbortRef.current.abort();
+    }
+
     setNfcStatus('writing');
 
     try {
       const ndef = new (window as any).NDEFReader();
-      await ndef.write({
-        records: [
-          {
-            recordType: 'text',
-            data: getNFCData()
+      const abortController = new AbortController();
+      nfcAbortRef.current = abortController;
+      
+      // IMPORTANTE: En Android, primero hacemos scan para activar el lector NFC
+      // y detectar cuando se acerca la tarjeta
+      await ndef.scan({ signal: abortController.signal });
+      
+      // Escuchar cuando se detecta una tarjeta
+      ndef.onreading = async () => {
+        try {
+          // Tarjeta detectada, ahora escribimos
+          await ndef.write({
+            records: [
+              {
+                recordType: 'text',
+                data: getNFCData()
+              }
+            ]
+          });
+          
+          // Vibrar para indicar éxito
+          if (navigator.vibrate) {
+            navigator.vibrate([100, 50, 100]);
           }
-        ]
-      });
-      setNfcStatus('success');
-      setTimeout(() => {
-        setNfcStatus('idle');
-        setShowNFCModal(false);
-        if (onPrint) onPrint();
-      }, 2000);
+          
+          // Detener el scan
+          abortController.abort();
+          nfcAbortRef.current = null;
+          
+          setNfcStatus('success');
+          setTimeout(() => {
+            setNfcStatus('idle');
+            setShowNFCModal(false);
+            if (onPrint) onPrint();
+          }, 2000);
+        } catch (writeError: any) {
+          console.error('Error writing NFC:', writeError);
+          abortController.abort();
+          nfcAbortRef.current = null;
+          setNfcStatus('error');
+          setTimeout(() => setNfcStatus('idle'), 3000);
+        }
+      };
+      
+      ndef.onreadingerror = () => {
+        console.error('NFC reading error');
+        setNfcStatus('error');
+        setTimeout(() => setNfcStatus('idle'), 3000);
+      };
+
     } catch (error: any) {
-      console.error('Error writing NFC:', error);
+      console.error('Error initializing NFC:', error);
+      nfcAbortRef.current = null;
       setNfcStatus('error');
       setTimeout(() => setNfcStatus('idle'), 3000);
     }
+  };
+
+  // Cancelar NFC al cerrar modal
+  const handleCloseNFCModal = () => {
+    if (nfcAbortRef.current) {
+      nfcAbortRef.current.abort();
+      nfcAbortRef.current = null;
+    }
+    setNfcStatus('idle');
+    setShowNFCModal(false);
   };
 
   return (
@@ -760,7 +815,7 @@ export default function BadgePreview({
 
             {/* Botón cancelar */}
             <button
-              onClick={() => setShowNFCModal(false)}
+              onClick={handleCloseNFCModal}
               className="w-full mt-4 py-2 text-slate-400 hover:text-white transition-colors"
             >
               Cancelar

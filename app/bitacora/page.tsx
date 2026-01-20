@@ -208,6 +208,8 @@ export default function BitacoraPage() {
     if (currentDimension < 5) {
       setCurrentDimension(prev => prev + 1);
       await autoSave(data, currentDimension + 1);
+      // Scroll hacia arriba al cambiar de sección
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       // Completar cuestionario
       await handleComplete();
@@ -217,6 +219,8 @@ export default function BitacoraPage() {
   const handlePrev = () => {
     if (currentDimension > 1) {
       setCurrentDimension(prev => prev - 1);
+      // Scroll hacia arriba al cambiar de sección
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 

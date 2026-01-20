@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
       if (!hasCompletedBitacora) {
         errors.push({
           type: 'bitacora',
-          message: 'No ha completado la Bitácora de Inicio (requerida para Avanzado)',
+          message: 'No ha completado el cuestionario de avanzado (requerido para Ingresar)',
           blocking: true // BLOQUEANTE - No puede entrar sin bitácora
         });
       }
