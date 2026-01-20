@@ -68,6 +68,26 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { action, dimension, data, visionId } = body;
 
+    // Campos válidos para actualizar (excluir campos de sistema)
+    const validFields = [
+      'maritalStatus', 'partnerRelationship', 'partnerRelationshipScore',
+      'hasChildren', 'childrenData', 'parentsRelationship', 'siblingsCount',
+      'siblingsRelationship', 'hasCompanion', 'companionName', 'companionRelation',
+      'healthStatus', 'currentMedications', 'isPregnant', 'hasSuicideAttempt',
+      'suicideAttemptReason', 'childhoodEvent', 'childhoodMeaning',
+      'adolescenceEvent', 'adolescenceMeaning', 'adulthoodEvent', 'adulthoodMeaning',
+      'eventsInfluence', 'externalPerception', 'friendsPerception', 'religiousBeliefs',
+      'educationBeliefs', 'workDescription', 'triggers', 'lifePurpose'
+    ];
+
+    // Filtrar solo campos válidos del data
+    const cleanData: any = {};
+    for (const field of validFields) {
+      if (data && data[field] !== undefined) {
+        cleanData[field] = data[field];
+      }
+    }
+
     // action: 'draft' | 'complete'
     
     if (action === 'draft') {
@@ -77,14 +97,14 @@ export async function POST(request: NextRequest) {
       });
 
       const updateData: any = {
-        ...data,
+        ...cleanData,
         currentDimension: dimension || existing?.currentDimension || 0,
         lastSavedAt: new Date(),
         status: 'IN_PROGRESS',
       };
 
       // Detectar flag de riesgo de suicidio
-      if (data.hasSuicideAttempt === true) {
+      if (cleanData.hasSuicideAttempt === true) {
         updateData.suicideRiskFlag = true;
       }
 
@@ -113,22 +133,22 @@ export async function POST(request: NextRequest) {
       const updated = await prisma.advancedQuestionnaire.upsert({
         where: { userId },
         update: {
-          ...data,
+          ...cleanData,
           status: 'COMPLETED',
           completedAt: new Date(),
           lastSavedAt: new Date(),
           // Verificar flag de suicidio
-          suicideRiskFlag: data.hasSuicideAttempt === true,
+          suicideRiskFlag: cleanData.hasSuicideAttempt === true,
         },
         create: {
           userId,
           visionId: visionId || null,
-          ...data,
+          ...cleanData,
           status: 'COMPLETED',
           completedAt: new Date(),
           lastSavedAt: new Date(),
           currentDimension: 5,
-          suicideRiskFlag: data.hasSuicideAttempt === true,
+          suicideRiskFlag: cleanData.hasSuicideAttempt === true,
         }
       });
 
