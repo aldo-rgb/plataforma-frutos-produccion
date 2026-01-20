@@ -10,12 +10,13 @@ import {
 interface QRScannerProps {
   onScan: (data: string) => void;
   defaultMode?: 'camera' | 'gun';
+  enabled?: boolean; // Controla si el scanner está activo
 }
 
 type ScanMode = 'camera' | 'gun';
 type PermissionStatus = 'pending' | 'granted' | 'denied' | 'error';
 
-export default function QRScanner({ onScan, defaultMode }: QRScannerProps) {
+export default function QRScanner({ onScan, defaultMode, enabled = true }: QRScannerProps) {
   // Detectar si es móvil/tablet para default
   const [isMobile, setIsMobile] = useState(false);
   const [scanMode, setScanMode] = useState<ScanMode>(defaultMode || 'gun');
@@ -73,6 +74,12 @@ export default function QRScanner({ onScan, defaultMode }: QRScannerProps) {
 
   // Iniciar/detener scanner según el modo
   useEffect(() => {
+    if (!enabled) {
+      // Si no está habilitado, detener todo
+      stopScanner();
+      return;
+    }
+    
     if (scanMode === 'camera') {
       startScanner();
     } else {
@@ -84,7 +91,7 @@ export default function QRScanner({ onScan, defaultMode }: QRScannerProps) {
     return () => {
       stopScanner();
     };
-  }, [scanMode]);
+  }, [scanMode, enabled]);
 
   // Mantener focus en input para modo pistola
   useEffect(() => {

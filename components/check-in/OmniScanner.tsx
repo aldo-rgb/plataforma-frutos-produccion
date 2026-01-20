@@ -320,6 +320,7 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId }: 
         <QRScanner 
           onScan={handleQRScan}
           defaultMode="camera"
+          enabled={enabled}
         />
       </div>
 
