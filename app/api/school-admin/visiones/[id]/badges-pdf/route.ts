@@ -167,9 +167,9 @@ export async function GET(
     // Obtener los Game Changers reales de esta visión (VisionGameChanger)
     const visionGameChangers = await prisma.visionGameChanger.findMany({
       where: { visionId },
-      select: { userId: true },
+      select: { gameChangerId: true },
     });
-    const gcUserIds = new Set(visionGameChangers.map(gc => gc.userId));
+    const gcUserIds = new Set(visionGameChangers.map(gc => gc.gameChangerId));
 
     // Agregar enrollments (Game Changers y Participantes)
     enrollments.forEach(e => {
