@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { createBacklogTicket } from '@/lib/backlog-ticket';
+import { processBacklogForAllPaidLevels } from '@/lib/backlog-ticket';
 
 // API para actualizar automáticamente los estados de asistencia
 // Puede ser llamado por Vercel Cron Jobs o manualmente
@@ -234,25 +234,30 @@ export async function POST(request: NextRequest) {
           });
           results.markedBacklog += enrollmentsToBacklog.length;
 
-          // Crear tickets para el siguiente básico
+          // Crear tickets para TODOS los niveles pagados de cada usuario
           for (const enrollment of enrollmentsToBacklog) {
-            const ticketResult = await createBacklogTicket(
+            const ticketResult = await processBacklogForAllPaidLevels(
               enrollment.userId,
               vision.id,
-              vision.organizationId
+              vision.organizationId,
+              'BACKLOG'
             );
             
-            if (ticketResult.success && ticketResult.ticketId) {
-              results.backlogTicketsCreated++;
-              console.log(`🎫 Ticket BACKLOG creado para usuario ${enrollment.userId} -> ${ticketResult.visionName}${ticketResult.isPendingAssignment ? ' (PENDIENTE)' : ''}`);
-            } else if (ticketResult.alreadyUsedBacklog) {
-              results.backlogTicketsAlreadyUsed++;
-              console.log(`⚠️ Usuario ${enrollment.userId} ya usó su oportunidad BACKLOG`);
-            } else {
-              results.backlogTicketsFailed++;
-              if (ticketResult.error) {
-                results.errors.push(`Ticket BACKLOG usuario ${enrollment.userId}: ${ticketResult.error}`);
-              }
+            if (ticketResult.success && ticketResult.totalTickets > 0) {
+              results.backlogTicketsCreated += ticketResult.totalTickets;
+              console.log(`🎫 ${ticketResult.totalTickets} Ticket(s) BACKLOG creados para usuario ${enrollment.userId} -> ${ticketResult.levelsProcessed.join(', ')}`);
+            }
+            
+            // Contar los que ya habían usado su oportunidad
+            const alreadyUsed = ticketResult.ticketsCreated.filter(t => t.alreadyUsedBacklog).length;
+            if (alreadyUsed > 0) {
+              results.backlogTicketsAlreadyUsed += alreadyUsed;
+            }
+            
+            // Contar los fallidos
+            const failed = ticketResult.ticketsCreated.filter(t => !t.success && !t.alreadyUsedBacklog).length;
+            if (failed > 0) {
+              results.backlogTicketsFailed += failed;
             }
           }
         }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { createBacklogTicket } from '@/lib/backlog-ticket';
+import { processBacklogForAllPaidLevels, createBacklogTickets } from '@/lib/backlog-ticket';
 
 // Roles permitidos para actualizar asistencia
 const ALLOWED_ROLES = [
@@ -120,13 +120,15 @@ export async function POST(
     });
 
     // ========================================
-    // TICKET PARA SIGUIENTE BÁSICO (si es BACKLOG o DROP y nivel BASIC)
-    // Tanto BACKLOG como DROP generan ticket de cortesía con las mismas reglas
+    // TICKETS DE CORTESÍA PARA TODOS LOS NIVELES PAGADOS
+    // Si es BACKLOG o DROP, genera tickets para TODOS los niveles que tenga pagados
     // ========================================
     let courtesyTicketResult = null;
-    if ((attendanceStatus === 'BACKLOG' || attendanceStatus === 'DROP') && updatedEnrollment.level === 'BASIC' && organizationId) {
-      console.log(`🎫 Creando ticket ${attendanceStatus} para usuario ${updatedEnrollment.userId}...`);
-      courtesyTicketResult = await createBacklogTicket(
+    if ((attendanceStatus === 'BACKLOG' || attendanceStatus === 'DROP') && organizationId) {
+      console.log(`🎫 Procesando tickets ${attendanceStatus} para usuario ${updatedEnrollment.userId}...`);
+      
+      // Procesar todos los niveles pagados del usuario
+      courtesyTicketResult = await processBacklogForAllPaidLevels(
         updatedEnrollment.userId,
         visionId,
         organizationId,
@@ -134,9 +136,9 @@ export async function POST(
       );
       
       if (courtesyTicketResult.success) {
-        console.log(`✅ Ticket ${attendanceStatus} creado: ${courtesyTicketResult.ticketId} -> ${courtesyTicketResult.visionName}`);
+        console.log(`✅ ${courtesyTicketResult.totalTickets} ticket(s) creados para niveles: ${courtesyTicketResult.levelsProcessed.join(', ')}`);
       } else {
-        console.log(`⚠️ No se pudo crear ticket ${attendanceStatus}: ${courtesyTicketResult.error}`);
+        console.log(`⚠️ No se pudieron crear tickets: ${courtesyTicketResult.error}`);
       }
     }
 
