@@ -19,6 +19,7 @@ import PersonalQRWidget from "@/components/dashboard/PersonalQRWidget";
 import MedicalFormWidget from "@/components/dashboard/MedicalFormWidget";
 import IdentityHeroSection from "@/components/dashboard/identity/IdentityHeroSection";
 import PendingTicketBanner from "@/components/dashboard/PendingTicketBanner";
+import BitacoraAlertWidget from "@/components/dashboard/BitacoraAlertWidget";
 
 export default async function DashboardPage() {
   // 1. Obtener sesión y datos frescos
@@ -533,6 +534,9 @@ export default async function DashboardPage() {
 
       {/* ALERTA DE TICKETS PENDIENTES DE PAGO */}
       <PendingTicketBanner />
+
+      {/* ALERTA DE BITÁCORA DE INICIO - Para usuarios ADVANCED sin completar */}
+      <BitacoraAlertWidget />
 
       {/* ALERTA DE RE-AGENDAMIENTO */}
       <AlertaReagendamiento />

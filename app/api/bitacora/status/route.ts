@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
       where: {
         userId,
         level: 'ADVANCED',
-        paymentStatus: { in: ['FULL', 'PARTIAL', 'GIFT'] },
+        paymentStatus: { in: ['FULL', 'PARTIAL', 'GIFT', 'PAID'] },
       },
       include: {
         Vision: {
