@@ -78,24 +78,25 @@ export async function POST(
     const updated = await prisma.visionGameChanger.update({
       where: { id: visionGC.id },
       data: { isCaptain: newCaptainStatus },
-      include: {
-        Usuario_VisionGameChanger_gameChangerIdToUsuario: {
-          select: { id: true, nombre: true, email: true },
-        },
-      },
+    });
+
+    // Obtener el usuario por separado
+    const gcUser = await prisma.usuario.findUnique({
+      where: { id: updated.gameChangerId },
+      select: { id: true, nombre: true, email: true },
     });
 
     return NextResponse.json({
       success: true,
       isCaptain: updated.isCaptain,
       message: updated.isCaptain 
-        ? `${updated.Usuario_VisionGameChanger_gameChangerIdToUsuario.nombre} es ahora el Capitán`
+        ? `${gcUser?.nombre || 'Game Changer'} es ahora el Capitán`
         : `Se removió el rol de Capitán`,
       gameChanger: {
         id: updated.id,
         gameChangerId: updated.gameChangerId,
         isCaptain: updated.isCaptain,
-        nombre: updated.Usuario_VisionGameChanger_gameChangerIdToUsuario.nombre,
+        nombre: gcUser?.nombre || '',
       },
     });
   } catch (error) {
