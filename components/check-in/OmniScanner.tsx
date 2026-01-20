@@ -8,6 +8,7 @@ interface OmniScannerProps {
   onScan: (data: string, method: 'camera' | 'keyboard' | 'nfc') => void;
   enabled?: boolean;
   expectedUserId?: number;
+  defaultScannerMode?: 'camera' | 'gun'; // Modo por defecto del scanner QR
 }
 
 type ScannerChannel = 'camera' | 'keyboard' | 'nfc';
@@ -30,7 +31,7 @@ interface NDEFReadingEvent {
   };
 }
 
-export default function OmniScanner({ onScan, enabled = true, expectedUserId }: OmniScannerProps) {
+export default function OmniScanner({ onScan, enabled = true, expectedUserId, defaultScannerMode }: OmniScannerProps) {
   const [channelStatus, setChannelStatus] = useState<ChannelStatus>({
     camera: 'inactive',
     keyboard: 'inactive',
@@ -319,7 +320,7 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId }: 
       <div className="bg-slate-900 rounded-2xl overflow-hidden border-2 border-slate-700">
         <QRScanner 
           onScan={handleQRScan}
-          defaultMode="camera"
+          defaultMode={defaultScannerMode || 'camera'}
           enabled={enabled}
         />
       </div>
