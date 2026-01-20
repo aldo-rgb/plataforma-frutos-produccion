@@ -28,37 +28,39 @@ export async function POST(
     const { id } = await params;
     const visionId = parseInt(id);
     const body = await request.json();
-    const { gameChangerId, level, isCaptain } = body;
+    const { gameChangerId } = body;
 
-    if (!gameChangerId || !level) {
+    if (!gameChangerId) {
       return NextResponse.json({ 
         success: false, 
-        error: 'Faltan parámetros: gameChangerId y level' 
+        error: 'Falta el parámetro gameChangerId' 
       }, { status: 400 });
     }
 
-    // Verificar que el game changer existe
+    // Buscar el registro VisionGameChanger por su ID directo
     const visionGC = await prisma.visionGameChanger.findFirst({
       where: {
+        id: parseInt(gameChangerId),
         visionId,
-        gameChangerId: parseInt(gameChangerId),
-        level: level,
       },
     });
 
     if (!visionGC) {
       return NextResponse.json({ 
         success: false, 
-        error: 'Game Changer no encontrado en esta visión/nivel' 
+        error: 'Game Changer no encontrado en esta visión' 
       }, { status: 404 });
     }
 
+    // Toggle del estado de capitán
+    const newCaptainStatus = !visionGC.isCaptain;
+
     // Si se está asignando como capitán, quitar el capitán anterior del mismo nivel
-    if (isCaptain) {
+    if (newCaptainStatus) {
       await prisma.visionGameChanger.updateMany({
         where: {
           visionId,
-          level: level,
+          level: visionGC.level,
           isCaptain: true,
           id: { not: visionGC.id },
         },
@@ -69,7 +71,7 @@ export async function POST(
     // Actualizar el estado de capitán
     const updated = await prisma.visionGameChanger.update({
       where: { id: visionGC.id },
-      data: { isCaptain: isCaptain },
+      data: { isCaptain: newCaptainStatus },
       include: {
         Usuario_VisionGameChanger_gameChangerIdToUsuario: {
           select: { id: true, nombre: true, email: true },
@@ -79,11 +81,13 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: isCaptain 
+      isCaptain: updated.isCaptain,
+      message: updated.isCaptain 
         ? `${updated.Usuario_VisionGameChanger_gameChangerIdToUsuario.nombre} es ahora el Capitán`
         : `Se removió el rol de Capitán`,
       gameChanger: {
-        id: updated.gameChangerId,
+        id: updated.id,
+        gameChangerId: updated.gameChangerId,
         isCaptain: updated.isCaptain,
         nombre: updated.Usuario_VisionGameChanger_gameChangerIdToUsuario.nombre,
       },
