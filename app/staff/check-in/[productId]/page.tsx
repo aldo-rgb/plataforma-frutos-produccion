@@ -76,10 +76,18 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ enrolled: 0, checkedIn: 0, pending: 0 });
+  const [isProcessing, setIsProcessing] = useState(false); // Flag para evitar múltiples validaciones
   
   // Control de debounce para sonidos - evitar múltiples sonidos rápidos
   const lastSoundTimeRef = useRef<number>(0);
   const soundCooldown = 500; // Mínimo 500ms entre sonidos
+  
+  // Función para cancelar vibraciones
+  const stopVibration = useCallback(() => {
+    if (navigator.vibrate) {
+      navigator.vibrate(0); // Cancelar cualquier vibración
+    }
+  }, []);
 
   // Sonidos con debounce
   const playSound = useCallback((type: 'success' | 'error' | 'warning' | 'scan') => {
@@ -159,7 +167,15 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
 
   // Validar QR escaneado o búsqueda manual
   const validateUser = async (identifier: string) => {
+    // Evitar múltiples validaciones simultáneas
+    if (isProcessing || checkInStatus !== 'idle') {
+      console.log('⚠️ Validación bloqueada - ya hay una en proceso o estado no es idle');
+      return;
+    }
+    
+    setIsProcessing(true);
     setCheckInStatus('validating');
+    stopVibration(); // Cancelar cualquier vibración previa
     playSound('scan');
 
     try {
@@ -209,6 +225,7 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
       }
     } catch (error) {
       console.error('Error validating:', error);
+      stopVibration(); // Cancelar vibraciones en error
       setCheckInStatus('error');
       playSound('error');
       setValidationResult({
@@ -216,6 +233,9 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
         errors: [{ type: 'general', message: 'Error de conexión', blocking: true }],
         canProceed: false
       });
+    } finally {
+      // Liberar el flag después de un pequeño delay para evitar rebotes
+      setTimeout(() => setIsProcessing(false), 1000);
     }
   };
 
@@ -394,6 +414,8 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
 
   // Resetear estación
   const resetStation = () => {
+    stopVibration(); // Cancelar cualquier vibración
+    setIsProcessing(false); // Liberar flag
     setCheckInStatus('idle');
     setValidationResult(null);
     setManualSearch('');
@@ -484,7 +506,7 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
                     console.log(`Detected via ${method}:`, data);
                     validateUser(data);
                   }}
-                  enabled={checkInStatus === 'idle'}
+                  enabled={checkInStatus === 'idle' && !isProcessing}
                 />
               </div>
 
