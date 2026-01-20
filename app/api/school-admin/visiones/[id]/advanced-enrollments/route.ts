@@ -78,12 +78,13 @@ export async function GET(
 
       return {
         id: enrollment.id,
-        userId: enrollment.userId,
+        oderId: enrollment.userId,
         visionId: enrollment.visionId,
         enrolledAt: enrollment.enrolledAt,
         enrollmentStatus: enrollment.enrollmentStatus,
         attendanceStatus: enrollment.attendanceStatus,
         level: enrollment.level,
+        rol: 'PARTICIPANTE',
         Usuario: {
           id: enrollment.Usuario_vision_enrollments_userIdToUsuario.id,
           nombre: enrollment.Usuario_vision_enrollments_userIdToUsuario.nombre,
@@ -99,9 +100,114 @@ export async function GET(
       };
     });
 
+    // Obtener Game Changers de esta visión para nivel ADVANCED
+    const visionGameChangers = await prisma.visionGameChanger.findMany({
+      where: { 
+        visionId,
+        level: 'ADVANCED'
+      },
+      include: {
+        Usuario_VisionGameChanger_gameChangerIdToUsuario: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+            telefono: true,
+            referralCode: true,
+          }
+        }
+      }
+    });
+
+    // Obtener Trainer del SchoolProduct ADVANCED
+    const schoolProduct = await prisma.schoolProduct.findFirst({
+      where: {
+        visionId,
+        levelType: 'ADVANCED',
+        isActive: true,
+      },
+      include: {
+        Trainer: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+            telefono: true,
+            referralCode: true,
+          }
+        }
+      }
+    });
+
+    // Crear lista de staff (GC + Trainer) al principio
+    const staffList: typeof formattedEnrollments = [];
+    
+    // Agregar Trainer primero
+    if (schoolProduct?.Trainer) {
+      staffList.push({
+        id: -schoolProduct.Trainer.id, // ID negativo para distinguir
+        oderId: schoolProduct.Trainer.id,
+        visionId: visionId,
+        enrolledAt: new Date(),
+        enrollmentStatus: 'ACTIVE',
+        attendanceStatus: null as any,
+        level: 'ADVANCED',
+        rol: 'TRAINER',
+        Usuario: {
+          id: schoolProduct.Trainer.id,
+          nombre: schoolProduct.Trainer.nombre,
+          email: schoolProduct.Trainer.email,
+          telefono: schoolProduct.Trainer.telefono,
+          referralCode: schoolProduct.Trainer.referralCode,
+          organizationId: null as any,
+          createdAt: new Date(),
+          Organization: null as any
+        },
+        gameChanger: null,
+        squadName: null
+      });
+    }
+
+    // Agregar Game Changers
+    for (const gc of visionGameChangers) {
+      const gcUser = gc.Usuario_VisionGameChanger_gameChangerIdToUsuario;
+      // Evitar duplicados si ya está como trainer
+      if (staffList.find(s => s.Usuario.id === gcUser.id)) continue;
+      
+      staffList.push({
+        id: -gcUser.id - 10000, // ID negativo único
+        oderId: gcUser.id,
+        visionId: visionId,
+        enrolledAt: gc.createdAt,
+        enrollmentStatus: 'ACTIVE',
+        attendanceStatus: null as any,
+        level: 'ADVANCED',
+        rol: 'GAME CHANGER',
+        Usuario: {
+          id: gcUser.id,
+          nombre: gcUser.nombre,
+          email: gcUser.email,
+          telefono: gcUser.telefono,
+          referralCode: gcUser.referralCode,
+          organizationId: null as any,
+          createdAt: gc.createdAt,
+          Organization: null as any
+        },
+        gameChanger: null,
+        squadName: null
+      });
+    }
+
+    // Filtrar participantes que ya están en staff
+    const staffIds = new Set(staffList.map(s => s.Usuario.id));
+    const filteredEnrollments = formattedEnrollments.filter(e => !staffIds.has(e.Usuario.id));
+
+    // Combinar: Staff primero, luego participantes
+    const allEnrollments = [...staffList, ...filteredEnrollments];
+
     return NextResponse.json({
       success: true,
-      enrollments: formattedEnrollments
+      enrollments: allEnrollments
     });
 
   } catch (error) {

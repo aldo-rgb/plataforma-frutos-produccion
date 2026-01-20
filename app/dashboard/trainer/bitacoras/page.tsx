@@ -101,24 +101,24 @@ export default function TrainerBitacorasPage() {
 
   if (loading || status === 'loading') {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-10 h-10 animate-spin text-purple-500 mx-auto mb-3" />
-          <p className="text-gray-500">Cargando participantes...</p>
+          <p className="text-gray-400">Cargando participantes...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-2xl font-bold text-white mb-2">
             Bitácoras de Participantes
           </h1>
-          <p className="text-gray-500 dark:text-gray-400">
+          <p className="text-gray-400">
             Visualiza el panorama de vida de tus participantes de Avanzado
           </p>
         </div>
@@ -126,63 +126,63 @@ export default function TrainerBitacorasPage() {
         {/* Stats cards */}
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center">
-                  <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
-                  <p className="text-xs text-gray-500">Total</p>
+                  <p className="text-2xl font-bold text-white">{stats.total}</p>
+                  <p className="text-xs text-gray-400">Total</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-500/20 flex items-center justify-center">
-                  <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                  <CheckCircle2 className="w-5 h-5 text-green-400" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.completed}</p>
-                  <p className="text-xs text-gray-500">Completadas</p>
+                  <p className="text-2xl font-bold text-white">{stats.completed}</p>
+                  <p className="text-xs text-gray-400">Completadas</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-amber-400" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.inProgress}</p>
-                  <p className="text-xs text-gray-500">En progreso</p>
+                  <p className="text-2xl font-bold text-white">{stats.inProgress}</p>
+                  <p className="text-xs text-gray-400">En progreso</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+            <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-gray-400" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.pending}</p>
-                  <p className="text-xs text-gray-500">Pendientes</p>
+                  <p className="text-2xl font-bold text-white">{stats.pending}</p>
+                  <p className="text-xs text-gray-400">Pendientes</p>
                 </div>
               </div>
             </div>
 
             {stats.withSuicideRisk > 0 && (
-              <div className="bg-red-50 dark:bg-red-500/10 rounded-xl p-4 border border-red-200 dark:border-red-500/30">
+              <div className="bg-red-500/10 rounded-xl p-4 border border-red-500/30">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center">
-                    <LifeBuoy className="w-5 h-5 text-red-600 dark:text-red-400" />
+                  <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                    <LifeBuoy className="w-5 h-5 text-red-400" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-red-600 dark:text-red-400">{stats.withSuicideRisk}</p>
-                    <p className="text-xs text-red-600 dark:text-red-400">Atención especial</p>
+                    <p className="text-2xl font-bold text-red-400">{stats.withSuicideRisk}</p>
+                    <p className="text-xs text-red-400">Atención especial</p>
                   </div>
                 </div>
               </div>
@@ -200,7 +200,7 @@ export default function TrainerBitacorasPage() {
               placeholder="Buscar participante..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:border-purple-500 outline-none"
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder-gray-400 focus:border-purple-500 outline-none"
             />
           </div>
 
@@ -221,7 +221,7 @@ export default function TrainerBitacorasPage() {
                     ? f.id === 'risk'
                       ? 'bg-red-500 text-white'
                       : 'bg-purple-500 text-white'
-                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    : 'bg-slate-800/50 text-gray-400 border border-slate-700 hover:bg-slate-700'
                   }
                 `}
               >
@@ -235,9 +235,9 @@ export default function TrainerBitacorasPage() {
         {/* Participants list */}
         <div className="space-y-3">
           {filteredParticipants.length === 0 ? (
-            <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-              <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-500">No se encontraron participantes</p>
+            <div className="text-center py-12 bg-slate-800/50 rounded-xl border border-slate-700">
+              <FileText className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+              <p className="text-gray-400">No se encontraron participantes</p>
             </div>
           ) : (
             filteredParticipants.map((participant, index) => (
@@ -247,13 +247,13 @@ export default function TrainerBitacorasPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
               >
-                <Link href={`/trainer/bitacoras/${participant.user.id}`}>
+                <Link href={`/dashboard/trainer/bitacoras/${participant.user.id}`}>
                   <div className={`
-                    bg-white dark:bg-gray-800 rounded-xl p-4 border transition-all cursor-pointer
-                    hover:shadow-lg hover:border-purple-300 dark:hover:border-purple-500/50
+                    bg-slate-800/50 rounded-xl p-4 border transition-all cursor-pointer
+                    hover:shadow-lg hover:border-purple-500/50
                     ${participant.hasSuicideRisk 
-                      ? 'border-red-300 dark:border-red-500/50 bg-red-50/50 dark:bg-red-500/5' 
-                      : 'border-gray-200 dark:border-gray-700'
+                      ? 'border-red-500/50 bg-red-500/5' 
+                      : 'border-slate-700'
                     }
                   `}>
                     <div className="flex items-center gap-4">
@@ -273,12 +273,12 @@ export default function TrainerBitacorasPage() {
                         
                         {/* Status badge */}
                         <div className={`
-                          absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white dark:border-gray-800 flex items-center justify-center
+                          absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-slate-800 flex items-center justify-center
                           ${participant.hasCompletedQuestionnaire 
                             ? 'bg-green-500' 
                             : participant.questionnaire?.status === 'IN_PROGRESS'
                               ? 'bg-amber-500'
-                              : 'bg-gray-400'
+                              : 'bg-gray-500'
                           }
                         `}>
                           {participant.hasCompletedQuestionnaire ? (
@@ -294,18 +294,18 @@ export default function TrainerBitacorasPage() {
                       {/* Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                          <h3 className="font-semibold text-white truncate">
                             {participant.user.nombre}
                           </h3>
                           {participant.hasSuicideRisk && (
-                            <span className="px-2 py-0.5 bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 text-xs font-medium rounded-full flex items-center gap-1">
+                            <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs font-medium rounded-full flex items-center gap-1">
                               <LifeBuoy className="w-3 h-3" />
                               Atención
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-500 truncate">{participant.user.email}</p>
-                        <p className="text-xs text-gray-400 mt-1">{participant.vision.nombre}</p>
+                        <p className="text-sm text-gray-400 truncate">{participant.user.email}</p>
+                        <p className="text-xs text-gray-500 mt-1">{participant.vision.nombre}</p>
                       </div>
 
                       {/* Status text */}
@@ -313,10 +313,10 @@ export default function TrainerBitacorasPage() {
                         <span className={`
                           text-sm font-medium
                           ${participant.hasCompletedQuestionnaire 
-                            ? 'text-green-600 dark:text-green-400' 
+                            ? 'text-green-400' 
                             : participant.questionnaire?.status === 'IN_PROGRESS'
-                              ? 'text-amber-600 dark:text-amber-400'
-                              : 'text-gray-400'
+                              ? 'text-amber-400'
+                              : 'text-gray-500'
                           }
                         `}>
                           {participant.hasCompletedQuestionnaire 
@@ -329,7 +329,7 @@ export default function TrainerBitacorasPage() {
                       </div>
 
                       {/* Arrow */}
-                      <ChevronRight className="w-5 h-5 text-gray-400" />
+                      <ChevronRight className="w-5 h-5 text-gray-500" />
                     </div>
                   </div>
                 </Link>

@@ -164,14 +164,41 @@ export async function GET(
       }
     }
 
-    // Obtener los Game Changers reales de esta visión (VisionGameChanger)
+    // Obtener los Game Changers reales de esta visión (VisionGameChanger) con sus datos
     const visionGameChangers = await prisma.visionGameChanger.findMany({
-      where: { visionId },
-      select: { gameChangerId: true },
+      where: { 
+        visionId,
+        level: level, // Filtrar por nivel
+      },
+      include: {
+        Usuario_VisionGameChanger_gameChangerIdToUsuario: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+            referralCode: true,
+          }
+        }
+      }
     });
     const gcUserIds = new Set(visionGameChangers.map(gc => gc.gameChangerId));
 
-    // Agregar enrollments (Game Changers y Participantes)
+    // Agregar Game Changers al principio (después del trainer/coordinador)
+    for (const gc of visionGameChangers) {
+      const gcUser = gc.Usuario_VisionGameChanger_gameChangerIdToUsuario;
+      // Solo agregar si no está filtrado por userIds y no es duplicado
+      if ((!userIds || userIds.includes(gcUser.id)) && !participants.find(p => p.id === gcUser.id)) {
+        participants.push({
+          id: gcUser.id,
+          nombre: gcUser.nombre,
+          email: gcUser.email,
+          referralCode: gcUser.referralCode,
+          rol: 'GAME CHANGER',
+        });
+      }
+    }
+
+    // Agregar enrollments (Participantes)
     enrollments.forEach(e => {
       const enrolledUser = e.Usuario_vision_enrollments_userIdToUsuario;
       if (!enrolledUser) return;

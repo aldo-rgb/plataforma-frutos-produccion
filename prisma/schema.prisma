@@ -2353,6 +2353,7 @@ model VisionGameChanger {
   gameChangerId                                    Int
   asignadoPorId                                    Int
   level                                            VisionLevel
+  isCaptain                                        Boolean     @default(false)
   createdAt                                        DateTime    @default(now())
   Usuario_VisionGameChanger_asignadoPorIdToUsuario Usuario     @relation("VisionGameChanger_asignadoPorIdToUsuario", fields: [asignadoPorId], references: [id], onDelete: Cascade)
   Usuario_VisionGameChanger_gameChangerIdToUsuario Usuario     @relation("VisionGameChanger_gameChangerIdToUsuario", fields: [gameChangerId], references: [id], onDelete: Cascade)
@@ -2362,6 +2363,7 @@ model VisionGameChanger {
   @@index([gameChangerId])
   @@index([visionId])
   @@index([level])
+  @@index([isCaptain])
 }
 
 model VisionMentor {

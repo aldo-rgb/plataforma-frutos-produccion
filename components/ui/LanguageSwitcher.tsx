@@ -1,6 +1,5 @@
 'use client';
 
-import { useLocale } from 'next-intl';
 import { Globe, Check } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -18,9 +17,8 @@ const languages: LanguageOption[] = [
 ];
 
 export default function LanguageSwitcher() {
-  const locale = useLocale() as Locale;
   const [isOpen, setIsOpen] = useState(false);
-  const [currentLocale, setCurrentLocale] = useState<Locale>(locale);
+  const [currentLocale, setCurrentLocale] = useState<Locale>('es');
 
   useEffect(() => {
     // Leer desde cookie primero (tiene prioridad porque es lo que lee el servidor)

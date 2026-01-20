@@ -6,8 +6,8 @@ import Link from 'next/link';
 
 interface Participant {
   id: number;
-  userId: number;
-  enrolledAt: string;
+  oderId?: number;
+  enrolledAt?: string;
   Usuario: {
     id: number;
     nombre: string;
@@ -15,6 +15,7 @@ interface Participant {
     telefono?: string;
     referralCode?: string;
   };
+  rol?: string; // For staff members
 }
 
 interface Vision {
@@ -317,34 +318,54 @@ export default function BadgesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredParticipants.map((participant) => {
               const isSelected = selectedIds.has(participant.Usuario.id);
+              const isStaff = participant.rol === 'TRAINER' || participant.rol === 'GAME CHANGER';
               return (
                 <div
                   key={participant.id}
                   onClick={() => toggleSelect(participant.Usuario.id)}
                   className={`
                     relative cursor-pointer rounded-xl p-4 transition-all duration-200
-                    ${isSelected 
-                      ? `bg-gradient-to-br ${colors.bg} ${colors.border} border-2 shadow-lg scale-[1.02]` 
-                      : 'bg-slate-800/30 border border-slate-700/50 hover:border-slate-600/50 hover:bg-slate-800/50'
+                    ${isStaff 
+                      ? isSelected 
+                        ? 'bg-gradient-to-br from-red-900/50 to-slate-900/50 border-red-500/50 border-2 shadow-lg scale-[1.02]'
+                        : 'bg-gradient-to-br from-red-900/30 to-slate-900/50 border border-red-500/30 hover:border-red-500/50'
+                      : isSelected 
+                        ? `bg-gradient-to-br ${colors.bg} ${colors.border} border-2 shadow-lg scale-[1.02]` 
+                        : 'bg-slate-800/30 border border-slate-700/50 hover:border-slate-600/50 hover:bg-slate-800/50'
                     }
                   `}
                 >
                   {/* Selection indicator */}
                   <div className={`absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center transition-all ${
                     isSelected 
-                      ? `bg-gradient-to-r ${colors.button} text-white` 
+                      ? isStaff 
+                        ? 'bg-gradient-to-r from-red-600 to-red-500 text-white'
+                        : `bg-gradient-to-r ${colors.button} text-white`
                       : 'bg-slate-700/50 text-slate-400'
                   }`}>
                     {isSelected ? '✓' : ''}
                   </div>
 
+                  {/* Role Badge for Staff */}
+                  {isStaff && (
+                    <div className="absolute top-3 left-3">
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                        participant.rol === 'TRAINER' 
+                          ? 'bg-red-600 text-white' 
+                          : 'bg-red-500/80 text-white'
+                      }`}>
+                        {participant.rol === 'TRAINER' ? '🎯 TRAINER' : '🔥 GC'}
+                      </span>
+                    </div>
+                  )}
+
                   {/* Avatar */}
-                  <div className={`w-16 h-16 rounded-full ${colors.accent} flex items-center justify-center text-2xl mb-3 mx-auto`}>
+                  <div className={`w-16 h-16 rounded-full ${isStaff ? 'bg-red-500/20' : colors.accent} flex items-center justify-center text-2xl mb-3 mx-auto ${isStaff ? 'mt-6' : ''}`}>
                     {participant.Usuario.nombre?.charAt(0).toUpperCase() || '?'}
                   </div>
 
                   {/* Name */}
-                  <h3 className={`font-bold text-center truncate ${isSelected ? colors.text : 'text-white'}`}>
+                  <h3 className={`font-bold text-center truncate ${isStaff ? 'text-red-300' : isSelected ? colors.text : 'text-white'}`}>
                     {participant.Usuario.nombre}
                   </h3>
 

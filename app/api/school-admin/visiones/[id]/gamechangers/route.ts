@@ -77,7 +77,8 @@ export async function GET(
         id: gc.id,
         usuario: gc.Usuario_VisionGameChanger_gameChangerIdToUsuario,
         assignedAt: gc.createdAt,
-        level: gc.level, // Include level field
+        level: gc.level,
+        isCaptain: gc.isCaptain,
       })),
     });
 

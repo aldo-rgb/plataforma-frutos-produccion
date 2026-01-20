@@ -85,6 +85,7 @@ export default function SquadBuilderPage() {
   const [lastScanned, setLastScanned] = useState<{name: string; success: boolean} | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showQRScanner, setShowQRScanner] = useState(false);
+  const [showNFCScanner, setShowNFCScanner] = useState(false);
   const [conflictData, setConflictData] = useState<{
     currentGroup: { id: string; name: string; leaderName: string };
     user: { id: number; nombre: string; };
@@ -651,7 +652,7 @@ export default function SquadBuilderPage() {
             <Button
               variant="outline"
               className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-              onClick={() => {/* TODO: Implement NFC */}}
+              onClick={() => setShowNFCScanner(true)}
             >
               <Smartphone className="w-5 h-5 mr-2" />
               Leer NFC
@@ -677,6 +678,17 @@ export default function SquadBuilderPage() {
             addMemberByCode(code);
           }}
           onClose={() => setShowQRScanner(false)}
+        />
+      )}
+
+      {/* NFC Scanner Modal */}
+      {showNFCScanner && (
+        <NFCScannerModal 
+          onScan={(code) => {
+            setShowNFCScanner(false);
+            addMemberByCode(code);
+          }}
+          onClose={() => setShowNFCScanner(false)}
         />
       )}
     </div>
@@ -883,6 +895,243 @@ function QRScannerModal({ onScan, onClose }: { onScan: (code: string) => void; o
             </p>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Componente de Scanner NFC para leer gafetes
+function NFCScannerModal({ onScan, onClose }: { onScan: (code: string) => void; onClose: () => void }) {
+  const [status, setStatus] = useState<'checking' | 'unsupported' | 'ready' | 'scanning' | 'success' | 'error'>('checking');
+  const [error, setError] = useState<string | null>(null);
+  const [scannedCode, setScannedCode] = useState<string | null>(null);
+  const nfcAbortRef = useRef<AbortController | null>(null);
+
+  // Verificar soporte NFC
+  useEffect(() => {
+    const checkNFC = async () => {
+      // Verificar si NFC está disponible (no en iOS)
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const hasNFC = 'NDEFReader' in window;
+
+      if (isIOS) {
+        setStatus('unsupported');
+        setError('NFC no está disponible en dispositivos iOS. Usa el escáner QR.');
+        return;
+      }
+
+      if (!hasNFC) {
+        setStatus('unsupported');
+        setError('Este dispositivo no soporta NFC o no está habilitado.');
+        return;
+      }
+
+      setStatus('ready');
+    };
+
+    checkNFC();
+
+    return () => {
+      // Cleanup: abortar escaneo NFC al cerrar
+      if (nfcAbortRef.current) {
+        nfcAbortRef.current.abort();
+        nfcAbortRef.current = null;
+      }
+    };
+  }, []);
+
+  // Iniciar escaneo NFC
+  const startNFCScan = async () => {
+    if (status !== 'ready') return;
+
+    setStatus('scanning');
+    setError(null);
+
+    try {
+      // @ts-ignore - Web NFC API
+      const ndef = new window.NDEFReader();
+      const abortController = new AbortController();
+      nfcAbortRef.current = abortController;
+
+      ndef.onreading = (event: any) => {
+        // Vibrar para indicar lectura
+        if (navigator.vibrate) {
+          navigator.vibrate([100, 50, 100]);
+        }
+
+        // Leer los datos del NFC
+        if (event.message && event.message.records && event.message.records.length > 0) {
+          for (const record of event.message.records) {
+            let data = '';
+            
+            if (record.recordType === 'text') {
+              const decoder = new TextDecoder(record.encoding || 'utf-8');
+              data = decoder.decode(record.data);
+            } else if (record.recordType === 'url') {
+              const decoder = new TextDecoder();
+              const url = decoder.decode(record.data);
+              // Extraer código de URL como https://frutos.com/verify/CODIGO
+              const match = url.match(/\/verify\/(.+)$/);
+              if (match) {
+                data = match[1];
+              } else {
+                data = url;
+              }
+            } else {
+              // Otro tipo de registro
+              const decoder = new TextDecoder();
+              data = decoder.decode(record.data);
+            }
+
+            if (data) {
+              // Limpiar el código (quitar prefijos comunes)
+              let cleanCode = data.trim();
+              if (cleanCode.startsWith('USER:')) {
+                cleanCode = cleanCode.substring(5);
+              }
+
+              setScannedCode(cleanCode);
+              setStatus('success');
+              
+              // Abortar el escaneo
+              abortController.abort();
+              nfcAbortRef.current = null;
+
+              // Esperar un momento para mostrar éxito y luego procesar
+              setTimeout(() => {
+                onScan(cleanCode);
+              }, 500);
+              
+              return;
+            }
+          }
+        }
+
+        // Si no se encontró dato válido
+        setError('No se encontró código válido en el gafete');
+        setStatus('ready');
+      };
+
+      ndef.onreadingerror = () => {
+        setError('Error al leer el gafete. Acércalo nuevamente.');
+        setStatus('ready');
+      };
+
+      await ndef.scan({ signal: abortController.signal });
+    } catch (err: any) {
+      console.error('Error starting NFC:', err);
+      
+      if (err.name === 'NotAllowedError') {
+        setError('Permiso de NFC denegado. Habilítalo en la configuración.');
+      } else if (err.name === 'NotSupportedError') {
+        setError('NFC no está habilitado en este dispositivo.');
+      } else {
+        setError('Error al iniciar el lector NFC.');
+      }
+      
+      setStatus('ready');
+    }
+  };
+
+  // Auto-iniciar escaneo cuando esté listo
+  useEffect(() => {
+    if (status === 'ready') {
+      startNFCScan();
+    }
+  }, [status]);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
+      <div className="bg-slate-900 rounded-2xl w-full max-w-md overflow-hidden border border-slate-700">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-slate-700">
+          <h3 className="text-white font-bold text-lg flex items-center gap-2">
+            <Smartphone className="w-5 h-5 text-cyan-400" />
+            Lector NFC
+          </h3>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5 text-slate-400" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          {status === 'checking' && (
+            <div className="text-center py-8">
+              <Loader2 className="w-12 h-12 text-cyan-400 animate-spin mx-auto mb-4" />
+              <p className="text-slate-400">Verificando NFC...</p>
+            </div>
+          )}
+
+          {status === 'unsupported' && (
+            <div className="text-center py-8">
+              <div className="w-20 h-20 mx-auto bg-amber-500/20 rounded-full flex items-center justify-center mb-4">
+                <AlertCircle className="w-10 h-10 text-amber-400" />
+              </div>
+              <h4 className="text-amber-400 font-bold text-lg mb-2">NFC No Disponible</h4>
+              <p className="text-slate-400 text-sm mb-4">{error}</p>
+              <Button
+                variant="outline"
+                onClick={onClose}
+                className="bg-slate-800 border-slate-600 text-white hover:bg-slate-700"
+              >
+                Cerrar
+              </Button>
+            </div>
+          )}
+
+          {(status === 'ready' || status === 'scanning') && (
+            <div className="text-center py-8">
+              <div className="relative w-32 h-32 mx-auto mb-6">
+                {/* Animación de ondas */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="absolute w-24 h-24 bg-cyan-500/20 rounded-full animate-ping" />
+                  <div className="absolute w-32 h-32 bg-cyan-500/10 rounded-full animate-ping" style={{ animationDelay: '0.5s' }} />
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Smartphone className="w-16 h-16 text-cyan-400" />
+                </div>
+              </div>
+              <h4 className="text-cyan-400 font-bold text-xl mb-2">
+                {status === 'scanning' ? 'Esperando gafete...' : 'Listo para escanear'}
+              </h4>
+              <p className="text-slate-400 text-sm mb-4">
+                Acerca el gafete NFC a la parte trasera del dispositivo
+              </p>
+              
+              {error && (
+                <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 mb-4">
+                  <p className="text-red-300 text-sm">{error}</p>
+                </div>
+              )}
+
+              {status === 'ready' && (
+                <Button
+                  onClick={startNFCScan}
+                  className="bg-cyan-500 hover:bg-cyan-600 text-white"
+                >
+                  <Smartphone className="w-4 h-4 mr-2" />
+                  Iniciar Escaneo
+                </Button>
+              )}
+            </div>
+          )}
+
+          {status === 'success' && (
+            <div className="text-center py-8">
+              <div className="w-20 h-20 mx-auto bg-green-500/20 rounded-full flex items-center justify-center mb-4">
+                <CheckCircle2 className="w-10 h-10 text-green-400" />
+              </div>
+              <h4 className="text-green-400 font-bold text-lg mb-2">¡Gafete Leído!</h4>
+              <p className="text-slate-400 text-sm">
+                Código: <span className="text-white font-mono">{scannedCode}</span>
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

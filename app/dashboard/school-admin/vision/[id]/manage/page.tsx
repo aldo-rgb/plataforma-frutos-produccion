@@ -63,6 +63,8 @@ interface GameChanger {
     profileImage?: string;
   };
   assignedAt: string;
+  level?: string;
+  isCaptain?: boolean;
 }
 
 export default function VisionManagePage() {
@@ -315,6 +317,46 @@ export default function VisionManagePage() {
       console.error('Error fetching game changers:', error);
     } finally {
       setLoadingGameChangers(false);
+    }
+  };
+
+  // Función para toggle de capitán
+  const toggleCaptain = async (gameChangerId: number, currentStatus: boolean) => {
+    try {
+      const res = await fetch(`/api/school-admin/visiones/${visionId}/gamechangers/toggle-captain`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameChangerId })
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        // Actualizar el estado local
+        setGameChangers(prev => prev.map(gc => 
+          gc.id === gameChangerId 
+            ? { ...gc, isCaptain: data.isCaptain }
+            : gc
+        ));
+        setToast({
+          show: true,
+          message: data.isCaptain ? '👑 Game Changer designado como Capitán' : 'Capitán removido',
+          type: 'success'
+        });
+      } else {
+        setToast({
+          show: true,
+          message: data.error || 'Error al cambiar estado de capitán',
+          type: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling captain:', error);
+      setToast({
+        show: true,
+        message: 'Error de conexión',
+        type: 'error'
+      });
     }
   };
 
@@ -863,22 +905,48 @@ export default function VisionManagePage() {
                       {gameChangers.filter((gc: any) => gc.level === 'BASIC').map((gc: any) => (
                         <div
                           key={gc.id}
-                          className="bg-slate-900/50 rounded-lg p-4 border-2 border-yellow-500/30 hover:border-yellow-500/50 transition-all relative overflow-hidden"
+                          className={`bg-slate-900/50 rounded-lg p-4 border-2 transition-all relative overflow-hidden ${
+                            gc.isCaptain 
+                              ? 'border-amber-400 bg-gradient-to-br from-amber-900/30 to-slate-900/50 ring-2 ring-amber-400/50' 
+                              : 'border-yellow-500/30 hover:border-yellow-500/50'
+                          }`}
                         >
-                          <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-500/10 rounded-bl-full"></div>
-                          <div className="absolute top-2 right-2 text-2xl">⭐</div>
+                          <div className={`absolute top-0 right-0 w-16 h-16 rounded-bl-full ${gc.isCaptain ? 'bg-amber-500/20' : 'bg-yellow-500/10'}`}></div>
+                          <div className="absolute top-2 right-2 text-2xl">{gc.isCaptain ? '👑' : '⭐'}</div>
                           <div className="flex items-center gap-3">
-                            <div className="w-14 h-14 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                            <div className={`w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg ${
+                              gc.isCaptain 
+                                ? 'bg-gradient-to-br from-amber-400 to-amber-600 ring-2 ring-amber-300' 
+                                : 'bg-gradient-to-br from-yellow-500 to-orange-600'
+                            }`}>
                               {gc.usuario.nombre.charAt(0).toUpperCase()}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="text-white font-bold truncate text-lg">{gc.usuario.nombre}</div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-white font-bold truncate text-lg">{gc.usuario.nombre}</span>
+                                {gc.isCaptain && (
+                                  <span className="bg-amber-500 text-black text-xs px-2 py-0.5 rounded-full font-bold">
+                                    CAPITÁN
+                                  </span>
+                                )}
+                              </div>
                               <div className="text-slate-400 text-xs truncate">{gc.usuario.email}</div>
                               <div className="text-yellow-400 text-xs mt-1">
                                 {new Date(gc.assignedAt).toLocaleDateString('es-MX')}
                               </div>
                             </div>
                           </div>
+                          {/* Botón de toggle capitán */}
+                          <button
+                            onClick={() => toggleCaptain(gc.id, gc.isCaptain)}
+                            className={`mt-3 w-full py-2 rounded-lg text-sm font-bold transition-all ${
+                              gc.isCaptain
+                                ? 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                                : 'bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 border border-amber-500/50'
+                            }`}
+                          >
+                            {gc.isCaptain ? '✖ Quitar Capitán' : '👑 Hacer Capitán'}
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -1177,22 +1245,48 @@ export default function VisionManagePage() {
                       {gameChangers.filter((gc: any) => gc.level === 'ADVANCED').map((gc: any) => (
                         <div
                           key={gc.id}
-                          className="bg-slate-900/50 rounded-lg p-4 border-2 border-orange-500/30 hover:border-orange-500/50 transition-all relative overflow-hidden"
+                          className={`bg-slate-900/50 rounded-lg p-4 border-2 transition-all relative overflow-hidden ${
+                            gc.isCaptain 
+                              ? 'border-amber-400 bg-gradient-to-br from-amber-900/30 to-slate-900/50 ring-2 ring-amber-400/50' 
+                              : 'border-orange-500/30 hover:border-orange-500/50'
+                          }`}
                         >
-                          <div className="absolute top-0 right-0 w-16 h-16 bg-orange-500/10 rounded-bl-full"></div>
-                          <div className="absolute top-2 right-2 text-2xl">⭐</div>
+                          <div className={`absolute top-0 right-0 w-16 h-16 rounded-bl-full ${gc.isCaptain ? 'bg-amber-500/20' : 'bg-orange-500/10'}`}></div>
+                          <div className="absolute top-2 right-2 text-2xl">{gc.isCaptain ? '👑' : '⭐'}</div>
                           <div className="flex items-center gap-3">
-                            <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                            <div className={`w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg ${
+                              gc.isCaptain 
+                                ? 'bg-gradient-to-br from-amber-400 to-amber-600 ring-2 ring-amber-300' 
+                                : 'bg-gradient-to-br from-orange-500 to-red-600'
+                            }`}>
                               {gc.usuario.nombre.charAt(0).toUpperCase()}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="text-white font-bold truncate text-lg">{gc.usuario.nombre}</div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-white font-bold truncate text-lg">{gc.usuario.nombre}</span>
+                                {gc.isCaptain && (
+                                  <span className="bg-amber-500 text-black text-xs px-2 py-0.5 rounded-full font-bold">
+                                    CAPITÁN
+                                  </span>
+                                )}
+                              </div>
                               <div className="text-slate-400 text-xs truncate">{gc.usuario.email}</div>
                               <div className="text-orange-400 text-xs mt-1">
                                 {new Date(gc.assignedAt).toLocaleDateString('es-MX')}
                               </div>
                             </div>
                           </div>
+                          {/* Botón de toggle capitán */}
+                          <button
+                            onClick={() => toggleCaptain(gc.id, gc.isCaptain)}
+                            className={`mt-3 w-full py-2 rounded-lg text-sm font-bold transition-all ${
+                              gc.isCaptain
+                                ? 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                                : 'bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 border border-amber-500/50'
+                            }`}
+                          >
+                            {gc.isCaptain ? '✖ Quitar Capitán' : '👑 Hacer Capitán'}
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -1503,22 +1597,48 @@ export default function VisionManagePage() {
                       {gameChangers.filter((gc: any) => gc.level === 'PL').map((gc: any) => (
                         <div
                           key={gc.id}
-                          className="bg-slate-900/50 rounded-lg p-4 border-2 border-purple-500/30 hover:border-purple-500/50 transition-all relative overflow-hidden"
+                          className={`bg-slate-900/50 rounded-lg p-4 border-2 transition-all relative overflow-hidden ${
+                            gc.isCaptain 
+                              ? 'border-amber-400 bg-gradient-to-br from-amber-900/30 to-slate-900/50 ring-2 ring-amber-400/50' 
+                              : 'border-purple-500/30 hover:border-purple-500/50'
+                          }`}
                         >
-                          <div className="absolute top-0 right-0 w-16 h-16 bg-purple-500/10 rounded-bl-full"></div>
-                          <div className="absolute top-2 right-2 text-2xl">⭐</div>
+                          <div className={`absolute top-0 right-0 w-16 h-16 rounded-bl-full ${gc.isCaptain ? 'bg-amber-500/20' : 'bg-purple-500/10'}`}></div>
+                          <div className="absolute top-2 right-2 text-2xl">{gc.isCaptain ? '👑' : '⭐'}</div>
                           <div className="flex items-center gap-3">
-                            <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                            <div className={`w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg ${
+                              gc.isCaptain 
+                                ? 'bg-gradient-to-br from-amber-400 to-amber-600 ring-2 ring-amber-300' 
+                                : 'bg-gradient-to-br from-purple-500 to-pink-600'
+                            }`}>
                               {gc.usuario.nombre.charAt(0).toUpperCase()}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="text-white font-bold truncate text-lg">{gc.usuario.nombre}</div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-white font-bold truncate text-lg">{gc.usuario.nombre}</span>
+                                {gc.isCaptain && (
+                                  <span className="bg-amber-500 text-black text-xs px-2 py-0.5 rounded-full font-bold">
+                                    CAPITÁN
+                                  </span>
+                                )}
+                              </div>
                               <div className="text-slate-400 text-xs truncate">{gc.usuario.email}</div>
                               <div className="text-purple-400 text-xs mt-1">
                                 {new Date(gc.assignedAt).toLocaleDateString('es-MX')}
                               </div>
                             </div>
                           </div>
+                          {/* Botón de toggle capitán */}
+                          <button
+                            onClick={() => toggleCaptain(gc.id, gc.isCaptain)}
+                            className={`mt-3 w-full py-2 rounded-lg text-sm font-bold transition-all ${
+                              gc.isCaptain
+                                ? 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                                : 'bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 border border-amber-500/50'
+                            }`}
+                          >
+                            {gc.isCaptain ? '✖ Quitar Capitán' : '👑 Hacer Capitán'}
+                          </button>
                         </div>
                       ))}
                     </div>

@@ -420,6 +420,27 @@ export default function TrainerDashboard() {
         </div>
         )}
 
+        {/* Widget de Bitácoras */}
+        <div className="mt-8">
+          <Link
+            href="/dashboard/trainer/bitacoras"
+            className="block bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur-sm rounded-2xl p-6 border border-purple-500/20 hover:border-purple-500/50 transition-all group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-xl">
+                  <FileText className="text-white" size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white group-hover:text-purple-400 transition-colors">Bitácoras</h2>
+                  <p className="text-sm text-slate-400">Expedientes y alertas de participantes</p>
+                </div>
+              </div>
+              <ChevronRight className="text-slate-500 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" size={24} />
+            </div>
+          </Link>
+        </div>
+
         {/* Widget de Alertas Médicas */}
         <div className="mt-8">
           <MedicalAlertsWidget />

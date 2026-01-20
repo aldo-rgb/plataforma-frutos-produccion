@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
       where: {
         visionId: { in: visionIdsToQuery },
         level: 'ADVANCED',
-        paymentStatus: { in: ['FULL', 'PARTIAL', 'GIFT'] },
+        paymentStatus: { in: ['FULL', 'PARTIAL', 'GIFT', 'PAID'] },
       },
       select: {
         userId: true,
