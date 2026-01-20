@@ -47,19 +47,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // Buscar enrollment
+    // Buscar enrollment - usando el levelType del producto para encontrar el correcto
     let enrollment = null;
     if (enrollmentId) {
       enrollment = await prisma.vision_enrollments.findUnique({
         where: { id: parseInt(enrollmentId) }
       });
     } else if (product.visionId) {
+      // Mapear levelType del producto al level del enrollment
+      const levelMap: Record<string, string> = {
+        'BASIC': 'BASIC',
+        'ADVANCED': 'ADVANCED',
+        'PL': 'PL',
+        'COMBO_FULL': 'BASIC', // Para combo, empezar con BASIC
+        'COMBO_ADV_PL': 'ADVANCED',
+      };
+      const enrollmentLevel = levelMap[product.levelType] || product.levelType;
+      
       enrollment = await prisma.vision_enrollments.findFirst({
         where: {
           userId: parseInt(userId),
-          visionId: product.visionId
+          visionId: product.visionId,
+          level: enrollmentLevel as any
         }
       });
+      
+      // Si no encuentra con el level específico, buscar cualquiera
+      if (!enrollment) {
+        enrollment = await prisma.vision_enrollments.findFirst({
+          where: {
+            userId: parseInt(userId),
+            visionId: product.visionId
+          }
+        });
+      }
     }
 
     // Obtener el staffId del usuario que hace el check-in
