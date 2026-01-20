@@ -43,7 +43,7 @@ const nextLevelConfig = {
     nextLevelName: 'Graduación',
     icon: Crown,
     color: '#FFD700',
-    description: 'Camino a la Graduación',
+    description: 'Viniendo de la Graduación',
     cta: null,
   },
   LOBO_SOLITARIO: {
@@ -114,8 +114,10 @@ export default function EvolutionBar({ currentLevel, nextMilestone, onUpgradeCli
         </div>
 
         <div className="flex justify-between text-xs text-slate-500">
-          <span>Fin de Semana 1</span>
-          <span>Fin de Semana 4</span>
+          <span>Avanzado</span>
+          <span className="text-center">FS 1</span>
+          <span className="text-center">FS 2</span>
+          <span>FS 3</span>
         </div>
       </motion.div>
     );

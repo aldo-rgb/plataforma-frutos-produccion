@@ -265,6 +265,10 @@ export async function GET() {
       data: {
         userId: usuario.id,
         userName: usuario.nombre,
+        userEmail: usuario.email,
+        referralCode: usuario.referralCode,
+        organizationId: usuario.organizationId,
+        organizationName: visionEnrollment?.Vision?.nombre || vision?.nombre,
         currentLevelInfo: {
           levelName: currentLevel,
           badgeAsset: badgeAssets[currentLevel],
