@@ -269,6 +269,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Función auxiliar para crear submissions para participantes
+// SOLO para usuarios con asistencia marcada (check-in)
 async function createSubmissionsForMission(
   missionId: number,
   visionId: number | null,
@@ -279,27 +280,41 @@ async function createSubmissionsForMission(
     let participantIds: number[] = []
 
     if (squadId) {
-      // Obtener miembros del squad específico
+      // Obtener miembros del squad específico QUE TIENEN CHECK-IN
       const members = await prisma.smallGroupMember.findMany({
-        where: { groupId: squadId, isActive: true },
+        where: { 
+          groupId: squadId, 
+          isActive: true,
+          // Verificar que tienen check-in en algún producto
+          user: {
+            CheckInRecords: {
+              some: {}
+            }
+          }
+        },
         select: { userId: true }
       })
       participantIds = members.map(m => m.userId)
     } else if (productId) {
-      // Obtener inscritos en el producto
-      const enrollments = await prisma.checkInRecord.findMany({
+      // Obtener usuarios con check-in en el producto específico
+      const checkIns = await prisma.checkInRecord.findMany({
         where: { productId },
         select: { userId: true },
         distinct: ['userId']
       })
-      participantIds = enrollments.map(e => e.userId)
+      participantIds = checkIns.map(e => e.userId)
     } else if (visionId) {
-      // Obtener todos los inscritos en la visión
-      const enrollments = await prisma.vision_enrollments.findMany({
-        where: { visionId, enrollmentStatus: 'ENROLLED' },
-        select: { userId: true }
+      // Obtener usuarios con check-in en CUALQUIER producto de la visión
+      const checkIns = await prisma.checkInRecord.findMany({
+        where: { 
+          Product: { 
+            visionId: visionId 
+          }
+        },
+        select: { userId: true },
+        distinct: ['userId']
       })
-      participantIds = enrollments.map(e => e.userId)
+      participantIds = checkIns.map(e => e.userId)
     }
 
     // Crear submissions en batch
@@ -314,7 +329,7 @@ async function createSubmissionsForMission(
       })
     }
 
-    console.log(`✅ Creadas ${participantIds.length} submissions para misión ${missionId}`)
+    console.log(`✅ Creadas ${participantIds.length} submissions para misión ${missionId} (solo usuarios con check-in)`)
   } catch (error) {
     console.error("Error creando submissions:", error)
   }
