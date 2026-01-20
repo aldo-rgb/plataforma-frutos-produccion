@@ -89,15 +89,15 @@ export default function BitacoraAlertWidget() {
           <div className="flex-1 min-w-0">
             <h3 className={`font-semibold mb-1 ${isUrgent ? 'text-red-400' : 'text-purple-400'}`}>
               {data.status === 'IN_PROGRESS' 
-                ? 'Continúa tu Bitácora de Inicio' 
-                : 'Bitácora de Inicio Pendiente'
+                ? 'Continúa tu Cuestionario Avanzado' 
+                : 'Cuestionario Avanzado Pendiente'
               }
             </h3>
             
             <p className="text-sm text-gray-300 mb-3">
               {data.status === 'IN_PROGRESS' 
                 ? `Llevas ${data.currentDimension} de 5 dimensiones. ¡Continúa tu proceso de introspección!`
-                : 'Completa tu Bitácora de Inicio para poder acceder al Entrenamiento Avanzado.'
+                : 'Completa tu Cuestionario Avanzado para poder acceder al Entrenamiento Avanzado.'
               }
             </p>
 
