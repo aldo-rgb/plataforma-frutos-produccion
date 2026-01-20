@@ -129,7 +129,11 @@ export async function POST(req: Request) {
         include: {
           Mission: {
             include: {
-              Template: true
+              Template: {
+                include: {
+                  Questions: true
+                }
+              }
             }
           }
         }
@@ -146,6 +150,16 @@ export async function POST(req: Request) {
       if (submission.Mission?.Template?.requiresEvidence) {
         return NextResponse.json(
           { error: 'Esta misión requiere evidencia' },
+          { status: 400 }
+        );
+      }
+
+      // Verificar que la misión no tenga preguntas pendientes
+      const hasQuestions = submission.Mission?.Template?.Questions && 
+                          submission.Mission.Template.Questions.length > 0;
+      if (hasQuestions) {
+        return NextResponse.json(
+          { error: 'Esta misión tiene preguntas que debes contestar', requiresQuestions: true },
           { status: 400 }
         );
       }

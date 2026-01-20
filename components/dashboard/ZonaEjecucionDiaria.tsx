@@ -1,8 +1,27 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Camera, Loader2, Clock, CheckCircle, AlertCircle, Upload, X, Zap, Calendar, Eye } from 'lucide-react';
+import { Camera, Loader2, Clock, CheckCircle, AlertCircle, Upload, X, Zap, Calendar, Eye, Send, FileQuestion } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastProvider';
+
+interface MissionQuestion {
+  id: number;
+  questionText: string;
+  questionType: 'TEXT' | 'SCALE' | 'YES_NO' | 'MULTIPLE_CHOICE';
+  options?: string[];
+  isRequired: boolean;
+  order: number;
+}
+
+interface MissionTemplate {
+  id: number;
+  title: string;
+  type: string;
+  instructions?: string;
+  hasQuestions: boolean;
+  questionsCount: number;
+  tags?: string[];
+}
 
 interface Tarea {
   id: string; // Changed: puede ser "carta-123" o "admin-456" o "trainer-789"
@@ -25,6 +44,8 @@ interface Tarea {
   deadline?: string | null; // Fecha + Hora límite combinadas
   horaLimite?: string | null;
   feedbackMentor?: string | null; // Feedback del mentor cuando rechaza
+  template?: MissionTemplate; // Para TRAINER_MISSION
+  trainerMessage?: string | null;
 }
 
 interface ZonaEjecucionData {
@@ -43,6 +64,11 @@ export default function ZonaEjecucionDiaria() {
   const [uploadingTaskId, setUploadingTaskId] = useState<string | null>(null); // Changed to string
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showViewEvidenceModal, setShowViewEvidenceModal] = useState(false);
+  const [showQuestionsModal, setShowQuestionsModal] = useState(false);
+  const [missionQuestions, setMissionQuestions] = useState<MissionQuestion[]>([]);
+  const [missionAnswers, setMissionAnswers] = useState<Record<number, any>>({});
+  const [missionInstructions, setMissionInstructions] = useState<string>('');
+  const [submittingMission, setSubmittingMission] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Tarea | null>(null);
   const [uploadForm, setUploadForm] = useState({
     file: null as File | null,
@@ -143,8 +169,98 @@ export default function ZonaEjecucionDiaria() {
     setSelectedTask(null);
   };
 
+  // Función para abrir el modal de preguntas de una misión del trainer
+  const openQuestionsModal = async (tarea: Tarea) => {
+    if (!tarea.submissionId) return;
+    
+    setUploadingTaskId(tarea.id);
+    
+    try {
+      // Obtener los detalles de la misión con las preguntas
+      const response = await fetch(`/api/participante/mision/${tarea.submissionId}`);
+      if (!response.ok) {
+        throw new Error('Error al cargar la misión');
+      }
+      
+      const data = await response.json();
+      const { submission } = data;
+      
+      // Guardar preguntas e instrucciones
+      setMissionQuestions(submission.template.questions || []);
+      setMissionInstructions(submission.template.instructions || '');
+      setMissionAnswers({});
+      setSelectedTask(tarea);
+      setShowQuestionsModal(true);
+    } catch (error) {
+      console.error('Error loading mission:', error);
+      toast.error('Error al cargar la misión');
+    } finally {
+      setUploadingTaskId(null);
+    }
+  };
+
+  // Función para enviar las respuestas del cuestionario
+  const handleSubmitMission = async () => {
+    if (!selectedTask?.submissionId) return;
+    
+    // Verificar que todas las preguntas requeridas tengan respuesta
+    const requiredQuestions = missionQuestions.filter(q => q.isRequired);
+    const missingAnswers = requiredQuestions.filter(q => !missionAnswers[q.id]);
+    
+    if (missingAnswers.length > 0) {
+      toast.error('Por favor contesta todas las preguntas obligatorias');
+      return;
+    }
+    
+    setSubmittingMission(true);
+    
+    try {
+      // Formatear respuestas
+      const answers = Object.entries(missionAnswers).map(([questionId, value]) => {
+        const question = missionQuestions.find(q => q.id === parseInt(questionId));
+        return {
+          questionId: parseInt(questionId),
+          textAnswer: question?.questionType === 'TEXT' ? value : null,
+          scaleValue: question?.questionType === 'SCALE' ? parseInt(value) : null,
+          booleanAnswer: question?.questionType === 'YES_NO' ? value === 'Sí' : null,
+          selectedOptions: question?.questionType === 'MULTIPLE_CHOICE' ? [value] : []
+        };
+      });
+      
+      const response = await fetch(`/api/participante/mision/${selectedTask.submissionId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(`✅ ¡Misión completada! +${result.pointsEarned || 0} puntos`);
+        setShowQuestionsModal(false);
+        setSelectedTask(null);
+        setMissionQuestions([]);
+        setMissionAnswers({});
+        await loadTareas();
+      } else {
+        const error = await response.json();
+        toast.error('Error al enviar: ' + (error.error || 'Error desconocido'));
+      }
+    } catch (error) {
+      console.error('Error submitting mission:', error);
+      toast.error('Error al enviar la misión');
+    } finally {
+      setSubmittingMission(false);
+    }
+  };
+
   // Función para completar tareas sin requerir evidencia
   const handleCompleteWithoutEvidence = async (tarea: Tarea) => {
+    // Si es una misión del trainer con preguntas, abrir modal de preguntas
+    if (tarea.tipo === 'TRAINER_MISSION' && tarea.template?.hasQuestions) {
+      openQuestionsModal(tarea);
+      return;
+    }
+    
     setUploadingTaskId(tarea.id);
     
     try {
@@ -163,6 +279,11 @@ export default function ZonaEjecucionDiaria() {
         await loadTareas(); // Recargar las tareas
       } else {
         const error = await response.json();
+        // Si tiene preguntas, abrir el modal
+        if (error.requiresQuestions && tarea.tipo === 'TRAINER_MISSION') {
+          openQuestionsModal(tarea);
+          return;
+        }
         toast.error('Error al completar tarea: ' + (error.error || 'Error desconocido'));
       }
     } catch (error) {
@@ -773,6 +894,175 @@ export default function ZonaEjecucionDiaria() {
                 className="w-full px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors"
               >
                 Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Preguntas para Misiones del Trainer */}
+      {showQuestionsModal && selectedTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-slate-900 rounded-xl border border-slate-800 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="p-6 bg-gradient-to-r from-amber-600 to-orange-600 rounded-t-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-white/20 rounded-xl">
+                    <FileQuestion className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <span className="text-sm text-white/70">Misión del Entrenador</span>
+                    <h2 className="text-xl font-bold text-white">{selectedTask.texto}</h2>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowQuestionsModal(false);
+                    setSelectedTask(null);
+                    setMissionQuestions([]);
+                    setMissionAnswers({});
+                  }}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
+              {selectedTask.pointsReward && (
+                <div className="mt-3 flex items-center gap-2 text-white/80 text-sm">
+                  <Zap className="w-4 h-4" />
+                  +{selectedTask.pointsReward} puntos
+                </div>
+              )}
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-6">
+              {/* Instrucciones */}
+              {missionInstructions && (
+                <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+                  <p className="text-sm text-slate-400 mb-1">Instrucciones</p>
+                  <p className="text-white">{missionInstructions}</p>
+                </div>
+              )}
+
+              {/* Preguntas */}
+              {missionQuestions.length > 0 ? (
+                <div className="space-y-5">
+                  {missionQuestions.map((question, index) => (
+                    <div key={question.id} className="space-y-2">
+                      <label className="block text-sm font-medium text-slate-300">
+                        {index + 1}. {question.questionText}
+                        {question.isRequired && <span className="text-red-400 ml-1">*</span>}
+                      </label>
+
+                      {question.questionType === 'TEXT' && (
+                        <textarea
+                          value={missionAnswers[question.id] || ''}
+                          onChange={(e) => setMissionAnswers(prev => ({ ...prev, [question.id]: e.target.value }))}
+                          placeholder="Tu respuesta..."
+                          rows={3}
+                          className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500 resize-none"
+                        />
+                      )}
+
+                      {question.questionType === 'YES_NO' && (
+                        <div className="flex gap-3">
+                          {['Sí', 'No'].map(opt => (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={() => setMissionAnswers(prev => ({ ...prev, [question.id]: opt }))}
+                              className={`flex-1 py-3 rounded-xl border transition-all ${
+                                missionAnswers[question.id] === opt
+                                  ? 'bg-amber-500 border-amber-500 text-white'
+                                  : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-600'
+                              }`}
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {question.questionType === 'SCALE' && (
+                        <div className="space-y-2">
+                          <input
+                            type="range"
+                            min={1}
+                            max={10}
+                            value={missionAnswers[question.id] || 5}
+                            onChange={(e) => setMissionAnswers(prev => ({ ...prev, [question.id]: e.target.value }))}
+                            className="w-full accent-amber-500"
+                          />
+                          <div className="flex justify-between text-xs text-slate-400">
+                            <span>1</span>
+                            <span className="text-amber-400 font-bold text-lg">
+                              {missionAnswers[question.id] || 5}
+                            </span>
+                            <span>10</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {question.questionType === 'MULTIPLE_CHOICE' && question.options && (
+                        <div className="space-y-2">
+                          {question.options.map((opt, j) => (
+                            <button
+                              key={j}
+                              type="button"
+                              onClick={() => setMissionAnswers(prev => ({ ...prev, [question.id]: opt }))}
+                              className={`w-full p-3 text-left rounded-xl border transition-all ${
+                                missionAnswers[question.id] === opt
+                                  ? 'bg-amber-500/20 border-amber-500 text-amber-400'
+                                  : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-600'
+                              }`}
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Loader2 className="w-8 h-8 text-amber-500 animate-spin mx-auto mb-2" />
+                  <p className="text-slate-400">Cargando preguntas...</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-slate-700 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowQuestionsModal(false);
+                  setSelectedTask(null);
+                  setMissionQuestions([]);
+                  setMissionAnswers({});
+                }}
+                className="px-6 py-3 bg-slate-700 text-white rounded-xl hover:bg-slate-600 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSubmitMission}
+                disabled={submittingMission || missionQuestions.length === 0}
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-amber-500/20 transition-all disabled:opacity-50"
+              >
+                {submittingMission ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-5 h-5" />
+                    Enviar Respuestas
+                  </>
+                )}
               </button>
             </div>
           </div>
