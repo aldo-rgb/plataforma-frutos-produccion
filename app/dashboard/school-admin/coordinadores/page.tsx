@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, Plus, Eye, UserCheck, XCircle, CheckCircle, Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { Users, Plus, Eye, UserCheck, XCircle, CheckCircle, Edit, Trash2, AlertTriangle, Key, Lock } from 'lucide-react';
 import Link from 'next/link';
 
 interface Coordinador {
@@ -44,6 +44,9 @@ export default function CoordinadoresPage() {
   const [loading, setLoading] = useState(true);
   const [modalCrear, setModalCrear] = useState(false);
   const [modalAsignar, setModalAsignar] = useState(false);
+  const [modalPassword, setModalPassword] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<Coordinador | null>(null);
+  const [newPassword, setNewPassword] = useState('');
   const [visionSeleccionada, setVisionSeleccionada] = useState<Vision | null>(null);
   const [formCoordinador, setFormCoordinador] = useState({
     nombre: '',
@@ -146,6 +149,40 @@ export default function CoordinadoresPage() {
     } catch (error) {
       console.error('Error asignando coordinador:', error);
       showNotification('error', 'Error al asignar coordinador');
+    }
+  };
+
+  const cambiarPassword = async () => {
+    if (!selectedUser || !newPassword) {
+      showNotification('error', 'Ingresa la nueva contraseña');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      showNotification('error', 'La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/director/coordinadores/${selectedUser.id}/password`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        showNotification('success', `Contraseña actualizada para ${selectedUser.nombre}`);
+        setModalPassword(false);
+        setSelectedUser(null);
+        setNewPassword('');
+      } else {
+        showNotification('error', data.error || 'Error al cambiar contraseña');
+      }
+    } catch (error) {
+      console.error('Error cambiando contraseña:', error);
+      showNotification('error', 'Error al cambiar contraseña');
     }
   };
 
@@ -302,7 +339,7 @@ export default function CoordinadoresPage() {
                     </div>
 
                     {coord.Vision.length > 0 && (
-                      <div className="flex flex-wrap gap-2 lg:gap-3">
+                      <div className="flex flex-wrap gap-2 lg:gap-3 mb-3 lg:mb-4">
                         {coord.Vision.map(vision => (
                           <span
                             key={vision.id}
@@ -313,6 +350,21 @@ export default function CoordinadoresPage() {
                         ))}
                       </div>
                     )}
+
+                    {/* Botón Cambiar Contraseña */}
+                    <div className="flex justify-end mt-2">
+                      <button
+                        onClick={() => {
+                          setSelectedUser(coord);
+                          setModalPassword(true);
+                        }}
+                        className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 rounded-lg text-amber-300 text-xs lg:text-sm font-medium transition-all hover:scale-105"
+                      >
+                        <Key size={14} className="lg:hidden" />
+                        <Key size={16} className="hidden lg:block" />
+                        <span>Cambiar Contraseña</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -571,6 +623,87 @@ export default function CoordinadoresPage() {
             >
               Cancelar
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Cambiar Contraseña */}
+      {modalPassword && selectedUser && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 border-2 border-amber-500/30 rounded-3xl p-6 lg:p-8 max-w-md w-full shadow-2xl shadow-amber-500/20 animate-in slide-in-from-bottom duration-300">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl shadow-lg shadow-amber-500/50">
+                <Lock size={28} className="text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl lg:text-2xl font-black text-white">Cambiar Contraseña</h2>
+                <p className="text-slate-400 text-sm">{selectedUser.nombre}</p>
+              </div>
+            </div>
+
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <AlertTriangle size={20} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-amber-300 text-sm font-medium">Nota importante</p>
+                  <p className="text-amber-200/70 text-xs mt-1">
+                    El usuario deberá cambiar esta contraseña en su próximo inicio de sesión.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-5 mb-6">
+              <div className="relative">
+                <label className="block text-sm font-bold text-slate-300 mb-2 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-amber-400 rounded-full"></span>
+                  Nueva Contraseña
+                </label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-4 py-3.5 bg-slate-900/80 border-2 border-slate-700 rounded-xl text-white placeholder:text-slate-500 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20 transition-all"
+                  placeholder="Mínimo 6 caracteres"
+                />
+              </div>
+
+              <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4">
+                <p className="text-xs text-slate-500 mb-2">Usuario seleccionado:</p>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-slate-800 rounded-lg">
+                    <UserCheck size={18} className="text-slate-400" />
+                  </div>
+                  <div>
+                    <p className="text-white font-medium">{selectedUser.nombre}</p>
+                    <p className="text-slate-400 text-xs">{selectedUser.email}</p>
+                  </div>
+                  <span className={`ml-auto px-2.5 py-1 bg-gradient-to-r ${getRolLabel(selectedUser.rol).color} text-white text-[10px] font-black rounded-lg`}>
+                    {getRolLabel(selectedUser.rol).emoji} {getRolLabel(selectedUser.rol).text}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={cambiarPassword}
+                disabled={!newPassword || newPassword.length < 6}
+                className="flex-1 px-6 py-4 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 text-white rounded-xl font-bold hover:shadow-xl hover:shadow-amber-500/50 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                🔐 Cambiar Contraseña
+              </button>
+              <button
+                onClick={() => {
+                  setModalPassword(false);
+                  setSelectedUser(null);
+                  setNewPassword('');
+                }}
+                className="px-6 py-4 bg-slate-700/50 border-2 border-slate-600 text-slate-300 rounded-xl font-bold hover:bg-slate-700 hover:text-white transition-all"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
       )}
