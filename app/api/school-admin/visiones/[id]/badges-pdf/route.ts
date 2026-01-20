@@ -164,6 +164,13 @@ export async function GET(
       }
     }
 
+    // Obtener los Game Changers reales de esta visión (VisionGameChanger)
+    const visionGameChangers = await prisma.visionGameChanger.findMany({
+      where: { visionId },
+      select: { userId: true },
+    });
+    const gcUserIds = new Set(visionGameChangers.map(gc => gc.userId));
+
     // Agregar enrollments (Game Changers y Participantes)
     enrollments.forEach(e => {
       const enrolledUser = e.Usuario_vision_enrollments_userIdToUsuario;
@@ -172,21 +179,24 @@ export async function GET(
       // Evitar duplicados (por si el trainer o coordinador también tiene enrollment)
       if (participants.find(p => p.id === enrolledUser.id)) return;
       
-      // Determinar rol: usar rol del usuario si es especial, si no usar nivel
+      // Determinar rol: 
+      // - ROJO: Solo GC real (VisionGameChanger) y Trainer/Coordinador (staff)
+      // - NEGRO: Participantes normales (incluyendo los de ADVANCED/PL que no son GC)
       let displayRole = 'PARTICIPANTE';
       const userRol = enrolledUser.rol?.toUpperCase() || '';
       
-      // Roles especiales que van en rojo (EQUIPO)
-      if (['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'COORDINATOR'].includes(userRol)) {
-        displayRole = 'COORDINADOR';
-      } else if (['GAMECHANGER', 'GAME_CHANGER'].includes(userRol)) {
-        displayRole = 'GAME CHANGER';
-      } else if (['TRAINER', 'COACH', 'MENTOR'].includes(userRol)) {
-        displayRole = 'TRAINER';
-      } else if (level === 'ADVANCED' || level === 'PL') {
-        // En avanzado/PL los participantes son Game Changers
+      // Verificar si es GC real de esta visión
+      if (gcUserIds.has(enrolledUser.id)) {
         displayRole = 'GAME CHANGER';
       }
+      // Roles de staff que van en rojo
+      else if (['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'COORDINATOR'].includes(userRol)) {
+        displayRole = 'COORDINADOR';
+      } else if (['TRAINER', 'COACH', 'MENTOR'].includes(userRol)) {
+        displayRole = 'TRAINER';
+      }
+      // Los participantes de ADVANCED/PL que NO son GC real, siguen siendo PARTICIPANTE (negro)
+      // No se cambia a GAME CHANGER solo por estar en ADVANCED/PL
       
       participants.push({
         id: enrolledUser.id,
