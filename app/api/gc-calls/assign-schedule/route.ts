@@ -11,6 +11,10 @@ import { prisma } from '@/lib/prisma';
  * NOTA: Se crea automáticamente un GCAvailability "de sistema" para mantener
  * la integridad del schema, pero NO es configurable por el GC.
  * El GCAvailability configurable se usará para llamadas Post-Entrenamiento.
+ * 
+ * FECHAS DE LLAMADAS:
+ * - BÁSICO: 3 días de entrenamiento. Día 1 llegada, Días 2-3 llamadas staff (2 slots)
+ * - AVANZADO: 4 días de entrenamiento. Día 1 llegada, Días 2-4 llamadas staff (3 slots)
  */
 export async function POST(request: Request) {
   try {
@@ -61,7 +65,11 @@ export async function POST(request: Request) {
         }
       },
       include: {
-        group: true
+        group: {
+          include: {
+            vision: true
+          }
+        }
       }
     });
 
@@ -70,6 +78,38 @@ export async function POST(request: Request) {
         error: 'El participante no pertenece a ninguno de tus átomos' 
       }, { status: 403 });
     }
+
+    const squad = membership.group;
+    const vision = squad.vision;
+    const level = squad.level; // BASIC o ADVANCED
+
+    // Determinar la fecha de inicio según el nivel
+    let trainingStartDate: Date | null = null;
+    let numCallDays = 0;
+
+    if (level === 'BASIC') {
+      trainingStartDate = vision.startDate;
+      numCallDays = 2; // Días 2 y 3 del entrenamiento
+    } else if (level === 'ADVANCED') {
+      trainingStartDate = vision.advancedStartDate;
+      numCallDays = 3; // Días 2, 3 y 4 del entrenamiento
+    } else {
+      // Para PL u otros niveles, usar la fecha actual como fallback
+      trainingStartDate = new Date();
+      numCallDays = 1;
+    }
+
+    if (!trainingStartDate) {
+      return NextResponse.json({ 
+        error: `No hay fecha de inicio configurada para el nivel ${level}` 
+      }, { status: 400 });
+    }
+
+    console.log('📅 Configuración de entrenamiento:', { 
+      level, 
+      trainingStartDate: trainingStartDate.toISOString(), 
+      numCallDays 
+    });
 
     // Obtener o crear un GCAvailability "de sistema" para llamadas de staff
     // Este availability es automático y representa el horario fijo 7:00-9:30
@@ -118,45 +158,40 @@ export async function POST(request: Request) {
       }, { status: 409 });
     }
 
-    // Buscar si este participante ya tiene un slot asignado
-    const existingParticipantSlot = await prisma.gCCallSlot.findFirst({
+    // Eliminar slots existentes del participante para este squad/nivel
+    await prisma.gCCallSlot.deleteMany({
       where: {
         participantId: parseInt(participantId),
-        squad: {
-          leaderId: gcId,
-        },
+        squadId: membership.groupId,
       }
     });
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     
     // Calcular hora fin (agregar 10 minutos)
     const endMinutes = minutes + 10;
     const endHours = hours + Math.floor(endMinutes / 60);
     const endTime = `${String(endHours).padStart(2, '0')}:${String(endMinutes % 60).padStart(2, '0')}`;
 
-    let slot;
-    if (existingParticipantSlot) {
-      // Actualizar slot existente
-      slot = await prisma.gCCallSlot.update({
-        where: { id: existingParticipantSlot.id },
-        data: {
-          scheduledTime: normalizedTime,
-          endTime: endTime,
-          bookedAt: new Date(),
-          assignedByGC: true,
-          callType: 'TRAINING',
-        }
-      });
-    } else {
-      // Crear nuevo slot
-      slot = await prisma.gCCallSlot.create({
+    // Calcular las fechas de los días de llamada (Días 2, 3, 4 del entrenamiento)
+    // Día 1 = fecha de inicio (llegada), Día 2 = inicio + 1, etc.
+    const callDates: Date[] = [];
+    for (let dayOffset = 1; dayOffset <= numCallDays; dayOffset++) {
+      const callDate = new Date(trainingStartDate);
+      callDate.setDate(callDate.getDate() + dayOffset);
+      callDate.setHours(0, 0, 0, 0);
+      callDates.push(callDate);
+    }
+
+    console.log('📅 Fechas de llamadas a crear:', callDates.map(d => d.toISOString()));
+
+    // Crear un slot para cada día de llamadas
+    const createdSlots = [];
+    for (const callDate of callDates) {
+      const slot = await prisma.gCCallSlot.create({
         data: {
           availabilityId: staffAvailability.id,
           participantId: parseInt(participantId),
           squadId: membership.groupId,
-          scheduledDate: today,
+          scheduledDate: callDate,
           scheduledTime: normalizedTime,
           endTime: endTime,
           bookedAt: new Date(),
@@ -164,12 +199,15 @@ export async function POST(request: Request) {
           callType: 'TRAINING',
         }
       });
+      createdSlots.push(slot);
+      console.log(`✅ Slot creado para ${callDate.toISOString().split('T')[0]} a las ${normalizedTime}`);
     }
 
     return NextResponse.json({
       success: true,
-      slot,
-      message: 'Horario asignado correctamente'
+      slots: createdSlots,
+      message: `${createdSlots.length} horarios asignados correctamente para los días de entrenamiento`,
+      dates: callDates.map(d => d.toISOString().split('T')[0])
     });
 
   } catch (error) {
