@@ -88,40 +88,65 @@ export default function NFCWriter({ userId, userName, token, onSuccess, onCancel
     try {
       const ndef = new window.NDEFReader();
       
-      const message: NDEFMessage = {
-        records: [
-          {
-            recordType: 'text',
-            data: token,
-            encoding: 'utf-8',
-            lang: 'en'
-          },
-          {
-            recordType: 'url',
-            data: `https://frutos.com/verify/${token}`
+      // IMPORTANTE: En algunos dispositivos Android, necesitamos iniciar un scan
+      // antes de poder escribir. Esto "activa" el lector NFC.
+      const abortController = new AbortController();
+      
+      // Iniciar scan para activar el NFC y detectar cuando se acerca la tarjeta
+      ndef.scan({ signal: abortController.signal }).catch(() => {
+        // Ignorar errores del scan, solo lo usamos para activar el NFC
+      });
+      
+      // Escuchar cuando se detecta una tarjeta
+      ndef.onreading = async () => {
+        // Tarjeta detectada, ahora podemos escribir
+        abortController.abort(); // Detener el scan
+        
+        setStatus('writing');
+        
+        try {
+          const message: NDEFMessage = {
+            records: [
+              {
+                recordType: 'text',
+                data: token,
+                encoding: 'utf-8',
+                lang: 'en'
+              },
+              {
+                recordType: 'url',
+                data: `https://frutos.com/verify/${token}`
+              }
+            ]
+          };
+
+          await ndef.write(message);
+
+          // Importante: Vibrar inmediatamente para que el usuario sepa que debe retirar la tarjeta
+          if (navigator.vibrate) {
+            navigator.vibrate([100, 50, 100, 50, 100]);
           }
-        ]
+
+          playSuccessSound();
+          setStatus('success');
+
+          setTimeout(() => {
+            onSuccess();
+          }, 3000);
+        } catch (writeError: any) {
+          console.error('Error writing NFC:', writeError);
+          setStatus('error');
+          setErrorMessage(writeError.message || 'Error al escribir en la tarjeta NFC.');
+        }
+      };
+      
+      ndef.onreadingerror = () => {
+        setStatus('error');
+        setErrorMessage('Error al leer la tarjeta. Intenta acercarla de nuevo.');
       };
 
-      setStatus('writing');
-      await ndef.write(message);
-
-      // Importante: Vibrar inmediatamente para que el usuario sepa que debe retirar la tarjeta
-      if (navigator.vibrate) {
-        navigator.vibrate([100, 50, 100, 50, 100]); // Vibración más larga para indicar "retira la tarjeta"
-      }
-
-      playSuccessSound();
-      setStatus('success');
-
-      // Delay más largo antes de llamar onSuccess para dar tiempo a retirar la tarjeta
-      // Si el usuario no retira la tarjeta, Android la detectará y mostrará el diálogo
-      setTimeout(() => {
-        onSuccess();
-      }, 3000); // 3 segundos para dar tiempo a retirar
-
     } catch (error: any) {
-      console.error('Error writing NFC:', error);
+      console.error('Error initializing NFC:', error);
       setStatus('error');
 
       if (error.name === 'NotAllowedError') {
@@ -133,7 +158,7 @@ export default function NFCWriter({ userId, userName, token, onSuccess, onCancel
       } else if (error.name === 'AbortError') {
         setErrorMessage('Operación cancelada. Mantén la tarjeta cerca hasta que termine.');
       } else {
-        setErrorMessage(error.message || 'Error al escribir en la tarjeta NFC.');
+        setErrorMessage(error.message || 'Error al inicializar NFC.');
       }
 
       if (navigator.vibrate) {
