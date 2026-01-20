@@ -902,9 +902,10 @@ function QRScannerModal({ onScan, onClose }: { onScan: (code: string) => void; o
 
 // Componente de Scanner NFC para leer gafetes
 function NFCScannerModal({ onScan, onClose }: { onScan: (code: string) => void; onClose: () => void }) {
-  const [status, setStatus] = useState<'checking' | 'unsupported' | 'ready' | 'scanning' | 'success' | 'error'>('checking');
+  const [status, setStatus] = useState<'checking' | 'unsupported' | 'ready' | 'scanning' | 'success' | 'error' | 'manual'>('checking');
   const [error, setError] = useState<string | null>(null);
   const [scannedCode, setScannedCode] = useState<string | null>(null);
+  const [manualCode, setManualCode] = useState('');
   const nfcAbortRef = useRef<AbortController | null>(null);
 
   // Verificar soporte NFC
@@ -1084,22 +1085,25 @@ function NFCScannerModal({ onScan, onClose }: { onScan: (code: string) => void; 
           )}
 
           {(status === 'ready' || status === 'scanning') && (
-            <div className="text-center py-8">
-              <div className="relative w-32 h-32 mx-auto mb-6">
+            <div className="text-center py-6">
+              <div className="relative w-28 h-28 mx-auto mb-4">
                 {/* Animación de ondas */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="absolute w-24 h-24 bg-cyan-500/20 rounded-full animate-ping" />
-                  <div className="absolute w-32 h-32 bg-cyan-500/10 rounded-full animate-ping" style={{ animationDelay: '0.5s' }} />
+                  <div className="absolute w-20 h-20 bg-cyan-500/20 rounded-full animate-ping" />
+                  <div className="absolute w-28 h-28 bg-cyan-500/10 rounded-full animate-ping" style={{ animationDelay: '0.5s' }} />
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <Smartphone className="w-16 h-16 text-cyan-400" />
+                  <Smartphone className="w-14 h-14 text-cyan-400" />
                 </div>
               </div>
               <h4 className="text-cyan-400 font-bold text-xl mb-2">
-                {status === 'scanning' ? 'Esperando gafete...' : 'Listo para escanear'}
+                {status === 'scanning' ? '📡 Escaneando...' : 'Listo para escanear'}
               </h4>
-              <p className="text-slate-400 text-sm mb-4">
-                Acerca el gafete NFC a la parte trasera del dispositivo
+              <p className="text-slate-400 text-sm mb-2">
+                Mantén esta ventana abierta y acerca el gafete NFC
+              </p>
+              <p className="text-slate-500 text-xs mb-4">
+                ⚠️ Si Android muestra "Nueva etiqueta escaneada", copia el código y usa la opción manual
               </p>
               
               {error && (
@@ -1111,12 +1115,36 @@ function NFCScannerModal({ onScan, onClose }: { onScan: (code: string) => void; 
               {status === 'ready' && (
                 <Button
                   onClick={startNFCScan}
-                  className="bg-cyan-500 hover:bg-cyan-600 text-white"
+                  className="bg-cyan-500 hover:bg-cyan-600 text-white mb-3"
                 >
                   <Smartphone className="w-4 h-4 mr-2" />
                   Iniciar Escaneo
                 </Button>
               )}
+
+              {/* Opción manual */}
+              <div className="border-t border-slate-700 pt-4 mt-4">
+                <p className="text-slate-500 text-xs mb-2">¿Android capturó el NFC? Escribe el código aquí:</p>
+                <div className="flex gap-2">
+                  <Input
+                    value={manualCode}
+                    onChange={(e) => setManualCode(e.target.value.toUpperCase())}
+                    placeholder="Ej: REGMK8IYGXXM858"
+                    className="bg-slate-800 border-slate-600 text-white text-center font-mono"
+                  />
+                  <Button
+                    onClick={() => {
+                      if (manualCode.trim()) {
+                        onScan(manualCode.trim());
+                      }
+                    }}
+                    disabled={!manualCode.trim()}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4"
+                  >
+                    ✓
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
 
