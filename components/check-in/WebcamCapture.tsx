@@ -16,6 +16,7 @@ export default function WebcamCapture({ onCapture, userName }: WebcamCaptureProp
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   const videoConstraints = {
     width: 480,
@@ -23,14 +24,22 @@ export default function WebcamCapture({ onCapture, userName }: WebcamCaptureProp
     facingMode: facingMode
   };
 
-  // Verificar permisos de cámara al montar
+  // Verificar permisos de cámara al montar - con delay para que el QR scanner libere la cámara
   useEffect(() => {
     const checkCamera = async () => {
+      // Esperar 1 segundo para que el QR scanner libere la cámara
+      console.log('📷 WebcamCapture: Esperando que se libere la cámara...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setIsInitializing(false);
+      
       try {
+        console.log('📷 WebcamCapture: Intentando acceder a la cámara...');
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         stream.getTracks().forEach(track => track.stop());
         setCameraError(null);
+        console.log('✅ WebcamCapture: Cámara disponible');
       } catch (err: any) {
+        console.error('❌ WebcamCapture: Error:', err);
         if (err.name === 'NotAllowedError') {
           setCameraError('Permiso de cámara denegado. Por favor habilita el acceso a la cámara.');
         } else if (err.name === 'NotFoundError') {
@@ -122,7 +131,9 @@ export default function WebcamCapture({ onCapture, userName }: WebcamCaptureProp
         {!capturedImage && !cameraReady && !cameraError && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-800">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-cyan-500 border-t-transparent mb-4"></div>
-            <p className="text-slate-400 text-sm">Iniciando cámara...</p>
+            <p className="text-slate-400 text-sm">
+              {isInitializing ? 'Preparando cámara...' : 'Iniciando cámara...'}
+            </p>
           </div>
         )}
 

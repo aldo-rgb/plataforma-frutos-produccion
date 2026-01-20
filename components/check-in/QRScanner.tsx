@@ -231,18 +231,47 @@ export default function QRScanner({ onScan, defaultMode, enabled = true }: QRSca
     }
   };
 
-  // Detener scanner
+  // Detener scanner y liberar cámara completamente
   const stopScanner = async () => {
-    if (scannerRef.current && isScanning) {
+    console.log('🛑 Deteniendo scanner...');
+    
+    // Primero detener el scanner de html5-qrcode
+    if (scannerRef.current) {
       try {
         await scannerRef.current.stop();
-        scannerRef.current = null;
-        setIsScanning(false);
-        setIsTorchOn(false);
+        console.log('✅ Scanner detenido');
       } catch (error) {
         console.error('Error stopping scanner:', error);
       }
+      scannerRef.current = null;
     }
+    
+    // Liberar cualquier stream de video activo en el DOM
+    try {
+      const videoElement = document.querySelector('#qr-reader video') as HTMLVideoElement;
+      if (videoElement && videoElement.srcObject) {
+        const stream = videoElement.srcObject as MediaStream;
+        stream.getTracks().forEach(track => {
+          track.stop();
+          console.log('✅ Track detenido:', track.kind);
+        });
+        videoElement.srcObject = null;
+      }
+    } catch (e) {
+      console.error('Error liberando video:', e);
+    }
+    
+    // Liberar TODOS los streams de MediaDevices activos
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      // No podemos detener streams desde enumerateDevices, pero el log ayuda
+      console.log('📷 Dispositivos:', devices.filter(d => d.kind === 'videoinput').length);
+    } catch (e) {
+      // Ignorar
+    }
+    
+    setIsScanning(false);
+    setIsTorchOn(false);
   };
 
   // Toggle linterna
