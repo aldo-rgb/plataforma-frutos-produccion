@@ -466,6 +466,7 @@ export default function BadgePreview({
 
   // Ref para cancelar el scan NFC
   const nfcAbortRef = useRef<AbortController | null>(null);
+  const [nfcError, setNfcError] = useState<string>('');
 
   // Grabar NFC - Versión corregida que hace scan primero para activar el lector
   const handleWriteNFC = async () => {
@@ -480,6 +481,7 @@ export default function BadgePreview({
     }
 
     setNfcStatus('writing');
+    setNfcError('');
 
     try {
       const ndef = new (window as any).NDEFReader();
@@ -491,9 +493,13 @@ export default function BadgePreview({
       await ndef.scan({ signal: abortController.signal });
       
       // Escuchar cuando se detecta una tarjeta
-      ndef.onreading = async () => {
+      ndef.onreading = async (event: any) => {
         try {
+          // Log del tipo de tarjeta para debug
+          console.log('NFC Tag detected:', event?.serialNumber);
+          
           // Tarjeta detectada, ahora escribimos
+          // Usar overwrite: true para sobrescribir cualquier dato existente
           await ndef.write({
             records: [
               {
@@ -501,7 +507,7 @@ export default function BadgePreview({
                 data: getNFCData()
               }
             ]
-          });
+          }, { overwrite: true });
           
           // Vibrar para indicar éxito
           if (navigator.vibrate) {
@@ -515,6 +521,7 @@ export default function BadgePreview({
           setNfcStatus('success');
           setTimeout(() => {
             setNfcStatus('idle');
+            setNfcError('');
             setShowNFCModal(false);
             if (onPrint) onPrint();
           }, 2000);
@@ -522,22 +529,36 @@ export default function BadgePreview({
           console.error('Error writing NFC:', writeError);
           abortController.abort();
           nfcAbortRef.current = null;
+          
+          // Mensajes de error específicos
+          let errorMsg = 'Error al grabar';
+          if (writeError.name === 'NotSupportedError') {
+            errorMsg = 'Tarjeta no compatible. Usa NTAG 213/215/216';
+          } else if (writeError.name === 'NotAllowedError') {
+            errorMsg = 'Tarjeta protegida contra escritura';
+          } else if (writeError.message?.includes('NDEF')) {
+            errorMsg = 'Tarjeta no formateada para NDEF. Usa NTAG';
+          }
+          
+          setNfcError(errorMsg);
           setNfcStatus('error');
-          setTimeout(() => setNfcStatus('idle'), 3000);
+          setTimeout(() => setNfcStatus('idle'), 5000);
         }
       };
       
-      ndef.onreadingerror = () => {
-        console.error('NFC reading error');
+      ndef.onreadingerror = (event: any) => {
+        console.error('NFC reading error:', event);
+        setNfcError('Error al leer tarjeta. Intenta con NTAG 213');
         setNfcStatus('error');
-        setTimeout(() => setNfcStatus('idle'), 3000);
+        setTimeout(() => setNfcStatus('idle'), 5000);
       };
 
     } catch (error: any) {
       console.error('Error initializing NFC:', error);
       nfcAbortRef.current = null;
+      setNfcError(error.message || 'Error de NFC');
       setNfcStatus('error');
-      setTimeout(() => setNfcStatus('idle'), 3000);
+      setTimeout(() => setNfcStatus('idle'), 5000);
     }
   };
 
@@ -548,6 +569,7 @@ export default function BadgePreview({
       nfcAbortRef.current = null;
     }
     setNfcStatus('idle');
+    setNfcError('');
     setShowNFCModal(false);
   };
 
@@ -751,7 +773,7 @@ export default function BadgePreview({
                     Copia el código y usa una app de NFC en otro dispositivo para grabarlo en la tarjeta.
                   </p>
                   <p className="text-slate-500 text-xs mt-2">
-                    Apps recomendadas: NFC Tools, TagWriter
+                    Apps recomendadas: NFC Tools, TagWriter (soportan Mifare)
                   </p>
                 </div>
               </div>
@@ -765,13 +787,22 @@ export default function BadgePreview({
                   <p className="text-white font-semibold">Grabar desde este dispositivo</p>
                   <p className="text-slate-400 text-sm mt-1">
                     {nfcSupported 
-                      ? 'Tu dispositivo soporta NFC. Acerca la tarjeta y presiona el botón.'
+                      ? 'Acerca una tarjeta NTAG 213/215/216 y presiona el botón.'
                       : 'Tu dispositivo no soporta NFC. Usa la opción de arriba.'}
                   </p>
+                  {nfcSupported && (
+                    <p className="text-amber-400/80 text-xs mt-2">
+                      ⚠️ Mifare Classic/DESFire no compatible desde navegador
+                    </p>
+                  )}
                 </div>
               </div>
 
               {nfcSupported && (
+                <>
+                {nfcError && (
+                  <p className="text-red-400 text-sm mb-3 text-center">{nfcError}</p>
+                )}
                 <button
                   onClick={handleWriteNFC}
                   disabled={nfcStatus === 'writing'}

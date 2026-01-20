@@ -158,13 +158,34 @@ export async function POST(request: NextRequest) {
 
     const errors: { type: string; message: string; blocking: boolean }[] = [];
 
-    // Buscar enrollment del usuario en este producto/visión
-    const enrollment = await prisma.vision_enrollments.findFirst({
+    // Mapear levelType del producto al level del enrollment
+    const levelMap: Record<string, string> = {
+      'BASIC': 'BASIC',
+      'ADVANCED': 'ADVANCED',
+      'PL': 'PL',
+      'COMBO_FULL': 'BASIC',
+      'COMBO_ADV_PL': 'ADVANCED',
+    };
+    const enrollmentLevel = levelMap[product.levelType] || product.levelType;
+
+    // Buscar enrollment del usuario en este producto/visión CON EL LEVEL CORRECTO
+    let enrollment = await prisma.vision_enrollments.findFirst({
       where: {
         userId: participantId,
-        ...(product.visionId ? { visionId: product.visionId } : {})
+        ...(product.visionId ? { visionId: product.visionId } : {}),
+        level: enrollmentLevel as any
       }
     });
+    
+    // Si no encuentra con level específico, buscar cualquiera como fallback
+    if (!enrollment) {
+      enrollment = await prisma.vision_enrollments.findFirst({
+        where: {
+          userId: participantId,
+          ...(product.visionId ? { visionId: product.visionId } : {})
+        }
+      });
+    }
 
     // También buscar si tiene un Ticket activo para esta visión
     const activeTicket = await prisma.ticket.findFirst({
