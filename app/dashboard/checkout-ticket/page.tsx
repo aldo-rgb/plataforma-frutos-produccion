@@ -39,6 +39,7 @@ interface GiftCodeData {
   type: string;
   value: number;
   organizationName: string;
+  isCashPayment?: boolean;
 }
 
 // Helper function to check if payment deadline has passed
@@ -147,16 +148,18 @@ function CheckoutTicketContent() {
 
       const data = await res.json();
 
-      if (data.valid) {
+      // El API devuelve success y giftCode, no valid
+      if (data.success && data.giftCode) {
         setAppliedCode({
-          code: giftCode.trim().toUpperCase(),
-          type: data.type,
-          value: data.value,
-          organizationName: data.organizationName,
+          code: data.giftCode.code,
+          type: data.giftCode.type,
+          value: data.giftCode.value || 0,
+          organizationName: data.giftCode.organization?.name || '',
+          isCashPayment: data.giftCode.isCashPayment || false,
         });
         setGiftCode('');
       } else {
-        setError(data.message || 'Código inválido');
+        setError(data.error || data.message || 'Código inválido');
         setTimeout(() => setError(null), 3000);
       }
     } catch (err) {
