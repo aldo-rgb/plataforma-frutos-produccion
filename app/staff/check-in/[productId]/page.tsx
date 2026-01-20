@@ -696,7 +696,13 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
               ) : (
                 <WebcamCapture
                   onCapture={handlePhotoCapture}
+                  onSkip={() => {
+                    // Continuar sin foto nueva
+                    console.log('Saltando captura de foto');
+                    setCheckInStatus('badge_print');
+                  }}
                   userName={validationResult.user.nombre}
+                  timeoutMs={8000}
                 />
               )}
 

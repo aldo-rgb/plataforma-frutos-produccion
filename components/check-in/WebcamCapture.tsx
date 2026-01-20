@@ -6,22 +6,41 @@ import { Camera, RotateCcw, Check, User, AlertCircle } from 'lucide-react';
 
 interface WebcamCaptureProps {
   onCapture: (imageData: string) => void;
+  onSkip?: () => void; // Opción para saltar sin foto
   userName: string;
+  timeoutMs?: number; // Timeout para inicialización de cámara
 }
 
-export default function WebcamCapture({ onCapture, userName }: WebcamCaptureProps) {
+export default function WebcamCapture({ onCapture, onSkip, userName, timeoutMs = 10000 }: WebcamCaptureProps) {
   const webcamRef = useRef<Webcam>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [showTimeout, setShowTimeout] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const videoConstraints = {
     width: 480,
     height: 480,
     facingMode: facingMode
   };
+
+  // Timeout para mostrar opción de saltar si la cámara tarda mucho
+  useEffect(() => {
+    timeoutRef.current = setTimeout(() => {
+      if (!cameraReady && !cameraError) {
+        setShowTimeout(true);
+      }
+    }, timeoutMs);
+    
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [timeoutMs, cameraReady, cameraError]);
 
   // Verificar permisos de cámara al montar
   useEffect(() => {
@@ -123,6 +142,14 @@ export default function WebcamCapture({ onCapture, userName }: WebcamCaptureProp
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-800">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-cyan-500 border-t-transparent mb-4"></div>
             <p className="text-slate-400 text-sm">Iniciando cámara...</p>
+            {showTimeout && onSkip && (
+              <button
+                onClick={onSkip}
+                className="mt-4 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-semibold rounded-lg transition-colors"
+              >
+                La cámara tarda mucho - Continuar sin foto
+              </button>
+            )}
           </div>
         )}
 
@@ -131,6 +158,14 @@ export default function WebcamCapture({ onCapture, userName }: WebcamCaptureProp
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-800">
             <User className="text-slate-600" size={80} />
             <p className="text-slate-500 text-sm mt-4">Cámara no disponible</p>
+            {onSkip && (
+              <button
+                onClick={onSkip}
+                className="mt-4 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-black font-semibold rounded-lg transition-colors"
+              >
+                Continuar sin foto
+              </button>
+            )}
           </div>
         )}
 
