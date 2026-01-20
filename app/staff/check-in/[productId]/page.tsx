@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, use } from 'react';
+import { useState, useEffect, useCallback, use, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -76,33 +76,49 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ enrolled: 0, checkedIn: 0, pending: 0 });
+  
+  // Control de debounce para sonidos - evitar múltiples sonidos rápidos
+  const lastSoundTimeRef = useRef<number>(0);
+  const soundCooldown = 500; // Mínimo 500ms entre sonidos
 
-  // Sonidos
+  // Sonidos con debounce
   const playSound = useCallback((type: 'success' | 'error' | 'warning' | 'scan') => {
     if (!soundEnabled) return;
     
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
+    // Debounce: ignorar si el último sonido fue hace menos de 500ms
+    const now = Date.now();
+    if (now - lastSoundTimeRef.current < soundCooldown) {
+      return;
+    }
+    lastSoundTimeRef.current = now;
     
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    const sounds = {
-      success: { freq: 880, duration: 0.15, type: 'sine' as OscillatorType },
-      error: { freq: 220, duration: 0.3, type: 'square' as OscillatorType },
-      warning: { freq: 440, duration: 0.2, type: 'triangle' as OscillatorType },
-      scan: { freq: 1200, duration: 0.05, type: 'sine' as OscillatorType }
-    };
-    
-    const sound = sounds[type];
-    oscillator.type = sound.type;
-    oscillator.frequency.setValueAtTime(sound.freq, audioContext.currentTime);
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + sound.duration);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + sound.duration);
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      const sounds = {
+        success: { freq: 880, duration: 0.15, type: 'sine' as OscillatorType },
+        error: { freq: 220, duration: 0.3, type: 'square' as OscillatorType },
+        warning: { freq: 440, duration: 0.2, type: 'triangle' as OscillatorType },
+        scan: { freq: 1200, duration: 0.05, type: 'sine' as OscillatorType }
+      };
+      
+      const sound = sounds[type];
+      oscillator.type = sound.type;
+      oscillator.frequency.setValueAtTime(sound.freq, audioContext.currentTime);
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + sound.duration);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + sound.duration);
+    } catch (e) {
+      // Silenciar errores de audio
+      console.error('Audio error:', e);
+    }
   }, [soundEnabled]);
 
   // Cargar info del producto y stats
@@ -458,7 +474,7 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
                   <Scan className="text-cyan-400" size={64} />
                 </div>
                 <h2 className="text-3xl font-bold mb-2">Esperando Participante</h2>
-                <p className="text-slate-400">Escanea QR, usa pistola lectora o tap NFC</p>
+                <p className="text-slate-400">Escanea QR, usa scanner o tap NFC</p>
               </div>
 
               {/* Omni Scanner - 3 canales simultáneos */}
@@ -468,7 +484,7 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
                     console.log(`Detected via ${method}:`, data);
                     validateUser(data);
                   }}
-                  enabled={true}
+                  enabled={checkInStatus === 'idle'}
                 />
               </div>
 
@@ -743,7 +759,7 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
                   Pide a <span className="text-white font-semibold">{validationResult.user.nombre}</span> que presente su gafete
                 </p>
                 <p className="text-slate-500 text-sm mt-1">
-                  📷 Escanea QR • 🔫 Usa pistola • 📱 Tap NFC
+                  📷 Escanea QR • 🔫 Usa Scanner • 📱 Tap NFC
                 </p>
               </div>
 

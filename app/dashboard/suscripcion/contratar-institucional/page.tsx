@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Building2, Mail, Upload, MapPin, Users, DollarSign, CreditCard, Loader2, ArrowLeft, CheckCircle2, Ticket, Navigation, Target } from 'lucide-react';
@@ -44,6 +44,9 @@ export default function ContratarInstitucionalPage() {
   const [searchMasterOrg, setSearchMasterOrg] = useState('');
   const [showMasterOrgDropdown, setShowMasterOrgDropdown] = useState(false);
   const [belongsToMaster, setBelongsToMaster] = useState<'yes' | 'no' | ''>('');
+  
+  // Ref para el input de archivo
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Cargar precios desde API público
   useEffect(() => {
@@ -651,6 +654,7 @@ export default function ContratarInstitucionalPage() {
                   <label className="block text-xs font-medium text-gray-400 mb-3 uppercase tracking-wider">
                     Logo de la Organización
                   </label>
+                  
                   <div className="flex items-center gap-4">
                     {logoUrl && (
                       <div className="w-24 h-24 rounded-2xl overflow-hidden bg-black/40 border border-white/10 shadow-lg">
@@ -664,27 +668,26 @@ export default function ContratarInstitucionalPage() {
                           <span className="text-sm">Subiendo...</span>
                         </div>
                       ) : (
-                        <div>
+                        <label className="flex items-center justify-center gap-3 w-full px-5 py-4 bg-black/40 border border-white/10 rounded-2xl text-gray-400 hover:border-purple-500/50 hover:bg-black/60 active:bg-purple-500/20 transition-all min-h-[56px] cursor-pointer">
+                          <Upload className="w-5 h-5 text-purple-400" />
+                          <span className="text-sm">{logoUrl ? 'Cambiar Logo' : 'Subir Logo'}</span>
+                          {/* Input SIN accept para compatibilidad con Android */}
                           <input
                             type="file"
-                            accept="image/*"
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) {
+                                // Validar tipo de archivo en JS
+                                if (!file.type.startsWith('image/')) {
+                                  setError('Por favor selecciona una imagen (JPG, PNG, etc.)');
+                                  return;
+                                }
                                 processFile(file);
                               }
                             }}
                             className="hidden"
-                            id="logo-file-upload"
                           />
-                          <label
-                            htmlFor="logo-file-upload"
-                            className="flex items-center justify-center gap-3 w-full px-5 py-4 bg-black/40 border border-white/10 rounded-2xl text-gray-400 hover:border-purple-500/50 hover:bg-black/60 active:border-purple-500 active:bg-black/60 transition-all min-h-[56px] cursor-pointer"
-                          >
-                            <Upload className="w-5 h-5 text-purple-400" />
-                            <span className="text-sm">{logoUrl ? 'Cambiar Logo' : 'Subir Logo'}</span>
-                          </label>
-                        </div>
+                        </label>
                       )}
                     </div>
                   </div>

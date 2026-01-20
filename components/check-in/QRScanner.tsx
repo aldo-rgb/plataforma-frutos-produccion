@@ -321,7 +321,7 @@ export default function QRScanner({ onScan, defaultMode }: QRScannerProps) {
               }`}
             >
               <Keyboard size={16} />
-              Pistola
+              Scanner
             </button>
           </div>
         </div>
