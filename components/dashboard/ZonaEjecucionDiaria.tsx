@@ -902,8 +902,19 @@ export default function ZonaEjecucionDiaria() {
 
       {/* Modal de Preguntas para Misiones del Trainer */}
       {showQuestionsModal && selectedTask && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-slate-900 rounded-xl border border-slate-800 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          onClick={() => {
+            setShowQuestionsModal(false);
+            setSelectedTask(null);
+            setMissionQuestions([]);
+            setMissionAnswers({});
+          }}
+        >
+          <div 
+            className="bg-slate-900 rounded-xl border border-slate-800 shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
             <div className="p-6 bg-gradient-to-r from-amber-600 to-orange-600 rounded-t-xl">
               <div className="flex items-center justify-between">
@@ -959,7 +970,13 @@ export default function ZonaEjecucionDiaria() {
                       {question.questionType === 'TEXT' && (
                         <textarea
                           value={missionAnswers[question.id] || ''}
-                          onChange={(e) => setMissionAnswers(prev => ({ ...prev, [question.id]: e.target.value }))}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            const newValue = e.target.value;
+                            setMissionAnswers(prev => ({ ...prev, [question.id]: newValue }));
+                          }}
+                          onFocus={(e) => e.stopPropagation()}
+                          onClick={(e) => e.stopPropagation()}
                           placeholder="Tu respuesta..."
                           rows={3}
                           className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500 resize-none"
@@ -972,7 +989,10 @@ export default function ZonaEjecucionDiaria() {
                             <button
                               key={opt}
                               type="button"
-                              onClick={() => setMissionAnswers(prev => ({ ...prev, [question.id]: opt }))}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMissionAnswers(prev => ({ ...prev, [question.id]: opt }));
+                              }}
                               className={`flex-1 py-3 rounded-xl border transition-all ${
                                 missionAnswers[question.id] === opt
                                   ? 'bg-amber-500 border-amber-500 text-white'
@@ -992,7 +1012,11 @@ export default function ZonaEjecucionDiaria() {
                             min={1}
                             max={10}
                             value={missionAnswers[question.id] || 5}
-                            onChange={(e) => setMissionAnswers(prev => ({ ...prev, [question.id]: e.target.value }))}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              setMissionAnswers(prev => ({ ...prev, [question.id]: e.target.value }));
+                            }}
+                            onClick={(e) => e.stopPropagation()}
                             className="w-full accent-amber-500"
                           />
                           <div className="flex justify-between text-xs text-slate-400">
@@ -1011,7 +1035,10 @@ export default function ZonaEjecucionDiaria() {
                             <button
                               key={j}
                               type="button"
-                              onClick={() => setMissionAnswers(prev => ({ ...prev, [question.id]: opt }))}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMissionAnswers(prev => ({ ...prev, [question.id]: opt }));
+                              }}
                               className={`w-full p-3 text-left rounded-xl border transition-all ${
                                 missionAnswers[question.id] === opt
                                   ? 'bg-amber-500/20 border-amber-500 text-amber-400'
