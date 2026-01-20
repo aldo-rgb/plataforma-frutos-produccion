@@ -379,9 +379,13 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
   };
 
   // Formulario médico completado
-  const handleMedicalFormComplete = () => {
-    // Revalidar
+  const handleMedicalFormComplete = async () => {
+    // Revalidar - primero resetear estado para permitir la validación
     if (validationResult?.user) {
+      setIsProcessing(false);
+      setCheckInStatus('idle');
+      // Pequeño delay para asegurar que el estado se actualice
+      await new Promise(r => setTimeout(r, 100));
       validateUser(validationResult.user.id.toString());
     }
   };
