@@ -80,6 +80,11 @@ interface TrainerData {
     totalInscritosVision?: number;
     totalDeclarados?: number;
     totalConfirmadosAvanzado?: number;
+    // Info del nivel del trainer
+    trainerLevel?: 'BASIC' | 'ADVANCED' | 'PL' | null;
+    isBasicTrainer?: boolean;
+    isAdvancedTrainer?: boolean;
+    isPLTrainer?: boolean;
   };
 }
 
@@ -339,7 +344,8 @@ export default function TrainerDashboard() {
           </div>
         </div>
 
-        {/* KPI Cards - Declarados y Confirmados */}
+        {/* KPI Cards - Declarados y Confirmados - Solo mostrar si el trainer tiene nivel asignado */}
+        {data.stats.trainerLevel && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {/* Widget Declarados */}
           <div 
@@ -352,7 +358,9 @@ export default function TrainerDashboard() {
                   <Users className="text-amber-400" size={32} />
                 </div>
                 <div>
-                  <div className="text-amber-400 text-sm font-medium uppercase tracking-wider">Declarados</div>
+                  <div className="text-amber-400 text-sm font-medium uppercase tracking-wider">
+                    {data.stats.isBasicTrainer ? 'Declarados' : data.stats.isAdvancedTrainer ? 'Pre-registros PL' : 'Pre-registros'}
+                  </div>
                   <div className="flex items-baseline gap-1 mt-1">
                     <span className="text-white text-4xl font-black">{data.stats.totalDeclarados || 0}</span>
                     <span className="text-slate-500 text-xl font-bold">/{data.stats.totalInscritosVision || 0}</span>
@@ -363,7 +371,11 @@ export default function TrainerDashboard() {
             
             <div className="flex items-center justify-between">
               <span className="text-slate-400 text-sm">
-                Pre-registros / Inscritos en visión
+                {data.stats.isBasicTrainer 
+                  ? 'Pre-registros Avanzado / Inscritos Básico'
+                  : data.stats.isAdvancedTrainer 
+                  ? 'Pre-registros PL / Inscritos Avanzado'
+                  : 'Pre-registros / Inscritos'}
               </span>
               <span className="text-amber-400 text-xs">Click para ver →</span>
             </div>
@@ -383,7 +395,9 @@ export default function TrainerDashboard() {
                   )}
                 </div>
                 <div>
-                  <div className="text-green-400 text-sm font-medium uppercase tracking-wider">Confirmados</div>
+                  <div className="text-green-400 text-sm font-medium uppercase tracking-wider">
+                    {data.stats.isBasicTrainer ? 'Confirmados Avanzado' : data.stats.isAdvancedTrainer ? 'Inscritos Avanzado' : 'Confirmados'}
+                  </div>
                   <div className="flex items-baseline gap-1 mt-1">
                     <span className="text-white text-4xl font-black">{data.stats.totalConfirmadosAvanzado || 0}</span>
                     <span className="text-slate-500 text-xl font-bold">/{data.stats.totalDeclarados || 0}</span>
@@ -394,12 +408,17 @@ export default function TrainerDashboard() {
             
             <div className="flex items-center justify-between">
               <span className="text-slate-400 text-sm">
-                Pagados avanzado / Pre-registros
+                {data.stats.isBasicTrainer 
+                  ? 'Pagados Avanzado / Pre-registros'
+                  : data.stats.isAdvancedTrainer 
+                  ? 'Ya inscritos / Pre-registros PL'
+                  : 'Confirmados / Pre-registros'}
               </span>
               <span className="text-green-400 text-xs">Click para ver →</span>
             </div>
           </div>
         </div>
+        )}
 
         {/* Widget de Alertas Médicas */}
         <div className="mt-8">
