@@ -129,7 +129,7 @@ export default function BitacoraDetailPage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-10 h-10 animate-spin text-purple-500 mx-auto mb-3" />
-          <p className="text-gray-500">Cargando bitácora...</p>
+          <p className="text-gray-500">Cargando Cuestionario...</p>
         </div>
       </div>
     );

@@ -109,14 +109,25 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'complete') {
-      // Marcar como completado
-      const updated = await prisma.advancedQuestionnaire.update({
+      // Marcar como completado - usar upsert por si no existe el registro
+      const updated = await prisma.advancedQuestionnaire.upsert({
         where: { userId },
-        data: {
+        update: {
           ...data,
           status: 'COMPLETED',
           completedAt: new Date(),
+          lastSavedAt: new Date(),
           // Verificar flag de suicidio
+          suicideRiskFlag: data.hasSuicideAttempt === true,
+        },
+        create: {
+          userId,
+          visionId: visionId || null,
+          ...data,
+          status: 'COMPLETED',
+          completedAt: new Date(),
+          lastSavedAt: new Date(),
+          currentDimension: 5,
           suicideRiskFlag: data.hasSuicideAttempt === true,
         }
       });
