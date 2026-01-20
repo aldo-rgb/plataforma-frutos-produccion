@@ -5,10 +5,11 @@ import { Camera, Loader2, Clock, CheckCircle, AlertCircle, Upload, X, Zap, Calen
 import { useToast } from '@/components/ui/ToastProvider';
 
 interface Tarea {
-  id: string; // Changed: puede ser "carta-123" o "admin-456"
+  id: string; // Changed: puede ser "carta-123" o "admin-456" o "trainer-789"
   taskId?: number; // ID original de TaskInstance
-  submissionId?: number; // ID de TaskSubmission si es admin
-  tipo: 'CARTA' | 'EXTRAORDINARIA' | 'EVENTO';
+  submissionId?: number; // ID de TaskSubmission o MissionSubmission
+  missionId?: number; // ID de TrainerMission si es TRAINER_MISSION
+  tipo: 'CARTA' | 'EXTRAORDINARIA' | 'EVENTO' | 'TRAINER_MISSION';
   texto: string;
   area: string;
   areaIcon: string;

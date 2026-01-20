@@ -122,6 +122,75 @@ export async function POST(req: Request) {
       });
     }
 
+    // ========== CASO 3: Misión del Trainer (MissionSubmission) ==========
+    if (submissionId && tipo === 'TRAINER_MISSION') {
+      const submission = await prisma.missionSubmission.findUnique({
+        where: { id: submissionId },
+        include: {
+          Mission: {
+            include: {
+              Template: true
+            }
+          }
+        }
+      });
+
+      if (!submission || submission.userId !== userId) {
+        return NextResponse.json(
+          { error: 'Misión no encontrada o sin permisos' },
+          { status: 404 }
+        );
+      }
+
+      // Verificar que la misión no requiera evidencia
+      if (submission.Mission?.Template?.requiresEvidence) {
+        return NextResponse.json(
+          { error: 'Esta misión requiere evidencia' },
+          { status: 400 }
+        );
+      }
+
+      // Completar la misión (marcar como SUBMITTED para que el trainer la revise)
+      // O si no requiere revisión, marcar como APPROVED
+      const updated = await prisma.missionSubmission.update({
+        where: { id: submissionId },
+        data: {
+          status: 'SUBMITTED',
+          submittedAt: new Date()
+        }
+      });
+
+      // Otorgar puntos cuánticos si tiene recompensa
+      const pointsReward = submission.Mission?.Template?.pointsReward || 0;
+      if (pointsReward > 0) {
+        await prisma.missionSubmission.update({
+          where: { id: submissionId },
+          data: {
+            pointsEarned: pointsReward
+          }
+        });
+
+        await prisma.usuario.update({
+          where: { id: userId },
+          data: {
+            puntosCuanticos: {
+              increment: pointsReward
+            }
+          }
+        });
+
+        console.log(`💰 Se otorgaron ${pointsReward} puntos al usuario ${userId}`);
+      }
+
+      console.log(`✅ Misión del trainer ${submissionId} completada sin evidencia`);
+
+      return NextResponse.json({
+        success: true,
+        message: 'Misión completada exitosamente',
+        pointsAwarded: pointsReward
+      });
+    }
+
     return NextResponse.json(
       { error: 'Tipo de tarea no válido' },
       { status: 400 }
