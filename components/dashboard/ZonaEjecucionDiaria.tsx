@@ -377,19 +377,19 @@ export default function ZonaEjecucionDiaria() {
     <>
       <div className="w-full rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl mb-6 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-slate-800/50 border-b border-slate-700">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 sm:px-6 py-4 bg-slate-800/50 border-b border-slate-700 gap-3">
           <div>
-            <h3 className="text-white font-bold text-xl flex items-center gap-2">
+            <h3 className="text-white font-bold text-lg sm:text-xl flex items-center gap-2">
               🚀 Zona de Ejecución
             </h3>
-            <p className="text-slate-400 text-sm mt-1">Hoy es día de ganar</p>
+            <p className="text-slate-400 text-xs sm:text-sm mt-1">Hoy es día de ganar</p>
           </div>
           
           {/* Tabs */}
-          <div className="flex bg-slate-800 rounded-lg p-1">
+          <div className="flex bg-slate-800 rounded-lg p-1 self-start sm:self-auto">
             <button
               onClick={() => setActiveTab('hoy')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              className={`px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-all ${
                 activeTab === 'hoy'
                   ? 'bg-indigo-600 text-white shadow-lg'
                   : 'text-slate-400 hover:text-white'
@@ -399,7 +399,7 @@ export default function ZonaEjecucionDiaria() {
             </button>
             <button
               onClick={() => setActiveTab('retrasadas')}
-              className={`px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-all ${
+              className={`px-3 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2 transition-all ${
                 activeTab === 'retrasadas'
                   ? 'bg-indigo-600 text-white shadow-lg'
                   : 'text-slate-400 hover:text-white'
@@ -501,12 +501,12 @@ export default function ZonaEjecucionDiaria() {
               return (
                 <div
                   key={tarea.id}
-                  className={`relative flex items-center justify-between p-4 rounded-xl transition-all group ${getCardStyle()}`}
+                  className={`relative flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 rounded-xl transition-all group ${getCardStyle()}`}
                 >
                   {/* Watermark de EXPIRADO solo para EXTRAORDINARIAS */}
                   {isExpired && tarea.tipo === 'EXTRAORDINARIA' && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                      <span className="text-5xl font-black text-red-900/30 -rotate-12 border-4 border-red-900/30 px-6 py-2 rounded-lg select-none">
+                      <span className="text-2xl sm:text-5xl font-black text-red-900/30 -rotate-12 border-4 border-red-900/30 px-4 sm:px-6 py-1 sm:py-2 rounded-lg select-none">
                         PERDISTE {tarea.pointsReward || 0} PC
                       </span>
                     </div>
@@ -516,16 +516,16 @@ export default function ZonaEjecucionDiaria() {
                   
                   {/* Countdown Timer para TODAS las tareas extraordinarias y eventos */}
                   {(tarea.tipo === 'EXTRAORDINARIA' || tarea.tipo === 'EVENTO') && timeRemaining && !timeRemaining.expired && (
-                    <div className={`absolute -top-2 -left-2 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg flex items-center gap-1 z-20 ${
+                    <div className={`absolute -top-2 -left-2 text-white text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full shadow-lg flex items-center gap-1 z-20 ${
                       timeRemaining.isUrgent ? 'bg-red-600 animate-pulse' : 'bg-orange-500'
                     }`}>
-                      ⏱ Expira en {timeRemaining.hours}h {timeRemaining.minutes}m
+                      ⏱ {timeRemaining.hours}h {timeRemaining.minutes}m
                     </div>
                   )}
                   
-                  <div className="flex items-center gap-4 flex-1 min-w-0 overflow-hidden">
+                  <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1 min-w-0">
                     {/* Icono del área */}
-                    <div className={`h-12 w-12 rounded-full flex items-center justify-center text-2xl flex-shrink-0 ${
+                    <div className={`h-10 w-10 sm:h-12 sm:w-12 rounded-full flex items-center justify-center text-xl sm:text-2xl flex-shrink-0 ${
                       isExpired ? 'bg-gray-800/50' :
                       tarea.tipo === 'EVENTO' ? 'bg-purple-900/50' : 
                       tarea.tipo === 'EXTRAORDINARIA' ? 'bg-amber-900/50' :
@@ -536,125 +536,61 @@ export default function ZonaEjecucionDiaria() {
                     
                     {/* Info de la tarea */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start gap-2">
-                        <div className="flex-1 min-w-0">
-                          <h4 className={`text-white font-medium ${
-                            expandedTaskId === tarea.id ? 'break-words' : 'truncate'
-                          } ${isExpired ? 'line-through decoration-red-500/50' : ''}`}>
-                            {tarea.texto}
-                          </h4>
-                          <p className={`text-xs text-slate-400 mt-1 ${expandedTaskId === tarea.id ? 'break-words' : 'truncate'}`}>
-                            {tarea.metaContext}
-                          </p>
-                          <p className="text-xs text-slate-500 mt-0.5">{tarea.area}</p>
-                        </div>
-                        <button
-                          onClick={() => setExpandedTaskId(expandedTaskId === tarea.id ? null : tarea.id)}
-                          className="text-xs bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 px-3 py-1.5 rounded-lg transition-all flex-shrink-0 font-medium border border-indigo-500/30 hover:border-indigo-500/60"
-                        >
-                          {expandedTaskId === tarea.id ? '▲ Ocultar' : '▼ Detalles'}
-                        </button>
-                      </div>
-                      
-                      {/* Detalles expandidos */}
-                      {expandedTaskId === tarea.id && (
-                        <div className="mt-3 space-y-2 animate-in slide-in-from-top-2">
-                          {tarea.tipo === 'EVENTO' && tarea.horaEvento && (
-                            <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg px-3 py-2 flex items-center gap-2">
-                              <span className="text-purple-400 font-semibold text-sm">⏰ Hora:</span>
-                              <span className="text-purple-300 text-sm">{tarea.horaEvento}</span>
-                            </div>
-                          )}
-                          {tarea.tipo === 'EVENTO' && tarea.lugar && (
-                            <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg px-3 py-2 flex items-center gap-2">
-                              <span className="text-purple-400 font-semibold text-sm">📍 Lugar:</span>
-                              <span className="text-purple-300 text-sm">{tarea.lugar}</span>
-                            </div>
-                          )}
-                          {tarea.tipo === 'EXTRAORDINARIA' && tarea.deadline && (() => {
-                            const deadlineUTC = new Date(tarea.deadline);
-                            const year = deadlineUTC.getUTCFullYear();
-                            const month = deadlineUTC.getUTCMonth();
-                            const day = deadlineUTC.getUTCDate();
-                            const deadlineLocal = new Date(year, month, day);
-                            
-                            return (
-                              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-amber-400 font-semibold text-sm">📅 Fecha límite:</span>
-                                  <span className="text-amber-300 text-sm">
-                                    {deadlineLocal.toLocaleDateString('es-MX', { month: 'long', day: 'numeric', year: 'numeric' })}
-                                    {tarea.horaLimite && ` - ${tarea.horaLimite}`}
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      )}
-                      
-                      {/* Mensaje de puntos perdidos para EXPIRED */}
-                      {isExpired && tarea.tipo === 'EXTRAORDINARIA' && (
-                        <div className="mt-2 bg-red-950/50 border border-red-900 rounded-lg p-3">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-2xl">💀</span>
-                            <span className="text-red-400 font-bold text-sm">MISIÓN FALLIDA</span>
-                          </div>
-                          <p className="text-red-300 text-xs mb-2">
-                            Perdiste la oportunidad de ganar <span className="font-bold text-amber-400">{tarea.pointsReward || 0} Puntos Cuánticos</span>
-                          </p>
-                          <p className="text-red-500 text-xs font-semibold">
-                            🔒 No se puede completar. La tomas o la pierdes para siempre.
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Alerta de evidencia rechazada */}
-                      {tarea.status === 'REJECTED' && tarea.feedbackMentor && (
-                        <div className="mt-3 bg-gradient-to-r from-red-950/80 to-orange-950/80 border-2 border-red-500 rounded-xl p-4 shadow-xl shadow-red-900/50 animate-pulse">
-                          <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0">
-                              <AlertCircle className="w-6 h-6 text-red-400" />
-                            </div>
-                            <div className="flex-1">
-                              <h4 className="text-red-300 font-bold text-sm mb-2 flex items-center gap-2">
-                                ❌ Evidencia Rechazada por tu Mentor
-                              </h4>
-                              <div className="bg-black/30 rounded-lg p-3 mb-3">
-                                <p className="text-slate-200 text-sm leading-relaxed">
-                                  {tarea.feedbackMentor}
-                                </p>
-                              </div>
-                              <p className="text-amber-400 text-xs font-semibold flex items-center gap-1">
-                                <Upload className="w-3 h-3" />
-                                Por favor, sube una nueva evidencia corrigiendo los detalles señalados
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Status Badge */}
-                    <div className="flex-shrink-0">
-                      {getStatusBadge(tarea)}
+                      <h4 className={`text-white font-medium text-sm sm:text-base leading-snug ${isExpired ? 'line-through decoration-red-500/50' : ''}`}>
+                        {tarea.texto}
+                      </h4>
+                      <p className="text-[10px] sm:text-xs text-slate-400 mt-0.5 line-clamp-1">
+                        {tarea.metaContext}
+                      </p>
+                      <p className="text-[10px] sm:text-xs text-slate-500">{tarea.area}</p>
                     </div>
                   </div>
                   
-                  {/* Action Button */}
-                  <div className="ml-4 flex-shrink-0">
+                  {/* Action Button - En móvil va abajo */}
+                  <div className="mt-3 sm:mt-0 sm:ml-4 flex-shrink-0 flex justify-end">
                     {isExpired ? (
                       <div className="text-center">
                         <button
                           disabled
-                          className="px-4 py-2 bg-gray-900 text-gray-600 rounded-lg cursor-not-allowed opacity-50 border border-gray-800 mb-1"
+                          className="px-3 sm:px-4 py-2 bg-gray-900 text-gray-600 rounded-lg cursor-not-allowed opacity-50 border border-gray-800 text-xs sm:text-sm"
                         >
-                          🔒 Cerrado
+                          Expirada
                         </button>
-                        <p className="text-xs text-red-500 font-semibold">0 PC</p>
                       </div>
+                    ) : tarea.evidenceStatus === 'PENDING' ? (
+                      <button
+                        onClick={() => handleViewEvidence(tarea)}
+                        className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded-lg transition-all text-xs sm:text-sm font-medium"
+                      >
+                        <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        Ver
+                      </button>
+                    ) : tarea.requiereEvidencia !== false ? (
+                      <button
+                        onClick={() => handleOpenUpload(tarea)}
+                        disabled={uploadingTaskId === tarea.id}
+                        className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg transition-all shadow-lg shadow-purple-500/30 text-xs sm:text-sm font-medium"
+                      >
+                        {uploadingTaskId === tarea.id ? (
+                          <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
+                        ) : (
+                          <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        )}
+                        <span className="hidden xs:inline">Subir</span> Evidencia
+                      </button>
                     ) : (
-                      getActionButton(tarea)
+                      <button
+                        onClick={() => handleCompleteWithoutEvidence(tarea)}
+                        disabled={uploadingTaskId === tarea.id}
+                        className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg transition-all shadow-lg shadow-green-500/30 text-xs sm:text-sm font-medium"
+                      >
+                        {uploadingTaskId === tarea.id ? (
+                          <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
+                        ) : (
+                          <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        )}
+                        Completar
+                      </button>
                     )}
                   </div>
                 </div>
