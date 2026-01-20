@@ -630,11 +630,17 @@ export default function SquadManagerWidget() {
                               <>
                                 {member.nextCall ? (
                                   <span className="text-purple-300">
-                                    📅 {new Date(member.nextCall.scheduledDate).toLocaleDateString('es-MX', { 
-                                      weekday: 'short', 
-                                      day: 'numeric', 
-                                      month: 'short' 
-                                    })} - {member.nextCall.scheduledTime}
+                                    📅 {(() => {
+                                      // Parsear la fecha sin conversión de timezone
+                                      const dateStr = member.nextCall.scheduledDate.split('T')[0];
+                                      const [year, month, day] = dateStr.split('-').map(Number);
+                                      const date = new Date(year, month - 1, day);
+                                      return date.toLocaleDateString('es-MX', { 
+                                        weekday: 'short', 
+                                        day: 'numeric', 
+                                        month: 'short' 
+                                      });
+                                    })()} - {member.nextCall.scheduledTime}
                                   </span>
                                 ) : schedule ? (
                                   formatTime(schedule)
