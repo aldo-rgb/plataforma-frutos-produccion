@@ -274,20 +274,51 @@ export async function POST(request: NextRequest) {
           lte: yesterdayEnd
         }
       },
-      select: { id: true, nombre: true }
+      select: { id: true, nombre: true, organizationId: true }
     });
 
     for (const vision of visionesAdvancedFinalizadas) {
       try {
-        const updated = await prisma.vision_enrollments.updateMany({
+        // Obtener enrollments individuales para crear tickets
+        const enrollmentsToBacklog = await prisma.vision_enrollments.findMany({
           where: {
             visionId: vision.id,
             level: 'ADVANCED',
             attendanceStatus: 'NOT_ATTENDED'
           },
-          data: { attendanceStatus: 'BACKLOG' }
+          select: { id: true, userId: true }
         });
-        results.markedBacklog += updated.count;
+
+        if (enrollmentsToBacklog.length > 0) {
+          // Marcar como BACKLOG
+          await prisma.vision_enrollments.updateMany({
+            where: { id: { in: enrollmentsToBacklog.map(e => e.id) } },
+            data: { attendanceStatus: 'BACKLOG' }
+          });
+          results.markedBacklog += enrollmentsToBacklog.length;
+
+          // Crear tickets desde ADVANCED hacia arriba (incluye PL si lo tiene pagado)
+          for (const enrollment of enrollmentsToBacklog) {
+            const ticketResult = await processBacklogForAllPaidLevels(
+              enrollment.userId,
+              vision.id,
+              vision.organizationId,
+              'BACKLOG',
+              'ADVANCED' // Trigger desde ADVANCED
+            );
+            
+            if (ticketResult.success) {
+              results.backlogTicketsCreated += ticketResult.totalTickets;
+              console.log(`🎫 ${ticketResult.totalTickets} Ticket(s) BACKLOG ADVANCED creados para usuario ${enrollment.userId}`);
+            }
+            
+            const alreadyUsed = ticketResult.ticketsCreated.filter(t => t.alreadyUsedBacklog).length;
+            if (alreadyUsed > 0) results.backlogTicketsAlreadyUsed += alreadyUsed;
+            
+            const failed = ticketResult.ticketsCreated.filter(t => !t.success && !t.alreadyUsedBacklog).length;
+            if (failed > 0) results.backlogTicketsFailed += failed;
+          }
+        }
       } catch (error: any) {
         results.errors.push(`Error backlog ADVANCED visión ${vision.id}: ${error.message}`);
       }
@@ -301,22 +332,54 @@ export async function POST(request: NextRequest) {
           lte: yesterdayEnd
         }
       },
-      select: { id: true, nombre: true }
+      select: { id: true, nombre: true, organizationId: true }
     });
 
     for (const vision of visionesPLFinalizadas) {
       try {
-        const updated = await prisma.vision_enrollments.updateMany({
+        // Obtener enrollments individuales para crear tickets
+        const enrollmentsToBacklog = await prisma.vision_enrollments.findMany({
           where: {
             visionId: vision.id,
             level: 'PL',
             attendanceStatus: 'NOT_ATTENDED'
           },
-          data: { attendanceStatus: 'BACKLOG' }
+          select: { id: true, userId: true }
         });
-        results.markedBacklog += updated.count;
+
+        if (enrollmentsToBacklog.length > 0) {
+          // Marcar como BACKLOG
+          await prisma.vision_enrollments.updateMany({
+            where: { id: { in: enrollmentsToBacklog.map(e => e.id) } },
+            data: { attendanceStatus: 'BACKLOG' }
+          });
+          results.markedBacklog += enrollmentsToBacklog.length;
+
+          // Crear tickets solo para PL
+          for (const enrollment of enrollmentsToBacklog) {
+            const ticketResult = await processBacklogForAllPaidLevels(
+              enrollment.userId,
+              vision.id,
+              vision.organizationId,
+              'BACKLOG',
+              'PL' // Trigger desde PL
+            );
+            
+            if (ticketResult.success) {
+              results.backlogTicketsCreated += ticketResult.totalTickets;
+              console.log(`🎫 Ticket BACKLOG PL creado para usuario ${enrollment.userId}`);
+            }
+            
+            const alreadyUsed = ticketResult.ticketsCreated.filter(t => t.alreadyUsedBacklog).length;
+            if (alreadyUsed > 0) results.backlogTicketsAlreadyUsed += alreadyUsed;
+            
+            const failed = ticketResult.ticketsCreated.filter(t => !t.success && !t.alreadyUsedBacklog).length;
+            if (failed > 0) results.backlogTicketsFailed += failed;
+          }
+        }
       } catch (error: any) {
         results.errors.push(`Error backlog PL visión ${vision.id}: ${error.message}`);
+      }
       }
     }
 

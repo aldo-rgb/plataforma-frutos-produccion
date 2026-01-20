@@ -120,23 +120,27 @@ export async function POST(
     });
 
     // ========================================
-    // TICKETS DE CORTESÍA PARA TODOS LOS NIVELES PAGADOS
-    // Si es BACKLOG o DROP, genera tickets para TODOS los niveles que tenga pagados
+    // TICKETS DE CORTESÍA CON CASCADA DE NIVELES
+    // Si es BACKLOG o DROP, genera tickets desde el nivel afectado hacia arriba
     // ========================================
     let courtesyTicketResult = null;
     if ((attendanceStatus === 'BACKLOG' || attendanceStatus === 'DROP') && organizationId) {
-      console.log(`🎫 Procesando tickets ${attendanceStatus} para usuario ${updatedEnrollment.userId}...`);
+      console.log(`🎫 Procesando tickets ${attendanceStatus} para usuario ${updatedEnrollment.userId} desde nivel ${updatedEnrollment.level}...`);
       
-      // Procesar todos los niveles pagados del usuario
+      // Procesar desde el nivel donde cayó hacia los niveles superiores
       courtesyTicketResult = await processBacklogForAllPaidLevels(
         updatedEnrollment.userId,
         visionId,
         organizationId,
-        attendanceStatus as 'BACKLOG' | 'DROP'
+        attendanceStatus as 'BACKLOG' | 'DROP',
+        updatedEnrollment.level as 'BASIC' | 'ADVANCED' | 'PL' // Nivel donde ocurrió el DROP/BACKLOG
       );
       
       if (courtesyTicketResult.success) {
         console.log(`✅ ${courtesyTicketResult.totalTickets} ticket(s) creados para niveles: ${courtesyTicketResult.levelsProcessed.join(', ')}`);
+        if (courtesyTicketResult.ticketsCancelled.length > 0) {
+          console.log(`🔄 ${courtesyTicketResult.ticketsCancelled.length} ticket(s) cancelados y movidos a siguiente visión`);
+        }
       } else {
         console.log(`⚠️ No se pudieron crear tickets: ${courtesyTicketResult.error}`);
       }

@@ -4,6 +4,9 @@ import { prisma } from '@/lib/prisma';
 export type TicketReasonType = 'BACKLOG' | 'DROP';
 export type VisionLevel = 'BASIC' | 'ADVANCED' | 'PL';
 
+// Orden jerárquico de los niveles (BASIC < ADVANCED < PL)
+const LEVEL_ORDER: VisionLevel[] = ['BASIC', 'ADVANCED', 'PL'];
+
 interface SingleTicketResult {
   level: VisionLevel;
   success: boolean;
@@ -12,46 +15,60 @@ interface SingleTicketResult {
   isPendingAssignment?: boolean;
   error?: string;
   alreadyUsedBacklog?: boolean;
+  wasCancelled?: boolean;
+  cancelledTicketId?: string;
 }
 
 interface BacklogTicketResult {
   success: boolean;
   ticketsCreated: SingleTicketResult[];
+  ticketsCancelled: { level: VisionLevel; ticketId: string }[];
   totalTickets: number;
   levelsProcessed: VisionLevel[];
   error?: string;
 }
 
 /**
- * Genera tickets de cortesía para TODOS los niveles que el usuario tiene pagados.
+ * LÓGICA DE TICKETS BACKLOG/DROP CON CASCADA DE NIVELES
  * 
- * LÓGICA:
- * 1. Busca todos los enrollments del usuario en la visión actual
- * 2. Para cada nivel (BASIC, ADVANCED, PL) que tenga ENROLLED, genera un ticket
- * 3. Cada nivel tiene su propia oportunidad de reposición (1 por nivel)
+ * Los niveles son secuenciales: BASIC → ADVANCED → PL
+ * Para llegar a un nivel superior, DEBES completar el anterior.
  * 
- * EJEMPLO:
- * - Usuario pagó trilogía (BASIC + ADVANCED + PL)
- * - Cae en DROP en BASIC
- * - Se le generan 3 tickets: uno para BASIC, uno para ADVANCED, uno para PL
+ * ESCENARIOS:
  * 
- * @param userId - ID del usuario que fue marcado como BACKLOG o DROP
- * @param currentVisionId - ID de la visión actual del enrollment
- * @param organizationId - ID de la organización del usuario
- * @param reasonType - Tipo de razón: 'BACKLOG' o 'DROP'
- * @param triggerLevel - Nivel donde se disparó el BACKLOG/DROP (para filtrar si solo aplica a ese nivel)
- * @returns Resultado con los tickets creados
+ * 1. DROP/BACKLOG en BÁSICO (teniendo trilogía pagada):
+ *    - Genera ticket BASIC para siguiente visión
+ *    - Genera ticket ADVANCED para siguiente visión
+ *    - Genera ticket PL para siguiente visión
+ *    → El usuario tendrá que repetir toda la trilogía en la siguiente visión
+ * 
+ * 2. DROP/BACKLOG en AVANZADO (ya pasó básico, tenía PL pagado):
+ *    - Genera ticket ADVANCED para siguiente visión
+ *    - CANCELA el ticket/enrollment de PL de la visión actual
+ *    - RE-CREA ticket PL para la siguiente visión
+ *    → El usuario hará ADVANCED + PL en la siguiente visión
+ * 
+ * 3. DROP/BACKLOG en LIDERATO (ya pasó básico y avanzado):
+ *    - Solo genera ticket PL para siguiente visión
+ *    → El usuario solo repetirá PL
+ * 
+ * REGLA IMPORTANTE:
+ * - Cada nivel tiene UNA sola oportunidad de reposición
+ * - Si ya usaste tu oportunidad de BASIC, no recibes otro ticket de BASIC
  */
-export async function createBacklogTickets(
+export async function processBacklogForAllPaidLevels(
   userId: number,
   currentVisionId: number,
   organizationId: number,
   reasonType: TicketReasonType = 'BACKLOG',
-  triggerLevel?: VisionLevel // Si se especifica, solo procesa ese nivel; si no, procesa todos los pagados
+  triggerLevel: VisionLevel = 'BASIC'
 ): Promise<BacklogTicketResult> {
   try {
     const now = new Date();
     const results: SingleTicketResult[] = [];
+    const cancelledTickets: { level: VisionLevel; ticketId: string }[] = [];
+
+    console.log(`🎫 Procesando ${reasonType} para usuario ${userId} desde nivel ${triggerLevel}`);
 
     // ========================================
     // 1. OBTENER TODOS LOS ENROLLMENTS DEL USUARIO EN ESTA VISIÓN
@@ -65,7 +82,8 @@ export async function createBacklogTickets(
       select: {
         id: true,
         level: true,
-        enrollmentStatus: true
+        enrollmentStatus: true,
+        attendanceStatus: true
       }
     });
 
@@ -73,24 +91,26 @@ export async function createBacklogTickets(
       return {
         success: false,
         ticketsCreated: [],
+        ticketsCancelled: [],
         totalTickets: 0,
         levelsProcessed: [],
         error: 'No se encontraron enrollments activos para este usuario'
       };
     }
 
-    // Determinar qué niveles procesar
-    let levelsToProcess: VisionLevel[];
+    // Niveles que tiene pagados el usuario
+    const paidLevels = userEnrollments.map(e => e.level as VisionLevel);
     
-    if (triggerLevel) {
-      // Solo procesar el nivel específico donde se disparó el BACKLOG/DROP
-      levelsToProcess = [triggerLevel];
-    } else {
-      // Procesar todos los niveles que tenga pagados
-      levelsToProcess = userEnrollments.map(e => e.level as VisionLevel);
-    }
+    // Determinar el índice del nivel donde cayó
+    const triggerIndex = LEVEL_ORDER.indexOf(triggerLevel);
+    
+    // Niveles a procesar: desde el nivel donde cayó hasta el más alto que tenga pagado
+    const levelsToProcess = LEVEL_ORDER.filter((level, index) => 
+      index >= triggerIndex && paidLevels.includes(level)
+    );
 
-    console.log(`🎫 Procesando tickets ${reasonType} para usuario ${userId}. Niveles: ${levelsToProcess.join(', ')}`);
+    console.log(`📋 Niveles pagados: ${paidLevels.join(', ')}`);
+    console.log(`📋 Niveles a procesar (desde ${triggerLevel}): ${levelsToProcess.join(', ')}`);
 
     // ========================================
     // 2. BUSCAR PRÓXIMA VISIÓN
@@ -98,16 +118,10 @@ export async function createBacklogTickets(
     const nextVision = await prisma.vision.findFirst({
       where: {
         organizationId: organizationId,
-        startDate: {
-          gt: now
-        },
-        id: {
-          not: currentVisionId
-        }
+        startDate: { gt: now },
+        id: { not: currentVisionId }
       },
-      orderBy: {
-        startDate: 'asc'
-      },
+      orderBy: { startDate: 'asc' },
       select: {
         id: true,
         nombre: true,
@@ -118,7 +132,6 @@ export async function createBacklogTickets(
       }
     });
 
-    // Si no hay próxima visión, usar la actual para ticket pendiente
     const currentVision = await prisma.vision.findUnique({
       where: { id: currentVisionId },
       select: {
@@ -138,6 +151,7 @@ export async function createBacklogTickets(
       return {
         success: false,
         ticketsCreated: [],
+        ticketsCancelled: [],
         totalTickets: 0,
         levelsProcessed: [],
         error: 'No se encontró visión para asignar tickets'
@@ -145,9 +159,51 @@ export async function createBacklogTickets(
     }
 
     // ========================================
-    // 3. CREAR TICKET PARA CADA NIVEL
+    // 3. CANCELAR TICKETS DE NIVELES SUPERIORES (si aplica)
     // ========================================
     for (const level of levelsToProcess) {
+      if (LEVEL_ORDER.indexOf(level) > triggerIndex) {
+        // Buscar ticket activo de este nivel para esta visión
+        const existingTicket = await prisma.ticket.findFirst({
+          where: {
+            ownerId: userId,
+            visionId: currentVisionId,
+            level: level,
+            status: 'ACTIVE'
+          }
+        });
+
+        if (existingTicket) {
+          await prisma.ticket.update({
+            where: { id: existingTicket.id },
+            data: { status: 'CANCELLED' }
+          });
+          
+          cancelledTickets.push({ level, ticketId: existingTicket.id });
+          console.log(`🚫 Ticket ${level} cancelado: ${existingTicket.id}`);
+        }
+
+        // Marcar enrollment de niveles superiores
+        const enrollmentToUpdate = userEnrollments.find(e => e.level === level);
+        if (enrollmentToUpdate && enrollmentToUpdate.attendanceStatus !== 'ATTENDED') {
+          await prisma.vision_enrollments.update({
+            where: { id: enrollmentToUpdate.id },
+            data: { 
+              attendanceStatus: 'MOVED',
+              enrollmentStatus: 'MOVED_TO_NEXT'
+            }
+          });
+          console.log(`📦 Enrollment ${level} marcado como MOVED`);
+        }
+      }
+    }
+
+    // ========================================
+    // 4. CREAR TICKETS PARA CADA NIVEL
+    // ========================================
+    for (const level of levelsToProcess) {
+      const isCascaded = LEVEL_ORDER.indexOf(level) > triggerIndex;
+      
       const result = await createSingleLevelTicket(
         userId,
         targetVision,
@@ -155,13 +211,21 @@ export async function createBacklogTickets(
         level,
         reasonType,
         isPendingAssignment,
-        now
+        now,
+        isCascaded
       );
+      
+      const cancelled = cancelledTickets.find(c => c.level === level);
+      if (cancelled) {
+        result.wasCancelled = true;
+        result.cancelledTicketId = cancelled.ticketId;
+      }
+      
       results.push(result);
     }
 
     // ========================================
-    // 4. ENVIAR NOTIFICACIÓN CONSOLIDADA
+    // 5. ENVIAR NOTIFICACIONES
     // ========================================
     const successfulTickets = results.filter(r => r.success);
     const failedAlreadyUsed = results.filter(r => r.alreadyUsedBacklog);
@@ -170,60 +234,60 @@ export async function createBacklogTickets(
       const reasonLabel = reasonType === 'DROP' ? 'DROP (baja)' : 'BACKLOG';
       const levelsCreated = successfulTickets.map(t => getLevelLabel(t.level)).join(', ');
       
-      const message = isPendingAssignment
-        ? `Se te han generado ${successfulTickets.length} ticket(s) de cortesía por tu situación de ${reasonLabel} para los niveles: ${levelsCreated}. Actualmente no hay un próximo entrenamiento programado, pero tus tickets están guardados. ⚠️ IMPORTANTE: Estos tickets NO son transferibles y solo tienes UNA oportunidad por nivel.`
-        : `Se te han asignado ${successfulTickets.length} ticket(s) de cortesía para "${targetVision.nombre}" (niveles: ${levelsCreated}). ⚠️ IMPORTANTE: Estos tickets NO son transferibles y es tu ÚNICA oportunidad de reposición por nivel.`;
+      let message = '';
+      
+      if (cancelledTickets.length > 0) {
+        const levelsCancelled = cancelledTickets.map(c => getLevelLabel(c.level)).join(', ');
+        message = `Por tu situación de ${reasonLabel} en ${getLevelLabel(triggerLevel)}, se han reorganizado tus tickets:\n\n` +
+          `✅ Tickets generados para siguiente visión: ${levelsCreated}\n` +
+          `🔄 Tickets movidos de visión actual: ${levelsCancelled}\n\n` +
+          `Deberás completar estos niveles en la próxima visión.`;
+      } else {
+        message = isPendingAssignment
+          ? `Se te han generado ${successfulTickets.length} ticket(s) de cortesía por ${reasonLabel} para: ${levelsCreated}. No hay próximo entrenamiento programado aún. ⚠️ Solo tienes UNA oportunidad de reposición por nivel.`
+          : `Se te han asignado ${successfulTickets.length} ticket(s) para "${targetVision.nombre}" (${levelsCreated}). ⚠️ Esta es tu ÚNICA oportunidad de reposición por nivel.`;
+      }
 
       await prisma.notification.create({
         data: {
           userId: userId,
           type: 'OTHER',
-          title: `🎫 ${successfulTickets.length} Ticket(s) de Reposición Generado(s)`,
+          title: `🎫 Tickets de Reposición - ${reasonLabel}`,
           message: message,
-          relatedId: currentVisionId
-        }
-      });
-
-      // Notificación de advertencia
-      await prisma.notification.create({
-        data: {
-          userId: userId,
-          type: 'SYSTEM_ALERT',
-          title: '⚠️ Advertencia sobre tus Tickets',
-          message: `Cada nivel tiene UNA sola oportunidad de reposición. Si vuelves a no asistir a alguno de estos niveles, NO se generará otro ticket para ese nivel. Asegúrate de confirmar tu asistencia con tu coordinador.`,
           relatedId: currentVisionId
         }
       });
     }
 
-    // Notificar si ya había usado oportunidades
     if (failedAlreadyUsed.length > 0) {
       const levelsUsed = failedAlreadyUsed.map(t => getLevelLabel(t.level)).join(', ');
       await prisma.notification.create({
         data: {
           userId: userId,
           type: 'SYSTEM_ALERT',
-          title: '⚠️ Oportunidad(es) de Reposición Agotada(s)',
-          message: `Ya utilizaste tu oportunidad de reposición para: ${levelsUsed}. No se generaron nuevos tickets para esos niveles.`,
+          title: '⚠️ Oportunidades Agotadas',
+          message: `Ya usaste tu oportunidad de reposición para: ${levelsUsed}. Contacta a tu coordinador.`,
           relatedId: currentVisionId
         }
       });
     }
 
-    console.log(`✅ Proceso completado: ${successfulTickets.length} tickets creados, ${failedAlreadyUsed.length} ya usados`);
+    console.log(`✅ Completado: ${successfulTickets.length} creados, ${cancelledTickets.length} cancelados`);
 
     return {
       success: successfulTickets.length > 0,
       ticketsCreated: results,
+      ticketsCancelled: cancelledTickets,
       totalTickets: successfulTickets.length,
       levelsProcessed: levelsToProcess
     };
 
   } catch (error: any) {
-    console.error(`❌ Error creando tickets BACKLOG para usuario ${userId}:`, error);
+    console.error(`❌ Error procesando BACKLOG para usuario ${userId}:`, error);
     return {
       success: false,
       ticketsCreated: [],
+      ticketsCancelled: [],
       totalTickets: 0,
       levelsProcessed: [],
       error: error?.message || 'Error desconocido'
@@ -241,30 +305,33 @@ async function createSingleLevelTicket(
   level: VisionLevel,
   reasonType: TicketReasonType,
   isPendingAssignment: boolean,
-  now: Date
+  now: Date,
+  isCascaded: boolean = false
 ): Promise<SingleTicketResult> {
   try {
-    // Verificar si ya usó su oportunidad para ESTE nivel específico
-    const existingTicket = await prisma.ticket.findFirst({
-      where: {
-        ownerId: userId,
-        type: 'SCHOLARSHIP',
-        level: level,
-        amountPaid: 0 // Ticket de cortesía
-      }
-    });
+    // Solo verificamos oportunidad usada para el nivel trigger, no para cascaded
+    if (!isCascaded) {
+      const existingBacklogTicket = await prisma.ticket.findFirst({
+        where: {
+          ownerId: userId,
+          type: 'SCHOLARSHIP',
+          level: level,
+          amountPaid: 0,
+          paymentStatus: 'GIFT'
+        }
+      });
 
-    if (existingTicket) {
-      console.log(`⚠️ Usuario ${userId} ya usó su oportunidad de reposición para ${level}`);
-      return {
-        level,
-        success: false,
-        alreadyUsedBacklog: true,
-        error: `Ya utilizaste tu oportunidad de ticket de cortesía para ${level}`
-      };
+      if (existingBacklogTicket) {
+        console.log(`⚠️ Usuario ${userId} ya usó oportunidad para ${level}`);
+        return {
+          level,
+          success: false,
+          alreadyUsedBacklog: true,
+          error: `Ya utilizaste tu oportunidad para ${level}`
+        };
+      }
     }
 
-    // Determinar fecha de validez según nivel
     let validUntil: Date;
     if (isPendingAssignment) {
       validUntil = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
@@ -284,7 +351,9 @@ async function createSingleLevelTicket(
       }
     }
 
-    // Crear el ticket
+    // Los tickets cascaded (movidos) también son GIFT porque ya estaban pagados
+    const paymentStatus = 'GIFT';
+    
     const newTicket = await prisma.ticket.create({
       data: {
         ownerId: userId,
@@ -293,7 +362,7 @@ async function createSingleLevelTicket(
         level: level,
         type: 'SCHOLARSHIP',
         status: isPendingAssignment ? 'PENDING_PAYMENT' : 'ACTIVE',
-        paymentStatus: 'GIFT',
+        paymentStatus: paymentStatus,
         isTransferable: false,
         purchasePrice: 0,
         amountPaid: 0,
@@ -301,18 +370,18 @@ async function createSingleLevelTicket(
       }
     });
 
-    console.log(`✅ Ticket ${reasonType} ${level} creado: ${newTicket.id} para usuario ${userId}`);
+    console.log(`✅ Ticket ${level} creado: ${newTicket.id} (${isCascaded ? 'MOVIDO' : 'REPOSICIÓN'})`);
 
     return {
       level,
       success: true,
       ticketId: newTicket.id,
-      visionName: isPendingAssignment ? 'Pendiente de asignar' : targetVision.nombre,
+      visionName: isPendingAssignment ? 'Pendiente' : targetVision.nombre,
       isPendingAssignment
     };
 
   } catch (error: any) {
-    console.error(`❌ Error creando ticket ${level} para usuario ${userId}:`, error);
+    console.error(`❌ Error creando ticket ${level}:`, error);
     return {
       level,
       success: false,
@@ -321,9 +390,6 @@ async function createSingleLevelTicket(
   }
 }
 
-/**
- * Helper para obtener etiqueta legible del nivel
- */
 function getLevelLabel(level: VisionLevel): string {
   switch (level) {
     case 'BASIC': return 'Básico';
@@ -334,12 +400,9 @@ function getLevelLabel(level: VisionLevel): string {
 }
 
 // ========================================
-// FUNCIÓN LEGACY - Mantener compatibilidad
+// FUNCIONES LEGACY
 // ========================================
-/**
- * @deprecated Usar createBacklogTickets en su lugar
- * Esta función se mantiene por compatibilidad pero ahora llama a la nueva
- */
+
 export async function createBacklogTicket(
   userId: number,
   currentVisionId: number,
@@ -353,9 +416,7 @@ export async function createBacklogTicket(
   error?: string;
   alreadyUsedBacklog?: boolean;
 }> {
-  // Llamar a la nueva función pero solo para BASIC (comportamiento anterior)
-  const result = await createBacklogTickets(userId, currentVisionId, organizationId, reasonType, 'BASIC');
-  
+  const result = await processBacklogForAllPaidLevels(userId, currentVisionId, organizationId, reasonType, 'BASIC');
   const basicResult = result.ticketsCreated.find(t => t.level === 'BASIC');
   
   if (basicResult) {
@@ -369,22 +430,15 @@ export async function createBacklogTicket(
     };
   }
   
-  return {
-    success: false,
-    error: result.error || 'No se pudo crear el ticket'
-  };
+  return { success: result.success, error: result.error };
 }
 
-/**
- * Procesa DROP/BACKLOG para todos los niveles pagados del usuario
- * Esta es la función principal a usar cuando se marca DROP o BACKLOG
- */
-export async function processBacklogForAllPaidLevels(
+export async function createBacklogTickets(
   userId: number,
   currentVisionId: number,
   organizationId: number,
-  reasonType: TicketReasonType = 'BACKLOG'
+  reasonType: TicketReasonType = 'BACKLOG',
+  triggerLevel?: VisionLevel
 ): Promise<BacklogTicketResult> {
-  // Esta función genera tickets para TODOS los niveles que tenga pagados
-  return createBacklogTickets(userId, currentVisionId, organizationId, reasonType);
+  return processBacklogForAllPaidLevels(userId, currentVisionId, organizationId, reasonType, triggerLevel || 'BASIC');
 }
