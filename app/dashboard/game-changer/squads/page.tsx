@@ -902,90 +902,59 @@ function QRScannerModal({ onScan, onClose }: { onScan: (code: string) => void; o
 
 // Componente de Scanner NFC para leer gafetes
 function NFCScannerModal({ onScan, onClose }: { onScan: (code: string) => void; onClose: () => void }) {
-  const [status, setStatus] = useState<'checking' | 'unsupported' | 'ready' | 'scanning' | 'success' | 'error' | 'manual'>('checking');
+  const [status, setStatus] = useState<'checking' | 'unsupported' | 'scanning' | 'success' | 'error'>('checking');
   const [error, setError] = useState<string | null>(null);
   const [scannedCode, setScannedCode] = useState<string | null>(null);
   const [manualCode, setManualCode] = useState('');
-  const nfcAbortRef = useRef<AbortController | null>(null);
+  const nfcReaderRef = useRef<any>(null);
 
-  // Verificar soporte NFC
+  // Iniciar NFC inmediatamente al montar (igual que OmniScanner)
   useEffect(() => {
-    const checkNFC = async () => {
-      // Verificar si NFC está disponible (no en iOS)
+    const startNFC = async () => {
+      // Verificar si NFC está disponible
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       const hasNFC = 'NDEFReader' in window;
 
-      if (isIOS) {
+      if (isIOS || !hasNFC) {
         setStatus('unsupported');
-        setError('NFC no está disponible en dispositivos iOS. Usa el escáner QR.');
+        setError(isIOS 
+          ? 'NFC no está disponible en dispositivos iOS. Usa el escáner QR.'
+          : 'Este dispositivo no soporta NFC o no está habilitado.'
+        );
         return;
       }
 
-      if (!hasNFC) {
-        setStatus('unsupported');
-        setError('Este dispositivo no soporta NFC o no está habilitado.');
-        return;
-      }
+      try {
+        // @ts-ignore - Web NFC API
+        const ndef = new (window as any).NDEFReader();
+        nfcReaderRef.current = ndef;
 
-      setStatus('ready');
-    };
+        ndef.onreading = (event: any) => {
+          // Vibrar para indicar lectura
+          if (navigator.vibrate) {
+            navigator.vibrate([100, 50, 100]);
+          }
 
-    checkNFC();
-
-    return () => {
-      // Cleanup: abortar escaneo NFC al cerrar
-      if (nfcAbortRef.current) {
-        nfcAbortRef.current.abort();
-        nfcAbortRef.current = null;
-      }
-    };
-  }, []);
-
-  // Iniciar escaneo NFC
-  const startNFCScan = async () => {
-    if (status !== 'ready') return;
-
-    setStatus('scanning');
-    setError(null);
-
-    try {
-      // @ts-ignore - Web NFC API
-      const ndef = new window.NDEFReader();
-      const abortController = new AbortController();
-      nfcAbortRef.current = abortController;
-
-      ndef.onreading = (event: any) => {
-        // Vibrar para indicar lectura
-        if (navigator.vibrate) {
-          navigator.vibrate([100, 50, 100]);
-        }
-
-        // Leer los datos del NFC
-        if (event.message && event.message.records && event.message.records.length > 0) {
-          for (const record of event.message.records) {
-            let data = '';
+          if (event.message && event.message.records && event.message.records.length > 0) {
+            const record = event.message.records[0];
             
+            let data = '';
             if (record.recordType === 'text') {
               const decoder = new TextDecoder(record.encoding || 'utf-8');
               data = decoder.decode(record.data);
             } else if (record.recordType === 'url') {
               const decoder = new TextDecoder();
-              const url = decoder.decode(record.data);
-              // Extraer código de URL como https://frutos.com/verify/CODIGO
-              const match = url.match(/\/verify\/(.+)$/);
+              data = decoder.decode(record.data);
+              const match = data.match(/\/verify\/(.+)$/);
               if (match) {
                 data = match[1];
-              } else {
-                data = url;
               }
             } else {
-              // Otro tipo de registro
               const decoder = new TextDecoder();
               data = decoder.decode(record.data);
             }
 
             if (data) {
-              // Limpiar el código (quitar prefijos comunes)
               let cleanCode = data.trim();
               if (cleanCode.startsWith('USER:')) {
                 cleanCode = cleanCode.substring(5);
@@ -993,53 +962,44 @@ function NFCScannerModal({ onScan, onClose }: { onScan: (code: string) => void; 
 
               setScannedCode(cleanCode);
               setStatus('success');
-              
-              // Abortar el escaneo
-              abortController.abort();
-              nfcAbortRef.current = null;
 
-              // Esperar un momento para mostrar éxito y luego procesar
+              // Procesar inmediatamente
               setTimeout(() => {
                 onScan(cleanCode);
               }, 500);
-              
-              return;
             }
           }
+        };
+
+        ndef.onreadingerror = (err: any) => {
+          console.error('NFC read error:', err);
+          setError('Error al leer. Acerca el gafete nuevamente.');
+        };
+
+        // Iniciar scan SIN AbortController (igual que OmniScanner)
+        await ndef.scan();
+        setStatus('scanning');
+        
+      } catch (err: any) {
+        console.error('Error starting NFC:', err);
+        setStatus('unsupported');
+        
+        if (err.name === 'NotAllowedError') {
+          setError('Permiso de NFC denegado. Habilítalo en la configuración del navegador.');
+        } else if (err.name === 'NotSupportedError') {
+          setError('NFC no está habilitado en este dispositivo.');
+        } else {
+          setError('Error al iniciar el lector NFC: ' + (err.message || ''));
         }
-
-        // Si no se encontró dato válido
-        setError('No se encontró código válido en el gafete');
-        setStatus('ready');
-      };
-
-      ndef.onreadingerror = () => {
-        setError('Error al leer el gafete. Acércalo nuevamente.');
-        setStatus('ready');
-      };
-
-      await ndef.scan({ signal: abortController.signal });
-    } catch (err: any) {
-      console.error('Error starting NFC:', err);
-      
-      if (err.name === 'NotAllowedError') {
-        setError('Permiso de NFC denegado. Habilítalo en la configuración.');
-      } else if (err.name === 'NotSupportedError') {
-        setError('NFC no está habilitado en este dispositivo.');
-      } else {
-        setError('Error al iniciar el lector NFC.');
       }
-      
-      setStatus('ready');
-    }
-  };
+    };
 
-  // Auto-iniciar escaneo cuando esté listo
-  useEffect(() => {
-    if (status === 'ready') {
-      startNFCScan();
-    }
-  }, [status]);
+    startNFC();
+
+    return () => {
+      nfcReaderRef.current = null;
+    };
+  }, [onScan]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
@@ -1084,7 +1044,7 @@ function NFCScannerModal({ onScan, onClose }: { onScan: (code: string) => void; 
             </div>
           )}
 
-          {(status === 'ready' || status === 'scanning') && (
+          {status === 'scanning' && (
             <div className="text-center py-6">
               <div className="relative w-28 h-28 mx-auto mb-4">
                 {/* Animación de ondas */}
@@ -1097,13 +1057,13 @@ function NFCScannerModal({ onScan, onClose }: { onScan: (code: string) => void; 
                 </div>
               </div>
               <h4 className="text-cyan-400 font-bold text-xl mb-2">
-                {status === 'scanning' ? '📡 Escaneando...' : 'Listo para escanear'}
+                📡 Escaneando NFC...
               </h4>
               <p className="text-slate-400 text-sm mb-2">
-                Mantén esta ventana abierta y acerca el gafete NFC
+                Acerca el gafete NFC a la parte trasera del dispositivo
               </p>
-              <p className="text-slate-500 text-xs mb-4">
-                ⚠️ Si Android muestra "Nueva etiqueta escaneada", copia el código y usa la opción manual
+              <p className="text-green-400 text-xs mb-4">
+                ✓ Lector NFC activo
               </p>
               
               {error && (
@@ -1112,19 +1072,9 @@ function NFCScannerModal({ onScan, onClose }: { onScan: (code: string) => void; 
                 </div>
               )}
 
-              {status === 'ready' && (
-                <Button
-                  onClick={startNFCScan}
-                  className="bg-cyan-500 hover:bg-cyan-600 text-white mb-3"
-                >
-                  <Smartphone className="w-4 h-4 mr-2" />
-                  Iniciar Escaneo
-                </Button>
-              )}
-
-              {/* Opción manual */}
+              {/* Opción manual como fallback */}
               <div className="border-t border-slate-700 pt-4 mt-4">
-                <p className="text-slate-500 text-xs mb-2">¿Android capturó el NFC? Escribe el código aquí:</p>
+                <p className="text-slate-500 text-xs mb-2">¿No funciona? Escribe el código manualmente:</p>
                 <div className="flex gap-2">
                   <Input
                     value={manualCode}
