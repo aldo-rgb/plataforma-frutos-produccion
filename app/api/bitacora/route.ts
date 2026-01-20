@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const userId = parseInt(session.user.id);
+    const userId = typeof session.user.id === 'string' ? parseInt(session.user.id) : session.user.id;
 
     // Buscar cuestionario existente
     const questionnaire = await prisma.advancedQuestionnaire.findUnique({
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const userId = parseInt(session.user.id);
+    const userId = typeof session.user.id === 'string' ? parseInt(session.user.id) : session.user.id;
     const body = await request.json();
     const { action, dimension, data, visionId } = body;
 

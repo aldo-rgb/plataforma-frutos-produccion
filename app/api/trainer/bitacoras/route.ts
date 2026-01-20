@@ -14,10 +14,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const userId = parseInt(session.user.id);
+    const userId = typeof session.user.id === 'string' ? parseInt(session.user.id) : session.user.id;
     const { searchParams } = new URL(request.url);
-    const productId = searchParams.get('productId');
-    const visionId = searchParams.get('visionId');
+    const visionIdParam = searchParams.get('visionId');
 
     // Verificar rol del usuario
     const user = await prisma.usuario.findUnique({
@@ -38,102 +37,58 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No tienes permisos para ver esta información' }, { status: 403 });
     }
 
-    // Construir query base
-    let whereClause: any = {};
-    
-    // Si es TRAINER, solo ver los productos donde es trainer
+    // Obtener visiones donde este usuario es trainer de productos ADVANCED
+    let visionIdsToQuery: number[] = [];
+
     if (user.rol === 'TRAINER') {
+      // Buscar productos donde es trainer y el levelType es ADVANCED
       const trainerProducts = await prisma.schoolProduct.findMany({
         where: {
           trainerId: userId,
-          level: 'ADVANCED',
+          levelType: 'ADVANCED',
         },
-        select: { id: true, visionId: true }
+        select: { id: true, visionId: true, levelType: true }
       });
       
-      const visionIds = trainerProducts.map(p => p.visionId);
-      
-      // Obtener enrollments de ADVANCED en esas visiones
-      const enrollments = await prisma.vision_enrollments.findMany({
-        where: {
-          visionId: { in: visionIds },
-          level: 'ADVANCED',
-          paymentStatus: { in: ['FULL', 'PARTIAL', 'GIFT'] },
-        },
-        select: {
-          userId: true,
-          visionId: true,
-          level: true,
-          paymentStatus: true,
-          Usuario_vision_enrollments_userIdToUsuario: {
-            select: {
-              id: true,
-              nombre: true,
-              email: true,
-              imagen: true,
-              telefono: true,
-              AdvancedQuestionnaire: true,
-            }
-          },
-          Vision: {
-            select: {
-              id: true,
-              nombre: true,
-            }
-          }
-        }
-      });
-
-      // Formatear respuesta
-      const participants = enrollments.map(e => ({
-        user: {
-          id: e.Usuario_vision_enrollments_userIdToUsuario.id,
-          nombre: e.Usuario_vision_enrollments_userIdToUsuario.nombre,
-          email: e.Usuario_vision_enrollments_userIdToUsuario.email,
-          imagen: e.Usuario_vision_enrollments_userIdToUsuario.imagen,
-          telefono: e.Usuario_vision_enrollments_userIdToUsuario.telefono,
-        },
-        vision: e.Vision,
-        enrollment: {
-          level: e.level,
-          paymentStatus: e.paymentStatus,
-        },
-        questionnaire: e.Usuario_vision_enrollments_userIdToUsuario.AdvancedQuestionnaire,
-        hasCompletedQuestionnaire: e.Usuario_vision_enrollments_userIdToUsuario.AdvancedQuestionnaire?.status === 'COMPLETED',
-        hasSuicideRisk: e.Usuario_vision_enrollments_userIdToUsuario.AdvancedQuestionnaire?.suicideRiskFlag || false,
-      }));
-
-      // Estadísticas
-      const stats = {
-        total: participants.length,
-        completed: participants.filter(p => p.hasCompletedQuestionnaire).length,
-        pending: participants.filter(p => !p.hasCompletedQuestionnaire).length,
-        inProgress: participants.filter(p => p.questionnaire?.status === 'IN_PROGRESS').length,
-        withSuicideRisk: participants.filter(p => p.hasSuicideRisk).length,
-      };
-
-      return NextResponse.json({
-        participants,
-        stats,
-      });
-    }
-
-    // Para ADMIN/SCHOOL_ADMIN - ver todos
-    if (visionId) {
-      whereClause.visionId = parseInt(visionId);
-    }
-    if (user.organizationId && user.rol === 'SCHOOL_ADMIN') {
-      // Filtrar por organización
+      visionIdsToQuery = trainerProducts.map(p => p.visionId).filter((id): id is number => id !== null);
+    } else if (user.rol === 'SCHOOL_ADMIN' && user.organizationId) {
+      // Para SCHOOL_ADMIN, obtener todas las visiones de su organización
       const visions = await prisma.vision.findMany({
         where: { organizationId: user.organizationId },
         select: { id: true }
       });
-      whereClause.visionId = { in: visions.map(v => v.id) };
+      visionIdsToQuery = visions.map(v => v.id);
+    } else {
+      // Para ADMIN, si se especifica visionId, usar ese, sino obtener todas
+      if (visionIdParam) {
+        visionIdsToQuery = [parseInt(visionIdParam)];
+      } else {
+        // Obtener todas las visiones activas con productos ADVANCED
+        const products = await prisma.schoolProduct.findMany({
+          where: { levelType: 'ADVANCED' },
+          select: { visionId: true }
+        });
+        visionIdsToQuery = [...new Set(products.map(p => p.visionId).filter((id): id is number => id !== null))];
+      }
     }
 
+    if (visionIdsToQuery.length === 0) {
+      return NextResponse.json({
+        participants: [],
+        stats: {
+          total: 0,
+          completed: 0,
+          pending: 0,
+          inProgress: 0,
+          withSuicideRisk: 0,
+        },
+      });
+    }
+
+    // Obtener enrollments de ADVANCED en esas visiones
     const enrollments = await prisma.vision_enrollments.findMany({
       where: {
-        ...whereClause,
+        visionId: { in: visionIdsToQuery },
         level: 'ADVANCED',
         paymentStatus: { in: ['FULL', 'PARTIAL', 'GIFT'] },
       },
@@ -142,43 +97,67 @@ export async function GET(request: NextRequest) {
         visionId: true,
         level: true,
         paymentStatus: true,
-        Usuario_vision_enrollments_userIdToUsuario: {
-          select: {
-            id: true,
-            nombre: true,
-            email: true,
-            imagen: true,
-            telefono: true,
-            AdvancedQuestionnaire: true,
-          }
-        },
-        Vision: {
-          select: {
-            id: true,
-            nombre: true,
-          }
-        }
       }
     });
 
-    const participants = enrollments.map(e => ({
-      user: {
-        id: e.Usuario_vision_enrollments_userIdToUsuario.id,
-        nombre: e.Usuario_vision_enrollments_userIdToUsuario.nombre,
-        email: e.Usuario_vision_enrollments_userIdToUsuario.email,
-        imagen: e.Usuario_vision_enrollments_userIdToUsuario.imagen,
-        telefono: e.Usuario_vision_enrollments_userIdToUsuario.telefono,
-      },
-      vision: e.Vision,
-      enrollment: {
-        level: e.level,
-        paymentStatus: e.paymentStatus,
-      },
-      questionnaire: e.Usuario_vision_enrollments_userIdToUsuario.AdvancedQuestionnaire,
-      hasCompletedQuestionnaire: e.Usuario_vision_enrollments_userIdToUsuario.AdvancedQuestionnaire?.status === 'COMPLETED',
-      hasSuicideRisk: e.Usuario_vision_enrollments_userIdToUsuario.AdvancedQuestionnaire?.suicideRiskFlag || false,
-    }));
+    // Obtener los usuarios
+    const userIds = [...new Set(enrollments.map(e => e.userId))];
+    
+    const users = await prisma.usuario.findMany({
+      where: { id: { in: userIds } },
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        imagen: true,
+        telefono: true,
+      }
+    });
 
+    // Obtener los cuestionarios de esos usuarios
+    const questionnaires = await prisma.advancedQuestionnaire.findMany({
+      where: { userId: { in: userIds } },
+    });
+
+    // Obtener las visiones
+    const visions = await prisma.vision.findMany({
+      where: { id: { in: visionIdsToQuery } },
+      select: {
+        id: true,
+        nombre: true,
+      }
+    });
+
+    const visionsMap = new Map(visions.map(v => [v.id, v]));
+    const usersMap = new Map(users.map(u => [u.id, u]));
+    const questionnairesMap = new Map(questionnaires.map(q => [q.userId, q]));
+
+    // Formatear respuesta
+    const participants = enrollments.map(e => {
+      const userInfo = usersMap.get(e.userId);
+      const visionInfo = visionsMap.get(e.visionId);
+      const questionnaire = questionnairesMap.get(e.userId);
+      
+      return {
+        user: {
+          id: userInfo?.id || e.userId,
+          nombre: userInfo?.nombre || 'Usuario',
+          email: userInfo?.email || '',
+          imagen: userInfo?.imagen || null,
+          telefono: userInfo?.telefono || null,
+        },
+        vision: visionInfo || { id: e.visionId, nombre: 'Visión' },
+        enrollment: {
+          level: e.level,
+          paymentStatus: e.paymentStatus,
+        },
+        questionnaire: questionnaire || null,
+        hasCompletedQuestionnaire: questionnaire?.status === 'COMPLETED',
+        hasSuicideRisk: questionnaire?.suicideRiskFlag || false,
+      };
+    });
+
+    // Estadísticas
     const stats = {
       total: participants.length,
       completed: participants.filter(p => p.hasCompletedQuestionnaire).length,

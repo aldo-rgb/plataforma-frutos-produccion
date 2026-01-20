@@ -380,7 +380,6 @@ export async function POST(request: NextRequest) {
       } catch (error: any) {
         results.errors.push(`Error backlog PL visión ${vision.id}: ${error.message}`);
       }
-      }
     }
 
     console.log('📊 Resultado de actualización automática de asistencia:', results);

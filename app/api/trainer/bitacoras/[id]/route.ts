@@ -8,7 +8,7 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -16,8 +16,9 @@ export async function GET(
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const currentUserId = parseInt(session.user.id);
-    const participantId = parseInt(params.id);
+    const { id } = await params;
+    const currentUserId = typeof session.user.id === 'string' ? parseInt(session.user.id) : session.user.id;
+    const participantId = parseInt(id);
 
     // Verificar rol del usuario actual
     const currentUser = await prisma.usuario.findUnique({
@@ -47,56 +48,35 @@ export async function GET(
           userId: participantId,
           level: 'ADVANCED',
         },
-        include: {
-          Vision: {
-            include: {
-              SchoolProduct: {
-                where: {
-                  level: 'ADVANCED',
-                  trainerId: currentUserId,
-                }
-              }
-            }
-          }
+        select: {
+          visionId: true,
         }
       });
 
-      if (!enrollment || enrollment.Vision.SchoolProduct.length === 0) {
+      if (enrollment) {
+        const isTrainerForThisVision = await prisma.schoolProduct.findFirst({
+          where: {
+            visionId: enrollment.visionId,
+            trainerId: currentUserId,
+            levelType: 'ADVANCED',
+          }
+        });
+
+        if (!isTrainerForThisVision) {
+          return NextResponse.json({ 
+            error: 'No tienes acceso a la bitácora de este participante' 
+          }, { status: 403 });
+        }
+      } else {
         return NextResponse.json({ 
-          error: 'No tienes acceso a la bitácora de este participante' 
+          error: 'Este participante no está inscrito en ADVANCED' 
         }, { status: 403 });
       }
     }
 
-    // Obtener la bitácora completa
+    // Obtener la bitácora
     const questionnaire = await prisma.advancedQuestionnaire.findUnique({
       where: { userId: participantId },
-      include: {
-        Usuario: {
-          select: {
-            id: true,
-            nombre: true,
-            email: true,
-            imagen: true,
-            telefono: true,
-            birthdate: true,
-            profession: true,
-          }
-        },
-        Vision: {
-          select: {
-            id: true,
-            nombre: true,
-            advancedStartDate: true,
-          }
-        },
-        ReviewedBy: {
-          select: {
-            id: true,
-            nombre: true,
-          }
-        }
-      }
     });
 
     if (!questionnaire) {
@@ -106,11 +86,48 @@ export async function GET(
       }, { status: 404 });
     }
 
+    // Obtener info del usuario
+    const participant = await prisma.usuario.findUnique({
+      where: { id: participantId },
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        imagen: true,
+        telefono: true,
+        birthdate: true,
+        profession: true,
+      }
+    });
+
+    // Obtener visión si existe
+    const vision = questionnaire.visionId 
+      ? await prisma.vision.findUnique({
+          where: { id: questionnaire.visionId },
+          select: {
+            id: true,
+            nombre: true,
+            advancedStartDate: true,
+          }
+        })
+      : null;
+
+    // Obtener quién revisó el flag
+    const reviewedBy = questionnaire.flagReviewedBy
+      ? await prisma.usuario.findUnique({
+          where: { id: questionnaire.flagReviewedBy },
+          select: {
+            id: true,
+            nombre: true,
+          }
+        })
+      : null;
+
     // Calcular edad si hay birthdate
     let age = null;
-    if (questionnaire.Usuario.birthdate) {
+    if (participant?.birthdate) {
       const today = new Date();
-      const birth = new Date(questionnaire.Usuario.birthdate);
+      const birth = new Date(participant.birthdate);
       age = today.getFullYear() - birth.getFullYear();
       const monthDiff = today.getMonth() - birth.getMonth();
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
@@ -121,15 +138,15 @@ export async function GET(
     // Formatear respuesta para el trainer
     const response = {
       participant: {
-        id: questionnaire.Usuario.id,
-        nombre: questionnaire.Usuario.nombre,
-        email: questionnaire.Usuario.email,
-        imagen: questionnaire.Usuario.imagen,
-        telefono: questionnaire.Usuario.telefono,
+        id: participant?.id || participantId,
+        nombre: participant?.nombre || 'Usuario',
+        email: participant?.email || '',
+        imagen: participant?.imagen || null,
+        telefono: participant?.telefono || null,
         edad: age,
-        profesion: questionnaire.Usuario.profession,
+        profesion: participant?.profession || null,
       },
-      vision: questionnaire.Vision,
+      vision: vision,
       status: questionnaire.status,
       completedAt: questionnaire.completedAt,
       lastSavedAt: questionnaire.lastSavedAt,
@@ -139,7 +156,7 @@ export async function GET(
       alerts: {
         suicideRisk: questionnaire.suicideRiskFlag,
         flagReviewedAt: questionnaire.flagReviewedAt,
-        flagReviewedBy: questionnaire.ReviewedBy,
+        flagReviewedBy: reviewedBy,
       },
 
       // DIMENSIÓN 1: RAÍCES Y RELACIONES
@@ -225,7 +242,7 @@ export async function GET(
 // PATCH: Marcar flag como revisado
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -233,9 +250,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const currentUserId = parseInt(session.user.id);
-    const participantId = parseInt(params.id);
-    const body = await request.json();
+    const { id } = await params;
+    const currentUserId = typeof session.user.id === 'string' ? parseInt(session.user.id) : session.user.id;
+    const participantId = parseInt(id);
 
     // Verificar que sea trainer/admin
     const currentUser = await prisma.usuario.findUnique({

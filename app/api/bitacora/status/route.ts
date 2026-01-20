@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const userId = parseInt(session.user.id);
+    const userId = typeof session.user.id === 'string' ? parseInt(session.user.id) : session.user.id;
 
     // Verificar si tiene enrollment en ADVANCED con pago
     const advancedEnrollment = await prisma.vision_enrollments.findFirst({
