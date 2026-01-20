@@ -142,6 +142,36 @@ export default function ZonaEjecucionDiaria() {
     setSelectedTask(null);
   };
 
+  // Función para completar tareas sin requerir evidencia
+  const handleCompleteWithoutEvidence = async (tarea: Tarea) => {
+    setUploadingTaskId(tarea.id);
+    
+    try {
+      const response = await fetch('/api/tareas/complete-without-evidence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId: tarea.taskId, // Para tareas de carta
+          submissionId: tarea.submissionId, // Para tareas admin
+          tipo: tarea.tipo
+        })
+      });
+
+      if (response.ok) {
+        toast.success('✅ ¡Tarea completada exitosamente!');
+        await loadTareas(); // Recargar las tareas
+      } else {
+        const error = await response.json();
+        toast.error('Error al completar tarea: ' + (error.error || 'Error desconocido'));
+      }
+    } catch (error) {
+      console.error('Error completing task:', error);
+      toast.error('Error al completar tarea');
+    } finally {
+      setUploadingTaskId(null);
+    }
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setUploadForm({ ...uploadForm, file: e.target.files[0] });
@@ -559,7 +589,7 @@ export default function ZonaEjecucionDiaria() {
                       </div>
                     ) : tarea.evidenceStatus === 'PENDING' ? (
                       <button
-                        onClick={() => handleViewEvidence(tarea)}
+                        onClick={() => openViewEvidenceModal(tarea)}
                         className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded-lg transition-all text-xs sm:text-sm font-medium"
                       >
                         <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -567,7 +597,7 @@ export default function ZonaEjecucionDiaria() {
                       </button>
                     ) : tarea.requiereEvidencia !== false ? (
                       <button
-                        onClick={() => handleOpenUpload(tarea)}
+                        onClick={() => openUploadModal(tarea)}
                         disabled={uploadingTaskId === tarea.id}
                         className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg transition-all shadow-lg shadow-purple-500/30 text-xs sm:text-sm font-medium"
                       >
