@@ -12,6 +12,7 @@ import MedicalAlertsWidget from '@/components/dashboard/MedicalAlertsWidget';
 import GCCallsMonitorWidget from '@/components/dashboard/GCCallsMonitorWidget';
 import TreasuryQuickWidget from '@/components/dashboard/TreasuryQuickWidget';
 import BacklogsDropsWidget from '@/components/dashboard/BacklogsDropsWidget';
+import PersonalQRWidget from '@/components/dashboard/PersonalQRWidget';
 import { ElCruceAccessWidget } from '@/components/el-cruce';
 
 interface DashboardData {
@@ -434,6 +435,21 @@ export default function CoordinadorBasicoDashboard() {
         <div className="mt-8">
           <ElCruceAccessWidget />
         </div>
+
+        {/* ═══════════════════════════════════════════════════ */}
+        {/*              QR PERSONAL - INVITAR PARTICIPANTES    */}
+        {/* ═══════════════════════════════════════════════════ */}
+        {session?.user && (
+          <div className="mt-8">
+            <PersonalQRWidget
+              userName={session.user.name || 'Coordinador'}
+              userId={parseInt(session.user.id as string)}
+              userEmail={session.user.email || ''}
+              referralCode={session.user.referralCode}
+              organizationId={session.user.organizationId}
+            />
+          </div>
+        )}
 
         {/* Widget de Productos Activos */}
         <div className="mt-8">

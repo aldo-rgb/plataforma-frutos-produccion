@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import MedicalAlertsWidget from '@/components/dashboard/MedicalAlertsWidget';
 import GCCallsMonitorWidget from '@/components/dashboard/GCCallsMonitorWidget';
+import PersonalQRWidget from '@/components/dashboard/PersonalQRWidget';
 import { ElCruceAccessWidget, TopFileModal } from '@/components/el-cruce';
 import { TrainerSurveyModal } from '@/components/training-closure';
 import VisionHistoryWidget from '@/components/widgets/VisionHistoryWidget';
@@ -517,6 +518,21 @@ export default function TrainerDashboard() {
         <div className="mt-8">
           <ElCruceAccessWidget />
         </div>
+
+        {/* ═══════════════════════════════════════════════════ */}
+        {/*              QR PERSONAL - INVITAR PARTICIPANTES    */}
+        {/* ═══════════════════════════════════════════════════ */}
+        {session?.user && (
+          <div className="mt-8">
+            <PersonalQRWidget
+              userName={session.user.name || 'Trainer'}
+              userId={parseInt(session.user.id as string)}
+              userEmail={session.user.email || ''}
+              referralCode={session.user.referralCode}
+              organizationId={session.user.organizationId}
+            />
+          </div>
+        )}
 
         {/* Widget de Historial de Visiones */}
         <div className="mt-8">

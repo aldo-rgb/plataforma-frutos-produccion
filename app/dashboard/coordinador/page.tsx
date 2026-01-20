@@ -16,6 +16,7 @@ import GCCallsMonitorWidget from '@/components/dashboard/GCCallsMonitorWidget';
 import TreasuryQuickWidget from '@/components/dashboard/TreasuryQuickWidget';
 import TrainingStatsWidgets from '@/components/dashboard/TrainingStatsWidgets';
 import BacklogsDropsWidget from '@/components/dashboard/BacklogsDropsWidget';
+import PersonalQRWidget from '@/components/dashboard/PersonalQRWidget';
 import { ElCruceAccessWidget } from '@/components/el-cruce';
 
 interface DashboardData {
@@ -296,6 +297,21 @@ export default function CoordinadorDashboard() {
         <div className="mt-8">
           <ElCruceAccessWidget />
         </div>
+
+        {/* ═══════════════════════════════════════════════════ */}
+        {/*              QR PERSONAL - INVITAR PARTICIPANTES    */}
+        {/* ═══════════════════════════════════════════════════ */}
+        {session?.user && (
+          <div className="mt-8">
+            <PersonalQRWidget
+              userName={session.user.name || 'Coordinador'}
+              userId={parseInt(session.user.id as string)}
+              userEmail={session.user.email || ''}
+              referralCode={session.user.referralCode}
+              organizationId={session.user.organizationId}
+            />
+          </div>
+        )}
 
         {/* Widgets de Acción - 2x3 Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
