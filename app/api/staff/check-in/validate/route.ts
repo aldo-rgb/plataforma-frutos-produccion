@@ -202,6 +202,22 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Verificar Bitácora de Inicio para productos ADVANCED
+    if (product.level === 'ADVANCED') {
+      const advancedQuestionnaire = await prisma.advancedQuestionnaire.findUnique({
+        where: { userId: participantId }
+      });
+
+      const hasCompletedBitacora = advancedQuestionnaire?.status === 'COMPLETED';
+      if (!hasCompletedBitacora) {
+        errors.push({
+          type: 'bitacora',
+          message: 'No ha completado la Bitácora de Inicio (requerida para Avanzado)',
+          blocking: true // BLOQUEANTE - No puede entrar sin bitácora
+        });
+      }
+    }
+
     // Verificar foto de perfil
     const hasProfilePhoto = !!(user.imagen || user.profileImage);
     if (!hasProfilePhoto) {

@@ -2236,6 +2236,10 @@ model Usuario {
   GameChangerSurveys                                                     GameChangerSurvey[]             @relation("GameChangerSurveys")
   GameChangerLocks                                                       GameChangerLockStatus[]         @relation("GameChangerLocks")
   DirectorAudits                                                         DirectorAudit[]                 @relation("DirectorAudits")
+  
+  // Bitácora de Inicio (Cuestionario Avanzado)
+  AdvancedQuestionnaire                                                  AdvancedQuestionnaire?
+  QuestionnaireReviews                                                   AdvancedQuestionnaire[]         @relation("QuestionnaireReviewer")
 
   @@index([communityOrganizationId])
 }
@@ -2302,6 +2306,7 @@ model Vision {
   coordinator_commissions       coordinator_commissions[]
   vision_enrollments            vision_enrollments[]
   weekly_payout_summary         weekly_payout_summary[]
+  AdvancedQuestionnaires        AdvancedQuestionnaire[]
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -4138,4 +4143,99 @@ model DirectorAudit {
   
   @@index([productId])
   @@index([directorId])
+}
+
+// ============================================
+// BITÁCORA DE INICIO - Cuestionario Avanzado
+// ============================================
+model AdvancedQuestionnaire {
+  id                     Int       @id @default(autoincrement())
+  userId                 Int       @unique
+  visionId               Int?
+  
+  // Estado del cuestionario
+  status                 QuestionnaireStatus @default(NOT_STARTED)
+  currentDimension       Int       @default(0)  // 0=welcome, 1-5=dimensions
+  lastSavedAt            DateTime?
+  completedAt            DateTime?
+  
+  // ===== DIMENSIÓN 1: RAÍCES Y RELACIONES =====
+  // Estado Civil y Pareja
+  maritalStatus          String?   // SINGLE, MARRIED, DIVORCED, WIDOWED, COMMON_LAW
+  partnerRelationship    String?   @db.Text  // Descripción de la relación con pareja
+  partnerRelationshipScore Int?    // 1-10
+  
+  // Hijos (JSON array: [{name, age, relationship}])
+  hasChildren            Boolean?
+  childrenData           Json?
+  
+  // Padres y Hermanos
+  parentsRelationship    String?   @db.Text
+  siblingsCount          Int?
+  siblingsRelationship   String?   @db.Text
+  
+  // Red de apoyo
+  hasCompanion           Boolean?  // ¿Alguien toma el entrenamiento contigo?
+  companionName          String?
+  companionRelation      String?
+  
+  // ===== DIMENSIÓN 2: CUERPO Y SOMBRA (Salud) =====
+  healthStatus           String?   @db.Text  // Estado de salud actual
+  currentMedications     String?   @db.Text  // Medicamentos
+  isPregnant             Boolean?            // Solo para mujeres
+  
+  // ALERTA CRÍTICA
+  hasSuicideAttempt      Boolean?
+  suicideAttemptReason   String?   @db.Text
+  
+  // ===== DIMENSIÓN 3: LÍNEA DE VIDA =====
+  // Niñez
+  childhoodEvent         String?   @db.Text
+  childhoodMeaning       String?   @db.Text
+  
+  // Adolescencia
+  adolescenceEvent       String?   @db.Text
+  adolescenceMeaning     String?   @db.Text
+  
+  // Adultez
+  adulthoodEvent         String?   @db.Text
+  adulthoodMeaning       String?   @db.Text
+  
+  // Impacto
+  eventsInfluence        String?   @db.Text  // Cómo han influido en tu vida actual
+  
+  // ===== DIMENSIÓN 4: ESPEJOS Y CREENCIAS =====
+  externalPerception     String?   @db.Text  // Cómo te describirían
+  friendsPerception      String?   @db.Text  // ¿Tienes amigos? ¿Cómo te ven?
+  religiousBeliefs       String?   @db.Text  // Costumbres religiosas
+  educationBeliefs       String?   @db.Text  // Educación y creencias
+  workDescription        String?   @db.Text  // Trabajo/carrera
+  triggers               String?   @db.Text  // Detonantes/triggers
+  
+  // ===== DIMENSIÓN 5: EL PROPÓSITO =====
+  lifePurpose            String?   @db.Text  // Propósito en el mundo
+  
+  // ===== FLAGS Y METADATA =====
+  suicideRiskFlag        Boolean   @default(false)  // FLAG ROJO para trainer
+  flagReviewedAt         DateTime?
+  flagReviewedBy         Int?
+  
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  
+  // Relaciones
+  Usuario                Usuario   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Vision                 Vision?   @relation(fields: [visionId], references: [id])
+  ReviewedBy             Usuario?  @relation("QuestionnaireReviewer", fields: [flagReviewedBy], references: [id])
+  
+  @@index([userId])
+  @@index([visionId])
+  @@index([status])
+  @@index([suicideRiskFlag])
+}
+
+enum QuestionnaireStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
 }
