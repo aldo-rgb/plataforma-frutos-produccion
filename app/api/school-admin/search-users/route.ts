@@ -47,6 +47,29 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Obtener la organización del usuario para saber su master
+    const userOrg = await prisma.organization.findUnique({
+      where: { id: user.organizationId },
+      select: { id: true, masterOrganizationId: true },
+    });
+
+    // Determinar el masterOrganizationId (puede ser la misma org si es master)
+    const masterId = userOrg?.masterOrganizationId || user.organizationId;
+
+    // Obtener todas las organizaciones que pertenecen al mismo master
+    const relatedOrgs = await prisma.organization.findMany({
+      where: {
+        OR: [
+          { id: masterId }, // La organización master
+          { masterOrganizationId: masterId }, // Organizaciones hijas del master
+        ],
+      },
+      select: { id: true },
+    });
+
+    const relatedOrgIds = relatedOrgs.map(org => org.id);
+    console.log('🔍 Buscando en organizaciones:', relatedOrgIds);
+
     // Obtener IDs de usuarios que ya son Game Changers en esta visión
     let existingGCIds: number[] = [];
     if (visionId) {
@@ -66,9 +89,9 @@ export async function GET(request: NextRequest) {
           { email: { contains: query, mode: 'insensitive' } },
           { telefono: { contains: query } },
         ],
-        // Solo buscar dentro de la misma organización o usuarios sin organización
+        // Buscar en todas las organizaciones del mismo master o usuarios sin organización
         organizationId: {
-          in: [user.organizationId, null].filter(Boolean) as number[],
+          in: [...relatedOrgIds, null].filter(Boolean) as number[],
         },
         // Excluir usuarios que ya son Game Changers en esta visión
         ...(existingGCIds.length > 0 ? { id: { notIn: existingGCIds } } : {}),

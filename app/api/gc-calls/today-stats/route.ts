@@ -43,13 +43,13 @@ export async function GET(request: Request) {
         isActive: true,
         ...(level && { levelType: level as ProductLevelType }),
       },
-      select: { id: true, visionId: true },
+      select: { id: true, visionId: true, levelType: true },
     });
 
     const productIds = activeProducts.map(p => p.id);
     const visionIds = activeProducts.map(p => p.visionId).filter(Boolean) as number[];
 
-    if (productIds.length === 0) {
+    if (productIds.length === 0 || visionIds.length === 0) {
       return NextResponse.json({
         success: true,
         completed: 0,
@@ -58,6 +58,48 @@ export async function GET(request: Request) {
       });
     }
 
+    // ========== NUEVO: Obtener stats de BasicCallTracking (sistema de call-management) ==========
+    // Buscar enrollments del nivel especificado con su tracking info
+    const enrollmentsWithTracking = await prisma.vision_enrollments.findMany({
+      where: {
+        visionId: { in: visionIds },
+        level: level as 'BASIC' | 'ADVANCED' | 'PL',
+        enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] },
+      },
+      include: {
+        BasicCallTracking: true,
+      },
+    });
+
+    // Contar totales y completados del BasicCallTracking
+    const totalCallTrackingParticipants = enrollmentsWithTracking.length;
+    const completedCallTracking = enrollmentsWithTracking.filter(
+      e => e.BasicCallTracking?.attendanceStatus === 'CONFIRMED' || 
+           e.BasicCallTracking?.attendanceStatus === 'COMPLETED'
+    ).length;
+
+    // Si hay datos de BasicCallTracking, usar esos como fuente principal
+    if (totalCallTrackingParticipants > 0) {
+      console.log('[today-stats] Using BasicCallTracking data:', { 
+        level, 
+        total: totalCallTrackingParticipants, 
+        completed: completedCallTracking 
+      });
+      
+      // Obtener el visionId principal (el primero de los productos activos del nivel)
+      const primaryVisionId = activeProducts.find(p => p.levelType === level)?.visionId || visionIds[0];
+      
+      return NextResponse.json({
+        success: true,
+        completed: completedCallTracking,
+        total: totalCallTrackingParticipants,
+        pending: totalCallTrackingParticipants - completedCallTracking,
+        visionId: primaryVisionId,
+        source: 'BasicCallTracking',
+      });
+    }
+
+    // ========== Fallback: usar el sistema antiguo de GCCallSlot/GCCallLog ==========
     // Si se filtra por nivel ADVANCED, obtener usuarios con enrollment activo/pagado en avanzado
     let participantFilter: { participantId?: { in: number[] } } = {};
     

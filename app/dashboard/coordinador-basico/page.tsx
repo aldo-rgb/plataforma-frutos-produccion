@@ -466,9 +466,33 @@ export default function CoordinadorBasicoDashboard() {
                 {productos.map((producto: any) => {
                   const startDate = producto.startDate ? new Date(producto.startDate) : null;
                   const now = new Date();
-                  const hasStarted = startDate && startDate <= now;
+                  
+                  // Lógica de Check-In:
+                  // - Countdown: 24h antes de las 9 AM hasta las 9 AM del día del entrenamiento
+                  // - Botón Check-In: Desde las 9 AM hasta la 1 PM del primer día
+                  // - En curso (sin Check-In): Después de la 1 PM
+                  
+                  let showCheckInButton = false;
+                  let showInProgress = false;
+                  
+                  if (startDate) {
+                    // 9 AM del día del entrenamiento
+                    const trainingStart9AM = new Date(startDate);
+                    trainingStart9AM.setHours(9, 0, 0, 0);
+                    
+                    // 1 PM del día del entrenamiento (límite de Check-In)
+                    const checkInDeadline1PM = new Date(startDate);
+                    checkInDeadline1PM.setHours(13, 0, 0, 0);
+                    
+                    // Botón Check-In: entre 9 AM y 1 PM del primer día
+                    showCheckInButton = now >= trainingStart9AM && now <= checkInDeadline1PM;
+                    
+                    // En curso (sin botón): después de la 1 PM del primer día
+                    showInProgress = now > checkInDeadline1PM;
+                  }
+                  
                   const isCompleted = producto.trainingStatus === 'COMPLETED';
-                  const showCountdown = countdown[producto.id];
+                  const showCountdown = countdown[producto.id]; // Ya calculado en el useEffect (24h antes hasta 9 AM)
 
                   return (
                     <Link
@@ -479,7 +503,7 @@ export default function CoordinadorBasicoDashboard() {
                       <div className={`rounded-xl p-5 transition-all cursor-pointer group hover:scale-[1.02] ${
                         isCompleted
                           ? 'bg-gradient-to-br from-slate-800/60 via-slate-800/40 to-slate-900 border-2 border-slate-600/50'
-                          : hasStarted 
+                          : (showCheckInButton || showInProgress)
                           ? 'bg-gradient-to-br from-green-900/40 via-emerald-900/30 to-slate-900 border-2 border-green-500/50 shadow-lg shadow-green-500/10'
                           : 'bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-2 border-slate-700/50 hover:border-cyan-500/50'
                       }`}>
@@ -552,7 +576,8 @@ export default function CoordinadorBasicoDashboard() {
                             </div>
                           </div>
 
-                          {showCountdown && !hasStarted && !isCompleted && (
+                          {/* Countdown: 24h antes hasta 9 AM del día del entrenamiento */}
+                          {showCountdown && !isCompleted && (
                             <button
                               onClick={(e) => {
                                 e.preventDefault();
@@ -568,6 +593,7 @@ export default function CoordinadorBasicoDashboard() {
                             </button>
                           )}
 
+                          {/* Completado */}
                           {isCompleted && (
                             <div className="flex items-center gap-3">
                               <div className="flex items-center gap-2 text-slate-400 text-sm font-semibold">
@@ -577,38 +603,27 @@ export default function CoordinadorBasicoDashboard() {
                             </div>
                           )}
 
-                          {hasStarted && !isCompleted && (
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center gap-2 text-green-400 text-sm font-semibold">
-                                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                                En curso
-                              </div>
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  window.location.href = `/staff/check-in/${producto.id}`;
-                                }}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-cyan-500/20 to-purple-500/20 hover:from-cyan-500/30 hover:to-purple-500/30 border border-cyan-500/50 rounded-lg text-cyan-400 hover:text-cyan-300 text-sm font-semibold transition-all"
-                              >
-                                <Scan size={14} />
-                                Check-In
-                              </button>
-                            </div>
-                          )}
-
-                          {!hasStarted && !showCountdown && !isCompleted && (
+                          {/* Botón Check-In: desde 9 AM hasta 1 PM del primer día */}
+                          {showCheckInButton && !isCompleted && !showCountdown && (
                             <button
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
                                 window.location.href = `/staff/check-in/${producto.id}`;
                               }}
-                              className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-slate-600/20 to-slate-700/20 hover:from-cyan-500/20 hover:to-purple-500/20 border border-slate-500/50 hover:border-cyan-500/50 rounded-lg text-slate-400 hover:text-cyan-400 text-sm font-semibold transition-all"
+                              className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-cyan-500/20 to-purple-500/20 hover:from-cyan-500/30 hover:to-purple-500/30 border border-cyan-500/50 rounded-lg text-cyan-400 hover:text-cyan-300 text-sm font-semibold transition-all"
                             >
                               <Scan size={14} />
                               Check-In
                             </button>
+                          )}
+
+                          {/* En curso (después de 1 PM): sin botón Check-In */}
+                          {showInProgress && !isCompleted && (
+                            <div className="flex items-center gap-2 text-green-400 text-sm font-semibold">
+                              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                              En curso
+                            </div>
                           )}
                         </div>
                       </div>

@@ -1,0 +1,401 @@
+# 🔮 PROMPT DE CONTINUACIÓN - PLATAFORMA FRUTOS
+
+## INSTRUCCIONES PARA EL NUEVO AGENTE
+
+Eres GitHub Copilot usando Claude Opus 4.5. El usuario es **Aldo**, desarrollador de la **Plataforma Frutos**, un sistema de gestión de entrenamientos de desarrollo personal tipo "Vision" en México. Responde de forma directa, técnica y concisa. Cuando Aldo reporta un bug, primero diagnostica con queries a la base de datos antes de editar código. Siempre sube los cambios a git después de cada fix.
+
+---
+
+## 📁 ESTRUCTURA DEL PROYECTO
+
+```
+/Users/aldokmps/plataforma-frutos-FINAL
+├── app/                          # Next.js App Router
+│   ├── api/                      # API Routes
+│   │   ├── auth/                 # NextAuth endpoints
+│   │   ├── bitacora/             # Bitácora de Inicio (cuestionario avanzado)
+│   │   │   ├── route.ts          # CRUD bitácora
+│   │   │   └── status/route.ts   # Estado de bitácora del usuario
+│   │   ├── staff/
+│   │   │   └── check-in/
+│   │   │       ├── validate/route.ts   # Validar participante para check-in
+│   │   │       ├── complete/route.ts   # Completar check-in
+│   │   │       └── product/[productId]/route.ts
+│   │   ├── mentor/               # APIs de mentores
+│   │   ├── organizations/        # Gestión de organizaciones
+│   │   ├── tickets/              # Sistema de tickets
+│   │   └── vision/               # APIs de visiones
+│   ├── bitacora/                 # Página de Bitácora de Inicio
+│   │   ├── page.tsx              # Cuestionario 5 dimensiones
+│   │   └── layout.tsx            # SessionProvider + Toaster
+│   ├── dashboard/                # Dashboard principal
+│   │   ├── page.tsx              # Incluye BitacoraAlertWidget
+│   │   ├── checkout-ticket/      # Canjear códigos de tickets
+│   │   └── quantum/              # Sección Quantum Matter
+│   ├── staff/
+│   │   └── check-in/[productId]/ # Estación de check-in
+│   └── manage/                   # Panel de gestión de enrollments
+├── components/
+│   ├── check-in/
+│   │   ├── BadgePreview.tsx      # Preview + impresión + NFC de gafetes
+│   │   ├── NFCWriter.tsx         # Escritura NFC standalone
+│   │   ├── OmniScanner.tsx       # Scanner QR/pistola/NFC
+│   │   ├── QRScanner.tsx         # Scanner QR con cámara
+│   │   └── WebcamCapture.tsx     # Captura de foto
+│   └── dashboard/
+│       └── BitacoraAlertWidget.tsx  # Alerta para usuarios ADVANCED
+├── lib/
+│   ├── prisma.ts                 # Cliente Prisma singleton
+│   └── auth.ts                   # Configuración NextAuth
+├── prisma/
+│   └── schema.prisma             # Esquema de base de datos
+└── public/
+```
+
+---
+
+## 🗄️ BASE DE DATOS (PostgreSQL + Prisma)
+
+### Modelos Principales:
+
+```prisma
+// USUARIOS
+model Usuario {
+  id            Int      @id @default(autoincrement())
+  nombre        String
+  apodo         String?  // Nickname
+  email         String   @unique
+  password      String?
+  imagen        String?  // URL imagen vieja
+  profileImage  String?  // URL imagen nueva
+  rol           String   @default("PARTICIPANTE") // PARTICIPANTE, GAMECHANGER, LIDER, COORDINADOR, TRAINER, ADMIN
+  referralCode  String?  @unique // Código QR único del usuario
+  phone         String?
+  whatsapp      String?
+  createdAt     DateTime @default(now())
+}
+
+// ORGANIZACIONES (Franquicias)
+model Organization {
+  id                Int      @id @default(autoincrement())
+  name              String
+  slug              String   @unique
+  logoUrl           String?
+  brandColor        String?  // Color hex de la marca
+  licensesAvailable Int      @default(0)
+  activeLicenses    Int      @default(0)
+  totalLicenses     Int      @default(0)
+}
+
+// VISIONES (Entrenamientos principales)
+model Vision {
+  id          Int      @id @default(autoincrement())
+  name        String   // "V1 GDL", "V2 GDL", etc.
+  description String?
+  startDate   DateTime?
+  endDate     DateTime?
+  isActive    Boolean  @default(true)
+}
+
+// PRODUCTOS DE ESCUELA (Niveles dentro de una Vision)
+model SchoolProduct {
+  id              Int      @id @default(autoincrement())
+  name            String   // "V1 GDL - Básico", "V1 GDL - Avanzado"
+  levelType       String   // IMPORTANTE: BASIC, ADVANCED, PL, COMBO_FULL, COMBO_ADV_PL, NONE
+  visionId        Int?
+  organizationId  Int
+  startDate       DateTime?
+  endDate         DateTime?
+  price           Float    @default(0)
+  isActive        Boolean  @default(true)
+}
+
+// ENROLLMENTS (Inscripciones a niveles)
+model vision_enrollments {
+  id               Int      @id @default(autoincrement())
+  userId           Int
+  visionId         Int
+  level            VisionLevel  // BASIC, ADVANCED, PL (enum)
+  enrollmentStatus String   @default("ENROLLED") // ENROLLED, COMPLETED, CANCELLED
+  attendanceStatus String?  // null, "ATTENDED", "NO_SHOW"
+  paymentStatus    String   @default("PENDING") // PENDING, PARTIAL, FULL, PAID, GIFT
+  createdAt        DateTime @default(now())
+}
+
+enum VisionLevel {
+  BASIC
+  ADVANCED
+  PL
+}
+
+// TICKETS (Boletos de pago)
+model Ticket {
+  id          String   @id @default(uuid())
+  ownerId     Int
+  visionId    Int?
+  productId   Int?
+  status      String   @default("ACTIVE") // ACTIVE, USED, CANCELLED
+  giftCode    String?  @unique  // Código para canjear (CASH payments)
+  paymentType String?  // CASH, CARD, TRANSFER
+  amount      Float?
+  createdAt   DateTime @default(now())
+}
+
+// CHECK-IN RECORDS
+model CheckInRecord {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  productId       Int
+  organizationId  Int
+  visionId        Int?
+  enrollmentId    Int?
+  checkInTime     DateTime @default(now())
+  checkInMethod   String   // QR_SCAN, NFC_TAP, MANUAL_SEARCH
+  checkedInBy     Int?     // Staff que hizo el check-in
+  badgePrinted    Boolean  @default(false)
+  licenseConsumed Boolean  @default(false)
+}
+
+// BITÁCORA DE INICIO (Cuestionario para ADVANCED)
+model AdvancedQuestionnaire {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  visionId  Int?
+  status    String   @default("NOT_STARTED") // NOT_STARTED, IN_PROGRESS, COMPLETED
+  
+  // 5 Dimensiones del cuestionario:
+  // Dimensión 1: Raíces y Relaciones
+  familyDescription    String?  @db.Text
+  familyDynamics       String?  @db.Text
+  childhoodMemory      String?  @db.Text
+  significantPeople    String?  @db.Text
+  
+  // Dimensión 2: El Cuerpo y la Sombra
+  bodyRelationship     String?  @db.Text
+  hiddenAspects        String?  @db.Text
+  avoidedEmotions      String?  @db.Text
+  physicalPatterns     String?  @db.Text
+  
+  // Dimensión 3: Línea de Vida
+  majorEvents          String?  @db.Text
+  turningPoints        String?  @db.Text
+  recurringPatterns    String?  @db.Text
+  unfinishedBusiness   String?  @db.Text
+  
+  // Dimensión 4: Espejos y Creencias
+  professionalLife     String?  @db.Text
+  triggers             String?  @db.Text
+  selfBeliefs          String?  @db.Text
+  mirrorRelationships  String?  @db.Text
+  
+  // Dimensión 5: El Propósito
+  lifeVision           String?  @db.Text
+  coreValues           String?  @db.Text
+  legacyDesired        String?  @db.Text
+  currentObstacles     String?  @db.Text
+  
+  currentDimension     Int      @default(0)
+  completedAt          DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+// FORMULARIO MÉDICO
+model MedicalForm {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  visionId     Int?
+  isComplete   Boolean  @default(false)
+  hasAlerts    Boolean  @default(false)
+  // ... campos médicos
+}
+
+// ASIGNACIÓN DE LICENCIAS
+model LicenseAssignment {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  organizationId  Int
+  visionId        Int?
+  licenseCode     String   @unique
+  assignedBy      Int
+  isActive        Boolean  @default(true)
+  activatedAt     DateTime?
+}
+```
+
+---
+
+## ✅ FUNCIONALIDADES COMPLETADAS
+
+### 1. Sistema de Check-in (`/staff/check-in/[productId]`)
+- Scanner omnidireccional (QR cámara, pistola barcode, NFC)
+- Validación de: ticket, formulario médico, foto de perfil
+- **Validación de prerrequisitos**: ADVANCED requiere haber asistido a BASIC
+- **Validación de bitácora**: ADVANCED requiere AdvancedQuestionnaire.status === 'COMPLETED'
+- Captura de foto en tiempo real si no tiene
+- Generación e impresión de gafetes
+- **Escritura NFC** en tarjetas NTAG 213/215/216 (NO funciona con MIFARE Classic)
+- Consumo automático de licencias de organización
+- Registro de CheckInRecord
+- Actualización de attendanceStatus en vision_enrollments
+
+### 2. Bitácora de Inicio (`/bitacora`)
+- Cuestionario de 5 dimensiones para usuarios ADVANCED
+- Auto-guardado cada cambio de sección
+- Indicadores visuales de progreso
+- Scroll automático al cambiar de sección
+- Widget de alerta en dashboard para usuarios que no han completado
+
+### 3. Sistema de Tickets
+- Códigos CASH canjeables en `/dashboard/checkout-ticket`
+- Validación: `data.success && data.giftCode` (NO `data.valid`)
+- Tipos de pago: CASH, CARD, TRANSFER
+
+### 4. Dashboard
+- `BitacoraAlertWidget` muestra alerta si usuario tiene enrollment ADVANCED sin bitácora completada
+- Filtra por paymentStatus: `['PAID', 'FULL', 'PARTIAL', 'GIFT']`
+
+### 5. Panel de Gestión (`/manage`)
+- Lista de enrollments con attendanceStatus
+- Filtros por nivel, estado, organización
+
+---
+
+## ⚠️ BUGS CONOCIDOS Y SOLUCIONES APLICADAS
+
+### Bug: Check-in ADVANCED actualizaba enrollment BASIC
+**Causa**: `validate/route.ts` no filtraba por `level` al buscar enrollment
+**Solución**: Agregar mapeo levelType → level y buscar enrollment específico:
+```typescript
+const levelMap = { 'BASIC': 'BASIC', 'ADVANCED': 'ADVANCED', 'PL': 'PL', ... };
+const enrollmentLevel = levelMap[product.levelType];
+enrollment = await prisma.vision_enrollments.findFirst({
+  where: { userId, visionId, level: enrollmentLevel }
+});
+```
+
+### Bug: NFC no grababa al primer click
+**Causa**: Android requiere `scan()` antes de `write()`
+**Solución**: En `BadgePreview.tsx`, hacer scan primero y escribir en `onreading`:
+```typescript
+await ndef.scan({ signal: abortController.signal });
+ndef.onreading = async () => {
+  await ndef.write({ records: [...] }, { overwrite: true });
+};
+```
+
+### Bug: MIFARE Classic no funciona con Web NFC
+**Causa**: Web NFC API solo soporta NDEF (NFC Forum tags)
+**Solución**: Usar tarjetas NTAG 213/215/216, NO MIFARE Classic/IsoDep
+
+### Bug: Bitácora no guardaba (error campos inválidos)
+**Causa**: El objeto `data` contenía campos como `id`, `Vision`, `createdAt` que Prisma rechazaba
+**Solución**: Filtrar campos válidos antes de guardar:
+```typescript
+const validFields = ['familyDescription', 'familyDynamics', ...];
+const filteredData = Object.fromEntries(
+  Object.entries(data).filter(([key]) => validFields.includes(key))
+);
+```
+
+---
+
+## 🚧 PENDIENTE POR DESARROLLAR
+
+### Alta Prioridad
+1. **Sistema de Mentores** - Asignación y seguimiento de mentores a participantes
+2. **Zona de Ejecución Diaria** - Tareas diarias y evidencias
+3. **Sistema de Llamadas** - Programación de llamadas mentor-participante
+4. **Notificaciones Push** - Recordatorios de tareas y eventos
+
+### Media Prioridad
+5. **Reportes y Analytics** - Dashboard de métricas por organización
+6. **Sistema de Pagos** - Integración con pasarelas de pago
+7. **App Móvil** - React Native o PWA mejorada
+
+### Baja Prioridad
+8. **Gamificación** - Puntos, badges, leaderboards
+9. **Integración WhatsApp** - Envío automático de recordatorios
+
+---
+
+## 🔧 STACK TECNOLÓGICO
+
+- **Framework**: Next.js 16.1.1 con App Router + Turbopack
+- **Base de datos**: PostgreSQL (Neon/Vercel Postgres)
+- **ORM**: Prisma 5.22.0
+- **Auth**: NextAuth.js con credentials provider
+- **Hosting**: Vercel
+- **Estilos**: Tailwind CSS
+- **UI Components**: Lucide icons, custom components
+- **NFC**: Web NFC API (solo Chrome Android)
+
+---
+
+## 📝 COMANDOS ÚTILES
+
+```bash
+# Desarrollo
+npm run dev
+
+# Base de datos
+npx prisma db push              # Sincronizar schema
+npx prisma generate             # Regenerar cliente
+npx prisma studio               # GUI de BD
+
+# Deploy
+git add -A && git commit -m "mensaje" && git push origin main
+```
+
+---
+
+## 🔑 RELACIONES PRISMA IMPORTANTES
+
+```typescript
+// En CheckInRecord, la relación a Usuario es:
+Usuario: { select: { nombre: true } }  // NO "User"
+
+// SchoolProduct usa levelType (String), NO level
+product.levelType === 'ADVANCED'
+
+// vision_enrollments usa level (Enum VisionLevel)
+enrollment.level === 'ADVANCED'
+```
+
+---
+
+## 📱 NFC - TARJETAS COMPATIBLES
+
+| Tipo | Compatible | Notas |
+|------|------------|-------|
+| NTAG 213 | ✅ | 144 bytes, más económica |
+| NTAG 215 | ✅ | 504 bytes |
+| NTAG 216 | ✅ | 888 bytes |
+| MIFARE Classic | ❌ | Protocolo propietario |
+| MIFARE DESFire | ❌ | Requiere autenticación |
+
+---
+
+## 🎯 FLUJO DE CHECK-IN AVANZADO
+
+```
+1. Staff escanea QR/busca participante
+2. validate/route.ts verifica:
+   - ✓ Tiene ticket válido (ENROLLED)
+   - ✓ Formulario médico completado
+   - ✓ Asistió a BÁSICO (attendanceStatus === 'ATTENDED')
+   - ✓ Bitácora completada (AdvancedQuestionnaire.status === 'COMPLETED')
+   - ○ Tiene foto (no bloqueante)
+3. Si todo OK → badge_print → grabar NFC/imprimir
+4. Verificar gafete (scan QR del gafete)
+5. complete/route.ts:
+   - Crea CheckInRecord
+   - Actualiza attendanceStatus → 'ATTENDED'
+   - Consume licencia de organización
+   - Crea LicenseAssignment si aplica
+```
+
+---
+
+**Fecha de este snapshot**: 20 de enero de 2026
+**Último commit**: `ac09ded` - "fix: validar asistencia a BÁSICO antes de permitir check-in en AVANZADO"

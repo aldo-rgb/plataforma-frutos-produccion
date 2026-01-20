@@ -433,12 +433,14 @@ export default function CallManagementPage() {
   // Calculate stats
   const totalCalls = filteredAndSortedData.length;
   const callsAsiste = filteredAndSortedData.filter(
-    (item) => item.tracking?.attendanceStatus === 'ASISTE'
+    (item) => item.tracking?.attendanceStatus === 'ASISTE' || item.tracking?.attendanceStatus === 'CONFIRMED'
   ).length;
   
-  // Llamadas pendientes (PENDING = no han sido atendidas aún)
+  // Llamadas pendientes = no tienen tracking O su status es PENDING/null
+  // Es decir, todos los que NO han confirmado asistencia
   const callsToday = filteredAndSortedData.filter((item) => {
-    return item.tracking?.attendanceStatus === 'PENDING';
+    const status = item.tracking?.attendanceStatus;
+    return !status || status === 'PENDING' || status === 'NO_ANSWER' || status === 'BUSY';
   }).length;
 
   return (

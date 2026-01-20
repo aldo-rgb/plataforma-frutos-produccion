@@ -267,6 +267,41 @@ export async function PUT(
       });
     }
 
+    // IMPORTANTE: También actualizar SchoolProduct para mantener sincronizado
+    // Actualizar producto BASIC
+    if (basicCoordinatorId || basicTrainerId) {
+      await prisma.schoolProduct.updateMany({
+        where: { visionId, levelType: 'BASIC' },
+        data: {
+          ...(basicCoordinatorId && { coordinatorId: parseInt(basicCoordinatorId) }),
+          ...(basicTrainerId && { trainerId: parseInt(basicTrainerId) }),
+        },
+      });
+    }
+
+    // Actualizar producto ADVANCED
+    if (advancedCoordinatorId || advancedTrainerId) {
+      await prisma.schoolProduct.updateMany({
+        where: { visionId, levelType: 'ADVANCED' },
+        data: {
+          ...(advancedCoordinatorId && { coordinatorId: parseInt(advancedCoordinatorId) }),
+          ...(advancedTrainerId && { trainerId: parseInt(advancedTrainerId) }),
+        },
+      });
+    }
+
+    // Actualizar producto PL (solo coordinador, trainers van en VisionStaff)
+    if (plCoordinatorId) {
+      await prisma.schoolProduct.updateMany({
+        where: { visionId, levelType: 'PL' },
+        data: {
+          coordinatorId: parseInt(plCoordinatorId),
+        },
+      });
+    }
+
+    console.log('✅ Staff guardado y SchoolProduct sincronizado');
+
     return NextResponse.json({
       success: true,
       message: 'Configuración de staff guardada correctamente',

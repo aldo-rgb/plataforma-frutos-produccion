@@ -1,5 +1,9 @@
 // API para obtener participantes que aún no han elegido cruzar
 // (hicieron check-in en un entrenamiento BASIC pero no tienen pre-registro)
+// FILTRADO POR VISIÓN según el rol del usuario:
+// - Coordinadores: visiones donde están asignados como staff
+// - Game Changers: visiones donde están asignados
+// - Trainers/Mentors: visiones donde están asignados como staff
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
@@ -16,16 +20,86 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const productId = searchParams.get("productId")
-    const organizationId = searchParams.get("organizationId")
+    const visionIdParam = searchParams.get("visionId")
+    
+    const userId = session.user.id
+    const userRole = session.user.rol || ''
 
-    // Obtener productos BASIC en curso (ya iniciados, no terminados, y NO completados)
+    console.log(`[participantes-pendientes] userId=${userId}, role=${userRole}`)
+
+    // Determinar las visiones a las que tiene acceso el usuario
+    let allowedVisionIds: number[] = []
+    
+    // Roles de admin/escuela ven todo (o filtran por param)
+    const isAdmin = ['ADMINISTRADOR', 'SCHOOL_ADMIN'].includes(userRole)
+    
+    if (isAdmin) {
+      // Admin puede ver todo o filtrar por param
+      if (visionIdParam) {
+        allowedVisionIds = [parseInt(visionIdParam)]
+      }
+      // Si no hay param, no filtramos (ve todo)
+    } else if (['COORDINATOR_BASIC'].includes(userRole)) {
+      // Coordinador Básico: ve todas las visiones donde está asignado
+      const staffAssignments = await prisma.visionStaff.findMany({
+        where: { userId },
+        select: { visionId: true }
+      })
+      allowedVisionIds = [...new Set(staffAssignments.map(s => s.visionId))]
+      console.log(`[participantes-pendientes] COORDINATOR_BASIC userId=${userId}:`, allowedVisionIds)
+    } else if (['COORDINATOR_ADVANCED', 'COORDINADOR'].includes(userRole)) {
+      // Coordinador Avanzado: ve visiones donde está asignado (para promover de BASIC a ADVANCED)
+      const staffAssignments = await prisma.visionStaff.findMany({
+        where: { userId },
+        select: { visionId: true }
+      })
+      allowedVisionIds = [...new Set(staffAssignments.map(s => s.visionId))]
+      console.log(`[participantes-pendientes] COORDINATOR_ADVANCED userId=${userId}:`, allowedVisionIds)
+    } else if (['TRAINER'].includes(userRole)) {
+      // TRAINER: Solo ve visiones donde está asignado como BASIC_TRAINER
+      // (El Atravesar es para promover de BASIC a ADVANCED, solo trainers de BASIC lo necesitan)
+      const staffAssignments = await prisma.visionStaff.findMany({
+        where: { 
+          userId,
+          role: 'BASIC_TRAINER' // Solo si está asignado como trainer de BÁSICO
+        },
+        select: { visionId: true }
+      })
+      allowedVisionIds = [...new Set(staffAssignments.map(s => s.visionId))]
+      console.log(`[participantes-pendientes] TRAINER (BASIC_TRAINER only) userId=${userId}:`, allowedVisionIds)
+    } else if (['MENTOR'].includes(userRole)) {
+      // Mentores: visiones donde están asignados
+      const staffAssignments = await prisma.visionStaff.findMany({
+        where: { userId },
+        select: { visionId: true }
+      })
+      allowedVisionIds = [...new Set(staffAssignments.map(s => s.visionId))]
+    } else if (['GAMECHANGER'].includes(userRole)) {
+      // Game Changers: visiones donde están asignados via VisionGameChanger
+      const gcAssignments = await prisma.visionGameChanger.findMany({
+        where: { gameChangerId: userId },
+        select: { visionId: true }
+      })
+      
+      allowedVisionIds = [...new Set(gcAssignments.map(s => s.visionId))]
+    }
+    
+    // Si el usuario especificó visionId y tiene acceso, usar ese
+    if (visionIdParam) {
+      const requestedVisionId = parseInt(visionIdParam)
+      if (isAdmin || allowedVisionIds.includes(requestedVisionId)) {
+        allowedVisionIds = [requestedVisionId]
+      }
+    }
+
+    // Obtener productos BASIC de las visiones permitidas
+    // Solo los que tienen trainingStatus != COMPLETED (aún relevantes para el cruce)
     const now = new Date()
     
     const whereProduct: any = {
       levelType: "BASIC",
       isActive: true,
-      startDate: { lte: now },
-      // Excluir entrenamientos que ya terminaron (COMPLETED)
+      // Excluir entrenamientos completados
       trainingStatus: { not: 'COMPLETED' }
     }
     
@@ -33,16 +107,27 @@ export async function GET(request: NextRequest) {
       whereProduct.id = parseInt(productId)
     }
     
-    if (organizationId) {
-      whereProduct.organizationId = parseInt(organizationId)
+    // Aplicar filtro de visión
+    if (allowedVisionIds.length > 0) {
+      whereProduct.visionId = { in: allowedVisionIds }
+    } else if (!isAdmin) {
+      // Si no es admin y no tiene visiones asignadas, no mostrar nada
+      console.log(`[participantes-pendientes] No vision assignments, returning empty`)
+      return NextResponse.json({
+        participantes: [],
+        stats: { total: 0, sinCruzar: 0, cruzaron: 0 }
+      })
     }
 
-    // Obtener productos básicos en curso
+    console.log(`[participantes-pendientes] Filtering products with visionIds:`, allowedVisionIds)
+
+    // Obtener productos básicos de las visiones permitidas
     const basicProducts = await prisma.schoolProduct.findMany({
       where: whereProduct,
       select: { 
         id: true, 
         name: true,
+        visionId: true,
         organizationId: true,
         Organization: {
           select: { name: true }

@@ -41,13 +41,13 @@ export async function GET(request: Request) {
     const now = new Date();
     console.log('[training-stats] User:', user.id, 'OrgId:', orgId, 'Rol:', user.rol, 'Now:', now);
 
-    // Obtener productos activos de la organización (BASIC y ADVANCED)
+    // Obtener productos activos de la organización (BASIC, ADVANCED y PL)
     const activeProducts = await prisma.schoolProduct.findMany({
       where: {
         organizationId: orgId,
         isActive: true,
         levelType: {
-          in: ['BASIC', 'ADVANCED']
+          in: ['BASIC', 'ADVANCED', 'PL']
         }
       },
       select: {
@@ -69,15 +69,48 @@ export async function GET(request: Request) {
       }
     });
 
-    // Encontrar el producto EN CURSO (startDate <= now <= endDate)
-    const currentProduct = activeProducts.find(p => {
+    // Helper: obtener solo la fecha (sin hora) en UTC para comparaciones consistentes
+    const getDateOnlyUTC = (date: Date) => {
+      return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+    };
+    const todayDateUTC = getDateOnlyUTC(now);
+    
+    console.log('[training-stats] Today UTC:', todayDateUTC.toISOString());
+
+    // Función para determinar si un producto está activo/en curso
+    const isProductActive = (p: any) => {
       if (!p.startDate) return false;
       const start = new Date(p.startDate);
+      const startDateOnly = getDateOnlyUTC(start);
       const end = p.endDate ? new Date(p.endDate) : new Date('2099-12-31');
-      return start <= now && now <= end;
-    });
+      const endDateOnly = getDateOnlyUTC(end);
+      
+      // Está en curso si: (inicio <= ahora <= fin) O (hoy es el día de inicio) O (estamos dentro del período de fechas)
+      const isInProgress = start <= now && now <= end;
+      const startsToday = startDateOnly.getTime() === todayDateUTC.getTime();
+      const isWithinPeriod = todayDateUTC >= startDateOnly && todayDateUTC <= endDateOnly;
+      
+      console.log('[training-stats] Product check:', p.levelType, 'startDate:', start.toISOString(), 'startsToday:', startsToday, 'isWithinPeriod:', isWithinPeriod, 'isInProgress:', isInProgress);
+      
+      return isInProgress || startsToday || isWithinPeriod;
+    };
 
-    console.log('[training-stats] Current product in course:', currentProduct?.id, currentProduct?.name, currentProduct?.levelType);
+    // Determinar el nivel preferido según el rol del usuario
+    let preferredLevel = 'BASIC';
+    if (user.rol === 'COORDINATOR_ADVANCED') {
+      preferredLevel = 'ADVANCED';
+    }
+
+    // Encontrar el producto EN CURSO que coincida con el nivel del coordinador
+    // Primero buscar por nivel preferido, luego cualquier producto activo
+    let currentProduct = activeProducts.find(p => p.levelType === preferredLevel && isProductActive(p));
+    
+    // Si no hay producto del nivel preferido activo, buscar cualquier producto activo
+    if (!currentProduct) {
+      currentProduct = activeProducts.find(p => isProductActive(p));
+    }
+
+    console.log('[training-stats] Current product in course:', currentProduct?.id, currentProduct?.name, currentProduct?.levelType, 'UserRole:', user.rol);
 
     const productIds = activeProducts.map(p => p.id);
     const visionIds = activeProducts.filter(p => p.visionId).map(p => p.visionId as number);
@@ -325,14 +358,37 @@ export async function GET(request: Request) {
           }
         });
         
+        // Obtener participantes ADVANCED que DECLARARON ASISTENCIA (confirmaron que van)
+        // Primero obtener los enrollments de ADVANCED, luego contar los que tienen tracking con CONFIRMED/ASISTE
+        const advancedEnrollmentsWithTracking = await prisma.vision_enrollments.findMany({
+          where: {
+            visionId: currentProduct.visionId,
+            level: 'ADVANCED',
+            enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+          },
+          include: {
+            BasicCallTracking: {
+              select: { attendanceStatus: true }
+            }
+          }
+        });
+        
+        const advancedDeclared = advancedEnrollmentsWithTracking.filter(
+          e => e.BasicCallTracking?.attendanceStatus === 'CONFIRMED' || 
+               e.BasicCallTracking?.attendanceStatus === 'ASISTE'
+        ).length;
+        
         // Buscar producto PL de la misma visión
         const plProduct = activeProducts.find(
           p => p.levelType === 'PL' && p.visionId === currentProduct.visionId
         );
         
+        let plEnrolled = 0;
+        let plPending = 0;
+        
         if (plProduct) {
           // Pre-registros para PL (usando AdvancedPreRegistration)
-          const plPending = await prisma.advancedPreRegistration.count({
+          plPending = await prisma.advancedPreRegistration.count({
             where: {
               OR: [
                 { targetProductId: plProduct.id },
@@ -353,7 +409,6 @@ export async function GET(request: Request) {
           });
           
           // Enrollments de PL
-          let plEnrolled = 0;
           if (currentProduct.visionId) {
             plEnrolled = await prisma.vision_enrollments.count({
               where: {
@@ -364,30 +419,30 @@ export async function GET(request: Request) {
             });
           }
           
-          const enrolled = Math.max(plEnrolled, plPaid);
-          const totalPreRegistros = plPending + plPaid;
-          
-          // Widget DECLARADOS: pre-registros pendientes / inscritos en avanzado
-          declaradosNumerator = plPending;
-          declaradosDenominator = advancedEnrolledCount;
-          
-          // Widget INSCRITOS: pagados de PL / total pre-registros
-          inscritosNumerator = enrolled;
-          inscritosDenominator = totalPreRegistros > 0 ? totalPreRegistros : plPending;
-          
-          nextLevelStats = {
-            pending: plPending,
-            enrolled: enrolled,
-            total: totalPreRegistros
-          };
-          
-          console.log('[training-stats] NEXT LEVEL (PL) Stats:', nextLevelStats);
-          console.log('[training-stats] Declarados:', declaradosNumerator, '/', declaradosDenominator);
-          console.log('[training-stats] Inscritos:', inscritosNumerator, '/', inscritosDenominator);
-        } else {
+          plEnrolled = Math.max(plEnrolled, plPaid);
+        }
+        
+        // Widget DECLARADOS: participantes que confirmaron asistencia / total inscritos ADVANCED
+        declaradosNumerator = advancedDeclared;
+        declaradosDenominator = advancedEnrolledCount;
+        
+        // Widget INSCRITOS: pagados/inscritos en PL / total declarados ADVANCED
+        inscritosNumerator = plEnrolled;
+        inscritosDenominator = advancedDeclared > 0 ? advancedDeclared : advancedEnrolledCount;
+        
+        nextLevelStats = {
+          pending: plPending,
+          enrolled: plEnrolled,
+          total: plPending + plEnrolled
+        };
+        
+        console.log('[training-stats] ADVANCED - Enrolled:', advancedEnrolledCount, 'Declared:', advancedDeclared);
+        console.log('[training-stats] NEXT LEVEL (PL) - Enrolled:', plEnrolled);
+        console.log('[training-stats] Declarados:', declaradosNumerator, '/', declaradosDenominator);
+        console.log('[training-stats] Inscritos:', inscritosNumerator, '/', inscritosDenominator);
+        
+        if (!plProduct) {
           // No hay producto PL
-          declaradosDenominator = advancedEnrolledCount;
-          nextLevelStats = { pending: 0, enrolled: 0, total: 0 };
           console.log('[training-stats] No hay producto PL para esta visión');
         }
       }

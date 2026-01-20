@@ -1456,9 +1456,11 @@ export default function VisionManagePage() {
                 </div>
 
                 <div className="bg-slate-900/50 rounded-lg p-4 border border-cyan-500/30 col-span-2">
-                  <label className="text-slate-400 text-xs font-medium mb-1 block">🎯 Trainer Asignado</label>
+                  <label className="text-slate-400 text-xs font-medium mb-1 block">🎯 Trainers Asignados (3 Fines de Semana)</label>
                   <div className="text-cyan-400 text-lg font-bold">
-                    {productos.pl?.Trainer?.nombre || 'Sin asignar'}
+                    {productos.pl?.plTrainers && productos.pl.plTrainers.length > 0 
+                      ? productos.pl.plTrainers.map((t: any, idx: number) => t?.nombre).filter(Boolean).join(', ') || 'Sin asignar'
+                      : productos.pl?.Trainer?.nombre || 'Sin asignar'}
                   </div>
                 </div>
               </div>

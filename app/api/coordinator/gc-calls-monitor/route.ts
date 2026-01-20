@@ -97,14 +97,45 @@ export async function GET(request: Request) {
       productFilter.organizationId = coordinator.organizationId;
     }
 
-    const visionesActivas = await prisma.schoolProduct.findMany({
-      where: productFilter,
-      select: { visionId: true }
-    });
-    const visionIdsSet = new Set(visionesActivas.filter(v => v.visionId).map(v => v.visionId!));
-    const visionIdsActivas = Array.from(visionIdsSet);
+    console.log('📊 Product filter:', productFilter);
 
-    console.log('📊 Visiones activas encontradas:', visionIdsActivas);
+    // Helper para obtener fecha UTC sin hora
+    const getDateOnlyUTC = (date: Date) => {
+      return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+    };
+    const todayUTC = getDateOnlyUTC(now);
+
+    // Obtener productos y determinar cuál está EN CURSO (por fechas)
+    const allProducts = await prisma.schoolProduct.findMany({
+      where: productFilter,
+      select: { 
+        id: true, 
+        visionId: true, 
+        levelType: true,
+        startDate: true,
+        endDate: true
+      }
+    });
+
+    // Filtrar solo los productos que están en curso HOY
+    const productosEnCurso = allProducts.filter(p => {
+      if (!p.startDate) return false;
+      const start = new Date(p.startDate);
+      const startDateOnly = getDateOnlyUTC(start);
+      const end = p.endDate ? new Date(p.endDate) : new Date('2099-12-31');
+      const endDateOnly = getDateOnlyUTC(end);
+      
+      // Está en curso si hoy está dentro del rango de fechas
+      return todayUTC >= startDateOnly && todayUTC <= endDateOnly;
+    });
+
+    console.log('📊 Productos en curso hoy:', productosEnCurso.map(p => ({ id: p.id, level: p.levelType, visionId: p.visionId })));
+
+    // Obtener los niveles activos y visionIds
+    const nivelesActivos = productosEnCurso.map(p => p.levelType);
+    const visionIdsActivas = [...new Set(productosEnCurso.filter(v => v.visionId).map(v => v.visionId!))];
+
+    console.log('📊 Visiones activas encontradas:', visionIdsActivas, 'Niveles:', nivelesActivos);
 
     // Si no hay visiones activas, retornar vacío
     if (visionIdsActivas.length === 0) {
@@ -121,12 +152,14 @@ export async function GET(request: Request) {
       });
     }
 
-    // Obtener solo átomos de visiones con entrenamientos activos
+    // Obtener solo átomos de visiones con entrenamientos activos Y del nivel correcto
     const squads = await prisma.smallGroup.findMany({
       where: {
         ...organizationFilter,
         isActive: true,
-        visionId: { in: visionIdsActivas }
+        visionId: { in: visionIdsActivas },
+        // Filtrar por el nivel del entrenamiento en curso
+        level: { in: nivelesActivos as any }
       },
       include: {
         leader: {
@@ -144,7 +177,7 @@ export async function GET(request: Request) {
       orderBy: { createdAt: 'desc' },
     });
 
-    console.log('📊 Squads encontrados:', squads.length);
+    console.log('📊 Squads encontrados:', squads.length, 'para niveles:', nivelesActivos);
 
     // Si no hay squads, retornar vacío
     if (squads.length === 0) {

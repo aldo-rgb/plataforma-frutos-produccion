@@ -22,6 +22,17 @@ export async function GET(
     const level = searchParams.get('level') || 'BASIC';
     const excludeUnpaid = searchParams.get('excludeUnpaid') === 'true';
 
+    console.log('📞 [call-tracking] Request:', { visionId, level, excludeUnpaid });
+
+    // DEBUG: Verificar enrollments con ese visionId primero
+    const debugEnrollments = await prisma.vision_enrollments.findMany({
+      where: { visionId },
+      select: { id: true, userId: true, level: true, paymentStatus: true },
+    });
+    console.log('📞 [call-tracking] DEBUG: All enrollments for vision:', debugEnrollments.length);
+    console.log('📞 [call-tracking] DEBUG: By level:', debugEnrollments.filter((e: any) => e.level === level).length);
+    console.log('📞 [call-tracking] DEBUG: Sample enrollments:', JSON.stringify(debugEnrollments.slice(0, 5)));
+
     // Obtener todos los enrollments del nivel especificado con su tracking info
     // @ts-ignore - Prisma relations exist but TypeScript doesn't recognize them
     const enrollments = await prisma.vision_enrollments.findMany({
@@ -137,12 +148,22 @@ export async function GET(
     );
 
     // Función para determinar el estado de pago del usuario
-    const getPaymentStatus = (tickets: any[]) => {
+    // Ahora considera tanto tickets como el paymentStatus del enrollment
+    const getPaymentStatus = (tickets: any[], enrollmentPaymentStatus?: string | null) => {
+      // Si el enrollment tiene paymentStatus, usarlo como fuente principal
+      if (enrollmentPaymentStatus) {
+        const validPaidStatuses = ['PAID', 'FULL', 'PARTIAL', 'GIFT'];
+        if (validPaidStatuses.includes(enrollmentPaymentStatus)) {
+          return enrollmentPaymentStatus === 'FULL' ? 'PAID' : enrollmentPaymentStatus;
+        }
+      }
+      
+      // Fallback a verificar tickets
       if (!tickets || tickets.length === 0) return 'NO_TICKET';
       const hasUnpaid = tickets.some(t => t.paymentStatus === 'UNPAID');
       const hasPartial = tickets.some(t => t.paymentStatus === 'PARTIAL');
-      const allPaid = tickets.every(t => t.paymentStatus === 'PAID');
-      if (allPaid) return 'PAID';
+      const hasPaid = tickets.some(t => t.paymentStatus === 'PAID' || t.paymentStatus === 'GIFT');
+      if (hasPaid) return 'PAID';
       if (hasPartial) return 'PARTIAL';
       if (hasUnpaid) return 'UNPAID';
       return 'PENDING';
@@ -150,19 +171,30 @@ export async function GET(
 
     // Filtrar enrollments si excludeUnpaid está activo
     let filteredEnrollments = enrollments;
+    console.log('📞 [call-tracking] Enrollments found:', enrollments.length);
+    
     if (excludeUnpaid) {
       filteredEnrollments = enrollments.filter((enrollment: any) => {
         const tickets = enrollment.Usuario_vision_enrollments_userIdToUsuario.Ticket_TicketOwner || [];
-        const status = getPaymentStatus(tickets);
+        const status = getPaymentStatus(tickets, enrollment.paymentStatus);
+        console.log('📞 [call-tracking] Filtering:', { 
+          enrollmentId: enrollment.id, 
+          userId: enrollment.userId,
+          enrollmentPaymentStatus: enrollment.paymentStatus,
+          ticketsCount: tickets.length,
+          computedStatus: status 
+        });
         return status !== 'UNPAID' && status !== 'NO_TICKET';
       });
     }
+
+    console.log('📞 [call-tracking] After filter:', filteredEnrollments.length);
 
     // Formatear la respuesta con toda la información necesaria
     // @ts-ignore - Prisma relations work at runtime despite TypeScript errors
     const formattedData = filteredEnrollments.map((enrollment: any) => {
       const tickets = enrollment.Usuario_vision_enrollments_userIdToUsuario.Ticket_TicketOwner || [];
-      const paymentStatus = getPaymentStatus(tickets);
+      const paymentStatus = getPaymentStatus(tickets, enrollment.paymentStatus);
       
       return {
         id: enrollment.id,

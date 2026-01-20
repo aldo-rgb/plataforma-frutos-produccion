@@ -14,7 +14,10 @@ export async function POST(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.rol !== 'SCHOOL_ADMIN') {
+    const allowedRoles = ['SCHOOL_ADMIN', 'ADMINISTRADOR', 'COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
+    
+    if (!session?.user || !allowedRoles.includes(session.user.rol as string)) {
+      console.log('🚫 [add-gamechangers] Unauthorized - rol:', session?.user?.rol);
       return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
     }
 
@@ -45,19 +48,36 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'No tienes acceso a esta visión' }, { status: 403 });
     }
 
+    // Obtener todas las organizaciones relacionadas al mismo master
+    const directorOrg = await prisma.organization.findUnique({
+      where: { id: director.organizationId },
+      select: { id: true, masterOrganizationId: true },
+    });
+    const masterId = directorOrg?.masterOrganizationId || director.organizationId;
+    const relatedOrgs = await prisma.organization.findMany({
+      where: {
+        OR: [
+          { id: masterId },
+          { masterOrganizationId: masterId },
+        ],
+      },
+      select: { id: true },
+    });
+    const relatedOrgIds = relatedOrgs.map(org => org.id);
+
     // Si se envían IDs directamente, asignar esos usuarios
     if (gameChangerIds && Array.isArray(gameChangerIds)) {
       const addedGameChangers = [];
       
       for (const userId of gameChangerIds) {
-        // Verificar que el usuario existe y pertenece a la organización
+        // Verificar que el usuario existe y pertenece a una organización relacionada
         const user = await prisma.usuario.findUnique({
           where: { id: userId },
           select: { id: true, email: true, organizationId: true, rol: true }
         });
 
-        if (!user || user.organizationId !== director.organizationId) {
-          continue; // Skip usuarios inválidos
+        if (!user || !user.organizationId || !relatedOrgIds.includes(user.organizationId)) {
+          continue; // Skip usuarios inválidos o de organizaciones no relacionadas
         }
 
         // Verificar si ya está asignado EN ESE NIVEL

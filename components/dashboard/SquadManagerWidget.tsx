@@ -407,9 +407,44 @@ export default function SquadManagerWidget() {
     );
   }
 
-  // Si no hay squads activos o el entrenamiento terminó hace más de 7 días, no mostrar el widget
-  if (squads.length === 0 || (trainingInfo && trainingInfo.showInDashboard === false)) {
+  // Si el entrenamiento terminó hace más de 7 días y no hay squads, no mostrar
+  // PERO si no hay squads, mostrar la opción de crear uno
+  if (trainingInfo && trainingInfo.showInDashboard === false && squads.length === 0) {
     return null;
+  }
+
+  // Si no hay squads, mostrar la opción de crear átomo
+  if (squads.length === 0) {
+    return (
+      <Card className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border-indigo-500/20 hover:border-indigo-500/40 transition-all">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-indigo-500/20">
+              <Users className="w-5 h-5 text-indigo-400" />
+            </div>
+            <CardTitle className="text-lg text-white">Mi Átomo</CardTitle>
+          </div>
+          <CardDescription className="text-gray-400">
+            Gestiona tu grupo de participantes
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-gradient-to-br from-indigo-500/5 to-purple-500/5 border border-dashed border-indigo-500/30 rounded-lg p-6 text-center">
+            <UserPlus className="w-10 h-10 text-indigo-400 mx-auto mb-3" />
+            <h4 className="text-white font-medium mb-1">Crea tu primer Átomo</h4>
+            <p className="text-sm text-gray-400 mb-4">
+              Organiza a tus participantes en grupos pequeños para un mejor seguimiento
+            </p>
+            <Link href="/dashboard/game-changer/squads">
+              <Button className="bg-indigo-500 hover:bg-indigo-600 text-white">
+                <Users className="w-4 h-4 mr-2" />
+                Crear Átomo
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

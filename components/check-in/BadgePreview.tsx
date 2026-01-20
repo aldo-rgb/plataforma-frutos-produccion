@@ -800,47 +800,48 @@ export default function BadgePreview({
 
               {nfcSupported && (
                 <>
-                {nfcError && (
-                  <p className="text-red-400 text-sm mb-3 text-center">{nfcError}</p>
-                )}
-                <button
-                  onClick={handleWriteNFC}
-                  disabled={nfcStatus === 'writing'}
-                  className={`w-full py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                    nfcStatus === 'success' 
-                      ? 'bg-green-500 text-white' 
-                      : nfcStatus === 'error'
-                      ? 'bg-red-500 text-white'
-                      : nfcStatus === 'writing'
-                      ? 'bg-purple-600 text-white animate-pulse'
-                      : 'bg-purple-600 hover:bg-purple-700 text-white'
-                  }`}
-                >
-                  {nfcStatus === 'writing' && (
-                    <>
-                      <Nfc size={20} className="animate-pulse" />
-                      Acerca la tarjeta NFC...
-                    </>
+                  {nfcError && (
+                    <p className="text-red-400 text-sm mb-3 text-center">{nfcError}</p>
                   )}
-                  {nfcStatus === 'success' && (
-                    <>
-                      <Check size={20} />
-                      ¡Grabado exitosamente!
-                    </>
-                  )}
-                  {nfcStatus === 'error' && (
-                    <>
-                      <X size={20} />
-                      Error al grabar. Intenta de nuevo.
-                    </>
-                  )}
-                  {nfcStatus === 'idle' && (
-                    <>
-                      <Nfc size={20} />
-                      Grabar NFC
-                    </>
-                  )}
-                </button>
+                  <button
+                    onClick={handleWriteNFC}
+                    disabled={nfcStatus === 'writing'}
+                    className={`w-full py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                      nfcStatus === 'success' 
+                        ? 'bg-green-500 text-white' 
+                        : nfcStatus === 'error'
+                        ? 'bg-red-500 text-white'
+                        : nfcStatus === 'writing'
+                        ? 'bg-purple-600 text-white animate-pulse'
+                        : 'bg-purple-600 hover:bg-purple-700 text-white'
+                    }`}
+                  >
+                    {nfcStatus === 'writing' && (
+                      <>
+                        <Nfc size={20} className="animate-pulse" />
+                        Acerca la tarjeta NFC...
+                      </>
+                    )}
+                    {nfcStatus === 'success' && (
+                      <>
+                        <Check size={20} />
+                        ¡Grabado exitosamente!
+                      </>
+                    )}
+                    {nfcStatus === 'error' && (
+                      <>
+                        <X size={20} />
+                        Error al grabar. Intenta de nuevo.
+                      </>
+                    )}
+                    {nfcStatus === 'idle' && (
+                      <>
+                        <Nfc size={20} />
+                        Grabar NFC
+                      </>
+                    )}
+                  </button>
+                </>
               )}
             </div>
 

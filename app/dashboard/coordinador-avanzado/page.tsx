@@ -46,7 +46,7 @@ export default function CoordinadorAvanzadoDashboard() {
   const [loadingProductos, setLoadingProductos] = useState(true);
   const [countdown, setCountdown] = useState<{[key: number]: string}>({});
   const [medicalAlertsCount, setMedicalAlertsCount] = useState(0);
-  const [advancedCallsData, setAdvancedCallsData] = useState<{ completed: number; total: number }>({ completed: 0, total: 0 });
+  const [advancedCallsData, setAdvancedCallsData] = useState<{ completed: number; total: number; pending: number; visionId?: number }>({ completed: 0, total: 0, pending: 0 });
   const [preRegistros, setPreRegistros] = useState<{ pending: number; paid: number; total: number }>({ pending: 0, paid: 0, total: 0 });
   const [visionInfo, setVisionInfo] = useState<{ nombre: string; level: string } | null>(null);
   const [advancedStats, setAdvancedStats] = useState<{ pending: number; enrolled: number; total: number }>({ pending: 0, enrolled: 0, total: 0 });
@@ -84,7 +84,9 @@ export default function CoordinadorAvanzadoDashboard() {
       if (res.ok && result.success) {
         setAdvancedCallsData({
           completed: result.completed || 0,
-          total: result.total || 0
+          total: result.total || 0,
+          pending: result.pending || (result.total - result.completed) || 0,
+          visionId: result.visionId
         });
       }
     } catch (error) {
@@ -330,7 +332,7 @@ export default function CoordinadorAvanzadoDashboard() {
         {/* KPI Cards - Llamadas, Declarados e Inscritos */}
         <div className="grid grid-cols-1 gap-6">
           {/* Widget Llamadas Pendientes con botón */}
-          <Link href="/dashboard/school-admin/vision/1/call-management?level=ADVANCED" className="h-full">
+          <Link href={`/dashboard/school-admin/vision/${advancedCallsData.visionId || 2}/call-management?level=ADVANCED`} className="h-full">
             <div className="bg-gradient-to-br from-yellow-900/40 via-orange-900/30 to-slate-900 border-2 border-yellow-500/30 rounded-2xl p-6 hover:border-yellow-500/50 transition-all cursor-pointer group hover:scale-105 hover:shadow-2xl h-full">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -340,7 +342,7 @@ export default function CoordinadorAvanzadoDashboard() {
                   <div>
                     <div className="text-yellow-400 text-sm font-medium uppercase tracking-wider">Llamadas Pendientes</div>
                     <div className="text-white text-4xl font-black mt-1">
-                      {advancedCallsData.completed}/{advancedCallsData.total}
+                      {advancedCallsData.pending}/{advancedCallsData.total}
                     </div>
                   </div>
                 </div>
@@ -382,9 +384,9 @@ export default function CoordinadorAvanzadoDashboard() {
                   </p>
                   <div className="flex items-baseline gap-1">
                     <p className="text-4xl font-black text-white">
-                      {advancedStats.pending}
+                      {widgetStats.declarados.numerator}
                     </p>
-                    <span className="text-xl text-slate-500 font-bold">/{advancedStats.declaradosDenominator}</span>
+                    <span className="text-xl text-slate-500 font-bold">/{widgetStats.declarados.denominator}</span>
                   </div>
                   <p className="text-sm text-slate-400 mt-1">
                     Participantes comprometidos
@@ -415,9 +417,9 @@ export default function CoordinadorAvanzadoDashboard() {
                   </p>
                   <div className="flex items-baseline gap-1">
                     <p className="text-4xl font-black text-white">
-                      {advancedStats.enrolled}
+                      {widgetStats.inscritos.numerator}
                     </p>
-                    <span className="text-xl text-slate-500 font-bold">/{advancedStats.inscritosDenominator}</span>
+                    <span className="text-xl text-slate-500 font-bold">/{widgetStats.inscritos.denominator}</span>
                   </div>
                   <p className="text-sm text-slate-400 mt-1">
                     Participantes pagados
@@ -484,9 +486,33 @@ export default function CoordinadorAvanzadoDashboard() {
                 {productos.map((producto: any) => {
                   const startDate = producto.startDate ? new Date(producto.startDate) : null;
                   const now = new Date();
-                  const hasStarted = startDate && startDate <= now;
+                  
+                  // Lógica de Check-In:
+                  // - Countdown: 24h antes de las 9 AM hasta las 9 AM del día del entrenamiento
+                  // - Botón Check-In: Desde las 9 AM hasta la 1 PM del primer día
+                  // - En curso (sin Check-In): Después de la 1 PM
+                  
+                  let showCheckInButton = false;
+                  let showInProgress = false;
+                  
+                  if (startDate) {
+                    // 9 AM del día del entrenamiento
+                    const trainingStart9AM = new Date(startDate);
+                    trainingStart9AM.setHours(9, 0, 0, 0);
+                    
+                    // 1 PM del día del entrenamiento (límite de Check-In)
+                    const checkInDeadline1PM = new Date(startDate);
+                    checkInDeadline1PM.setHours(13, 0, 0, 0);
+                    
+                    // Botón Check-In: entre 9 AM y 1 PM del primer día
+                    showCheckInButton = now >= trainingStart9AM && now <= checkInDeadline1PM;
+                    
+                    // En curso (sin botón): después de la 1 PM del primer día
+                    showInProgress = now > checkInDeadline1PM;
+                  }
+                  
                   const isCompleted = producto.trainingStatus === 'COMPLETED';
-                  const showCountdown = countdown[producto.id];
+                  const showCountdown = countdown[producto.id]; // Ya calculado en el useEffect (24h antes hasta 9 AM)
 
                   return (
                     <Link
@@ -497,7 +523,7 @@ export default function CoordinadorAvanzadoDashboard() {
                       <div className={`rounded-xl p-5 transition-all cursor-pointer group hover:scale-[1.02] ${
                         isCompleted
                           ? 'bg-gradient-to-br from-slate-800/60 via-slate-800/40 to-slate-900 border-2 border-slate-600/50'
-                          : hasStarted 
+                          : (showCheckInButton || showInProgress)
                           ? 'bg-gradient-to-br from-green-900/40 via-emerald-900/30 to-slate-900 border-2 border-green-500/50 shadow-lg shadow-green-500/10'
                           : 'bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-2 border-slate-700/50 hover:border-red-500/50'
                       }`}>
@@ -570,7 +596,8 @@ export default function CoordinadorAvanzadoDashboard() {
                             </div>
                           </div>
 
-                          {showCountdown && !hasStarted && !isCompleted && (
+                          {/* Countdown: 24h antes hasta 9 AM del día del entrenamiento */}
+                          {showCountdown && !isCompleted && (
                             <button
                               onClick={(e) => {
                                 e.preventDefault();
@@ -586,6 +613,7 @@ export default function CoordinadorAvanzadoDashboard() {
                             </button>
                           )}
 
+                          {/* Completado */}
                           {isCompleted && (
                             <div className="flex items-center gap-3">
                               <div className="flex items-center gap-2 text-slate-400 text-sm font-semibold">
@@ -595,38 +623,27 @@ export default function CoordinadorAvanzadoDashboard() {
                             </div>
                           )}
 
-                          {hasStarted && !isCompleted && (
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center gap-2 text-green-400 text-sm font-semibold">
-                                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                                En curso
-                              </div>
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  window.location.href = `/staff/check-in/${producto.id}`;
-                                }}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-red-500/20 to-orange-500/20 hover:from-red-500/30 hover:to-orange-500/30 border border-red-500/50 rounded-lg text-red-400 hover:text-red-300 text-sm font-semibold transition-all"
-                              >
-                                <Scan size={14} />
-                                Check-In
-                              </button>
-                            </div>
-                          )}
-
-                          {!hasStarted && !showCountdown && !isCompleted && (
+                          {/* Botón Check-In: desde 9 AM hasta 1 PM del primer día */}
+                          {showCheckInButton && !isCompleted && !showCountdown && (
                             <button
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
                                 window.location.href = `/staff/check-in/${producto.id}`;
                               }}
-                              className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-slate-600/20 to-slate-700/20 hover:from-red-500/20 hover:to-orange-500/20 border border-slate-500/50 hover:border-red-500/50 rounded-lg text-slate-400 hover:text-red-400 text-sm font-semibold transition-all"
+                              className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-red-500/20 to-orange-500/20 hover:from-red-500/30 hover:to-orange-500/30 border border-red-500/50 rounded-lg text-red-400 hover:text-red-300 text-sm font-semibold transition-all"
                             >
                               <Scan size={14} />
                               Check-In
                             </button>
+                          )}
+
+                          {/* En curso (después de 1 PM): sin botón Check-In */}
+                          {showInProgress && !isCompleted && (
+                            <div className="flex items-center gap-2 text-green-400 text-sm font-semibold">
+                              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                              En curso
+                            </div>
                           )}
                         </div>
                       </div>
