@@ -30,6 +30,8 @@ export async function POST(
     const body = await request.json();
     const { gameChangerId } = body;
 
+    console.log('Toggle captain request:', { visionId, gameChangerId, body });
+
     if (!gameChangerId) {
       return NextResponse.json({ 
         success: false, 
@@ -37,13 +39,17 @@ export async function POST(
       }, { status: 400 });
     }
 
+    const gcId = typeof gameChangerId === 'string' ? parseInt(gameChangerId) : gameChangerId;
+
     // Buscar el registro VisionGameChanger por su ID directo
     const visionGC = await prisma.visionGameChanger.findFirst({
       where: {
-        id: parseInt(gameChangerId),
+        id: gcId,
         visionId,
       },
     });
+
+    console.log('Found VisionGameChanger:', visionGC);
 
     if (!visionGC) {
       return NextResponse.json({ 
