@@ -103,7 +103,7 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
 
   if (!data) return null;
 
-  const { currentLevelInfo, buddyInfo, tribeStats, isLoboSolitario, isDropped } = data;
+  const { currentLevelInfo, tribeStats, isLoboSolitario, isDropped } = data;
   const level = currentLevelInfo.levelName;
 
   const handleUpgradeClick = () => {
@@ -150,7 +150,7 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
         {/* ADVANCED: Mostrar BuddySystemWidget + PromiseWidget + GCCallWidget */}
         {level === 'ADVANCED' && (
           <>
-            <BuddySystemWidget buddy={buddyInfo} />
+            <BuddySystemWidget />
             <PromiseWidget 
               hasCompletedCarta={cartaData?.hasCompletedCarta}
               promises={cartaData?.promises}

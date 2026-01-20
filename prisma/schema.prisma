@@ -2240,6 +2240,11 @@ model Usuario {
   // Bitácora de Inicio (Cuestionario Avanzado)
   AdvancedQuestionnaire                                                  AdvancedQuestionnaire?
   QuestionnaireReviews                                                   AdvancedQuestionnaire[]         @relation("QuestionnaireReviewer")
+  
+  // Buddy System
+  BuddyInitiated                                                         BuddyPair[]                     @relation("BuddyInitiator")
+  BuddyReceived                                                          BuddyPair[]                     @relation("BuddyReceiver")
+  BuddyBroken                                                            BuddyPair[]                     @relation("BuddyBrokenBy")
 
   @@index([communityOrganizationId])
 }
@@ -2307,6 +2312,7 @@ model Vision {
   vision_enrollments            vision_enrollments[]
   weekly_payout_summary         weekly_payout_summary[]
   AdvancedQuestionnaires        AdvancedQuestionnaire[]
+  BuddyPairs                    BuddyPair[]
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -4241,3 +4247,59 @@ enum QuestionnaireStatus {
   IN_PROGRESS
   COMPLETED
 }
+
+// ============================================
+// BUDDY SYSTEM - Sistema de Compañeros
+// ============================================
+
+model BuddyPair {
+  id                  String      @id @default(uuid())
+  visionId            Int
+  
+  // Usuario que inició la solicitud
+  initiatorId         Int
+  initiatorAccepted   Boolean     @default(false)
+  initiatorSharedAt   DateTime?
+  
+  // Usuario que recibe la solicitud  
+  receiverId          Int
+  receiverAccepted    Boolean     @default(false)
+  receiverSharedAt    DateTime?
+  
+  // Estado del pacto
+  status              BuddyStatus @default(PENDING)
+  
+  // Datos compartidos (solo visibles cuando status = MATCHED)
+  initiatorPhone      String?
+  initiatorAddress    String?
+  receiverPhone       String?
+  receiverAddress     String?
+  
+  // Timestamps
+  createdAt           DateTime    @default(now())
+  matchedAt           DateTime?
+  brokenAt            DateTime?
+  brokenBy            Int?
+  brokenReason        String?
+  
+  // Relaciones
+  vision              Vision      @relation(fields: [visionId], references: [id])
+  initiator           Usuario     @relation("BuddyInitiator", fields: [initiatorId], references: [id])
+  receiver            Usuario     @relation("BuddyReceiver", fields: [receiverId], references: [id])
+  brokenByUser        Usuario?    @relation("BuddyBrokenBy", fields: [brokenBy], references: [id])
+  
+  @@unique([visionId, initiatorId])
+  @@unique([visionId, receiverId])
+  @@index([visionId])
+  @@index([initiatorId])
+  @@index([receiverId])
+  @@index([status])
+}
+
+enum BuddyStatus {
+  PENDING       // A solicitó, esperando respuesta de B
+  MATCHED       // Ambos aceptaron - Pacto sellado
+  REJECTED      // B rechazó la solicitud
+  BROKEN        // Pacto roto (por abandono, etc.)
+}
+
