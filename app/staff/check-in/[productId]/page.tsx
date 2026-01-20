@@ -255,6 +255,7 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
         
         if (qrUserId === validationResult.user.id) {
           playSound('success');
+          setCheckInStatus('validating'); // Mostrar "Validando" mientras completa
           completeCheckIn(false);
           return;
         } else {
@@ -268,6 +269,7 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
       const upperData = trimmedData.toUpperCase();
       if (validationResult.user.referralCode && upperData === validationResult.user.referralCode.toUpperCase()) {
         playSound('success');
+        setCheckInStatus('validating'); // Mostrar "Validando" mientras completa
         completeCheckIn(false);
         return;
       }
@@ -280,6 +282,7 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
 
         if (data.valid && data.user.id === validationResult.user.id) {
           playSound('success');
+          setCheckInStatus('validating'); // Mostrar "Validando" mientras completa
           completeCheckIn(false);
           return;
         } else if (data.valid && data.user.id !== validationResult.user.id) {
@@ -300,6 +303,7 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
         // Verificar que el ID coincide
         if (qrInfo.id === validationResult.user.id) {
           playSound('success');
+          setCheckInStatus('validating'); // Mostrar "Validando" mientras completa
           completeCheckIn(false);
         } else {
           playSound('error');
@@ -314,6 +318,7 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
       const scannedId = parseInt(scanData);
       if (!isNaN(scannedId) && scannedId === validationResult.user.id) {
         playSound('success');
+        setCheckInStatus('validating'); // Mostrar "Validando" mientras completa
         completeCheckIn(false);
         return;
       }
