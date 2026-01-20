@@ -223,6 +223,26 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Verificar asistencia a BÁSICO antes de permitir AVANZADO
+    if (product.levelType === 'ADVANCED' && product.visionId) {
+      const basicEnrollment = await prisma.vision_enrollments.findFirst({
+        where: {
+          userId: participantId,
+          visionId: product.visionId,
+          level: 'BASIC'
+        }
+      });
+
+      const attendedBasic = basicEnrollment?.attendanceStatus === 'ATTENDED';
+      if (!attendedBasic) {
+        errors.push({
+          type: 'prerequisite',
+          message: `${user.nombre} no ha asistido al entrenamiento BÁSICO. Debe completar Básico primero.`,
+          blocking: true
+        });
+      }
+    }
+
     // Verificar Bitácora de Inicio para productos ADVANCED
     if (product.levelType === 'ADVANCED') {
       const advancedQuestionnaire = await prisma.advancedQuestionnaire.findUnique({
