@@ -199,7 +199,51 @@ export async function GET(request: NextRequest) {
       // IDs de usuarios que ya cruzaron (pre-registros + tickets de PL)
       const preRegisteredUserIds = new Set(preRegistered.map(p => p.userId))
       const plTicketUserIds = new Set(plTicketHolders.map(p => p.ownerId))
-      const crossedUserIds = new Set([...preRegisteredUserIds, ...plTicketUserIds])
+      const checkedInUserIds = new Set(checkedInUsers.map(u => u.userId))
+
+      // AUTO-CREAR pre-registros para usuarios con ticket PL que hicieron check-in
+      // pero no tienen pre-registro aún (esto los unifica en el sistema)
+      const plUsersWithCheckInNoPreReg = plTicketHolders.filter(t => 
+        checkedInUserIds.has(t.ownerId) && !preRegisteredUserIds.has(t.ownerId)
+      )
+
+      if (plUsersWithCheckInNoPreReg.length > 0 && plProduct?.id) {
+        // Crear pre-registros para usuarios con ticket PL que no tienen
+        const targetProductId = crossingSession.targetProductId || plProduct.id
+        
+        for (const t of plUsersWithCheckInNoPreReg) {
+          try {
+            // Verificar si ya existe
+            const existing = await prisma.advancedPreRegistration.findFirst({
+              where: {
+                userId: t.ownerId,
+                targetProductId: targetProductId
+              }
+            })
+            
+            if (!existing) {
+              await prisma.advancedPreRegistration.create({
+                data: {
+                  userId: t.ownerId,
+                  currentProductId: crossingSession.productId,
+                  targetProductId: targetProductId,
+                  status: 'PAID',
+                  promoPrice: 0,
+                  regularPrice: 0,
+                  promoDeadline: new Date()
+                }
+              })
+              // Agregar a la lista de pre-registrados
+              preRegisteredUserIds.add(t.ownerId)
+            }
+          } catch (e) {
+            // Ignorar errores de duplicados
+            console.error('Error creating preRegistration for PL user:', e)
+          }
+        }
+      }
+
+      const crossedUserIds = new Set(Array.from(preRegisteredUserIds).concat(Array.from(plTicketUserIds)))
 
       // ═══════════════════════════════════════════════════════════════
       // EXTRAER PALABRAS CLAVE DE LAS METAS DEL WIZARD
