@@ -110,29 +110,11 @@ export async function GET(req: Request) {
     });
 
     // === CÁLCULO CORRECTO DE LICENCIAS CONSUMIDAS ===
-    // 1. GAMECHANGER y LIDER: Consumen licencia al ser creados (no requieren check-in)
-    const gcLiderCount = await prisma.usuario.count({
-      where: {
-        organizationId: fullUser.organizationId,
-        rol: { in: ['GAMECHANGER', 'LIDER'] },
-        isActive: true
-      }
-    });
-
-    // 2. PARTICIPANTES: Consumen licencia SOLO cuando hacen check-in (registro con gafete)
-    const participantesWithCheckIn = await prisma.checkInRecord.count({
-      where: {
-        organizationId: fullUser.organizationId,
-        licenseConsumed: true,
-        Usuario: { rol: 'PARTICIPANTE' }
-      }
-    });
-
-    // Total de licencias consumidas
-    const licensesConsumed = gcLiderCount + participantesWithCheckIn;
-
-    // Licencias disponibles = Total en pool - Consumidas
-    const availableLicenses = totalLicensesInPool - licensesConsumed;
+    // Usar directamente el valor de la organización, que se actualiza en:
+    // 1. Check-in con gafete (staff/check-in/complete)
+    // 2. Asistencia manual en BÁSICO (school-admin/visiones/[id]/update-attendance)
+    // 3. Creación de GAMECHANGER/LIDER
+    const availableLicenses = organization.licensesAvailable ?? 0;
 
     // Contar solo las licencias ACTIVADAS (con activatedAt no nulo)
     const activatedLicenses = await prisma.licenseAssignment.count({
