@@ -34,9 +34,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'El archivo debe ser una imagen' }, { status: 400 });
     }
 
-    // Validar tamaño (5MB máximo)
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: 'La imagen no puede superar los 5MB' }, { status: 400 });
+    // Validar tamaño (10MB máximo)
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: 'La imagen no puede superar los 10MB' }, { status: 400 });
     }
 
     // Generar nombre único para el archivo
@@ -107,8 +107,20 @@ export async function POST(req: NextRequest) {
       message: 'Imagen subida exitosamente'
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error en upload:', error);
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+    
+    // Mensajes de error más específicos
+    let errorMessage = 'Error interno del servidor';
+    
+    if (error?.message?.includes('Supabase environment')) {
+      errorMessage = 'El servicio de almacenamiento no está configurado correctamente';
+    } else if (error?.message?.includes('storage')) {
+      errorMessage = 'Error al almacenar la imagen. Intenta de nuevo.';
+    } else if (error?.code === 'ECONNREFUSED' || error?.code === 'ETIMEDOUT') {
+      errorMessage = 'No se pudo conectar con el servidor de almacenamiento';
+    }
+    
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
