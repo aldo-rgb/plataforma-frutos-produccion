@@ -61,6 +61,13 @@ export async function GET(request: NextRequest) {
         select: { id: true }
       })
 
+      // Obtener las visiones de la organización para buscar tickets de PL
+      const orgVisions = await prisma.vision.findMany({
+        where: { organizationId: crossingSession.product.organizationId },
+        select: { id: true }
+      })
+      const visionIds = orgVisions.map(v => v.id)
+
       // Obtener participantes en paralelo para mayor velocidad
       const [checkedInUsers, preRegistered, plTicketHolders] = await Promise.all([
         // Usuarios que hicieron check-in en el producto actual (Avanzado)
@@ -148,15 +155,16 @@ export async function GET(request: NextRequest) {
           }
         }),
         // Usuarios que ya tienen ticket de PL pagado (Tu Vida)
-        plProduct ? prisma.ticket.findMany({
+        visionIds.length > 0 ? prisma.ticket.findMany({
           where: {
-            productId: plProduct.id,
-            status: { in: ['PAID', 'ACTIVE', 'USED'] },
-            levelType: 'PL'
+            visionId: { in: visionIds },
+            level: 'PL',
+            status: 'ACTIVE',
+            paymentStatus: { in: ['PAID', 'GIFT'] }
           },
           select: {
-            userId: true,
-            user: {
+            ownerId: true,
+            owner: {
               select: { 
                 id: true, 
                 nombre: true, 
@@ -190,7 +198,7 @@ export async function GET(request: NextRequest) {
 
       // IDs de usuarios que ya cruzaron (pre-registros + tickets de PL)
       const preRegisteredUserIds = new Set(preRegistered.map(p => p.userId))
-      const plTicketUserIds = new Set(plTicketHolders.map(p => p.userId))
+      const plTicketUserIds = new Set(plTicketHolders.map(p => p.ownerId))
       const crossedUserIds = new Set([...preRegisteredUserIds, ...plTicketUserIds])
 
       // ═══════════════════════════════════════════════════════════════
@@ -345,14 +353,14 @@ export async function GET(request: NextRequest) {
       
       // Agregar usuarios con ticket de PL que no están en pre-registros
       const crossedFromTickets = plTicketHolders
-        .filter(t => !preRegisteredUserIds.has(t.userId))
+        .filter(t => !preRegisteredUserIds.has(t.ownerId))
         .map(t => {
-          const wizardData = getWizardKeywords(t.user)
+          const wizardData = getWizardKeywords(t.owner)
           return {
-            id: t.userId,
-            name: t.user.nombre || 'Participante',
-            image: t.user.profileImage,
-            saltoQuantico: getSaltoQuantico(t.user),
+            id: t.ownerId,
+            name: t.owner.nombre || 'Participante',
+            image: t.owner.profileImage,
+            saltoQuantico: getSaltoQuantico(t.owner),
             hasWizard: wizardData.hasWizard,
             keywords: wizardData.keywords,
             status: 'PAID',
