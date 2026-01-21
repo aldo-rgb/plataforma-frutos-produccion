@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { CheckCircle, XCircle, X } from 'lucide-react';
+import { CheckCircle, XCircle, X, Key } from 'lucide-react';
 
 // Roles permitidos para acceder a esta página
 const ALLOWED_ROLES = [
@@ -176,6 +176,10 @@ export default function VisionManagePage() {
   });
   const [gcSelectedLevel, setGcSelectedLevel] = useState('BASIC');
   const [gcRegistering, setGcRegistering] = useState(false);
+
+  // Estados para modal de restablecer contraseña
+  const [resetPasswordUser, setResetPasswordUser] = useState<{id: number; nombre: string} | null>(null);
+  const [resettingPassword, setResettingPassword] = useState(false);
 
   useEffect(() => {
     fetchVisionData();
@@ -713,6 +717,40 @@ export default function VisionManagePage() {
     }
   };
 
+  // Función para restablecer contraseña
+  const handleResetPassword = async (userId: number, userName: string) => {
+    if (!confirm(`¿Restablecer la contraseña de ${userName} a "Quantum123"?\n\nEl usuario deberá cambiarla en su próximo inicio de sesión.`)) {
+      return;
+    }
+    
+    setResettingPassword(true);
+    setResetPasswordUser({ id: userId, nombre: userName });
+    
+    try {
+      const res = await fetch('/api/school-admin/users/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setToast({ show: true, message: `Contraseña de ${userName} restablecida a "Quantum123"`, type: 'success' });
+        setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
+      } else {
+        throw new Error(data.error || 'Error al restablecer');
+      }
+    } catch (error: any) {
+      console.error('Error resetting password:', error);
+      setToast({ show: true, message: error.message || 'Error al restablecer contraseña', type: 'error' });
+      setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 3000);
+    } finally {
+      setResettingPassword(false);
+      setResetPasswordUser(null);
+    }
+  };
+
   if (loading || status === 'loading') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
@@ -1070,6 +1108,7 @@ export default function VisionManagePage() {
                             <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Game Changer</th>
                             <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Fecha de Registro</th>
                             <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Asistencia</th>
+                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Acciones</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1159,6 +1198,16 @@ export default function VisionManagePage() {
                                   <option value="DROP" className="bg-slate-800 text-gray-300">🚫 Drop</option>
                                   <option value="BACKLOG" className="bg-slate-800 text-amber-300">⏳ Backlog</option>
                                 </select>
+                              </td>
+                              <td className="py-4 px-4">
+                                <button
+                                  onClick={() => handleResetPassword(enrollment.userId, enrollment.Usuario?.nombre)}
+                                  disabled={resettingPassword && resetPasswordUser?.id === enrollment.userId}
+                                  className="p-2 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+                                  title="Restablecer contraseña"
+                                >
+                                  <Key className="w-4 h-4" />
+                                </button>
                               </td>
                             </tr>
                           ))}
@@ -1410,6 +1459,7 @@ export default function VisionManagePage() {
                             <th className="text-left py-3 px-4 text-orange-300 font-bold text-sm">Game Changer</th>
                             <th className="text-left py-3 px-4 text-orange-300 font-bold text-sm">Fecha de Registro</th>
                             <th className="text-left py-3 px-4 text-orange-300 font-bold text-sm">Asistencia</th>
+                            <th className="text-left py-3 px-4 text-orange-300 font-bold text-sm">Acciones</th>
                           </tr>
                         </thead>
                         <tbody>
