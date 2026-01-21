@@ -1583,6 +1583,107 @@ export default function ElAtravesarTuVidaPage() {
           </motion.div>
         </div>
         
+        {/* ═══ TARJETA DE USUARIOS QUE YA CRUZARON ═══ */}
+        {crossedParticipants.length > 0 && (
+          <motion.div
+            className="absolute top-24 right-4 z-40 w-56"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
+            <div className="bg-gradient-to-br from-amber-950/80 via-orange-950/70 to-slate-950/90 backdrop-blur-xl rounded-2xl border border-amber-500/30 overflow-hidden shadow-2xl shadow-amber-500/10">
+              {/* Header de la tarjeta */}
+              <div className="px-4 py-3 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border-b border-amber-500/20">
+                <div className="flex items-center gap-2">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                  >
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                  </motion.div>
+                  <span className="text-amber-300 text-xs font-bold uppercase tracking-wider">Ya Cruzaron</span>
+                  <div className="ml-auto bg-amber-500/30 px-2 py-0.5 rounded-full">
+                    <span className="text-amber-200 text-xs font-bold">{crossedParticipants.length}</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Lista de usuarios */}
+              <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-amber-500/30 scrollbar-track-transparent">
+                {crossedParticipants.map((participant, index) => (
+                  <motion.div
+                    key={participant.id}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="px-3 py-2 flex items-center gap-3 border-b border-amber-500/10 hover:bg-amber-500/10 transition-colors group"
+                  >
+                    {/* Avatar pequeño */}
+                    <div className="relative">
+                      <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-amber-500/50 group-hover:border-amber-400 transition-colors">
+                        {participant.image ? (
+                          <img 
+                            src={participant.image} 
+                            alt={participant.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-amber-600 to-orange-700 flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">
+                              {participant.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      {/* Indicador de brillo */}
+                      <motion.div
+                        className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-amber-400 rounded-full"
+                        animate={{ 
+                          scale: [1, 1.3, 1],
+                          opacity: [0.8, 1, 0.8]
+                        }}
+                        transition={{ duration: 2, repeat: Infinity, delay: index * 0.2 }}
+                      >
+                        <Star className="w-3 h-3 text-amber-900" />
+                      </motion.div>
+                    </div>
+                    
+                    {/* Info del usuario */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-amber-100 text-sm font-semibold truncate group-hover:text-amber-50 transition-colors">
+                        {participant.name}
+                      </p>
+                      {participant.hasWizard && participant.keywords && participant.keywords[0] && (
+                        <p className="text-amber-400/60 text-[10px] truncate">
+                          {participant.keywords[0].replace(/^[💰❤️🏃🧘🎯✨🎸🌟]\s*/g, '').substring(0, 25)}...
+                        </p>
+                      )}
+                    </div>
+                    
+                    {/* Número de orden */}
+                    <div className="text-amber-500/40 text-xs font-mono">
+                      #{index + 1}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+              
+              {/* Footer con efecto glow */}
+              <div className="px-4 py-2 bg-gradient-to-t from-amber-500/10 to-transparent">
+                <div className="flex items-center justify-center gap-1">
+                  <motion.div
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    <Zap className="w-3 h-3 text-amber-500" />
+                  </motion.div>
+                  <span className="text-amber-500/70 text-[10px] uppercase tracking-wider">Viviendo su nueva realidad</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+        
         {/* Avatares en la luz */}
         {crossedParticipants.map((p, i) => (
           <LightAvatar key={p.id} participant={p} index={i} total={crossedParticipants.length} />
