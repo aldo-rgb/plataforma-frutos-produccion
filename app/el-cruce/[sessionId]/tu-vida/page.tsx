@@ -1744,11 +1744,9 @@ export default function ElAtravesarTuVidaPage() {
                       <p className="text-amber-100 text-sm font-semibold truncate group-hover:text-amber-50 transition-colors">
                         {participant.name}
                       </p>
-                      {participant.hasWizard && participant.keywords && participant.keywords[0] && (
-                        <p className="text-amber-400/60 text-[10px] truncate">
-                          {participant.keywords[0].replace(/^[💰❤️🏃🧘🎯✨🎸🌟]\s*/g, '').substring(0, 25)}...
-                        </p>
-                      )}
+                      <p className="text-amber-400/60 text-[10px]">
+                        ✨ Eligió su vida
+                      </p>
                     </div>
                     
                     {/* Número de orden */}
