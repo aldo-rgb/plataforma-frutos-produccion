@@ -4,11 +4,20 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@supabase/supabase-js';
 
+// Log de configuración al inicio
+console.log('🔧 quantum-identity API - Verificando configuración:');
+console.log('  - OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? '✅ Configurado' : '❌ FALTA');
+console.log('  - NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Configurado' : '❌ FALTA');
+console.log('  - SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Configurado' : '❌ FALTA');
+
 // OpenAI se inicializa solo si hay API key
 let openai: any = null;
 if (process.env.OPENAI_API_KEY) {
   const OpenAI = require('openai');
   openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  console.log('✅ OpenAI client inicializado');
+} else {
+  console.error('❌ OPENAI_API_KEY no está configurada - la generación de avatares no funcionará');
 }
 
 // Función para obtener cliente de Supabase (lazy initialization)
