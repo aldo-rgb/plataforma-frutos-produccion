@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X } from 'lucide-react';
 import IdentityBadge, { UserLevel } from './IdentityBadge';
 import EvolutionBar from './EvolutionBar';
 import UpgradeToAdvancedWidget from './widgets/UpgradeToAdvancedWidget';
@@ -10,12 +11,17 @@ import TribeManagementWidget from './widgets/TribeManagementWidget';
 import PromiseWidget from './widgets/PromiseWidget';
 import JoinVisionWidget from './widgets/JoinVisionWidget';
 import GCCallWidget from './widgets/GCCallWidget';
+import PersonalQRWidget from '../PersonalQRWidget';
 
 interface DashboardStatsResponse {
   success: boolean;
   data: {
     userId: number;
     userName: string;
+    userEmail: string;
+    referralCode?: string;
+    organizationId?: number | null;
+    organizationName?: string;
     currentLevelInfo: {
       levelName: UserLevel;
       badgeAsset: string;
@@ -71,6 +77,7 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
   const [data, setData] = useState<DashboardStatsResponse['data'] | null>(initialData || null);
   const [loading, setLoading] = useState(!initialData);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
 
   useEffect(() => {
     if (!initialData) {
@@ -164,9 +171,7 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
           <>
             <TribeManagementWidget 
               stats={tribeStats}
-              onInviteClick={() => {
-                // Abrir modal de QR o compartir link
-              }}
+              onInviteClick={() => setShowQRModal(true)}
             />
             <PromiseWidget 
               hasCompletedCarta={cartaData?.hasCompletedCarta}
@@ -186,6 +191,47 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
           </>
         )}
       </div>
+
+      {/* Modal de QR Personal */}
+      <AnimatePresence>
+        {showQRModal && data && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowQRModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-4 border-b border-slate-700">
+                <h3 className="text-lg font-semibold text-white">Mi QR Personal</h3>
+                <button
+                  onClick={() => setShowQRModal(false)}
+                  className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
+              <div className="p-4">
+                <PersonalQRWidget
+                  userName={data.userName}
+                  userId={data.userId}
+                  userEmail={data.userEmail || ''}
+                  referralCode={data.referralCode}
+                  organizationId={data.organizationId}
+                  organizationName={data.organizationName}
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

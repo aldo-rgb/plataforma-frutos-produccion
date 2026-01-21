@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Camera, Loader2, Clock, CheckCircle, AlertCircle, Upload, X, Zap, Calendar, Eye } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastProvider';
 
@@ -36,6 +37,7 @@ interface ZonaEjecucionData {
 
 export default function ZonaEjecucionDiaria() {
   const toast = useToast();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'hoy' | 'retrasadas'>('hoy');
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ZonaEjecucionData | null>(null);
@@ -559,7 +561,7 @@ export default function ZonaEjecucionDiaria() {
                       </div>
                     ) : tarea.evidenceStatus === 'PENDING' ? (
                       <button
-                        onClick={() => handleViewEvidence(tarea)}
+                        onClick={() => router.push('/dashboard/hoy')}
                         className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded-lg transition-all text-xs sm:text-sm font-medium"
                       >
                         <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -567,28 +569,18 @@ export default function ZonaEjecucionDiaria() {
                       </button>
                     ) : tarea.requiereEvidencia !== false ? (
                       <button
-                        onClick={() => handleOpenUpload(tarea)}
-                        disabled={uploadingTaskId === tarea.id}
+                        onClick={() => router.push('/dashboard/hoy')}
                         className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg transition-all shadow-lg shadow-purple-500/30 text-xs sm:text-sm font-medium"
                       >
-                        {uploadingTaskId === tarea.id ? (
-                          <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
-                        ) : (
-                          <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        )}
+                        <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         <span className="hidden xs:inline">Subir</span> Evidencia
                       </button>
                     ) : (
                       <button
-                        onClick={() => handleCompleteWithoutEvidence(tarea)}
-                        disabled={uploadingTaskId === tarea.id}
+                        onClick={() => router.push('/dashboard/hoy')}
                         className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg transition-all shadow-lg shadow-green-500/30 text-xs sm:text-sm font-medium"
                       >
-                        {uploadingTaskId === tarea.id ? (
-                          <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
-                        ) : (
-                          <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        )}
+                        <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         Completar
                       </button>
                     )}
