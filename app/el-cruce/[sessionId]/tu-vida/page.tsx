@@ -1310,7 +1310,8 @@ export default function ElAtravesarTuVidaPage() {
     if (crossingParticipant) {
       // Mover de pendientes a cruzados
       setPendingParticipants(prev => prev.filter(p => p.id !== crossingParticipant.id))
-      setCrossedParticipants(prev => [...prev, crossingParticipant])
+      // Agregar al INICIO de la lista (el más reciente arriba)
+      setCrossedParticipants(prev => [crossingParticipant, ...prev])
       
       // Actualizar estadísticas
       setStats(prev => {
@@ -1699,14 +1700,14 @@ export default function ElAtravesarTuVidaPage() {
                 </div>
               </div>
               
-              {/* Lista de usuarios */}
-              <div className="max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-amber-500/30 scrollbar-track-transparent">
-                {crossedParticipants.map((participant, index) => (
+              {/* Lista de usuarios - máximo 15, el más reciente arriba */}
+              <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-amber-500/30 scrollbar-track-transparent">
+                {crossedParticipants.slice(0, 15).map((participant, index) => (
                   <motion.div
                     key={participant.id}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
+                    transition={{ delay: index * 0.05 }}
                     className="px-3 py-2 flex items-center gap-3 border-b border-amber-500/10 hover:bg-amber-500/10 transition-colors group"
                   >
                     {/* Avatar pequeño */}
@@ -1726,22 +1727,22 @@ export default function ElAtravesarTuVidaPage() {
                           </div>
                         )}
                       </div>
-                      {/* Indicador de brillo */}
+                      {/* Indicador de brillo - más brillante para el más reciente */}
                       <motion.div
-                        className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-amber-400 rounded-full"
+                        className={`absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full ${index === 0 ? 'bg-green-400' : 'bg-amber-400'}`}
                         animate={{ 
-                          scale: [1, 1.3, 1],
+                          scale: index === 0 ? [1, 1.5, 1] : [1, 1.3, 1],
                           opacity: [0.8, 1, 0.8]
                         }}
-                        transition={{ duration: 2, repeat: Infinity, delay: index * 0.2 }}
+                        transition={{ duration: index === 0 ? 1 : 2, repeat: Infinity, delay: index * 0.1 }}
                       >
-                        <Star className="w-3 h-3 text-amber-900" />
+                        <Star className={`w-3 h-3 ${index === 0 ? 'text-green-900' : 'text-amber-900'}`} />
                       </motion.div>
                     </div>
                     
                     {/* Info del usuario */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-amber-100 text-sm font-semibold truncate group-hover:text-amber-50 transition-colors">
+                      <p className={`text-sm font-semibold truncate transition-colors ${index === 0 ? 'text-green-300' : 'text-amber-100 group-hover:text-amber-50'}`}>
                         {participant.name}
                       </p>
                       <p className="text-amber-400/60 text-[10px]">
@@ -1749,8 +1750,8 @@ export default function ElAtravesarTuVidaPage() {
                       </p>
                     </div>
                     
-                    {/* Número de orden */}
-                    <div className="text-amber-500/40 text-xs font-mono">
+                    {/* Número de orden - el #1 es el más reciente */}
+                    <div className={`text-xs font-mono ${index === 0 ? 'text-green-400 font-bold' : 'text-amber-500/40'}`}>
                       #{index + 1}
                     </div>
                   </motion.div>
