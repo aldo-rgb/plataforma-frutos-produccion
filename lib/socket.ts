@@ -61,6 +61,20 @@ export const initSocketIO = async (httpServer: HTTPServer) => {
       socket.join(`crossing_display:${sessionId}`);
       console.log(`🖥️ Pantalla gigante conectada a sesión: ${sessionId}`);
     });
+
+    // Broadcast de eventos de cruce (desde el API)
+    socket.on('broadcast_crossing', (payload: { sessionId: string, event: string, data: any }) => {
+      const { sessionId, event, data } = payload;
+      io?.to(`crossing:${sessionId}`).emit(event, data);
+      console.log(`📡 Broadcast ${event} a sesión ${sessionId}`);
+    });
+
+    // Broadcast a usuario específico (desde el API)
+    socket.on('broadcast_to_user', (payload: { userId: string, event: string, data: any }) => {
+      const { userId, event, data } = payload;
+      io?.to(`user:${userId}`).emit(event, data);
+      console.log(`📡 Broadcast ${event} a usuario ${userId}`);
+    });
     
     // Salir de sesión
     socket.on('leave_crossing_session', (sessionId: string) => {

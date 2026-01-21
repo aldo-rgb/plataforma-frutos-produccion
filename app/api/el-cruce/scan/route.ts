@@ -7,7 +7,9 @@ import { authOptions } from "@/lib/auth"
 import { PrismaClient } from "@prisma/client"
 
 const prisma = new PrismaClient()
+// Importar tanto el emisor local como el cliente externo
 import { emitCrossing, emitCrossingStats, emitPreRegistrationAlert } from "@/lib/socket"
+import { emitCrossingToExternal, emitCrossingStatsToExternal, emitPreRegistrationAlertToExternal } from "@/lib/socket-client"
 
 export async function POST(request: NextRequest) {
   try {
@@ -203,35 +205,45 @@ export async function POST(request: NextRequest) {
     const totalParticipants = updatedSession.totalParticipants
     const remainingCount = totalParticipants - crossedCount
 
-    // Evento de cruce para pantalla gigante
-    emitCrossing(sessionId, {
+    const crossingData = {
       participantId: participant.id,
       participantName: participant.nombre,
       participantImage: participant.imagen,
       crossedCount,
       totalParticipants,
       timestamp: Date.now()
-    })
+    }
 
-    // Actualización de stats
-    emitCrossingStats(sessionId, {
+    const statsData = {
       crossedCount,
       totalParticipants,
       remainingCount,
       percentageCrossed: Math.round((crossedCount / totalParticipants) * 100)
-    })
+    }
+
+    // Emitir a socket local (si existe)
+    emitCrossing(sessionId, crossingData)
+    emitCrossingStats(sessionId, statsData)
+
+    // Emitir al servidor socket externo (para producción)
+    emitCrossingToExternal(sessionId, crossingData).catch(console.error)
+    emitCrossingStatsToExternal(sessionId, statsData).catch(console.error)
 
     // 10. Emitir alerta al dashboard del participante
     const countdownSeconds = Math.floor((promoDeadline.getTime() - Date.now()) / 1000)
     
-    emitPreRegistrationAlert(participant.id.toString(), {
+    const alertData = {
       preRegistrationId: preRegistration.id,
       targetProductName: targetProduct.name,
       promoPrice,
       regularPrice,
       promoDeadline: promoDeadline.toISOString(),
       countdown: countdownSeconds
-    })
+    }
+
+    // Emitir a socket local y externo
+    emitPreRegistrationAlert(participant.id.toString(), alertData)
+    emitPreRegistrationAlertToExternal(participant.id.toString(), alertData).catch(console.error)
 
     // 11. Respuesta exitosa para el staff
     return NextResponse.json({
