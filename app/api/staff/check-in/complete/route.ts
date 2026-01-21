@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { triggerEnrollmentTaskCompletion } from '@/lib/enrollment-task-trigger';
 
 // POST - Completar el check-in: registrar asistencia y consumir licencia
 export async function POST(request: NextRequest) {
@@ -228,6 +229,27 @@ export async function POST(request: NextRequest) {
           }
         });
         console.log(`✅ Asistencia marcada automáticamente para enrollment ${enrollment.id} - Usuario: ${user.nombre}`);
+
+        // *** TRIGGER: Completar tarea de enrolamiento del invitador ***
+        // Si este usuario fue invitado por alguien y está asistiendo a BASIC,
+        // completar automáticamente una tarea de enrolamiento del invitador
+        if (enrollment.level === 'BASIC') {
+          try {
+            const triggerResult = await triggerEnrollmentTaskCompletion(
+              parseInt(userId),
+              enrollment.level
+            );
+            
+            if (triggerResult.taskCompleted) {
+              console.log(`🎉 Tarea de enrolamiento completada: ${triggerResult.inviterName} enroló a ${triggerResult.guestName}`);
+            } else {
+              console.log(`ℹ️ Trigger de enrolamiento: ${triggerResult.message}`);
+            }
+          } catch (triggerError) {
+            // No fallar el check-in si el trigger falla
+            console.error('⚠️ Error en trigger de enrolamiento (no crítico):', triggerError);
+          }
+        }
       }
     }
 

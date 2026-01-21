@@ -59,6 +59,19 @@ export async function POST(req: Request) {
         );
       }
 
+      // *** BLOQUEAR COMPLETADO MANUAL PARA TAREAS DE ENROLAMIENTO ***
+      // Las tareas de servicioTrans (Servicio Transformacional) solo se completan automáticamente
+      // cuando un invitado asiste al entrenamiento
+      if (task.Accion?.Meta?.categoria === 'servicioTrans') {
+        return NextResponse.json(
+          { 
+            error: 'Las tareas de enrolamiento se completan automáticamente',
+            message: '🎯 Esta tarea se completará cuando tu invitado asista al entrenamiento. Comparte tu código QR para invitar personas.'
+          },
+          { status: 403 }
+        );
+      }
+
       // Generar nombre único para el archivo
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);

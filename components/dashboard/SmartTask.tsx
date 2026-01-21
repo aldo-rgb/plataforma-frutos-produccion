@@ -59,10 +59,14 @@ export default function SmartTask({ task, onUpdate, onUploadEvidence }: SmartTas
 
   const delayInfo = calculateDelayLabel();
 
+  // Detectar si es tarea de enrolamiento (SERVICIO TRANSFORMADOR)
+  const isEnrollmentTask = task.areaType === 'SERVICIO TRANSFORMADOR' || task.areaType === 'servicioTrans';
+
   // 2. MANEJO DE EVIDENCIA
   const handleCircleClick = () => {
     if (task.status === 'COMPLETED') return;
     if (task.evidenceStatus === 'PENDING') return; // Bloqueado si espera mentor
+    if (isEnrollmentTask) return; // Bloqueado para tareas de enrolamiento
     
     // Abrir modal de evidencia
     onUploadEvidence(task.id, task.accionId, task.metaId);
@@ -182,7 +186,13 @@ export default function SmartTask({ task, onUpdate, onUploadEvidence }: SmartTas
           {/* F. BOTÓN DE SUBIR/VER EVIDENCIA */}
           {task.status !== 'COMPLETED' && (
             <div className="mt-3">
-              {task.evidenceStatus === 'PENDING' ? (
+              {/* Tareas de enrolamiento: Mostrar mensaje especial */}
+              {isEnrollmentTask ? (
+                <div className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-indigo-900/30 border border-indigo-500/30 text-indigo-300">
+                  <span className="text-lg">📱</span>
+                  <span>Se completa cuando tu invitado asista</span>
+                </div>
+              ) : task.evidenceStatus === 'PENDING' ? (
                 <button
                   onClick={() => onUploadEvidence(task.id, task.accionId, task.metaId)}
                   className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all bg-blue-600 hover:bg-blue-500 text-white shadow-lg"
@@ -209,8 +219,8 @@ export default function SmartTask({ task, onUpdate, onUploadEvidence }: SmartTas
         </div>
       </div>
 
-      {/* G. BOTÓN DE REAGENDAR (Siempre visible y claro) */}
-      {task.status !== 'COMPLETED' && task.evidenceStatus !== 'PENDING' && (
+      {/* G. BOTÓN DE REAGENDAR (Siempre visible y claro) - NO para tareas de enrolamiento */}
+      {task.status !== 'COMPLETED' && task.evidenceStatus !== 'PENDING' && !isEnrollmentTask && (
         <div className="absolute top-4 right-4">
           <button 
             onClick={() => setIsMenuOpen(!isMenuOpen)}
