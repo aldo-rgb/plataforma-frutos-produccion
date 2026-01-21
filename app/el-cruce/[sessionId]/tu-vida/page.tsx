@@ -1154,6 +1154,10 @@ export default function ElAtravesarTuVidaPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const crossSoundRef = useRef<HTMLAudioElement | null>(null)
   
+  // Ref para trackear IDs ya cruzados (para polling)
+  const crossedIdsRef = useRef<Set<number>>(new Set())
+  const isAnimatingRef = useRef<boolean>(false)
+  
   // Cola de participantes que deben cruzar con animación al inicio
   const [initialCrossingQueue, setInitialCrossingQueue] = useState<Participant[]>([])
   const [isInitialCrossingActive, setIsInitialCrossingActive] = useState(false)
@@ -1216,6 +1220,10 @@ export default function ElAtravesarTuVidaPage() {
           setPendingParticipants([...pending, ...crossed])
           setCrossedParticipants([]) // Empezar vacío, se llenarán con las animaciones
           
+          // Inicializar el Set de IDs que ya cruzaron para que el polling no los duplique
+          crossedIdsRef.current = new Set(crossed.map((p: any) => p.id))
+          console.log('🎯 crossedIdsRef inicializado con', crossedIdsRef.current.size, 'IDs')
+          
           // Si hay usuarios que ya cruzaron, ponerlos en la cola de animación
           if (crossed.length > 0) {
             setInitialCrossingQueue(crossed)
@@ -1251,28 +1259,31 @@ export default function ElAtravesarTuVidaPage() {
           const data = await res.json()
           if (data.session) {
             const crossed = data.session.crossed || []
-            const pending = data.session.pending || []
             
-            // Detectar nuevos cruces comparando con el estado actual
-            const currentCrossedIds = new Set(crossedParticipants.map((p: Participant) => p.id))
-            const newCrossed = crossed.filter((p: any) => !currentCrossedIds.has(p.id))
+            // Detectar nuevos cruces usando la ref (no el state)
+            const newCrossed = crossed.filter((p: any) => !crossedIdsRef.current.has(p.id))
             
-            if (newCrossed.length > 0) {
-              console.log('🔄 Polling detectó nuevos cruces:', newCrossed.length)
+            if (newCrossed.length > 0 && !isAnimatingRef.current) {
+              console.log('🔄 Polling detectó nuevos cruces:', newCrossed.length, newCrossed.map((p: any) => p.name))
+              
               // Animar el primer nuevo cruce
               const firstNew = newCrossed[0]
               const participant: Participant = {
                 id: firstNew.id,
-                name: firstNew.name || firstNew.participantName || 'Participante',
-                image: firstNew.image || firstNew.participantImage || null
+                name: firstNew.name || 'Participante',
+                image: firstNew.image || null
               }
               
-              if (!crossingParticipant) {
-                setCrossingParticipant(participant)
-                if (!muted && crossSoundRef.current) {
-                  crossSoundRef.current.currentTime = 0
-                  crossSoundRef.current.play().catch(() => {})
-                }
+              // Marcar como animando y agregar a la ref
+              isAnimatingRef.current = true
+              crossedIdsRef.current.add(firstNew.id)
+              
+              // Iniciar animación
+              setCrossingParticipant(participant)
+              
+              if (!muted && crossSoundRef.current) {
+                crossSoundRef.current.currentTime = 0
+                crossSoundRef.current.play().catch(() => {})
               }
             }
             
@@ -1291,7 +1302,7 @@ export default function ElAtravesarTuVidaPage() {
       } catch (e) {
         // Silenciar errores de polling
       }
-    }, 3000)
+    }, 2000) // Polling cada 2 segundos para detectar cruces más rápido
     
     return () => clearInterval(pollInterval)
   }, [sessionId])
@@ -1397,6 +1408,9 @@ export default function ElAtravesarTuVidaPage() {
       // Agregar al INICIO de la lista (el más reciente arriba)
       setCrossedParticipants(prev => [crossingParticipant, ...prev])
       
+      // Agregar a la ref de IDs cruzados
+      crossedIdsRef.current.add(crossingParticipant.id)
+      
       // Actualizar estadísticas
       setStats(prev => {
         const newCrossedCount = prev.crossedCount + 1
@@ -1411,6 +1425,9 @@ export default function ElAtravesarTuVidaPage() {
       })
       
       setCrossingParticipant(null)
+      
+      // Marcar que ya no estamos animando (permitir siguiente animación)
+      isAnimatingRef.current = false
       
       // Si ya no hay más en la cola inicial, marcar como completado
       if (initialCrossingQueue.length === 0) {
