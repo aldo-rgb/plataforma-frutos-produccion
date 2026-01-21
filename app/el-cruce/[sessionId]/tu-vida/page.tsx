@@ -1274,24 +1274,56 @@ export default function ElAtravesarTuVidaPage() {
   useEffect(() => {
     const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'wss://socket.quantummatter.app'
     const newSocket = io(socketUrl, {
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
       query: { sessionId }
     })
     
     newSocket.on('connect', () => {
       console.log('🔌 Conectado a WebSocket - Tu Vida')
-      newSocket.emit('join-session', sessionId)
+      // Usar el evento correcto para unirse a la sesión
+      newSocket.emit('join_crossing_display', sessionId)
     })
     
-    newSocket.on('participant-crossed', (data: { participant: Participant }) => {
+    // Escuchar evento de cruce (emitido por broadcast_crossing)
+    newSocket.on('participant_crossed', (data: any) => {
+      console.log('🌟 Participante cruzó:', data)
+      // Crear objeto participante desde los datos
+      const participant: Participant = {
+        id: data.participantId,
+        name: data.participantName,
+        image: data.participantImage || null
+      }
       // Iniciar animación de cruce
-      setCrossingParticipant(data.participant)
+      setCrossingParticipant(participant)
       
       // Reproducir sonido
       if (!muted && crossSoundRef.current) {
         crossSoundRef.current.currentTime = 0
         crossSoundRef.current.play().catch(() => {})
       }
+    })
+    
+    // También escuchar el formato antiguo por compatibilidad
+    newSocket.on('participant-crossed', (data: { participant: Participant }) => {
+      console.log('🌟 Participante cruzó (formato antiguo):', data)
+      setCrossingParticipant(data.participant)
+      
+      if (!muted && crossSoundRef.current) {
+        crossSoundRef.current.currentTime = 0
+        crossSoundRef.current.play().catch(() => {})
+      }
+    })
+    
+    // Escuchar actualización de estadísticas
+    newSocket.on('crossing_stats_update', (newStats: any) => {
+      console.log('📊 Stats actualizados:', newStats)
+      setStats(prev => ({
+        ...prev,
+        crossedCount: newStats.crossedCount || prev.crossedCount,
+        remainingCount: newStats.remainingCount || prev.remainingCount,
+        percentageCrossed: newStats.percentageCrossed || prev.percentageCrossed,
+        totalParticipants: newStats.totalParticipants || prev.totalParticipants
+      }))
     })
     
     newSocket.on('stats-updated', (newStats: CrossingStats) => {

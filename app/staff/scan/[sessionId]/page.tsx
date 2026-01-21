@@ -72,6 +72,7 @@ export default function StaffScanPage() {
   const videoRef = useRef<HTMLDivElement>(null)
   const nfcReaderRef = useRef<any>(null)
   const scanCooldownRef = useRef<boolean>(false)
+  const scannedCodesRef = useRef<Set<string>>(new Set()) // Códigos ya escaneados en esta sesión
 
   // Conectar Socket.IO
   useEffect(() => {
@@ -123,8 +124,8 @@ export default function StaffScanPage() {
           aspectRatio: 1.0
         },
         (decodedText) => {
-          // Solo procesar si no estamos en cooldown
-          if (!scanCooldownRef.current) {
+          // Solo procesar si no estamos en cooldown Y no hemos escaneado este código antes
+          if (!scanCooldownRef.current && !scannedCodesRef.current.has(decodedText.trim())) {
             handleScan(decodedText, "QR")
           }
         },
@@ -139,7 +140,7 @@ export default function StaffScanPage() {
             qrbox: { width: 200, height: 200 }
           },
           (decodedText) => {
-            if (!scanCooldownRef.current) {
+            if (!scanCooldownRef.current && !scannedCodesRef.current.has(decodedText.trim())) {
               handleScan(decodedText, "QR")
             }
           },
@@ -276,19 +277,26 @@ export default function StaffScanPage() {
     // Activar cooldown INMEDIATAMENTE antes de cualquier otra cosa
     scanCooldownRef.current = true
     
+    const trimmedCode = code.trim()
+    
     // Evitar escaneos repetidos del mismo código
-    if (scanning || !code.trim()) {
+    if (scanning || !trimmedCode) {
       scanCooldownRef.current = false
       return
     }
-    if (code.trim() === lastScannedCode) {
-      console.log("🔄 Código repetido, ignorando:", code)
-      // Mantener cooldown por un momento para códigos repetidos
-      setTimeout(() => { scanCooldownRef.current = false }, 1000)
+    
+    // Verificar si ya escaneamos este código en esta sesión
+    if (scannedCodesRef.current.has(trimmedCode)) {
+      console.log("🔄 Código ya escaneado en esta sesión, ignorando:", trimmedCode)
+      // Cooldown corto para evitar spam
+      setTimeout(() => { scanCooldownRef.current = false }, 500)
       return
     }
     
-    setLastScannedCode(code.trim())
+    // Agregar código al Set de escaneados ANTES de procesar
+    scannedCodesRef.current.add(trimmedCode)
+    
+    setLastScannedCode(trimmedCode)
     setScanning(true)
     setScanResult("scanning")
     setErrorMessage("")
@@ -299,7 +307,7 @@ export default function StaffScanPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId,
-          participantCode: code.trim(),
+          participantCode: trimmedCode,
           scanMethod: method
         })
       })
