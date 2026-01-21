@@ -65,10 +65,13 @@ export default function StaffScanPage() {
   const [nfcSupported, setNfcSupported] = useState(false)
   const [nfcReading, setNfcReading] = useState(false)
   const [nfcError, setNfcError] = useState<string | null>(null)
+  const [lastScannedCode, setLastScannedCode] = useState<string>("")
+  const [errorMessage, setErrorMessage] = useState<string>("")
   
   const qrScannerRef = useRef<Html5Qrcode | null>(null)
   const videoRef = useRef<HTMLDivElement>(null)
   const nfcReaderRef = useRef<any>(null)
+  const scanCooldownRef = useRef<boolean>(false)
 
   // Conectar Socket.IO
   useEffect(() => {
@@ -249,19 +252,25 @@ export default function StaffScanPage() {
     }
   }, [scanMode, startQRScanner, stopQRScanner, startNFCReader, stopNFCReader])
 
-  // Vibrar dispositivo
+  // Vibrar dispositivo (con stop primero para evitar loops)
   const vibrate = (pattern: number | number[]) => {
     if (typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate(0) // Detener vibración actual
       navigator.vibrate(pattern)
     }
   }
 
   // Procesar escaneo
   const handleScan = async (code: string, method: string) => {
-    if (scanning || !code.trim()) return
-
+    // Evitar escaneos repetidos del mismo código o durante cooldown
+    if (scanning || !code.trim() || scanCooldownRef.current) return
+    if (code.trim() === lastScannedCode) return
+    
+    scanCooldownRef.current = true
+    setLastScannedCode(code.trim())
     setScanning(true)
     setScanResult("scanning")
+    setErrorMessage("")
 
     try {
       const res = await fetch("/api/el-cruce/scan", {
@@ -290,23 +299,30 @@ export default function StaffScanPage() {
         }
       } else {
         setScanResult("error")
-        vibrate([100, 100, 100, 100, 100]) // Vibración de error
-        setLastScanned({ success: false, message: data.message || "Error" } as ScanResponse)
+        vibrate([100, 50, 100]) // Vibración corta de error
+        const errMsg = data.message || data.error || "Error desconocido"
+        setErrorMessage(errMsg)
+        setLastScanned({ success: false, message: errMsg } as ScanResponse)
       }
-    } catch (error) {
+    } catch (error: any) {
       setScanResult("error")
-      vibrate([100, 100, 100, 100, 100])
-      setLastScanned({ success: false, message: "Error de conexión" } as ScanResponse)
+      vibrate([100, 50, 100])
+      const errMsg = error?.message || "Error de conexión"
+      setErrorMessage(errMsg)
+      setLastScanned({ success: false, message: errMsg } as ScanResponse)
     }
 
     setScanning(false)
     setManualCode("")
 
-    // Resetear después de 2 segundos
+    // Resetear después de 3 segundos
     setTimeout(() => {
       setScanResult("idle")
       setLastScanned(null)
-    }, 2000)
+      setLastScannedCode("")
+      setErrorMessage("")
+      scanCooldownRef.current = false
+    }, 3000)
   }
 
   // Enviar código manual
@@ -400,6 +416,18 @@ export default function StaffScanPage() {
                 transition={{ delay: 0.3 }}
               >
                 {lastScanned.participant.nombre}
+              </motion.p>
+            )}
+
+            {/* Mostrar mensaje de error detallado */}
+            {scanResult === "error" && errorMessage && (
+              <motion.p
+                className="text-sm text-white/70 mt-4 px-6 text-center max-w-xs"
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.4 }}
+              >
+                {errorMessage}
               </motion.p>
             )}
           </motion.div>
