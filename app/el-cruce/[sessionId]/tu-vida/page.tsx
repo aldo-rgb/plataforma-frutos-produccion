@@ -12,6 +12,8 @@ interface Participant {
   image?: string | null
   gender?: 'M' | 'F' | null
   saltoQuantico?: string // Meta principal del Wizard v2
+  hasWizard?: boolean // Si tiene carta wizard completada
+  keywords?: string[] // Palabras clave extraídas del wizard
   status?: string
 }
 
@@ -30,6 +32,21 @@ interface CrossingStats {
 
 const ShadowAvatar = ({ participant, index, total }: { participant: Participant; index: number; total: number }) => {
   const [isNearRift, setIsNearRift] = useState(false)
+  const [currentKeywordIndex, setCurrentKeywordIndex] = useState(0)
+  
+  // Keywords del wizard o fallback
+  const keywords = participant.hasWizard && participant.keywords && participant.keywords.length > 0
+    ? participant.keywords
+    : [participant.saltoQuantico || 'Mi sueño...']
+  
+  // Rotar keywords cada 2 segundos
+  useEffect(() => {
+    if (keywords.length <= 1) return
+    const interval = setInterval(() => {
+      setCurrentKeywordIndex(prev => (prev + 1) % keywords.length)
+    }, 2000 + Math.random() * 1000) // 2-3 segundos aleatorio
+    return () => clearInterval(interval)
+  }, [keywords.length])
   
   // Generador de números pseudo-aleatorios basado en el ID del participante para consistencia
   const hashCode = (str: string) => {
@@ -267,17 +284,24 @@ const ShadowAvatar = ({ participant, index, total }: { participant: Participant;
           />
         </motion.div>
         
-        {/* ═══ TEXTO DE META ═══ */}
+        {/* ═══ TEXTO DE META (KEYWORDS ROTATIVAS SI TIENE WIZARD) ═══ */}
         <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap">
-          <motion.p 
-            className="text-[10px] font-semibold italic text-center max-w-[100px] truncate"
-            animate={{
-              color: isNearRift ? '#a78bfa' : '#94a3b8',
-            }}
-            transition={{ duration: 0.5 }}
-          >
-            "{participant.saltoQuantico || 'Mi sueño...'}"
-          </motion.p>
+          <AnimatePresence mode="wait">
+            <motion.p 
+              key={currentKeywordIndex}
+              className="text-[10px] font-semibold italic text-center max-w-[100px] truncate uppercase"
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ 
+                opacity: 1, 
+                y: 0,
+                color: isNearRift ? '#a78bfa' : '#94a3b8',
+              }}
+              exit={{ opacity: 0, y: -5 }}
+              transition={{ duration: 0.4 }}
+            >
+              {participant.hasWizard ? keywords[currentKeywordIndex] : `"${keywords[0]}"`}
+            </motion.p>
+          </AnimatePresence>
         </div>
       </motion.div>
       
@@ -302,6 +326,22 @@ const ShadowAvatar = ({ participant, index, total }: { participant: Participant;
 // ═══════════════════════════════════════════════════════════════
 
 const LightAvatar = ({ participant, index, total }: { participant: Participant; index: number; total: number }) => {
+  const [currentKeywordIndex, setCurrentKeywordIndex] = useState(0)
+  
+  // Keywords del wizard o fallback
+  const keywords = participant.hasWizard && participant.keywords && participant.keywords.length > 0
+    ? participant.keywords
+    : [participant.saltoQuantico || '¡LO LOGRÉ!']
+  
+  // Rotar keywords más rápido (energía positiva!)
+  useEffect(() => {
+    if (keywords.length <= 1) return
+    const interval = setInterval(() => {
+      setCurrentKeywordIndex(prev => (prev + 1) % keywords.length)
+    }, 1500 + Math.random() * 500) // 1.5-2 segundos (más rápido que sombra)
+    return () => clearInterval(interval)
+  }, [keywords.length])
+  
   // Distribuir en grid virtual para cubrir toda la mitad derecha
   const cols = Math.ceil(Math.sqrt(Math.max(total, 1)))
   const rows = Math.ceil(Math.max(total, 1) / cols)
@@ -514,7 +554,7 @@ const LightAvatar = ({ participant, index, total }: { participant: Participant; 
           />
         </div>
         
-        {/* ═══ BANNER DE META MANIFESTADA ═══ */}
+        {/* ═══ BANNER DE META MANIFESTADA (KEYWORDS ROTATIVAS) ═══ */}
         <motion.div
           className="absolute -top-16 left-1/2 -translate-x-1/2"
           animate={{
@@ -530,10 +570,19 @@ const LightAvatar = ({ participant, index, total }: { participant: Participant; 
             transition={{ duration: 2, repeat: Infinity }}
           />
           
-          <div className="relative bg-gradient-to-r from-amber-500 via-yellow-400 to-orange-500 px-4 py-2 rounded-xl shadow-lg shadow-amber-500/50 border border-yellow-300/50">
-            <p className="text-[11px] font-bold text-slate-900 max-w-[100px] text-center uppercase leading-tight">
-              {participant.saltoQuantico || '¡LO LOGRÉ!'}
-            </p>
+          <div className="relative bg-gradient-to-r from-amber-500 via-yellow-400 to-orange-500 px-4 py-2 rounded-xl shadow-lg shadow-amber-500/50 border border-yellow-300/50 overflow-hidden">
+            <AnimatePresence mode="wait">
+              <motion.p 
+                key={currentKeywordIndex}
+                className="text-[11px] font-bold text-slate-900 max-w-[100px] text-center uppercase leading-tight"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+              >
+                {participant.hasWizard ? `✨ ${keywords[currentKeywordIndex]}` : keywords[0]}
+              </motion.p>
+            </AnimatePresence>
           </div>
           
           {/* Sparkles */}

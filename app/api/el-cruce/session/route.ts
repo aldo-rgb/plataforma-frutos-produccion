@@ -78,10 +78,21 @@ export async function GET(request: NextRequest) {
                   take: 1,
                   orderBy: { fechaCreacion: 'desc' },
                   select: {
+                    id: true,
+                    estado: true,
+                    // Todas las declaraciones del wizard
+                    finanzasDeclaracion: true,
+                    relacionesDeclaracion: true,
+                    talentosDeclaracion: true,
+                    saludDeclaracion: true,
+                    pazMentalDeclaracion: true,
+                    ocioDeclaracion: true,
+                    servicioTransDeclaracion: true,
+                    servicioComunDeclaracion: true,
+                    // Todas las metas
                     Meta: {
-                      take: 1,
                       orderBy: { orden: 'asc' },
-                      select: { metaPrincipal: true }
+                      select: { metaPrincipal: true, categoria: true }
                     }
                   }
                 }
@@ -109,10 +120,19 @@ export async function GET(request: NextRequest) {
                   take: 1,
                   orderBy: { fechaCreacion: 'desc' },
                   select: {
+                    id: true,
+                    estado: true,
+                    finanzasDeclaracion: true,
+                    relacionesDeclaracion: true,
+                    talentosDeclaracion: true,
+                    saludDeclaracion: true,
+                    pazMentalDeclaracion: true,
+                    ocioDeclaracion: true,
+                    servicioTransDeclaracion: true,
+                    servicioComunDeclaracion: true,
                     Meta: {
-                      take: 1,
                       orderBy: { orden: 'asc' },
-                      select: { metaPrincipal: true }
+                      select: { metaPrincipal: true, categoria: true }
                     }
                   }
                 }
@@ -139,10 +159,19 @@ export async function GET(request: NextRequest) {
                   take: 1,
                   orderBy: { fechaCreacion: 'desc' },
                   select: {
+                    id: true,
+                    estado: true,
+                    finanzasDeclaracion: true,
+                    relacionesDeclaracion: true,
+                    talentosDeclaracion: true,
+                    saludDeclaracion: true,
+                    pazMentalDeclaracion: true,
+                    ocioDeclaracion: true,
+                    servicioTransDeclaracion: true,
+                    servicioComunDeclaracion: true,
                     Meta: {
-                      take: 1,
                       orderBy: { orden: 'asc' },
-                      select: { metaPrincipal: true }
+                      select: { metaPrincipal: true, categoria: true }
                     }
                   }
                 }
@@ -157,6 +186,134 @@ export async function GET(request: NextRequest) {
       const plTicketUserIds = new Set(plTicketHolders.map(p => p.userId))
       const crossedUserIds = new Set([...preRegisteredUserIds, ...plTicketUserIds])
 
+      // ═══════════════════════════════════════════════════════════════
+      // EXTRAER PALABRAS CLAVE DE LAS METAS DEL WIZARD
+      // ═══════════════════════════════════════════════════════════════
+      
+      // Palabras comunes que NO son importantes (stop words en español)
+      const stopWords = new Set([
+        'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'de', 'del', 'al',
+        'y', 'o', 'que', 'en', 'con', 'por', 'para', 'es', 'son', 'ser', 'estar',
+        'mi', 'mis', 'tu', 'tus', 'su', 'sus', 'yo', 'soy', 'me', 'te', 'se',
+        'a', 'e', 'i', 'u', 'como', 'más', 'muy', 'si', 'no', 'lo', 'le', 'les',
+        'ya', 'cada', 'todo', 'toda', 'todos', 'todas', 'este', 'esta', 'esto',
+        'donde', 'cuando', 'porque', 'quien', 'cual', 'qué', 'hay', 'ha', 'he',
+        'tener', 'tengo', 'tiene', 'quiero', 'voy', 'hacer', 'hago', 'hace',
+        'día', 'vida', 'gran', 'grande', 'nuevo', 'nueva', 'mejor', 'bien',
+        'momento', 'forma', 'manera', 'nivel', 'manera', 'vez', 'través', 'año', 'años'
+      ])
+
+      // Palabras importantes relacionadas con metas (priorizarlas)
+      const importantPatterns = [
+        // Dinero y finanzas
+        /\$[\d,]+|\d+[\s,]*(?:mil(?:lones?)?|mdp|mxn|usd|dólares?|pesos)/gi,
+        /\b(dinero|millonario|abundancia|riqueza|fortuna|patrimonio|ingresos?|ganancias?|inversión|inversiones|ahorro|ahorros)\b/gi,
+        // Posesiones
+        /\b(casa|departamento|depa|terreno|rancho|propiedad|propiedades|carro|auto|coche|camioneta|tesla|mercedes|bmw|porsche|ferrari)\b/gi,
+        // Viajes y experiencias
+        /\b(viaje|viajes|viajar|europa|asia|japón|disney|crucero|playa|vacaciones|aventura)\b/gi,
+        // Salud y bienestar
+        /\b(salud|fitness|gym|gimnasio|peso|kilos|músculo|maratón|correr|ejercicio|energía)\b/gi,
+        // Familia y relaciones
+        /\b(familia|hijos?|esposa?|pareja|matrimonio|boda|amor|relación|papá|mamá|padres)\b/gi,
+        // Negocios y carrera
+        /\b(negocio|negocios|empresa|emprendimiento|startup|jefe|director|gerente|líder|equipo|cliente|clientes|ventas)\b/gi,
+        // Educación
+        /\b(universidad|maestría|doctorado|certificación|curso|título|graduación|estudiar|carrera)\b/gi,
+        // Metas específicas
+        /\b(libertad|independencia|éxito|logro|meta|sueño|objetivo|propósito|misión|visión|impacto)\b/gi
+      ]
+
+      // Función para extraer palabras clave de texto
+      const extractKeywords = (text: string): string[] => {
+        if (!text || typeof text !== 'string') return []
+        
+        const keywords: string[] = []
+        
+        // Primero buscar patrones importantes (cantidades de dinero, posesiones específicas)
+        importantPatterns.forEach(pattern => {
+          const matches = text.match(pattern)
+          if (matches) {
+            matches.forEach(match => {
+              const clean = match.trim().toLowerCase()
+              if (clean.length > 2 && !keywords.includes(clean)) {
+                keywords.push(clean)
+              }
+            })
+          }
+        })
+        
+        // Luego extraer otras palabras significativas (sustantivos largos)
+        const words = text
+          .toLowerCase()
+          .replace(/[^\wáéíóúñü\s]/g, ' ')
+          .split(/\s+/)
+          .filter(word => 
+            word.length >= 4 && 
+            !stopWords.has(word) &&
+            !keywords.includes(word)
+          )
+        
+        // Agregar palabras únicas que no están ya en keywords
+        words.forEach(word => {
+          if (!keywords.includes(word) && keywords.length < 20) {
+            keywords.push(word)
+          }
+        })
+        
+        return keywords
+      }
+
+      // Función para obtener datos completos del wizard
+      const getWizardKeywords = (user: any): { hasWizard: boolean; keywords: string[] } => {
+        const carta = user?.CartaFrutos?.[0]
+        
+        // Si no tiene carta o está en borrador, no tiene wizard completo
+        if (!carta || carta.estado === 'BORRADOR') {
+          return { hasWizard: false, keywords: [] }
+        }
+        
+        const allKeywords: string[] = []
+        
+        // Extraer de todas las declaraciones del wizard
+        const declaraciones = [
+          carta.finanzasDeclaracion,
+          carta.relacionesDeclaracion,
+          carta.talentosDeclaracion,
+          carta.saludDeclaracion,
+          carta.pazMentalDeclaracion,
+          carta.ocioDeclaracion,
+          carta.servicioTransDeclaracion,
+          carta.servicioComunDeclaracion
+        ]
+        
+        declaraciones.forEach(dec => {
+          if (dec) {
+            const kw = extractKeywords(dec)
+            kw.forEach(k => {
+              if (!allKeywords.includes(k)) allKeywords.push(k)
+            })
+          }
+        })
+        
+        // Extraer de todas las metas
+        if (carta.Meta && Array.isArray(carta.Meta)) {
+          carta.Meta.forEach((meta: any) => {
+            if (meta.metaPrincipal) {
+              const kw = extractKeywords(meta.metaPrincipal)
+              kw.forEach(k => {
+                if (!allKeywords.includes(k)) allKeywords.push(k)
+              })
+            }
+          })
+        }
+        
+        // Si tiene al menos 3 keywords, consideramos que tiene wizard válido
+        const hasWizard = allKeywords.length >= 3
+        
+        return { hasWizard, keywords: allKeywords.slice(0, 15) } // Máximo 15 palabras
+      }
+
       // Helper para obtener salto cuántico (meta principal)
       const getSaltoQuantico = (user: any) => {
         // Prioridad: Meta de la Carta > goals del usuario > default
@@ -165,37 +322,52 @@ export async function GET(request: NextRequest) {
       }
 
       // Formatear participantes cruzados (pre-registros + tickets de PL)
-      const crossedFromPreReg = preRegistered.map(p => ({
-        id: p.userId,
-        name: p.user.nombre || 'Participante',
-        image: p.user.profileImage,
-        saltoQuantico: getSaltoQuantico(p.user),
-        status: p.status,
-        source: 'preregistration'
-      }))
+      const crossedFromPreReg = preRegistered.map(p => {
+        const wizardData = getWizardKeywords(p.user)
+        return {
+          id: p.userId,
+          name: p.user.nombre || 'Participante',
+          image: p.user.profileImage,
+          saltoQuantico: getSaltoQuantico(p.user),
+          hasWizard: wizardData.hasWizard,
+          keywords: wizardData.keywords,
+          status: p.status,
+          source: 'preregistration'
+        }
+      })
       
       // Agregar usuarios con ticket de PL que no están en pre-registros
       const crossedFromTickets = plTicketHolders
         .filter(t => !preRegisteredUserIds.has(t.userId))
-        .map(t => ({
-          id: t.userId,
-          name: t.user.nombre || 'Participante',
-          image: t.user.profileImage,
-          saltoQuantico: getSaltoQuantico(t.user),
-          status: 'PAID',
-          source: 'pl_ticket'
-        }))
+        .map(t => {
+          const wizardData = getWizardKeywords(t.user)
+          return {
+            id: t.userId,
+            name: t.user.nombre || 'Participante',
+            image: t.user.profileImage,
+            saltoQuantico: getSaltoQuantico(t.user),
+            hasWizard: wizardData.hasWizard,
+            keywords: wizardData.keywords,
+            status: 'PAID',
+            source: 'pl_ticket'
+          }
+        })
       
       const crossedParticipants = [...crossedFromPreReg, ...crossedFromTickets]
 
       const waitingParticipants = checkedInUsers
         .filter(u => !crossedUserIds.has(u.userId))
-        .map(u => ({
-          id: u.userId,
-          name: u.Usuario.nombre || 'Participante',
-          image: u.Usuario.profileImage,
-          saltoQuantico: getSaltoQuantico(u.Usuario)
-        }))
+        .map(u => {
+          const wizardData = getWizardKeywords(u.Usuario)
+          return {
+            id: u.userId,
+            name: u.Usuario.nombre || 'Participante',
+            image: u.Usuario.profileImage,
+            saltoQuantico: getSaltoQuantico(u.Usuario),
+            hasWizard: wizardData.hasWizard,
+            keywords: wizardData.keywords
+          }
+        })
 
       // Obtener estadísticas de la Master Organización (optimizado con cache simple)
       // Estas estadísticas cambian muy poco, podemos hacer queries más ligeras
