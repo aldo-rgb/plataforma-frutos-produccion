@@ -444,7 +444,7 @@ export default function ElCrucePage() {
   useEffect(() => {
     if (!sessionId) return
 
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3000"
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "wss://socket.quantummatter.app"
     const newSocket = io(socketUrl, {
       transports: ["websocket", "polling"]
     })

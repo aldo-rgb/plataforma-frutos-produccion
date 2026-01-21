@@ -69,7 +69,7 @@ export default function AdvancedPreRegistrationAlert({ userId, onPayClick }: Pro
 
   // Conectar Socket.IO para recibir alertas en tiempo real
   useEffect(() => {
-    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3000"
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "wss://socket.quantummatter.app"
     const newSocket = io(socketUrl, {
       transports: ["websocket", "polling"]
     })
