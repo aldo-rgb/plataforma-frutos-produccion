@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
         where: { id: crossingSession.targetProductId }
       })
     } else {
-      // Buscar próximo producto del nivel target
+      // Buscar próximo producto del nivel target - primero con fecha futura
       targetProduct = await prisma.schoolProduct.findFirst({
         where: {
           visionId: crossingSession.product.visionId,
@@ -121,6 +121,18 @@ export async function POST(request: NextRequest) {
         },
         orderBy: { startDate: "asc" }
       })
+      
+      // Si no hay con fecha futura, buscar cualquier producto activo del nivel target
+      if (!targetProduct) {
+        targetProduct = await prisma.schoolProduct.findFirst({
+          where: {
+            visionId: crossingSession.product.visionId,
+            levelType: crossingSession.targetLevel,
+            isActive: true
+          },
+          orderBy: { createdAt: "desc" }
+        })
+      }
     }
 
     if (!targetProduct) {
