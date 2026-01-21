@@ -33,7 +33,7 @@ const ShadowAvatar = ({ participant, index }: { participant: Participant; index:
   
   // Posición en el lado izquierdo (0-45% del ancho)
   const startX = 5 + random(1) * 35
-  const startY = 15 + random(2) * 70
+  const startY = 20 + random(2) * 55
   
   // Movimiento lento y pesado (caminando en círculos - overthinking)
   const circleRadius = 2 + random(3) * 3
@@ -56,81 +56,220 @@ const ShadowAvatar = ({ participant, index }: { participant: Participant; index:
         scale: { duration: 0.8, delay: index * 0.3 },
       }}
     >
-      {/* Avatar cabizabajo */}
+      {/* ════════ NUBE DE TORMENTA (pensamiento pesado) ════════ */}
+      <motion.div
+        className="absolute -top-20 left-1/2 -translate-x-1/2 z-20"
+        animate={{
+          y: [0, -4, 0],
+          opacity: [0.7, 1, 0.7],
+        }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+      >
+        {/* Forma de nube de tormenta */}
+        <div className="relative">
+          {/* Nubes apiladas para efecto de tormenta */}
+          <motion.div 
+            className="absolute -top-1 -left-2 w-8 h-5 bg-slate-700/80 rounded-full blur-sm"
+            animate={{ x: [-2, 2, -2], opacity: [0.6, 0.8, 0.6] }}
+            transition={{ duration: 4, repeat: Infinity }}
+          />
+          <motion.div 
+            className="absolute -top-2 left-4 w-10 h-6 bg-slate-600/70 rounded-full blur-sm"
+            animate={{ x: [2, -2, 2], opacity: [0.5, 0.7, 0.5] }}
+            transition={{ duration: 3.5, repeat: Infinity }}
+          />
+          <motion.div 
+            className="absolute top-0 left-0 w-12 h-5 bg-slate-800/90 rounded-full blur-[2px]"
+          />
+          
+          {/* Rayitos de tormenta ocasionales */}
+          <motion.div
+            className="absolute top-4 left-1/2 -translate-x-1/2 w-0.5 h-3 bg-slate-400/50"
+            animate={{ 
+              opacity: [0, 0.8, 0], 
+              scaleY: [0.5, 1, 0.5],
+            }}
+            transition={{ duration: 0.3, repeat: Infinity, repeatDelay: 3 + random(1) * 2 }}
+          />
+          
+          {/* Contenedor del texto */}
+          <div className="relative bg-gradient-to-b from-slate-700/95 to-slate-800/95 px-3 py-2 rounded-2xl border border-slate-600/30 shadow-2xl mt-1">
+            <p className="text-[10px] text-slate-400/90 font-medium max-w-[100px] text-center leading-tight italic">
+              "{participant.saltoQuantico || 'Mi sueño...'}"
+            </p>
+          </div>
+          
+          {/* Gotas de lluvia cayendo */}
+          {[...Array(3)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute w-0.5 h-2 bg-slate-500/40 rounded-full"
+              style={{ left: `${20 + i * 30}%`, top: '100%' }}
+              animate={{
+                y: [0, 20, 0],
+                opacity: [0, 0.6, 0],
+              }}
+              transition={{
+                duration: 1,
+                repeat: Infinity,
+                delay: i * 0.3,
+                ease: "easeIn"
+              }}
+            />
+          ))}
+        </div>
+      </motion.div>
+
+      {/* ════════ SILUETA DE CUERPO COMPLETO ════════ */}
       <motion.div
         className="relative"
         animate={{
-          y: [0, -3, 0], // Ligero movimiento de respiración pesada
-          rotate: [-5, 0, -5], // Cabeza agachada
+          y: [0, -2, 0],
+          rotate: [-2, 2, -2], // Caminar pesado
         }}
         transition={{
-          duration: 4,
+          duration: 2,
           repeat: Infinity,
           ease: "easeInOut",
         }}
       >
-        {/* Aura de incertidumbre */}
+        {/* Aura de pesadumbre */}
         <motion.div 
-          className="absolute -inset-6 bg-slate-600/20 rounded-full blur-2xl"
+          className="absolute -inset-4 bg-slate-600/15 rounded-full blur-2xl"
           animate={{
-            opacity: [0.2, 0.4, 0.2],
-            scale: [1, 1.2, 1]
+            opacity: [0.2, 0.35, 0.2],
+            scale: [1, 1.15, 1]
           }}
           transition={{ duration: 3, repeat: Infinity }}
         />
         
-        {/* El avatar gris/translúcido */}
-        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center border-2 border-slate-600/30 shadow-2xl relative overflow-hidden">
-          {participant.image ? (
-            <img 
-              src={participant.image} 
-              alt={participant.name}
-              className="w-full h-full rounded-full object-cover grayscale opacity-50 filter brightness-50"
-            />
-          ) : (
-            <span className="text-3xl font-bold text-slate-500/70">
-              {participant.name.charAt(0).toUpperCase()}
-            </span>
-          )}
-          
-          {/* Overlay de tristeza */}
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-slate-900/50 rounded-full" />
-        </div>
-      </motion.div>
-      
-      {/* Globo de pensamiento con la meta (carga mental) */}
-      <motion.div
-        className="absolute -top-16 left-1/2 -translate-x-1/2"
-        animate={{
-          y: [0, -3, 0],
-          opacity: [0.6, 0.9, 0.6],
-          scale: [0.95, 1.02, 0.95],
-        }}
-        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-      >
-        {/* Burbuja de pensamiento temblorosa */}
-        <motion.div
-          className="relative bg-slate-800/90 border border-slate-600/50 rounded-2xl px-3 py-2 shadow-xl"
-          animate={{
-            borderColor: ["rgba(100,116,139,0.3)", "rgba(100,116,139,0.6)", "rgba(100,116,139,0.3)"],
-          }}
-          transition={{ duration: 2, repeat: Infinity }}
+        {/* ═══ SVG SILUETA ENCORVADA ═══ */}
+        <svg 
+          width="70" 
+          height="120" 
+          viewBox="0 0 70 120" 
+          className="drop-shadow-2xl"
         >
-          <p className="text-xs text-slate-400 font-medium max-w-[120px] text-center leading-tight italic">
-            "{participant.saltoQuantico || 'Mi sueño...'}"
-          </p>
+          {/* Definir gradientes y filtros */}
+          <defs>
+            <linearGradient id={`shadowGrad-${index}`} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#475569" />
+              <stop offset="50%" stopColor="#334155" />
+              <stop offset="100%" stopColor="#1e293b" />
+            </linearGradient>
+            <filter id={`shadowBlur-${index}`}>
+              <feGaussianBlur stdDeviation="1" />
+            </filter>
+            {/* Clip path para la cabeza */}
+            <clipPath id={`headClip-${index}`}>
+              <circle cx="35" cy="18" r="14" />
+            </clipPath>
+          </defs>
           
-          {/* Puntos de conexión del globo */}
-          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex flex-col items-center">
-            <div className="w-2 h-2 bg-slate-700 rounded-full" />
-            <div className="w-1.5 h-1.5 bg-slate-700 rounded-full mt-0.5" />
-          </div>
-        </motion.div>
+          {/* Sombra proyectada */}
+          <ellipse 
+            cx="35" 
+            cy="118" 
+            rx="20" 
+            ry="4" 
+            fill="rgba(0,0,0,0.3)"
+            filter={`url(#shadowBlur-${index})`}
+          />
+          
+          {/* ═══ CUERPO ENCORVADO ═══ */}
+          {/* Piernas (caminando lento) */}
+          <motion.path
+            d="M28 85 L24 115 M28 85 Q30 100 35 115"
+            stroke={`url(#shadowGrad-${index})`}
+            strokeWidth="8"
+            strokeLinecap="round"
+            fill="none"
+            animate={{
+              d: [
+                "M28 85 L24 115 M42 85 L46 115",
+                "M28 85 L26 115 M42 85 L44 115",
+                "M28 85 L24 115 M42 85 L46 115",
+              ]
+            }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          />
+          
+          {/* Torso encorvado */}
+          <path
+            d="M35 45 Q30 55 28 70 Q26 80 35 85 Q44 80 42 70 Q40 55 35 45"
+            fill={`url(#shadowGrad-${index})`}
+          />
+          
+          {/* Brazos en bolsillos */}
+          <motion.path
+            d="M28 55 Q20 60 18 75 M42 55 Q50 60 52 75"
+            stroke={`url(#shadowGrad-${index})`}
+            strokeWidth="6"
+            strokeLinecap="round"
+            fill="none"
+            animate={{
+              d: [
+                "M28 55 Q20 60 18 75 M42 55 Q50 60 52 75",
+                "M28 55 Q19 61 17 74 M42 55 Q51 61 53 74",
+                "M28 55 Q20 60 18 75 M42 55 Q50 60 52 75",
+              ]
+            }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          />
+          
+          {/* Cuello/Hombros caídos */}
+          <ellipse cx="35" cy="42" rx="12" ry="6" fill={`url(#shadowGrad-${index})`} />
+          
+          {/* ═══ CABEZA CON FOTO (mirando abajo) ═══ */}
+          <g transform="translate(0, 3) rotate(-10, 35, 18)">
+            {/* Base de la cabeza */}
+            <circle 
+              cx="35" 
+              cy="18" 
+              r="15" 
+              fill={`url(#shadowGrad-${index})`}
+              stroke="#475569"
+              strokeWidth="1"
+            />
+            
+            {/* Foto del participante (desaturada) */}
+            {participant.image && (
+              <g clipPath={`url(#headClip-${index})`}>
+                <image
+                  href={participant.image}
+                  x="21"
+                  y="4"
+                  width="28"
+                  height="28"
+                  preserveAspectRatio="xMidYMid slice"
+                  style={{ filter: 'grayscale(100%) brightness(0.5)' }}
+                />
+                {/* Overlay oscuro */}
+                <circle cx="35" cy="18" r="14" fill="rgba(30,41,59,0.4)" />
+              </g>
+            )}
+            
+            {/* Si no hay imagen, mostrar inicial */}
+            {!participant.image && (
+              <text
+                x="35"
+                y="23"
+                textAnchor="middle"
+                fill="#64748b"
+                fontSize="14"
+                fontWeight="bold"
+                fontFamily="system-ui"
+              >
+                {participant.name.charAt(0).toUpperCase()}
+              </text>
+            )}
+          </g>
+        </svg>
       </motion.div>
       
       {/* Nombre con efecto de peso */}
       <motion.p 
-        className="text-sm text-slate-500 mt-3 font-medium text-center max-w-[100px] truncate"
+        className="text-xs text-slate-500 mt-1 font-medium text-center max-w-[80px] truncate"
         animate={{ opacity: [0.4, 0.7, 0.4] }}
         transition={{ duration: 4, repeat: Infinity }}
       >
@@ -151,126 +290,349 @@ const LightAvatar = ({ participant, index }: { participant: Participant; index: 
   
   // Posición en el lado derecho (55-95% del ancho)
   const startX = 55 + random(1) * 35
-  const startY = 15 + random(2) * 70
+  const startY = 20 + random(2) * 55
   
   return (
     <motion.div
       className="absolute flex flex-col items-center z-10"
       style={{ left: `${startX}%`, top: `${startY}%` }}
-      initial={{ opacity: 0, scale: 0 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.8, delay: index * 0.2 }}
+      initial={{ opacity: 0, scale: 0, y: 50 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ duration: 0.8, delay: index * 0.2, type: "spring" }}
     >
-      {/* Avatar brillante en pose de poder */}
+      {/* ════════ META MANIFESTADA (banner dorado flotando) ════════ */}
+      <motion.div
+        className="absolute -top-24 left-1/2 -translate-x-1/2 z-20"
+        animate={{
+          y: [0, -6, 0],
+          scale: [1, 1.05, 1],
+        }}
+        transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+      >
+        {/* Resplandor detrás */}
+        <motion.div 
+          className="absolute inset-0 bg-gradient-to-r from-amber-400/60 via-yellow-300/70 to-orange-400/60 blur-xl rounded-full scale-150"
+          animate={{
+            opacity: [0.5, 0.9, 0.5],
+          }}
+          transition={{ duration: 2, repeat: Infinity }}
+        />
+        
+        {/* Banner de la meta */}
+        <div className="relative bg-gradient-to-r from-amber-500 via-yellow-400 to-orange-500 px-4 py-2 rounded-2xl shadow-lg shadow-amber-500/50 border-2 border-yellow-300/50">
+          <p className="text-[11px] font-black text-slate-900 max-w-[110px] text-center uppercase tracking-wide leading-tight">
+            {participant.saltoQuantico || '¡LO LOGRÉ!'}
+          </p>
+        </div>
+        
+        {/* Destellos alrededor */}
+        {[...Array(4)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute"
+            style={{
+              top: `${-10 + Math.sin(i * 1.57) * 25}px`,
+              left: `${50 + Math.cos(i * 1.57) * 45}%`,
+            }}
+            animate={{ 
+              rotate: 360, 
+              scale: [0.6, 1.2, 0.6],
+              opacity: [0.4, 1, 0.4]
+            }}
+            transition={{ duration: 2 + i * 0.3, repeat: Infinity, delay: i * 0.2 }}
+          >
+            <Sparkles className="w-3 h-3 text-yellow-300" />
+          </motion.div>
+        ))}
+      </motion.div>
+
+      {/* ════════ SILUETA VICTORIOSA ════════ */}
       <motion.div
         className="relative"
         animate={{
-          y: [0, -8, 0], // Saltando de alegría
-          scale: [1, 1.05, 1],
+          y: [0, -10, 0], // Saltando/flotando de alegría
+          scale: [1, 1.03, 1],
         }}
         transition={{
-          duration: 2,
+          duration: 1.8,
           repeat: Infinity,
           ease: "easeInOut",
         }}
       >
         {/* Aura dorada brillante */}
         <motion.div 
-          className="absolute -inset-8 bg-gradient-to-r from-amber-500/30 via-yellow-400/40 to-orange-500/30 rounded-full blur-2xl"
+          className="absolute -inset-8 rounded-full blur-2xl"
+          style={{
+            background: 'radial-gradient(circle, rgba(251,191,36,0.4) 0%, rgba(245,158,11,0.2) 50%, transparent 70%)'
+          }}
           animate={{
-            opacity: [0.4, 0.8, 0.4],
+            opacity: [0.5, 0.9, 0.5],
             scale: [1, 1.3, 1],
-            rotate: [0, 180, 360],
           }}
-          transition={{ duration: 4, repeat: Infinity }}
+          transition={{ duration: 2.5, repeat: Infinity }}
         />
         
-        {/* Estela de luz */}
+        {/* Rayos de luz detrás */}
         <motion.div
-          className="absolute -inset-4 bg-gradient-to-t from-amber-400/20 to-transparent rounded-full"
-          animate={{
-            opacity: [0.3, 0.6, 0.3],
-            y: [0, 10, 0],
-          }}
-          transition={{ duration: 2, repeat: Infinity }}
-        />
-        
-        {/* El avatar con color completo y brillo */}
-        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 via-yellow-300 to-orange-400 p-1 shadow-2xl shadow-amber-500/50">
-          <div className="w-full h-full rounded-full overflow-hidden bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-            {participant.image ? (
-              <img 
-                src={participant.image} 
-                alt={participant.name}
-                className="w-full h-full rounded-full object-cover brightness-110 saturate-110"
-              />
-            ) : (
-              <span className="text-3xl font-bold text-white drop-shadow-lg">
-                {participant.name.charAt(0).toUpperCase()}
-              </span>
-            )}
-          </div>
-        </div>
-        
-        {/* Corona o estrella de logro */}
-        <motion.div
-          className="absolute -top-3 left-1/2 -translate-x-1/2"
-          animate={{
-            y: [0, -3, 0],
-            rotate: [0, 5, -5, 0],
-          }}
-          transition={{ duration: 2, repeat: Infinity }}
+          className="absolute -inset-6 opacity-30"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
         >
-          <Crown className="w-6 h-6 text-yellow-300 drop-shadow-lg" />
+          {[...Array(8)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute top-1/2 left-1/2 w-1 h-16 bg-gradient-to-t from-amber-400 to-transparent origin-bottom"
+              style={{
+                transform: `translate(-50%, -100%) rotate(${i * 45}deg)`,
+              }}
+            />
+          ))}
         </motion.div>
-      </motion.div>
-      
-      {/* Meta manifestada - texto dorado flotando */}
-      <motion.div
-        className="absolute -top-20 left-1/2 -translate-x-1/2"
-        animate={{
-          y: [0, -5, 0],
-          scale: [1, 1.05, 1],
-        }}
-        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-      >
-        <motion.div
-          className="relative"
-          animate={{
-            filter: ["brightness(1)", "brightness(1.3)", "brightness(1)"],
-          }}
-          transition={{ duration: 2, repeat: Infinity }}
+        
+        {/* ═══ SVG SILUETA VICTORIOSA ═══ */}
+        <svg 
+          width="80" 
+          height="120" 
+          viewBox="0 0 80 120" 
+          className="drop-shadow-2xl relative z-10"
         >
-          {/* Resplandor detrás del texto */}
-          <div className="absolute inset-0 bg-gradient-to-r from-amber-400/50 via-yellow-300/60 to-orange-400/50 blur-xl rounded-full" />
+          {/* Definir gradientes */}
+          <defs>
+            <linearGradient id={`lightGrad-${index}`} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#fcd34d" />
+              <stop offset="50%" stopColor="#f59e0b" />
+              <stop offset="100%" stopColor="#d97706" />
+            </linearGradient>
+            <linearGradient id={`lightGradBright-${index}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#fef3c7" />
+              <stop offset="50%" stopColor="#fcd34d" />
+              <stop offset="100%" stopColor="#f59e0b" />
+            </linearGradient>
+            <filter id={`glow-${index}`}>
+              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+            {/* Clip path para la cabeza */}
+            <clipPath id={`headClipLight-${index}`}>
+              <circle cx="40" cy="18" r="14" />
+            </clipPath>
+          </defs>
           
-          <div className="relative bg-gradient-to-r from-amber-500 via-yellow-400 to-orange-500 px-4 py-2 rounded-full shadow-lg shadow-amber-500/50">
-            <p className="text-sm font-black text-slate-900 max-w-[140px] text-center uppercase tracking-wide">
-              {participant.saltoQuantico || '¡LO LOGRÉ!'}
-            </p>
-          </div>
+          {/* Sombra dorada proyectada */}
+          <ellipse 
+            cx="40" 
+            cy="118" 
+            rx="18" 
+            ry="4" 
+            fill="rgba(251,191,36,0.3)"
+          />
           
-          {/* Destellos */}
-          <motion.div
-            className="absolute -top-2 -right-2"
-            animate={{ rotate: 360, scale: [0.8, 1.2, 0.8] }}
-            transition={{ duration: 3, repeat: Infinity }}
+          {/* ═══ CUERPO EN POSE VICTORIOSA ═══ */}
+          {/* Piernas firmes (pose de poder) */}
+          <motion.g
+            animate={{
+              y: [0, -2, 0],
+            }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
           >
-            <Sparkles className="w-4 h-4 text-yellow-300" />
-          </motion.div>
-        </motion.div>
+            <path
+              d="M32 85 L28 115 M48 85 L52 115"
+              stroke={`url(#lightGrad-${index})`}
+              strokeWidth="9"
+              strokeLinecap="round"
+              fill="none"
+              filter={`url(#glow-${index})`}
+            />
+          </motion.g>
+          
+          {/* Torso erguido */}
+          <path
+            d="M40 42 Q35 50 33 65 Q31 78 40 85 Q49 78 47 65 Q45 50 40 42"
+            fill={`url(#lightGrad-${index})`}
+            filter={`url(#glow-${index})`}
+          />
+          
+          {/* ═══ BRAZOS ARRIBA (VICTORIA) ═══ */}
+          <motion.g
+            animate={{
+              rotate: [0, 3, -3, 0],
+            }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            style={{ transformOrigin: '40px 55px' }}
+          >
+            {/* Brazo izquierdo arriba */}
+            <motion.path
+              d="M33 52 Q20 35 15 15"
+              stroke={`url(#lightGradBright-${index})`}
+              strokeWidth="7"
+              strokeLinecap="round"
+              fill="none"
+              filter={`url(#glow-${index})`}
+              animate={{
+                d: [
+                  "M33 52 Q20 35 15 15",
+                  "M33 52 Q18 33 12 12",
+                  "M33 52 Q20 35 15 15",
+                ]
+              }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            />
+            {/* Mano izquierda (puño) */}
+            <motion.circle 
+              cx="15" 
+              cy="12" 
+              r="5" 
+              fill={`url(#lightGradBright-${index})`}
+              filter={`url(#glow-${index})`}
+              animate={{ cy: [12, 9, 12] }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            />
+            
+            {/* Brazo derecho arriba */}
+            <motion.path
+              d="M47 52 Q60 35 65 15"
+              stroke={`url(#lightGradBright-${index})`}
+              strokeWidth="7"
+              strokeLinecap="round"
+              fill="none"
+              filter={`url(#glow-${index})`}
+              animate={{
+                d: [
+                  "M47 52 Q60 35 65 15",
+                  "M47 52 Q62 33 68 12",
+                  "M47 52 Q60 35 65 15",
+                ]
+              }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            />
+            {/* Mano derecha (puño) */}
+            <motion.circle 
+              cx="65" 
+              cy="12" 
+              r="5" 
+              fill={`url(#lightGradBright-${index})`}
+              filter={`url(#glow-${index})`}
+              animate={{ cy: [12, 9, 12] }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            />
+          </motion.g>
+          
+          {/* Cuello/Hombros erguidos */}
+          <ellipse 
+            cx="40" 
+            cy="40" 
+            rx="14" 
+            ry="6" 
+            fill={`url(#lightGrad-${index})`}
+            filter={`url(#glow-${index})`}
+          />
+          
+          {/* ═══ CABEZA CON FOTO (mirando arriba con orgullo) ═══ */}
+          <g transform="translate(0, -2) rotate(5, 40, 18)">
+            {/* Círculo dorado de fondo */}
+            <circle 
+              cx="40" 
+              cy="18" 
+              r="16" 
+              fill={`url(#lightGradBright-${index})`}
+              stroke="#fcd34d"
+              strokeWidth="2"
+              filter={`url(#glow-${index})`}
+            />
+            
+            {/* Foto del participante (a todo color y brillante) */}
+            {participant.image && (
+              <g clipPath={`url(#headClipLight-${index})`}>
+                <image
+                  href={participant.image}
+                  x="26"
+                  y="4"
+                  width="28"
+                  height="28"
+                  preserveAspectRatio="xMidYMid slice"
+                  style={{ filter: 'brightness(1.15) saturate(1.2)' }}
+                />
+              </g>
+            )}
+            
+            {/* Si no hay imagen, mostrar inicial */}
+            {!participant.image && (
+              <text
+                x="40"
+                y="23"
+                textAnchor="middle"
+                fill="#78350f"
+                fontSize="16"
+                fontWeight="bold"
+                fontFamily="system-ui"
+              >
+                {participant.name.charAt(0).toUpperCase()}
+              </text>
+            )}
+          </g>
+          
+          {/* Corona sobre la cabeza */}
+          <motion.g
+            animate={{
+              y: [0, -3, 0],
+              rotate: [0, 3, -3, 0],
+            }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            style={{ transformOrigin: '40px -5px' }}
+          >
+            <path
+              d="M28 -2 L32 -12 L36 -5 L40 -15 L44 -5 L48 -12 L52 -2 Z"
+              fill="#fcd34d"
+              stroke="#f59e0b"
+              strokeWidth="1"
+              filter={`url(#glow-${index})`}
+            />
+            {/* Gemas de la corona */}
+            <circle cx="40" cy="-10" r="2" fill="#ef4444" />
+            <circle cx="33" cy="-7" r="1.5" fill="#3b82f6" />
+            <circle cx="47" cy="-7" r="1.5" fill="#22c55e" />
+          </motion.g>
+        </svg>
       </motion.div>
       
       {/* Nombre con gloria */}
       <motion.p 
-        className="text-base text-amber-300 mt-3 font-bold text-center max-w-[120px] truncate drop-shadow-lg"
+        className="text-sm text-amber-300 mt-2 font-bold text-center max-w-[100px] truncate"
         animate={{ 
-          textShadow: ["0 0 10px rgba(251,191,36,0.5)", "0 0 20px rgba(251,191,36,0.8)", "0 0 10px rgba(251,191,36,0.5)"]
+          textShadow: ["0 0 8px rgba(251,191,36,0.5)", "0 0 16px rgba(251,191,36,0.8)", "0 0 8px rgba(251,191,36,0.5)"]
         }}
         transition={{ duration: 2, repeat: Infinity }}
       >
         {participant.name.split(' ')[0]}
       </motion.p>
+      
+      {/* Partículas de celebración */}
+      {[...Array(5)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute w-2 h-2 rounded-full"
+          style={{
+            background: i % 2 === 0 ? '#fcd34d' : '#f59e0b',
+            left: `${30 + random(i) * 40}%`,
+            top: `${20 + random(i + 5) * 60}%`,
+          }}
+          animate={{
+            y: [0, -30, 0],
+            x: [0, (random(i + 10) - 0.5) * 40, 0],
+            opacity: [0, 1, 0],
+            scale: [0.5, 1, 0.5],
+          }}
+          transition={{
+            duration: 2 + random(i + 15),
+            repeat: Infinity,
+            delay: random(i + 20) * 2,
+            ease: "easeOut"
+          }}
+        />
+      ))}
     </motion.div>
   )
 }
