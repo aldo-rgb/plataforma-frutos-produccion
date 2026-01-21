@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const isPLOnlyPurchase = packageType === 'PL_BASE' || packageType === 'PL_CON_CREDITO';
 
     // Check if already enrolled in ADVANCED for this vision
-    const existingAdvancedEnrollment = await prisma.vision_enrollments.findFirst({
+    let existingAdvancedEnrollment = await prisma.vision_enrollments.findFirst({
       where: {
         userId: userId,
         visionId: visionId,
@@ -46,7 +46,42 @@ export async function POST(request: Request) {
       },
     });
 
-    // For PL-only purchases, user MUST have ADVANCED enrollment
+    // For PL-only purchases, if no ADVANCED in specified vision, find where user HAS ADVANCED
+    let effectiveVisionId = visionId;
+    if (isPLOnlyPurchase && !existingAdvancedEnrollment) {
+      // Buscar en qué visión SÍ tiene ADVANCED
+      const advancedEnrollmentAnyVision = await prisma.vision_enrollments.findFirst({
+        where: {
+          userId: userId,
+          level: 'ADVANCED',
+          enrollmentStatus: { in: ['ACTIVE', 'ENROLLED'] },
+        },
+        include: {
+          Vision: {
+            select: {
+              id: true,
+              organizationId: true,
+              enabledLevels: true,
+            },
+          },
+        },
+        orderBy: { enrolledAt: 'desc' },
+      });
+
+      if (advancedEnrollmentAnyVision && advancedEnrollmentAnyVision.Vision?.enabledLevels?.includes('PL')) {
+        // Usar la visión donde tiene ADVANCED
+        effectiveVisionId = advancedEnrollmentAnyVision.visionId;
+        existingAdvancedEnrollment = advancedEnrollmentAnyVision;
+        console.log(`🔄 PL-only: Usuario ${userId} no tiene ADVANCED en visión ${visionId}, usando visión ${effectiveVisionId} donde sí tiene ADVANCED`);
+      } else {
+        return NextResponse.json(
+          { success: false, error: 'Debes tener una inscripción activa en Avanzado para comprar solo PL' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // For PL-only purchases, user MUST have ADVANCED enrollment (already handled above)
     if (isPLOnlyPurchase && !existingAdvancedEnrollment) {
       return NextResponse.json(
         { success: false, error: 'Debes tener una inscripción activa en Avanzado para comprar solo PL' },
@@ -62,11 +97,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if already enrolled in PL for this vision
+    // Check if already enrolled in PL for the effective vision (may be different from requested for PL-only)
     const existingPLEnrollment = await prisma.vision_enrollments.findFirst({
       where: {
         userId: userId,
-        visionId: visionId,
+        visionId: effectiveVisionId,
         level: 'PL',
       },
     });
@@ -94,9 +129,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get the vision to verify it exists and has ADVANCED enabled
+    // Get the vision to verify it exists and has levels enabled
+    // For PL-only purchases, use effectiveVisionId (where user has ADVANCED)
+    const targetVisionId = isPLOnlyPurchase ? effectiveVisionId : visionId;
+    
     const vision = await prisma.vision.findUnique({
-      where: { id: visionId },
+      where: { id: targetVisionId },
       select: {
         id: true,
         enabledLevels: true,
@@ -114,9 +152,18 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!vision.enabledLevels?.includes('ADVANCED')) {
+    // For non-PL-only, verify ADVANCED is enabled
+    if (!isPLOnlyPurchase && !vision.enabledLevels?.includes('ADVANCED')) {
       return NextResponse.json(
         { success: false, error: 'Esta visión no tiene el nivel Avanzado habilitado' },
+        { status: 400 }
+      );
+    }
+
+    // For PL-only, verify PL is enabled
+    if (isPLOnlyPurchase && !vision.enabledLevels?.includes('PL')) {
+      return NextResponse.json(
+        { success: false, error: 'Esta visión no tiene el nivel PL habilitado' },
         { status: 400 }
       );
     }
@@ -133,11 +180,11 @@ export async function POST(request: Request) {
 
       // For PL-only purchases, skip ADVANCED creation (user already has it)
       if (isPLOnly) {
-        // Verify user already has ADVANCED enrollment
+        // Verify user already has ADVANCED enrollment (use effectiveVisionId)
         const existingAdvanced = await tx.vision_enrollments.findFirst({
           where: {
             userId: userId,
-            visionId: visionId,
+            visionId: effectiveVisionId,
             level: 'ADVANCED',
           },
         });
@@ -146,11 +193,11 @@ export async function POST(request: Request) {
           throw new Error('Debes tener una inscripción activa en Avanzado para comprar solo PL');
         }
 
-        // Create PL enrollment
+        // Create PL enrollment in the same vision as ADVANCED
         plEnrollment = await tx.vision_enrollments.create({
           data: {
             userId: userId,
-            visionId: visionId,
+            visionId: effectiveVisionId,
             coordinatorId: existingAdvanced.coordinatorId,
             level: 'PL',
             enrollmentStatus: 'ACTIVE',
@@ -160,12 +207,12 @@ export async function POST(request: Request) {
           },
         });
 
-        // Create PL ticket
+        // Create PL ticket in the same vision as ADVANCED
         plTicket = await tx.ticket.create({
           data: {
             ownerId: userId,
             organizationId: organizationId,
-            visionId: visionId,
+            visionId: effectiveVisionId,
             level: 'PL',
             type: 'STANDARD',
             status: 'ACTIVE',
