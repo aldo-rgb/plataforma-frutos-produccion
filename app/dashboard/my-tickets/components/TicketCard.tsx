@@ -15,6 +15,10 @@ interface Ticket {
     nombre: string;
     startDate: string;
     endDate: string | null;
+    advancedStartDate: string | null;
+    advancedEndDate: string | null;
+    plStartDate: string | null;
+    plEndDate: string | null;
   };
   organization: {
     name: string;
@@ -76,9 +80,31 @@ export function TicketCard({ ticket, onTransfer }: Props) {
   const statusStyle = getStatusColor(ticket.status);
   const levelBadge = getLevelBadge(ticket.level);
 
-  const isEventStarted = new Date(ticket.vision.startDate) <= new Date();
-  const isEventEnded = ticket.vision.endDate ? new Date(ticket.vision.endDate) <= new Date() : false;
-  const daysUntilStart = Math.ceil((new Date(ticket.vision.startDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+  // Obtener fechas según el nivel del ticket
+  const getTrainingDates = () => {
+    switch (ticket.level) {
+      case 'ADVANCED':
+        return {
+          start: ticket.vision.advancedStartDate || ticket.vision.startDate,
+          end: ticket.vision.advancedEndDate || ticket.vision.endDate,
+        };
+      case 'PL':
+        return {
+          start: ticket.vision.plStartDate || ticket.vision.startDate,
+          end: ticket.vision.plEndDate || ticket.vision.endDate,
+        };
+      default: // BASIC
+        return {
+          start: ticket.vision.startDate,
+          end: ticket.vision.endDate,
+        };
+    }
+  };
+
+  const trainingDates = getTrainingDates();
+  const isEventStarted = new Date(trainingDates.start) <= new Date();
+  const isEventEnded = trainingDates.end ? new Date(trainingDates.end) <= new Date() : false;
+  const daysUntilStart = Math.ceil((new Date(trainingDates.start).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
   
   const canTransfer = ticket.status === 'ACTIVE' && 
                       ticket.isTransferable && 
@@ -142,11 +168,20 @@ export function TicketCard({ ticket, onTransfer }: Props) {
           <div className="flex items-center gap-2 text-slate-300">
             <span>📅</span>
             <span>
-              {new Date(ticket.vision.startDate).toLocaleDateString('es-MX', {
+              {new Date(trainingDates.start).toLocaleDateString('es-MX', {
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric',
               })}
+              {trainingDates.end && (
+                <span className="text-slate-400">
+                  {' → '}
+                  {new Date(trainingDates.end).toLocaleDateString('es-MX', {
+                    day: 'numeric',
+                    month: 'long',
+                  })}
+                </span>
+              )}
             </span>
           </div>
           {!isEventStarted && daysUntilStart > 0 && (

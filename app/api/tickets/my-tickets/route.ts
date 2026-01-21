@@ -52,6 +52,9 @@ export async function GET() {
             startDate: true,
             endDate: true,
             advancedStartDate: true,
+            advancedEndDate: true,
+            plWeekend1StartDate: true,
+            plWeekend3EndDate: true,
           },
         },
         organization: {
@@ -102,9 +105,15 @@ export async function GET() {
           vision: {
             id: ticket.vision.id,
             nombre: ticket.vision.nombre,
+            // Fechas de BASIC
             startDate: ticket.vision.startDate?.toISOString() || '',
             endDate: ticket.vision.endDate?.toISOString() || null,
+            // Fechas de ADVANCED
             advancedStartDate: ticket.vision.advancedStartDate?.toISOString() || null,
+            advancedEndDate: ticket.vision.advancedEndDate?.toISOString() || null,
+            // Fechas de PL (Liderato)
+            plStartDate: ticket.vision.plWeekend1StartDate?.toISOString() || null,
+            plEndDate: ticket.vision.plWeekend3EndDate?.toISOString() || null,
           },
           organization: {
             name: ticket.organization.name,
