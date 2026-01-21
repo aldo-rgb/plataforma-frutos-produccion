@@ -1026,20 +1026,21 @@ const CrossingAnimation = ({
         </motion.div>
       )}
       
-      {/* Nombre del participante */}
+      {/* Nombre del participante - posicionado arriba de la barra de stats */}
       <motion.div
-        className="absolute bottom-20 left-1/2 -translate-x-1/2"
+        className="absolute bottom-36 left-1/2 -translate-x-1/2"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
       >
         <motion.p
           className="text-4xl font-black drop-shadow-2xl"
+          style={{ textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}
           animate={{
             color: (phase === 'emerge' || phase === 'celebrate') ? '#fbbf24' : '#94a3b8',
             textShadow: (phase === 'emerge' || phase === 'celebrate') 
-              ? '0 0 20px rgba(251,191,36,0.8)' 
-              : 'none',
+              ? '0 0 20px rgba(251,191,36,0.8), 0 2px 10px rgba(0,0,0,0.8)' 
+              : '0 2px 10px rgba(0,0,0,0.8)',
           }}
         >
           {participant.name}
