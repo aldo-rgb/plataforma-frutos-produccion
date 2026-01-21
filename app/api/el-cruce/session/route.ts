@@ -279,61 +279,120 @@ export async function GET(request: NextRequest) {
         return keywords
       }
 
-      // Función para obtener datos completos del wizard
+      // Función para obtener metas del wizard CON SU CATEGORÍA
       const getWizardKeywords = (user: any): { hasWizard: boolean; keywords: string[] } => {
         const carta = user?.CartaFrutos?.[0]
         
-        // Si no tiene carta o está en borrador, no tiene wizard completo
-        if (!carta || carta.estado === 'BORRADOR') {
+        // Si no tiene carta, no tiene wizard
+        if (!carta) {
           return { hasWizard: false, keywords: [] }
         }
         
-        const allKeywords: string[] = []
+        const metasConCategoria: string[] = []
         
-        // Extraer de todas las declaraciones del wizard
-        const declaraciones = [
-          carta.finanzasDeclaracion,
-          carta.relacionesDeclaracion,
-          carta.talentosDeclaracion,
-          carta.saludDeclaracion,
-          carta.pazMentalDeclaracion,
-          carta.ocioDeclaracion,
-          carta.servicioTransDeclaracion,
-          carta.servicioComunDeclaracion
-        ]
+        // Mapeo de categorías a etiquetas amigables
+        // NOTA: Se excluyen servicio_trans y servicio_comun por diseño
+        const categoriaLabels: Record<string, string> = {
+          'finanzas': '💰 FINANZAS',
+          'relaciones': '❤️ RELACIONES', 
+          'familia': '👨‍👩‍👧 FAMILIA',
+          'talentos': '⭐ TALENTOS',
+          'salud': '💪 SALUD',
+          'paz_mental': '🧘 PAZ MENTAL',
+          'pazMental': '🧘 PAZ MENTAL',
+          'pazmental': '🧘 PAZ MENTAL',
+          'ocio': '🎮 OCIO',
+          'profesional': '💼 PROFESIONAL',
+          'espiritual': '🙏 ESPIRITUAL',
+          'educacion': '📚 EDUCACIÓN'
+        }
         
-        declaraciones.forEach(dec => {
-          if (dec) {
-            const kw = extractKeywords(dec)
-            kw.forEach(k => {
-              if (!allKeywords.includes(k)) allKeywords.push(k)
-            })
-          }
-        })
+        // Categorías a excluir de los globos
+        const categoriasExcluidas = new Set([
+          'servicio_trans', 'servicio_comun', 'serviciotrans', 'serviciocomun',
+          'serviciotransformacion', 'serviciocomunitario'
+        ])
         
-        // Extraer de todas las metas
+        // Extraer metas CON su categoría (excluyendo servicio)
         if (carta.Meta && Array.isArray(carta.Meta)) {
           carta.Meta.forEach((meta: any) => {
             if (meta.metaPrincipal) {
-              const kw = extractKeywords(meta.metaPrincipal)
-              kw.forEach(k => {
-                if (!allKeywords.includes(k)) allKeywords.push(k)
-              })
+              // Obtener etiqueta de categoría o usar una genérica
+              const cat = meta.categoria?.toLowerCase() || 'meta'
+              
+              // Saltar categorías de servicio
+              if (categoriasExcluidas.has(cat)) return
+              
+              const label = categoriaLabels[cat] || `📌 ${cat.toUpperCase()}`
+              
+              // Truncar meta si es muy larga
+              const metaTexto = meta.metaPrincipal.length > 50 
+                ? meta.metaPrincipal.substring(0, 47) + '...'
+                : meta.metaPrincipal
+              
+              metasConCategoria.push(`${label}: ${metaTexto}`)
             }
           })
         }
         
-        // Si tiene al menos 3 keywords, consideramos que tiene wizard válido
-        const hasWizard = allKeywords.length >= 3
+        // También agregar declaraciones como keywords secundarios
+        // NOTA: Se excluyen servicioTrans y servicioComunidad por diseño
+        const declaracionesMap = [
+          { key: 'finanzasDeclaracion', label: '💰 FINANZAS' },
+          { key: 'relacionesDeclaracion', label: '❤️ RELACIONES' },
+          { key: 'talentosDeclaracion', label: '⭐ TALENTOS' },
+          { key: 'saludDeclaracion', label: '💪 SALUD' },
+          { key: 'pazMentalDeclaracion', label: '🧘 PAZ MENTAL' },
+          { key: 'ocioDeclaracion', label: '🎮 OCIO' }
+          // servicioTransDeclaracion y servicioComunDeclaracion excluidos
+        ]
         
-        return { hasWizard, keywords: allKeywords.slice(0, 15) } // Máximo 15 palabras
+        declaracionesMap.forEach(({ key, label }) => {
+          const dec = carta[key]
+          if (dec && typeof dec === 'string' && dec.trim()) {
+            const texto = dec.length > 50 ? dec.substring(0, 47) + '...' : dec
+            metasConCategoria.push(`${label}: ${texto}`)
+          }
+        })
+        
+        // Si tiene al menos 1 meta, consideramos que tiene wizard válido
+        const hasWizard = metasConCategoria.length >= 1
+        
+        return { hasWizard, keywords: metasConCategoria.slice(0, 10) } // Máximo 10 metas
+      }
+
+      // Helper para parsear goals (puede ser string JSON o array)
+      const parseGoals = (goals: any): string[] => {
+        if (!goals) return []
+        if (Array.isArray(goals)) return goals
+        if (typeof goals === 'string') {
+          try {
+            const parsed = JSON.parse(goals)
+            return Array.isArray(parsed) ? parsed : [goals]
+          } catch {
+            return [goals] // Si no es JSON válido, usar como string simple
+          }
+        }
+        return []
       }
 
       // Helper para obtener salto cuántico (meta principal)
       const getSaltoQuantico = (user: any) => {
-        // Prioridad: Meta de la Carta > goals del usuario > default
+        // Prioridad: Meta de la Carta > goals del usuario (parseado) > default
         const cartaMeta = user?.CartaFrutos?.[0]?.Meta?.[0]?.metaPrincipal
-        return cartaMeta || user?.goals || 'Mi gran sueño'
+        if (cartaMeta) return cartaMeta
+        
+        // Parsear goals si existe
+        const goalsArray = parseGoals(user?.goals)
+        if (goalsArray.length > 0) return goalsArray[0]
+        
+        return 'Mi gran sueño'
+      }
+
+      // Helper para obtener keywords de goals cuando no hay wizard
+      const getGoalsKeywords = (user: any): string[] => {
+        const goalsArray = parseGoals(user?.goals)
+        return goalsArray.filter(g => g && g.length > 0)
       }
 
       // Formatear participantes cruzados (pre-registros + tickets de PL)

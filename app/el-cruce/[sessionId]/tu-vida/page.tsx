@@ -30,98 +30,111 @@ interface CrossingStats {
 //         OPCIÓN 2: ORBE DE PIEDRA / CRISTAL ROTO
 // ═══════════════════════════════════════════════════════════════
 
+// Helper para limpiar texto que puede venir como JSON array
+const cleanGoalText = (text: string | undefined): string => {
+  if (!text) return 'Mi gran sueño'
+  // Si parece ser un JSON array, parsearlo y tomar el primer elemento
+  if (text.startsWith('[') && text.includes('"')) {
+    try {
+      const parsed = JSON.parse(text)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed[0]
+      }
+    } catch {
+      // Si falla el parse, limpiar manualmente
+      return text.replace(/[\[\]"]/g, '').split(',')[0].trim()
+    }
+  }
+  return text
+}
+
 const ShadowAvatar = ({ participant, index, total }: { participant: Participant; index: number; total: number }) => {
   const [isNearRift, setIsNearRift] = useState(false)
   const [currentKeywordIndex, setCurrentKeywordIndex] = useState(0)
   
-  // Keywords del wizard o fallback al saltoQuantico (meta principal)
+  // Para shadow (sin wizard) solo mostrar texto limpio, sin rotación
+  const displayText = cleanGoalText(participant.saltoQuantico)
+  
+  // Keywords solo se usan si tiene wizard
   const keywords = participant.hasWizard && participant.keywords && participant.keywords.length > 0
     ? participant.keywords
-    : [participant.saltoQuantico || 'Mi gran sueño']
+    : [displayText]
   
-  // Rotar keywords cada 2 segundos
+  // Rotar keywords cada 2-3 segundos (SOLO si tiene wizard con múltiples keywords)
   useEffect(() => {
-    if (keywords.length <= 1) return
+    if (!participant.hasWizard || keywords.length <= 1) return
     const interval = setInterval(() => {
       setCurrentKeywordIndex(prev => (prev + 1) % keywords.length)
-    }, 2000 + Math.random() * 1000) // 2-3 segundos aleatorio
+    }, 2000 + Math.random() * 1000)
     return () => clearInterval(interval)
-  }, [keywords.length])
+  }, [keywords.length, participant.hasWizard])
   
-  // Generador de números pseudo-aleatorios basado en el ID del participante para consistencia
-  const hashCode = (str: string) => {
-    let hash = 0
-    for (let i = 0; i < str.length; i++) {
-      hash = ((hash << 5) - hash) + str.charCodeAt(i)
-      hash |= 0
-    }
-    return Math.abs(hash)
+  // Generador de números pseudo-aleatorios con más entropía (igual que LightAvatar)
+  const seed = (participant.id * 7919 + index * 6271) % 100000
+  const random = (n: number) => {
+    const x = Math.sin(seed + n * 1000) * 10000
+    return x - Math.floor(x)
   }
   
-  const seed = hashCode(String(participant.id || `participant-${index}`))
-  const random = (n: number) => ((seed * (n + 1) * 9301 + 49297) % 233280) / 233280
+  // Posiciones iniciales MUY dispersas usando diferentes zonas
+  const zones = [
+    { x: [5, 28], y: [8, 30] },     // Arriba izquierda
+    { x: [30, 55], y: [5, 28] },    // Arriba centro
+    { x: [58, 85], y: [10, 35] },   // Arriba derecha
+    { x: [8, 32], y: [35, 58] },    // Centro izquierda
+    { x: [35, 62], y: [32, 55] },   // Centro
+    { x: [60, 88], y: [38, 60] },   // Centro derecha
+    { x: [5, 30], y: [62, 85] },    // Abajo izquierda
+    { x: [32, 58], y: [58, 82] },   // Abajo centro
+    { x: [55, 85], y: [65, 88] },   // Abajo derecha
+  ]
   
-  // Distribuir en grid 4x4 con variación aleatoria para llenar toda la pantalla
-  const gridCols = 4
-  const gridRows = 4
-  const cellIndex = index % (gridCols * gridRows)
-  const col = cellIndex % gridCols
-  const row = Math.floor(cellIndex / gridCols)
+  // Asignar zona basada en el ID del participante
+  const zoneIndex = (participant.id * 5 + index * 3) % zones.length
+  const zone = zones[zoneIndex]
   
-  // Tamaño de cada celda (dejando margen)
-  const cellWidth = 80 / gridCols  // 20% cada celda
-  const cellHeight = 75 / gridRows // ~18.75% cada celda
+  // Posición dentro de la zona asignada
+  const startX = zone.x[0] + random(1) * (zone.x[1] - zone.x[0])
+  const startY = zone.y[0] + random(2) * (zone.y[1] - zone.y[0])
   
-  // Posición base + variación aleatoria dentro de la celda
-  const baseX = 5 + col * cellWidth
-  const baseY = 8 + row * cellHeight
-  const offsetX = random(1) * cellWidth * 0.7
-  const offsetY = random(2) * cellHeight * 0.7
+  // Trayectorias aleatorias usando funciones trigonométricas
+  const phase1 = random(10) * Math.PI * 2
+  const phase2 = random(11) * Math.PI * 2
+  const amplitude = 35 + random(12) * 50 // 35-85px (un poco menos que luz)
   
-  const startX = baseX + offsetX
-  const startY = baseY + offsetY
+  const waypoints = {
+    x: [
+      0,
+      Math.cos(phase1) * amplitude,
+      Math.sin(phase1 + 1.2) * amplitude * 0.75,
+      Math.cos(phase1 + 2.8) * amplitude * 1.1,
+      Math.sin(phase1 + 4.3) * amplitude * 0.6,
+      Math.cos(phase1 + 5.7) * amplitude * 0.85,
+      0
+    ],
+    y: [
+      0,
+      Math.sin(phase2) * amplitude * 0.65,
+      Math.cos(phase2 + 1.5) * amplitude * 0.9,
+      Math.sin(phase2 + 3) * amplitude * 0.8,
+      Math.cos(phase2 + 4.5) * amplitude,
+      Math.sin(phase2 + 6) * amplitude * 0.7,
+      0
+    ]
+  }
   
-  // Calcular movimiento hacia la grieta (derecha) y de regreso
-  const moveTowardsRift = 15 + random(3) * 25 // Se mueve 15-40% hacia la derecha
-  const verticalMovement = (random(4) - 0.5) * 25 // Movimiento vertical aleatorio
+  // Duración diferente para cada orbe (más lento, son pesados)
+  const moveDuration = 18 + random(30) * 12 // 18-30 segundos
   
-  // Duración del ciclo (lento y pesado, diferente para cada uno)
-  const cycleDuration = 12 + random(5) * 12 // 12-24 segundos
-  
-  // Umbral de cercanía a la grieta (los que empiezan más a la derecha se iluminan antes)
-  // La grieta está en ~100% del contenedor izquierdo (50% de la pantalla total)
-  const distanceToRift = 100 - startX // Qué tan lejos está de la grieta inicialmente
-  
-  // Detectar cuando está cerca de la grieta basándose en la posición X real
+  // Detectar cercanía a la grieta basado en posición
   useEffect(() => {
-    const startTime = Date.now() / 1000
     const interval = setInterval(() => {
-      const elapsed = (Date.now() / 1000) - startTime
-      const normalizedTime = (elapsed % cycleDuration) / cycleDuration
-      
-      // Calcular el desplazamiento X actual (simulando la curva easeInOut)
-      // Keyframes: [0, moveTowardsRift, moveTowardsRift+10, moveTowardsRift, 0]
-      // at 0% -> 0, at 25% -> moveTowardsRift, at 50% -> moveTowardsRift+10, at 75% -> moveTowardsRift, at 100% -> 0
-      let currentX = 0
-      if (normalizedTime < 0.25) {
-        currentX = (normalizedTime / 0.25) * moveTowardsRift
-      } else if (normalizedTime < 0.5) {
-        currentX = moveTowardsRift + ((normalizedTime - 0.25) / 0.25) * 10
-      } else if (normalizedTime < 0.75) {
-        currentX = moveTowardsRift + 10 - ((normalizedTime - 0.5) / 0.25) * 10
-      } else {
-        currentX = moveTowardsRift * (1 - (normalizedTime - 0.75) / 0.25)
-      }
-      
-      // Posición total desde el borde izquierdo (en % del contenedor)
-      const totalX = startX + currentX
-      
-      // Se ilumina cuando está a menos de 30% de la grieta (que está en ~95-100%)
-      const nearRift = totalX > 65
+      // Aproximación: considerar cerca si está en zona derecha
+      const nearRift = startX > 50 || random(100) > 0.7
       setIsNearRift(nearRift)
-    }, 150)
+    }, 2000)
     return () => clearInterval(interval)
-  }, [cycleDuration, startX, moveTowardsRift])
+  }, [startX])
   
   return (
     <motion.div
@@ -131,24 +144,25 @@ const ShadowAvatar = ({ participant, index, total }: { participant: Participant;
       animate={{ 
         opacity: 1, 
         scale: 1,
-        x: [0, moveTowardsRift, moveTowardsRift + 10, moveTowardsRift, 0],
-        y: [0, verticalMovement * 0.5, verticalMovement, verticalMovement * 0.5, 0],
+        x: waypoints.x,
+        y: waypoints.y,
       }}
       transition={{ 
         opacity: { duration: 1, delay: index * 0.15 },
         scale: { duration: 0.8, delay: index * 0.15 },
-        x: { duration: cycleDuration, repeat: Infinity, ease: "easeInOut" },
-        y: { duration: cycleDuration, repeat: Infinity, ease: "easeInOut" },
+        x: { duration: moveDuration, repeat: Infinity, ease: "easeInOut", delay: random(50) * 3 },
+        y: { duration: moveDuration * (0.85 + random(51) * 0.3), repeat: Infinity, ease: "easeInOut", delay: random(52) * 3 },
       }}
     >
       {/* ════════ ORBE DE PIEDRA/CRISTAL ATRAPADO ════════ */}
       <motion.div
         className="relative"
         animate={{
-          rotate: [0, 2, -2, 1, 0],
+          rotate: [0, 3, -3, 2, 0],
+          scale: [1, 1.02, 0.98, 1.01, 1],
         }}
         transition={{
-          duration: 8,
+          duration: moveDuration * 0.6,
           repeat: Infinity,
           ease: "easeInOut",
         }}
@@ -328,58 +342,110 @@ const ShadowAvatar = ({ participant, index, total }: { participant: Participant;
 const LightAvatar = ({ participant, index, total }: { participant: Participant; index: number; total: number }) => {
   const [currentKeywordIndex, setCurrentKeywordIndex] = useState(0)
   
-  // Keywords del wizard o fallback al saltoQuantico (meta principal)
+  // Limpiar saltoQuantico si viene como JSON
+  const cleanSalto = cleanGoalText(participant.saltoQuantico)
+  
+  // Keywords del wizard para rotación, o solo el saltoQuantico limpio
   const keywords = participant.hasWizard && participant.keywords && participant.keywords.length > 0
     ? participant.keywords
-    : [participant.saltoQuantico || 'Mi gran sueño']
+    : [cleanSalto]
   
-  // Rotar keywords más rápido (energía positiva!)
+  // Rotar keywords más rápido (energía positiva!) - SOLO si tiene wizard con múltiples keywords
   useEffect(() => {
-    if (keywords.length <= 1) return
+    if (!participant.hasWizard || keywords.length <= 1) return
     const interval = setInterval(() => {
       setCurrentKeywordIndex(prev => (prev + 1) % keywords.length)
-    }, 1500 + Math.random() * 500) // 1.5-2 segundos (más rápido que sombra)
+    }, 1500 + Math.random() * 500) // 1.5-2 segundos
     return () => clearInterval(interval)
-  }, [keywords.length])
+  }, [keywords.length, participant.hasWizard])
   
-  // Distribuir en grid virtual para cubrir toda la mitad derecha
-  const cols = Math.ceil(Math.sqrt(Math.max(total, 1)))
-  const rows = Math.ceil(Math.max(total, 1) / cols)
-  const col = index % cols
-  const row = Math.floor(index / cols)
+  // Generador de números pseudo-aleatorios con más entropía
+  const seed = (participant.id * 7919 + index * 6271) % 100000
+  const random = (n: number) => {
+    const x = Math.sin(seed + n * 1000) * 10000
+    return x - Math.floor(x)
+  }
   
-  // Calcular posición base en grid (5-45% del ancho relativo, 10-80% del alto)
-  const cellWidth = 40 / cols
-  const cellHeight = 70 / rows
+  // Posiciones iniciales MUY dispersas usando diferentes zonas
+  // Dividir el espacio en zonas y distribuir aleatoriamente
+  const zones = [
+    { x: [5, 30], y: [10, 35] },    // Arriba izquierda
+    { x: [35, 65], y: [5, 30] },    // Arriba centro
+    { x: [60, 85], y: [15, 40] },   // Arriba derecha
+    { x: [10, 35], y: [40, 65] },   // Centro izquierda
+    { x: [40, 70], y: [35, 60] },   // Centro
+    { x: [55, 85], y: [45, 70] },   // Centro derecha
+    { x: [5, 35], y: [65, 85] },    // Abajo izquierda
+    { x: [30, 60], y: [60, 85] },   // Abajo centro
+    { x: [55, 85], y: [70, 90] },   // Abajo derecha
+  ]
   
-  // Agregar variación aleatoria dentro de cada celda
-  const seed = (index + 100) * 1000
-  const random = (n: number) => ((seed + n) * 9301 + 49297) % 233280 / 233280
-  const offsetX = random(1) * cellWidth * 0.6
-  const offsetY = random(2) * cellHeight * 0.6
+  // Asignar zona basada en el ID del participante (más random)
+  const zoneIndex = (participant.id * 3 + index * 7) % zones.length
+  const zone = zones[zoneIndex]
   
-  const startX = 5 + col * cellWidth + offsetX  // Posición relativa al contenedor (lado derecho)
-  const startY = 10 + row * cellHeight + offsetY
+  // Posición dentro de la zona asignada
+  const startX = zone.x[0] + random(1) * (zone.x[1] - zone.x[0])
+  const startY = zone.y[0] + random(2) * (zone.y[1] - zone.y[0])
+  
+  // Trayectorias completamente diferentes para cada orbe
+  // Usar funciones trigonométricas con diferentes fases
+  const phase1 = random(10) * Math.PI * 2
+  const phase2 = random(11) * Math.PI * 2
+  const amplitude = 40 + random(12) * 60 // 40-100px
+  
+  const waypoints = {
+    x: [
+      0,
+      Math.cos(phase1) * amplitude,
+      Math.sin(phase1 + 1) * amplitude * 0.8,
+      Math.cos(phase1 + 2.5) * amplitude * 1.1,
+      Math.sin(phase1 + 4) * amplitude * 0.6,
+      Math.cos(phase1 + 5.5) * amplitude * 0.9,
+      0
+    ],
+    y: [
+      0,
+      Math.sin(phase2) * amplitude * 0.7,
+      Math.cos(phase2 + 1.3) * amplitude,
+      Math.sin(phase2 + 2.8) * amplitude * 0.85,
+      Math.cos(phase2 + 4.2) * amplitude * 1.05,
+      Math.sin(phase2 + 5.8) * amplitude * 0.75,
+      0
+    ]
+  }
+  
+  // Duración diferente para cada orbe
+  const moveDuration = 15 + random(30) * 10 // 15-25 segundos
   
   return (
     <motion.div
       className="absolute flex flex-col items-center z-10"
       style={{ left: `${startX}%`, top: `${startY}%` }}
-      initial={{ opacity: 0, scale: 0, x: 100 }}
-      animate={{ opacity: 1, scale: 1, x: 0 }}
-      transition={{ duration: 0.8, delay: index * 0.2, type: "spring" }}
+      initial={{ opacity: 0, scale: 0, x: 50 + random(40) * 100 }}
+      animate={{ 
+        opacity: 1, 
+        scale: 1, 
+        x: waypoints.x,
+        y: waypoints.y,
+      }}
+      transition={{ 
+        opacity: { duration: 0.8, delay: index * 0.15 },
+        scale: { duration: 0.8, delay: index * 0.15, type: "spring" },
+        x: { duration: moveDuration, repeat: Infinity, ease: "easeInOut", delay: random(50) * 3 },
+        y: { duration: moveDuration * (0.9 + random(51) * 0.3), repeat: Infinity, ease: "easeInOut", delay: random(52) * 3 },
+      }}
     >
       {/* ════════ COMETA DE LUZ ════════ */}
       <motion.div
         className="relative"
-        // Movimiento RÁPIDO y libre (como cometa surcando el cielo)
+        // Rotación suave mientras se mueve
         animate={{
-          x: [0, 30, -20, 40, 0],
-          y: [0, -25, 15, -30, 0],
-          rotate: [0, 5, -5, 3, 0],
+          rotate: [0, 5, -4, 6, -3, 0],
+          scale: [1, 1.03, 0.98, 1.02, 1],
         }}
         transition={{
-          duration: 5 + random(1) * 3, // 5-8 segundos (mucho más rápido que piedra)
+          duration: moveDuration * 0.7,
           repeat: Infinity,
           ease: "easeInOut",
         }}
@@ -556,10 +622,10 @@ const LightAvatar = ({ participant, index, total }: { participant: Participant; 
         
         {/* ═══ BANNER DE META MANIFESTADA (KEYWORDS ROTATIVAS) ═══ */}
         <motion.div
-          className="absolute -top-16 left-1/2 -translate-x-1/2"
+          className="absolute -top-20 left-1/2 -translate-x-1/2"
           animate={{
             y: [0, -5, 0],
-            scale: [1, 1.05, 1],
+            scale: [1, 1.02, 1],
           }}
           transition={{ duration: 2, repeat: Infinity }}
         >
@@ -570,17 +636,17 @@ const LightAvatar = ({ participant, index, total }: { participant: Participant; 
             transition={{ duration: 2, repeat: Infinity }}
           />
           
-          <div className="relative bg-gradient-to-r from-amber-500 via-yellow-400 to-orange-500 px-4 py-2 rounded-xl shadow-lg shadow-amber-500/50 border border-yellow-300/50 overflow-hidden">
+          <div className="relative bg-gradient-to-r from-amber-500 via-yellow-400 to-orange-500 px-3 py-2 rounded-xl shadow-lg shadow-amber-500/50 border border-yellow-300/50 overflow-hidden min-w-[120px] max-w-[180px]">
             <AnimatePresence mode="wait">
               <motion.p 
                 key={currentKeywordIndex}
-                className="text-[11px] font-bold text-slate-900 max-w-[100px] text-center uppercase leading-tight"
+                className="text-[10px] font-bold text-slate-900 text-center leading-tight whitespace-pre-wrap"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.3 }}
               >
-                {participant.hasWizard ? `✨ ${keywords[currentKeywordIndex]}` : keywords[0]}
+                {keywords[currentKeywordIndex]}
               </motion.p>
             </AnimatePresence>
           </div>
@@ -1097,9 +1163,27 @@ export default function ElAtravesarTuVidaPage() {
     const fetchSession = async () => {
       try {
         // Obtener sesión (usar query param, no ruta dinámica)
-        const res = await fetch(`/api/el-cruce/session?sessionId=${sessionId}`)
+        // IMPORTANTE: credentials: 'include' para enviar cookies de sesión
+        const res = await fetch(`/api/el-cruce/session?sessionId=${sessionId}`, {
+          credentials: 'include'
+        })
+        console.log('📡 Respuesta API:', res.status, res.ok)
         if (res.ok) {
           const data = await res.json()
+          console.log('📊 Datos recibidos:', {
+            session: data.session?.id,
+            waitingCount: data.participants?.waiting?.length,
+            crossedCount: data.participants?.crossed?.length
+          })
+          
+          // DEBUG: Verificar imágenes
+          console.log('🖼️ Imágenes waiting:', data.participants?.waiting?.map((p: any) => ({
+            id: p.id, name: p.name, hasImage: !!p.image
+          })))
+          console.log('🖼️ Imágenes crossed:', data.participants?.crossed?.map((p: any) => ({
+            id: p.id, name: p.name, hasImage: !!p.image
+          })))
+          
           setSessionData(data.session)
           
           // Los participantes vienen en data.participants (no en session)
@@ -1111,6 +1195,8 @@ export default function ElAtravesarTuVidaPage() {
             name: p.name || 'Participante',
             image: p.image,
             saltoQuantico: p.saltoQuantico || 'Mi meta pendiente...',
+            hasWizard: p.hasWizard || false,
+            keywords: p.keywords || [],
             status: 'waiting'
           }))
           
@@ -1120,6 +1206,8 @@ export default function ElAtravesarTuVidaPage() {
             name: p.name || 'Participante',
             image: p.image,
             saltoQuantico: p.saltoQuantico || 'Mi meta manifestada',
+            hasWizard: p.hasWizard || false,
+            keywords: p.keywords || [],
             status: 'crossed'
           }))
           
@@ -1142,9 +1230,12 @@ export default function ElAtravesarTuVidaPage() {
             remainingCount: total,
             percentageCrossed: 0
           })
+        } else {
+          const errorData = await res.json().catch(() => ({}))
+          console.error('❌ Error del API:', res.status, errorData)
         }
       } catch (error) {
-        console.error('Error loading session:', error)
+        console.error('❌ Error loading session:', error)
       } finally {
         setLoading(false)
       }
@@ -1346,6 +1437,112 @@ export default function ElAtravesarTuVidaPage() {
           }}
           transition={{ duration: 5, repeat: Infinity }}
         />
+        
+        {/* ═══ ESTELA DE LUZ PRINCIPAL - Onda que empuja los orbes ═══ */}
+        <motion.div
+          className="absolute w-[200%] h-24 pointer-events-none z-20"
+          style={{
+            background: `linear-gradient(90deg, 
+              transparent 0%,
+              rgba(251,191,36,0.03) 20%,
+              rgba(253,224,71,0.1) 35%,
+              rgba(254,240,138,0.25) 45%,
+              rgba(255,255,255,0.5) 50%,
+              rgba(254,240,138,0.25) 55%,
+              rgba(253,224,71,0.1) 65%,
+              rgba(251,191,36,0.03) 80%,
+              transparent 100%
+            )`,
+            filter: 'blur(12px)',
+          }}
+          initial={{ x: '100%', y: '20%', rotate: -3 }}
+          animate={{
+            x: ['-100%', '100%'],
+            y: ['20%', '60%', '40%', '70%', '20%'],
+            rotate: [-3, 3, -2, 4, -3],
+          }}
+          transition={{
+            x: { duration: 8, repeat: Infinity, ease: "linear" },
+            y: { duration: 16, repeat: Infinity, ease: "easeInOut" },
+            rotate: { duration: 12, repeat: Infinity, ease: "easeInOut" },
+          }}
+        />
+        
+        {/* Segunda estela más suave */}
+        <motion.div
+          className="absolute w-[150%] h-16 pointer-events-none z-20"
+          style={{
+            background: `linear-gradient(90deg, 
+              transparent 0%,
+              rgba(251,191,36,0.05) 30%,
+              rgba(255,255,255,0.3) 50%,
+              rgba(251,191,36,0.05) 70%,
+              transparent 100%
+            )`,
+            filter: 'blur(16px)',
+          }}
+          initial={{ x: '100%', y: '50%', rotate: 2 }}
+          animate={{
+            x: ['-80%', '100%'],
+            y: ['50%', '25%', '55%', '15%', '50%'],
+            rotate: [2, -4, 3, -2, 2],
+          }}
+          transition={{
+            x: { duration: 10, repeat: Infinity, ease: "linear", delay: 3 },
+            y: { duration: 18, repeat: Infinity, ease: "easeInOut" },
+            rotate: { duration: 14, repeat: Infinity, ease: "easeInOut" },
+          }}
+        />
+        
+        {/* Tercera estela diagonal suave */}
+        <motion.div
+          className="absolute w-[120%] h-12 pointer-events-none z-20"
+          style={{
+            background: `linear-gradient(90deg, 
+              transparent 0%,
+              rgba(253,224,71,0.1) 40%,
+              rgba(255,255,255,0.35) 50%,
+              rgba(253,224,71,0.1) 60%,
+              transparent 100%
+            )`,
+            filter: 'blur(10px)',
+          }}
+          initial={{ x: '100%', y: '35%', rotate: -5 }}
+          animate={{
+            x: ['-60%', '100%'],
+            y: ['35%', '75%', '25%', '65%', '35%'],
+            rotate: [-5, 8, -3, 5, -5],
+          }}
+          transition={{
+            x: { duration: 7, repeat: Infinity, ease: "linear", delay: 5 },
+            y: { duration: 12, repeat: Infinity, ease: "easeInOut" },
+            rotate: { duration: 9, repeat: Infinity, ease: "easeInOut" },
+          }}
+        />
+        
+        {/* Destellos de impacto suaves */}
+        {[...Array(4)].map((_, i) => (
+          <motion.div
+            key={`flash-${i}`}
+            className="absolute w-6 h-6 rounded-full pointer-events-none"
+            style={{
+              left: `${20 + i * 20}%`,
+              top: `${25 + (i % 2) * 35}%`,
+              background: 'radial-gradient(circle, rgba(255,255,255,0.6) 0%, rgba(251,191,36,0.2) 50%, transparent 70%)',
+              filter: 'blur(6px)',
+            }}
+            animate={{
+              scale: [0, 1.5, 0],
+              opacity: [0, 0.7, 0],
+            }}
+            transition={{
+              duration: 2.5,
+              repeat: Infinity,
+              delay: i * 1.5 + 1,
+              ease: "easeOut",
+            }}
+          />
+        ))}
         
         {/* Partículas de energía subiendo */}
         <div className="absolute inset-0 overflow-hidden">

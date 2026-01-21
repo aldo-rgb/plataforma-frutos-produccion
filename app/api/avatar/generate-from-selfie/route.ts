@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import Replicate from 'replicate';
+import { createClient } from '@supabase/supabase-js';
 
 // Inicialización lazy de Replicate - solo si hay API token
 let replicate: Replicate | null = null;
@@ -13,6 +14,65 @@ function getReplicate(): Replicate | null {
     });
   }
   return replicate;
+}
+
+// Cliente de Supabase para storage
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://fteqhmntkmmppxufjrwt.supabase.co';
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+let supabase: ReturnType<typeof createClient> | null = null;
+
+function getSupabase() {
+  if (!supabase && supabaseKey) {
+    supabase = createClient(supabaseUrl, supabaseKey);
+  }
+  return supabase;
+}
+
+/**
+ * Sube una imagen a Supabase Storage y retorna la URL pública permanente
+ */
+async function uploadImageToSupabase(imageUrl: string, userId: number): Promise<string> {
+  const supabaseClient = getSupabase();
+  if (!supabaseClient) {
+    console.warn('⚠️ Supabase no configurado, usando URL temporal');
+    return imageUrl;
+  }
+
+  try {
+    console.log('📥 Descargando imagen de Replicate...');
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`Error descargando imagen: ${response.status}`);
+    }
+    
+    const imageBuffer = await response.arrayBuffer();
+    const fileName = `avatars/${userId}-${Date.now()}.png`;
+    
+    console.log('📤 Subiendo a Supabase Storage:', fileName);
+    const { data, error } = await supabaseClient.storage
+      .from('mentor-assets')
+      .upload(fileName, imageBuffer, {
+        contentType: 'image/png',
+        upsert: true
+      });
+
+    if (error) {
+      console.error('❌ Error subiendo a Supabase:', error);
+      throw error;
+    }
+
+    // Obtener URL pública permanente
+    const { data: { publicUrl } } = supabaseClient.storage
+      .from('mentor-assets')
+      .getPublicUrl(fileName);
+
+    console.log('✅ Imagen guardada permanentemente:', publicUrl);
+    return publicUrl;
+  } catch (error) {
+    console.error('❌ Error en uploadImageToSupabase:', error);
+    // Si falla, retornar la URL temporal como fallback
+    return imageUrl;
+  }
 }
 
 /**
@@ -300,18 +360,13 @@ REQUIRED - YES:
     console.log('Output:', result.output);
 
     // El output ahora es un array de URLs (strings)
-    let avatarUrl = Array.isArray(result.output) ? result.output[0] : result.output;
+    let replicateUrl = Array.isArray(result.output) ? result.output[0] : result.output;
 
-    // TODO: IMPORTANTE - En producción, descarga esta imagen y súbela a tu S3/Cloudinary
-    // Por ahora usamos la URL temporal de Replicate
-    // Ejemplo con fetch + upload a S3:
-    /*
-    const imageResponse = await fetch(avatarUrl);
-    const imageBuffer = await imageResponse.arrayBuffer();
-    const fileName = 'avatars/' + usuario.id + '-' + Date.now() + '.png';
-    const uploadedUrl = await uploadToS3(imageBuffer, fileName);
-    avatarUrl = uploadedUrl;
-    */
+    // IMPORTANTE: Subir la imagen a Supabase Storage para URL permanente
+    // Las URLs de Replicate son temporales y expiran
+    console.log('🔄 Guardando imagen permanentemente en Supabase...');
+    let avatarUrl = await uploadImageToSupabase(replicateUrl, usuario.id);
+    console.log('✅ URL permanente:', avatarUrl);
 
     // TEMPORAL: Comentado mientras se regenera el cliente de Prisma
     /*
