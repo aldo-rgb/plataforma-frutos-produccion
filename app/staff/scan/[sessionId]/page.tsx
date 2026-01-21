@@ -17,7 +17,8 @@ import {
   Camera,
   Keyboard,
   User,
-  Zap
+  Zap,
+  AlertCircle
 } from "lucide-react"
 import { Html5Qrcode } from "html5-qrcode"
 
@@ -39,6 +40,13 @@ interface ScanResponse {
   }
 }
 
+// Declarar tipos para Web NFC API
+declare global {
+  interface Window {
+    NDEFReader: any
+  }
+}
+
 export default function StaffScanPage() {
   const params = useParams()
   const searchParams = useSearchParams()
@@ -54,9 +62,13 @@ export default function StaffScanPage() {
   const [totalScanned, setTotalScanned] = useState(0)
   const [sessionActive, setSessionActive] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
+  const [nfcSupported, setNfcSupported] = useState(false)
+  const [nfcReading, setNfcReading] = useState(false)
+  const [nfcError, setNfcError] = useState<string | null>(null)
   
   const qrScannerRef = useRef<Html5Qrcode | null>(null)
   const videoRef = useRef<HTMLDivElement>(null)
+  const nfcReaderRef = useRef<any>(null)
 
   // Conectar Socket.IO
   useEffect(() => {
@@ -146,18 +158,96 @@ export default function StaffScanPage() {
     }
   }, [])
 
+  // Verificar soporte NFC al montar
+  useEffect(() => {
+    if (typeof window !== "undefined" && "NDEFReader" in window) {
+      setNfcSupported(true)
+    }
+  }, [])
+
+  // Iniciar lectura NFC
+  const startNFCReader = useCallback(async () => {
+    if (!nfcSupported || nfcReaderRef.current) return
+
+    try {
+      const ndef = new window.NDEFReader()
+      nfcReaderRef.current = ndef
+
+      await ndef.scan()
+      setNfcReading(true)
+      setNfcError(null)
+
+      ndef.addEventListener("reading", ({ message, serialNumber }: any) => {
+        // Intentar leer el contenido del tag NFC
+        let nfcData = serialNumber || ""
+        
+        for (const record of message.records) {
+          if (record.recordType === "text") {
+            const textDecoder = new TextDecoder(record.encoding || "utf-8")
+            nfcData = textDecoder.decode(record.data)
+            break
+          } else if (record.recordType === "url") {
+            const textDecoder = new TextDecoder()
+            const url = textDecoder.decode(record.data)
+            // Extraer código de la URL si existe
+            const match = url.match(/code=([A-Z0-9]+)/i) || url.match(/\/([A-Z0-9]{10,})/i)
+            if (match) {
+              nfcData = match[1]
+            }
+            break
+          }
+        }
+
+        if (nfcData) {
+          handleScan(nfcData.toUpperCase(), "NFC")
+        }
+      })
+
+      ndef.addEventListener("readingerror", () => {
+        setNfcError("Error al leer la etiqueta NFC")
+        vibrate([100, 100, 100])
+      })
+
+    } catch (err: any) {
+      console.error("Error iniciando NFC:", err)
+      if (err.name === "NotAllowedError") {
+        setNfcError("Permiso NFC denegado. Permite el acceso en configuración.")
+      } else if (err.name === "NotSupportedError") {
+        setNfcError("NFC no soportado en este dispositivo")
+        setNfcSupported(false)
+      } else {
+        setNfcError(err?.message || "Error al iniciar NFC")
+      }
+    }
+  }, [nfcSupported])
+
+  // Detener lectura NFC
+  const stopNFCReader = useCallback(() => {
+    if (nfcReaderRef.current) {
+      // Web NFC no tiene método stop(), solo dejamos de escuchar
+      nfcReaderRef.current = null
+      setNfcReading(false)
+    }
+  }, [])
+
   // Manejar cambio de modo
   useEffect(() => {
     if (scanMode === "qr") {
       startQRScanner()
+      stopNFCReader()
+    } else if (scanMode === "nfc") {
+      stopQRScanner()
+      startNFCReader()
     } else {
       stopQRScanner()
+      stopNFCReader()
     }
 
     return () => {
       stopQRScanner()
+      stopNFCReader()
     }
-  }, [scanMode, startQRScanner, stopQRScanner])
+  }, [scanMode, startQRScanner, stopQRScanner, startNFCReader, stopNFCReader])
 
   // Vibrar dispositivo
   const vibrate = (pattern: number | number[]) => {
@@ -394,19 +484,59 @@ export default function StaffScanPage() {
 
             {scanMode === "nfc" && (
               <div className="bg-slate-800 rounded-2xl p-8 aspect-square flex flex-col items-center justify-center">
-                <motion.div
-                  animate={{ 
-                    scale: [1, 1.1, 1],
-                    opacity: [0.5, 1, 0.5]
-                  }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  <Nfc className="w-24 h-24 text-amber-400" />
-                </motion.div>
-                <p className="text-white text-lg mt-4">Acerca el gafete NFC</p>
-                <p className="text-slate-500 text-sm mt-2">
-                  El dispositivo debe tener NFC habilitado
-                </p>
+                {!nfcSupported ? (
+                  <>
+                    <AlertCircle className="w-24 h-24 text-red-400 mb-4" />
+                    <p className="text-white text-lg text-center">NFC no disponible</p>
+                    <p className="text-slate-400 text-sm mt-2 text-center">
+                      Este navegador no soporta Web NFC. Usa Chrome en Android o ingresa el código manualmente.
+                    </p>
+                    <button
+                      onClick={() => setScanMode("manual")}
+                      className="mt-4 px-6 py-3 bg-amber-500 text-white rounded-xl font-bold flex items-center gap-2"
+                    >
+                      <Keyboard className="w-5 h-5" />
+                      Entrada manual
+                    </button>
+                  </>
+                ) : nfcError ? (
+                  <>
+                    <AlertCircle className="w-24 h-24 text-yellow-400 mb-4" />
+                    <p className="text-white text-lg text-center">Error NFC</p>
+                    <p className="text-slate-400 text-sm mt-2 text-center">
+                      {nfcError}
+                    </p>
+                    <button
+                      onClick={() => {
+                        setNfcError(null)
+                        startNFCReader()
+                      }}
+                      className="mt-4 px-6 py-3 bg-amber-500 text-white rounded-xl font-bold"
+                    >
+                      Reintentar
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <motion.div
+                      animate={{ 
+                        scale: [1, 1.1, 1],
+                        opacity: [0.5, 1, 0.5]
+                      }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      <Nfc className={`w-24 h-24 ${nfcReading ? "text-green-400" : "text-amber-400"}`} />
+                    </motion.div>
+                    <p className="text-white text-lg mt-4">
+                      {nfcReading ? "✓ NFC Activo - Acerca el gafete" : "Iniciando NFC..."}
+                    </p>
+                    <p className="text-slate-500 text-sm mt-2 text-center">
+                      {nfcReading 
+                        ? "Mantén el gafete cerca hasta que vibre" 
+                        : "Asegúrate de tener NFC habilitado"}
+                    </p>
+                  </>
+                )}
               </div>
             )}
 
