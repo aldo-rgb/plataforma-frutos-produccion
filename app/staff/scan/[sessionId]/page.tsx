@@ -118,12 +118,15 @@ export default function StaffScanPage() {
       await html5QrCode.start(
         { facingMode: "environment" },
         {
-          fps: 10,
+          fps: 5, // Reducir FPS para evitar escaneos múltiples
           qrbox: { width: 200, height: 200 },
           aspectRatio: 1.0
         },
         (decodedText) => {
-          handleScan(decodedText, "QR")
+          // Solo procesar si no estamos en cooldown
+          if (!scanCooldownRef.current) {
+            handleScan(decodedText, "QR")
+          }
         },
         () => {} // Ignorar errores de escaneo continuo
       ).catch(async (err) => {
@@ -132,11 +135,13 @@ export default function StaffScanPage() {
         await html5QrCode.start(
           { facingMode: "user" },
           {
-            fps: 10,
+            fps: 5,
             qrbox: { width: 200, height: 200 }
           },
           (decodedText) => {
-            handleScan(decodedText, "QR")
+            if (!scanCooldownRef.current) {
+              handleScan(decodedText, "QR")
+            }
           },
           () => {}
         )
@@ -262,11 +267,27 @@ export default function StaffScanPage() {
 
   // Procesar escaneo
   const handleScan = async (code: string, method: string) => {
-    // Evitar escaneos repetidos del mismo código o durante cooldown
-    if (scanning || !code.trim() || scanCooldownRef.current) return
-    if (code.trim() === lastScannedCode) return
+    // CRÍTICO: Verificar cooldown PRIMERO de forma síncrona
+    if (scanCooldownRef.current) {
+      console.log("⏳ En cooldown, ignorando escaneo:", code)
+      return
+    }
     
+    // Activar cooldown INMEDIATAMENTE antes de cualquier otra cosa
     scanCooldownRef.current = true
+    
+    // Evitar escaneos repetidos del mismo código
+    if (scanning || !code.trim()) {
+      scanCooldownRef.current = false
+      return
+    }
+    if (code.trim() === lastScannedCode) {
+      console.log("🔄 Código repetido, ignorando:", code)
+      // Mantener cooldown por un momento para códigos repetidos
+      setTimeout(() => { scanCooldownRef.current = false }, 1000)
+      return
+    }
+    
     setLastScannedCode(code.trim())
     setScanning(true)
     setScanResult("scanning")
