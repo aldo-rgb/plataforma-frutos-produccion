@@ -58,6 +58,7 @@ interface Product {
   startDate?: string
   endDate?: string
   visionId?: number
+  trainingStatus?: string
 }
 
 // Props opcionales - el widget puede funcionar sin ellas
@@ -66,13 +67,15 @@ interface Props {
   organizationId?: number
   products?: Product[]
   currentProductId?: number
+  trainerLevel?: 'BASIC' | 'ADVANCED' | 'PL' | null // Nivel asignado al trainer
 }
 
 export default function ElCruceAccessWidget({ 
   userRole: propUserRole, 
   organizationId: propOrgId,
   products: propProducts = [],
-  currentProductId 
+  currentProductId,
+  trainerLevel: propTrainerLevel
 }: Props) {
   const { data: session } = useSession()
   const [sessions, setSessions] = useState<CrossingSession[]>([])
@@ -101,7 +104,9 @@ export default function ElCruceAccessWidget({
   
   // Setup state para crear sesión
   const [selectedProductId, setSelectedProductId] = useState<number | null>(currentProductId || null)
-  const [targetLevel, setTargetLevel] = useState<"ADVANCED" | "PL">("ADVANCED")
+  // Si el trainer es de ADVANCED, el destino es PL (Tu Vida)
+  // Si es de BASIC, el destino es ADVANCED
+  const [targetLevel, setTargetLevel] = useState<"ADVANCED" | "PL">(propTrainerLevel === 'ADVANCED' ? "PL" : "ADVANCED")
   const [targetProductId, setTargetProductId] = useState<number | null>(null)
 
   // Obtener rol y organizationId desde sesión o props
@@ -137,7 +142,8 @@ export default function ElCruceAccessWidget({
               levelType: p.levelType,
               startDate: p.startDate,
               endDate: p.endDate,
-              visionId: p.visionId
+              visionId: p.visionId,
+              trainingStatus: p.trainingStatus
             })))
           }
         }
@@ -243,11 +249,16 @@ export default function ElCruceAccessWidget({
     }
   }
 
-  // Copiar URL
-  const copyUrl = (sessionId: string, type: "display" | "staff") => {
+  // Copiar URL - diferente ruta según el nivel destino
+  const copyUrl = (sessionId: string, type: "display" | "staff", targetLevel?: string) => {
     const baseUrl = window.location.origin
+    // Si el destino es PL (Tu Vida), usar la pantalla especial
+    const displayPath = targetLevel === "PL" 
+      ? `${baseUrl}/el-cruce/${sessionId}/tu-vida`
+      : `${baseUrl}/el-cruce/${sessionId}`
+    
     const url = type === "display" 
-      ? `${baseUrl}/el-cruce/${sessionId}`
+      ? displayPath
       : `${baseUrl}/staff/scan/${sessionId}`
     
     navigator.clipboard.writeText(url)
@@ -337,24 +348,35 @@ export default function ElCruceAccessWidget({
     setShowTopFile(true)
   }
 
-  // Productos para crear sesión - solo los que ya iniciaron y aún no terminan (en curso)
-  // TEMPORAL PARA PRUEBAS: También incluye el próximo básico que va a iniciar
-  const now = new Date()
-  const basicProducts = products.filter(p => {
-    if (p.levelType !== "BASIC") return false
-    if (!p.startDate) return false
-    const startDate = new Date(p.startDate)
-    const endDate = p.endDate ? new Date(p.endDate) : null
-    // Ya inició Y (no tiene endDate O endDate aún no pasó)
-    const hasStarted = startDate <= now
-    const hasNotEnded = !endDate || endDate >= now
-    const isInProgress = hasStarted && hasNotEnded
-    // TEMPORAL: También incluir próximos (para pruebas)
-    const isUpcoming = startDate > now
-    return isInProgress || isUpcoming
-  })
-  const advancedProducts = products.filter(p => p.levelType === "ADVANCED")
-  const plProducts = products.filter(p => p.levelType === "PL")
+  // Productos para crear sesión - solo los que están EN CURSO (IN_PROGRESS)
+  // Un trainer solo puede tener un entrenamiento activo a la vez
+  
+  // Filtrar productos que están IN_PROGRESS (sin importar el nivel)
+  // El trainer solo puede tener El Atravesar para entrenamientos activos
+  const productsInProgress = products.filter(p => p.trainingStatus === 'IN_PROGRESS')
+  
+  // Productos por nivel (todos IN_PROGRESS)
+  const basicProducts = productsInProgress.filter(p => p.levelType === 'BASIC')
+  const advancedProducts = productsInProgress.filter(p => p.levelType === 'ADVANCED')
+  const plProducts = productsInProgress.filter(p => p.levelType === 'PL')
+
+  // Auto-detectar el producto en curso del trainer
+  // Un trainer típicamente tiene UN producto asignado activo
+  const productInProgress = productsInProgress.length > 0 ? productsInProgress[0] : null
+  
+  // Auto-determinar el nivel destino basado en el producto origen
+  const autoTargetLevel = productInProgress?.levelType === 'BASIC' ? 'ADVANCED' : 'PL'
+
+  // Auto-seleccionar el producto en curso cuando se carguen los productos
+  useEffect(() => {
+    if (!selectedProductId && productsInProgress.length > 0) {
+      // Seleccionar el único/primer producto IN_PROGRESS
+      setSelectedProductId(productsInProgress[0].id)
+      // Actualizar el nivel destino según el producto
+      const level = productsInProgress[0].levelType
+      setTargetLevel(level === 'BASIC' ? 'ADVANCED' : 'PL')
+    }
+  }, [selectedProductId, productsInProgress])
 
   // Auto-seleccionar producto destino basado en la visión del producto origen
   useEffect(() => {
@@ -384,6 +406,7 @@ export default function ElCruceAccessWidget({
   const selectedProduct = products.find(p => p.id === selectedProductId)
   const targetProducts = (targetLevel === "ADVANCED" ? advancedProducts : plProducts)
     .filter(p => !selectedProduct?.visionId || p.visionId === selectedProduct.visionId)
+  const targetProductSelected = targetProducts.find(p => p.id === targetProductId)
 
   // Sesiones activas (EN VIVO o LISTO)
   const activeSessions = sessions.filter(s => ['ACTIVE', 'WAITING', 'PAUSED'].includes(s.status))
@@ -546,7 +569,9 @@ export default function ElCruceAccessWidget({
 
                         {/* Botón para ver pantalla */}
                         <a
-                          href={`/el-cruce/${session.id}`}
+                          href={session.targetLevel === 'PL' 
+                            ? `/el-cruce/${session.id}/tu-vida` 
+                            : `/el-cruce/${session.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex-1 py-2 bg-slate-700 text-white rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-slate-600 transition-colors"
@@ -585,7 +610,7 @@ export default function ElCruceAccessWidget({
                           {/* Links para copiar */}
                           <div className="flex gap-2 text-xs">
                             <button
-                              onClick={() => copyUrl(session.id, "staff")}
+                              onClick={() => copyUrl(session.id, "staff", session.targetLevel)}
                               className="flex-1 py-1.5 bg-slate-800 rounded flex items-center justify-center gap-1 text-slate-400 hover:text-white transition-colors"
                             >
                               {copied === `${session.id}-staff` ? (
@@ -596,7 +621,7 @@ export default function ElCruceAccessWidget({
                               Link Staff
                             </button>
                             <button
-                              onClick={() => copyUrl(session.id, "display")}
+                              onClick={() => copyUrl(session.id, "display", session.targetLevel)}
                               className="flex-1 py-1.5 bg-slate-800 rounded flex items-center justify-center gap-1 text-slate-400 hover:text-white transition-colors"
                             >
                               {copied === `${session.id}-display` ? (
@@ -704,74 +729,76 @@ export default function ElCruceAccessWidget({
                         </motion.div>
                       )}
 
-                      {/* Seleccionar producto origen */}
-                      {basicProducts.length > 0 && (
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-slate-300">
-                            Producto Básico (origen)
-                          </label>
-                          <select
-                            value={selectedProductId || ""}
-                            onChange={(e) => setSelectedProductId(parseInt(e.target.value))}
-                            className="w-full px-4 py-3 bg-slate-900/80 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
-                          >
-                            <option value="">Seleccionar...</option>
-                            {basicProducts.map(p => (
-                              <option key={p.id} value={p.id}>{p.name}</option>
-                            ))}
-                          </select>
+                      {/* Resumen de la sesión a crear */}
+                      <div className="space-y-4">
+                        {/* Producto origen (auto-detectado) */}
+                        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+                          <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Producto en curso</p>
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${selectedProduct?.levelType === 'ADVANCED' ? 'bg-purple-500/20' : 'bg-blue-500/20'}`}>
+                              <Rocket className={`w-5 h-5 ${selectedProduct?.levelType === 'ADVANCED' ? 'text-purple-400' : 'text-blue-400'}`} />
+                            </div>
+                            <div>
+                              <p className="text-white font-medium">
+                                {selectedProduct?.name || 'No hay entrenamientos en curso'}
+                              </p>
+                              <p className="text-xs text-slate-400">
+                                {selectedProduct?.levelType === 'ADVANCED' ? 'Nivel Avanzado' : selectedProduct?.levelType === 'PL' ? 'Nivel Liderato' : 'Nivel Básico'}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          {/* Selector solo si hay múltiples productos IN_PROGRESS */}
+                          {productsInProgress.length > 1 && (
+                            <select
+                              value={selectedProductId || ""}
+                              onChange={(e) => {
+                                const newId = parseInt(e.target.value)
+                                setSelectedProductId(newId)
+                                const prod = products.find(p => p.id === newId)
+                                if (prod) {
+                                  setTargetLevel(prod.levelType === 'BASIC' ? 'ADVANCED' : 'PL')
+                                }
+                              }}
+                              className="mt-3 w-full px-3 py-2 bg-slate-900/80 border border-slate-600 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                            >
+                              {productsInProgress.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                              ))}
+                            </select>
+                          )}
                         </div>
-                      )}
 
-                      {/* Seleccionar nivel destino */}
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-slate-300">
-                          Nivel destino
-                        </label>
-                        <div className="grid grid-cols-2 gap-3">
-                          <button
-                            onClick={() => setTargetLevel("ADVANCED")}
-                            className={`py-3 px-4 rounded-xl flex items-center justify-center gap-2 font-medium transition-all ${
-                              targetLevel === "ADVANCED"
-                                ? "bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg shadow-purple-500/30"
-                                : "bg-slate-800 border border-slate-600 text-slate-400 hover:border-purple-500/50"
-                            }`}
-                          >
-                            <Rocket className="w-5 h-5" />
-                            Avanzado
-                          </button>
-                          <button
-                            onClick={() => setTargetLevel("PL")}
-                            className={`py-3 px-4 rounded-xl flex items-center justify-center gap-2 font-medium transition-all ${
-                              targetLevel === "PL"
-                                ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30"
-                                : "bg-slate-800 border border-slate-600 text-slate-400 hover:border-amber-500/50"
-                            }`}
-                          >
-                            <Crown className="w-5 h-5" />
-                            Tu Vida
-                          </button>
+                        {/* Flecha de transición */}
+                        <div className="flex justify-center">
+                          <div className="flex flex-col items-center">
+                            <div className="w-px h-4 bg-gradient-to-b from-slate-700 to-amber-500/50" />
+                            <div className="p-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full">
+                              <Zap className="w-4 h-4 text-white" />
+                            </div>
+                            <p className="text-xs text-amber-400 mt-1 font-medium">El Atravesar</p>
+                            <div className="w-px h-4 bg-gradient-to-b from-amber-500/50 to-slate-700" />
+                          </div>
+                        </div>
+
+                        {/* Producto destino (auto-detectado) */}
+                        <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-xl p-4 border border-amber-500/30">
+                          <p className="text-xs text-amber-600 uppercase tracking-wider mb-2">Destino</p>
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-amber-500/20 rounded-lg">
+                              <Crown className="w-5 h-5 text-amber-400" />
+                            </div>
+                            <div>
+                              <p className="text-white font-medium">
+                                {targetProductSelected?.name || (targetLevel === 'PL' ? 'Tu Vida (Liderato)' : 'Avanzado')}
+                              </p>
+                              <p className="text-xs text-amber-400">
+                                {targetLevel === 'PL' ? 'Nivel Tu Vida' : 'Nivel Avanzado'}
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       </div>
-
-                      {/* Producto destino específico */}
-                      {targetProducts.length > 0 && (
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-slate-300">
-                            Producto destino (opcional)
-                          </label>
-                          <select
-                            value={targetProductId || ""}
-                            onChange={(e) => setTargetProductId(e.target.value ? parseInt(e.target.value) : null)}
-                            className="w-full px-4 py-3 bg-slate-900/80 border border-slate-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
-                          >
-                            <option value="">Auto-detectar próximo</option>
-                            {targetProducts.map(p => (
-                              <option key={p.id} value={p.id}>{p.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
 
                       {/* Botones */}
                       <div className="flex gap-3 pt-2">

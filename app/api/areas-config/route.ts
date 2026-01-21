@@ -56,6 +56,7 @@ export async function GET(req: NextRequest) {
     });
 
     // Obtener info del usuario target y verificar si pertenece a una visión
+    // Primero buscar por VisionParticipante (agregado por coordinador)
     const targetUser = await prisma.usuario.findUnique({
       where: { id: userId },
       select: { 
@@ -82,9 +83,43 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    const visionParticipante = targetUser?.VisionParticipante_VisionParticipante_participanteIdToUsuario?.[0];
-    const perteneceAGrupo = !!visionParticipante;
-    const visionConfig = visionParticipante?.Vision;
+    let visionParticipante = targetUser?.VisionParticipante_VisionParticipante_participanteIdToUsuario?.[0];
+    let visionConfig = visionParticipante?.Vision;
+    let perteneceAGrupo = !!visionParticipante;
+
+    // Si no es VisionParticipante, verificar si tiene vision_enrollments (inscrito al programa)
+    if (!perteneceAGrupo) {
+      const enrollment = await prisma.vision_enrollments.findFirst({
+        where: {
+          userId,
+          enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+        },
+        include: {
+          Vision: {
+            select: {
+              id: true,
+              nombre: true,
+              transformationGuestsTarget: true,
+              forceFinanzasArea: true,
+              forceRelacionesArea: true,
+              forceTalentosArea: true,
+              forceSaludArea: true,
+              forcePazMentalArea: true,
+              forceOcioArea: true,
+              forceTransformationArea: true,
+              forceCommunityServiceArea: true
+            }
+          }
+        },
+        orderBy: { enrolledAt: 'desc' }
+      });
+
+      if (enrollment?.Vision) {
+        console.log('🔍 Usuario tiene enrollment en Vision:', enrollment.Vision.nombre);
+        perteneceAGrupo = true;
+        visionConfig = enrollment.Vision;
+      }
+    }
 
     // Si pertenece a una Vision, SIEMPRE usar la configuración de la Vision
     // (ignorar cualquier configuración previa en areaConfig)

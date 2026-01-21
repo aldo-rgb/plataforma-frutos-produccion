@@ -62,7 +62,19 @@ export async function GET(request: NextRequest) {
               select: { 
                 id: true, 
                 nombre: true, 
-                profileImage: true 
+                profileImage: true,
+                goals: true, // Meta general del usuario
+                CartaFrutos: {
+                  take: 1,
+                  orderBy: { fechaCreacion: 'desc' },
+                  select: {
+                    Meta: {
+                      take: 1,
+                      orderBy: { orden: 'asc' },
+                      select: { metaPrincipal: true }
+                    }
+                  }
+                }
               }
             }
           },
@@ -80,7 +92,19 @@ export async function GET(request: NextRequest) {
               select: { 
                 id: true, 
                 nombre: true, 
-                profileImage: true 
+                profileImage: true,
+                goals: true,
+                CartaFrutos: {
+                  take: 1,
+                  orderBy: { fechaCreacion: 'desc' },
+                  select: {
+                    Meta: {
+                      take: 1,
+                      orderBy: { orden: 'asc' },
+                      select: { metaPrincipal: true }
+                    }
+                  }
+                }
               }
             }
           }
@@ -89,11 +113,19 @@ export async function GET(request: NextRequest) {
 
       const crossedUserIds = new Set(preRegistered.map(p => p.userId))
 
+      // Helper para obtener salto cuántico (meta principal)
+      const getSaltoQuantico = (user: any) => {
+        // Prioridad: Meta de la Carta > goals del usuario > default
+        const cartaMeta = user?.CartaFrutos?.[0]?.Meta?.[0]?.metaPrincipal
+        return cartaMeta || user?.goals || 'Mi gran sueño'
+      }
+
       // Formatear participantes
       const crossedParticipants = preRegistered.map(p => ({
         id: p.userId,
         name: p.user.nombre || 'Participante',
         image: p.user.profileImage,
+        saltoQuantico: getSaltoQuantico(p.user),
         status: p.status
       }))
 
@@ -102,7 +134,8 @@ export async function GET(request: NextRequest) {
         .map(u => ({
           id: u.userId,
           name: u.Usuario.nombre || 'Participante',
-          image: u.Usuario.profileImage
+          image: u.Usuario.profileImage,
+          saltoQuantico: getSaltoQuantico(u.Usuario)
         }))
 
       // Obtener estadísticas de la Master Organización (optimizado con cache simple)
@@ -189,12 +222,17 @@ export async function GET(request: NextRequest) {
     // Buscar sesiones activas (para el widget)
     if (active === "true") {
       const where: any = {
-        status: { in: ["WAITING", "ACTIVE", "PAUSED"] }
+        status: { in: ["WAITING", "ACTIVE", "PAUSED"] },
+        // Solo mostrar sesiones de productos que están EN CURSO
+        product: {
+          trainingStatus: 'IN_PROGRESS'
+        }
       }
 
       // Filtrar por organización si se especifica
       if (organizationId) {
         where.product = {
+          ...where.product,
           organizationId: parseInt(organizationId)
         }
       }
@@ -203,7 +241,7 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           product: {
-            select: { id: true, name: true, levelType: true, organizationId: true }
+            select: { id: true, name: true, levelType: true, organizationId: true, trainingStatus: true }
           },
           creator: {
             select: { id: true, nombre: true }
@@ -273,6 +311,14 @@ export async function POST(request: NextRequest) {
 
     if (!product) {
       return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 })
+    }
+
+    // Verificar que el entrenamiento está EN CURSO
+    if (product.trainingStatus !== 'IN_PROGRESS') {
+      return NextResponse.json({ 
+        error: "Solo puedes crear sesiones de El Atravesar para entrenamientos en curso",
+        currentStatus: product.trainingStatus
+      }, { status: 400 })
     }
 
     // Verificar que no hay sesión activa para este producto

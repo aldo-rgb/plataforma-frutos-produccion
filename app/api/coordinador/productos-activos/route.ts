@@ -55,10 +55,14 @@ export async function GET() {
     const startOfToday = new Date(now);
     startOfToday.setHours(0, 0, 0, 0);
 
+    // Para TRAINER: incluir también productos donde es trainer, sin importar la organización
+    const isTrainer = usuario.rol === 'TRAINER'
+
     // Primero obtener productos no completados (en curso o próximos)
     const productosActivos = await prisma.schoolProduct.findMany({
       where: {
         OR: [
+          // Productos de la organización del usuario
           {
             Vision: {
               organizationId: usuario.organizationId
@@ -66,7 +70,9 @@ export async function GET() {
           },
           {
             organizationId: usuario.organizationId
-          }
+          },
+          // Si es TRAINER, incluir productos donde es trainer (cualquier org)
+          ...(isTrainer ? [{ trainerId: usuario.id }] : [])
         ],
         isActive: true,
         trainingStatus: { not: 'COMPLETED' },

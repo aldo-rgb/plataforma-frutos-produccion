@@ -48,10 +48,11 @@ export async function GET() {
     }
 
     // PASO 1: Verificar vision_enrollments (fuente de acceso progresivo)
+    // Incluir ENROLLED y ACTIVE (usuarios que están activamente en el programa)
     const enrollments = await prisma.vision_enrollments.findMany({
       where: {
         userId,
-        enrollmentStatus: 'ENROLLED'
+        enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
       },
       select: {
         level: true,
