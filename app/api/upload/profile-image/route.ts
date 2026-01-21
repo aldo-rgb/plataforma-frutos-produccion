@@ -70,8 +70,32 @@ export async function POST(req: NextRequest) {
     const { PrismaClient } = await import('@prisma/client');
     const prisma = new PrismaClient();
 
+    // Obtener usuario actual para guardar foto anterior en vault
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: parseInt(session.user.id) },
+      select: { id: true, profileImage: true }
+    });
+
+    // Guardar foto anterior en The Vault si existe
+    if (usuario?.profileImage) {
+      try {
+        await prisma.avatarGenerationAttempt.create({
+          data: {
+            usuarioId: usuario.id,
+            generatedUrl: usuario.profileImage,
+            vibe: 'profile-backup',
+            gender: 'neutral',
+            sourceImage: 'previous-profile'
+          }
+        });
+        console.log('📸 Foto anterior guardada en The Vault');
+      } catch (vaultError) {
+        console.error('⚠️ Error guardando en vault (continuando):', vaultError);
+      }
+    }
+
     await prisma.usuario.update({
-      where: { id: session.user.id },
+      where: { id: parseInt(session.user.id) },
       data: { profileImage: publicUrl },
     });
 

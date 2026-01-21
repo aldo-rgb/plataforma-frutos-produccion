@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Sparkles, Zap, Shield, Brain, Target, CheckCircle, 
-  Loader2, Share2, Twitter, Facebook, Linkedin, Copy, X, Camera
+  Loader2, Share2, Twitter, Facebook, Linkedin, Copy, X, Camera, Upload
 } from 'lucide-react';
 import SelfieAvatarCapture from './SelfieAvatarCapture';
 
@@ -45,6 +45,8 @@ export default function QuantumIdentityModal({
   const [isGenerating, setIsGenerating] = useState(false);
   const [showSelfieCapture, setShowSelfieCapture] = useState(false);
   const [useSelfieMode, setUseSelfieMode] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Función para limpiar el cooldown cuando el avatar se guarda exitosamente
   const clearCooldown = () => {
@@ -82,6 +84,90 @@ export default function QuantumIdentityModal({
     setStage('reveal');
     // Limpiar cooldown ya que el avatar se guardó exitosamente
     clearCooldown();
+  };
+
+  // Manejar subida de foto desde archivo
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de archivo
+    if (!file.type.startsWith('image/')) {
+      setErrorTitle('Archivo no válido');
+      setErrorMessage('Por favor selecciona una imagen (JPG, PNG, etc.)');
+      setStage('error');
+      return;
+    }
+
+    // Validar tamaño (máximo 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorTitle('Archivo muy grande');
+      setErrorMessage('La imagen no debe superar los 10MB');
+      setStage('error');
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+    setStage('generating'); // Mostrar estado de carga
+
+    try {
+      // Crear FormData para subir la imagen
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', 'profile-upload');
+
+      // Subir a Supabase via API
+      const uploadRes = await fetch('/api/upload/profile-image', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!uploadRes.ok) {
+        const error = await uploadRes.json().catch(() => ({ error: 'Error al subir imagen' }));
+        throw new Error(error.error || 'Error al subir imagen');
+      }
+
+      const { url: uploadedUrl } = await uploadRes.json();
+
+      // Actualizar el perfil del usuario con la nueva imagen
+      const updateRes = await fetch('/api/user/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileImage: uploadedUrl })
+      });
+
+      if (!updateRes.ok) {
+        throw new Error('Error al actualizar perfil');
+      }
+
+      // Guardar en vault como backup también
+      await fetch('/api/avatars/vault', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          avatarUrl: uploadedUrl,
+          vibe: 'uploaded-photo',
+          gender: gender || 'neutral',
+          sourceImage: 'manual-upload'
+        })
+      });
+
+      setAvatarUrl(uploadedUrl);
+      setStage('reveal');
+      clearCooldown();
+      
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      setErrorTitle('Error al subir foto');
+      setErrorMessage(error instanceof Error ? error.message : 'No se pudo subir la fotografía');
+      setStage('error');
+    } finally {
+      setIsUploadingPhoto(false);
+      // Limpiar el input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const generateIdentityOptions = async () => {
@@ -357,7 +443,16 @@ export default function QuantumIdentityModal({
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              {/* Input oculto para subir foto */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                 {/* Botón de Avatar con IA */}
                 <button
                   onClick={() => {
@@ -385,6 +480,19 @@ export default function QuantumIdentityModal({
                     <Camera size={24} className="sm:w-8 sm:h-8 group-hover:rotate-12 transition-transform" />
                     <span className="text-sm sm:text-base md:text-lg leading-tight text-center">📸 Crear con Selfie</span>
                     <span className="text-xs sm:text-sm text-cyan-200 leading-tight text-center">Avatar personalizado con IA</span>
+                  </div>
+                </button>
+
+                {/* Botón de Subir Fotografía */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingPhoto}
+                  className="group relative px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-xl transition-all transform hover:scale-105 shadow-lg shadow-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                >
+                  <div className="flex flex-col items-center space-y-1 sm:space-y-2">
+                    <Upload size={24} className="sm:w-8 sm:h-8 group-hover:rotate-12 transition-transform" />
+                    <span className="text-sm sm:text-base md:text-lg leading-tight text-center">📷 Subir Fotografía</span>
+                    <span className="text-xs sm:text-sm text-emerald-200 leading-tight text-center">Usar foto existente</span>
                   </div>
                 </button>
               </div>
