@@ -93,6 +93,11 @@ export default function SquadBuilderPage() {
   } | null>(null);
   const [orgInfo, setOrgInfo] = useState<OrgInfo>({ name: '', logoUrl: null });
   
+  // Estado para modal de nombrar átomo
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [atomName, setAtomName] = useState('');
+  const [savingName, setSavingName] = useState(false);
+  
   // Vibration helper
   const vibrate = (pattern: number | number[]) => {
     if ('vibrate' in navigator) {
@@ -184,6 +189,30 @@ export default function SquadBuilderPage() {
     fetchOrCreateSquad();
   }, [selectedVisionId, selectedLevel, session?.user?.id]);
 
+  // Guardar nombre del átomo
+  const saveAtomName = async () => {
+    if (!squad || !atomName.trim()) return;
+    
+    setSavingName(true);
+    try {
+      const res = await fetch(`/api/squads/${squad.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: atomName.trim() }),
+      });
+      
+      if (res.ok) {
+        setSquad(prev => prev ? { ...prev, name: atomName.trim() } : null);
+        setShowNameModal(false);
+        vibrate(50);
+      }
+    } catch (err) {
+      console.error('Error saving atom name:', err);
+    } finally {
+      setSavingName(false);
+    }
+  };
+
   // Create squad if doesn't exist
   const ensureSquad = async (): Promise<Squad | null> => {
     if (squad) return squad;
@@ -205,6 +234,11 @@ export default function SquadBuilderPage() {
       
       if (data.success) {
         setSquad(data.squad);
+        // Si es un átomo nuevo (no existente), mostrar modal para nombrar
+        if (!data.isExisting) {
+          setAtomName(data.squad.name || '');
+          setShowNameModal(true);
+        }
         return data.squad;
       } else {
         // Mostrar el error específico del servidor
@@ -690,6 +724,53 @@ export default function SquadBuilderPage() {
           }}
           onClose={() => setShowNFCScanner(false)}
         />
+      )}
+
+      {/* Modal para nombrar el átomo */}
+      {showNameModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-gradient-to-br from-slate-900 to-indigo-900 rounded-2xl border border-indigo-500/30 w-full max-w-sm shadow-2xl">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 mx-auto bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full flex items-center justify-center mb-4">
+                <Sparkles className="w-8 h-8 text-purple-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">¡Átomo Creado!</h3>
+              <p className="text-slate-400 text-sm mb-4">
+                Dale un nombre único a tu grupo
+              </p>
+              
+              <Input
+                value={atomName}
+                onChange={(e) => setAtomName(e.target.value)}
+                placeholder="Ej: Los Imparables"
+                className="bg-slate-800 border-slate-600 text-white text-center text-lg font-medium mb-4"
+                autoFocus
+              />
+              
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowNameModal(false)}
+                  className="flex-1 bg-slate-800/50 border-slate-600 text-white hover:bg-slate-700"
+                  disabled={savingName}
+                >
+                  Omitir
+                </Button>
+                <Button
+                  onClick={saveAtomName}
+                  disabled={!atomName.trim() || savingName}
+                  className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                >
+                  {savingName ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    'Guardar'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

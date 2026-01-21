@@ -549,7 +549,7 @@ export default function SquadManagerWidget() {
               <Sparkles className="w-4 h-4 text-purple-400" />
               Tus Participantes
             </h4>
-            <div className="space-y-2 max-h-[280px] overflow-y-auto">
+            <div className="space-y-2 max-h-[320px] overflow-y-auto">
               {allMembers.map((member) => {
                 const schedule = memberSchedules[member.user.id];
                 const callStatus = todayCallStatus[member.user.id];
@@ -569,17 +569,18 @@ export default function SquadManagerWidget() {
                           }`
                     }`}
                   >
-                    <div className="flex items-center justify-between">
+                    {/* Layout móvil: nombre y teléfono arriba, botón abajo */}
+                    <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-3">
-                        <div className="relative">
+                        <div className="relative shrink-0">
                           {member.user.imagen ? (
                             <img 
                               src={member.user.imagen} 
                               alt={member.user.nombre}
-                              className={`w-8 h-8 rounded-full object-cover ${isDrop ? 'grayscale' : ''}`}
+                              className={`w-10 h-10 rounded-full object-cover ${isDrop ? 'grayscale' : ''}`}
                             />
                           ) : (
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-base font-medium">
                               {member.user.nombre?.charAt(0) || '?'}
                             </div>
                           )}
@@ -601,103 +602,58 @@ export default function SquadManagerWidget() {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className={`text-sm font-medium flex items-center gap-2 ${isDrop ? 'text-gray-400 line-through' : 'text-white'}`}>
+                          <p className={`text-sm font-semibold truncate ${isDrop ? 'text-gray-400 line-through' : 'text-white'}`}>
                             {member.user.nombre}
                             {isDrop && (
-                              <span className="text-xs text-gray-500 no-underline">(DROP)</span>
+                              <span className="text-xs text-gray-500 ml-1 no-underline">(DROP)</span>
                             )}
-                            {isCompleted && !isDrop && callStatus?.rating && (
-                              <span className="flex items-center text-xs text-amber-400">
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {isDrop ? (
+                              <span className="text-gray-500">Abandonó</span>
+                            ) : schedule ? (
+                              formatTime(schedule)
+                            ) : (
+                              'Sin horario'
+                            )}
+                            {isCompleted && callStatus?.rating && (
+                              <span className="ml-2 inline-flex items-center text-amber-400">
                                 <Star className="w-3 h-3 mr-0.5 fill-amber-400" />
                                 {callStatus.rating}
                               </span>
                             )}
-                            {/* Teléfono clickable */}
-                            {member.user.telefono && !isDrop && (
-                              <a 
-                                href={`tel:${member.user.telefono}`}
-                                className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 transition-colors no-underline"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Phone className="w-3 h-3" />
-                              </a>
-                            )}
-                          </p>
-                          <p className="text-xs text-gray-400 flex items-center gap-1">
-                            {isDrop ? (
-                              <span className="text-gray-500">Abandonó el entrenamiento</span>
-                            ) : (
-                              <>
-                                {member.nextCall ? (
-                                  <span className="text-purple-300">
-                                    📅 {(() => {
-                                      // Parsear la fecha sin conversión de timezone
-                                      const dateStr = member.nextCall.scheduledDate.split('T')[0];
-                                      const [year, month, day] = dateStr.split('-').map(Number);
-                                      const date = new Date(year, month - 1, day);
-                                      return date.toLocaleDateString('es-MX', { 
-                                        weekday: 'short', 
-                                        day: 'numeric', 
-                                        month: 'short' 
-                                      });
-                                    })()} - {member.nextCall.scheduledTime}
-                                  </span>
-                                ) : schedule ? (
-                                  formatTime(schedule)
-                                ) : (
-                                  'Sin horario'
-                                )}
-                                {member.user.telefono && (
-                                  <a 
-                                    href={`tel:${member.user.telefono}`}
-                                    className="ml-2 text-emerald-400 hover:text-emerald-300 hover:underline transition-colors"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    {member.user.telefono}
-                                  </a>
-                                )}
-                                {isCompleted && (
-                                  <span className="text-emerald-400 ml-1">• ✓</span>
-                                )}
-                                {needsRetry && (
-                                  <span className="text-amber-400 ml-1">• Reintentar</span>
-                                )}
-                              </>
-                            )}
                           </p>
                         </div>
-                      </div>
-                      {/* Botón registrar llamada - oculto para DROP */}
-                      {!isDrop && (
-                        <Button
-                          size="sm"
-                          onClick={() => openCallModal(member)}
-                          className={`${
-                            isCompleted 
-                              ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30' 
-                              : needsRetry
-                              ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30'
-                              : 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30'
-                          }`}
-                        >
-                          {isCompleted ? (
-                            <>
-                              <CheckCircle2 className="w-3 h-3 mr-1" />
-                              Listo
-                            </>
-                          ) : needsRetry ? (
-                            <>
-                              <RefreshCw className="w-3 h-3 mr-1" />
-                              Reintentar
-                            </>
-                          ) : (
-                            <>
-                              <Phone className="w-3 h-3 mr-1" />
+                        {/* Teléfono y botón en la derecha */}
+                        {!isDrop && (
+                          <div className="flex items-center gap-2 shrink-0">
+                            {member.user.telefono && (
+                              <a 
+                                href={`tel:${member.user.telefono}`}
+                                className="flex items-center gap-1 px-2 py-1.5 rounded-md bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors text-xs font-mono"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Phone className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">{member.user.telefono}</span>
+                              </a>
+                            )}
+                            <Button
+                              size="sm"
+                              onClick={() => openCallModal(member)}
+                              className={`text-xs px-2 py-1.5 h-auto ${
+                                isCompleted 
+                                  ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30' 
+                                  : needsRetry
+                                  ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30'
+                                  : 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30'
+                              }`}
+                            >
+                              <Phone className="w-3.5 h-3.5 mr-1" />
                               Registrar
-                            </>
-                          )}
-                        </Button>
-                      )}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
