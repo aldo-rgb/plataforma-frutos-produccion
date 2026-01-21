@@ -34,10 +34,10 @@ const ShadowAvatar = ({ participant, index, total }: { participant: Participant;
   const [isNearRift, setIsNearRift] = useState(false)
   const [currentKeywordIndex, setCurrentKeywordIndex] = useState(0)
   
-  // Keywords del wizard o fallback
+  // Keywords del wizard o fallback al saltoQuantico (meta principal)
   const keywords = participant.hasWizard && participant.keywords && participant.keywords.length > 0
     ? participant.keywords
-    : [participant.saltoQuantico || 'Mi sueño...']
+    : [participant.saltoQuantico || 'Mi gran sueño']
   
   // Rotar keywords cada 2 segundos
   useEffect(() => {
@@ -328,10 +328,10 @@ const ShadowAvatar = ({ participant, index, total }: { participant: Participant;
 const LightAvatar = ({ participant, index, total }: { participant: Participant; index: number; total: number }) => {
   const [currentKeywordIndex, setCurrentKeywordIndex] = useState(0)
   
-  // Keywords del wizard o fallback
+  // Keywords del wizard o fallback al saltoQuantico (meta principal)
   const keywords = participant.hasWizard && participant.keywords && participant.keywords.length > 0
     ? participant.keywords
-    : [participant.saltoQuantico || '¡LO LOGRÉ!']
+    : [participant.saltoQuantico || 'Mi gran sueño']
   
   // Rotar keywords más rápido (energía positiva!)
   useEffect(() => {
