@@ -41,8 +41,10 @@ export function Topbar({ usuario, onMenuClick }: TopbarProps) {
       <div className="flex-1 lg:flex-initial" />
       
       <div className="flex items-center gap-3 md:gap-6">
-        {/* Language Switcher */}
-        <LanguageSwitcher />
+        {/* Language Switcher - oculto en móviles */}
+        <div className="hidden sm:block">
+          <LanguageSwitcher />
+        </div>
         
         {/* Phoenix SOS Button */}
         <PhoenixButton />

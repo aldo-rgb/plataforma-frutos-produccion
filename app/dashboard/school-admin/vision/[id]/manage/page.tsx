@@ -717,26 +717,28 @@ export default function VisionManagePage() {
     }
   };
 
-  // Función para restablecer contraseña
-  const handleResetPassword = async (userId: number, userName: string) => {
-    if (!confirm(`¿Restablecer la contraseña de ${userName} a "Quantum123"?\n\nEl usuario deberá cambiarla en su próximo inicio de sesión.`)) {
-      return;
-    }
+  // Función para abrir modal de restablecer contraseña
+  const handleResetPassword = (userId: number, userName: string) => {
+    setResetPasswordUser({ id: userId, nombre: userName });
+  };
+
+  // Función para confirmar el restablecimiento de contraseña
+  const confirmResetPassword = async () => {
+    if (!resetPasswordUser) return;
     
     setResettingPassword(true);
-    setResetPasswordUser({ id: userId, nombre: userName });
     
     try {
       const res = await fetch('/api/school-admin/users/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId })
+        body: JSON.stringify({ userId: resetPasswordUser.id })
       });
 
       const data = await res.json();
 
       if (data.success) {
-        setToast({ show: true, message: `Contraseña de ${userName} restablecida a "Quantum123"`, type: 'success' });
+        setToast({ show: true, message: `Contraseña de ${resetPasswordUser.nombre} restablecida a "Quantum123"`, type: 'success' });
         setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
       } else {
         throw new Error(data.error || 'Error al restablecer');
@@ -2520,6 +2522,84 @@ export default function VisionManagePage() {
                   {gcRegistering ? 'Registrando...' : '⭐ Registrar Game Changer'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Restablecer Contraseña */}
+      {resetPasswordUser && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl border border-slate-700 shadow-2xl max-w-md w-full animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-6 border-b border-slate-700">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
+                  <Key className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-white">Restablecer Contraseña</h3>
+                  <p className="text-slate-400 text-sm">Confirma esta acción</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              <p className="text-white text-lg">
+                ¿Restablecer la contraseña de <span className="font-bold text-amber-400">{resetPasswordUser.nombre}</span>?
+              </p>
+              
+              <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                    <span className="text-lg">🔑</span>
+                  </div>
+                  <div>
+                    <p className="text-slate-400 text-xs">Nueva contraseña temporal</p>
+                    <p className="text-white font-mono font-bold text-lg">Quantum123</p>
+                  </div>
+                </div>
+                
+                <div className="h-px bg-slate-700" />
+                
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-lg">ℹ️</span>
+                  </div>
+                  <p className="text-slate-300 text-sm">
+                    El usuario deberá cambiar esta contraseña en su próximo inicio de sesión.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-slate-700 flex gap-3">
+              <button
+                onClick={() => setResetPasswordUser(null)}
+                disabled={resettingPassword}
+                className="flex-1 py-3 px-4 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white rounded-xl font-bold transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmResetPassword}
+                disabled={resettingPassword}
+                className="flex-1 py-3 px-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 disabled:from-slate-600 disabled:to-slate-600 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+              >
+                {resettingPassword ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Restableciendo...
+                  </>
+                ) : (
+                  <>
+                    <Key className="w-5 h-5" />
+                    Restablecer
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
