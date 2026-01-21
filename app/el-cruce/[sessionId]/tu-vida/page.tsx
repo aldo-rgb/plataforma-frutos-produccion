@@ -1411,6 +1411,97 @@ export default function ElAtravesarTuVidaPage() {
           </motion.div>
         </div>
         
+        {/* ═══ TARJETA DE USUARIOS PENDIENTES (SOMBRA) ═══ */}
+        {pendingParticipants.length > 0 && (
+          <motion.div
+            className="absolute top-24 left-4 z-40 w-52"
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
+            <div className="bg-gradient-to-br from-slate-900/90 via-slate-800/80 to-slate-950/95 backdrop-blur-xl rounded-2xl border border-slate-600/30 overflow-hidden shadow-2xl shadow-slate-900/50">
+              {/* Header estilo piedra/cristal roto */}
+              <div className="px-4 py-3 bg-gradient-to-r from-slate-700/30 to-slate-600/20 border-b border-slate-600/30">
+                <div className="flex items-center gap-2">
+                  <motion.div
+                    animate={{ opacity: [0.4, 0.7, 0.4] }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                  >
+                    <Crown className="w-4 h-4 text-slate-500" />
+                  </motion.div>
+                  <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">Razonando</span>
+                  <div className="ml-auto bg-slate-700/50 px-2 py-0.5 rounded-full">
+                    <span className="text-slate-300 text-xs font-bold">{pendingParticipants.length}</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Lista de usuarios pendientes */}
+              <div className="max-h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600/30 scrollbar-track-transparent">
+                {pendingParticipants.map((participant, index) => (
+                  <motion.div
+                    key={participant.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.08 }}
+                    className="px-3 py-2 flex items-center gap-3 border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors group"
+                  >
+                    {/* Avatar estilo piedra */}
+                    <div className="relative">
+                      <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-slate-600/50 group-hover:border-slate-500 transition-colors grayscale">
+                        {participant.image ? (
+                          <img 
+                            src={participant.image} 
+                            alt={participant.name}
+                            className="w-full h-full object-cover opacity-70"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center">
+                            <span className="text-slate-400 text-xs font-bold">
+                              {participant.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      {/* Grieta sutil en el orbe */}
+                      <div className="absolute inset-0 rounded-full opacity-30" 
+                        style={{
+                          background: 'linear-gradient(135deg, transparent 40%, rgba(100,116,139,0.3) 50%, transparent 60%)'
+                        }}
+                      />
+                    </div>
+                    
+                    {/* Info del usuario */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-slate-300 text-xs font-medium truncate group-hover:text-slate-200 transition-colors">
+                        {participant.name}
+                      </p>
+                      {participant.saltoQuantico && (
+                        <p className="text-slate-500 text-[9px] truncate">
+                          {cleanGoalText(participant.saltoQuantico).substring(0, 20)}...
+                        </p>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+              
+              {/* Footer con efecto de niebla */}
+              <div className="px-3 py-2 bg-gradient-to-t from-slate-800/50 to-transparent">
+                <div className="flex items-center justify-center gap-1">
+                  <motion.div
+                    animate={{ opacity: [0.3, 0.6, 0.3] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    <Users className="w-3 h-3 text-slate-600" />
+                  </motion.div>
+                  <span className="text-slate-600 text-[9px] uppercase tracking-wider">Esperando el salto</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+        
         {/* Avatares en la sombra */}
         {pendingParticipants.map((p, i) => (
           <ShadowAvatar key={p.id} participant={p} index={i} total={pendingParticipants.length} />
