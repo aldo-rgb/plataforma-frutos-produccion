@@ -177,7 +177,7 @@ export async function GET(request: NextRequest) {
     // IDs de usuarios que ya cruzaron
     const cruzaronIds = new Set(preRegistros.map(p => p.userId))
 
-    // Participantes que NO han cruzado (sin pre-registro)
+    // Participantes que NO han dado el salto (sin pre-registro)
     const participantesSinCruzar = checkIns
       .filter(c => !cruzaronIds.has(c.userId))
       .map(c => {

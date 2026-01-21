@@ -25,253 +25,269 @@ interface CrossingStats {
 // ═══════════════════════════════════════════════════════════════
 //                    LADO IZQUIERDO: LA SOMBRA
 //              "El Mundo de la Probabilidad"
+//         OPCIÓN 2: ORBE DE PIEDRA / CRISTAL ROTO
 // ═══════════════════════════════════════════════════════════════
 
-const ShadowAvatar = ({ participant, index }: { participant: Participant; index: number }) => {
-  const seed = index * 1000
-  const random = (n: number) => ((seed + n) * 9301 + 49297) % 233280 / 233280
+const ShadowAvatar = ({ participant, index, total }: { participant: Participant; index: number; total: number }) => {
+  const [isNearRift, setIsNearRift] = useState(false)
   
-  // Posición en el lado izquierdo (0-45% del ancho)
-  const startX = 5 + random(1) * 35
-  const startY = 20 + random(2) * 55
+  // Generador de números pseudo-aleatorios basado en el ID del participante para consistencia
+  const hashCode = (str: string) => {
+    let hash = 0
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i)
+      hash |= 0
+    }
+    return Math.abs(hash)
+  }
   
-  // Movimiento lento y pesado (caminando en círculos - overthinking)
-  const circleRadius = 2 + random(3) * 3
+  const seed = hashCode(String(participant.id || `participant-${index}`))
+  const random = (n: number) => ((seed * (n + 1) * 9301 + 49297) % 233280) / 233280
+  
+  // Distribuir en grid 4x4 con variación aleatoria para llenar toda la pantalla
+  const gridCols = 4
+  const gridRows = 4
+  const cellIndex = index % (gridCols * gridRows)
+  const col = cellIndex % gridCols
+  const row = Math.floor(cellIndex / gridCols)
+  
+  // Tamaño de cada celda (dejando margen)
+  const cellWidth = 80 / gridCols  // 20% cada celda
+  const cellHeight = 75 / gridRows // ~18.75% cada celda
+  
+  // Posición base + variación aleatoria dentro de la celda
+  const baseX = 5 + col * cellWidth
+  const baseY = 8 + row * cellHeight
+  const offsetX = random(1) * cellWidth * 0.7
+  const offsetY = random(2) * cellHeight * 0.7
+  
+  const startX = baseX + offsetX
+  const startY = baseY + offsetY
+  
+  // Calcular movimiento hacia la grieta (derecha) y de regreso
+  const moveTowardsRift = 15 + random(3) * 25 // Se mueve 15-40% hacia la derecha
+  const verticalMovement = (random(4) - 0.5) * 25 // Movimiento vertical aleatorio
+  
+  // Duración del ciclo (lento y pesado, diferente para cada uno)
+  const cycleDuration = 12 + random(5) * 12 // 12-24 segundos
+  
+  // Umbral de cercanía a la grieta (los que empiezan más a la derecha se iluminan antes)
+  // La grieta está en ~100% del contenedor izquierdo (50% de la pantalla total)
+  const distanceToRift = 100 - startX // Qué tan lejos está de la grieta inicialmente
+  
+  // Detectar cuando está cerca de la grieta basándose en la posición X real
+  useEffect(() => {
+    const startTime = Date.now() / 1000
+    const interval = setInterval(() => {
+      const elapsed = (Date.now() / 1000) - startTime
+      const normalizedTime = (elapsed % cycleDuration) / cycleDuration
+      
+      // Calcular el desplazamiento X actual (simulando la curva easeInOut)
+      // Keyframes: [0, moveTowardsRift, moveTowardsRift+10, moveTowardsRift, 0]
+      // at 0% -> 0, at 25% -> moveTowardsRift, at 50% -> moveTowardsRift+10, at 75% -> moveTowardsRift, at 100% -> 0
+      let currentX = 0
+      if (normalizedTime < 0.25) {
+        currentX = (normalizedTime / 0.25) * moveTowardsRift
+      } else if (normalizedTime < 0.5) {
+        currentX = moveTowardsRift + ((normalizedTime - 0.25) / 0.25) * 10
+      } else if (normalizedTime < 0.75) {
+        currentX = moveTowardsRift + 10 - ((normalizedTime - 0.5) / 0.25) * 10
+      } else {
+        currentX = moveTowardsRift * (1 - (normalizedTime - 0.75) / 0.25)
+      }
+      
+      // Posición total desde el borde izquierdo (en % del contenedor)
+      const totalX = startX + currentX
+      
+      // Se ilumina cuando está a menos de 30% de la grieta (que está en ~95-100%)
+      const nearRift = totalX > 65
+      setIsNearRift(nearRift)
+    }, 150)
+    return () => clearInterval(interval)
+  }, [cycleDuration, startX, moveTowardsRift])
   
   return (
     <motion.div
       className="absolute flex flex-col items-center z-10"
       style={{ left: `${startX}%`, top: `${startY}%` }}
       initial={{ opacity: 0, scale: 0 }}
-      animate={{
-        x: [0, circleRadius * 10, 0, -circleRadius * 10, 0],
-        y: [0, -circleRadius * 5, circleRadius * 5, -circleRadius * 5, 0],
-        opacity: 1,
+      animate={{ 
+        opacity: 1, 
         scale: 1,
+        x: [0, moveTowardsRift, moveTowardsRift + 10, moveTowardsRift, 0],
+        y: [0, verticalMovement * 0.5, verticalMovement, verticalMovement * 0.5, 0],
       }}
-      transition={{
-        x: { duration: 15 + random(4) * 10, repeat: Infinity, ease: "easeInOut" },
-        y: { duration: 12 + random(5) * 8, repeat: Infinity, ease: "easeInOut" },
-        opacity: { duration: 1, delay: index * 0.3 },
-        scale: { duration: 0.8, delay: index * 0.3 },
+      transition={{ 
+        opacity: { duration: 1, delay: index * 0.15 },
+        scale: { duration: 0.8, delay: index * 0.15 },
+        x: { duration: cycleDuration, repeat: Infinity, ease: "easeInOut" },
+        y: { duration: cycleDuration, repeat: Infinity, ease: "easeInOut" },
       }}
     >
-      {/* ════════ NUBE DE TORMENTA (pensamiento pesado) ════════ */}
-      <motion.div
-        className="absolute -top-20 left-1/2 -translate-x-1/2 z-20"
-        animate={{
-          y: [0, -4, 0],
-          opacity: [0.7, 1, 0.7],
-        }}
-        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-      >
-        {/* Forma de nube de tormenta */}
-        <div className="relative">
-          {/* Nubes apiladas para efecto de tormenta */}
-          <motion.div 
-            className="absolute -top-1 -left-2 w-8 h-5 bg-slate-700/80 rounded-full blur-sm"
-            animate={{ x: [-2, 2, -2], opacity: [0.6, 0.8, 0.6] }}
-            transition={{ duration: 4, repeat: Infinity }}
-          />
-          <motion.div 
-            className="absolute -top-2 left-4 w-10 h-6 bg-slate-600/70 rounded-full blur-sm"
-            animate={{ x: [2, -2, 2], opacity: [0.5, 0.7, 0.5] }}
-            transition={{ duration: 3.5, repeat: Infinity }}
-          />
-          <motion.div 
-            className="absolute top-0 left-0 w-12 h-5 bg-slate-800/90 rounded-full blur-[2px]"
-          />
-          
-          {/* Rayitos de tormenta ocasionales */}
-          <motion.div
-            className="absolute top-4 left-1/2 -translate-x-1/2 w-0.5 h-3 bg-slate-400/50"
-            animate={{ 
-              opacity: [0, 0.8, 0], 
-              scaleY: [0.5, 1, 0.5],
-            }}
-            transition={{ duration: 0.3, repeat: Infinity, repeatDelay: 3 + random(1) * 2 }}
-          />
-          
-          {/* Contenedor del texto */}
-          <div className="relative bg-gradient-to-b from-slate-700/95 to-slate-800/95 px-3 py-2 rounded-2xl border border-slate-600/30 shadow-2xl mt-1">
-            <p className="text-[10px] text-slate-400/90 font-medium max-w-[100px] text-center leading-tight italic">
-              "{participant.saltoQuantico || 'Mi sueño...'}"
-            </p>
-          </div>
-          
-          {/* Gotas de lluvia cayendo */}
-          {[...Array(3)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-0.5 h-2 bg-slate-500/40 rounded-full"
-              style={{ left: `${20 + i * 30}%`, top: '100%' }}
-              animate={{
-                y: [0, 20, 0],
-                opacity: [0, 0.6, 0],
-              }}
-              transition={{
-                duration: 1,
-                repeat: Infinity,
-                delay: i * 0.3,
-                ease: "easeIn"
-              }}
-            />
-          ))}
-        </div>
-      </motion.div>
-
-      {/* ════════ SILUETA DE CUERPO COMPLETO ════════ */}
+      {/* ════════ ORBE DE PIEDRA/CRISTAL ATRAPADO ════════ */}
       <motion.div
         className="relative"
         animate={{
-          y: [0, -2, 0],
-          rotate: [-2, 2, -2], // Caminar pesado
+          rotate: [0, 2, -2, 1, 0],
         }}
         transition={{
-          duration: 2,
+          duration: 8,
           repeat: Infinity,
           ease: "easeInOut",
         }}
       >
-        {/* Aura de pesadumbre */}
-        <motion.div 
-          className="absolute -inset-4 bg-slate-600/15 rounded-full blur-2xl"
-          animate={{
-            opacity: [0.2, 0.35, 0.2],
-            scale: [1, 1.15, 1]
-          }}
-          transition={{ duration: 3, repeat: Infinity }}
+        {/* Sombra pesada debajo */}
+        <motion.div
+          className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-16 h-3 bg-black/30 rounded-full blur-md"
+          animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.5, 0.3] }}
+          transition={{ duration: 4, repeat: Infinity }}
         />
         
-        {/* ═══ SVG SILUETA ENCORVADA ═══ */}
-        <svg 
-          width="70" 
-          height="120" 
-          viewBox="0 0 70 120" 
-          className="drop-shadow-2xl"
+        {/* ═══ AURA DE ILUMINACIÓN CUANDO SE ACERCA A LA GRIETA ═══ */}
+        <motion.div
+          className="absolute -inset-3 rounded-full pointer-events-none"
+          animate={{
+            opacity: isNearRift ? 0.6 : 0,
+            scale: isNearRift ? 1.2 : 1,
+          }}
+          transition={{ duration: 0.8 }}
+          style={{
+            background: 'radial-gradient(circle, rgba(139,92,246,0.4) 0%, rgba(168,85,247,0.2) 50%, transparent 70%)',
+            boxShadow: isNearRift ? '0 0 30px rgba(139,92,246,0.5)' : 'none',
+          }}
+        />
+
+        {/* ═══ ORBE DE PIEDRA PRINCIPAL ═══ */}
+        <motion.div 
+          className="relative w-24 h-24"
+          animate={{
+            filter: isNearRift 
+              ? 'brightness(1.3) saturate(1.2)' 
+              : 'brightness(1) saturate(1)',
+          }}
+          transition={{ duration: 0.8 }}
         >
-          {/* Definir gradientes y filtros */}
-          <defs>
-            <linearGradient id={`shadowGrad-${index}`} x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#475569" />
-              <stop offset="50%" stopColor="#334155" />
-              <stop offset="100%" stopColor="#1e293b" />
-            </linearGradient>
-            <filter id={`shadowBlur-${index}`}>
-              <feGaussianBlur stdDeviation="1" />
-            </filter>
-            {/* Clip path para la cabeza */}
-            <clipPath id={`headClip-${index}`}>
-              <circle cx="35" cy="18" r="14" />
-            </clipPath>
-          </defs>
-          
-          {/* Sombra proyectada */}
-          <ellipse 
-            cx="35" 
-            cy="118" 
-            rx="20" 
-            ry="4" 
-            fill="rgba(0,0,0,0.3)"
-            filter={`url(#shadowBlur-${index})`}
-          />
-          
-          {/* ═══ CUERPO ENCORVADO ═══ */}
-          {/* Piernas (caminando lento) */}
-          <motion.path
-            d="M28 85 L24 115 M28 85 Q30 100 35 115"
-            stroke={`url(#shadowGrad-${index})`}
-            strokeWidth="8"
-            strokeLinecap="round"
-            fill="none"
-            animate={{
-              d: [
-                "M28 85 L24 115 M42 85 L46 115",
-                "M28 85 L26 115 M42 85 L44 115",
-                "M28 85 L24 115 M42 85 L46 115",
-              ]
+          {/* Capa exterior: Roca/Piedra agrietada */}
+          <motion.div
+            className="absolute inset-0 rounded-full"
+            style={{
+              background: `
+                radial-gradient(ellipse at 30% 20%, #64748b 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, #475569 0%, transparent 50%),
+                radial-gradient(circle, #334155 0%, #1e293b 60%, #0f172a 100%)
+              `,
+              boxShadow: 'inset 0 0 30px rgba(0,0,0,0.8), inset 0 -10px 20px rgba(0,0,0,0.5)',
             }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
           />
           
-          {/* Torso encorvado */}
-          <path
-            d="M35 45 Q30 55 28 70 Q26 80 35 85 Q44 80 42 70 Q40 55 35 45"
-            fill={`url(#shadowGrad-${index})`}
-          />
+          {/* Grietas que brillan cuando se acerca */}
+          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
+            <defs>
+              <linearGradient id={`crackGrad-${index}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor={isNearRift ? "#8b5cf6" : "#0f172a"} />
+                <stop offset="50%" stopColor={isNearRift ? "#a855f7" : "#1e293b"} />
+                <stop offset="100%" stopColor={isNearRift ? "#8b5cf6" : "#0f172a"} />
+              </linearGradient>
+            </defs>
+            <motion.path
+              d="M50 15 L48 30 L45 35 M50 15 L55 28 L58 40"
+              stroke={`url(#crackGrad-${index})`}
+              strokeWidth={isNearRift ? 3 : 2}
+              fill="none"
+              animate={{ opacity: isNearRift ? [0.7, 1, 0.7] : [0.4, 0.6, 0.4] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            />
+            <motion.path
+              d="M85 50 L70 48 L65 45 M85 50 L72 55 L60 58"
+              stroke={`url(#crackGrad-${index})`}
+              strokeWidth={isNearRift ? 3 : 2}
+              fill="none"
+              animate={{ opacity: isNearRift ? [0.6, 0.9, 0.6] : [0.3, 0.5, 0.3] }}
+              transition={{ duration: 2, repeat: Infinity, delay: 0.3 }}
+            />
+            <motion.path
+              d="M50 85 L52 70 L55 65 M50 85 L45 72 L42 60"
+              stroke={`url(#crackGrad-${index})`}
+              strokeWidth={isNearRift ? 3 : 2}
+              fill="none"
+              animate={{ opacity: isNearRift ? [0.6, 0.9, 0.6] : [0.3, 0.5, 0.3] }}
+              transition={{ duration: 1.8, repeat: Infinity, delay: 0.5 }}
+            />
+          </svg>
           
-          {/* Brazos en bolsillos */}
-          <motion.path
-            d="M28 55 Q20 60 18 75 M42 55 Q50 60 52 75"
-            stroke={`url(#shadowGrad-${index})`}
-            strokeWidth="6"
-            strokeLinecap="round"
-            fill="none"
+          {/* ═══ FOTO ATRAPADA EN EL CENTRO ═══ */}
+          <motion.div 
+            className="absolute inset-4 rounded-full overflow-hidden"
             animate={{
-              d: [
-                "M28 55 Q20 60 18 75 M42 55 Q50 60 52 75",
-                "M28 55 Q19 61 17 74 M42 55 Q51 61 53 74",
-                "M28 55 Q20 60 18 75 M42 55 Q50 60 52 75",
-              ]
+              filter: isNearRift 
+                ? 'grayscale(40%) brightness(0.85)' 
+                : 'grayscale(80%) brightness(0.65)',
             }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-          />
-          
-          {/* Cuello/Hombros caídos */}
-          <ellipse cx="35" cy="42" rx="12" ry="6" fill={`url(#shadowGrad-${index})`} />
-          
-          {/* ═══ CABEZA CON FOTO (mirando abajo) ═══ */}
-          <g transform="translate(0, 3) rotate(-10, 35, 18)">
-            {/* Base de la cabeza */}
-            <circle 
-              cx="35" 
-              cy="18" 
-              r="15" 
-              fill={`url(#shadowGrad-${index})`}
-              stroke="#475569"
-              strokeWidth="1"
+            transition={{ duration: 0.8 }}
+          >
+            {/* Cristal semi-transparente sobre la foto */}
+            <div 
+              className="absolute inset-0 z-10 rounded-full"
+              style={{
+                background: 'radial-gradient(circle at 30% 30%, rgba(100,116,139,0.15) 0%, rgba(30,41,59,0.35) 100%)',
+              }}
             />
             
-            {/* Foto del participante (desaturada) */}
-            {participant.image && (
-              <g clipPath={`url(#headClip-${index})`}>
-                <image
-                  href={participant.image}
-                  x="21"
-                  y="4"
-                  width="28"
-                  height="28"
-                  preserveAspectRatio="xMidYMid slice"
-                  style={{ filter: 'grayscale(100%) brightness(0.5)' }}
-                />
-                {/* Overlay oscuro */}
-                <circle cx="35" cy="18" r="14" fill="rgba(30,41,59,0.4)" />
-              </g>
+            {/* Foto */}
+            {participant.image ? (
+              <img 
+                src={participant.image} 
+                alt={participant.name}
+                className="w-full h-full object-cover rounded-full"
+                style={{ 
+                  filter: 'contrast(1.1)',
+                }}
+              />
+            ) : (
+              <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center">
+                <span className="text-2xl font-bold text-slate-600">
+                  {participant.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
             )}
             
-            {/* Si no hay imagen, mostrar inicial */}
-            {!participant.image && (
-              <text
-                x="35"
-                y="23"
-                textAnchor="middle"
-                fill="#64748b"
-                fontSize="14"
-                fontWeight="bold"
-                fontFamily="system-ui"
-              >
-                {participant.name.charAt(0).toUpperCase()}
-              </text>
-            )}
-          </g>
-        </svg>
+            {/* Viñeta suave */}
+            <div 
+              className="absolute inset-0 rounded-full"
+              style={{
+                boxShadow: 'inset 0 0 15px 5px rgba(15,23,42,0.5)',
+              }}
+            />
+          </motion.div>
+          
+          {/* Reflejo sutil */}
+          <div 
+            className="absolute top-2 left-4 w-8 h-4 bg-slate-400/10 rounded-full blur-sm"
+            style={{ transform: 'rotate(-30deg)' }}
+          />
+        </motion.div>
+        
+        {/* ═══ TEXTO DE META ═══ */}
+        <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap">
+          <motion.p 
+            className="text-[10px] font-semibold italic text-center max-w-[100px] truncate"
+            animate={{
+              color: isNearRift ? '#a78bfa' : '#94a3b8',
+            }}
+            transition={{ duration: 0.5 }}
+          >
+            "{participant.saltoQuantico || 'Mi sueño...'}"
+          </motion.p>
+        </div>
       </motion.div>
       
-      {/* Nombre con efecto de peso */}
+      {/* Nombre */}
       <motion.p 
-        className="text-xs text-slate-500 mt-1 font-medium text-center max-w-[80px] truncate"
-        animate={{ opacity: [0.4, 0.7, 0.4] }}
-        transition={{ duration: 4, repeat: Infinity }}
+        className="text-xs mt-12 font-bold text-center max-w-[90px] truncate"
+        animate={{
+          color: isNearRift ? '#c4b5fd' : '#cbd5e1',
+        }}
+        transition={{ duration: 0.5 }}
       >
         {participant.name.split(' ')[0]}
       </motion.p>
@@ -282,357 +298,269 @@ const ShadowAvatar = ({ participant, index }: { participant: Participant; index:
 // ═══════════════════════════════════════════════════════════════
 //                    LADO DERECHO: LA LUZ
 //              "El Mundo de la Posibilidad"
+//         OPCIÓN 2: COMETA DE LUZ / ORBE BRILLANTE
 // ═══════════════════════════════════════════════════════════════
 
-const LightAvatar = ({ participant, index }: { participant: Participant; index: number }) => {
+const LightAvatar = ({ participant, index, total }: { participant: Participant; index: number; total: number }) => {
+  // Distribuir en grid virtual para cubrir toda la mitad derecha
+  const cols = Math.ceil(Math.sqrt(Math.max(total, 1)))
+  const rows = Math.ceil(Math.max(total, 1) / cols)
+  const col = index % cols
+  const row = Math.floor(index / cols)
+  
+  // Calcular posición base en grid (5-45% del ancho relativo, 10-80% del alto)
+  const cellWidth = 40 / cols
+  const cellHeight = 70 / rows
+  
+  // Agregar variación aleatoria dentro de cada celda
   const seed = (index + 100) * 1000
   const random = (n: number) => ((seed + n) * 9301 + 49297) % 233280 / 233280
+  const offsetX = random(1) * cellWidth * 0.6
+  const offsetY = random(2) * cellHeight * 0.6
   
-  // Posición en el lado derecho (55-95% del ancho)
-  const startX = 55 + random(1) * 35
-  const startY = 20 + random(2) * 55
+  const startX = 5 + col * cellWidth + offsetX  // Posición relativa al contenedor (lado derecho)
+  const startY = 10 + row * cellHeight + offsetY
   
   return (
     <motion.div
       className="absolute flex flex-col items-center z-10"
       style={{ left: `${startX}%`, top: `${startY}%` }}
-      initial={{ opacity: 0, scale: 0, y: 50 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
+      initial={{ opacity: 0, scale: 0, x: 100 }}
+      animate={{ opacity: 1, scale: 1, x: 0 }}
       transition={{ duration: 0.8, delay: index * 0.2, type: "spring" }}
     >
-      {/* ════════ META MANIFESTADA (banner dorado flotando) ════════ */}
-      <motion.div
-        className="absolute -top-24 left-1/2 -translate-x-1/2 z-20"
-        animate={{
-          y: [0, -6, 0],
-          scale: [1, 1.05, 1],
-        }}
-        transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-      >
-        {/* Resplandor detrás */}
-        <motion.div 
-          className="absolute inset-0 bg-gradient-to-r from-amber-400/60 via-yellow-300/70 to-orange-400/60 blur-xl rounded-full scale-150"
-          animate={{
-            opacity: [0.5, 0.9, 0.5],
-          }}
-          transition={{ duration: 2, repeat: Infinity }}
-        />
-        
-        {/* Banner de la meta */}
-        <div className="relative bg-gradient-to-r from-amber-500 via-yellow-400 to-orange-500 px-4 py-2 rounded-2xl shadow-lg shadow-amber-500/50 border-2 border-yellow-300/50">
-          <p className="text-[11px] font-black text-slate-900 max-w-[110px] text-center uppercase tracking-wide leading-tight">
-            {participant.saltoQuantico || '¡LO LOGRÉ!'}
-          </p>
-        </div>
-        
-        {/* Destellos alrededor */}
-        {[...Array(4)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute"
-            style={{
-              top: `${-10 + Math.sin(i * 1.57) * 25}px`,
-              left: `${50 + Math.cos(i * 1.57) * 45}%`,
-            }}
-            animate={{ 
-              rotate: 360, 
-              scale: [0.6, 1.2, 0.6],
-              opacity: [0.4, 1, 0.4]
-            }}
-            transition={{ duration: 2 + i * 0.3, repeat: Infinity, delay: i * 0.2 }}
-          >
-            <Sparkles className="w-3 h-3 text-yellow-300" />
-          </motion.div>
-        ))}
-      </motion.div>
-
-      {/* ════════ SILUETA VICTORIOSA ════════ */}
+      {/* ════════ COMETA DE LUZ ════════ */}
       <motion.div
         className="relative"
+        // Movimiento RÁPIDO y libre (como cometa surcando el cielo)
         animate={{
-          y: [0, -10, 0], // Saltando/flotando de alegría
-          scale: [1, 1.03, 1],
+          x: [0, 30, -20, 40, 0],
+          y: [0, -25, 15, -30, 0],
+          rotate: [0, 5, -5, 3, 0],
         }}
         transition={{
-          duration: 1.8,
+          duration: 5 + random(1) * 3, // 5-8 segundos (mucho más rápido que piedra)
           repeat: Infinity,
           ease: "easeInOut",
         }}
       >
-        {/* Aura dorada brillante */}
-        <motion.div 
-          className="absolute -inset-8 rounded-full blur-2xl"
-          style={{
-            background: 'radial-gradient(circle, rgba(251,191,36,0.4) 0%, rgba(245,158,11,0.2) 50%, transparent 70%)'
-          }}
-          animate={{
-            opacity: [0.5, 0.9, 0.5],
-            scale: [1, 1.3, 1],
-          }}
-          transition={{ duration: 2.5, repeat: Infinity }}
-        />
-        
-        {/* Rayos de luz detrás */}
+        {/* ═══ ESTELA DE LUZ (cola del cometa) ═══ */}
         <motion.div
-          className="absolute -inset-6 opacity-30"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          className="absolute -left-24 top-1/2 -translate-y-1/2"
+          animate={{
+            scaleX: [0.7, 1, 0.8, 1.1, 0.7],
+            opacity: [0.6, 0.9, 0.7, 1, 0.6],
+          }}
+          transition={{ duration: 2, repeat: Infinity }}
         >
-          {[...Array(8)].map((_, i) => (
-            <div
+          {/* Cola principal - gradiente largo */}
+          <div 
+            className="w-28 h-12 rounded-l-full"
+            style={{
+              background: `linear-gradient(to right, 
+                transparent 0%, 
+                rgba(251,191,36,0.1) 10%,
+                rgba(251,191,36,0.2) 30%,
+                rgba(253,224,71,0.4) 60%,
+                rgba(254,240,138,0.7) 85%,
+                rgba(255,255,255,0.9) 100%
+              )`,
+              filter: 'blur(4px)',
+            }}
+          />
+          
+          {/* Estelas secundarias */}
+          {[...Array(3)].map((_, i) => (
+            <motion.div
               key={i}
-              className="absolute top-1/2 left-1/2 w-1 h-16 bg-gradient-to-t from-amber-400 to-transparent origin-bottom"
+              className="absolute rounded-l-full"
               style={{
-                transform: `translate(-50%, -100%) rotate(${i * 45}deg)`,
+                width: `${60 - i * 15}px`,
+                height: `${6 - i}px`,
+                top: `${50 + (i - 1) * 18}%`,
+                right: 0,
+                background: `linear-gradient(to right, transparent, rgba(251,191,36,${0.2 + i * 0.1}))`,
+                filter: 'blur(2px)',
+              }}
+              animate={{
+                scaleX: [0.6, 1.2, 0.6],
+                opacity: [0.3, 0.7, 0.3],
+              }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                delay: i * 0.2,
               }}
             />
           ))}
         </motion.div>
+
+        {/* ═══ PARTÍCULAS DE ENERGÍA ALREDEDOR ═══ */}
+        {[...Array(8)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-1.5 h-1.5 rounded-full"
+            style={{
+              background: i % 3 === 0 ? '#fef3c7' : i % 3 === 1 ? '#fcd34d' : '#f59e0b',
+              left: `${50 + Math.cos(i * 0.785) * 50}%`,
+              top: `${50 + Math.sin(i * 0.785) * 50}%`,
+            }}
+            animate={{
+              scale: [0, 1.5, 0],
+              opacity: [0, 1, 0],
+              x: [0, Math.cos(i * 0.785) * 20],
+              y: [0, Math.sin(i * 0.785) * 20],
+            }}
+            transition={{
+              duration: 1.5,
+              repeat: Infinity,
+              delay: i * 0.15,
+            }}
+          />
+        ))}
+
+        {/* ═══ ORBE BRILLANTE PRINCIPAL ═══ */}
+        <div className="relative w-24 h-24">
+          {/* Aura exterior pulsante */}
+          <motion.div 
+            className="absolute -inset-6 rounded-full"
+            style={{
+              background: 'radial-gradient(circle, rgba(254,243,199,0.6) 0%, rgba(251,191,36,0.3) 40%, transparent 70%)',
+            }}
+            animate={{
+              scale: [1, 1.4, 1],
+              opacity: [0.5, 0.9, 0.5],
+            }}
+            transition={{ duration: 2, repeat: Infinity }}
+          />
+          
+          {/* Anillo de energía */}
+          <motion.div 
+            className="absolute -inset-3 rounded-full border-2 border-amber-300/40"
+            animate={{
+              scale: [1, 1.2, 1],
+              opacity: [0.3, 0.7, 0.3],
+              rotate: 360,
+            }}
+            transition={{
+              scale: { duration: 2, repeat: Infinity },
+              opacity: { duration: 2, repeat: Infinity },
+              rotate: { duration: 8, repeat: Infinity, ease: "linear" },
+            }}
+          />
+          
+          {/* Núcleo brillante exterior */}
+          <motion.div
+            className="absolute inset-0 rounded-full"
+            style={{
+              background: `
+                radial-gradient(ellipse at 30% 30%, rgba(255,255,255,0.9) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 70%, rgba(254,240,138,0.8) 0%, transparent 40%),
+                radial-gradient(circle, #fef3c7 0%, #fcd34d 30%, #f59e0b 60%, #d97706 100%)
+              `,
+              boxShadow: '0 0 40px rgba(251,191,36,0.8), 0 0 80px rgba(251,191,36,0.4), inset 0 0 30px rgba(255,255,255,0.5)',
+            }}
+            animate={{
+              boxShadow: [
+                '0 0 40px rgba(251,191,36,0.8), 0 0 80px rgba(251,191,36,0.4), inset 0 0 30px rgba(255,255,255,0.5)',
+                '0 0 60px rgba(251,191,36,1), 0 0 100px rgba(251,191,36,0.6), inset 0 0 40px rgba(255,255,255,0.7)',
+                '0 0 40px rgba(251,191,36,0.8), 0 0 80px rgba(251,191,36,0.4), inset 0 0 30px rgba(255,255,255,0.5)',
+              ]
+            }}
+            transition={{ duration: 2, repeat: Infinity }}
+          />
+          
+          {/* ═══ FOTO COMO NÚCLEO DEL COMETA ═══ */}
+          <div className="absolute inset-3 rounded-full overflow-hidden shadow-inner">
+            {/* Foto vibrante y brillante */}
+            {participant.image ? (
+              <img 
+                src={participant.image} 
+                alt={participant.name}
+                className="w-full h-full object-cover rounded-full"
+                style={{ 
+                  filter: 'brightness(1.2) saturate(1.3) contrast(1.05)',
+                }}
+              />
+            ) : (
+              <div className="w-full h-full rounded-full bg-gradient-to-br from-amber-300 to-amber-500 flex items-center justify-center">
+                <span className="text-3xl font-bold text-amber-800">
+                  {participant.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            )}
+            
+            {/* Brillo sobre la foto */}
+            <motion.div 
+              className="absolute inset-0 rounded-full"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%, rgba(255,255,255,0.1) 100%)',
+              }}
+              animate={{
+                opacity: [0.5, 0.8, 0.5],
+              }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+          </div>
+          
+          {/* Destello superior (reflejo de luz) */}
+          <motion.div 
+            className="absolute top-1 left-4 w-6 h-3 bg-white/60 rounded-full blur-sm"
+            style={{ transform: 'rotate(-30deg)' }}
+            animate={{
+              opacity: [0.4, 0.8, 0.4],
+            }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          />
+        </div>
         
-        {/* ═══ SVG SILUETA VICTORIOSA ═══ */}
-        <svg 
-          width="80" 
-          height="120" 
-          viewBox="0 0 80 120" 
-          className="drop-shadow-2xl relative z-10"
+        {/* ═══ BANNER DE META MANIFESTADA ═══ */}
+        <motion.div
+          className="absolute -top-16 left-1/2 -translate-x-1/2"
+          animate={{
+            y: [0, -5, 0],
+            scale: [1, 1.05, 1],
+          }}
+          transition={{ duration: 2, repeat: Infinity }}
         >
-          {/* Definir gradientes */}
-          <defs>
-            <linearGradient id={`lightGrad-${index}`} x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#fcd34d" />
-              <stop offset="50%" stopColor="#f59e0b" />
-              <stop offset="100%" stopColor="#d97706" />
-            </linearGradient>
-            <linearGradient id={`lightGradBright-${index}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#fef3c7" />
-              <stop offset="50%" stopColor="#fcd34d" />
-              <stop offset="100%" stopColor="#f59e0b" />
-            </linearGradient>
-            <filter id={`glow-${index}`}>
-              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-              <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-            {/* Clip path para la cabeza */}
-            <clipPath id={`headClipLight-${index}`}>
-              <circle cx="40" cy="18" r="14" />
-            </clipPath>
-          </defs>
-          
-          {/* Sombra dorada proyectada */}
-          <ellipse 
-            cx="40" 
-            cy="118" 
-            rx="18" 
-            ry="4" 
-            fill="rgba(251,191,36,0.3)"
+          {/* Glow detrás */}
+          <motion.div 
+            className="absolute inset-0 bg-amber-400/50 blur-lg rounded-full scale-150"
+            animate={{ opacity: [0.4, 0.8, 0.4] }}
+            transition={{ duration: 2, repeat: Infinity }}
           />
           
-          {/* ═══ CUERPO EN POSE VICTORIOSA ═══ */}
-          {/* Piernas firmes (pose de poder) */}
-          <motion.g
-            animate={{
-              y: [0, -2, 0],
-            }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <path
-              d="M32 85 L28 115 M48 85 L52 115"
-              stroke={`url(#lightGrad-${index})`}
-              strokeWidth="9"
-              strokeLinecap="round"
-              fill="none"
-              filter={`url(#glow-${index})`}
-            />
-          </motion.g>
+          <div className="relative bg-gradient-to-r from-amber-500 via-yellow-400 to-orange-500 px-4 py-2 rounded-xl shadow-lg shadow-amber-500/50 border border-yellow-300/50">
+            <p className="text-[11px] font-bold text-slate-900 max-w-[100px] text-center uppercase leading-tight">
+              {participant.saltoQuantico || '¡LO LOGRÉ!'}
+            </p>
+          </div>
           
-          {/* Torso erguido */}
-          <path
-            d="M40 42 Q35 50 33 65 Q31 78 40 85 Q49 78 47 65 Q45 50 40 42"
-            fill={`url(#lightGrad-${index})`}
-            filter={`url(#glow-${index})`}
-          />
-          
-          {/* ═══ BRAZOS ARRIBA (VICTORIA) ═══ */}
-          <motion.g
-            animate={{
-              rotate: [0, 3, -3, 0],
-            }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            style={{ transformOrigin: '40px 55px' }}
-          >
-            {/* Brazo izquierdo arriba */}
-            <motion.path
-              d="M33 52 Q20 35 15 15"
-              stroke={`url(#lightGradBright-${index})`}
-              strokeWidth="7"
-              strokeLinecap="round"
-              fill="none"
-              filter={`url(#glow-${index})`}
-              animate={{
-                d: [
-                  "M33 52 Q20 35 15 15",
-                  "M33 52 Q18 33 12 12",
-                  "M33 52 Q20 35 15 15",
-                ]
+          {/* Sparkles */}
+          {[...Array(3)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute text-yellow-300"
+              style={{
+                top: `${-5 + i * 10}px`,
+                left: `${-10 + i * 50}px`,
               }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-            />
-            {/* Mano izquierda (puño) */}
-            <motion.circle 
-              cx="15" 
-              cy="12" 
-              r="5" 
-              fill={`url(#lightGradBright-${index})`}
-              filter={`url(#glow-${index})`}
-              animate={{ cy: [12, 9, 12] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-            />
-            
-            {/* Brazo derecho arriba */}
-            <motion.path
-              d="M47 52 Q60 35 65 15"
-              stroke={`url(#lightGradBright-${index})`}
-              strokeWidth="7"
-              strokeLinecap="round"
-              fill="none"
-              filter={`url(#glow-${index})`}
-              animate={{
-                d: [
-                  "M47 52 Q60 35 65 15",
-                  "M47 52 Q62 33 68 12",
-                  "M47 52 Q60 35 65 15",
-                ]
-              }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-            />
-            {/* Mano derecha (puño) */}
-            <motion.circle 
-              cx="65" 
-              cy="12" 
-              r="5" 
-              fill={`url(#lightGradBright-${index})`}
-              filter={`url(#glow-${index})`}
-              animate={{ cy: [12, 9, 12] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-            />
-          </motion.g>
-          
-          {/* Cuello/Hombros erguidos */}
-          <ellipse 
-            cx="40" 
-            cy="40" 
-            rx="14" 
-            ry="6" 
-            fill={`url(#lightGrad-${index})`}
-            filter={`url(#glow-${index})`}
-          />
-          
-          {/* ═══ CABEZA CON FOTO (mirando arriba con orgullo) ═══ */}
-          <g transform="translate(0, -2) rotate(5, 40, 18)">
-            {/* Círculo dorado de fondo */}
-            <circle 
-              cx="40" 
-              cy="18" 
-              r="16" 
-              fill={`url(#lightGradBright-${index})`}
-              stroke="#fcd34d"
-              strokeWidth="2"
-              filter={`url(#glow-${index})`}
-            />
-            
-            {/* Foto del participante (a todo color y brillante) */}
-            {participant.image && (
-              <g clipPath={`url(#headClipLight-${index})`}>
-                <image
-                  href={participant.image}
-                  x="26"
-                  y="4"
-                  width="28"
-                  height="28"
-                  preserveAspectRatio="xMidYMid slice"
-                  style={{ filter: 'brightness(1.15) saturate(1.2)' }}
-                />
-              </g>
-            )}
-            
-            {/* Si no hay imagen, mostrar inicial */}
-            {!participant.image && (
-              <text
-                x="40"
-                y="23"
-                textAnchor="middle"
-                fill="#78350f"
-                fontSize="16"
-                fontWeight="bold"
-                fontFamily="system-ui"
-              >
-                {participant.name.charAt(0).toUpperCase()}
-              </text>
-            )}
-          </g>
-          
-          {/* Corona sobre la cabeza */}
-          <motion.g
-            animate={{
-              y: [0, -3, 0],
-              rotate: [0, 3, -3, 0],
-            }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            style={{ transformOrigin: '40px -5px' }}
-          >
-            <path
-              d="M28 -2 L32 -12 L36 -5 L40 -15 L44 -5 L48 -12 L52 -2 Z"
-              fill="#fcd34d"
-              stroke="#f59e0b"
-              strokeWidth="1"
-              filter={`url(#glow-${index})`}
-            />
-            {/* Gemas de la corona */}
-            <circle cx="40" cy="-10" r="2" fill="#ef4444" />
-            <circle cx="33" cy="-7" r="1.5" fill="#3b82f6" />
-            <circle cx="47" cy="-7" r="1.5" fill="#22c55e" />
-          </motion.g>
-        </svg>
+              animate={{ scale: [0.5, 1, 0.5], opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.3 }}
+            >
+              <Sparkles className="w-3 h-3" />
+            </motion.div>
+          ))}
+        </motion.div>
       </motion.div>
       
-      {/* Nombre con gloria */}
-      <motion.p 
-        className="text-sm text-amber-300 mt-2 font-bold text-center max-w-[100px] truncate"
-        animate={{ 
-          textShadow: ["0 0 8px rgba(251,191,36,0.5)", "0 0 16px rgba(251,191,36,0.8)", "0 0 8px rgba(251,191,36,0.5)"]
-        }}
-        transition={{ duration: 2, repeat: Infinity }}
+      {/* Nombre brillante */}
+      <p 
+        className="text-sm text-amber-200 mt-4 font-bold text-center max-w-[90px] truncate"
+        style={{ textShadow: '0 0 8px rgba(251,191,36,0.6)' }}
       >
         {participant.name.split(' ')[0]}
-      </motion.p>
-      
-      {/* Partículas de celebración */}
-      {[...Array(5)].map((_, i) => (
-        <motion.div
-          key={i}
-          className="absolute w-2 h-2 rounded-full"
-          style={{
-            background: i % 2 === 0 ? '#fcd34d' : '#f59e0b',
-            left: `${30 + random(i) * 40}%`,
-            top: `${20 + random(i + 5) * 60}%`,
-          }}
-          animate={{
-            y: [0, -30, 0],
-            x: [0, (random(i + 10) - 0.5) * 40, 0],
-            opacity: [0, 1, 0],
-            scale: [0.5, 1, 0.5],
-          }}
-          transition={{
-            duration: 2 + random(i + 15),
-            repeat: Infinity,
-            delay: random(i + 20) * 2,
-            ease: "easeOut"
-          }}
-        />
-      ))}
+      </p>
     </motion.div>
   )
 }
@@ -640,6 +568,7 @@ const LightAvatar = ({ participant, index }: { participant: Participant; index: 
 // ═══════════════════════════════════════════════════════════════
 //                    ANIMACIÓN DE CRUCE
 //              El momento del "Salto Cuántico"
+//         OPCIÓN 2: PIEDRA EXPLOTA → COMETA DE LUZ
 // ═══════════════════════════════════════════════════════════════
 
 const CrossingAnimation = ({ 
@@ -649,16 +578,16 @@ const CrossingAnimation = ({
   participant: Participant
   onComplete: () => void 
 }) => {
-  const [phase, setPhase] = useState<'run' | 'jump' | 'flash' | 'transform' | 'celebrate'>('run')
+  const [phase, setPhase] = useState<'approach' | 'explode' | 'flash' | 'emerge' | 'celebrate'>('approach')
   
   useEffect(() => {
-    // Secuencia de animación
+    // Secuencia de animación: Piedra se acerca → Explota → Flash → Cometa emerge → Celebración
     const timers = [
-      setTimeout(() => setPhase('jump'), 1500),
+      setTimeout(() => setPhase('explode'), 2000),
       setTimeout(() => setPhase('flash'), 2500),
-      setTimeout(() => setPhase('transform'), 3000),
-      setTimeout(() => setPhase('celebrate'), 3800),
-      setTimeout(() => onComplete(), 5500),
+      setTimeout(() => setPhase('emerge'), 3000),
+      setTimeout(() => setPhase('celebrate'), 4000),
+      setTimeout(() => onComplete(), 6000),
     ]
     
     return () => timers.forEach(clearTimeout)
@@ -666,11 +595,14 @@ const CrossingAnimation = ({
   
   return (
     <div className="fixed inset-0 z-50 pointer-events-none">
-      {/* Flash blanco en el momento del cruce */}
+      {/* Flash blanco/dorado en el momento del cruce */}
       <AnimatePresence>
         {phase === 'flash' && (
           <motion.div
-            className="absolute inset-0 bg-white"
+            className="absolute inset-0"
+            style={{
+              background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,1) 0%, rgba(251,191,36,0.8) 30%, transparent 70%)'
+            }}
             initial={{ opacity: 0 }}
             animate={{ opacity: [0, 1, 0] }}
             exit={{ opacity: 0 }}
@@ -679,177 +611,305 @@ const CrossingAnimation = ({
         )}
       </AnimatePresence>
       
-      {/* El avatar corriendo y saltando */}
-      <motion.div
-        className="absolute top-1/2 -translate-y-1/2"
-        initial={{ left: '20%' }}
-        animate={{
-          left: phase === 'run' ? '40%' : 
-                phase === 'jump' ? '50%' : 
-                phase === 'flash' ? '50%' :
-                phase === 'transform' ? '60%' : '70%',
-          y: phase === 'jump' ? -100 : 0,
-          scale: phase === 'flash' ? 1.5 : phase === 'celebrate' ? 1.2 : 1,
-        }}
-        transition={{
-          duration: phase === 'run' ? 1.5 : phase === 'jump' ? 1 : 0.5,
-          ease: phase === 'jump' ? 'easeOut' : 'easeInOut',
-        }}
-      >
-        {/* Versión gris (antes del flash) */}
-        {(phase === 'run' || phase === 'jump') && (
+      {/* ═══ FASE 1: ORBE DE PIEDRA ACERCÁNDOSE ═══ */}
+      {(phase === 'approach' || phase === 'explode') && (
+        <motion.div
+          className="absolute top-1/2 -translate-y-1/2"
+          initial={{ left: '15%' }}
+          animate={{
+            left: phase === 'approach' ? '45%' : '50%',
+          }}
+          transition={{
+            duration: phase === 'approach' ? 2 : 0.5,
+            ease: 'easeInOut',
+          }}
+        >
           <motion.div
-            className="w-28 h-28 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center border-4 border-slate-500 shadow-2xl overflow-hidden"
+            className="relative w-32 h-32"
             animate={{
-              rotate: phase === 'run' ? [0, -10, 10, -10, 0] : 0,
+              rotate: phase === 'approach' ? [0, 5, -5, 3, 0] : 0,
+              scale: phase === 'explode' ? [1, 1.3, 0] : 1,
             }}
-            transition={{ duration: 0.3, repeat: Infinity }}
+            transition={{
+              rotate: { duration: 3, repeat: Infinity },
+              scale: { duration: 0.5, ease: 'easeOut' },
+            }}
           >
-            {participant.image ? (
-              <img 
-                src={participant.image} 
-                alt={participant.name}
-                className="w-full h-full rounded-full object-cover grayscale"
+            {/* Orbe de piedra oscura */}
+            <div 
+              className="absolute inset-0 rounded-full"
+              style={{
+                background: `
+                  radial-gradient(ellipse at 30% 20%, #64748b 0%, transparent 50%),
+                  radial-gradient(ellipse at 70% 80%, #475569 0%, transparent 50%),
+                  radial-gradient(circle, #334155 0%, #1e293b 60%, #0f172a 100%)
+                `,
+                boxShadow: 'inset 0 0 40px rgba(0,0,0,0.8), 0 0 30px rgba(0,0,0,0.5)',
+              }}
+            />
+            
+            {/* Grietas brillando (presión interna) */}
+            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
+              <motion.path
+                d="M50 10 L48 30 L42 45 L50 50 L58 45 L52 30 Z"
+                fill="none"
+                stroke="rgba(251,191,36,0.8)"
+                strokeWidth="2"
+                animate={{
+                  opacity: phase === 'approach' ? [0.2, 0.8, 0.2] : 1,
+                  strokeWidth: phase === 'explode' ? 4 : 2,
+                }}
+                transition={{ duration: 1, repeat: Infinity }}
               />
-            ) : (
-              <span className="text-5xl font-bold text-slate-400">
-                {participant.name.charAt(0).toUpperCase()}
-              </span>
-            )}
+              <motion.path
+                d="M90 50 L70 48 L55 42 L50 50 L55 58 L70 52 Z"
+                fill="none"
+                stroke="rgba(251,191,36,0.6)"
+                strokeWidth="2"
+                animate={{
+                  opacity: phase === 'approach' ? [0.1, 0.6, 0.1] : 1,
+                }}
+                transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
+              />
+              <motion.path
+                d="M50 90 L52 70 L58 55 L50 50 L42 55 L48 70 Z"
+                fill="none"
+                stroke="rgba(251,191,36,0.7)"
+                strokeWidth="2"
+                animate={{
+                  opacity: phase === 'approach' ? [0.15, 0.7, 0.15] : 1,
+                }}
+                transition={{ duration: 1.2, repeat: Infinity, delay: 0.5 }}
+              />
+            </svg>
+            
+            {/* Foto atrapada (apenas visible) */}
+            <div className="absolute inset-6 rounded-full overflow-hidden">
+              {participant.image ? (
+                <img 
+                  src={participant.image} 
+                  alt={participant.name}
+                  className="w-full h-full object-cover rounded-full"
+                  style={{ filter: 'grayscale(100%) brightness(0.3)' }}
+                />
+              ) : (
+                <div className="w-full h-full bg-slate-800 flex items-center justify-center">
+                  <span className="text-3xl font-bold text-slate-600">
+                    {participant.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
+              <div className="absolute inset-0 bg-slate-900/60" />
+            </div>
           </motion.div>
-        )}
-        
-        {/* Efecto de cáscara rompiéndose */}
-        {phase === 'transform' && (
+          
+          {/* Fragmentos de piedra explotando */}
+          {phase === 'explode' && (
+            <>
+              {[...Array(16)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute left-1/2 top-1/2 w-6 h-6 rounded-md"
+                  style={{
+                    background: `linear-gradient(135deg, #475569 0%, #1e293b 100%)`,
+                  }}
+                  initial={{ x: 0, y: 0, opacity: 1, rotate: 0, scale: 1 }}
+                  animate={{
+                    x: Math.cos(i * 22.5 * Math.PI / 180) * (120 + Math.random() * 80),
+                    y: Math.sin(i * 22.5 * Math.PI / 180) * (120 + Math.random() * 80),
+                    opacity: 0,
+                    rotate: 720,
+                    scale: 0,
+                  }}
+                  transition={{ duration: 1.2, ease: 'easeOut' }}
+                />
+              ))}
+              
+              {/* Partículas doradas emergiendo */}
+              {[...Array(24)].map((_, i) => (
+                <motion.div
+                  key={`gold-${i}`}
+                  className="absolute left-1/2 top-1/2 w-3 h-3 rounded-full"
+                  style={{
+                    background: i % 2 === 0 ? '#fcd34d' : '#fbbf24',
+                    boxShadow: '0 0 10px rgba(251,191,36,0.8)',
+                  }}
+                  initial={{ x: 0, y: 0, opacity: 0, scale: 0 }}
+                  animate={{
+                    x: Math.cos(i * 15 * Math.PI / 180) * (60 + Math.random() * 40),
+                    y: Math.sin(i * 15 * Math.PI / 180) * (60 + Math.random() * 40),
+                    opacity: [0, 1, 0],
+                    scale: [0, 1.5, 0],
+                  }}
+                  transition={{ duration: 0.8, delay: 0.2, ease: 'easeOut' }}
+                />
+              ))}
+            </>
+          )}
+        </motion.div>
+      )}
+      
+      {/* ═══ FASE 2: COMETA DE LUZ EMERGIENDO ═══ */}
+      {(phase === 'emerge' || phase === 'celebrate') && (
+        <motion.div
+          className="absolute top-1/2 -translate-y-1/2"
+          initial={{ left: '50%', scale: 0 }}
+          animate={{
+            left: phase === 'emerge' ? '60%' : '70%',
+            scale: phase === 'celebrate' ? 1.1 : 1,
+          }}
+          transition={{
+            duration: 1,
+            ease: 'easeOut',
+          }}
+        >
           <motion.div
             className="relative"
-            initial={{ scale: 1.5 }}
-            animate={{ scale: 1 }}
+            animate={{
+              y: phase === 'celebrate' ? [0, -15, 0] : 0,
+            }}
+            transition={{ duration: 0.6, repeat: phase === 'celebrate' ? 3 : 0 }}
           >
-            {/* Fragmentos de la cáscara gris */}
+            {/* Estela del cometa */}
+            <motion.div
+              className="absolute -left-32 top-1/2 -translate-y-1/2 w-40 h-16"
+              initial={{ scaleX: 0, opacity: 0 }}
+              animate={{ scaleX: 1, opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              style={{
+                background: 'linear-gradient(to right, transparent 0%, rgba(251,191,36,0.2) 30%, rgba(253,224,71,0.5) 70%, rgba(255,255,255,0.8) 100%)',
+                filter: 'blur(8px)',
+                transformOrigin: 'right',
+              }}
+            />
+            
+            {/* Orbe brillante principal */}
+            <motion.div
+              className="relative w-32 h-32"
+              animate={{
+                boxShadow: [
+                  '0 0 40px rgba(251,191,36,0.8)',
+                  '0 0 80px rgba(251,191,36,1)',
+                  '0 0 40px rgba(251,191,36,0.8)',
+                ]
+              }}
+              transition={{ duration: 1, repeat: Infinity }}
+              style={{ borderRadius: '50%' }}
+            >
+              {/* Aura exterior */}
+              <motion.div 
+                className="absolute -inset-4 rounded-full"
+                style={{
+                  background: 'radial-gradient(circle, rgba(254,243,199,0.6) 0%, rgba(251,191,36,0.3) 50%, transparent 70%)',
+                }}
+                animate={{ scale: [1, 1.3, 1], opacity: [0.6, 1, 0.6] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              />
+              
+              {/* Núcleo brillante */}
+              <div
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background: `
+                    radial-gradient(ellipse at 30% 30%, rgba(255,255,255,0.9) 0%, transparent 50%),
+                    radial-gradient(circle, #fef3c7 0%, #fcd34d 30%, #f59e0b 60%, #d97706 100%)
+                  `,
+                  boxShadow: 'inset 0 0 30px rgba(255,255,255,0.5)',
+                }}
+              />
+              
+              {/* Foto vibrante */}
+              <div className="absolute inset-4 rounded-full overflow-hidden shadow-lg">
+                {participant.image ? (
+                  <img 
+                    src={participant.image} 
+                    alt={participant.name}
+                    className="w-full h-full object-cover rounded-full"
+                    style={{ filter: 'brightness(1.2) saturate(1.3)' }}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-amber-300 to-amber-500 flex items-center justify-center">
+                    <span className="text-4xl font-bold text-amber-800">
+                      {participant.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                )}
+                <div 
+                  className="absolute inset-0 rounded-full"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 50%)',
+                  }}
+                />
+              </div>
+            </motion.div>
+            
+            {/* Partículas de energía */}
             {[...Array(8)].map((_, i) => (
               <motion.div
                 key={i}
-                className="absolute w-8 h-8 bg-gradient-to-br from-slate-600 to-slate-800 rounded-lg"
-                initial={{ x: 0, y: 0, opacity: 1, rotate: 0 }}
-                animate={{
-                  x: Math.cos(i * 45 * Math.PI / 180) * 150,
-                  y: Math.sin(i * 45 * Math.PI / 180) * 150,
-                  opacity: 0,
-                  rotate: 360,
-                  scale: 0,
+                className="absolute w-2 h-2 rounded-full"
+                style={{
+                  background: '#fcd34d',
+                  left: `${50 + Math.cos(i * 0.785) * 60}%`,
+                  top: `${50 + Math.sin(i * 0.785) * 60}%`,
                 }}
-                transition={{ duration: 0.8, ease: 'easeOut' }}
+                animate={{
+                  scale: [0, 1.5, 0],
+                  opacity: [0, 1, 0],
+                }}
+                transition={{ duration: 1, repeat: Infinity, delay: i * 0.1 }}
               />
             ))}
-            
-            {/* Avatar dorado emergiendo */}
+          </motion.div>
+        </motion.div>
+      )}
+      
+      {/* ═══ CELEBRACIÓN: META MANIFESTADA ═══ */}
+      {phase === 'celebrate' && (
+        <motion.div
+          className="absolute top-1/4 left-1/2 -translate-x-1/2"
+          initial={{ scale: 0, opacity: 0, y: 50 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: 'backOut' }}
+        >
+          {/* Estrellas de fuegos artificiales */}
+          {[...Array(12)].map((_, i) => (
             <motion.div
-              className="w-28 h-28 rounded-full bg-gradient-to-br from-amber-400 via-yellow-300 to-orange-400 p-1 shadow-2xl shadow-amber-500/50"
+              key={i}
+              className="absolute left-1/2 top-1/2"
               initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ duration: 0.5, ease: 'backOut' }}
+              animate={{
+                x: Math.cos(i * 30 * Math.PI / 180) * 100,
+                y: Math.sin(i * 30 * Math.PI / 180) * 100,
+                scale: [0, 1, 0],
+                opacity: [0, 1, 0],
+              }}
+              transition={{ duration: 1.5, delay: 0.2 }}
             >
-              <div className="w-full h-full rounded-full overflow-hidden bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-                {participant.image ? (
-                  <img 
-                    src={participant.image} 
-                    alt={participant.name}
-                    className="w-full h-full rounded-full object-cover brightness-110"
-                  />
-                ) : (
-                  <span className="text-5xl font-bold text-white drop-shadow-lg">
-                    {participant.name.charAt(0).toUpperCase()}
-                  </span>
-                )}
-              </div>
+              <Star className="w-6 h-6 text-yellow-400 fill-yellow-400" />
             </motion.div>
-          </motion.div>
-        )}
-        
-        {/* Celebración final */}
-        {phase === 'celebrate' && (
+          ))}
+          
+          {/* Banner de la meta */}
           <motion.div
-            className="relative"
+            className="bg-gradient-to-r from-amber-500 via-yellow-400 to-orange-500 px-8 py-4 rounded-2xl shadow-2xl"
+            style={{ boxShadow: '0 0 40px rgba(251,191,36,0.8)' }}
             animate={{
-              y: [0, -20, 0],
+              scale: [1, 1.05, 1],
+              boxShadow: [
+                '0 0 40px rgba(251,191,36,0.6)',
+                '0 0 60px rgba(251,191,36,1)',
+                '0 0 40px rgba(251,191,36,0.6)',
+              ]
             }}
-            transition={{ duration: 0.5, repeat: 3 }}
+            transition={{ duration: 1, repeat: Infinity }}
           >
-            {/* Avatar brillante celebrando */}
-            <div className="w-28 h-28 rounded-full bg-gradient-to-br from-amber-400 via-yellow-300 to-orange-400 p-1 shadow-2xl shadow-amber-500/50">
-              <div className="w-full h-full rounded-full overflow-hidden bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-                {participant.image ? (
-                  <img 
-                    src={participant.image} 
-                    alt={participant.name}
-                    className="w-full h-full rounded-full object-cover brightness-110"
-                  />
-                ) : (
-                  <span className="text-5xl font-bold text-white drop-shadow-lg">
-                    {participant.name.charAt(0).toUpperCase()}
-                  </span>
-                )}
-              </div>
-            </div>
-            
-            {/* Corona */}
-            <motion.div
-              className="absolute -top-6 left-1/2 -translate-x-1/2"
-              initial={{ y: -50, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-            >
-              <Crown className="w-12 h-12 text-yellow-300 drop-shadow-lg" />
-            </motion.div>
-            
-            {/* Meta explotando como fuegos artificiales */}
-            <motion.div
-              className="absolute -top-32 left-1/2 -translate-x-1/2"
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.5, ease: 'backOut' }}
-            >
-              <div className="relative">
-                {/* Estrellas de fuegos artificiales */}
-                {[...Array(12)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    className="absolute left-1/2 top-1/2"
-                    initial={{ scale: 0 }}
-                    animate={{
-                      x: Math.cos(i * 30 * Math.PI / 180) * 80,
-                      y: Math.sin(i * 30 * Math.PI / 180) * 80,
-                      scale: [0, 1, 0],
-                      opacity: [0, 1, 0],
-                    }}
-                    transition={{ duration: 1.5, delay: 0.3 }}
-                  >
-                    <Star className="w-6 h-6 text-yellow-400 fill-yellow-400" />
-                  </motion.div>
-                ))}
-                
-                {/* Texto de la meta */}
-                <motion.div
-                  className="bg-gradient-to-r from-amber-500 via-yellow-400 to-orange-500 px-6 py-3 rounded-full shadow-2xl shadow-amber-500/50"
-                  animate={{
-                    scale: [1, 1.1, 1],
-                    boxShadow: [
-                      "0 0 20px rgba(251,191,36,0.5)",
-                      "0 0 40px rgba(251,191,36,0.8)",
-                      "0 0 20px rgba(251,191,36,0.5)"
-                    ]
-                  }}
-                  transition={{ duration: 1, repeat: Infinity }}
-                >
-                  <p className="text-xl font-black text-slate-900 uppercase tracking-wider">
-                    {participant.saltoQuantico || '¡SALTO CUÁNTICO!'}
-                  </p>
-                </motion.div>
-              </div>
-            </motion.div>
+            <p className="text-2xl font-black text-slate-900 uppercase tracking-wider">
+              {participant.saltoQuantico || '¡SALTO CUÁNTICO!'}
+            </p>
           </motion.div>
-        )}
-      </motion.div>
+        </motion.div>
+      )}
       
       {/* Nombre del participante */}
       <motion.div
@@ -859,9 +919,12 @@ const CrossingAnimation = ({
         transition={{ delay: 0.5 }}
       >
         <motion.p
-          className="text-4xl font-black text-white drop-shadow-2xl"
+          className="text-4xl font-black drop-shadow-2xl"
           animate={{
-            color: phase === 'celebrate' ? '#fbbf24' : '#ffffff',
+            color: (phase === 'emerge' || phase === 'celebrate') ? '#fbbf24' : '#94a3b8',
+            textShadow: (phase === 'emerge' || phase === 'celebrate') 
+              ? '0 0 20px rgba(251,191,36,0.8)' 
+              : 'none',
           }}
         >
           {participant.name}
@@ -976,6 +1039,10 @@ export default function ElAtravesarTuVidaPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const crossSoundRef = useRef<HTMLAudioElement | null>(null)
   
+  // Cola de participantes que deben cruzar con animación al inicio
+  const [initialCrossingQueue, setInitialCrossingQueue] = useState<Participant[]>([])
+  const [isInitialCrossingActive, setIsInitialCrossingActive] = useState(false)
+  
   // Cargar datos iniciales
   useEffect(() => {
     const fetchSession = async () => {
@@ -989,7 +1056,7 @@ export default function ElAtravesarTuVidaPage() {
           // Los participantes vienen en data.participants (no en session)
           const participants = data.participants || {}
           
-          // waiting = lado izquierdo (PROBABILIDAD - no han cruzado)
+          // waiting = lado izquierdo (PROBABILIDAD - no han dado el salto)
           const pending = (participants.waiting || []).map((p: any) => ({
             id: p.id,
             name: p.name || 'Participante',
@@ -998,7 +1065,7 @@ export default function ElAtravesarTuVidaPage() {
             status: 'waiting'
           }))
           
-          // crossed = lado derecho (POSIBILIDAD - ya cruzaron)
+          // crossed = los que ya tienen PL pagado - estos deben hacer la animación de cruce
           const crossed = (participants.crossed || []).map((p: any) => ({
             id: p.id,
             name: p.name || 'Participante',
@@ -1007,16 +1074,24 @@ export default function ElAtravesarTuVidaPage() {
             status: 'crossed'
           }))
           
-          setPendingParticipants(pending)
-          setCrossedParticipants(crossed)
+          // TODOS empiezan en pendientes (lado izquierdo)
+          // Los que ya cruzaron van a la cola de animación inicial
+          setPendingParticipants([...pending, ...crossed])
+          setCrossedParticipants([]) // Empezar vacío, se llenarán con las animaciones
           
-          // Calcular stats
+          // Si hay usuarios que ya cruzaron, ponerlos en la cola de animación
+          if (crossed.length > 0) {
+            setInitialCrossingQueue(crossed)
+            setIsInitialCrossingActive(true)
+          }
+          
+          // Calcular stats (considerando que los crossed aún no han animado)
           const total = pending.length + crossed.length
           setStats({
-            crossedCount: crossed.length,
+            crossedCount: 0, // Empezar en 0, se actualizará con cada animación
             totalParticipants: total,
-            remainingCount: pending.length,
-            percentageCrossed: total > 0 ? Math.round((crossed.length / total) * 100) : 0
+            remainingCount: total,
+            percentageCrossed: 0
           })
         }
       } catch (error) {
@@ -1028,6 +1103,32 @@ export default function ElAtravesarTuVidaPage() {
     
     fetchSession()
   }, [sessionId])
+  
+  // Procesar cola de cruces iniciales uno por uno
+  useEffect(() => {
+    if (!isInitialCrossingActive || initialCrossingQueue.length === 0 || crossingParticipant) {
+      return
+    }
+    
+    // Esperar un poco antes de iniciar el primer cruce para que se vea la escena
+    const delay = initialCrossingQueue.length === (stats.totalParticipants - pendingParticipants.length + initialCrossingQueue.length) 
+      ? 2000 // Primera animación: esperar 2 segundos
+      : 500  // Siguientes: esperar medio segundo entre cada una
+    
+    const timer = setTimeout(() => {
+      const [nextToCross, ...remaining] = initialCrossingQueue
+      setInitialCrossingQueue(remaining)
+      setCrossingParticipant(nextToCross)
+      
+      // Reproducir sonido
+      if (!muted && crossSoundRef.current) {
+        crossSoundRef.current.currentTime = 0
+        crossSoundRef.current.play().catch(() => {})
+      }
+    }, delay)
+    
+    return () => clearTimeout(timer)
+  }, [isInitialCrossingActive, initialCrossingQueue, crossingParticipant, muted, stats.totalParticipants, pendingParticipants.length])
   
   // Conectar a WebSocket para actualizaciones en tiempo real
   useEffect(() => {
@@ -1070,9 +1171,28 @@ export default function ElAtravesarTuVidaPage() {
       // Mover de pendientes a cruzados
       setPendingParticipants(prev => prev.filter(p => p.id !== crossingParticipant.id))
       setCrossedParticipants(prev => [...prev, crossingParticipant])
+      
+      // Actualizar estadísticas
+      setStats(prev => {
+        const newCrossedCount = prev.crossedCount + 1
+        return {
+          ...prev,
+          crossedCount: newCrossedCount,
+          remainingCount: prev.remainingCount - 1,
+          percentageCrossed: prev.totalParticipants > 0 
+            ? Math.round((newCrossedCount / prev.totalParticipants) * 100) 
+            : 0
+        }
+      })
+      
       setCrossingParticipant(null)
+      
+      // Si ya no hay más en la cola inicial, marcar como completado
+      if (initialCrossingQueue.length === 0) {
+        setIsInitialCrossingActive(false)
+      }
     }
-  }, [crossingParticipant])
+  }, [crossingParticipant, initialCrossingQueue.length])
   
   if (loading) {
     return (
@@ -1153,7 +1273,7 @@ export default function ElAtravesarTuVidaPage() {
         
         {/* Avatares en la sombra */}
         {pendingParticipants.map((p, i) => (
-          <ShadowAvatar key={p.id} participant={p} index={i} />
+          <ShadowAvatar key={p.id} participant={p} index={i} total={pendingParticipants.length} />
         ))}
       </div>
       
@@ -1219,7 +1339,7 @@ export default function ElAtravesarTuVidaPage() {
         
         {/* Avatares en la luz */}
         {crossedParticipants.map((p, i) => (
-          <LightAvatar key={p.id} participant={p} index={i} />
+          <LightAvatar key={p.id} participant={p} index={i} total={crossedParticipants.length} />
         ))}
       </div>
       
@@ -1235,14 +1355,14 @@ export default function ElAtravesarTuVidaPage() {
           transition={{ duration: 3, repeat: Infinity }}
         >
           <div className="text-center">
-            <p className="text-slate-400 text-xs uppercase tracking-wider">Esperando</p>
+            <p className="text-slate-400 text-xs uppercase tracking-wider">Razonando</p>
             <p className="text-2xl font-black text-slate-300">{stats.remainingCount}</p>
           </div>
           
           <div className="h-12 w-px bg-violet-500/30" />
           
           <div className="text-center">
-            <p className="text-violet-400 text-xs uppercase tracking-wider">Han Cruzado</p>
+            <p className="text-violet-400 text-xs uppercase tracking-wider">Han dado el salto</p>
             <p className="text-3xl font-black text-violet-300">{stats.crossedCount}</p>
           </div>
           

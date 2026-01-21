@@ -52,8 +52,18 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "Sesión no encontrada" }, { status: 404 })
       }
 
+      // Obtener el producto de PL de la misma organización (para Tu Vida)
+      const plProduct = await prisma.schoolProduct.findFirst({
+        where: {
+          organizationId: crossingSession.product.organizationId,
+          levelType: 'PL'
+        },
+        select: { id: true }
+      })
+
       // Obtener participantes en paralelo para mayor velocidad
-      const [checkedInUsers, preRegistered] = await Promise.all([
+      const [checkedInUsers, preRegistered, plTicketHolders] = await Promise.all([
+        // Usuarios que hicieron check-in en el producto actual (Avanzado)
         prisma.checkInRecord.findMany({
           where: { productId: crossingSession.productId },
           select: {
@@ -63,7 +73,7 @@ export async function GET(request: NextRequest) {
                 id: true, 
                 nombre: true, 
                 profileImage: true,
-                goals: true, // Meta general del usuario
+                goals: true,
                 CartaFrutos: {
                   take: 1,
                   orderBy: { fechaCreacion: 'desc' },
@@ -80,6 +90,7 @@ export async function GET(request: NextRequest) {
           },
           distinct: ['userId']
         }),
+        // Pre-registros de avanzado (los que están en proceso de cruzar)
         prisma.advancedPreRegistration.findMany({
           where: { 
             currentProductId: crossingSession.productId,
@@ -108,10 +119,43 @@ export async function GET(request: NextRequest) {
               }
             }
           }
-        })
+        }),
+        // Usuarios que ya tienen ticket de PL pagado (Tu Vida)
+        plProduct ? prisma.ticket.findMany({
+          where: {
+            productId: plProduct.id,
+            status: { in: ['PAID', 'ACTIVE', 'USED'] },
+            levelType: 'PL'
+          },
+          select: {
+            userId: true,
+            user: {
+              select: { 
+                id: true, 
+                nombre: true, 
+                profileImage: true,
+                goals: true,
+                CartaFrutos: {
+                  take: 1,
+                  orderBy: { fechaCreacion: 'desc' },
+                  select: {
+                    Meta: {
+                      take: 1,
+                      orderBy: { orden: 'asc' },
+                      select: { metaPrincipal: true }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }) : []
       ])
 
-      const crossedUserIds = new Set(preRegistered.map(p => p.userId))
+      // IDs de usuarios que ya cruzaron (pre-registros + tickets de PL)
+      const preRegisteredUserIds = new Set(preRegistered.map(p => p.userId))
+      const plTicketUserIds = new Set(plTicketHolders.map(p => p.userId))
+      const crossedUserIds = new Set([...preRegisteredUserIds, ...plTicketUserIds])
 
       // Helper para obtener salto cuántico (meta principal)
       const getSaltoQuantico = (user: any) => {
@@ -120,14 +164,29 @@ export async function GET(request: NextRequest) {
         return cartaMeta || user?.goals || 'Mi gran sueño'
       }
 
-      // Formatear participantes
-      const crossedParticipants = preRegistered.map(p => ({
+      // Formatear participantes cruzados (pre-registros + tickets de PL)
+      const crossedFromPreReg = preRegistered.map(p => ({
         id: p.userId,
         name: p.user.nombre || 'Participante',
         image: p.user.profileImage,
         saltoQuantico: getSaltoQuantico(p.user),
-        status: p.status
+        status: p.status,
+        source: 'preregistration'
       }))
+      
+      // Agregar usuarios con ticket de PL que no están en pre-registros
+      const crossedFromTickets = plTicketHolders
+        .filter(t => !preRegisteredUserIds.has(t.userId))
+        .map(t => ({
+          id: t.userId,
+          name: t.user.nombre || 'Participante',
+          image: t.user.profileImage,
+          saltoQuantico: getSaltoQuantico(t.user),
+          status: 'PAID',
+          source: 'pl_ticket'
+        }))
+      
+      const crossedParticipants = [...crossedFromPreReg, ...crossedFromTickets]
 
       const waitingParticipants = checkedInUsers
         .filter(u => !crossedUserIds.has(u.userId))
