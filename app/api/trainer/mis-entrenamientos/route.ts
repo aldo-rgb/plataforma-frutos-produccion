@@ -283,6 +283,7 @@ export async function GET(request: NextRequest) {
     if (allVisionIds.length > 0) {
       // Si es trainer de BÁSICO, mostrar inscritos en BÁSICO
       // Si es trainer de AVANZADO, mostrar inscritos en AVANZADO
+      // Si es trainer de PL, mostrar inscritos en PL
       const levelToCount = isBasicTrainer ? 'BASIC' : (isAdvancedTrainer ? 'ADVANCED' : 'PL')
       totalInscritosVision = await prisma.vision_enrollments.count({
         where: {
@@ -295,7 +296,7 @@ export async function GET(request: NextRequest) {
 
     // Total confirmados - depende del nivel del trainer
     // Si es trainer BÁSICO: confirmados = pre-registros PAGADOS a AVANZADO (de sus productos BASIC)
-    // Si es trainer AVANZADO: confirmados = inscritos ADVANCED en sus visiones
+    // Si es trainer AVANZADO: confirmados = pre-registros PAGADOS a PL (de sus productos ADVANCED)
     // Si es trainer PL: confirmados = inscritos PL en sus visiones
     let totalConfirmadosAvanzado = 0
     if (allVisionIds.length > 0) {
@@ -311,14 +312,16 @@ export async function GET(request: NextRequest) {
           })
         }
       } else if (isAdvancedTrainer) {
-        // Trainer de AVANZADO ve inscritos en ADVANCED
-        totalConfirmadosAvanzado = await prisma.vision_enrollments.count({
-          where: {
-            visionId: { in: allVisionIds },
-            level: 'ADVANCED',
-            enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
-          }
-        })
+        // Trainer de AVANZADO ve cuántos ya pagaron PL (desde sus productos ADVANCED)
+        const advancedProductIds = advancedProducts.map(p => p.id)
+        if (advancedProductIds.length > 0) {
+          totalConfirmadosAvanzado = await prisma.advancedPreRegistration.count({
+            where: {
+              currentProductId: { in: advancedProductIds },
+              status: 'PAID'
+            }
+          })
+        }
       } else if (isPLTrainer) {
         // Trainer de PL ve inscritos en PL
         totalConfirmadosAvanzado = await prisma.vision_enrollments.count({
