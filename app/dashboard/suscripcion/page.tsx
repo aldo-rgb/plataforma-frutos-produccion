@@ -699,14 +699,14 @@ export default function SuscripcionPage() {
               />
             )}
             <div>
-              <h3 className="text-lg font-bold text-white">Miembro de {schoolInfo.name}</h3>
-              <p className="text-slate-300 text-sm">Tu institución te da acceso a la plataforma</p>
+              <h3 className="text-lg font-bold text-white">Miembro de {schoolInfo.name}</h3> Tus Objetivos han sido guardados.
+              <p className="text-slate-300 text-sm">Tu institución te da acceso a la plataforma</p> No requieres hacer un pago ahora.
             </div>
           </div>
           <div className="bg-slate-900/50 rounded-lg px-4 py-3 border border-slate-700">
             <p className="text-sm text-slate-300">
-              💡 <span className="font-semibold">Tip:</span> Habla con tu coordinador sobre activar un plan premium 
-              para desbloquear todas las funciones de transformación cuántica.
+              💡 <span className="font-semibold">Tip:</span> Ya tienes un plan standard, esto se desbloqueara en el programa de Tu Vida, 
+              espera para desbloquear todas las funciones de transformación cuántica.
             </p>
           </div>
         </div>

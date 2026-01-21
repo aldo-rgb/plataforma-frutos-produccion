@@ -33,7 +33,7 @@ const levelConfig = {
     textColor: 'text-purple-400',
   },
   PL: {
-    title: 'NIVEL 3: El Jueago de Tu VIDA',
+    title: 'NIVEL 3: El Juego / Tu VIDA',
     subtitle: 'El lider de Tu vida',
     icon: Crown,
     color: '#FFD700', // Dorado Legendario

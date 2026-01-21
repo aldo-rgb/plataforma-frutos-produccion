@@ -28,7 +28,7 @@ export default function PromiseWidget({ promises, hasCompletedCarta }: PromiseWi
             <Target className="w-5 h-5 text-cyan-400" />
           </div>
           <div>
-            <h3 className="font-semibold text-white">La Promesa</h3>
+            <h3 className="font-semibold text-white">Los Saltos Cuánticos</h3>
             <p className="text-xs text-slate-400">Tus metas principales</p>
           </div>
         </div>
@@ -71,15 +71,15 @@ export default function PromiseWidget({ promises, hasCompletedCarta }: PromiseWi
             <Target className="w-5 h-5 text-cyan-400" />
           </div>
           <div>
-            <h3 className="font-semibold text-white">La Promesa</h3>
+            <h3 className="font-semibold text-white">Los Saltos Cuánticos</h3>
             <p className="text-xs text-slate-400">Tu compromiso contigo mismo</p>
           </div>
         </div>
         <Link
-          href="/dashboard/carta"
+          href="/dashboard/carta/resumen"
           className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
         >
-          Ver Carta
+          Ver Objetivos
           <ChevronRight className="w-3 h-3" />
         </Link>
       </div>

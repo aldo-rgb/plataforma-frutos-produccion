@@ -20,8 +20,8 @@ export default function CartaWizardWidget({ hasCompletedCarta, cartaStatus, user
 
   // Determinar el enlace según el estado
   const getLink = () => {
-    // Si está en revisión o cambios requeridos, llevar al resumen
-    if (cartaStatus === 'EN_REVISION' || cartaStatus === 'CAMBIOS_REQUERIDOS') {
+    // Si está en borrador, revisión o cambios requeridos, llevar al resumen
+    if (cartaStatus === 'BORRADOR' || cartaStatus === 'EN_REVISION' || cartaStatus === 'CAMBIOS_REQUERIDOS') {
       return '/dashboard/carta/resumen';
     }
     // En cualquier otro caso, llevar al wizard
