@@ -20,8 +20,12 @@ export async function GET() {
     }
 
     // Obtener enrollment de visión (incluyendo attendanceStatus para detectar DROP)
-    const visionEnrollment = await prisma.vision_enrollments.findFirst({
-      where: { userId: usuario.id },
+    // Ordenar por nivel descendente para obtener el nivel más alto (PL > ADVANCED > BASIC)
+    const visionEnrollments = await prisma.vision_enrollments.findMany({
+      where: { 
+        userId: usuario.id,
+        enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+      },
       include: {
         Vision: {
           select: {
@@ -37,6 +41,13 @@ export async function GET() {
         }
       }
     });
+
+    // Ordenar para obtener el nivel más alto: PL > ADVANCED > BASIC
+    const levelPriority: Record<string, number> = { 'PL': 3, 'ADVANCED': 2, 'BASIC': 1 };
+    const sortedEnrollments = visionEnrollments.sort((a, b) => 
+      (levelPriority[b.level] || 0) - (levelPriority[a.level] || 0)
+    );
+    const visionEnrollment = sortedEnrollments[0] || null;
 
     // Verificar si el usuario está marcado como DROP
     const isDropped = visionEnrollment?.attendanceStatus === 'DROP';

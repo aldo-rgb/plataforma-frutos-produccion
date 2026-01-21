@@ -1,0 +1,571 @@
+================================================================================
+INSTRUCTIVO COMPLETO - PLATAFORMA FRUTOS (VISION 24)
+Fecha: 20 de enero de 2026
+================================================================================
+
+================================================================================
+CONTEXTO PARA NUEVA CONVERSACIÓN
+================================================================================
+
+Soy el desarrollador de "Plataforma Frutos", una aplicación Next.js 14 con App Router 
+para gestión de programas de desarrollo personal llamados "Vision". La plataforma 
+maneja entrenamientos en 3 niveles: BASIC, ADVANCED y PL (Program Leadership).
+
+STACK TECNOLÓGICO:
+- Next.js 14 (App Router)
+- TypeScript
+- Prisma ORM con PostgreSQL
+- NextAuth.js para autenticación
+- Tailwind CSS
+- Desplegado en Vercel
+
+RUTA DEL PROYECTO: /Users/aldokmps/plataforma-frutos-FINAL
+
+================================================================================
+ARQUITECTURA DE BASE DE DATOS (MODELOS PRINCIPALES)
+================================================================================
+
+--------------------------------------------------------------------------------
+USUARIOS Y AUTENTICACIÓN
+--------------------------------------------------------------------------------
+
+model Usuario {
+  id                    Int       @id @default(autoincrement())
+  nombre                String
+  email                 String    @unique
+  password              String
+  telefono              String?
+  imagen                String?
+  rol                   Rol       @default(PARTICIPANTE)
+  // Roles: ADMINISTRADOR, COORDINADOR, TRAINER, MENTOR, GAMECHANGER, PARTICIPANTE
+  tier                  String?   // "frutos_free", "frutos_pro", etc.
+  suscripcion           String?
+  organizationId        Int?
+  currentVisionLevel    String?   // "BASIC", "ADVANCED", "PL"
+  graduatedFromBasic    Boolean?
+  graduatedFromAdvanced Boolean?
+  assignedMentorId      Int?      // Mentor asignado para llamadas
+  mentorId              Int?      // Si este usuario ES mentor
+}
+
+--------------------------------------------------------------------------------
+SISTEMA VISION (ENTRENAMIENTOS)
+--------------------------------------------------------------------------------
+
+model Vision {
+  id                        Int       @id @default(autoincrement())
+  nombre                    String
+  coordinadorId             Int
+  organizationId            Int
+  isActive                  Boolean   @default(true)
+  startDate                 DateTime? // Fecha básico
+  endDate                   DateTime?
+  advancedStartDate         DateTime? // Fecha avanzado
+  advancedEndDate           DateTime?
+  plWeekend1StartDate       DateTime? // PL tiene 3 fines de semana
+  plWeekend1EndDate         DateTime?
+  plWeekend2StartDate       DateTime?
+  plWeekend2EndDate         DateTime?
+  plWeekend3StartDate       DateTime?
+  plWeekend3EndDate         DateTime?
+  
+  // Configuración de áreas obligatorias
+  forceFinanzasArea         Boolean   @default(true)
+  forceRelacionesArea       Boolean   @default(true)
+  forceTalentosArea         Boolean   @default(true)
+  forceSaludArea            Boolean   @default(true)
+  forcePazMentalArea        Boolean   @default(true)
+  forceOcioArea             Boolean   @default(true)
+  forceTransformationArea   Boolean   @default(false)  // Área servicio transformación
+  forceCommunityServiceArea Boolean   @default(false)  // Área servicio comunitario
+  transformationGuestsTarget Int?     // Meta de invitados para transformación
+}
+
+model vision_enrollments {
+  id               String           @id @default(cuid())
+  userId           Int
+  visionId         Int
+  level            VisionLevel      // BASIC, ADVANCED, PL
+  enrollmentStatus String           // "ENROLLED", "ACTIVE", "COMPLETED", "CANCELLED"
+  paymentStatus    String?          // "PAID", "PENDING", "PARTIAL"
+  enrolledAt       DateTime         @default(now())
+  completedAt      DateTime?
+  graduatedAt      DateTime?
+}
+
+model VisionParticipante {
+  id             Int  @id @default(autoincrement())
+  visionId       Int
+  participanteId Int  // Usuario agregado manualmente por coordinador
+  gameChangerId  Int? // GameChanger asignado
+  asignadoPorId  Int?
+}
+
+--------------------------------------------------------------------------------
+PRODUCTOS (ENTRENAMIENTOS ESPECÍFICOS)
+--------------------------------------------------------------------------------
+
+model SchoolProduct {
+  id                Int             @id @default(autoincrement())
+  name              String
+  organizationId    Int?
+  visionId          Int?
+  levelType         VisionLevel     // BASIC, ADVANCED, PL, NONE
+  type              ProductType     // CORE_TRAINING, EXTRA_WORKSHOP
+  trainingStatus    TrainingStatus  // PENDING, IN_PROGRESS, COMPLETED
+  startDate         DateTime
+  endDate           DateTime
+  trainerId         Int?            // Entrenador asignado
+  coordinatorId     Int?
+  maxCapacity       Int             @default(100)
+  currentEnrollment Int             @default(0)
+  isActive          Boolean         @default(true)
+  location          String?
+  
+  // Para PL (3 fines de semana)
+  plWeekend1StartDate DateTime?
+  plWeekend1EndDate   DateTime?
+  plWeekend2StartDate DateTime?
+  plWeekend2EndDate   DateTime?
+  plWeekend3StartDate DateTime?
+  plWeekend3EndDate   DateTime?
+}
+
+model CheckInRecord {
+  id          Int      @id @default(autoincrement())
+  usuarioId   Int
+  visionId    Int?
+  productId   Int?
+  dayNumber   Int      // Día del entrenamiento (1, 2, 3...)
+  checkedInAt DateTime @default(now())
+  checkedInBy Int?     // Quién hizo el check-in
+}
+
+--------------------------------------------------------------------------------
+CARTA DE FRUTOS (METAS PERSONALES)
+--------------------------------------------------------------------------------
+
+model CartaFrutos {
+  id                    Int       @id @default(autoincrement())
+  usuarioId             Int       @unique
+  estado                CartaEstado // "borrador", "pendiente", "aprobada"
+  
+  // 8 áreas con meta, avance y declaración
+  finanzasMeta          Int?
+  finanzasAvance        Int       @default(0)
+  finanzasDeclaracion   String?   // "Yo soy abundancia..."
+  finanzasDeclaracionStatus String? // "pending", "approved", "rejected"
+  
+  relacionesMeta        Int?
+  relacionesAvance      Int       @default(0)
+  relacionesDeclaracion String?
+  
+  talentosMeta          Int?
+  talentosAvance        Int       @default(0)
+  talentosDeclaracion   String?
+  
+  saludMeta             Int?
+  saludAvance           Int       @default(0)
+  saludDeclaracion      String?
+  
+  pazMentalMeta         Int?
+  pazMentalAvance       Int       @default(0)
+  pazMentalDeclaracion  String?
+  
+  ocioMeta              Int?
+  ocioAvance            Int       @default(0)
+  ocioDeclaracion       String?
+  
+  servicioTransMeta     Int?      // Área servicio transformación
+  servicioTransAvance   Int       @default(0)
+  servicioTransDeclaracion String?
+  
+  servicioComunMeta     Int?      // Área servicio comunitario
+  servicioComunAvance   Int       @default(0)
+  servicioComunDeclaracion String?
+  
+  enrolamientoMeta      Int?      // Meta de invitados
+  enrolamientoAvance    Int       @default(0)
+  invitadosInscritos    Int       @default(0)
+  
+  autorizadoMentor      Boolean   @default(false)
+  autorizadoCoord       Boolean   @default(false)
+}
+
+model Meta {
+  id              Int      @id @default(autoincrement())
+  cartaId         Int
+  categoria       String   // "finanzas", "salud", etc.
+  orden           Int      @default(1)
+  declaracionPoder String? // "Yo soy..."
+  metaPrincipal   String?  // Objetivo específico
+  avance          Int      @default(0)
+  status          MetaStatus // "pending", "approved", "rejected"
+  mentorFeedback  String?
+}
+
+model AreaConfig {
+  id        Int      @id @default(autoincrement())
+  usuarioId Int
+  areaKey   String   // "finanzas", "servicioTrans", etc.
+  enabled   Boolean  @default(true)
+}
+
+--------------------------------------------------------------------------------
+SISTEMA DE SQUADS Y GAMECHANGERS
+--------------------------------------------------------------------------------
+
+model SmallGroup {
+  id             Int         @id @default(autoincrement())
+  name           String
+  visionId       Int?
+  productId      Int?
+  leaderId       Int?        // GameChanger líder
+  organizationId Int?
+  level          VisionLevel // BASIC, ADVANCED, PL
+  maxSize        Int         @default(10)
+  isActive       Boolean     @default(true)
+}
+
+model SmallGroupMember {
+  id        Int      @id @default(autoincrement())
+  groupId   Int
+  usuarioId Int
+  isActive  Boolean  @default(true)
+  joinedAt  DateTime @default(now())
+}
+
+model GCCallAttempt {
+  id              Int       @id @default(autoincrement())
+  gameChangerId   Int
+  participantId   Int
+  squadId         Int?
+  visionId        Int?
+  trainingType    VisionLevel // BASIC, ADVANCED, PL
+  trainingDay     Int         // Día del entrenamiento
+  attemptNumber   Int         // 1, 2, 3...
+  completed       Boolean     @default(false)
+  potentialRating Int?        // 1-10
+  notes           String?
+  attemptedAt     DateTime    @default(now())
+}
+
+--------------------------------------------------------------------------------
+SISTEMA DE MENTORES Y LLAMADAS
+--------------------------------------------------------------------------------
+
+model MentorAvailability {
+  id          Int      @id @default(autoincrement())
+  mentorId    Int
+  visionId    Int?
+  dayOfWeek   Int      // 0=Domingo, 1=Lunes...
+  startTime   String   // "09:00"
+  endTime     String   // "10:00"
+  isAvailable Boolean  @default(true)
+}
+
+model MentorCall {
+  id           String    @id @default(cuid())
+  mentorId     Int
+  participantId Int
+  visionId     Int?
+  scheduledAt  DateTime
+  status       CallStatus // PENDING, COMPLETED, CANCELLED, NO_SHOW
+  duration     Int?       // minutos
+  notes        String?
+  completedAt  DateTime?
+}
+
+--------------------------------------------------------------------------------
+EL ATRAVESAR (SISTEMA DE CRUCES)
+--------------------------------------------------------------------------------
+
+model ElCruceSession {
+  id           String   @id @default(cuid())
+  visitorId    Int      // Usuario que hace el cruce
+  guideId      Int      // Coordinador/Trainer que guía
+  productId    Int?     // Producto asociado
+  sourceLevel  String   // "BASIC", "ADVANCED"
+  targetLevel  String   // "ADVANCED", "PL"
+  status       String   // "IN_PROGRESS", "COMPLETED", "CANCELLED"
+  startedAt    DateTime @default(now())
+  completedAt  DateTime?
+  currentPage  String?  // Página actual del flujo
+}
+
+model ElCruceAnswer {
+  id         String   @id @default(cuid())
+  sessionId  String
+  questionId String
+  answer     String
+  answeredAt DateTime @default(now())
+}
+
+--------------------------------------------------------------------------------
+TICKETS Y PAGOS
+--------------------------------------------------------------------------------
+
+model Ticket {
+  id            Int                   @id @default(autoincrement())
+  usuarioId     Int
+  visionId      Int?
+  productId     Int?
+  level         VisionLevel
+  status        TicketStatus          // ACTIVE, USED, CANCELLED, TRANSFERRED
+  paymentStatus TicketPaymentStatus   // PENDING, PAID, PARTIAL, REFUNDED
+  price         Float?
+  paidAmount    Float                 @default(0)
+  createdAt     DateTime              @default(now())
+}
+
+================================================================================
+FUNCIONALIDADES IMPLEMENTADAS
+================================================================================
+
+--------------------------------------------------------------------------------
+1. AUTENTICACIÓN Y ROLES
+--------------------------------------------------------------------------------
+- Login/Logout con NextAuth
+- Roles: ADMINISTRADOR, COORDINADOR, TRAINER, MENTOR, GAMECHANGER, PARTICIPANTE
+- Middleware de protección de rutas por rol
+
+--------------------------------------------------------------------------------
+2. DASHBOARD PRINCIPAL (/dashboard)
+--------------------------------------------------------------------------------
+- Widget de carta de frutos con progreso
+- Widget de tareas pendientes
+- Widget de llamadas con mentor
+- Widget de El Atravesar (para coordinadores/trainers)
+- Acceso condicional según nivel (BASIC, ADVANCED, PL)
+
+--------------------------------------------------------------------------------
+3. WIZARD DE CARTA v2 (/dashboard/carta/wizard-v2)
+--------------------------------------------------------------------------------
+
+FLUJO EN 5 PASOS:
+1. SER: Declaraciones de poder ("Yo soy...") por área
+2. Objetivo: Meta principal de cada área
+3. HACER: Acciones específicas con frecuencia
+4. Acciones: Configuración de días y repeticiones
+5. Revisión: Resumen final antes de guardar
+
+LÓGICA DE ÁREAS:
+- Usuarios Vision: 8 áreas (6 básicas + 2 de servicio)
+- Usuarios orgánicos (Lobo Solitario): 6 áreas básicas
+- Botón de configurar áreas (6) DESHABILITADO para usuarios Vision
+
+--------------------------------------------------------------------------------
+4. SISTEMA DE ACCESO POR NIVEL (VisionAccessContext)
+--------------------------------------------------------------------------------
+
+API: /api/user/vision-level
+Determina acceso según nivel:
+- BASIC: ranking, quantum, llamadasMentor
+- ADVANCED: + carta, metas
+- PL: + tareas, evidencias, disciplina (acceso completo)
+
+IMPORTANTE: Busca enrollments con status 'ENROLLED' o 'ACTIVE'
+
+--------------------------------------------------------------------------------
+5. EL ATRAVESAR (/el-cruce)
+--------------------------------------------------------------------------------
+
+Sistema de "cruces" para pasar de nivel:
+- BASIC → ADVANCED
+- ADVANCED → PL
+
+FLUJO:
+1. Coordinador/Trainer selecciona producto IN_PROGRESS
+2. Crea sesión de cruce
+3. Participante responde preguntas
+4. Páginas del flujo: /el-cruce/[sessionId]/tu-vida, etc.
+
+APIS:
+- POST /api/el-cruce/session - Crear sesión
+- GET /api/el-cruce/session?active=true - Sesiones activas
+- GET /api/coordinador/productos-activos - Productos disponibles
+
+--------------------------------------------------------------------------------
+6. SISTEMA DE SQUADS Y GAMECHANGERS
+--------------------------------------------------------------------------------
+- Creación de squads por nivel
+- Asignación de GameChangers
+- Registro de llamadas (GCCallAttempt)
+- Monitor de llamadas (/api/coordinator/gc-calls-monitor)
+
+--------------------------------------------------------------------------------
+7. CHECK-IN DE ENTRENAMIENTOS
+--------------------------------------------------------------------------------
+- QR por producto/día
+- Registro en CheckInRecord
+- Página: /dashboard/school-admin/checkin/[productId]
+
+--------------------------------------------------------------------------------
+8. MENTORES
+--------------------------------------------------------------------------------
+- Horarios disponibles (MentorAvailability)
+- Agendar llamadas (MentorCall)
+- Asignación automática de mentores
+
+================================================================================
+PENDIENTE POR DESARROLLAR
+================================================================================
+
+--------------------------------------------------------------------------------
+1. EL ATRAVESAR - PÁGINAS FALTANTES
+--------------------------------------------------------------------------------
+/el-cruce/[sessionId]/tu-vida ✅ (creada)
+/el-cruce/[sessionId]/preguntas (pendiente)
+/el-cruce/[sessionId]/reflexion (pendiente)
+/el-cruce/[sessionId]/compromiso (pendiente)
+/el-cruce/[sessionId]/completado (pendiente)
+
+--------------------------------------------------------------------------------
+2. FLUJO COMPLETO DE AVANZADO
+--------------------------------------------------------------------------------
+- Validación de graduación de básico
+- Pre-registro para avanzado
+- Sistema de transferencias de tickets
+
+--------------------------------------------------------------------------------
+3. FLUJO COMPLETO DE PL
+--------------------------------------------------------------------------------
+- Los 3 fines de semana
+- Evaluaciones por fin de semana
+- Graduación final
+
+--------------------------------------------------------------------------------
+4. REPORTES Y ANALYTICS
+--------------------------------------------------------------------------------
+- Dashboard de métricas por Vision
+- Reportes de asistencia
+- Progreso de participantes
+
+--------------------------------------------------------------------------------
+5. NOTIFICACIONES
+--------------------------------------------------------------------------------
+- Push notifications
+- Emails automáticos
+- Recordatorios de llamadas
+
+================================================================================
+FIXES RECIENTES (ENERO 2026)
+================================================================================
+
+--------------------------------------------------------------------------------
+Fix 1: Detección de usuarios Vision
+--------------------------------------------------------------------------------
+Archivo: /app/api/user/vision-level/route.ts
+ANTES: Solo buscaba enrollmentStatus: 'ENROLLED'
+DESPUÉS: Busca enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+
+--------------------------------------------------------------------------------
+Fix 2: Áreas de servicio para usuarios Vision
+--------------------------------------------------------------------------------
+Archivo: /app/api/areas-config/route.ts
+ANTES: Solo verificaba VisionParticipante
+DESPUÉS: También verifica vision_enrollments
+Permite que usuarios inscritos vean las 8 áreas
+
+--------------------------------------------------------------------------------
+Fix 3: Productos del trainer en otras organizaciones
+--------------------------------------------------------------------------------
+Archivo: /app/api/coordinador/productos-activos/route.ts
+AGREGADO: trainerId en el filtro OR
+Permite ver productos donde el usuario es trainer aunque esté en otra org
+
+================================================================================
+ESTRUCTURA DE CARPETAS PRINCIPALES
+================================================================================
+
+/app
+  /api
+    /areas-config          # Configuración de áreas por usuario
+    /carta                 # CRUD de carta de frutos
+    /coordinador           # APIs para coordinadores
+    /el-cruce              # Sistema El Atravesar
+    /mentor                # Sistema de mentores
+    /user                  # Info de usuario y nivel
+  /dashboard
+    /carta
+      /wizard-v2           # Wizard de carta
+      /resumen             # Resumen de carta
+    /school-admin          # Admin de escuela/vision
+    /coordinador           # Panel coordinador
+  /el-cruce
+    /[sessionId]           # Páginas del flujo de cruce
+
+/components
+  /dashboard
+    /CartaWizardRelacional.tsx  # Componente principal del wizard
+  /el-cruce
+    /ElCruceAccessWidget.tsx    # Widget para iniciar cruces
+  /ui
+    /LockedModuleOverlay.tsx    # Protección de módulos por nivel
+
+/contexts
+  /VisionAccessContext.tsx      # Context de acceso por nivel
+
+/lib
+  /prisma.ts                    # Cliente Prisma
+  /auth.ts                      # Configuración NextAuth
+
+================================================================================
+INSTRUCCIONES PARA CONTINUAR
+================================================================================
+
+1. Siempre verificar el contexto antes de hacer cambios
+2. Usar búsqueda semántica para encontrar código relacionado
+3. Probar con usuarios de prueba:
+   - Usuario Vision con enrollment: userId 34 (Iri Día)
+   - Trainer: userId 11 (t3 zero)
+4. Los cambios se suben a Vercel con: 
+   git add -A && git commit -m "mensaje" && git push origin main
+
+--------------------------------------------------------------------------------
+FORMATO DE RESPUESTA PREFERIDO
+--------------------------------------------------------------------------------
+
+Cuando hagas correcciones, usa este formato:
+
+BUSCAR (líneas X-Y en archivo.ts):
+[código exacto a buscar]
+
+REEMPLAZAR POR:
+[código nuevo]
+
+O si es nuevo:
+INSERTAR DESPUÉS DE (línea X que dice "..."):
+[código nuevo]
+INSERTAR ANTES DE (línea Y que dice "..."):
+
+================================================================================
+COMANDOS ÚTILES
+================================================================================
+
+# Desarrollo local
+cd /Users/aldokmps/plataforma-frutos-FINAL
+npm run dev
+
+# Deploy a Vercel
+git add -A && git commit -m "descripción" && git push origin main
+
+# Consultar base de datos
+node -e "
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+(async () => {
+  // Tu consulta aquí
+  await prisma.\$disconnect();
+})();
+"
+
+================================================================================
+NOTA IMPORTANTE
+================================================================================
+
+Este instructivo refleja el estado del proyecto al 20 de enero de 2026. 
+Siempre verifica el código actual antes de hacer cambios, ya que puede 
+haber actualizaciones posteriores.
+
+================================================================================
