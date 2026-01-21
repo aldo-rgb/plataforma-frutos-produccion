@@ -34,8 +34,11 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check if this is a PL-only purchase
+    const isPLOnlyPurchase = packageType === 'PL_BASE' || packageType === 'PL_CON_CREDITO';
+
     // Check if already enrolled in ADVANCED for this vision
-    const existingEnrollment = await prisma.vision_enrollments.findFirst({
+    const existingAdvancedEnrollment = await prisma.vision_enrollments.findFirst({
       where: {
         userId: userId,
         visionId: visionId,
@@ -43,9 +46,34 @@ export async function POST(request: Request) {
       },
     });
 
-    if (existingEnrollment) {
+    // For PL-only purchases, user MUST have ADVANCED enrollment
+    if (isPLOnlyPurchase && !existingAdvancedEnrollment) {
+      return NextResponse.json(
+        { success: false, error: 'Debes tener una inscripción activa en Avanzado para comprar solo PL' },
+        { status: 400 }
+      );
+    }
+
+    // For non-PL-only purchases, user must NOT have ADVANCED enrollment already
+    if (!isPLOnlyPurchase && existingAdvancedEnrollment) {
       return NextResponse.json(
         { success: false, error: 'Ya estás inscrito en este entrenamiento Avanzado' },
+        { status: 400 }
+      );
+    }
+
+    // Check if already enrolled in PL for this vision
+    const existingPLEnrollment = await prisma.vision_enrollments.findFirst({
+      where: {
+        userId: userId,
+        visionId: visionId,
+        level: 'PL',
+      },
+    });
+
+    if (existingPLEnrollment) {
+      return NextResponse.json(
+        { success: false, error: 'Ya estás inscrito en el Liderato (PL)' },
         { status: 400 }
       );
     }
@@ -93,53 +121,40 @@ export async function POST(request: Request) {
       );
     }
 
+    // Determine if this is a PL-only purchase (user already has ADVANCED)
+    const isPLOnly = packageType === 'PL_BASE' || packageType === 'PL_CON_CREDITO';
+
     // Create enrollment and tickets in a transaction
     const result = await prisma.$transaction(async (tx) => {
-      // Create the ADVANCED enrollment
-      const advancedEnrollment = await tx.vision_enrollments.create({
-        data: {
-          userId: userId,
-          visionId: visionId,
-          coordinatorId: basicEnrollment.coordinatorId,
-          level: 'ADVANCED',
-          enrollmentStatus: 'ACTIVE',
-          paymentStatus: amountPaid > 0 ? 'PAID' : 'PENDING',
-          enrolledAt: new Date(),
-          updatedAt: new Date(),
-        },
-      });
-
-      // Create ADVANCED ticket (always paid for all package types)
-      const advancedTicket = await tx.ticket.create({
-        data: {
-          ownerId: userId,
-          organizationId: organizationId,
-          visionId: visionId,
-          level: 'ADVANCED',
-          type: 'STANDARD',
-          status: 'ACTIVE',
-          paymentStatus: 'PAID',
-          costAtPurchase: prices?.ADVANCED_BASE || amountPaid,
-          amountPaid: packageType === 'APARTADO' ? (prices?.ADVANCED_BASE || amountPaid) : amountPaid,
-          isTransferable: false,
-          validUntil: vision.advancedEndDate || null,
-        },
-      });
-
+      let advancedEnrollment = null;
+      let advancedTicket = null;
       let plEnrollment = null;
       let plTicket = null;
 
-      // If COMBO or APARTADO, also create PL enrollment and ticket
-      if (packageType === 'COMBO' || packageType === 'APARTADO') {
+      // For PL-only purchases, skip ADVANCED creation (user already has it)
+      if (isPLOnly) {
+        // Verify user already has ADVANCED enrollment
+        const existingAdvanced = await tx.vision_enrollments.findFirst({
+          where: {
+            userId: userId,
+            visionId: visionId,
+            level: 'ADVANCED',
+          },
+        });
+
+        if (!existingAdvanced) {
+          throw new Error('Debes tener una inscripción activa en Avanzado para comprar solo PL');
+        }
+
         // Create PL enrollment
         plEnrollment = await tx.vision_enrollments.create({
           data: {
             userId: userId,
             visionId: visionId,
-            coordinatorId: basicEnrollment.coordinatorId,
+            coordinatorId: existingAdvanced.coordinatorId,
             level: 'PL',
-            enrollmentStatus: packageType === 'COMBO' ? 'ACTIVE' : 'PENDING', // APARTADO = pending
-            paymentStatus: packageType === 'COMBO' ? 'PAID' : 'PENDING',
+            enrollmentStatus: 'ACTIVE',
+            paymentStatus: 'PAID',
             enrolledAt: new Date(),
             updatedAt: new Date(),
           },
@@ -153,14 +168,79 @@ export async function POST(request: Request) {
             visionId: visionId,
             level: 'PL',
             type: 'STANDARD',
-            status: packageType === 'COMBO' ? 'ACTIVE' : 'PENDING_PAYMENT', // APARTADO = pending payment
-            paymentStatus: packageType === 'COMBO' ? 'PAID' : 'PENDING', // APARTADO = pending payment
-            costAtPurchase: prices?.PL || pendingDebt,
-            amountPaid: packageType === 'COMBO' ? (prices?.PL || 0) : 0, // APARTADO hasn't paid PL yet
+            status: 'ACTIVE',
+            paymentStatus: 'PAID',
+            costAtPurchase: prices?.PL_BASE || amountPaid,
+            amountPaid: amountPaid,
             isTransferable: false,
             validUntil: vision.plWeekend3EndDate || null,
           },
         });
+      } else {
+        // Original flow: Create ADVANCED enrollment and ticket
+        advancedEnrollment = await tx.vision_enrollments.create({
+          data: {
+            userId: userId,
+            visionId: visionId,
+            coordinatorId: basicEnrollment.coordinatorId,
+            level: 'ADVANCED',
+            enrollmentStatus: 'ACTIVE',
+            paymentStatus: amountPaid > 0 ? 'PAID' : 'PENDING',
+            enrolledAt: new Date(),
+            updatedAt: new Date(),
+          },
+        });
+
+        // Create ADVANCED ticket
+        advancedTicket = await tx.ticket.create({
+          data: {
+            ownerId: userId,
+            organizationId: organizationId,
+            visionId: visionId,
+            level: 'ADVANCED',
+            type: 'STANDARD',
+            status: 'ACTIVE',
+            paymentStatus: 'PAID',
+            costAtPurchase: prices?.ADVANCED_BASE || amountPaid,
+            amountPaid: packageType === 'APARTADO' ? (prices?.ADVANCED_BASE || amountPaid) : amountPaid,
+            isTransferable: false,
+            validUntil: vision.advancedEndDate || null,
+          },
+        });
+
+        // If COMBO or APARTADO, also create PL enrollment and ticket
+        if (packageType === 'COMBO' || packageType === 'APARTADO') {
+          // Create PL enrollment
+          plEnrollment = await tx.vision_enrollments.create({
+            data: {
+              userId: userId,
+              visionId: visionId,
+              coordinatorId: basicEnrollment.coordinatorId,
+              level: 'PL',
+              enrollmentStatus: packageType === 'COMBO' ? 'ACTIVE' : 'PENDING', // APARTADO = pending
+              paymentStatus: packageType === 'COMBO' ? 'PAID' : 'PENDING',
+              enrolledAt: new Date(),
+              updatedAt: new Date(),
+            },
+          });
+
+          // Create PL ticket
+          plTicket = await tx.ticket.create({
+            data: {
+              ownerId: userId,
+              organizationId: organizationId,
+              visionId: visionId,
+              level: 'PL',
+              type: 'STANDARD',
+              status: packageType === 'COMBO' ? 'ACTIVE' : 'PENDING_PAYMENT', // APARTADO = pending payment
+              paymentStatus: packageType === 'COMBO' ? 'PAID' : 'PENDING', // APARTADO = pending payment
+              costAtPurchase: prices?.PL || pendingDebt,
+              amountPaid: packageType === 'COMBO' ? (prices?.PL || 0) : 0, // APARTADO hasn't paid PL yet
+              isTransferable: false,
+              validUntil: vision.plWeekend3EndDate || null,
+            },
+          });
+        }
       }
 
       // Update user's currentVisionLevel
@@ -171,7 +251,7 @@ export async function POST(request: Request) {
 
       const levelHierarchy = ['BASIC', 'ADVANCED', 'PL'];
       const currentLevelIndex = levelHierarchy.indexOf(user?.currentVisionLevel || 'BASIC');
-      const targetLevel = (packageType === 'COMBO') ? 'PL' : 'ADVANCED';
+      const targetLevel = (packageType === 'COMBO' || isPLOnly) ? 'PL' : 'ADVANCED';
       const newLevelIndex = levelHierarchy.indexOf(targetLevel);
 
       if (newLevelIndex > currentLevelIndex) {
@@ -204,6 +284,7 @@ export async function POST(request: Request) {
         plEnrollment,
         plTicket,
         packageType,
+        isPLOnly,
       };
     });
 
@@ -213,26 +294,35 @@ export async function POST(request: Request) {
       message = '¡Inscripción exitosa al Combo Avanzado + Liderato!';
     } else if (packageType === 'APARTADO') {
       message = '¡Tu lugar en Liderato ha sido apartado! Recuerda pagar antes del inicio del Avanzado.';
+    } else if (packageType === 'PL_BASE' || packageType === 'PL_CON_CREDITO') {
+      message = '¡Inscripción exitosa al Liderato (PL)!';
     }
+
+    // For PL-only, return the PL enrollment info
+    const enrollmentToReturn = result.isPLOnly ? result.plEnrollment : result.advancedEnrollment;
 
     return NextResponse.json({
       success: true,
       message,
-      enrollment: {
-        id: result.advancedEnrollment.id,
-        level: result.advancedEnrollment.level,
-        status: result.advancedEnrollment.enrollmentStatus,
+      enrollment: enrollmentToReturn ? {
+        id: enrollmentToReturn.id,
+        level: enrollmentToReturn.level,
+        status: enrollmentToReturn.enrollmentStatus,
         packageType: packageType,
-      },
+      } : null,
       tickets: {
         advanced: result.advancedTicket ? { id: result.advancedTicket.id, status: result.advancedTicket.status } : null,
         pl: result.plTicket ? { id: result.plTicket.id, status: result.plTicket.status, paymentStatus: result.plTicket.paymentStatus } : null,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error enrolling in advanced:', error);
+    
+    // Return specific error message if it's a known validation error
+    const errorMessage = error?.message || 'Error interno del servidor';
+    
     return NextResponse.json(
-      { success: false, error: 'Error interno del servidor' },
+      { success: false, error: errorMessage },
       { status: 500 }
     );
   }

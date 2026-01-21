@@ -32,11 +32,11 @@ const nextLevelConfig = {
   },
   ADVANCED: {
     nextLevel: 'PL',
-    nextLevelName: 'Quantum Leadership',
+    nextLevelName: 'Tu Vida',
     icon: Crown,
     color: '#FFD700',
-    description: 'Preparación para el Vuelo',
-    cta: 'Compromiso PL',
+    description: 'Preparación para el Salto',
+    cta: 'Elegir Tu Vida',
   },
   PL: {
     nextLevel: null,

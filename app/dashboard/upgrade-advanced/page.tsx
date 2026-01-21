@@ -466,7 +466,7 @@ export default function UpgradeAdvancedPage() {
             <div className="mt-4 grid grid-cols-2 gap-3">
               {[
                 '8 sesiones intensivas',
-                'Certificación oficial',
+                'Entrenadores Certificados',
                 'Comunidad exclusiva',
                 'Mentoría personalizada',
               ].map((benefit, idx) => (

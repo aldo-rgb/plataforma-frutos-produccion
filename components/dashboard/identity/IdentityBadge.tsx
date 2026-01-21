@@ -23,8 +23,8 @@ const levelConfig = {
     textColor: 'text-cyan-400',
   },
   ADVANCED: {
-    title: 'NIVEL 2: BREAKTHROUGH',
-    subtitle: 'The Breaker',
+    title: 'NIVEL 2: El Entrenamiento',
+    subtitle: 'Irrazonable',
     icon: Rocket,
     color: '#9D4EDD', // Magenta/Púrpura
     bgGradient: 'from-purple-500/20 to-purple-600/10',
@@ -33,8 +33,8 @@ const levelConfig = {
     textColor: 'text-purple-400',
   },
   PL: {
-    title: 'NIVEL 3: QUANTUM LEADERSHIP',
-    subtitle: 'The Leader',
+    title: 'NIVEL 3: El Jueago de Tu VIDA',
+    subtitle: 'El lider de Tu vida',
     icon: Crown,
     color: '#FFD700', // Dorado Legendario
     bgGradient: 'from-yellow-500/20 to-amber-600/10',
