@@ -82,54 +82,74 @@ export async function POST(
 
     // ========================================
     // CONSUMIR LICENCIA - Solo para BASIC cuando se marca ATTENDED
+    // Usa el mismo proceso que check-in/complete
     // ========================================
     let licenseConsumed = false;
-    let licenseError = null;
+    let licensesWentNegative = false;
     
     if (attendanceStatus === 'ATTENDED' && 
         enrollment.level === 'BASIC' && 
         previousStatus !== 'ATTENDED' && 
         organizationId) {
       
-      // Buscar una licencia activa de la organización con cupos disponibles
-      const availableLicense = await prisma.license.findFirst({
-        where: {
-          organizationId: organizationId,
-          isActive: true,
-          isRevoked: false,
-          OR: [
-            { expiresAt: null },
-            { expiresAt: { gt: new Date() } }
-          ]
-        },
-        orderBy: { createdAt: 'asc' } // Usar la más antigua primero
+      // Decrementar licensesAvailable de la organización (igual que check-in)
+      const updatedOrg = await prisma.organization.update({
+        where: { id: organizationId },
+        data: {
+          licensesAvailable: { decrement: 1 },
+          activeLicenses: { increment: 1 }
+        }
       });
 
-      if (availableLicense) {
-        if (availableLicense.usedCount < availableLicense.maxUses) {
-          // Consumir licencia
-          await prisma.license.update({
-            where: { id: availableLicense.id },
-            data: { usedCount: { increment: 1 } }
-          });
-          licenseConsumed = true;
-          console.log(`🎫 Licencia consumida: ${availableLicense.code} (${availableLicense.usedCount + 1}/${availableLicense.maxUses}) para usuario ${enrollment.userId}`);
-        } else {
-          licenseError = 'La licencia de la organización ha alcanzado su límite de usos';
-          console.log(`⚠️ Licencia agotada: ${availableLicense.code} (${availableLicense.usedCount}/${availableLicense.maxUses})`);
-        }
-      } else {
-        licenseError = 'No hay licencias activas disponibles para esta organización';
-        console.log(`⚠️ No hay licencias disponibles para organización ${organizationId}`);
+      licenseConsumed = true;
+      
+      if (updatedOrg.licensesAvailable < 0) {
+        licensesWentNegative = true;
+        console.log(`⚠️ ALERTA: Organización ${organizationId} tiene ${updatedOrg.licensesAvailable} licencias (NEGATIVO)`);
       }
+
+      // Crear LicenseAssignment si no existe
+      const user = await prisma.usuario.findUnique({
+        where: { id: enrollment.userId }
+      });
+
+      if (user && ['PARTICIPANTE', 'GAMECHANGER', 'LIDER'].includes(user.rol)) {
+        const existingAssignment = await prisma.licenseAssignment.findFirst({
+          where: {
+            userId: user.id,
+            organizationId: organizationId,
+            isActive: true
+          }
+        });
+
+        if (!existingAssignment) {
+          const licenseCode = `LIC-${organizationId}-${user.id}-${Date.now()}`;
+          
+          await prisma.licenseAssignment.create({
+            data: {
+              userId: user.id,
+              organizationId: organizationId,
+              visionId: visionId,
+              licenseCode: licenseCode,
+              assignedBy: usuario.id,
+              isActive: true,
+              activatedAt: new Date(),
+              notes: `Asignado manualmente por coordinador - Marcado asistencia BASIC`
+            }
+          });
+          
+          console.log(`✅ LicenseAssignment creado para usuario ${user.nombre} (ID: ${user.id})`);
+        }
+      }
+
+      console.log(`🎫 Licencia consumida para usuario ${enrollment.userId} en nivel BASIC`);
     }
 
     // Actualizar el estado de asistencia
     const updatedEnrollment = await prisma.vision_enrollments.update({
       where: { id: enrollmentId },
       data: { 
-        attendanceStatus: attendanceStatus,
-        ...(licenseConsumed && { licenseConsumed: true })
+        attendanceStatus: attendanceStatus
       },
       include: {
         Usuario_vision_enrollments_userIdToUsuario: {
@@ -199,8 +219,8 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: licenseError 
-        ? `Asistencia actualizada pero: ${licenseError}` 
+      message: licensesWentNegative 
+        ? 'Asistencia actualizada (⚠️ licencias en negativo)' 
         : 'Asistencia actualizada correctamente',
       enrollment: {
         id: updatedEnrollment.id,
@@ -213,7 +233,7 @@ export async function POST(
       historyLogged: true,
       courtesyTicket: courtesyTicketResult,
       licenseConsumed: licenseConsumed,
-      licenseError: licenseError
+      licensesWentNegative: licensesWentNegative
     });
 
   } catch (error: any) {
