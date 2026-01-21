@@ -336,7 +336,7 @@ export async function GET(request: NextRequest) {
 
     // Total pre-registros (declarados) - depende del nivel del trainer
     // Si es trainer BÁSICO: declarados = pre-registros PENDING a AVANZADO (de sus productos BASIC)
-    // Si es trainer AVANZADO: declarados = pre-registros PENDING a PL (desde sus productos ADVANCED)
+    // Si es trainer AVANZADO: declarados = todos los que declararon ir a PL (PENDING + PAID)
     let totalDeclarados = 0
     if (isBasicTrainer) {
       const basicProductIds = basicProducts.map(p => p.id)
@@ -349,13 +349,14 @@ export async function GET(request: NextRequest) {
         })
       }
     } else if (isAdvancedTrainer) {
-      // Para trainers de avanzado, mostrar pre-registros de ADVANCED a PL
+      // Para trainers de avanzado, mostrar TODOS los declarados a PL (PENDING + PAID)
+      // porque un "declarado" es alguien que dijo que iba, haya pagado o no
       const advancedProductIds = advancedProducts.map(p => p.id)
       if (advancedProductIds.length > 0) {
         totalDeclarados = await prisma.advancedPreRegistration.count({
           where: {
             currentProductId: { in: advancedProductIds },
-            status: 'PENDING'
+            status: { in: ['PENDING', 'PAID'] }
           }
         })
       }
