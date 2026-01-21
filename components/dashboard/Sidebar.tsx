@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { 
   LayoutDashboard, Trophy, Target, BarChart3, User, LogOut, 
   UserPlus, DollarSign, Package, Shield, 
-  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase
+  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { MENU_ITEMS } from '@/config/menuPermissions';
@@ -883,6 +883,22 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             <CreditCard size={18} />
             <span>Membresía</span>
           </Link>
+
+          {/* Mi QR Personal - Solo para PARTICIPANTE, LIDER, GAMECHANGER */}
+          {(usuario.rol === 'PARTICIPANTE' || usuario.rol === 'LIDER' || usuario.rol === 'GAMECHANGER') && (
+            <Link 
+              href="/dashboard/mi-qr" 
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
+                pathname === '/dashboard/mi-qr' 
+                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg' 
+                  : 'text-slate-400 hover:bg-gradient-to-r hover:from-cyan-900/30 hover:to-blue-900/30 hover:text-cyan-300'
+              }`}
+            >
+              <QrCode size={18} className="text-cyan-400 group-hover:text-cyan-300" />
+              <span className="font-medium">Mi QR Personal</span>
+            </Link>
+          )}
         </div>
       </nav>
 

@@ -1,8 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Users, UserPlus, Award, ChevronRight, TrendingUp } from 'lucide-react';
-import Link from 'next/link';
+import { Users, UserPlus, Award, TrendingUp } from 'lucide-react';
 
 interface TribeStats {
   invitedCount: number;
@@ -16,7 +15,6 @@ interface TribeManagementWidgetProps {
 }
 
 export default function TribeManagementWidget({ stats, onInviteClick }: TribeManagementWidgetProps) {
-  const invitedCount = stats?.invitedCount || 0;
   const enrolledCount = stats?.enrolledCount || 0;
   const graduatedCount = stats?.graduatedCount || 0;
 
@@ -37,71 +35,31 @@ export default function TribeManagementWidget({ stats, onInviteClick }: TribeMan
             <p className="text-xs text-slate-400">Tu legado transformacional</p>
           </div>
         </div>
-        <Link 
-          href="/dashboard/carta"
-          className="flex items-center gap-1 text-xs text-yellow-400 hover:text-yellow-300 transition-colors"
-        >
-          Carta F.R.U.T.O.S.
-          <ChevronRight className="w-3 h-3" />
-        </Link>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      {/* Stats Grid - Solo Enrollados y Graduados */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
         <motion.div
-          className="bg-slate-800/50 rounded-xl p-3 border border-slate-700 text-center"
+          className="bg-slate-800/50 rounded-xl p-4 border border-slate-700 text-center"
           whileHover={{ scale: 1.02 }}
         >
-          <div className="flex items-center justify-center gap-1 mb-1">
-            <UserPlus className="w-4 h-4 text-yellow-400" />
+          <div className="flex items-center justify-center gap-1 mb-2">
+            <TrendingUp className="w-5 h-5 text-green-400" />
           </div>
-          <span className="text-2xl font-bold text-white">{invitedCount}</span>
-          <p className="text-xs text-slate-400">Invitados</p>
+          <span className="text-3xl font-bold text-white">{enrolledCount}</span>
+          <p className="text-sm text-slate-400">Enrollados</p>
         </motion.div>
 
         <motion.div
-          className="bg-slate-800/50 rounded-xl p-3 border border-slate-700 text-center"
+          className="bg-slate-800/50 rounded-xl p-4 border border-slate-700 text-center"
           whileHover={{ scale: 1.02 }}
         >
-          <div className="flex items-center justify-center gap-1 mb-1">
-            <TrendingUp className="w-4 h-4 text-green-400" />
+          <div className="flex items-center justify-center gap-1 mb-2">
+            <Award className="w-5 h-5 text-purple-400" />
           </div>
-          <span className="text-2xl font-bold text-white">{enrolledCount}</span>
-          <p className="text-xs text-slate-400">Enrollados</p>
+          <span className="text-3xl font-bold text-white">{graduatedCount}</span>
+          <p className="text-sm text-slate-400">Graduados</p>
         </motion.div>
-
-        <motion.div
-          className="bg-slate-800/50 rounded-xl p-3 border border-slate-700 text-center"
-          whileHover={{ scale: 1.02 }}
-        >
-          <div className="flex items-center justify-center gap-1 mb-1">
-            <Award className="w-4 h-4 text-purple-400" />
-          </div>
-          <span className="text-2xl font-bold text-white">{graduatedCount}</span>
-          <p className="text-xs text-slate-400">Graduados</p>
-        </motion.div>
-      </div>
-
-      {/* Progress indicator */}
-      <div className="bg-slate-800/30 rounded-xl p-3 mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs text-slate-400">Meta de Transformación</span>
-          <span className="text-xs font-medium text-yellow-400">{enrolledCount}/3</span>
-        </div>
-        <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-          <motion.div
-            className="h-full bg-gradient-to-r from-yellow-500 to-amber-500"
-            initial={{ width: 0 }}
-            animate={{ width: `${Math.min(100, (enrolledCount / 3) * 100)}%` }}
-            transition={{ duration: 1 }}
-          />
-        </div>
-        <p className="text-xs text-slate-500 mt-1">
-          {enrolledCount >= 3 
-            ? '🎉 ¡Meta alcanzada!' 
-            : `${3 - enrolledCount} más para completar tu área transformacional`
-          }
-        </p>
       </div>
 
       {/* CTA */}

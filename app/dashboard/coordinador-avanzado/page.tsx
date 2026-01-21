@@ -516,15 +516,15 @@ export default function CoordinadorAvanzadoDashboard() {
                     const trainingStart9AM = new Date(startDate);
                     trainingStart9AM.setHours(9, 0, 0, 0);
                     
-                    // 8 PM del día del entrenamiento (límite de Check-In)
-                    const checkInDeadline8PM = new Date(startDate);
-                    checkInDeadline8PM.setHours(20, 0, 0, 0);
+                    // 1 PM del día del entrenamiento (límite de Check-In)
+                    const checkInDeadline1PM = new Date(startDate);
+                    checkInDeadline1PM.setHours(13, 0, 0, 0);
                     
-                    // Botón Check-In: entre 9 AM y 8 PM del primer día
-                    showCheckInButton = now >= trainingStart9AM && now <= checkInDeadline8PM;
+                    // Botón Check-In: entre 9 AM y 1 PM del primer día
+                    showCheckInButton = now >= trainingStart9AM && now <= checkInDeadline1PM;
                     
-                    // En curso (sin botón): después de las 8 PM del primer día
-                    showInProgress = now > checkInDeadline8PM;
+                    // En curso (sin botón): después de la 1 PM del primer día
+                    showInProgress = now > checkInDeadline1PM;
                   }
                   
                   const isCompleted = producto.trainingStatus === 'COMPLETED';

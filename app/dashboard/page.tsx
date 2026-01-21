@@ -15,7 +15,6 @@ import OrganizationChangeModal from "@/components/OrganizationChangeModal";
 import QuantumPointsWidget from "@/components/dashboard/QuantumPointsWidget";
 import RankingWidget from "@/components/dashboard/RankingWidget";
 import PendingMentorReviewsWidget from "@/components/dashboard/PendingMentorReviewsWidget";
-import PersonalQRWidget from "@/components/dashboard/PersonalQRWidget";
 import MedicalFormWidget from "@/components/dashboard/MedicalFormWidget";
 import IdentityHeroSection from "@/components/dashboard/identity/IdentityHeroSection";
 import PendingTicketBanner from "@/components/dashboard/PendingTicketBanner";
@@ -566,21 +565,6 @@ export default async function DashboardPage() {
       {/* progreso hacia siguiente nivel               */}
       {/* ============================================ */}
       <IdentityHeroSection cartaData={cartaDataForIdentity} />
-
-      {/* ============================================ */}
-      {/* QR PERSONAL - WIDGET PARA INVITAR            */}
-      {/* ============================================ */}
-      {(usuario.rol === 'PARTICIPANTE' || usuario.rol === 'LIDER' || usuario.rol === 'GAMECHANGER') && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <PersonalQRWidget 
-            userName={usuario.nombre}
-            userId={usuario.id}
-            userEmail={usuario.email}
-            referralCode={usuario.referralCode || undefined}
-            organizationId={usuario.organizationId}
-          />
-        </div>
-      )}
 
       {/* ============================================ */}
       {/* ZONA SUPERIOR: Hero Section Condicional      */}

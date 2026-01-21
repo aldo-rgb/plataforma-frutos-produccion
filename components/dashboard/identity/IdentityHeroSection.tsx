@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { X } from 'lucide-react';
 import IdentityBadge, { UserLevel } from './IdentityBadge';
 import EvolutionBar from './EvolutionBar';
 import UpgradeToAdvancedWidget from './widgets/UpgradeToAdvancedWidget';
@@ -11,17 +10,12 @@ import TribeManagementWidget from './widgets/TribeManagementWidget';
 import PromiseWidget from './widgets/PromiseWidget';
 import JoinVisionWidget from './widgets/JoinVisionWidget';
 import GCCallWidget from './widgets/GCCallWidget';
-import PersonalQRWidget from '@/components/dashboard/PersonalQRWidget';
 
 interface DashboardStatsResponse {
   success: boolean;
   data: {
     userId: number;
     userName: string;
-    userEmail?: string;
-    referralCode?: string;
-    organizationId?: number;
-    organizationName?: string;
     currentLevelInfo: {
       levelName: UserLevel;
       badgeAsset: string;
@@ -77,7 +71,6 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
   const [data, setData] = useState<DashboardStatsResponse['data'] | null>(initialData || null);
   const [loading, setLoading] = useState(!initialData);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [showQRModal, setShowQRModal] = useState(false);
 
   useEffect(() => {
     if (!initialData) {
@@ -171,7 +164,9 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
           <>
             <TribeManagementWidget 
               stats={tribeStats}
-              onInviteClick={() => setShowQRModal(true)}
+              onInviteClick={() => {
+                // Abrir modal de QR o compartir link
+              }}
             />
             <PromiseWidget 
               hasCompletedCarta={cartaData?.hasCompletedCarta}
@@ -191,34 +186,6 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
           </>
         )}
       </div>
-
-      {/* Modal del QR Personal */}
-      {showQRModal && data && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-          onClick={() => setShowQRModal(false)}
-        >
-          <div 
-            className="relative max-w-lg w-full"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setShowQRModal(false)}
-              className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white transition-colors"
-            >
-              <X className="w-8 h-8" />
-            </button>
-            <PersonalQRWidget
-              userName={data.userName}
-              userId={data.userId}
-              userEmail={data.userEmail || ''}
-              referralCode={data.referralCode}
-              organizationId={data.organizationId}
-              organizationName={data.organizationName}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

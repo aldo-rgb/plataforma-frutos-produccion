@@ -80,11 +80,56 @@ export async function POST(
     // Guardar el estado anterior para el historial
     const previousStatus = enrollment.attendanceStatus || 'PENDING';
 
+    // ========================================
+    // CONSUMIR LICENCIA - Solo para BASIC cuando se marca ATTENDED
+    // ========================================
+    let licenseConsumed = false;
+    let licenseError = null;
+    
+    if (attendanceStatus === 'ATTENDED' && 
+        enrollment.level === 'BASIC' && 
+        previousStatus !== 'ATTENDED' && 
+        organizationId) {
+      
+      // Buscar una licencia activa de la organización con cupos disponibles
+      const availableLicense = await prisma.license.findFirst({
+        where: {
+          organizationId: organizationId,
+          isActive: true,
+          isRevoked: false,
+          OR: [
+            { expiresAt: null },
+            { expiresAt: { gt: new Date() } }
+          ]
+        },
+        orderBy: { createdAt: 'asc' } // Usar la más antigua primero
+      });
+
+      if (availableLicense) {
+        if (availableLicense.usedCount < availableLicense.maxUses) {
+          // Consumir licencia
+          await prisma.license.update({
+            where: { id: availableLicense.id },
+            data: { usedCount: { increment: 1 } }
+          });
+          licenseConsumed = true;
+          console.log(`🎫 Licencia consumida: ${availableLicense.code} (${availableLicense.usedCount + 1}/${availableLicense.maxUses}) para usuario ${enrollment.userId}`);
+        } else {
+          licenseError = 'La licencia de la organización ha alcanzado su límite de usos';
+          console.log(`⚠️ Licencia agotada: ${availableLicense.code} (${availableLicense.usedCount}/${availableLicense.maxUses})`);
+        }
+      } else {
+        licenseError = 'No hay licencias activas disponibles para esta organización';
+        console.log(`⚠️ No hay licencias disponibles para organización ${organizationId}`);
+      }
+    }
+
     // Actualizar el estado de asistencia
     const updatedEnrollment = await prisma.vision_enrollments.update({
       where: { id: enrollmentId },
       data: { 
-        attendanceStatus: attendanceStatus 
+        attendanceStatus: attendanceStatus,
+        ...(licenseConsumed && { licenseConsumed: true })
       },
       include: {
         Usuario_vision_enrollments_userIdToUsuario: {
@@ -148,10 +193,15 @@ export async function POST(
 
     console.log(`✅ Asistencia actualizada: Enrollment ${enrollmentId} -> ${attendanceStatus} (antes: ${previousStatus})`);
     console.log(`📝 Historial guardado por usuario ${usuario.id}`);
+    if (licenseConsumed) {
+      console.log(`🎫 Licencia consumida para nivel BASIC`);
+    }
 
     return NextResponse.json({
       success: true,
-      message: 'Asistencia actualizada correctamente',
+      message: licenseError 
+        ? `Asistencia actualizada pero: ${licenseError}` 
+        : 'Asistencia actualizada correctamente',
       enrollment: {
         id: updatedEnrollment.id,
         userId: updatedEnrollment.userId,
@@ -161,7 +211,9 @@ export async function POST(
         usuario: updatedEnrollment.Usuario_vision_enrollments_userIdToUsuario
       },
       historyLogged: true,
-      courtesyTicket: courtesyTicketResult
+      courtesyTicket: courtesyTicketResult,
+      licenseConsumed: licenseConsumed,
+      licenseError: licenseError
     });
 
   } catch (error: any) {
