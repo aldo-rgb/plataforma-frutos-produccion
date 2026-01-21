@@ -413,6 +413,28 @@ REQUIRED - YES:
     const permanentAvatarUrl = await downloadAndUploadToSupabase(temporaryAvatarUrl!, usuario.id);
     console.log('✅ Avatar guardado permanentemente:', permanentAvatarUrl);
 
+    // ═══════════════════════════════════════════════════════════════
+    // GUARDAR FOTO ANTERIOR EN THE VAULT (antes de reemplazar)
+    // ═══════════════════════════════════════════════════════════════
+    if (usuario.profileImage) {
+      console.log('📸 Guardando foto anterior en The Vault...');
+      try {
+        await prisma.avatarGenerationAttempt.create({
+          data: {
+            usuarioId: usuario.id,
+            generatedUrl: usuario.profileImage,
+            vibe: 'profile-backup', // Identificar como backup de foto de perfil
+            gender: gender,
+            sourceImage: 'check-in-photo' // Indica que viene de fotos de check-in
+          }
+        });
+        console.log('✅ Foto anterior guardada en The Vault:', usuario.profileImage);
+      } catch (vaultError) {
+        console.error('⚠️ Error guardando foto en vault (continuando):', vaultError);
+        // No bloquear el proceso si falla el guardado en vault
+      }
+    }
+
     // Actualizar usuario con la designación y avatar permanente
     console.log('💾 Actualizando usuario con avatar permanente...');
     console.log('Usuario ID:', usuario.id);

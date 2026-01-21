@@ -74,6 +74,13 @@ export async function GET(request: NextRequest) {
                 nombre: true, 
                 profileImage: true,
                 goals: true,
+                // Avatar del Quantum Identity (creado al final del wizard)
+                QuantumIdentity: {
+                  take: 1,
+                  orderBy: { generatedAt: 'desc' },
+                  where: { avatarUrl: { not: null } },
+                  select: { avatarUrl: true }
+                },
                 CartaFrutos: {
                   take: 1,
                   orderBy: { fechaCreacion: 'desc' },
