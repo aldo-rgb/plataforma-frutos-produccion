@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { processBacklogForAllPaidLevels, createBacklogTickets } from '@/lib/backlog-ticket';
+import { triggerEnrollmentTaskCompletion } from '@/lib/enrollment-task-trigger';
 
 // Roles permitidos para actualizar asistencia
 const ALLOWED_ROLES = [
@@ -145,6 +146,37 @@ export async function POST(
       console.log(`🎫 Licencia consumida para usuario ${enrollment.userId} en nivel BASIC`);
     }
 
+    // ========================================
+    // CREAR CheckInRecord - Solo cuando se marca ATTENDED
+    // Para tener registro de asistencia igual que el QR check-in
+    // ========================================
+    let checkInRecordCreated = false;
+    
+    if (attendanceStatus === 'ATTENDED' && previousStatus !== 'ATTENDED') {
+      // Verificar si ya existe un CheckInRecord para este usuario y visión
+      const existingCheckIn = await prisma.checkInRecord.findFirst({
+        where: {
+          visitorId: enrollment.userId,
+          visionId: visionId
+        }
+      });
+
+      if (!existingCheckIn) {
+        await prisma.checkInRecord.create({
+          data: {
+            visitorId: enrollment.userId,
+            visionId: visionId,
+            checkInTime: new Date(),
+            staffId: usuario.id,
+            status: 'COMPLETED',
+            notes: `Check-in manual por coordinador (${usuario.rol})`
+          }
+        });
+        checkInRecordCreated = true;
+        console.log(`✅ CheckInRecord creado para usuario ${enrollment.userId} en visión ${visionId}`);
+      }
+    }
+
     // Actualizar el estado de asistencia
     const updatedEnrollment = await prisma.vision_enrollments.update({
       where: { id: enrollmentId },
@@ -169,6 +201,32 @@ export async function POST(
 
     const participanteName = updatedEnrollment.Usuario_vision_enrollments_userIdToUsuario?.nombre || 'Participante';
     const visionName = updatedEnrollment.Vision?.nombre || `Visión ${visionId}`;
+
+    // ========================================
+    // TRIGGER ENROLLMENT TASK - Auto-completar tarea de enrolamiento
+    // Si el invitado asiste a BASIC, completar tarea del que lo invitó
+    // ========================================
+    let enrollmentTaskCompleted = false;
+    
+    if (attendanceStatus === 'ATTENDED' && 
+        updatedEnrollment.level === 'BASIC' && 
+        previousStatus !== 'ATTENDED') {
+      try {
+        const triggerResult = await triggerEnrollmentTaskCompletion(
+          updatedEnrollment.userId, 
+          visionId
+        );
+        enrollmentTaskCompleted = triggerResult.success;
+        
+        if (triggerResult.success) {
+          console.log(`✅ Tarea de enrolamiento completada automáticamente para quien invitó a ${participanteName}`);
+        } else {
+          console.log(`ℹ️ No se completó tarea de enrolamiento: ${triggerResult.message}`);
+        }
+      } catch (triggerError) {
+        console.error('⚠️ Error en trigger de enrollment task:', triggerError);
+      }
+    }
 
     // ========================================
     // HISTORIAL DE CAMBIOS - Log del cambio
@@ -216,6 +274,12 @@ export async function POST(
     if (licenseConsumed) {
       console.log(`🎫 Licencia consumida para nivel BASIC`);
     }
+    if (checkInRecordCreated) {
+      console.log(`📋 CheckInRecord creado para asistencia manual`);
+    }
+    if (enrollmentTaskCompleted) {
+      console.log(`🎯 Tarea de enrolamiento completada automáticamente`);
+    }
 
     return NextResponse.json({
       success: true,
@@ -233,7 +297,9 @@ export async function POST(
       historyLogged: true,
       courtesyTicket: courtesyTicketResult,
       licenseConsumed: licenseConsumed,
-      licensesWentNegative: licensesWentNegative
+      licensesWentNegative: licensesWentNegative,
+      checkInRecordCreated: checkInRecordCreated,
+      enrollmentTaskCompleted: enrollmentTaskCompleted
     });
 
   } catch (error: any) {
