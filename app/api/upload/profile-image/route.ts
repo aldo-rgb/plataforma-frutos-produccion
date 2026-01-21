@@ -7,8 +7,16 @@ import { createClient } from '@supabase/supabase-js';
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  console.log('🔧 Supabase Config Check:');
+  console.log('  - NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✅ Configurado' : '❌ FALTA');
+  console.log('  - SUPABASE_SERVICE_ROLE_KEY:', supabaseKey ? '✅ Configurado' : '❌ FALTA');
+  
   if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing Supabase environment variables');
+    const missing = [];
+    if (!supabaseUrl) missing.push('NEXT_PUBLIC_SUPABASE_URL');
+    if (!supabaseKey) missing.push('SUPABASE_SERVICE_ROLE_KEY');
+    throw new Error(`Missing Supabase environment variables: ${missing.join(', ')}`);
   }
   return createClient(supabaseUrl, supabaseKey);
 }

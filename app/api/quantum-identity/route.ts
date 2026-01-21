@@ -471,10 +471,29 @@ REQUIRED - YES:
       message: `IDENTIDAD CONFIRMADA. BIENVENIDO, ${selectedCandidate.designation}.`
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error seleccionando identidad:', error);
+    console.error('Error name:', error?.name);
+    console.error('Error message:', error?.message);
+    console.error('Error stack:', error?.stack);
+    
+    // Proporcionar mensajes de error más específicos
+    let errorMessage = 'Error al generar avatar';
+    
+    if (error?.message?.includes('content_policy_violation')) {
+      errorMessage = 'El contenido generado fue rechazado. Por favor intenta de nuevo.';
+    } else if (error?.message?.includes('rate_limit')) {
+      errorMessage = 'Demasiadas solicitudes. Espera un momento e intenta de nuevo.';
+    } else if (error?.message?.includes('billing') || error?.message?.includes('quota')) {
+      errorMessage = 'Servicio de generación de imágenes no disponible temporalmente.';
+    } else if (error?.message?.includes('Supabase')) {
+      errorMessage = 'Error al guardar la imagen. Por favor intenta de nuevo.';
+    } else if (error?.code === 'ECONNREFUSED' || error?.code === 'ETIMEDOUT') {
+      errorMessage = 'Error de conexión. Verifica tu internet e intenta de nuevo.';
+    }
+    
     return NextResponse.json(
-      { error: 'Error al generar avatar' },
+      { error: errorMessage, details: error?.message },
       { status: 500 }
     );
   }
