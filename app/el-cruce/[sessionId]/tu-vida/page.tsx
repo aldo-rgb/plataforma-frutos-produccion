@@ -1242,6 +1242,58 @@ export default function ElAtravesarTuVidaPage() {
     }
     
     fetchSession()
+    
+    // POLLING: Actualizar cada 3 segundos como fallback si el socket no funciona
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/el-cruce/session?sessionId=${sessionId}&t=${Date.now()}`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.session) {
+            const crossed = data.session.crossed || []
+            const pending = data.session.pending || []
+            
+            // Detectar nuevos cruces comparando con el estado actual
+            const currentCrossedIds = new Set(crossedParticipants.map((p: Participant) => p.id))
+            const newCrossed = crossed.filter((p: any) => !currentCrossedIds.has(p.id))
+            
+            if (newCrossed.length > 0) {
+              console.log('🔄 Polling detectó nuevos cruces:', newCrossed.length)
+              // Animar el primer nuevo cruce
+              const firstNew = newCrossed[0]
+              const participant: Participant = {
+                id: firstNew.id,
+                name: firstNew.name || firstNew.participantName || 'Participante',
+                image: firstNew.image || firstNew.participantImage || null
+              }
+              
+              if (!crossingParticipant) {
+                setCrossingParticipant(participant)
+                if (!muted && crossSoundRef.current) {
+                  crossSoundRef.current.currentTime = 0
+                  crossSoundRef.current.play().catch(() => {})
+                }
+              }
+            }
+            
+            // Actualizar estadísticas
+            if (data.session.stats) {
+              setStats(prev => ({
+                ...prev,
+                crossedCount: data.session.stats.crossedCount || prev.crossedCount,
+                remainingCount: data.session.stats.remainingCount ?? prev.remainingCount,
+                totalParticipants: data.session.stats.totalParticipants || prev.totalParticipants,
+                percentageCrossed: data.session.stats.percentageCrossed || prev.percentageCrossed
+              }))
+            }
+          }
+        }
+      } catch (e) {
+        // Silenciar errores de polling
+      }
+    }, 3000)
+    
+    return () => clearInterval(pollInterval)
   }, [sessionId])
   
   // Procesar cola de cruces iniciales uno por uno

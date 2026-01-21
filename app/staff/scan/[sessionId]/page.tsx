@@ -318,6 +318,23 @@ export default function StaffScanPage() {
         if (data.alreadyRegistered) {
           setScanResult("already")
           vibrate([100, 50, 100])
+          // Para "ya registrado", mostrar solo 2 segundos y NO resetear el código
+          // para que no vuelva a escanear el mismo
+          setLastScanned(data)
+          if (data.stats) {
+            setTotalScanned(data.stats.crossedCount)
+          }
+          setScanning(false)
+          
+          // Resetear UI después de 2 segundos pero MANTENER el código en el Set
+          setTimeout(() => {
+            setScanResult("idle")
+            setLastScanned(null)
+            setErrorMessage("")
+            scanCooldownRef.current = false
+            // NO resetear lastScannedCode ni remover del Set
+          }, 2000)
+          return // Salir temprano
         } else {
           setScanResult("success")
           vibrate(200) // Vibración de éxito
@@ -344,7 +361,7 @@ export default function StaffScanPage() {
     setScanning(false)
     setManualCode("")
 
-    // Resetear después de 3 segundos
+    // Resetear después de 3 segundos para éxito/error (no para already)
     setTimeout(() => {
       setScanResult("idle")
       setLastScanned(null)
