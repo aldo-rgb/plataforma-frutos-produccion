@@ -195,7 +195,18 @@ export default function BadgesPage() {
       // Flag para evitar múltiples escrituras
       let hasWritten = false;
 
-      // IMPORTANTE: Registrar listeners ANTES de llamar scan()
+      // PRIMERO: Iniciar scan (como lo hace NFCWriter que funciona)
+      // NO usar await, usar .catch() para ignorar errores del scan
+      ndef.scan({ signal: abortController.signal }).catch((err: any) => {
+        // Solo loguear si no es un abort intencional
+        if (err.name !== 'AbortError') {
+          console.error('NFC scan error:', err);
+        }
+      });
+      
+      console.log('NFC scan started, waiting for card...');
+
+      // DESPUÉS: Registrar listeners (IGUAL que NFCWriter que funciona)
       ndef.onreading = async () => {
         console.log('NFC card detected!');
         if (hasWritten) {
@@ -285,17 +296,6 @@ export default function BadgesPage() {
         setNfcStatus('error');
         setNfcMessage('❌ Error al leer tarjeta. Acércala de nuevo.');
       };
-
-      // Iniciar scan - NO usar await, usar .catch() para ignorar errores del scan
-      // Esto es como lo hace el NFCWriter que SÍ funciona
-      ndef.scan({ signal: abortController.signal }).catch((err: any) => {
-        // Solo loguear si no es un abort intencional
-        if (err.name !== 'AbortError') {
-          console.error('NFC scan error:', err);
-        }
-      });
-      
-      console.log('NFC scan started, waiting for card...');
 
     } catch (error: any) {
       console.error('NFC Session Error:', error);
