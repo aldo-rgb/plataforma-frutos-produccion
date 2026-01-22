@@ -152,11 +152,10 @@ export default function BadgesPage() {
     setNfcQueue(queue);
     setCurrentNfcIndex(0);
     setNfcMode(true);
-    setNfcStatus('waiting');
-    setNfcMessage(`📱 Acerca el gafete NFC de: ${queue[0].nombre}`);
+    setNfcStatus('idle'); // Empezar en idle, el usuario debe presionar para activar NFC
+    setNfcMessage(`Presiona el botón para activar NFC`);
     
-    // Start NFC writing for first badge
-    startNfcSession(queue[0], 0);
+    // NO iniciar automáticamente - el usuario debe hacer click (requisito de Web NFC)
   };
 
   // Función que inicia una sesión NFC para escribir un gafete
@@ -660,10 +659,25 @@ export default function BadgesPage() {
                     </div>
                   </div>
                 )}
-                {nfcStatus === 'idle' && nfcQueue.length > 0 && (
+                {nfcStatus === 'idle' && nfcQueue.length > 0 && nfcQueue.some(q => q.status !== 'success') && (
+                  <div>
+                    <div className="text-6xl mb-4">📲</div>
+                    <p className="text-xl font-bold text-cyan-300 mb-2">
+                      {nfcQueue[currentNfcIndex]?.nombre || 'Listo para grabar'}
+                    </p>
+                    <p className="text-slate-400 mb-4">Presiona el botón para activar el NFC</p>
+                    <button
+                      onClick={() => startNfcSession(nfcQueue[currentNfcIndex], currentNfcIndex)}
+                      className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-lg shadow-cyan-500/30"
+                    >
+                      📱 Activar NFC y Acercar Gafete
+                    </button>
+                  </div>
+                )}
+                {nfcStatus === 'idle' && nfcQueue.length > 0 && nfcQueue.every(q => q.status === 'success') && (
                   <div>
                     <div className="text-6xl mb-4">🎉</div>
-                    <p className="text-xl font-bold text-green-300">{nfcMessage}</p>
+                    <p className="text-xl font-bold text-green-300">¡Todos los gafetes han sido grabados!</p>
                   </div>
                 )}
               </div>
