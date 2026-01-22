@@ -16,7 +16,12 @@ import {
   RefreshCw,
   CheckCircle2,
   Pencil,
-  AlertCircle
+  AlertCircle,
+  Camera,
+  Upload,
+  Music,
+  FileText,
+  Loader2
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -94,6 +99,23 @@ interface TrainingInfo {
   showInDashboard?: boolean;
 }
 
+interface LegacyCaptureForm {
+  participantId: number;
+  participantName: string;
+  participantImage: string | null;
+  visionId: number | null;
+  trainingLevel: 'BASIC' | 'ADVANCED' | 'PL';
+  // Campos básicos
+  photoWithGCUrl: string;
+  photoWithSquadUrl: string;
+  photoBlueWallUrl: string;
+  // Campos avanzados
+  lullabyTitle: string;
+  lullabyArtist: string;
+  contractPhotoUrl: string;
+  contractDeclaration: string;
+}
+
 export default function SquadManagerWidget() {
   const [stats, setStats] = useState<SquadStats>({
     totalSquads: 0,
@@ -139,6 +161,12 @@ export default function SquadManagerWidget() {
   
   // Estado para el modal de Post Entreno
   const [showPostEntrenoModal, setShowPostEntrenoModal] = useState(false);
+
+  // Estado para el modal de Legacy Capture
+  const [showLegacyModal, setShowLegacyModal] = useState(false);
+  const [legacyForm, setLegacyForm] = useState<LegacyCaptureForm | null>(null);
+  const [savingLegacy, setSavingLegacy] = useState(false);
+  const [uploadingField, setUploadingField] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -391,6 +419,153 @@ export default function SquadManagerWidget() {
       alert('Error al marcar como DROP');
     } finally {
       setMarkingDrop(false);
+    }
+  };
+
+  // Función para abrir el modal de Legacy
+  const openLegacyModal = (member: SquadMember) => {
+    // Determinar el nivel basado en trainingInfo o squad
+    const level = (trainingInfo?.level as 'BASIC' | 'ADVANCED' | 'PL') || 'BASIC';
+    
+    // Obtener el visionId del squad del miembro
+    const squad = squads.find(s => s.members?.some(m => m.id === member.id));
+    
+    setLegacyForm({
+      participantId: member.user.id,
+      participantName: member.user.nombre,
+      participantImage: member.user.imagen,
+      visionId: squad ? parseInt(squad.id.split('-')[0]) : null, // Extraer visionId del squadId si está en formato "visionId-..."
+      trainingLevel: level,
+      photoWithGCUrl: '',
+      photoWithSquadUrl: '',
+      photoBlueWallUrl: '',
+      lullabyTitle: '',
+      lullabyArtist: '',
+      contractPhotoUrl: '',
+      contractDeclaration: '',
+    });
+    setShowLegacyModal(true);
+    
+    // Cargar datos existentes del legacy si los hay
+    loadExistingLegacy(member.user.id);
+  };
+
+  // Cargar datos existentes del legacy
+  const loadExistingLegacy = async (participantId: number) => {
+    try {
+      const res = await fetch(`/api/legacy-capture?participantId=${participantId}`);
+      if (res.ok) {
+        const data = await res.json();
+        // Si hay datos existentes, actualizar el formulario
+        if (data.visiones) {
+          const visionConCaptura = data.visiones.find((v: any) => 
+            v.participantes?.some((p: any) => p.id === participantId && p.captureId)
+          );
+          if (visionConCaptura) {
+            const participante = visionConCaptura.participantes.find((p: any) => p.id === participantId);
+            if (participante && participante.captureId) {
+              // Cargar detalles de la captura existente
+              const captureRes = await fetch(`/api/legacy-capture/${participante.captureId}`);
+              if (captureRes.ok) {
+                const captureData = await captureRes.json();
+                if (captureData.success && captureData.capture) {
+                  const c = captureData.capture;
+                  setLegacyForm(prev => prev ? {
+                    ...prev,
+                    visionId: visionConCaptura.visionId,
+                    photoWithGCUrl: c.photoWithGCUrl || '',
+                    photoWithSquadUrl: c.photoWithSquadUrl || '',
+                    photoBlueWallUrl: c.photoBlueWallUrl || '',
+                    lullabyTitle: c.lullabyTitle || '',
+                    lullabyArtist: c.lullabyArtist || '',
+                    contractPhotoUrl: c.contractPhotoUrl || '',
+                    contractDeclaration: c.contractDeclaration || '',
+                  } : null);
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading existing legacy:', error);
+    }
+  };
+
+  // Subir imagen para legacy
+  const handleLegacyImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: keyof LegacyCaptureForm
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file || !legacyForm) return;
+
+    setUploadingField(field);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', 'legacy');
+      formData.append('participantId', legacyForm.participantId.toString());
+      formData.append('photoType', field.replace('Url', '').replace('photo', '').toLowerCase());
+
+      const res = await fetch('/api/quantum-album/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await res.json();
+      if (res.ok && result.photoUrl) {
+        setLegacyForm({
+          ...legacyForm,
+          [field]: result.photoUrl,
+        });
+      } else {
+        alert(result.error || 'Error al subir imagen');
+      }
+    } catch (error) {
+      console.error('Error uploading:', error);
+      alert('Error al subir la imagen');
+    } finally {
+      setUploadingField(null);
+    }
+  };
+
+  // Guardar legacy
+  const handleSaveLegacy = async () => {
+    if (!legacyForm) return;
+
+    setSavingLegacy(true);
+    try {
+      const res = await fetch('/api/legacy-capture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          visionId: legacyForm.visionId,
+          participantId: legacyForm.participantId,
+          trainingLevel: legacyForm.trainingLevel,
+          photoWithGCUrl: legacyForm.photoWithGCUrl || null,
+          photoWithSquadUrl: legacyForm.photoWithSquadUrl || null,
+          photoBlueWallUrl: legacyForm.photoBlueWallUrl || null,
+          lullabyTitle: legacyForm.lullabyTitle || null,
+          lullabyArtist: legacyForm.lullabyArtist || null,
+          contractPhotoUrl: legacyForm.contractPhotoUrl || null,
+          contractDeclaration: legacyForm.contractDeclaration || null,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setShowLegacyModal(false);
+        setLegacyForm(null);
+        alert('✅ Legacy guardado exitosamente');
+      } else {
+        alert(data.error || 'Error al guardar el legacy');
+      }
+    } catch (error) {
+      console.error('Error saving legacy:', error);
+      alert('Error al guardar el legacy');
+    } finally {
+      setSavingLegacy(false);
     }
   };
 
@@ -650,6 +825,14 @@ export default function SquadManagerWidget() {
                             >
                               <Phone className="w-3.5 h-3.5 mr-1" />
                               Registrar
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => openLegacyModal(member)}
+                              className="text-xs px-2 py-1.5 h-auto bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 border border-pink-500/30"
+                            >
+                              <Camera className="w-3.5 h-3.5 mr-1" />
+                              Legacy
                             </Button>
                           </div>
                         )}
@@ -1127,6 +1310,281 @@ export default function SquadManagerWidget() {
             loadData(); // Recargar datos después de agendar
           }}
         />
+      )}
+
+      {/* Modal de Legacy Capture */}
+      {showLegacyModal && legacyForm && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-pink-500/30 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center">
+                  {legacyForm.participantImage ? (
+                    <img 
+                      src={legacyForm.participantImage} 
+                      alt={legacyForm.participantName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Camera className="w-5 h-5 text-white" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Legacy Capture</h3>
+                  <p className="text-sm text-pink-300">{legacyForm.participantName}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowLegacyModal(false)}
+                className="text-slate-400 hover:text-white p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* Fotos Básicas */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium text-white flex items-center gap-2">
+                  <Camera className="w-4 h-4 text-pink-400" />
+                  Fotos del Entrenamiento
+                </h4>
+
+                {/* Foto con GC */}
+                <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+                  <label className="text-xs text-slate-400 mb-2 block">Foto con Game Changer</label>
+                  {legacyForm.photoWithGCUrl ? (
+                    <div className="relative">
+                      <img 
+                        src={legacyForm.photoWithGCUrl} 
+                        alt="Foto con GC" 
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
+                      <button
+                        onClick={() => setLegacyForm({...legacyForm, photoWithGCUrl: ''})}
+                        className="absolute top-2 right-2 bg-red-500/80 p-1 rounded-full"
+                      >
+                        <X className="w-3 h-3 text-white" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-pink-500/50 transition-colors">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleLegacyImageUpload(e, 'photoWithGCUrl')}
+                        disabled={uploadingField !== null}
+                      />
+                      {uploadingField === 'photoWithGCUrl' ? (
+                        <Loader2 className="w-6 h-6 text-pink-400 animate-spin" />
+                      ) : (
+                        <>
+                          <Upload className="w-6 h-6 text-slate-500 mb-1" />
+                          <span className="text-xs text-slate-500">Subir foto</span>
+                        </>
+                      )}
+                    </label>
+                  )}
+                </div>
+
+                {/* Foto con Squad */}
+                <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+                  <label className="text-xs text-slate-400 mb-2 block">Foto con Squad/Átomo</label>
+                  {legacyForm.photoWithSquadUrl ? (
+                    <div className="relative">
+                      <img 
+                        src={legacyForm.photoWithSquadUrl} 
+                        alt="Foto con Squad" 
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
+                      <button
+                        onClick={() => setLegacyForm({...legacyForm, photoWithSquadUrl: ''})}
+                        className="absolute top-2 right-2 bg-red-500/80 p-1 rounded-full"
+                      >
+                        <X className="w-3 h-3 text-white" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-pink-500/50 transition-colors">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleLegacyImageUpload(e, 'photoWithSquadUrl')}
+                        disabled={uploadingField !== null}
+                      />
+                      {uploadingField === 'photoWithSquadUrl' ? (
+                        <Loader2 className="w-6 h-6 text-pink-400 animate-spin" />
+                      ) : (
+                        <>
+                          <Upload className="w-6 h-6 text-slate-500 mb-1" />
+                          <span className="text-xs text-slate-500">Subir foto</span>
+                        </>
+                      )}
+                    </label>
+                  )}
+                </div>
+
+                {/* Foto Pared Azul */}
+                <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+                  <label className="text-xs text-slate-400 mb-2 block">Foto en Pared Azul</label>
+                  {legacyForm.photoBlueWallUrl ? (
+                    <div className="relative">
+                      <img 
+                        src={legacyForm.photoBlueWallUrl} 
+                        alt="Pared Azul" 
+                        className="w-full h-32 object-cover rounded-lg"
+                      />
+                      <button
+                        onClick={() => setLegacyForm({...legacyForm, photoBlueWallUrl: ''})}
+                        className="absolute top-2 right-2 bg-red-500/80 p-1 rounded-full"
+                      >
+                        <X className="w-3 h-3 text-white" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-pink-500/50 transition-colors">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleLegacyImageUpload(e, 'photoBlueWallUrl')}
+                        disabled={uploadingField !== null}
+                      />
+                      {uploadingField === 'photoBlueWallUrl' ? (
+                        <Loader2 className="w-6 h-6 text-pink-400 animate-spin" />
+                      ) : (
+                        <>
+                          <Upload className="w-6 h-6 text-slate-500 mb-1" />
+                          <span className="text-xs text-slate-500">Subir foto</span>
+                        </>
+                      )}
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              {/* Campos Avanzados - Solo si nivel es ADVANCED o PL */}
+              {(legacyForm.trainingLevel === 'ADVANCED' || legacyForm.trainingLevel === 'PL') && (
+                <div className="space-y-3 pt-2 border-t border-slate-800">
+                  <h4 className="text-sm font-medium text-white flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    Datos Avanzados
+                  </h4>
+
+                  {/* Canción de Cuna */}
+                  <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+                    <label className="text-xs text-slate-400 mb-2 block flex items-center gap-1">
+                      <Music className="w-3 h-3" />
+                      Canción de Cuna
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        placeholder="Título de la canción"
+                        value={legacyForm.lullabyTitle}
+                        onChange={(e) => setLegacyForm({...legacyForm, lullabyTitle: e.target.value})}
+                        className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-pink-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Artista"
+                        value={legacyForm.lullabyArtist}
+                        onChange={(e) => setLegacyForm({...legacyForm, lullabyArtist: e.target.value})}
+                        className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-pink-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Foto del Contrato */}
+                  <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+                    <label className="text-xs text-slate-400 mb-2 block flex items-center gap-1">
+                      <FileText className="w-3 h-3" />
+                      Foto del Contrato
+                    </label>
+                    {legacyForm.contractPhotoUrl ? (
+                      <div className="relative">
+                        <img 
+                          src={legacyForm.contractPhotoUrl} 
+                          alt="Contrato" 
+                          className="w-full h-32 object-cover rounded-lg"
+                        />
+                        <button
+                          onClick={() => setLegacyForm({...legacyForm, contractPhotoUrl: ''})}
+                          className="absolute top-2 right-2 bg-red-500/80 p-1 rounded-full"
+                        >
+                          <X className="w-3 h-3 text-white" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-pink-500/50 transition-colors">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => handleLegacyImageUpload(e, 'contractPhotoUrl')}
+                          disabled={uploadingField !== null}
+                        />
+                        {uploadingField === 'contractPhotoUrl' ? (
+                          <Loader2 className="w-6 h-6 text-pink-400 animate-spin" />
+                        ) : (
+                          <>
+                            <Upload className="w-6 h-6 text-slate-500 mb-1" />
+                            <span className="text-xs text-slate-500">Subir foto</span>
+                          </>
+                        )}
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Declaración */}
+                  <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+                    <label className="text-xs text-slate-400 mb-2 block">Declaración del Participante</label>
+                    <textarea
+                      placeholder="Escribe la declaración..."
+                      value={legacyForm.contractDeclaration}
+                      onChange={(e) => setLegacyForm({...legacyForm, contractDeclaration: e.target.value})}
+                      rows={3}
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-pink-500 resize-none"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-800 flex gap-2 shrink-0">
+              <Button
+                variant="outline"
+                onClick={() => setShowLegacyModal(false)}
+                className="flex-1 border-slate-700 hover:bg-slate-800"
+                disabled={savingLegacy}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSaveLegacy}
+                className="flex-1 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
+                disabled={savingLegacy || uploadingField !== null}
+              >
+                {savingLegacy ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Camera className="w-4 h-4 mr-2" />
+                    Guardar Legacy
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </Card>
   );
