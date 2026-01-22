@@ -488,12 +488,12 @@ export default function BadgePreview({
       const abortController = new AbortController();
       nfcAbortRef.current = abortController;
       
-      // IMPORTANTE: En Android, primero hacemos scan para activar el lector NFC
-      // y detectar cuando se acerca la tarjeta
+      // IMPORTANTE: Primero scan(), DESPUÉS addEventListener
+      // Este es el patrón que funciona en scan/[sessionId]
       await ndef.scan({ signal: abortController.signal });
       
-      // Escuchar cuando se detecta una tarjeta
-      ndef.onreading = async (event: any) => {
+      // Usar addEventListener en lugar de onreading (funciona mejor en Android)
+      ndef.addEventListener("reading", async (event: any) => {
         try {
           // Log del tipo de tarjeta para debug
           console.log('NFC Tag detected:', event?.serialNumber);
@@ -544,14 +544,14 @@ export default function BadgePreview({
           setNfcStatus('error');
           setTimeout(() => setNfcStatus('idle'), 5000);
         }
-      };
+      });
       
-      ndef.onreadingerror = (event: any) => {
+      ndef.addEventListener("readingerror", (event: any) => {
         console.error('NFC reading error:', event);
         setNfcError('Error al leer tarjeta. Intenta con NTAG 213');
         setNfcStatus('error');
         setTimeout(() => setNfcStatus('idle'), 5000);
-      };
+      });
 
     } catch (error: any) {
       console.error('Error initializing NFC:', error);
