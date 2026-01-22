@@ -1020,6 +1020,11 @@ model Organization {
   masterOrganizationId                                  Int?
   address                                               String?
   licensesAvailable                                     Int                             @default(0)
+  // Branding para login personalizado
+  loginBackgroundUrl                                    String?
+  loginWelcomeMessage                                   String?                         @default("Bienvenido al Portal de Entrenamiento")
+  showPoweredBy                                         Boolean                         @default(true)
+  customLoginEnabled                                    Boolean                         @default(false)
   CashBatches                                           CashBatch[]
   CheckInRecord                                         CheckInRecord[]
   DefaultPrice                                          DefaultPrice[]
