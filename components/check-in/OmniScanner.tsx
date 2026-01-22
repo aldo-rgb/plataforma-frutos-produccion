@@ -181,47 +181,38 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId, de
         const ndef = new (window as any).NDEFReader();
         nfcReaderRef.current = ndef;
 
-        // IMPORTANTE: Primero scan(), DESPUÉS addEventListener
-        // Este es el patrón que funciona en scan/[sessionId]
-        await ndef.scan();
-        setChannelStatus(prev => ({ ...prev, nfc: 'scanning' }));
-        
-        // Usar addEventListener en lugar de onreading (funciona mejor)
-        ndef.addEventListener("reading", ({ message, serialNumber }: any) => {
-          let data = '';
-          
-          for (const record of message.records) {
+        ndef.onreading = (event: NDEFReadingEvent) => {
+          if (event.message.records.length > 0) {
+            const record = event.message.records[0];
+            
+            let data = '';
             if (record.recordType === 'text') {
               const decoder = new TextDecoder(record.encoding || 'utf-8');
               data = decoder.decode(record.data);
-              break;
             } else if (record.recordType === 'url') {
               const decoder = new TextDecoder();
-              const url = decoder.decode(record.data);
-              const match = url.match(/\/verify\/(.+)$/) || url.match(/code=([A-Z0-9]+)/i);
+              data = decoder.decode(record.data);
+              const match = data.match(/\/verify\/(.+)$/);
               if (match) {
                 data = match[1];
-              } else {
-                data = url;
               }
-              break;
+            } else {
+              const decoder = new TextDecoder();
+              data = decoder.decode(record.data);
+            }
+
+            if (data) {
+              handleDetection(data, 'nfc');
             }
           }
-          
-          // Si no se encontró texto, usar el serialNumber
-          if (!data && serialNumber) {
-            data = serialNumber;
-          }
+        };
 
-          if (data) {
-            handleDetection(data, 'nfc');
-          }
-        });
-
-        ndef.addEventListener("readingerror", (error: any) => {
+        ndef.onreadingerror = (error: any) => {
           console.error('NFC read error:', error);
-        });
+        };
 
+        await ndef.scan();
+        setChannelStatus(prev => ({ ...prev, nfc: 'scanning' }));
       } catch (error) {
         console.error('Error starting NFC:', error);
         setChannelStatus(prev => ({ ...prev, nfc: 'inactive' }));
