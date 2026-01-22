@@ -451,7 +451,7 @@ export default function VisionManagePage() {
 
     try {
       setGcSearching(true);
-      const res = await fetch(`/api/school-admin/search-users?q=${encodeURIComponent(gcSearchQuery)}&visionId=${visionId}`);
+      const res = await fetch(`/api/school-admin/search-users?q=${encodeURIComponent(gcSearchQuery)}&visionId=${visionId}&level=${gcSelectedLevel}`);
       const data = await res.json();
 
       if (data.success) {

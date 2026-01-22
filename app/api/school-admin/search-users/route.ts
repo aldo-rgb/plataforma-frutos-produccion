@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get('q')?.trim();
     const visionId = searchParams.get('visionId');
+    const level = searchParams.get('level'); // BASIC, ADVANCED, PL
 
     if (!query || query.length < 2) {
       return NextResponse.json(
@@ -70,11 +71,15 @@ export async function GET(request: NextRequest) {
     const relatedOrgIds = relatedOrgs.map(org => org.id);
     console.log('🔍 Buscando en organizaciones:', relatedOrgIds);
 
-    // Obtener IDs de usuarios que ya son Game Changers en esta visión
+    // Obtener IDs de usuarios que ya son Game Changers en esta visión (y nivel específico si se proporciona)
     let existingGCIds: number[] = [];
     if (visionId) {
+      const whereClause: any = { visionId: parseInt(visionId) };
+      if (level) {
+        whereClause.level = level; // Solo excluir GCs del mismo nivel
+      }
       const existingGCs = await prisma.visionGameChanger.findMany({
-        where: { visionId: parseInt(visionId) },
+        where: whereClause,
         select: { gameChangerId: true },
       });
       existingGCIds = existingGCs.map(gc => gc.gameChangerId);
