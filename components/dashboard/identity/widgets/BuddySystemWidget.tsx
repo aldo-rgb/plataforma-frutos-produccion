@@ -101,42 +101,65 @@ export default function BuddySystemWidget() {
 
   // Extraer identificador del texto escaneado (userId o referralCode)
   const extractIdentifier = (text: string): { type: 'userId' | 'referralCode'; value: string } | null => {
-    console.log('Extracting identifier from:', text);
+    console.log('🔍 Extracting identifier from:', JSON.stringify(text));
     const trimmed = text.trim();
     
     // Formato: FRUTOS:USER:123
     const frutosMatch = trimmed.match(/FRUTOS:USER:(\d+)/i);
-    if (frutosMatch) return { type: 'userId', value: frutosMatch[1] };
+    if (frutosMatch) {
+      console.log('✅ Matched FRUTOS:USER format:', frutosMatch[1]);
+      return { type: 'userId', value: frutosMatch[1] };
+    }
     
     // Formato gafete: USER:123
     const userMatch = trimmed.match(/^USER:(\d+)$/i);
-    if (userMatch) return { type: 'userId', value: userMatch[1] };
+    if (userMatch) {
+      console.log('✅ Matched USER: format:', userMatch[1]);
+      return { type: 'userId', value: userMatch[1] };
+    }
     
     // URL con /perfil/123 o ?userId=123 o profile/123
     const urlMatch = trimmed.match(/(?:perfil\/|profile\/|userId=|user=|id=)(\d+)/i);
-    if (urlMatch) return { type: 'userId', value: urlMatch[1] };
+    if (urlMatch) {
+      console.log('✅ Matched URL format:', urlMatch[1]);
+      return { type: 'userId', value: urlMatch[1] };
+    }
     
     // URL de signup con ref=CODE (ej: /auth/signup?org=1&ref=ABC123)
     const refMatch = trimmed.match(/[?&]ref=([A-Z0-9]+)/i);
-    if (refMatch) return { type: 'referralCode', value: refMatch[1].toUpperCase() };
+    if (refMatch) {
+      console.log('✅ Matched ref= URL format:', refMatch[1]);
+      return { type: 'referralCode', value: refMatch[1].toUpperCase() };
+    }
     
     // Solo número (ID directo)
-    if (/^\d+$/.test(trimmed)) return { type: 'userId', value: trimmed };
+    if (/^\d+$/.test(trimmed)) {
+      console.log('✅ Matched numeric ID:', trimmed);
+      return { type: 'userId', value: trimmed };
+    }
     
-    // ReferralCode alfanumérico (ej: ABC123, JOHN99) - típicamente 4-12 caracteres
-    if (/^[A-Z0-9]{4,12}$/i.test(trimmed)) return { type: 'referralCode', value: trimmed.toUpperCase() };
+    // ReferralCode alfanumérico (ej: GAMSCFFVKXD4D, PRUMK5P5P7Y2AE1) - 6-20 caracteres
+    if (/^[A-Z0-9]{6,20}$/i.test(trimmed)) {
+      console.log('✅ Matched referralCode:', trimmed.toUpperCase());
+      return { type: 'referralCode', value: trimmed.toUpperCase() };
+    }
     
+    console.log('❌ No pattern matched for:', trimmed);
     return null;
   };
 
   const processScannedData = async (scannedText: string) => {
+    console.log('📱 Processing scanned data:', JSON.stringify(scannedText));
     const identifier = extractIdentifier(scannedText);
     
     if (!identifier) {
-      setScanError('Código no válido. Escanea el QR de un gafete.');
+      // Mostrar qué se escaneó para debugging
+      const preview = scannedText.length > 50 ? scannedText.substring(0, 50) + '...' : scannedText;
+      setScanError(`Código no reconocido: "${preview}"`);
       return;
     }
 
+    console.log('✅ Identifier found:', identifier);
     stopCamera();
     stopNFC();
     setProcessing(true);
@@ -146,7 +169,8 @@ export default function BuddySystemWidget() {
       const body = identifier.type === 'userId' 
         ? { scannedUserId: identifier.value }
         : { referralCode: identifier.value };
-        
+      
+      console.log('📤 Sending to API:', body);
       const res = await fetch('/api/buddy/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -154,6 +178,7 @@ export default function BuddySystemWidget() {
       });
       
       const json = await res.json();
+      console.log('📥 API response:', json);
       
       if (json.success && json.canConnect) {
         setShowScanModal(false);
