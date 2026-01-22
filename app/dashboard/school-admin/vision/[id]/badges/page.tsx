@@ -157,32 +157,6 @@ export default function BadgesPage() {
     setNfcQueue([]);
     setCurrentNfcIndex(0);
   };
-
-  const playSuccessSound = () => {
-    try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const notes = [523.25, 659.25, 783.99, 1046.50];
-      
-      notes.forEach((freq, i) => {
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(freq, audioContext.currentTime + i * 0.1);
-        
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime + i * 0.1);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i * 0.1 + 0.15);
-        
-        oscillator.start(audioContext.currentTime + i * 0.1);
-        oscillator.stop(audioContext.currentTime + i * 0.1 + 0.15);
-      });
-    } catch (e) {
-      console.log('Could not play sound');
-    }
-  };
   // ========== END NFC FUNCTIONS ==========
 
   const toggleSelect = (id: number) => {
