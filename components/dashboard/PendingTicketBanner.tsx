@@ -63,7 +63,7 @@ export default function PendingTicketBanner() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
-        className="relative overflow-hidden rounded-xl bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-yellow-500/10 border border-orange-500/30 p-4 mb-4"
+        className="relative overflow-hidden rounded-xl bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-yellow-500/10 border border-orange-500/30 p-3 sm:p-4 mb-4"
       >
         {/* Background pattern */}
         <div className="absolute inset-0 opacity-5">
@@ -73,52 +73,43 @@ export default function PendingTicketBanner() {
         </div>
 
         <div className="relative z-10">
-          <div className="flex items-start justify-between gap-4">
+          {/* Mobile Layout - Stack everything */}
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+            
+            {/* Top section: Icon + Title + Badge + Action Button */}
             <div className="flex items-start gap-3">
               {/* Icon */}
-              <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
-                <AlertTriangle className="w-6 h-6 text-white" />
+              <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
+                <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
 
-              {/* Content */}
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-bold text-orange-400 text-lg">
-                    Tienes un pago pendiente
-                  </h3>
-                  <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-orange-500/20 text-orange-400 border border-orange-500/30">
-                    ACCIÓN REQUERIDA
-                  </span>
-                </div>
-                
-                <div className="space-y-2">
-                  {pendingTickets.map((ticket) => (
-                    <div key={ticket.id} className="flex items-center gap-3 text-sm">
-                      <Ticket className="w-4 h-4 text-amber-400" />
-                      <span className="text-gray-300">
-                        <span className="font-semibold text-white">{getLevelLabel(ticket.level)}</span>
-                        {' - '}
-                        <span className="text-gray-400">{ticket.vision.nombre}</span>
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/20 text-red-400 border border-red-500/30 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        Pendiente: ${(ticket.costAtPurchase - ticket.amountPaid).toLocaleString()} MXN
-                      </span>
-                    </div>
-                  ))}
-                </div>
+              {/* Title + Badge */}
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-orange-400 text-base sm:text-lg leading-tight">
+                  Tienes un pago pendiente
+                </h3>
+                <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                  ACCIÓN REQUERIDA
+                </span>
+              </div>
 
-                {pendingTickets.length > 0 && (
-                  <p className="text-gray-400 text-sm mt-2 flex items-center gap-2">
-                    <CreditCard className="w-4 h-4" />
-                    Total por pagar: <span className="font-bold text-orange-400">${totalPending.toLocaleString()} MXN</span>
-                  </p>
-                )}
+              {/* Action Button - Mobile: Top Right */}
+              <div className="flex items-center gap-1 sm:hidden">
+                <Link href="/dashboard/my-tickets">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="px-3 py-1.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-bold rounded-lg flex items-center gap-1 shadow-lg shadow-orange-500/30"
+                  >
+                    <span>Ver Tickets</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </motion.button>
+                </Link>
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-2">
+            {/* Desktop Action Button */}
+            <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
               <Link href="/dashboard/my-tickets">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
@@ -139,6 +130,47 @@ export default function PendingTicketBanner() {
               </button>
             </div>
           </div>
+          
+          {/* Ticket Details - Better mobile layout */}
+          <div className="mt-3 space-y-2 pl-0 sm:pl-[52px]">
+            {pendingTickets.map((ticket) => (
+              <div key={ticket.id} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm bg-slate-800/30 rounded-lg p-2 sm:p-0 sm:bg-transparent">
+                <div className="flex items-center gap-2">
+                  <Ticket className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                  <span className="text-gray-300">
+                    <span className="font-semibold text-white">{getLevelLabel(ticket.level)}</span>
+                    {' - '}
+                    <span className="text-gray-400 text-xs sm:text-sm">{ticket.vision.nombre}</span>
+                  </span>
+                </div>
+                <span className="ml-6 sm:ml-0 px-2 py-0.5 rounded-full text-xs bg-red-500/20 text-red-400 border border-red-500/30 flex items-center gap-1 w-fit">
+                  <Clock className="w-3 h-3" />
+                  Pendiente: ${(ticket.costAtPurchase - ticket.amountPaid).toLocaleString()} MXN
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Total */}
+          {pendingTickets.length > 0 && (
+            <div className="mt-3 pt-2 border-t border-orange-500/20 pl-0 sm:pl-[52px] flex items-center justify-between">
+              <p className="text-gray-400 text-sm flex items-center gap-2">
+                <CreditCard className="w-4 h-4" />
+                <span className="hidden sm:inline">Total por pagar:</span>
+                <span className="sm:hidden">Total:</span>
+                <span className="font-bold text-orange-400">${totalPending.toLocaleString()} MXN</span>
+              </p>
+              
+              {/* Mobile dismiss button */}
+              <button
+                onClick={() => setDismissed(true)}
+                className="sm:hidden p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                title="Ocultar"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       </motion.div>
     </AnimatePresence>
