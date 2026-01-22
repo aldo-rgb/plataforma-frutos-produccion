@@ -79,24 +79,37 @@ export async function GET(request: NextRequest) {
         const vision = vgc.Vision;
         const trainingLevel = vgc.level;
 
-        // Obtener participantes asignados a este GC en esta visión
-        const participantesAsignados = await prisma.visionParticipante.findMany({
+        // Buscar participantes del squad de este GC en esta visión
+        // Los GCs tienen participantes asignados a través de SmallGroup (squads)
+        const squads = await prisma.smallGroup.findMany({
           where: {
             visionId: vision.id,
-            gameChangerId: usuario.id
+            leaderId: usuario.id,
+            level: trainingLevel,
+            isActive: true
           },
           include: {
-            Usuario_VisionParticipante_participanteIdToUsuario: {
-              select: {
-                id: true,
-                nombre: true,
-                email: true,
-                telefono: true,
-                profileImage: true
+            members: {
+              where: { isActive: true },
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    nombre: true,
+                    email: true,
+                    telefono: true,
+                    profileImage: true
+                  }
+                }
               }
             }
           }
         });
+
+        // Extraer todos los participantes de los squads
+        const participantesDelSquad = squads.flatMap(squad => 
+          squad.members.map(member => member.user)
+        );
 
         // Obtener capturas existentes para esta visión
         const capturasExistentes = await prisma.legacyCaptureSession.findMany({
@@ -111,8 +124,7 @@ export async function GET(request: NextRequest) {
         );
 
         // Mapear participantes con su estado de captura
-        const participantesConEstado = participantesAsignados.map((p) => {
-          const participante = p.Usuario_VisionParticipante_participanteIdToUsuario;
+        const participantesConEstado = participantesDelSquad.map((participante) => {
           const captura = capturasMap.get(participante.id);
           
           return {
@@ -234,18 +246,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar que el participante está asignado a este GC
-    const asignacion = await prisma.visionParticipante.findFirst({
+    // Verificar que el participante está asignado a este GC a través de SmallGroup
+    const squadMembership = await prisma.smallGroupMember.findFirst({
       where: {
-        visionId: parseInt(visionId),
-        participanteId: parseInt(participantId),
-        gameChangerId: gcId
+        userId: parseInt(participantId),
+        isActive: true,
+        group: {
+          visionId: parseInt(visionId),
+          leaderId: gcId,
+          isActive: true
+        }
+      },
+      include: {
+        group: true
       }
     });
 
-    if (!asignacion) {
+    if (!squadMembership) {
       return NextResponse.json(
-        { error: "Este participante no está asignado a ti" },
+        { error: "Este participante no está asignado a tu squad" },
         { status: 403 }
       );
     }

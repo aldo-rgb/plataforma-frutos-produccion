@@ -15,7 +15,10 @@ import {
   AlertCircle,
   Loader2,
   BookOpen,
-  Clock
+  Clock,
+  Camera,
+  UsersRound,
+  Phone
 } from 'lucide-react';
 import Link from 'next/link';
 import VisionHistoryWidget from '@/components/widgets/VisionHistoryWidget';
