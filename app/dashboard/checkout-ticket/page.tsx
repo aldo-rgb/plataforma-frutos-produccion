@@ -43,14 +43,14 @@ interface GiftCodeData {
 }
 
 // Helper function to check if payment deadline has passed
-// Payment deadline is 12:00 PM on the day of advancedStartDate
+// Payment deadline is 7:00 PM on the day of advancedStartDate
 function isPaymentDeadlinePassed(advancedStartDate: string | null | undefined): boolean {
   if (!advancedStartDate) return false;
   
   const advancedDate = new Date(advancedStartDate);
-  // Set deadline to 12:00 PM (noon) on the advanced start date
+  // Set deadline to 7:00 PM on the advanced start date
   const deadline = new Date(advancedDate);
-  deadline.setHours(12, 0, 0, 0);
+  deadline.setHours(19, 0, 0, 0);
   
   const now = new Date();
   return now >= deadline;
@@ -62,7 +62,7 @@ function formatDeadline(advancedStartDate: string | null | undefined): string {
   
   const advancedDate = new Date(advancedStartDate);
   const deadline = new Date(advancedDate);
-  deadline.setHours(12, 0, 0, 0);
+  deadline.setHours(19, 0, 0, 0);
   
   return deadline.toLocaleDateString('es-MX', {
     weekday: 'long',
