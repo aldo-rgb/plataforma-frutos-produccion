@@ -155,24 +155,31 @@ export default function BadgesPage() {
     setNfcStatus('waiting');
     setNfcMessage(`📱 Acerca el gafete NFC de: ${queue[0].nombre}`);
     
-    // Start NFC listening for first badge
-    startNfcListening(queue[0], 0);
+    // Start NFC writing for first badge
+    writeNfcBadge(queue[0], 0);
   };
 
-  const startNfcListening = async (currentItem: NFCWriteQueue, index: number) => {
+  // Nueva función simplificada que usa write() directamente
+  // Web NFC write() espera automáticamente a que se acerque una tarjeta
+  const writeNfcBadge = async (currentItem: NFCWriteQueue, index: number) => {
     if (!nfcSupported) return;
 
-    // Reset writing flag
-    setIsWriting(false);
+    // Prevenir escrituras duplicadas
+    if (isWriting) {
+      console.log('Already writing, skipping...');
+      return;
+    }
+
+    setIsWriting(true);
+    setNfcStatus('waiting');
+    setNfcMessage(`📱 Acerca el gafete NFC de: ${currentItem.nombre}`);
 
     try {
-      // Cancel any previous NFC operation
+      // Cancelar operación previa si existe
       if (abortControllerRef) {
         abortControllerRef.abort();
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
-
-      // Small delay to let previous operation clean up
-      await new Promise(resolve => setTimeout(resolve, 300));
 
       const abortController = new AbortController();
       setAbortControllerRef(abortController);
@@ -180,126 +187,109 @@ export default function BadgesPage() {
       // @ts-ignore - NDEFReader is not in TypeScript types yet
       const ndef = new (window as any).NDEFReader();
       
-      // Start scanning to activate NFC and wait for card
-      await ndef.scan({ signal: abortController.signal });
-      
-      setNfcMessage(`📱 Acerca el gafete NFC de: ${currentItem.nombre}`);
-      
-      // Flag to prevent multiple writes
-      let hasWritten = false;
-      
-      // When a card is detected
-      ndef.onreading = async () => {
-        // Prevent duplicate writes
-        if (hasWritten || isWriting) {
-          console.log('Skipping duplicate NFC read event');
-          return;
-        }
-        hasWritten = true;
-        setIsWriting(true);
-        
-        // Card detected - now write to it
-        setNfcStatus('writing');
-        setNfcMessage(`✏️ Escribiendo gafete de: ${currentItem.nombre}...`);
-        
-        try {
-          // Stop scanning before writing to prevent conflicts
-          abortController.abort();
-          
-          // Create a new reader just for writing
-          // @ts-ignore
-          const writer = new (window as any).NDEFReader();
-          
-          await writer.write({
-            records: [
-              {
-                recordType: "url",
-                data: `https://frutos.app/u/${currentItem.referralCode}`
-              },
-              {
-                recordType: "text",
-                data: JSON.stringify({
-                  type: 'frutos-badge',
-                  userId: currentItem.userId,
-                  code: currentItem.referralCode,
-                  name: currentItem.nombre,
-                  level: level,
-                  visionId: visionId,
-                  timestamp: new Date().toISOString()
-                })
-              }
-            ]
-          });
+      // Actualizar mensaje
+      setNfcQueue(prev => prev.map((item, idx) => 
+        idx === index ? { ...item, status: 'writing' } : item
+      ));
+      setNfcStatus('writing');
+      setNfcMessage(`✏️ Esperando tarjeta para: ${currentItem.nombre}...`);
 
-          // Vibrate on success
-          if (navigator.vibrate) {
-            navigator.vibrate([100, 50, 100, 50, 100]);
-          }
-          playSuccessSound();
-
-          // Update queue status
-          setNfcQueue(prev => prev.map((item, idx) => 
-            idx === index ? { ...item, status: 'success' } : item
-          ));
-
-          setNfcStatus('success');
-          setNfcMessage(`✅ ¡Gafete grabado! ${currentItem.nombre}`);
-          setIsWriting(false);
-
-          // Move to next after short delay
-          setTimeout(() => {
-            const nextIndex = index + 1;
-            if (nextIndex < nfcQueue.length) {
-              setCurrentNfcIndex(nextIndex);
-              setNfcStatus('waiting');
-              // Start listening for next badge
-              startNfcListening(nfcQueue[nextIndex], nextIndex);
-            } else {
-              setNfcStatus('idle');
-              setNfcMessage('🎉 ¡Todos los gafetes han sido grabados!');
-              setAbortControllerRef(null);
+      // write() espera automáticamente a que se acerque una tarjeta
+      // No necesitamos scan() antes
+      await ndef.write(
+        {
+          records: [
+            {
+              recordType: "url",
+              data: `https://frutos.app/u/${currentItem.referralCode}`
+            },
+            {
+              recordType: "text",
+              data: JSON.stringify({
+                type: 'frutos-badge',
+                userId: currentItem.userId,
+                code: currentItem.referralCode,
+                name: currentItem.nombre,
+                level: level,
+                visionId: visionId,
+                timestamp: new Date().toISOString()
+              })
             }
-          }, 2000);
+          ]
+        },
+        { signal: abortController.signal }
+      );
 
-        } catch (writeError: any) {
-          console.error('NFC Write Error:', writeError);
-          setIsWriting(false);
-          hasWritten = false; // Allow retry
-          
-          if (navigator.vibrate) {
-            navigator.vibrate([300, 100, 300]);
-          }
-          setNfcQueue(prev => prev.map((item, idx) => 
-            idx === index ? { ...item, status: 'error', error: writeError.message } : item
-          ));
-          setNfcStatus('error');
-          setNfcMessage(`❌ Error: ${writeError.message}. Retira y vuelve a acercar el gafete.`);
+      // ¡Éxito!
+      if (navigator.vibrate) {
+        navigator.vibrate([100, 50, 100, 50, 100]);
+      }
+      playSuccessSound();
+
+      // Actualizar estado del queue
+      setNfcQueue(prev => prev.map((item, idx) => 
+        idx === index ? { ...item, status: 'success' } : item
+      ));
+
+      setNfcStatus('success');
+      setNfcMessage(`✅ ¡Gafete grabado! ${currentItem.nombre}`);
+      setIsWriting(false);
+
+      // Pasar al siguiente después de un delay
+      setTimeout(() => {
+        const nextIndex = index + 1;
+        if (nextIndex < nfcQueue.length) {
+          setCurrentNfcIndex(nextIndex);
+          // Grabar el siguiente gafete
+          writeNfcBadge(nfcQueue[nextIndex], nextIndex);
+        } else {
+          setNfcStatus('idle');
+          setNfcMessage('🎉 ¡Todos los gafetes han sido grabados!');
+          setAbortControllerRef(null);
         }
-      };
-
-      ndef.onreadingerror = () => {
-        setNfcStatus('error');
-        setNfcMessage('❌ Error al leer la tarjeta. Intenta acercarla de nuevo.');
-      };
+      }, 1500);
 
     } catch (error: any) {
-      console.error('NFC Error:', error);
+      console.error('NFC Write Error:', error);
+      setIsWriting(false);
       
-      let errorMsg = 'Error al iniciar NFC';
-      if (error.name === 'NotAllowedError') {
-        errorMsg = 'Permiso denegado. Permite el acceso NFC en tu navegador.';
-      } else if (error.name === 'NotSupportedError') {
-        errorMsg = 'NFC no soportado en este dispositivo.';
-      } else if (error.name === 'AbortError') {
-        // Ignore abort errors - they're expected when we cancel
+      // Ignorar errores de abort (cancelación intencional)
+      if (error.name === 'AbortError') {
         return;
       }
 
       if (navigator.vibrate) {
         navigator.vibrate([300, 100, 300]);
       }
+
+      let errorMsg = error.message || 'Error desconocido';
+      if (error.name === 'NotAllowedError') {
+        errorMsg = 'Permiso NFC denegado. Permite el acceso en tu navegador.';
+      } else if (error.name === 'NotSupportedError') {
+        errorMsg = 'NFC no soportado en este dispositivo.';
+      } else if (error.name === 'NetworkError') {
+        errorMsg = 'La tarjeta se alejó. Mantenla cerca durante la escritura.';
+      } else if (error.name === 'NotReadableError') {
+        errorMsg = 'No se pudo leer la tarjeta. Verifica que sea una tarjeta NFC válida.';
+      }
+
+      setNfcQueue(prev => prev.map((item, idx) => 
+        idx === index ? { ...item, status: 'error', error: errorMsg } : item
+      ));
       setNfcStatus('error');
-      setNfcMessage(`❌ ${errorMsg}`);
+      setNfcMessage(`❌ Error: ${errorMsg}`);
+    }
+  };
+
+  // Función para reintentar un gafete con error
+  const retryNfcBadge = (index: number) => {
+    const item = nfcQueue[index];
+    if (item) {
+      setNfcQueue(prev => prev.map((it, idx) => 
+        idx === index ? { ...it, status: 'pending', error: undefined } : it
+      ));
+      setCurrentNfcIndex(index);
+      writeNfcBadge(item, index);
     }
   };
 
@@ -321,22 +311,30 @@ export default function BadgesPage() {
     if (currentNfcIndex < nfcQueue.length) {
       setIsWriting(false);
       setNfcStatus('waiting');
-      startNfcListening(nfcQueue[currentNfcIndex], currentNfcIndex);
+      writeNfcBadge(nfcQueue[currentNfcIndex], currentNfcIndex);
     }
   };
 
   const skipCurrentNfc = () => {
-    // Abort current scan
+    // Abort current operation
     if (abortControllerRef) {
       abortControllerRef.abort();
     }
     setIsWriting(false);
     
+    // Marcar como saltado
+    setNfcQueue(prev => prev.map((item, idx) => 
+      idx === currentNfcIndex ? { ...item, status: 'error', error: 'Saltado' } : item
+    ));
+    
     const nextIndex = currentNfcIndex + 1;
     if (nextIndex < nfcQueue.length) {
       setCurrentNfcIndex(nextIndex);
       setNfcStatus('waiting');
-      startNfcListening(nfcQueue[nextIndex], nextIndex);
+      // Pequeño delay antes del siguiente
+      setTimeout(() => {
+        writeNfcBadge(nfcQueue[nextIndex], nextIndex);
+      }, 500);
     } else {
       setNfcStatus('idle');
       setNfcMessage('🎉 Proceso completado');
