@@ -121,6 +121,55 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    // ✅ Otorgar 1,000 PC por completar la encuesta
+    const SURVEY_REWARD_PC = 1000;
+    const SURVEY_REWARD_XP = 1000;
+
+    // Verificar si ya recibió reward por esta encuesta
+    const existingReward = await prisma.rewardHistory.findFirst({
+      where: {
+        usuarioId: gc.id,
+        sourceType: 'GC_SURVEY',
+        sourceId: productId,
+        type: 'PC'
+      }
+    });
+
+    if (!existingReward) {
+      // Actualizar puntos del usuario
+      await prisma.usuario.update({
+        where: { id: gc.id },
+        data: {
+          puntosCuanticos: { increment: SURVEY_REWARD_PC },
+          experienciaXP: { increment: SURVEY_REWARD_XP }
+        }
+      });
+
+      // Registrar en historial
+      await prisma.rewardHistory.createMany({
+        data: [
+          {
+            usuarioId: gc.id,
+            type: 'PC',
+            amount: SURVEY_REWARD_PC,
+            reason: `Encuesta de cierre completada: ${product.name}`,
+            sourceType: 'GC_SURVEY',
+            sourceId: productId
+          },
+          {
+            usuarioId: gc.id,
+            type: 'XP',
+            amount: SURVEY_REWARD_XP,
+            reason: `Encuesta de cierre completada: ${product.name}`,
+            sourceType: 'GC_SURVEY',
+            sourceId: productId
+          }
+        ]
+      });
+
+      console.log(`🎁 +${SURVEY_REWARD_PC} PC y +${SURVEY_REWARD_XP} XP otorgados a ${gc.nombre} por encuesta`);
+    }
+
     console.log(`✅ Encuesta GC completada: ${gc.nombre} para "${product.name}"`);
 
     return NextResponse.json({
