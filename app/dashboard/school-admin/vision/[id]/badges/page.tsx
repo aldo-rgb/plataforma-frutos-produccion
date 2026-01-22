@@ -160,17 +160,10 @@ export default function BadgesPage() {
   };
 
   // Función que inicia una sesión NFC para escribir un gafete
-  // Usa scan() para detectar la tarjeta, y write() en el mismo ndef cuando se detecta
+  // COPIA EXACTA del patrón de NFCWriter.tsx que SÍ FUNCIONA
   const startNfcSession = async (currentItem: NFCWriteQueue, index: number) => {
     if (!nfcSupported) return;
 
-    // Prevenir sesiones duplicadas
-    if (isWriting) {
-      console.log('Already in NFC session, skipping...');
-      return;
-    }
-
-    setIsWriting(true);
     setNfcStatus('waiting');
     setNfcMessage(`📱 Acerca el gafete NFC de: ${currentItem.nombre}`);
     
@@ -180,49 +173,25 @@ export default function BadgesPage() {
     ));
 
     try {
-      // Cancelar operación previa si existe
-      if (abortControllerRef) {
-        abortControllerRef.abort();
-        await new Promise(resolve => setTimeout(resolve, 300));
-      }
-
-      const abortController = new AbortController();
-      setAbortControllerRef(abortController);
-
       // @ts-ignore - NDEFReader is not in TypeScript types yet
       const ndef = new (window as any).NDEFReader();
+      const abortController = new AbortController();
+      setAbortControllerRef(abortController);
       
-      // Flag para evitar múltiples escrituras
-      let hasWritten = false;
-
-      // PRIMERO: Iniciar scan (como lo hace NFCWriter que funciona)
-      // NO usar await, usar .catch() para ignorar errores del scan
-      ndef.scan({ signal: abortController.signal }).catch((err: any) => {
-        // Solo loguear si no es un abort intencional
-        if (err.name !== 'AbortError') {
-          console.error('NFC scan error:', err);
-        }
+      // EXACTAMENTE como NFCWriter: scan con signal, .catch() sin await
+      ndef.scan({ signal: abortController.signal }).catch(() => {
+        // Ignorar errores del scan, solo lo usamos para activar el NFC
       });
       
-      console.log('NFC scan started, waiting for card...');
-
-      // DESPUÉS: Registrar listeners (IGUAL que NFCWriter que funciona)
+      // Escuchar cuando se detecta una tarjeta
       ndef.onreading = async () => {
-        console.log('NFC card detected!');
-        if (hasWritten) {
-          console.log('Already written, ignoring...');
-          return;
-        }
-        hasWritten = true;
-        
-        // Detener el scan inmediatamente
-        abortController.abort();
+        // Tarjeta detectada, ahora podemos escribir
+        abortController.abort(); // Detener el scan
         
         setNfcStatus('writing');
         setNfcMessage(`✏️ Escribiendo gafete de: ${currentItem.nombre}...`);
         
         try {
-          // Escribir en la tarjeta
           await ndef.write({
             records: [
               {
@@ -238,8 +207,6 @@ export default function BadgesPage() {
             ]
           });
 
-          console.log('NFC write successful!');
-          
           // ¡Éxito! Vibrar inmediatamente
           if (navigator.vibrate) {
             navigator.vibrate([100, 50, 100, 50, 100]);
@@ -253,14 +220,12 @@ export default function BadgesPage() {
 
           setNfcStatus('success');
           setNfcMessage(`✅ ¡Gafete grabado! ${currentItem.nombre}`);
-          setIsWriting(false);
 
           // Pasar al siguiente después de un delay
           setTimeout(() => {
             const nextIndex = index + 1;
             if (nextIndex < nfcQueue.length) {
               setCurrentNfcIndex(nextIndex);
-              // Iniciar sesión para el siguiente gafete
               startNfcSession(nfcQueue[nextIndex], nextIndex);
             } else {
               setNfcStatus('idle');
@@ -271,8 +236,6 @@ export default function BadgesPage() {
 
         } catch (writeError: any) {
           console.error('NFC Write Error:', writeError);
-          hasWritten = false; // Permitir reintento
-          setIsWriting(false);
           
           if (navigator.vibrate) {
             navigator.vibrate([300, 100, 300]);
@@ -291,20 +254,13 @@ export default function BadgesPage() {
         }
       };
 
-      ndef.onreadingerror = (event: any) => {
-        console.error('NFC read error:', event);
+      ndef.onreadingerror = () => {
         setNfcStatus('error');
         setNfcMessage('❌ Error al leer tarjeta. Acércala de nuevo.');
       };
 
     } catch (error: any) {
       console.error('NFC Session Error:', error);
-      setIsWriting(false);
-      
-      // Ignorar errores de abort
-      if (error.name === 'AbortError') {
-        return;
-      }
 
       if (navigator.vibrate) {
         navigator.vibrate([300, 100, 300]);
