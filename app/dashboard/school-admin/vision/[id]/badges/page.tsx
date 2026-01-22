@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import BadgePreview from '@/components/check-in/BadgePreview';
 
 interface Participant {
   id: number;
@@ -46,15 +47,13 @@ export default function BadgesPage() {
   const [level, setLevel] = useState(levelParam);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // NFC States
+  // NFC States - AHORA USAMOS BadgePreview que YA FUNCIONA
   const [nfcSupported, setNfcSupported] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [nfcMode, setNfcMode] = useState(false);
   const [nfcQueue, setNfcQueue] = useState<NFCWriteQueue[]>([]);
   const [currentNfcIndex, setCurrentNfcIndex] = useState(0);
-  const [nfcStatus, setNfcStatus] = useState<'idle' | 'writing' | 'success' | 'error'>('idle');
-  const [nfcError, setNfcError] = useState('');
-  const [nfcDebug, setNfcDebug] = useState(''); // DEBUG LOG VISUAL
+  const [showBadgePreview, setShowBadgePreview] = useState(false); // NUEVO: usar BadgePreview
   const nfcAbortRef = useRef<AbortController | null>(null);
 
   // Check NFC Support
@@ -152,95 +151,47 @@ export default function BadgesPage() {
     setNfcQueue(queue);
     setCurrentNfcIndex(0);
     setNfcMode(true);
-    setNfcStatus('idle');
-    setNfcError('');
+    setShowBadgePreview(true); // Mostrar BadgePreview que YA FUNCIONA
   };
 
-  // FUNCIÓN SIMPLIFICADA - SOLO WRITE DIRECTO
-  const handleWriteNFC = async () => {
-    setNfcDebug('1. Iniciando...');
+  // Obtener datos del participante actual para BadgePreview
+  const getCurrentParticipantForBadge = () => {
+    if (!nfcQueue[currentNfcIndex]) return null;
+    const current = nfcQueue[currentNfcIndex];
+    const participant = participants.find(p => p.Usuario.id === current.userId);
+    if (!participant) return null;
     
-    if (!('NDEFReader' in window)) {
-      setNfcDebug('ERROR: NDEFReader no existe');
-      alert('Tu dispositivo no soporta NFC');
-      return;
-    }
-    setNfcDebug('2. NDEFReader existe');
-
-    const currentItem = nfcQueue[currentNfcIndex];
-    if (!currentItem) {
-      setNfcDebug('ERROR: No hay item actual');
-      return;
-    }
-    setNfcDebug('3. Item: ' + currentItem.referralCode);
-
-    setNfcStatus('writing');
-    setNfcError('');
-
-    try {
-      setNfcDebug('4. Creando NDEFReader...');
-      const ndef = new (window as any).NDEFReader();
-      
-      setNfcDebug('5. ACERCA LA TARJETA Y MANTENLA...');
-      
-      // Write DIRECTO - según la spec, write() debe esperar la tarjeta
-      // Usamos un AbortController con timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        controller.abort();
-        setNfcDebug('TIMEOUT 60s - Intenta de nuevo');
-        setNfcStatus('error');
-        setNfcError('Timeout - no se detectó tarjeta');
-      }, 60000);
-      
-      await ndef.write(
-        {
-          records: [
-            {
-              recordType: 'text',
-              data: `USER:${currentItem.referralCode}`
-            }
-          ]
-        },
-        { 
-          overwrite: true,
-          signal: controller.signal
-        }
-      );
-      
-      clearTimeout(timeoutId);
-      setNfcDebug('6. ESCRITO OK!');
-      
-      // Vibrar para indicar éxito
-      if (navigator.vibrate) {
-        navigator.vibrate([100, 50, 100]);
+    return {
+      participant: {
+        id: participant.Usuario.id,
+        name: participant.Usuario.nombre,
+        role: participant.rol || 'PARTICIPANTE',
+        referralCode: participant.Usuario.referralCode || `USER-${participant.Usuario.id}`
+      },
+      organization: {
+        name: vision?.nombre || 'Vision',
+        brandColor: level === 'BASIC' ? '#22d3ee' : level === 'ADVANCED' ? '#f97316' : '#a855f7'
+      },
+      product: {
+        name: level === 'BASIC' ? 'Básico' : level === 'ADVANCED' ? 'Avanzado' : 'Liderazgo'
       }
-      
-      // Marcar como exitoso
-      setNfcQueue(prev => prev.map((item, idx) => 
-        idx === currentNfcIndex ? { ...item, status: 'success' } : item
-      ));
-      
-      setNfcStatus('success');
-      
-      // Pasar al siguiente después de un delay
-      setTimeout(() => {
-        const nextIndex = currentNfcIndex + 1;
-        if (nextIndex < nfcQueue.length) {
-          setCurrentNfcIndex(nextIndex);
-          setNfcStatus('idle');
-          setNfcError('');
-          setNfcDebug('');
-        } else {
-          setNfcStatus('idle');
-          setNfcDebug('COMPLETADO');
-        }
-      }, 1500);
+    };
+  };
 
-    } catch (error: any) {
-      setNfcDebug('ERROR: ' + error.name + ' - ' + error.message);
-      setNfcError(error.message || 'Error de NFC');
-      setNfcStatus('error');
+  const handleBadgePrinted = () => {
+    // Marcar como exitoso y pasar al siguiente
+    setNfcQueue(prev => prev.map((item, idx) => 
+      idx === currentNfcIndex ? { ...item, status: 'success' } : item
+    ));
+    
+    const nextIndex = currentNfcIndex + 1;
+    if (nextIndex < nfcQueue.length) {
+      setCurrentNfcIndex(nextIndex);
+    } else {
+      // Todos completados
+      setTimeout(() => {
+        setShowBadgePreview(false);
+      }, 500);
     }
   };
 
@@ -250,10 +201,9 @@ export default function BadgesPage() {
       nfcAbortRef.current = null;
     }
     setNfcMode(false);
+    setShowBadgePreview(false);
     setNfcQueue([]);
     setCurrentNfcIndex(0);
-    setNfcStatus('idle');
-    setNfcError('');
   };
   // ========== END NFC FUNCTIONS ==========
 
@@ -500,15 +450,20 @@ export default function BadgesPage() {
           </div>
         </div>
 
-        {/* NFC Mode Modal - Usa el componente NFCWriter que SÍ FUNCIONA */}
-        {nfcMode && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl border-2 border-cyan-500/50 max-w-2xl w-full p-6 shadow-2xl">
+        {/* NFC Mode Modal - USANDO BadgePreview que SÍ FUNCIONA */}
+        {nfcMode && showBadgePreview && getCurrentParticipantForBadge() && (
+          <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl border-2 border-cyan-500/50 max-w-lg w-full p-6 shadow-2xl">
               {/* Header */}
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-black bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent flex items-center gap-3">
-                  <span className="text-3xl">📡</span> Grabador NFC de Gafetes
-                </h2>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-xl font-black bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+                    📡 Grabar NFC
+                  </h2>
+                  <p className="text-slate-400 text-sm">
+                    {currentNfcIndex + 1} de {nfcQueue.length}
+                  </p>
+                </div>
                 <button
                   onClick={exitNfcMode}
                   className="p-2 hover:bg-slate-700/50 rounded-lg transition-all"
@@ -520,148 +475,52 @@ export default function BadgesPage() {
               </div>
 
               {/* Progress */}
-              <div className="mb-6">
-                <div className="flex justify-between text-sm text-slate-400 mb-2">
-                  <span>Progreso</span>
-                  <span>{nfcQueue.filter(q => q.status === 'success').length} de {nfcQueue.length}</span>
-                </div>
-                <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
+              <div className="mb-4">
+                <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500"
-                    style={{ width: `${(nfcQueue.filter(q => q.status === 'success').length / nfcQueue.length) * 100}%` }}
+                    style={{ width: `${((currentNfcIndex) / nfcQueue.length) * 100}%` }}
                   />
                 </div>
               </div>
 
-              {/* DEBUG LOG - VISIBLE */}
-              {nfcDebug && (
-                <div className="mb-4 p-3 bg-yellow-500/20 border border-yellow-500/50 rounded-lg">
-                  <p className="text-yellow-300 font-mono text-sm">🔍 {nfcDebug}</p>
-                </div>
-              )}
-
-              {/* Si ya terminamos todos */}
-              {nfcQueue.every(q => q.status === 'success') ? (
-                <div className="p-6 rounded-xl mb-6 text-center bg-green-500/20 border border-green-500/50">
-                  <div className="text-6xl mb-4">🎉</div>
-                  <p className="text-xl font-bold text-green-300">¡Todos los gafetes han sido grabados!</p>
-                </div>
-              ) : (
-                /* UI de NFC - COPIA de BadgePreview que SÍ funciona */
-                <div className="p-6 rounded-xl mb-6 text-center bg-slate-700/50 border border-slate-600/50">
-                  {nfcStatus === 'idle' && (
-                    <>
-                      <div className="text-6xl mb-4">📲</div>
-                      <p className="text-xl font-bold text-cyan-300 mb-2">
-                        {nfcQueue[currentNfcIndex]?.nombre}
-                      </p>
-                      <p className="text-slate-400 text-sm mb-4 font-mono">
-                        {nfcQueue[currentNfcIndex]?.referralCode}
-                      </p>
-                      <button
-                        onClick={handleWriteNFC}
-                        className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-lg shadow-cyan-500/30"
-                      >
-                        📱 Grabar Gafete NFC
-                      </button>
-                    </>
-                  )}
-                  
-                  {nfcStatus === 'writing' && (
-                    <div className="animate-pulse">
-                      <div className="text-6xl mb-4">📡</div>
-                      <p className="text-xl font-bold text-amber-300">Acerca el gafete NFC...</p>
-                      <p className="text-slate-300 mt-2">Coloca la tarjeta en la parte trasera del dispositivo</p>
-                      <p className="text-slate-500 text-sm mt-2">Mantén la tarjeta quieta hasta que termine</p>
-                    </div>
-                  )}
-                  
-                  {nfcStatus === 'success' && (
-                    <>
-                      <div className="text-6xl mb-4">✅</div>
-                      <p className="text-xl font-bold text-green-300">¡Gafete grabado!</p>
-                      <p className="text-amber-400 font-medium mt-2">⚠️ RETIRA LA TARJETA</p>
-                      <p className="text-slate-400 text-sm mt-2">Continuando al siguiente...</p>
-                    </>
-                  )}
-                  
-                  {nfcStatus === 'error' && (
-                    <>
-                      <div className="text-6xl mb-4">❌</div>
-                      <p className="text-xl font-bold text-red-300">Error</p>
-                      <p className="text-slate-400 mt-2">{nfcError}</p>
-                      <div className="flex gap-3 justify-center mt-4">
-                        <button
-                          onClick={handleWriteNFC}
-                          className="px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-medium transition-all"
-                        >
-                          🔄 Reintentar
-                        </button>
-                        <button
-                          onClick={() => {
-                            const nextIndex = currentNfcIndex + 1;
-                            if (nextIndex < nfcQueue.length) {
-                              setCurrentNfcIndex(nextIndex);
-                              setNfcStatus('idle');
-                              setNfcError('');
-                            }
-                          }}
-                          className="px-6 py-3 bg-slate-600 hover:bg-slate-500 text-white rounded-lg font-medium transition-all"
-                        >
-                          ⏭️ Saltar
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {/* Queue List */}
-              <div className="max-h-40 overflow-y-auto space-y-2 mb-6 mt-6">
-                {nfcQueue.map((item, idx) => (
-                  <div 
-                    key={item.userId}
-                    className={`flex items-center justify-between p-3 rounded-lg ${
-                      idx === currentNfcIndex && !nfcQueue.every(q => q.status === 'success')
-                        ? 'bg-cyan-500/20 border border-cyan-500/50' 
-                        : item.status === 'success'
-                        ? 'bg-green-500/10 border border-green-500/30'
-                        : item.status === 'error'
-                        ? 'bg-red-500/10 border border-red-500/30'
-                        : 'bg-slate-800/50 border border-slate-700/50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg">
-                        {item.status === 'success' ? '✅' : 
-                         item.status === 'error' ? '❌' : 
-                         idx === currentNfcIndex ? '📲' : '⏳'}
-                      </span>
-                      <div>
-                        <p className="font-medium text-white">{item.nombre}</p>
-                        <p className="text-xs text-slate-400 font-mono">{item.referralCode}</p>
-                      </div>
-                    </div>
-                    <span className={`text-sm font-medium ${
-                      item.status === 'success' ? 'text-green-400' :
-                      item.status === 'error' ? 'text-red-400' :
-                      idx === currentNfcIndex ? 'text-cyan-400' : 'text-slate-500'
-                    }`}>
-                      {item.status === 'success' ? 'Grabado' :
-                       item.status === 'error' ? 'Error' :
-                       idx === currentNfcIndex ? 'Actual' : 'Pendiente'}
-                    </span>
-                  </div>
-                ))}
+              {/* BadgePreview Component - ESTE YA FUNCIONA */}
+              <div className="flex justify-center">
+                <BadgePreview
+                  participant={getCurrentParticipantForBadge()!.participant}
+                  organization={getCurrentParticipantForBadge()!.organization}
+                  product={getCurrentParticipantForBadge()!.product}
+                  showButtons={true}
+                  onPrint={handleBadgePrinted}
+                />
               </div>
 
-              {/* Close Button */}
-              <button
-                onClick={exitNfcMode}
-                className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-all"
-              >
-                Cerrar
-              </button>
+              {/* Navigation Buttons */}
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={() => {
+                    if (currentNfcIndex > 0) {
+                      setCurrentNfcIndex(currentNfcIndex - 1);
+                    }
+                  }}
+                  disabled={currentNfcIndex === 0}
+                  className="flex-1 py-2 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white rounded-lg font-medium transition-all"
+                >
+                  ⬅️ Anterior
+                </button>
+                <button
+                  onClick={() => {
+                    if (currentNfcIndex < nfcQueue.length - 1) {
+                      setCurrentNfcIndex(currentNfcIndex + 1);
+                    } else {
+                      exitNfcMode();
+                    }
+                  }}
+                  className="flex-1 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-medium transition-all"
+                >
+                  {currentNfcIndex < nfcQueue.length - 1 ? 'Siguiente ➡️' : 'Terminar ✅'}
+                </button>
+              </div>
             </div>
           </div>
         )}
