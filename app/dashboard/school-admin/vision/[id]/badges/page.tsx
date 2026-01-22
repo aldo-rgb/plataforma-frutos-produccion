@@ -157,36 +157,51 @@ export default function BadgesPage() {
 
   // FUNCIÓN EXACTA DE BadgePreview.tsx QUE SÍ FUNCIONA
   const handleWriteNFC = async () => {
+    console.log('=== handleWriteNFC called ===');
+    
     if (!('NDEFReader' in window)) {
+      console.log('NDEFReader NOT in window');
       alert('Tu dispositivo no soporta NFC');
       return;
     }
+    console.log('NDEFReader found in window');
 
     const currentItem = nfcQueue[currentNfcIndex];
-    if (!currentItem) return;
+    if (!currentItem) {
+      console.log('No current item found');
+      return;
+    }
+    console.log('Current item:', currentItem);
 
     // Cancelar cualquier operación anterior
     if (nfcAbortRef.current) {
+      console.log('Aborting previous operation');
       nfcAbortRef.current.abort();
     }
 
     setNfcStatus('writing');
     setNfcError('');
+    console.log('Status set to writing');
 
     try {
+      console.log('Creating NDEFReader...');
       const ndef = new (window as any).NDEFReader();
       const abortController = new AbortController();
       nfcAbortRef.current = abortController;
       
+      console.log('Starting scan with await...');
       // IMPORTANTE: En Android, primero hacemos scan para activar el lector NFC
       // y detectar cuando se acerca la tarjeta - CON AWAIT
       await ndef.scan({ signal: abortController.signal });
+      console.log('Scan started successfully, waiting for card...');
       
       // Escuchar cuando se detecta una tarjeta
       ndef.onreading = async (event: any) => {
+        console.log('=== onreading triggered ===');
         try {
           console.log('NFC Tag detected:', event?.serialNumber);
           
+          console.log('Writing to card...');
           // Tarjeta detectada, ahora escribimos con overwrite: true
           await ndef.write({
             records: [
@@ -196,6 +211,7 @@ export default function BadgesPage() {
               }
             ]
           }, { overwrite: true });
+          console.log('Write successful!');
           
           // Vibrar para indicar éxito
           if (navigator.vibrate) {
