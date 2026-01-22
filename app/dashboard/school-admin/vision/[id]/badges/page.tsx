@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import NFCWriter from '@/components/check-in/NFCWriter';
 
 interface Participant {
   id: number;
@@ -52,10 +53,6 @@ export default function BadgesPage() {
   const [nfcMode, setNfcMode] = useState(false);
   const [nfcQueue, setNfcQueue] = useState<NFCWriteQueue[]>([]);
   const [currentNfcIndex, setCurrentNfcIndex] = useState(0);
-  const [nfcStatus, setNfcStatus] = useState<'idle' | 'waiting' | 'writing' | 'success' | 'error'>('idle');
-  const [nfcMessage, setNfcMessage] = useState('');
-  const [abortControllerRef, setAbortControllerRef] = useState<AbortController | null>(null);
-  const [isWriting, setIsWriting] = useState(false); // Prevent duplicate writes
 
   // Check NFC Support
   useEffect(() => {
@@ -152,193 +149,38 @@ export default function BadgesPage() {
     setNfcQueue(queue);
     setCurrentNfcIndex(0);
     setNfcMode(true);
-    setNfcStatus('idle'); // Empezar en idle, el usuario debe presionar para activar NFC
-    setNfcMessage(`Presiona el botón para activar NFC`);
-    
-    // NO iniciar automáticamente - el usuario debe hacer click (requisito de Web NFC)
-  };
-
-  // Función que inicia una sesión NFC para escribir un gafete
-  // COPIA EXACTA del patrón de NFCWriter.tsx que SÍ FUNCIONA
-  const startNfcSession = async (currentItem: NFCWriteQueue, index: number) => {
-    if (!nfcSupported) return;
-
-    setNfcStatus('waiting');
-    setNfcMessage(`📱 Acerca el gafete NFC de: ${currentItem.nombre}`);
-    
-    // Actualizar estado en la cola
-    setNfcQueue(prev => prev.map((item, idx) => 
-      idx === index ? { ...item, status: 'writing' } : item
-    ));
-
-    try {
-      // @ts-ignore - NDEFReader is not in TypeScript types yet
-      const ndef = new (window as any).NDEFReader();
-      const abortController = new AbortController();
-      setAbortControllerRef(abortController);
-      
-      // EXACTAMENTE como NFCWriter: scan con signal, .catch() sin await
-      ndef.scan({ signal: abortController.signal }).catch(() => {
-        // Ignorar errores del scan, solo lo usamos para activar el NFC
-      });
-      
-      // Escuchar cuando se detecta una tarjeta
-      ndef.onreading = async () => {
-        // Tarjeta detectada, ahora podemos escribir
-        abortController.abort(); // Detener el scan
-        
-        setNfcStatus('writing');
-        setNfcMessage(`✏️ Escribiendo gafete de: ${currentItem.nombre}...`);
-        
-        try {
-          await ndef.write({
-            records: [
-              {
-                recordType: "text",
-                data: `USER:${currentItem.referralCode}`,
-                encoding: "utf-8",
-                lang: "en"
-              },
-              {
-                recordType: "url",
-                data: `https://frutos.app/u/${currentItem.referralCode}`
-              }
-            ]
-          });
-
-          // ¡Éxito! Vibrar inmediatamente
-          if (navigator.vibrate) {
-            navigator.vibrate([100, 50, 100, 50, 100]);
-          }
-          playSuccessSound();
-
-          // Actualizar estado del queue
-          setNfcQueue(prev => prev.map((item, idx) => 
-            idx === index ? { ...item, status: 'success' } : item
-          ));
-
-          setNfcStatus('success');
-          setNfcMessage(`✅ ¡Gafete grabado! ${currentItem.nombre}`);
-
-          // Pasar al siguiente después de un delay
-          setTimeout(() => {
-            const nextIndex = index + 1;
-            if (nextIndex < nfcQueue.length) {
-              setCurrentNfcIndex(nextIndex);
-              startNfcSession(nfcQueue[nextIndex], nextIndex);
-            } else {
-              setNfcStatus('idle');
-              setNfcMessage('🎉 ¡Todos los gafetes han sido grabados!');
-              setAbortControllerRef(null);
-            }
-          }, 1500);
-
-        } catch (writeError: any) {
-          console.error('NFC Write Error:', writeError);
-          
-          if (navigator.vibrate) {
-            navigator.vibrate([300, 100, 300]);
-          }
-
-          let errorMsg = writeError.message || 'Error al escribir';
-          if (writeError.name === 'NetworkError') {
-            errorMsg = 'La tarjeta se alejó. Mantenla cerca y vuelve a acercarla.';
-          }
-          
-          setNfcQueue(prev => prev.map((item, idx) => 
-            idx === index ? { ...item, status: 'error', error: errorMsg } : item
-          ));
-          setNfcStatus('error');
-          setNfcMessage(`❌ Error: ${errorMsg}`);
-        }
-      };
-
-      ndef.onreadingerror = () => {
-        setNfcStatus('error');
-        setNfcMessage('❌ Error al leer tarjeta. Acércala de nuevo.');
-      };
-
-    } catch (error: any) {
-      console.error('NFC Session Error:', error);
-
-      if (navigator.vibrate) {
-        navigator.vibrate([300, 100, 300]);
-      }
-
-      let errorMsg = error.message || 'Error desconocido';
-      if (error.name === 'NotAllowedError') {
-        errorMsg = 'Permiso NFC denegado. Permite el acceso en tu navegador.';
-      } else if (error.name === 'NotSupportedError') {
-        errorMsg = 'NFC no soportado en este dispositivo.';
-      }
-
-      setNfcQueue(prev => prev.map((item, idx) => 
-        idx === index ? { ...item, status: 'error', error: errorMsg } : item
-      ));
-      setNfcStatus('error');
-      setNfcMessage(`❌ Error: ${errorMsg}`);
-    }
-  };
-
-  // Función para reintentar un gafete con error
-  const retryNfcBadge = (index: number) => {
-    const item = nfcQueue[index];
-    if (item) {
-      setNfcQueue(prev => prev.map((it, idx) => 
-        idx === index ? { ...it, status: 'pending', error: undefined } : it
-      ));
-      setCurrentNfcIndex(index);
-      setIsWriting(false); // Reset flag
-      startNfcSession(item, index);
-    }
+    // El componente NFCWriter maneja todo automáticamente
   };
 
   const exitNfcMode = () => {
-    // Abort any ongoing NFC operation
-    if (abortControllerRef) {
-      abortControllerRef.abort();
-      setAbortControllerRef(null);
-    }
     setNfcMode(false);
     setNfcQueue([]);
     setCurrentNfcIndex(0);
-    setNfcStatus('idle');
-    setNfcMessage('');
-    setIsWriting(false);
   };
 
-  const retryCurrentNfc = () => {
-    if (currentNfcIndex < nfcQueue.length) {
-      setIsWriting(false);
-      setNfcStatus('waiting');
-      startNfcSession(nfcQueue[currentNfcIndex], currentNfcIndex);
-    }
-  };
-
-  const skipCurrentNfc = () => {
-    // Abort current operation
-    if (abortControllerRef) {
-      abortControllerRef.abort();
-    }
-    setIsWriting(false);
-    
-    // Marcar como saltado
-    setNfcQueue(prev => prev.map((item, idx) => 
-      idx === currentNfcIndex ? { ...item, status: 'error', error: 'Saltado' } : item
-    ));
-    
-    const nextIndex = currentNfcIndex + 1;
-    if (nextIndex < nfcQueue.length) {
-      setCurrentNfcIndex(nextIndex);
-      setNfcStatus('waiting');
-      // Pequeño delay antes del siguiente
-      setTimeout(() => {
-        startNfcSession(nfcQueue[nextIndex], nextIndex);
-      }, 500);
-    } else {
-      setNfcStatus('idle');
-      setNfcMessage('🎉 Proceso completado');
-      setAbortControllerRef(null);
+  const playSuccessSound = () => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      
+      notes.forEach((freq, i) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(freq, audioContext.currentTime + i * 0.1);
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime + i * 0.1);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i * 0.1 + 0.15);
+        
+        oscillator.start(audioContext.currentTime + i * 0.1);
+        oscillator.stop(audioContext.currentTime + i * 0.1 + 0.15);
+      });
+    } catch (e) {
+      console.log('Could not play sound');
     }
   };
   // ========== END NFC FUNCTIONS ==========
@@ -586,7 +428,7 @@ export default function BadgesPage() {
           </div>
         </div>
 
-        {/* NFC Mode Modal */}
+        {/* NFC Mode Modal - Usa el componente NFCWriter que SÍ FUNCIONA */}
         {nfcMode && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl border-2 border-cyan-500/50 max-w-2xl w-full p-6 shadow-2xl">
@@ -619,76 +461,50 @@ export default function BadgesPage() {
                 </div>
               </div>
 
-              {/* Current Status */}
-              <div className={`p-6 rounded-xl mb-6 text-center ${
-                nfcStatus === 'waiting' ? 'bg-cyan-500/20 border border-cyan-500/50' :
-                nfcStatus === 'success' ? 'bg-green-500/20 border border-green-500/50' :
-                nfcStatus === 'error' ? 'bg-red-500/20 border border-red-500/50' :
-                'bg-slate-700/50 border border-slate-600/50'
-              }`}>
-                {nfcStatus === 'waiting' && (
-                  <div className="animate-pulse">
-                    <div className="text-6xl mb-4">📲</div>
-                    <p className="text-xl font-bold text-cyan-300">Esperando gafete NFC...</p>
-                    <p className="text-slate-300 mt-2">{nfcMessage}</p>
-                  </div>
-                )}
-                {nfcStatus === 'success' && (
-                  <div>
-                    <div className="text-6xl mb-4">✅</div>
-                    <p className="text-xl font-bold text-green-300">{nfcMessage}</p>
-                  </div>
-                )}
-                {nfcStatus === 'error' && (
-                  <div>
-                    <div className="text-6xl mb-4">❌</div>
-                    <p className="text-xl font-bold text-red-300">{nfcMessage}</p>
-                    <div className="flex gap-3 justify-center mt-4">
-                      <button
-                        onClick={retryCurrentNfc}
-                        className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-medium transition-all"
-                      >
-                        🔄 Reintentar
-                      </button>
-                      <button
-                        onClick={skipCurrentNfc}
-                        className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg font-medium transition-all"
-                      >
-                        ⏭️ Saltar
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {nfcStatus === 'idle' && nfcQueue.length > 0 && nfcQueue.some(q => q.status !== 'success') && (
-                  <div>
-                    <div className="text-6xl mb-4">📲</div>
-                    <p className="text-xl font-bold text-cyan-300 mb-2">
-                      {nfcQueue[currentNfcIndex]?.nombre || 'Listo para grabar'}
-                    </p>
-                    <p className="text-slate-400 mb-4">Presiona el botón para activar el NFC</p>
-                    <button
-                      onClick={() => startNfcSession(nfcQueue[currentNfcIndex], currentNfcIndex)}
-                      className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-lg shadow-cyan-500/30"
-                    >
-                      📱 Activar NFC y Acercar Gafete
-                    </button>
-                  </div>
-                )}
-                {nfcStatus === 'idle' && nfcQueue.length > 0 && nfcQueue.every(q => q.status === 'success') && (
-                  <div>
-                    <div className="text-6xl mb-4">🎉</div>
-                    <p className="text-xl font-bold text-green-300">¡Todos los gafetes han sido grabados!</p>
-                  </div>
-                )}
-              </div>
+              {/* Si ya terminamos todos */}
+              {nfcQueue.every(q => q.status === 'success') ? (
+                <div className="p-6 rounded-xl mb-6 text-center bg-green-500/20 border border-green-500/50">
+                  <div className="text-6xl mb-4">🎉</div>
+                  <p className="text-xl font-bold text-green-300">¡Todos los gafetes han sido grabados!</p>
+                </div>
+              ) : (
+                /* Usar el componente NFCWriter que SÍ FUNCIONA */
+                <NFCWriter
+                  userId={nfcQueue[currentNfcIndex]?.userId || 0}
+                  userName={nfcQueue[currentNfcIndex]?.nombre || ''}
+                  token={`USER:${nfcQueue[currentNfcIndex]?.referralCode || ''}`}
+                  onSuccess={() => {
+                    // Marcar como exitoso
+                    setNfcQueue(prev => prev.map((item, idx) => 
+                      idx === currentNfcIndex ? { ...item, status: 'success' } : item
+                    ));
+                    
+                    // Pasar al siguiente
+                    const nextIndex = currentNfcIndex + 1;
+                    if (nextIndex < nfcQueue.length) {
+                      setCurrentNfcIndex(nextIndex);
+                    }
+                  }}
+                  onCancel={() => {
+                    // Saltar al siguiente
+                    const nextIndex = currentNfcIndex + 1;
+                    if (nextIndex < nfcQueue.length) {
+                      setCurrentNfcIndex(nextIndex);
+                    } else {
+                      // Si era el último, cerrar
+                      exitNfcMode();
+                    }
+                  }}
+                />
+              )}
 
               {/* Queue List */}
-              <div className="max-h-60 overflow-y-auto space-y-2 mb-6">
+              <div className="max-h-40 overflow-y-auto space-y-2 mb-6 mt-6">
                 {nfcQueue.map((item, idx) => (
                   <div 
                     key={item.userId}
                     className={`flex items-center justify-between p-3 rounded-lg ${
-                      idx === currentNfcIndex && nfcStatus !== 'idle' 
+                      idx === currentNfcIndex && !nfcQueue.every(q => q.status === 'success')
                         ? 'bg-cyan-500/20 border border-cyan-500/50' 
                         : item.status === 'success'
                         ? 'bg-green-500/10 border border-green-500/30'
