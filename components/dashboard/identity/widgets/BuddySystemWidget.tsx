@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, MessageCircle, Phone, QrCode, X, Check, 
-  Clock, Loader2, UserPlus, AlertTriangle
+  Clock, Loader2, UserPlus, AlertTriangle, Wifi
 } from 'lucide-react';
 import Image from 'next/image';
+import { Html5QrcodeScanner } from 'html5-qrcode';
 
 interface BuddyInfo {
   id: number;
@@ -54,11 +55,18 @@ export default function BuddySystemWidget() {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [scanning, setScanning] = useState(false);
+  const [nfcSupported, setNfcSupported] = useState(false);
+  const [nfcReading, setNfcReading] = useState(false);
+  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const nfcAbortController = useRef<AbortController | null>(null);
 
   useEffect(() => {
     loadBuddyData();
+    // Verificar soporte NFC
+    if ('NDEFReader' in window) {
+      setNfcSupported(true);
+    }
   }, []);
 
   const loadBuddyData = async () => {
@@ -75,34 +83,29 @@ export default function BuddySystemWidget() {
     }
   };
 
-  const startScanning = async () => {
-    setShowScanModal(true);
-    setScanError(null);
-    setScanning(true);
+  // Extraer userId del texto escaneado (QR o NFC)
+  const extractUserId = (text: string): string | null => {
+    // Formato: FRUTOS:USER:123 o simplemente el número
+    const match = text.match(/FRUTOS:USER:(\d+)/i) || text.match(/^(\d+)$/);
+    if (match) return match[1];
     
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-    } catch {
-      setScanError('No se pudo acceder a la cámara');
-      setScanning(false);
-    }
+    // También intentar extraer de URL como /perfil/123 o ?userId=123
+    const urlMatch = text.match(/(?:perfil\/|userId=)(\d+)/i);
+    if (urlMatch) return urlMatch[1];
+    
+    return null;
   };
 
-  const stopScanning = () => {
-    if (videoRef.current?.srcObject) {
-      const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-      tracks.forEach(track => track.stop());
+  const handleScanResult = useCallback(async (scannedText: string) => {
+    // Extraer userId del texto escaneado
+    const userId = extractUserId(scannedText);
+    
+    if (!userId) {
+      setScanError('Código QR no válido para Buddy System');
+      return;
     }
-    setShowScanModal(false);
-    setScanning(false);
-  };
 
-  const handleScanResult = async (userId: string) => {
+    // Detener scanner
     stopScanning();
     setProcessing(true);
     
@@ -124,15 +127,146 @@ export default function BuddySystemWidget() {
       }
     } catch {
       setScanError('Error de conexión');
+      setShowScanModal(true);
     } finally {
       setProcessing(false);
+    }
+  }, []);
+
+  const startScanning = () => {
+    setShowScanModal(true);
+    setScanError(null);
+    setScanning(true);
+  };
+
+  // Inicializar scanner QR cuando se abre el modal
+  useEffect(() => {
+    if (scanning && showScanModal && !scannerRef.current) {
+      // Pequeño delay para asegurar que el DOM esté listo
+      const timeout = setTimeout(() => {
+        try {
+          const scanner = new Html5QrcodeScanner(
+            'buddy-qr-reader',
+            { 
+              fps: 10, 
+              qrbox: { width: 250, height: 250 },
+              aspectRatio: 1.0,
+              rememberLastUsedCamera: true,
+            },
+            false
+          );
+
+          scanner.render(
+            (decodedText) => {
+              // QR escaneado exitosamente
+              scanner.clear().catch(console.error);
+              scannerRef.current = null;
+              handleScanResult(decodedText);
+            },
+            (errorMessage) => {
+              // Errores de escaneo silenciados (son frecuentes mientras busca)
+            }
+          );
+
+          scannerRef.current = scanner;
+        } catch (error) {
+          console.error('Error initializing scanner:', error);
+          setScanError('Error al inicializar la cámara');
+        }
+      }, 100);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [scanning, showScanModal, handleScanResult]);
+
+  const stopScanning = () => {
+    if (scannerRef.current) {
+      scannerRef.current.clear().catch(console.error);
+      scannerRef.current = null;
+    }
+    if (nfcAbortController.current) {
+      nfcAbortController.current.abort();
+      nfcAbortController.current = null;
+    }
+    setShowScanModal(false);
+    setScanning(false);
+    setNfcReading(false);
+  };
+
+  // Iniciar lectura NFC
+  const startNFC = async () => {
+    if (!('NDEFReader' in window)) {
+      setScanError('NFC no está disponible en este dispositivo');
+      return;
+    }
+
+    try {
+      setNfcReading(true);
+      setScanError(null);
+      
+      // @ts-ignore - NDEFReader es experimental
+      const ndef = new NDEFReader();
+      nfcAbortController.current = new AbortController();
+      
+      await ndef.scan({ signal: nfcAbortController.current.signal });
+      
+      ndef.addEventListener('reading', ({ message }: any) => {
+        for (const record of message.records) {
+          if (record.recordType === 'text') {
+            const textDecoder = new TextDecoder();
+            const text = textDecoder.decode(record.data);
+            handleScanResult(text);
+            return;
+          }
+          if (record.recordType === 'url') {
+            const textDecoder = new TextDecoder();
+            const url = textDecoder.decode(record.data);
+            handleScanResult(url);
+            return;
+          }
+        }
+        setScanError('Tag NFC no contiene información válida');
+      });
+
+      ndef.addEventListener('readingerror', () => {
+        setScanError('Error al leer el tag NFC');
+      });
+
+    } catch (error: any) {
+      if (error.name !== 'AbortError') {
+        console.error('NFC Error:', error);
+        setScanError('Error al iniciar NFC: ' + (error.message || 'Permiso denegado'));
+      }
+      setNfcReading(false);
     }
   };
 
   const handleManualScan = async () => {
     const userId = prompt('ID del usuario a conectar (para pruebas):');
     if (userId) {
-      await handleScanResult(userId);
+      stopScanning();
+      setProcessing(true);
+      try {
+        const res = await fetch('/api/buddy/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scannedUserId: userId })
+        });
+        
+        const json = await res.json();
+        
+        if (json.success && json.canConnect) {
+          setScannedUser(json.targetUser);
+          setShowConfirmModal(true);
+        } else {
+          setScanError(json.error || 'Error al escanear');
+          setShowScanModal(true);
+        }
+      } catch {
+        setScanError('Error de conexión');
+      } finally {
+        setProcessing(false);
+      }
     }
   };
 
@@ -429,19 +563,42 @@ export default function BuddySystemWidget() {
                   <h3 className="text-lg font-bold text-white">Escanear Gafete</h3>
                   <button onClick={stopScanning} className="text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
                 </div>
-                {scanError ? (
+                
+                {processing ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="w-12 h-12 text-purple-400 mx-auto mb-3 animate-spin" />
+                    <p className="text-slate-400">Verificando...</p>
+                  </div>
+                ) : scanError ? (
                   <div className="text-center py-8">
                     <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-3" />
-                    <p className="text-red-400">{scanError}</p>
-                    <button onClick={() => { setScanError(null); startScanning(); }} className="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg">Reintentar</button>
+                    <p className="text-red-400 mb-4">{scanError}</p>
+                    <button onClick={() => { setScanError(null); startScanning(); }} className="px-4 py-2 bg-purple-600 text-white rounded-lg">Reintentar</button>
                   </div>
                 ) : (
                   <>
-                    <div className="aspect-square bg-black rounded-xl overflow-hidden mb-4">
-                      <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
-                    </div>
-                    <p className="text-sm text-slate-400 text-center">Apunta al código QR del gafete</p>
-                    <button onClick={handleManualScan} className="w-full mt-4 py-2 bg-slate-700 text-slate-300 rounded-lg text-sm">Ingresar ID manual (pruebas)</button>
+                    {/* Scanner QR */}
+                    <div id="buddy-qr-reader" className="rounded-xl overflow-hidden mb-4" />
+                    
+                    <p className="text-sm text-slate-400 text-center mb-4">Apunta al código QR del gafete de tu Buddy</p>
+                    
+                    {/* Botón NFC */}
+                    {nfcSupported && (
+                      <button 
+                        onClick={startNFC}
+                        disabled={nfcReading}
+                        className={`w-full py-3 mb-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
+                          nfcReading 
+                            ? 'bg-blue-500/30 text-blue-300 border border-blue-500/50' 
+                            : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border border-blue-500/30'
+                        }`}
+                      >
+                        <Wifi className="w-5 h-5" />
+                        {nfcReading ? 'Acerca el gafete NFC...' : 'Usar NFC'}
+                      </button>
+                    )}
+                    
+                    <button onClick={handleManualScan} className="w-full py-2 bg-slate-700 text-slate-300 rounded-lg text-sm">Ingresar ID manual (pruebas)</button>
                   </>
                 )}
               </motion.div>
