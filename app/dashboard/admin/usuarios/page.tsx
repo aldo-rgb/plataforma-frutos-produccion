@@ -633,10 +633,16 @@ export default function GestionUsuariosPage() {
                                         className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-purple-500 outline-none appearance-none cursor-pointer"
                                     >
                                         <option value="PARTICIPANTE">Participante</option>
+                                        <option value="LIDER">Líder</option>
                                         <option value="MENTOR">Mentor</option>
                                         <option value="COORDINADOR">Coordinador</option>
+                                        <option value="COORDINATOR_BASIC">Coordinador Básico</option>
+                                        <option value="COORDINATOR_ADVANCED">Coordinador Avanzado</option>
+                                        <option value="TRAINER">Trainer</option>
                                         <option value="GAMECHANGER">Game Changer</option>
-                                        <option value="ADMIN">Admin</option>
+                                        <option value="SCHOOL_ADMIN">School Admin</option>
+                                        <option value="ADMINISTRADOR">Administrador</option>
+                                        <option value="SUPER_ADMIN">Super Admin</option>
                                     </select>
                                     <div className="mt-2 flex items-start gap-2 text-blue-400">
                                         <span className="text-sm flex-shrink-0">💡</span>
