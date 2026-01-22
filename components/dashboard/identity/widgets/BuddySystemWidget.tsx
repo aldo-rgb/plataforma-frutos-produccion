@@ -99,27 +99,40 @@ export default function BuddySystemWidget() {
     }
   };
 
-  // Extraer userId del texto escaneado
-  const extractUserId = (text: string): string | null => {
-    console.log('Extracting userId from:', text);
+  // Extraer identificador del texto escaneado (userId o referralCode)
+  const extractIdentifier = (text: string): { type: 'userId' | 'referralCode'; value: string } | null => {
+    console.log('Extracting identifier from:', text);
+    const trimmed = text.trim();
+    
     // Formato: FRUTOS:USER:123
-    const frutosMatch = text.match(/FRUTOS:USER:(\d+)/i);
-    if (frutosMatch) return frutosMatch[1];
+    const frutosMatch = trimmed.match(/FRUTOS:USER:(\d+)/i);
+    if (frutosMatch) return { type: 'userId', value: frutosMatch[1] };
     
-    // URL con /perfil/123 o ?userId=123
-    const urlMatch = text.match(/(?:perfil\/|userId=|user=|id=)(\d+)/i);
-    if (urlMatch) return urlMatch[1];
+    // Formato gafete: USER:123
+    const userMatch = trimmed.match(/^USER:(\d+)$/i);
+    if (userMatch) return { type: 'userId', value: userMatch[1] };
     
-    // Solo número
-    if (/^\d+$/.test(text.trim())) return text.trim();
+    // URL con /perfil/123 o ?userId=123 o profile/123
+    const urlMatch = trimmed.match(/(?:perfil\/|profile\/|userId=|user=|id=)(\d+)/i);
+    if (urlMatch) return { type: 'userId', value: urlMatch[1] };
+    
+    // URL de signup con ref=CODE (ej: /auth/signup?org=1&ref=ABC123)
+    const refMatch = trimmed.match(/[?&]ref=([A-Z0-9]+)/i);
+    if (refMatch) return { type: 'referralCode', value: refMatch[1].toUpperCase() };
+    
+    // Solo número (ID directo)
+    if (/^\d+$/.test(trimmed)) return { type: 'userId', value: trimmed };
+    
+    // ReferralCode alfanumérico (ej: ABC123, JOHN99) - típicamente 4-12 caracteres
+    if (/^[A-Z0-9]{4,12}$/i.test(trimmed)) return { type: 'referralCode', value: trimmed.toUpperCase() };
     
     return null;
   };
 
   const processScannedData = async (scannedText: string) => {
-    const userId = extractUserId(scannedText);
+    const identifier = extractIdentifier(scannedText);
     
-    if (!userId) {
+    if (!identifier) {
       setScanError('Código no válido. Escanea el QR de un gafete.');
       return;
     }
@@ -129,10 +142,15 @@ export default function BuddySystemWidget() {
     setProcessing(true);
     
     try {
+      // Enviar userId o referralCode según el tipo identificado
+      const body = identifier.type === 'userId' 
+        ? { scannedUserId: identifier.value }
+        : { referralCode: identifier.value };
+        
       const res = await fetch('/api/buddy/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scannedUserId: userId })
+        body: JSON.stringify(body)
       });
       
       const json = await res.json();
@@ -241,8 +259,14 @@ export default function BuddySystemWidget() {
   };
 
   const startNFC = async () => {
+    // Verificar soporte de NFC Web API
     if (!('NDEFReader' in window)) {
-      setScanError('NFC no disponible en este dispositivo');
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        setScanError('NFC no disponible en iPhone/iPad. Usa la cámara para escanear el QR.');
+      } else {
+        setScanError('NFC no disponible. Usa Chrome o Edge en Android.');
+      }
       return;
     }
 
@@ -250,44 +274,83 @@ export default function BuddySystemWidget() {
       setNfcReading(true);
       setScanError(null);
       
-      // @ts-ignore
+      // @ts-ignore - Web NFC API
       const ndef = new NDEFReader();
       nfcAbortRef.current = new AbortController();
       
       await ndef.scan({ signal: nfcAbortRef.current.signal });
+      console.log('NFC scan started');
       
-      ndef.addEventListener('reading', ({ message }: any) => {
-        console.log('NFC Reading:', message);
-        for (const record of message.records) {
-          let text = '';
-          if (record.recordType === 'text') {
-            const decoder = new TextDecoder(record.encoding || 'utf-8');
-            text = decoder.decode(record.data);
-          } else if (record.recordType === 'url') {
-            const decoder = new TextDecoder();
-            text = decoder.decode(record.data);
-          }
-          
-          if (text) {
-            console.log('NFC Data:', text);
-            processScannedData(text);
-            return;
+      ndef.addEventListener('reading', ({ message, serialNumber }: any) => {
+        console.log('NFC Reading:', { serialNumber, recordCount: message?.records?.length });
+        
+        // Primero intentar con serialNumber si no hay records útiles
+        let foundData = false;
+        
+        if (message?.records?.length > 0) {
+          for (const record of message.records) {
+            let text = '';
+            try {
+              if (record.recordType === 'text') {
+                const decoder = new TextDecoder(record.encoding || 'utf-8');
+                text = decoder.decode(record.data);
+              } else if (record.recordType === 'url') {
+                const decoder = new TextDecoder();
+                text = decoder.decode(record.data);
+                // Extraer código de URL si es verify
+                const match = text.match(/\/verify\/(.+)$/);
+                if (match) text = match[1];
+              } else {
+                const decoder = new TextDecoder();
+                text = decoder.decode(record.data);
+              }
+              
+              if (text) {
+                console.log('NFC Data from record:', text);
+                foundData = true;
+                processScannedData(text);
+                return;
+              }
+            } catch (e) {
+              console.error('Error decoding NFC record:', e);
+            }
           }
         }
+        
+        // Fallback: usar serialNumber como identificador
+        if (!foundData && serialNumber) {
+          console.log('Using NFC serialNumber:', serialNumber);
+          processScannedData(serialNumber);
+          return;
+        }
+        
         setScanError('Tag NFC no contiene datos válidos');
       });
 
-      ndef.addEventListener('readingerror', () => {
-        setScanError('Error leyendo el tag NFC');
+      ndef.addEventListener('readingerror', (err: any) => {
+        console.error('NFC read error:', err);
+        setScanError('Error leyendo el tag NFC. Acércalo nuevamente.');
         setNfcReading(false);
       });
 
     } catch (error: any) {
       console.error('NFC Error:', error);
-      if (error.name !== 'AbortError') {
-        setScanError('Error NFC: ' + (error.message || 'Permiso denegado'));
-      }
       setNfcReading(false);
+      
+      if (error.name === 'AbortError') {
+        // Ignorar - es un cierre normal
+        return;
+      }
+      
+      if (error.name === 'NotAllowedError') {
+        setScanError('Permiso NFC denegado. Habilítalo en configuración del navegador.');
+      } else if (error.name === 'NotSupportedError') {
+        setScanError('NFC no está habilitado en este dispositivo. Actívalo en Ajustes.');
+      } else if (error.name === 'SecurityError') {
+        setScanError('NFC requiere conexión HTTPS segura.');
+      } else {
+        setScanError('Error NFC: ' + (error.message || 'Error desconocido'));
+      }
     }
   };
 
