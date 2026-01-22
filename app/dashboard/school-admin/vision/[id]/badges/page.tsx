@@ -156,7 +156,7 @@ export default function BadgesPage() {
     setNfcError('');
   };
 
-  // FUNCIÓN EXACTA DE BadgePreview.tsx QUE SÍ FUNCIONA
+  // FUNCIÓN SIMPLIFICADA - SOLO WRITE DIRECTO
   const handleWriteNFC = async () => {
     setNfcDebug('1. Iniciando...');
     
@@ -174,109 +174,71 @@ export default function BadgesPage() {
     }
     setNfcDebug('3. Item: ' + currentItem.referralCode);
 
-    // Cancelar cualquier operación anterior
-    if (nfcAbortRef.current) {
-      nfcAbortRef.current.abort();
-      nfcAbortRef.current = null;
-    }
-
     setNfcStatus('writing');
     setNfcError('');
 
     try {
       setNfcDebug('4. Creando NDEFReader...');
       const ndef = new (window as any).NDEFReader();
-      const abortController = new AbortController();
-      nfcAbortRef.current = abortController;
       
-      setNfcDebug('5. Pidiendo permiso NFC...');
+      setNfcDebug('5. ACERCA LA TARJETA Y MANTENLA...');
       
-      // Pedir permiso explícitamente primero
-      try {
-        await (navigator as any).permissions.query({ name: 'nfc' });
-        setNfcDebug('5b. Permiso OK');
-      } catch (permErr) {
-        setNfcDebug('5b. Sin API permisos (normal)');
+      // Write DIRECTO - según la spec, write() debe esperar la tarjeta
+      // Usamos un AbortController con timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+        setNfcDebug('TIMEOUT 60s - Intenta de nuevo');
+        setNfcStatus('error');
+        setNfcError('Timeout - no se detectó tarjeta');
+      }, 60000);
+      
+      await ndef.write(
+        {
+          records: [
+            {
+              recordType: 'text',
+              data: `USER:${currentItem.referralCode}`
+            }
+          ]
+        },
+        { 
+          overwrite: true,
+          signal: controller.signal
+        }
+      );
+      
+      clearTimeout(timeoutId);
+      setNfcDebug('6. ESCRITO OK!');
+      
+      // Vibrar para indicar éxito
+      if (navigator.vibrate) {
+        navigator.vibrate([100, 50, 100]);
       }
       
-      setNfcDebug('6. Iniciando scan...');
+      // Marcar como exitoso
+      setNfcQueue(prev => prev.map((item, idx) => 
+        idx === currentNfcIndex ? { ...item, status: 'success' } : item
+      ));
       
-      // Timeout para detectar si onreading nunca se dispara
-      const timeoutId = setTimeout(() => {
-        setNfcDebug('TIMEOUT: 30s sin detectar tarjeta');
-      }, 30000);
+      setNfcStatus('success');
       
-      await ndef.scan({ signal: abortController.signal });
-      setNfcDebug('7. Scan OK - ACERCA TARJETA AHORA');
-      
-      // Escuchar cuando se detecta una tarjeta
-      ndef.onreading = async (event: any) => {
-        clearTimeout(timeoutId);
-        setNfcDebug('8. TARJETA DETECTADA! Serial: ' + (event?.serialNumber || 'N/A'));
-        
-        try {
-          setNfcDebug('9. Escribiendo...');
-          
-          await ndef.write({
-            records: [
-              {
-                recordType: 'text',
-                data: `USER:${currentItem.referralCode}`
-              }
-            ]
-          }, { overwrite: true });
-          
-          setNfcDebug('10. ESCRITO OK!');
-          
-          // Vibrar para indicar éxito
-          if (navigator.vibrate) {
-            navigator.vibrate([100, 50, 100]);
-          }
-          
-          // Detener el scan
-          abortController.abort();
-          nfcAbortRef.current = null;
-          
-          // Marcar como exitoso
-          setNfcQueue(prev => prev.map((item, idx) => 
-            idx === currentNfcIndex ? { ...item, status: 'success' } : item
-          ));
-          
-          setNfcStatus('success');
-          
-          // Pasar al siguiente después de un delay
-          setTimeout(() => {
-            const nextIndex = currentNfcIndex + 1;
-            if (nextIndex < nfcQueue.length) {
-              setCurrentNfcIndex(nextIndex);
-              setNfcStatus('idle');
-              setNfcError('');
-              setNfcDebug('');
-            } else {
-              setNfcStatus('idle');
-              setNfcDebug('COMPLETADO');
-            }
-          }, 1500);
-          
-        } catch (writeError: any) {
-          setNfcDebug('ERROR WRITE: ' + writeError.message);
-          abortController.abort();
-          nfcAbortRef.current = null;
-          setNfcError(writeError.message || 'Error al escribir');
-          setNfcStatus('error');
+      // Pasar al siguiente después de un delay
+      setTimeout(() => {
+        const nextIndex = currentNfcIndex + 1;
+        if (nextIndex < nfcQueue.length) {
+          setCurrentNfcIndex(nextIndex);
+          setNfcStatus('idle');
+          setNfcError('');
+          setNfcDebug('');
+        } else {
+          setNfcStatus('idle');
+          setNfcDebug('COMPLETADO');
         }
-      };
-      
-      ndef.onreadingerror = (event: any) => {
-        clearTimeout(timeoutId);
-        setNfcDebug('ERROR READING: ' + JSON.stringify(event));
-        setNfcError('Error al leer tarjeta');
-        setNfcStatus('error');
-      };
+      }, 1500);
 
     } catch (error: any) {
       setNfcDebug('ERROR: ' + error.name + ' - ' + error.message);
-      nfcAbortRef.current = null;
       setNfcError(error.message || 'Error de NFC');
       setNfcStatus('error');
     }
