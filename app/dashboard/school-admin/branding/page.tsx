@@ -261,7 +261,7 @@ export default function BrandingPage() {
             {/* Show Powered By */}
             <div className="flex items-center justify-between p-4 bg-slate-700/50 rounded-lg">
               <div>
-                <label className="text-white font-medium">Mostrar "Powered by Frutos"</label>
+                <label className="text-white font-medium">Mostrar "Powered by Appsync"</label>
                 <p className="text-slate-400 text-sm">Muestra el crédito a la plataforma</p>
               </div>
               <button
@@ -351,7 +351,7 @@ export default function BrandingPage() {
                 {/* Powered By */}
                 {branding.showPoweredBy && (
                   <p className="text-slate-500 text-xs mt-8">
-                    Powered by <span className="text-purple-400">Frutos</span>
+                    Powered by <span className="text-purple-400">Appsync</span>
                   </p>
                 )}
               </div>

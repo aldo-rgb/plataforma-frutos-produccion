@@ -19,6 +19,7 @@ import SquadManagerWidget from "@/components/dashboard/SquadManagerWidget";
 import { ElCruceAccessWidget } from "@/components/el-cruce";
 import VisionHistoryWidget from "@/components/widgets/VisionHistoryWidget";
 import GCPendingSurveyBanner from "@/components/dashboard/GCPendingSurveyBanner";
+import GCLegacyRewardBanner from "@/components/dashboard/GCLegacyRewardBanner";
 
 export default async function GameChangerDashboardPage() {
   // 1. Obtener sesión y datos frescos
@@ -273,6 +274,9 @@ export default async function GameChangerDashboardPage() {
 
       {/* BANNER DE ENCUESTAS PENDIENTES */}
       <GCPendingSurveyBanner />
+
+      {/* BANNER DE RECOMPENSA LEGACY + POST-ENTRENO */}
+      <GCLegacyRewardBanner />
 
       {/* ALERTA DE RE-AGENDAMIENTO */}
       <AlertaReagendamiento />

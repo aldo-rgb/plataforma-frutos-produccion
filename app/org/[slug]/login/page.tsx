@@ -236,7 +236,7 @@ export default function OrgLoginPage() {
               <p className="text-slate-500 text-xs">
                 Powered by{' '}
                 <a href="/" className="text-purple-400 hover:text-purple-300 transition-colors">
-                  Frutos
+                  AppSync
                 </a>
               </p>
             </div>

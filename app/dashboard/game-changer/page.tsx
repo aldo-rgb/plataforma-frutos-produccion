@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import VisionHistoryWidget from '@/components/widgets/VisionHistoryWidget';
+import GCLegacyRewardBanner from '@/components/dashboard/GCLegacyRewardBanner';
 
 interface Participante {
   id: number;
@@ -121,6 +122,9 @@ export default function GameChangerDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-cyan-950 to-slate-950 p-6">
       <div className="max-w-7xl mx-auto">
+        {/* Banner de Legacy Reward */}
+        <GCLegacyRewardBanner />
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">
