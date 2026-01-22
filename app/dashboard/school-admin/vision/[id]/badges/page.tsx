@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import NFCWriter from '@/components/check-in/NFCWriter';
 
 interface Participant {
   id: number;
@@ -53,6 +52,9 @@ export default function BadgesPage() {
   const [nfcMode, setNfcMode] = useState(false);
   const [nfcQueue, setNfcQueue] = useState<NFCWriteQueue[]>([]);
   const [currentNfcIndex, setCurrentNfcIndex] = useState(0);
+  const [nfcStatus, setNfcStatus] = useState<'idle' | 'writing' | 'success' | 'error'>('idle');
+  const [nfcError, setNfcError] = useState('');
+  const nfcAbortRef = useRef<AbortController | null>(null);
 
   // Check NFC Support
   useEffect(() => {
@@ -149,13 +151,124 @@ export default function BadgesPage() {
     setNfcQueue(queue);
     setCurrentNfcIndex(0);
     setNfcMode(true);
-    // El componente NFCWriter maneja todo automáticamente
+    setNfcStatus('idle');
+    setNfcError('');
+  };
+
+  // FUNCIÓN EXACTA DE BadgePreview.tsx QUE SÍ FUNCIONA
+  const handleWriteNFC = async () => {
+    if (!('NDEFReader' in window)) {
+      alert('Tu dispositivo no soporta NFC');
+      return;
+    }
+
+    const currentItem = nfcQueue[currentNfcIndex];
+    if (!currentItem) return;
+
+    // Cancelar cualquier operación anterior
+    if (nfcAbortRef.current) {
+      nfcAbortRef.current.abort();
+    }
+
+    setNfcStatus('writing');
+    setNfcError('');
+
+    try {
+      const ndef = new (window as any).NDEFReader();
+      const abortController = new AbortController();
+      nfcAbortRef.current = abortController;
+      
+      // IMPORTANTE: En Android, primero hacemos scan para activar el lector NFC
+      // y detectar cuando se acerca la tarjeta - CON AWAIT
+      await ndef.scan({ signal: abortController.signal });
+      
+      // Escuchar cuando se detecta una tarjeta
+      ndef.onreading = async (event: any) => {
+        try {
+          console.log('NFC Tag detected:', event?.serialNumber);
+          
+          // Tarjeta detectada, ahora escribimos con overwrite: true
+          await ndef.write({
+            records: [
+              {
+                recordType: 'text',
+                data: `USER:${currentItem.referralCode}`
+              }
+            ]
+          }, { overwrite: true });
+          
+          // Vibrar para indicar éxito
+          if (navigator.vibrate) {
+            navigator.vibrate([100, 50, 100]);
+          }
+          
+          // Detener el scan
+          abortController.abort();
+          nfcAbortRef.current = null;
+          
+          // Marcar como exitoso
+          setNfcQueue(prev => prev.map((item, idx) => 
+            idx === currentNfcIndex ? { ...item, status: 'success' } : item
+          ));
+          
+          setNfcStatus('success');
+          
+          // Pasar al siguiente después de un delay
+          setTimeout(() => {
+            const nextIndex = currentNfcIndex + 1;
+            if (nextIndex < nfcQueue.length) {
+              setCurrentNfcIndex(nextIndex);
+              setNfcStatus('idle');
+              setNfcError('');
+            } else {
+              // Todos grabados
+              setNfcStatus('idle');
+            }
+          }, 1500);
+          
+        } catch (writeError: any) {
+          console.error('Error writing NFC:', writeError);
+          abortController.abort();
+          nfcAbortRef.current = null;
+          
+          let errorMsg = 'Error al grabar';
+          if (writeError.name === 'NotSupportedError') {
+            errorMsg = 'Tarjeta no compatible. Usa NTAG 213/215/216';
+          } else if (writeError.name === 'NotAllowedError') {
+            errorMsg = 'Tarjeta protegida contra escritura';
+          } else if (writeError.message?.includes('NDEF')) {
+            errorMsg = 'Tarjeta no formateada para NDEF. Usa NTAG';
+          }
+          
+          setNfcError(errorMsg);
+          setNfcStatus('error');
+        }
+      };
+      
+      ndef.onreadingerror = (event: any) => {
+        console.error('NFC reading error:', event);
+        setNfcError('Error al leer tarjeta. Intenta con NTAG 213');
+        setNfcStatus('error');
+      };
+
+    } catch (error: any) {
+      console.error('Error initializing NFC:', error);
+      nfcAbortRef.current = null;
+      setNfcError(error.message || 'Error de NFC');
+      setNfcStatus('error');
+    }
   };
 
   const exitNfcMode = () => {
+    if (nfcAbortRef.current) {
+      nfcAbortRef.current.abort();
+      nfcAbortRef.current = null;
+    }
     setNfcMode(false);
     setNfcQueue([]);
     setCurrentNfcIndex(0);
+    setNfcStatus('idle');
+    setNfcError('');
   };
   // ========== END NFC FUNCTIONS ==========
 
@@ -442,34 +555,73 @@ export default function BadgesPage() {
                   <p className="text-xl font-bold text-green-300">¡Todos los gafetes han sido grabados!</p>
                 </div>
               ) : (
-                /* Usar el componente NFCWriter que SÍ FUNCIONA */
-                <NFCWriter
-                  userId={nfcQueue[currentNfcIndex]?.userId || 0}
-                  userName={nfcQueue[currentNfcIndex]?.nombre || ''}
-                  token={`USER:${nfcQueue[currentNfcIndex]?.referralCode || ''}`}
-                  onSuccess={() => {
-                    // Marcar como exitoso
-                    setNfcQueue(prev => prev.map((item, idx) => 
-                      idx === currentNfcIndex ? { ...item, status: 'success' } : item
-                    ));
-                    
-                    // Pasar al siguiente
-                    const nextIndex = currentNfcIndex + 1;
-                    if (nextIndex < nfcQueue.length) {
-                      setCurrentNfcIndex(nextIndex);
-                    }
-                  }}
-                  onCancel={() => {
-                    // Saltar al siguiente
-                    const nextIndex = currentNfcIndex + 1;
-                    if (nextIndex < nfcQueue.length) {
-                      setCurrentNfcIndex(nextIndex);
-                    } else {
-                      // Si era el último, cerrar
-                      exitNfcMode();
-                    }
-                  }}
-                />
+                /* UI de NFC - COPIA de BadgePreview que SÍ funciona */
+                <div className="p-6 rounded-xl mb-6 text-center bg-slate-700/50 border border-slate-600/50">
+                  {nfcStatus === 'idle' && (
+                    <>
+                      <div className="text-6xl mb-4">📲</div>
+                      <p className="text-xl font-bold text-cyan-300 mb-2">
+                        {nfcQueue[currentNfcIndex]?.nombre}
+                      </p>
+                      <p className="text-slate-400 text-sm mb-4 font-mono">
+                        {nfcQueue[currentNfcIndex]?.referralCode}
+                      </p>
+                      <button
+                        onClick={handleWriteNFC}
+                        className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-lg shadow-cyan-500/30"
+                      >
+                        📱 Grabar Gafete NFC
+                      </button>
+                    </>
+                  )}
+                  
+                  {nfcStatus === 'writing' && (
+                    <div className="animate-pulse">
+                      <div className="text-6xl mb-4">📡</div>
+                      <p className="text-xl font-bold text-amber-300">Acerca el gafete NFC...</p>
+                      <p className="text-slate-300 mt-2">Coloca la tarjeta en la parte trasera del dispositivo</p>
+                      <p className="text-slate-500 text-sm mt-2">Mantén la tarjeta quieta hasta que termine</p>
+                    </div>
+                  )}
+                  
+                  {nfcStatus === 'success' && (
+                    <>
+                      <div className="text-6xl mb-4">✅</div>
+                      <p className="text-xl font-bold text-green-300">¡Gafete grabado!</p>
+                      <p className="text-amber-400 font-medium mt-2">⚠️ RETIRA LA TARJETA</p>
+                      <p className="text-slate-400 text-sm mt-2">Continuando al siguiente...</p>
+                    </>
+                  )}
+                  
+                  {nfcStatus === 'error' && (
+                    <>
+                      <div className="text-6xl mb-4">❌</div>
+                      <p className="text-xl font-bold text-red-300">Error</p>
+                      <p className="text-slate-400 mt-2">{nfcError}</p>
+                      <div className="flex gap-3 justify-center mt-4">
+                        <button
+                          onClick={handleWriteNFC}
+                          className="px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-medium transition-all"
+                        >
+                          🔄 Reintentar
+                        </button>
+                        <button
+                          onClick={() => {
+                            const nextIndex = currentNfcIndex + 1;
+                            if (nextIndex < nfcQueue.length) {
+                              setCurrentNfcIndex(nextIndex);
+                              setNfcStatus('idle');
+                              setNfcError('');
+                            }
+                          }}
+                          className="px-6 py-3 bg-slate-600 hover:bg-slate-500 text-white rounded-lg font-medium transition-all"
+                        >
+                          ⏭️ Saltar
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               )}
 
               {/* Queue List */}
