@@ -197,16 +197,16 @@ export async function GET(
       });
     }
 
-    // Filtrar participantes que ya están en staff
+    // Filtrar participantes que ya están en staff (GC o Trainer)
     const staffIds = new Set(staffList.map(s => s.Usuario.id));
     const filteredEnrollments = formattedEnrollments.filter(e => !staffIds.has(e.Usuario.id));
 
-    // Combinar: Staff primero, luego participantes
-    const allEnrollments = [...staffList, ...filteredEnrollments];
-
+    // Solo participantes en la lista principal (sin staff)
+    // Staff se devuelve aparte para gafetes
     return NextResponse.json({
       success: true,
-      enrollments: allEnrollments
+      enrollments: filteredEnrollments,
+      staff: staffList // Para gafetes
     });
 
   } catch (error) {

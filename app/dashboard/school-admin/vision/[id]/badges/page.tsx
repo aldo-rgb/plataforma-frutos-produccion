@@ -63,7 +63,10 @@ export default function BadgesPage() {
       const enrollRes = await fetch(endpoint);
       if (enrollRes.ok) {
         const enrollData = await enrollRes.json();
-        setParticipants(enrollData.enrollments || []);
+        // Combinar staff (GC + Trainer) con participantes para gafetes
+        const staff = enrollData.staff || [];
+        const enrollments = enrollData.enrollments || [];
+        setParticipants([...staff, ...enrollments]);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
