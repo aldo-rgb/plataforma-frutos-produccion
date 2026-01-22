@@ -48,15 +48,20 @@ export default function BadgesPage() {
 
   // NFC States
   const [nfcSupported, setNfcSupported] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
   const [nfcMode, setNfcMode] = useState(false);
   const [nfcQueue, setNfcQueue] = useState<NFCWriteQueue[]>([]);
   const [currentNfcIndex, setCurrentNfcIndex] = useState(0);
   const [nfcStatus, setNfcStatus] = useState<'idle' | 'waiting' | 'writing' | 'success' | 'error'>('idle');
   const [nfcMessage, setNfcMessage] = useState('');
+  const [abortControllerRef, setAbortControllerRef] = useState<AbortController | null>(null);
 
   // Check NFC Support
   useEffect(() => {
-    if ('NDEFReader' in window) {
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    setIsIOS(ios);
+    
+    if (!ios && 'NDEFReader' in window) {
       setNfcSupported(true);
     }
   }, []);
@@ -99,6 +104,32 @@ export default function BadgesPage() {
   };
 
   // ========== NFC FUNCTIONS ==========
+  const playSuccessSound = () => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      
+      notes.forEach((freq, i) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(freq, audioContext.currentTime + i * 0.1);
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime + i * 0.1);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i * 0.1 + 0.15);
+        
+        oscillator.start(audioContext.currentTime + i * 0.1);
+        oscillator.stop(audioContext.currentTime + i * 0.1 + 0.15);
+      });
+    } catch (e) {
+      console.log('Could not play sound');
+    }
+  };
+
   const startNfcWriteMode = () => {
     const idsToWrite = Array.from(selectedIds);
     if (idsToWrite.length === 0) {
@@ -121,79 +152,137 @@ export default function BadgesPage() {
     setCurrentNfcIndex(0);
     setNfcMode(true);
     setNfcStatus('waiting');
-    setNfcMessage(`Acerca el gafete NFC de: ${queue[0].nombre}`);
+    setNfcMessage(`📱 Acerca el gafete NFC de: ${queue[0].nombre}`);
+    
+    // Start NFC listening for first badge
+    startNfcListening(queue[0], 0);
   };
 
-  const writeNfcTag = useCallback(async () => {
-    if (!nfcSupported || currentNfcIndex >= nfcQueue.length) return;
+  const startNfcListening = async (currentItem: NFCWriteQueue, index: number) => {
+    if (!nfcSupported) return;
 
-    const currentItem = nfcQueue[currentNfcIndex];
-    
     try {
-      setNfcStatus('waiting');
-      setNfcMessage(`Acerca el gafete NFC de: ${currentItem.nombre}`);
+      // Cancel any previous NFC operation
+      if (abortControllerRef) {
+        abortControllerRef.abort();
+      }
+
+      const abortController = new AbortController();
+      setAbortControllerRef(abortController);
 
       // @ts-ignore - NDEFReader is not in TypeScript types yet
-      const ndef = new NDEFReader();
-      await ndef.write({
-        records: [
-          {
-            recordType: "url",
-            data: `https://frutos.app/u/${currentItem.referralCode}`
-          },
-          {
-            recordType: "text",
-            data: JSON.stringify({
-              type: 'frutos-badge',
-              userId: currentItem.userId,
-              code: currentItem.referralCode,
-              name: currentItem.nombre,
-              level: level,
-              visionId: visionId,
-              timestamp: new Date().toISOString()
-            })
+      const ndef = new (window as any).NDEFReader();
+      
+      // Start scanning to activate NFC and wait for card
+      await ndef.scan({ signal: abortController.signal });
+      
+      setNfcMessage(`📱 Acerca el gafete NFC de: ${currentItem.nombre}`);
+      
+      // When a card is detected
+      ndef.onreading = async () => {
+        // Card detected - now write to it
+        setNfcStatus('writing');
+        setNfcMessage(`✏️ Escribiendo gafete de: ${currentItem.nombre}...`);
+        
+        try {
+          await ndef.write({
+            records: [
+              {
+                recordType: "url",
+                data: `https://frutos.app/u/${currentItem.referralCode}`
+              },
+              {
+                recordType: "text",
+                data: JSON.stringify({
+                  type: 'frutos-badge',
+                  userId: currentItem.userId,
+                  code: currentItem.referralCode,
+                  name: currentItem.nombre,
+                  level: level,
+                  visionId: visionId,
+                  timestamp: new Date().toISOString()
+                })
+              }
+            ]
+          });
+
+          // Vibrate on success
+          if (navigator.vibrate) {
+            navigator.vibrate([100, 50, 100, 50, 100]);
           }
-        ]
-      });
+          playSuccessSound();
 
-      // Update queue status
-      setNfcQueue(prev => prev.map((item, idx) => 
-        idx === currentNfcIndex ? { ...item, status: 'success' } : item
-      ));
+          // Update queue status
+          setNfcQueue(prev => prev.map((item, idx) => 
+            idx === index ? { ...item, status: 'success' } : item
+          ));
 
-      setNfcStatus('success');
-      setNfcMessage(`✅ Gafete grabado: ${currentItem.nombre}`);
+          setNfcStatus('success');
+          setNfcMessage(`✅ ¡Gafete grabado! ${currentItem.nombre}`);
 
-      // Move to next after short delay
-      setTimeout(() => {
-        if (currentNfcIndex + 1 < nfcQueue.length) {
-          setCurrentNfcIndex(prev => prev + 1);
-          setNfcStatus('waiting');
-          setNfcMessage(`Acerca el gafete NFC de: ${nfcQueue[currentNfcIndex + 1].nombre}`);
-        } else {
-          setNfcStatus('idle');
-          setNfcMessage('🎉 ¡Todos los gafetes han sido grabados!');
+          // Abort current scan
+          abortController.abort();
+
+          // Move to next after short delay
+          setTimeout(() => {
+            const nextIndex = index + 1;
+            if (nextIndex < nfcQueue.length) {
+              setCurrentNfcIndex(nextIndex);
+              setNfcStatus('waiting');
+              // Start listening for next badge
+              startNfcListening(nfcQueue[nextIndex], nextIndex);
+            } else {
+              setNfcStatus('idle');
+              setNfcMessage('🎉 ¡Todos los gafetes han sido grabados!');
+              setAbortControllerRef(null);
+            }
+          }, 1500);
+
+        } catch (writeError: any) {
+          console.error('NFC Write Error:', writeError);
+          if (navigator.vibrate) {
+            navigator.vibrate([300, 100, 300]);
+          }
+          setNfcQueue(prev => prev.map((item, idx) => 
+            idx === index ? { ...item, status: 'error', error: writeError.message } : item
+          ));
+          setNfcStatus('error');
+          setNfcMessage(`❌ Error al escribir: ${writeError.message}`);
         }
-      }, 1500);
+      };
+
+      ndef.onreadingerror = () => {
+        setNfcStatus('error');
+        setNfcMessage('❌ Error al leer la tarjeta. Intenta acercarla de nuevo.');
+      };
 
     } catch (error: any) {
-      console.error('NFC Write Error:', error);
-      setNfcQueue(prev => prev.map((item, idx) => 
-        idx === currentNfcIndex ? { ...item, status: 'error', error: error.message } : item
-      ));
-      setNfcStatus('error');
-      setNfcMessage(`❌ Error: ${error.message}. Intenta de nuevo.`);
-    }
-  }, [currentNfcIndex, nfcQueue, nfcSupported, level, visionId]);
+      console.error('NFC Error:', error);
+      
+      let errorMsg = 'Error al iniciar NFC';
+      if (error.name === 'NotAllowedError') {
+        errorMsg = 'Permiso denegado. Permite el acceso NFC en tu navegador.';
+      } else if (error.name === 'NotSupportedError') {
+        errorMsg = 'NFC no soportado en este dispositivo.';
+      } else if (error.name === 'AbortError') {
+        // Ignore abort errors - they're expected when we cancel
+        return;
+      }
 
-  // Auto-start NFC write when in NFC mode and waiting
-  useEffect(() => {
-    if (nfcMode && nfcStatus === 'waiting' && nfcSupported) {
-      writeNfcTag();
+      if (navigator.vibrate) {
+        navigator.vibrate([300, 100, 300]);
+      }
+      setNfcStatus('error');
+      setNfcMessage(`❌ ${errorMsg}`);
     }
-  }, [nfcMode, nfcStatus, nfcSupported, writeNfcTag]);
+  };
 
   const exitNfcMode = () => {
+    // Abort any ongoing NFC operation
+    if (abortControllerRef) {
+      abortControllerRef.abort();
+      setAbortControllerRef(null);
+    }
     setNfcMode(false);
     setNfcQueue([]);
     setCurrentNfcIndex(0);
@@ -202,17 +291,27 @@ export default function BadgesPage() {
   };
 
   const retryCurrentNfc = () => {
-    setNfcStatus('waiting');
-    writeNfcTag();
+    if (currentNfcIndex < nfcQueue.length) {
+      setNfcStatus('waiting');
+      startNfcListening(nfcQueue[currentNfcIndex], currentNfcIndex);
+    }
   };
 
   const skipCurrentNfc = () => {
-    if (currentNfcIndex + 1 < nfcQueue.length) {
-      setCurrentNfcIndex(prev => prev + 1);
+    // Abort current scan
+    if (abortControllerRef) {
+      abortControllerRef.abort();
+    }
+    
+    const nextIndex = currentNfcIndex + 1;
+    if (nextIndex < nfcQueue.length) {
+      setCurrentNfcIndex(nextIndex);
       setNfcStatus('waiting');
+      startNfcListening(nfcQueue[nextIndex], nextIndex);
     } else {
       setNfcStatus('idle');
       setNfcMessage('🎉 Proceso completado');
+      setAbortControllerRef(null);
     }
   };
   // ========== END NFC FUNCTIONS ==========
@@ -597,7 +696,11 @@ export default function BadgesPage() {
             <span className="text-2xl">⚠️</span>
             <div>
               <p className="font-medium text-yellow-300">NFC no disponible</p>
-              <p className="text-sm text-slate-400">Tu navegador no soporta Web NFC. Usa Chrome en Android para grabar gafetes NFC.</p>
+              <p className="text-sm text-slate-400">
+                {isIOS 
+                  ? 'iOS no permite escribir NFC desde el navegador. Usa un dispositivo Android con Chrome para grabar gafetes NFC.'
+                  : 'Tu navegador no soporta Web NFC. Usa Chrome en Android para grabar gafetes NFC.'}
+              </p>
             </div>
           </div>
         )}
