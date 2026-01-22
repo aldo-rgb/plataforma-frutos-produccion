@@ -158,13 +158,13 @@ export async function POST(request: Request) {
 
       createdSlots.push(slot);
 
-      // Crear AdminTask para el PARTICIPANTE (tipo TASK, sin evidencia, solo marcar completado)
+      // Crear AdminTask para el PARTICIPANTE (tipo EVENT para llamadas programadas)
       const participantTaskTitle = `📞 Llamada con tu Game Changer (Día ${call.dayOffset})`;
       const participantTaskDescription = `Llamada de seguimiento post-entrenamiento programada para las ${formatTime(call.time)}. Tu Game Changer te contactará para revisar tu progreso y apoyarte en tu transformación.`;
 
       const participantTask = await prisma.adminTask.create({
         data: {
-          type: 'TASK',
+          type: 'EVENT',
           titulo: participantTaskTitle,
           descripcion: participantTaskDescription,
           pointsReward: 50,
@@ -187,13 +187,13 @@ export async function POST(request: Request) {
         }
       });
 
-      // Crear AdminTask para el GAME CHANGER (tipo TASK, sin evidencia, solo marcar completado)
+      // Crear AdminTask para el GAME CHANGER (tipo EVENT para llamadas programadas)
       const gcTaskTitle = `📞 Llamada con ${participantName} (Día ${call.dayOffset})`;
       const gcTaskDescription = `Llamada de seguimiento post-entrenamiento con tu participante ${participantName} programada para las ${formatTime(call.time)}. Revisa su progreso y brinda apoyo en su transformación.`;
 
       const gcTask = await prisma.adminTask.create({
         data: {
-          type: 'TASK',
+          type: 'EVENT',
           titulo: gcTaskTitle,
           descripcion: gcTaskDescription,
           pointsReward: 0, // El GC no recibe puntos por esto

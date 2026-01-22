@@ -35,7 +35,7 @@ export async function GET(request: Request) {
       where: {
         organizationId: director.organizationId,
         rol: {
-          in: ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER']
+          in: ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER', 'SCHOOL_ADMIN']
         }
       },
       select: {
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
     }
 
     // Validar que el rol sea un tipo de coordinador válido
-    const validCoordinatorRoles = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER'];
+    const validCoordinatorRoles = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER', 'SCHOOL_ADMIN'];
     if (!validCoordinatorRoles.includes(rol)) {
       return NextResponse.json(
         { error: 'Tipo de coordinador inválido' },

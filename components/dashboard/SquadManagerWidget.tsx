@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { 
   Users, 
   Calendar, 
@@ -185,9 +186,21 @@ export default function SquadManagerWidget() {
     setTimeout(() => setShowToast(false), 3000);
   };
 
+  // Detectar parámetro de URL para abrir modal de Post-Entreno
+  const searchParams = useSearchParams();
+  
   useEffect(() => {
     loadData();
   }, []);
+
+  // Efecto para abrir modal de Post-Entreno si viene en URL
+  useEffect(() => {
+    if (searchParams.get('openPostEntreno') === 'true' && squads.length > 0 && !loading) {
+      setShowPostEntrenoModal(true);
+      // Limpiar el parámetro de la URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [searchParams, squads, loading]);
 
   const loadData = async () => {
     try {

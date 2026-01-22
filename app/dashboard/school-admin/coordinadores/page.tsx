@@ -33,7 +33,8 @@ const getRolLabel = (rol: string) => {
     'COORDINADOR': { text: 'Liderato', emoji: '🎯', color: 'from-purple-500 to-pink-500' },
     'COORDINATOR_BASIC': { text: 'Básico', emoji: '📋', color: 'from-blue-500 to-cyan-500' },
     'COORDINATOR_ADVANCED': { text: 'Avanzado', emoji: '🎪', color: 'from-green-500 to-emerald-500' },
-    'TRAINER': { text: 'Trainer', emoji: '🚀', color: 'from-orange-500 to-yellow-500' }
+    'TRAINER': { text: 'Trainer', emoji: '🚀', color: 'from-orange-500 to-yellow-500' },
+    'SCHOOL_ADMIN': { text: 'Admin Escuela', emoji: '🏫', color: 'from-amber-500 to-red-500' }
   };
   return labels[rol] || { text: rol, emoji: '👤', color: 'from-slate-500 to-slate-600' };
 };
@@ -52,7 +53,7 @@ export default function CoordinadoresPage() {
     nombre: '',
     email: '',
     password: '',
-    rol: 'COORDINADOR' as 'COORDINADOR' | 'COORDINATOR_BASIC' | 'COORDINATOR_ADVANCED' | 'TRAINER'
+    rol: 'COORDINADOR' as 'COORDINADOR' | 'COORDINATOR_BASIC' | 'COORDINATOR_ADVANCED' | 'TRAINER' | 'SCHOOL_ADMIN'
   });
   const [notification, setNotification] = useState<{
     show: boolean;
@@ -481,12 +482,14 @@ export default function CoordinadoresPage() {
                   <option value="COORDINATOR_BASIC">Coordinador Básico (Discovery)</option>
                   <option value="COORDINATOR_ADVANCED">Coordinador Avanzado (Breakthrough)</option>
                   <option value="TRAINER">Trainer (Quantum Leap)</option>
+                  <option value="SCHOOL_ADMIN">Administrador de Escuela</option>
                 </select>
                 <p className="mt-2 text-xs text-slate-500">
                   {formCoordinador.rol === 'COORDINADOR' && '🎯 Tu Vida - Acceso completo a todas las funciones'}
                   {formCoordinador.rol === 'COORDINATOR_BASIC' && '📋 Logística, Pagos y Asistencia'}
                   {formCoordinador.rol === 'COORDINATOR_ADVANCED' && '🎪 Dinámicas y Staff'}
                   {formCoordinador.rol === 'TRAINER' && '🚀 Mentores, Cartas y Gamificación'}
+                  {formCoordinador.rol === 'SCHOOL_ADMIN' && '🏫 Acceso total - Gestión de escuela, licencias y configuración'}
                 </p>
               </div>
 

@@ -250,7 +250,7 @@ export default function GCLegacyRewardBanner() {
                       </Link>
                     )}
                     {reward.postEntrenoProgress < 100 && (
-                      <Link href="/dashboard/game-changer/squads">
+                      <Link href="/dashboard/game-changer/squads?openPostEntreno=true">
                         <motion.button
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
