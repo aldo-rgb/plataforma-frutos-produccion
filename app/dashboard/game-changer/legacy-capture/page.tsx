@@ -29,12 +29,18 @@ interface Participante {
   telefono: string | null;
   captureStatus: 'PENDING' | 'PARTIAL' | 'COMPLETE' | null;
   captureId: number | null;
+  // Campos BÁSICO
   hasPhotoWithGC: boolean;
   hasPhotoWithSquad: boolean;
   hasPhotoBlueWall: boolean;
+  // Campos AVANZADO
   hasLullaby: boolean;
   hasContract: boolean;
   hasDeclaration: boolean;
+  // Campos PL
+  hasPlLullaby: boolean;
+  hasPhotoSalon: boolean;
+  hasPhotoManta: boolean;
 }
 
 interface Vision {
@@ -66,14 +72,20 @@ interface CaptureForm {
   participantId: number;
   participantName: string;
   trainingLevel: 'BASIC' | 'ADVANCED' | 'PL';
-  // Campos
+  // Campos BÁSICO
   photoWithGCUrl: string;
   photoWithSquadUrl: string;
   photoBlueWallUrl: string;
+  // Campos AVANZADO
   lullabyTitle: string;
   lullabyArtist: string;
   contractPhotoUrl: string;
   contractDeclaration: string;
+  // Campos PL
+  plLullabyTitle: string;
+  plLullabyArtist: string;
+  photoSalonUrl: string;
+  photoMantaUrl: string;
 }
 
 export default function LegacyCapturePage() {
@@ -87,6 +99,18 @@ export default function LegacyCapturePage() {
   const [captureForm, setCaptureForm] = useState<CaptureForm | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
+  
+  // Toast notification state
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type: 'success' | 'error';
+  }>({ show: false, message: '', type: 'success' });
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
+  };
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -142,17 +166,19 @@ export default function LegacyCapturePage() {
 
       const result = await res.json();
 
-      if (res.ok) {
+      if (res.ok && result.photoUrl) {
         setCaptureForm({
           ...captureForm,
           [field]: result.photoUrl,
         });
+        showToast('Imagen subida correctamente', 'success');
       } else {
-        alert(result.error || 'Error al subir imagen');
+        console.error('Upload error:', result);
+        showToast(result.error || result.details || 'Error al subir imagen', 'error');
       }
     } catch (error) {
       console.error('Error uploading:', error);
-      alert('Error al subir la imagen');
+      showToast('Error al subir la imagen', 'error');
     } finally {
       setUploading(null);
     }
@@ -164,13 +190,20 @@ export default function LegacyCapturePage() {
       participantId: participante.id,
       participantName: participante.nombreCompleto,
       trainingLevel: vision.trainingLevel,
+      // Campos BÁSICO
       photoWithGCUrl: '',
       photoWithSquadUrl: '',
       photoBlueWallUrl: '',
+      // Campos AVANZADO
       lullabyTitle: '',
       lullabyArtist: '',
       contractPhotoUrl: '',
       contractDeclaration: '',
+      // Campos PL
+      plLullabyTitle: '',
+      plLullabyArtist: '',
+      photoSalonUrl: '',
+      photoMantaUrl: '',
     });
     setShowCaptureModal(true);
   };
@@ -192,13 +225,13 @@ export default function LegacyCapturePage() {
         setShowCaptureModal(false);
         setCaptureForm(null);
         fetchLegacyData(); // Refresh
-        alert(result.message);
+        showToast('✨ ' + result.message, 'success');
       } else {
-        alert(result.error || 'Error al guardar');
+        showToast(result.error || 'Error al guardar', 'error');
       }
     } catch (error) {
       console.error('Error saving:', error);
-      alert('Error al guardar la captura');
+      showToast('Error al guardar la captura', 'error');
     } finally {
       setSaving(false);
     }
@@ -236,6 +269,30 @@ export default function LegacyCapturePage() {
 
   return (
     <div className="min-h-screen bg-black">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed top-4 right-4 z-[100] animate-in slide-in-from-top-2 fade-in duration-300">
+          <div className={`flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl border ${
+            toast.type === 'success' 
+              ? 'bg-gradient-to-r from-green-600 to-emerald-600 border-green-400/30 text-white' 
+              : 'bg-gradient-to-r from-red-600 to-rose-600 border-red-400/30 text-white'
+          }`}>
+            {toast.type === 'success' ? (
+              <CheckCircle className="w-6 h-6 flex-shrink-0" />
+            ) : (
+              <AlertCircle className="w-6 h-6 flex-shrink-0" />
+            )}
+            <span className="font-medium text-sm">{toast.message}</span>
+            <button 
+              onClick={() => setToast({ ...toast, show: false })}
+              className="ml-2 p-1 hover:bg-white/20 rounded-full transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+      
     <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-6 text-white">
@@ -479,6 +536,13 @@ export default function LegacyCapturePage() {
                 <p className="text-sm text-gray-400">
                   {captureForm.participantName}
                 </p>
+                <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${
+                  captureForm.trainingLevel === 'BASIC' ? 'bg-blue-500/20 text-blue-300' :
+                  captureForm.trainingLevel === 'ADVANCED' ? 'bg-purple-500/20 text-purple-300' :
+                  'bg-yellow-500/20 text-yellow-300'
+                }`}>
+                  {captureForm.trainingLevel}
+                </span>
               </div>
               <button
                 onClick={() => setShowCaptureModal(false)}
@@ -489,200 +553,169 @@ export default function LegacyCapturePage() {
             </div>
 
             <div className="p-4 space-y-6">
-              {/* Foto con GC */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  📸 Foto con el GC
-                </label>
-                <div className="flex items-center gap-4">
-                  {captureForm.photoWithGCUrl ? (
-                    <img
-                      src={captureForm.photoWithGCUrl}
-                      alt="Con GC"
-                      className="w-24 h-24 object-cover rounded-lg"
-                    />
-                  ) : (
-                    <div className="w-24 h-24 bg-gray-800 rounded-lg flex items-center justify-center">
-                      <Camera className="w-8 h-8 text-gray-600" />
-                    </div>
-                  )}
-                  <label className="flex-1">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileUpload(e, 'photoWithGCUrl')}
-                      className="hidden"
-                    />
-                    <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-purple-500 hover:bg-purple-900/20 transition-colors">
-                      {uploading === 'photoWithGCUrl' ? (
-                        <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
-                      ) : (
-                        <Upload className="w-5 h-5 text-gray-500" />
-                      )}
-                      <span className="text-sm text-gray-400">
-                        {captureForm.photoWithGCUrl ? 'Cambiar' : 'Subir foto'}
-                      </span>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              {/* Foto con Squad */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  👥 Foto con el Squad
-                </label>
-                <div className="flex items-center gap-4">
-                  {captureForm.photoWithSquadUrl ? (
-                    <img
-                      src={captureForm.photoWithSquadUrl}
-                      alt="Con Squad"
-                      className="w-24 h-24 object-cover rounded-lg"
-                    />
-                  ) : (
-                    <div className="w-24 h-24 bg-gray-800 rounded-lg flex items-center justify-center">
-                      <Users className="w-8 h-8 text-gray-600" />
-                    </div>
-                  )}
-                  <label className="flex-1">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileUpload(e, 'photoWithSquadUrl')}
-                      className="hidden"
-                    />
-                    <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-purple-500 hover:bg-purple-900/20 transition-colors">
-                      {uploading === 'photoWithSquadUrl' ? (
-                        <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
-                      ) : (
-                        <Upload className="w-5 h-5 text-gray-500" />
-                      )}
-                      <span className="text-sm text-gray-400">
-                        {captureForm.photoWithSquadUrl ? 'Cambiar' : 'Subir foto'}
-                      </span>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              {/* Foto Pared Azul */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  🟦 Foto en la Pared Azul
-                </label>
-                <div className="flex items-center gap-4">
-                  {captureForm.photoBlueWallUrl ? (
-                    <img
-                      src={captureForm.photoBlueWallUrl}
-                      alt="Pared Azul"
-                      className="w-24 h-24 object-cover rounded-lg"
-                    />
-                  ) : (
-                    <div className="w-24 h-24 bg-blue-900/50 rounded-lg flex items-center justify-center">
-                      <div className="w-8 h-8 bg-blue-500 rounded" />
-                    </div>
-                  )}
-                  <label className="flex-1">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleFileUpload(e, 'photoBlueWallUrl')}
-                      className="hidden"
-                    />
-                    <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-purple-500 hover:bg-purple-900/20 transition-colors">
-                      {uploading === 'photoBlueWallUrl' ? (
-                        <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
-                      ) : (
-                        <Upload className="w-5 h-5 text-gray-500" />
-                      )}
-                      <span className="text-sm text-gray-400">
-                        {captureForm.photoBlueWallUrl ? 'Cambiar' : 'Subir foto'}
-                      </span>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              {/* Campos adicionales para ADVANCED/PL */}
-              {captureForm.trainingLevel !== 'BASIC' && (
+              
+              {/* ========== CAMPOS BÁSICO (3 fotos) ========== */}
+              {captureForm.trainingLevel === 'BASIC' && (
                 <>
-                  <hr className="my-4 border-gray-800" />
-                  <div className="bg-purple-900/30 border border-purple-800 rounded-xl p-4 mb-4">
-                    <div className="flex items-center gap-2 text-purple-400 mb-2">
-                      <Sparkles className="w-5 h-5" />
-                      <span className="font-medium">Contenido Avanzado</span>
+                  <div className="bg-blue-900/20 border border-blue-800/50 rounded-xl p-4 mb-4">
+                    <div className="flex items-center gap-2 text-blue-400 mb-2">
+                      <Camera className="w-5 h-5" />
+                      <span className="font-medium">Entrenamiento Básico</span>
                     </div>
-                    <p className="text-sm text-purple-300">
-                      Estos campos son exclusivos para entrenamientos avanzados
+                    <p className="text-sm text-blue-300/80">
+                      Captura las 3 fotos requeridas para este nivel
                     </p>
                   </div>
 
+                  {/* Foto con GC */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-300">📸 Foto con el GC</label>
+                    <div className="flex items-center gap-4">
+                      {captureForm.photoWithGCUrl ? (
+                        <img src={captureForm.photoWithGCUrl} alt="Con GC" className="w-24 h-24 object-cover rounded-lg"/>
+                      ) : (
+                        <div className="w-24 h-24 bg-gray-800 rounded-lg flex items-center justify-center">
+                          <Camera className="w-8 h-8 text-gray-600" />
+                        </div>
+                      )}
+                      <label className="flex-1">
+                        <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'photoWithGCUrl')} className="hidden"/>
+                        <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-900/20 transition-colors">
+                          {uploading === 'photoWithGCUrl' ? <Loader2 className="w-5 h-5 animate-spin text-blue-500" /> : <Upload className="w-5 h-5 text-gray-500" />}
+                          <span className="text-sm text-gray-400">{captureForm.photoWithGCUrl ? 'Cambiar' : 'Subir foto'}</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Foto con Squad */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-300">👥 Foto con el Squad</label>
+                    <div className="flex items-center gap-4">
+                      {captureForm.photoWithSquadUrl ? (
+                        <img src={captureForm.photoWithSquadUrl} alt="Con Squad" className="w-24 h-24 object-cover rounded-lg"/>
+                      ) : (
+                        <div className="w-24 h-24 bg-gray-800 rounded-lg flex items-center justify-center">
+                          <Users className="w-8 h-8 text-gray-600" />
+                        </div>
+                      )}
+                      <label className="flex-1">
+                        <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'photoWithSquadUrl')} className="hidden"/>
+                        <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-900/20 transition-colors">
+                          {uploading === 'photoWithSquadUrl' ? <Loader2 className="w-5 h-5 animate-spin text-blue-500" /> : <Upload className="w-5 h-5 text-gray-500" />}
+                          <span className="text-sm text-gray-400">{captureForm.photoWithSquadUrl ? 'Cambiar' : 'Subir foto'}</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Foto Pared Azul */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-300">🔵 Foto en la Pared Azul</label>
+                    <div className="flex items-center gap-4">
+                      {captureForm.photoBlueWallUrl ? (
+                        <img src={captureForm.photoBlueWallUrl} alt="Pared Azul" className="w-24 h-24 object-cover rounded-lg"/>
+                      ) : (
+                        <div className="w-24 h-24 bg-blue-900/50 rounded-lg flex items-center justify-center">
+                          <div className="w-8 h-8 bg-blue-500 rounded" />
+                        </div>
+                      )}
+                      <label className="flex-1">
+                        <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'photoBlueWallUrl')} className="hidden"/>
+                        <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-900/20 transition-colors">
+                          {uploading === 'photoBlueWallUrl' ? <Loader2 className="w-5 h-5 animate-spin text-blue-500" /> : <Upload className="w-5 h-5 text-gray-500" />}
+                          <span className="text-sm text-gray-400">{captureForm.photoBlueWallUrl ? 'Cambiar' : 'Subir foto'}</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* ========== CAMPOS AVANZADO (fotos + canción + contrato) ========== */}
+              {captureForm.trainingLevel === 'ADVANCED' && (
+                <>
+                  <div className="bg-purple-900/20 border border-purple-800/50 rounded-xl p-4 mb-4">
+                    <div className="flex items-center gap-2 text-purple-400 mb-2">
+                      <Sparkles className="w-5 h-5" />
+                      <span className="font-medium">Entrenamiento Avanzado</span>
+                    </div>
+                    <p className="text-sm text-purple-300/80">
+                      Fotos + Canción de Cuna + Contrato + Declaración
+                    </p>
+                  </div>
+
+                  {/* Foto con GC */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-300">📸 Foto con el GC</label>
+                    <div className="flex items-center gap-4">
+                      {captureForm.photoWithGCUrl ? (
+                        <img src={captureForm.photoWithGCUrl} alt="Con GC" className="w-24 h-24 object-cover rounded-lg"/>
+                      ) : (
+                        <div className="w-24 h-24 bg-gray-800 rounded-lg flex items-center justify-center">
+                          <Camera className="w-8 h-8 text-gray-600" />
+                        </div>
+                      )}
+                      <label className="flex-1">
+                        <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'photoWithGCUrl')} className="hidden"/>
+                        <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-purple-500 hover:bg-purple-900/20 transition-colors">
+                          {uploading === 'photoWithGCUrl' ? <Loader2 className="w-5 h-5 animate-spin text-purple-500" /> : <Upload className="w-5 h-5 text-gray-500" />}
+                          <span className="text-sm text-gray-400">{captureForm.photoWithGCUrl ? 'Cambiar' : 'Subir foto'}</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Foto con Squad */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-300">👥 Foto con el Squad</label>
+                    <div className="flex items-center gap-4">
+                      {captureForm.photoWithSquadUrl ? (
+                        <img src={captureForm.photoWithSquadUrl} alt="Con Squad" className="w-24 h-24 object-cover rounded-lg"/>
+                      ) : (
+                        <div className="w-24 h-24 bg-gray-800 rounded-lg flex items-center justify-center">
+                          <Users className="w-8 h-8 text-gray-600" />
+                        </div>
+                      )}
+                      <label className="flex-1">
+                        <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'photoWithSquadUrl')} className="hidden"/>
+                        <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-purple-500 hover:bg-purple-900/20 transition-colors">
+                          {uploading === 'photoWithSquadUrl' ? <Loader2 className="w-5 h-5 animate-spin text-purple-500" /> : <Upload className="w-5 h-5 text-gray-500" />}
+                          <span className="text-sm text-gray-400">{captureForm.photoWithSquadUrl ? 'Cambiar' : 'Subir foto'}</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
                   {/* Canción de Cuna */}
-                  <div className="space-y-4">
-                    <label className="block text-sm font-medium text-gray-300">
-                      🎵 Canción de Cuna
-                    </label>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-300">🎵 Canción de Cuna</label>
                     <div className="grid grid-cols-2 gap-4">
-                      <input
-                        type="text"
-                        placeholder="Título de la canción"
-                        value={captureForm.lullabyTitle}
-                        onChange={(e) =>
-                          setCaptureForm({
-                            ...captureForm,
-                            lullabyTitle: e.target.value,
-                          })
-                        }
-                        className="px-4 py-2 bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-purple-500"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Artista"
-                        value={captureForm.lullabyArtist}
-                        onChange={(e) =>
-                          setCaptureForm({
-                            ...captureForm,
-                            lullabyArtist: e.target.value,
-                          })
-                        }
-                        className="px-4 py-2 bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-purple-500"
-                      />
+                      <input type="text" placeholder="Título de la canción" value={captureForm.lullabyTitle}
+                        onChange={(e) => setCaptureForm({...captureForm, lullabyTitle: e.target.value})}
+                        className="px-4 py-2 bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-purple-500"/>
+                      <input type="text" placeholder="Artista" value={captureForm.lullabyArtist}
+                        onChange={(e) => setCaptureForm({...captureForm, lullabyArtist: e.target.value})}
+                        className="px-4 py-2 bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-purple-500"/>
                     </div>
                   </div>
 
                   {/* Foto del Contrato */}
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-300">
-                      📜 Foto del Contrato Firmado
-                    </label>
+                    <label className="block text-sm font-medium text-gray-300">📜 Foto del Contrato Firmado</label>
                     <div className="flex items-center gap-4">
                       {captureForm.contractPhotoUrl ? (
-                        <img
-                          src={captureForm.contractPhotoUrl}
-                          alt="Contrato"
-                          className="w-24 h-24 object-cover rounded-lg"
-                        />
+                        <img src={captureForm.contractPhotoUrl} alt="Contrato" className="w-24 h-24 object-cover rounded-lg"/>
                       ) : (
                         <div className="w-24 h-24 bg-yellow-900/30 rounded-lg flex items-center justify-center">
                           <FileText className="w-8 h-8 text-yellow-500" />
                         </div>
                       )}
                       <label className="flex-1">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleFileUpload(e, 'contractPhotoUrl')}
-                          className="hidden"
-                        />
+                        <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'contractPhotoUrl')} className="hidden"/>
                         <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-purple-500 hover:bg-purple-900/20 transition-colors">
-                          {uploading === 'contractPhotoUrl' ? (
-                            <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
-                          ) : (
-                            <Upload className="w-5 h-5 text-gray-500" />
-                          )}
-                          <span className="text-sm text-gray-400">
-                            {captureForm.contractPhotoUrl ? 'Cambiar' : 'Subir foto'}
-                          </span>
+                          {uploading === 'contractPhotoUrl' ? <Loader2 className="w-5 h-5 animate-spin text-purple-500" /> : <Upload className="w-5 h-5 text-gray-500" />}
+                          <span className="text-sm text-gray-400">{captureForm.contractPhotoUrl ? 'Cambiar' : 'Subir foto'}</span>
                         </div>
                       </label>
                     </div>
@@ -690,24 +723,122 @@ export default function LegacyCapturePage() {
 
                   {/* Declaración */}
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-300">
-                      ✨ Contrato del Participante
-                    </label>
-                    <textarea
-                      placeholder="Escribe la declaración que el participante quiere mostrar en su dashboard..."
-                      value={captureForm.contractDeclaration}
-                      onChange={(e) =>
-                        setCaptureForm({
-                          ...captureForm,
-                          contractDeclaration: e.target.value,
-                        })
-                      }
-                      rows={4}
-                      className="w-full px-4 py-3 bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-purple-500 resize-none"
-                    />
-                    <p className="text-xs text-gray-500">
-                      Esta declaración aparecerá en el dashboard del participante
+                    <label className="block text-sm font-medium text-gray-300">📝 Declaración "Yo soy..."</label>
+                    <textarea placeholder='Escribe la declaración que el participante quiere mostrar...' value={captureForm.contractDeclaration}
+                      onChange={(e) => setCaptureForm({...captureForm, contractDeclaration: e.target.value})}
+                      rows={4} className="w-full px-4 py-3 bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-purple-500 resize-none"/>
+                  </div>
+                </>
+              )}
+
+              {/* ========== CAMPOS PL (fotos + canción PL + salón + manta) ========== */}
+              {captureForm.trainingLevel === 'PL' && (
+                <>
+                  <div className="bg-yellow-900/20 border border-yellow-800/50 rounded-xl p-4 mb-4">
+                    <div className="flex items-center gap-2 text-yellow-400 mb-2">
+                      <Sparkles className="w-5 h-5" />
+                      <span className="font-medium">Programa de Liderazgo (PL)</span>
+                    </div>
+                    <p className="text-sm text-yellow-300/80">
+                      Fotos + Canción PL + Foto Salón + Foto Manta
                     </p>
+                  </div>
+
+                  {/* Foto con GC */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-300">📸 Foto con el GC</label>
+                    <div className="flex items-center gap-4">
+                      {captureForm.photoWithGCUrl ? (
+                        <img src={captureForm.photoWithGCUrl} alt="Con GC" className="w-24 h-24 object-cover rounded-lg"/>
+                      ) : (
+                        <div className="w-24 h-24 bg-gray-800 rounded-lg flex items-center justify-center">
+                          <Camera className="w-8 h-8 text-gray-600" />
+                        </div>
+                      )}
+                      <label className="flex-1">
+                        <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'photoWithGCUrl')} className="hidden"/>
+                        <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-yellow-500 hover:bg-yellow-900/20 transition-colors">
+                          {uploading === 'photoWithGCUrl' ? <Loader2 className="w-5 h-5 animate-spin text-yellow-500" /> : <Upload className="w-5 h-5 text-gray-500" />}
+                          <span className="text-sm text-gray-400">{captureForm.photoWithGCUrl ? 'Cambiar' : 'Subir foto'}</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Foto con Squad */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-300">👥 Foto con el Squad</label>
+                    <div className="flex items-center gap-4">
+                      {captureForm.photoWithSquadUrl ? (
+                        <img src={captureForm.photoWithSquadUrl} alt="Con Squad" className="w-24 h-24 object-cover rounded-lg"/>
+                      ) : (
+                        <div className="w-24 h-24 bg-gray-800 rounded-lg flex items-center justify-center">
+                          <Users className="w-8 h-8 text-gray-600" />
+                        </div>
+                      )}
+                      <label className="flex-1">
+                        <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'photoWithSquadUrl')} className="hidden"/>
+                        <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-yellow-500 hover:bg-yellow-900/20 transition-colors">
+                          {uploading === 'photoWithSquadUrl' ? <Loader2 className="w-5 h-5 animate-spin text-yellow-500" /> : <Upload className="w-5 h-5 text-gray-500" />}
+                          <span className="text-sm text-gray-400">{captureForm.photoWithSquadUrl ? 'Cambiar' : 'Subir foto'}</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Canción de Cuna PL */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-300">🎵 Canción de Cuna (PL)</label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <input type="text" placeholder="Título de la canción" value={captureForm.plLullabyTitle}
+                        onChange={(e) => setCaptureForm({...captureForm, plLullabyTitle: e.target.value})}
+                        className="px-4 py-2 bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-yellow-500"/>
+                      <input type="text" placeholder="Artista" value={captureForm.plLullabyArtist}
+                        onChange={(e) => setCaptureForm({...captureForm, plLullabyArtist: e.target.value})}
+                        className="px-4 py-2 bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-yellow-500"/>
+                    </div>
+                  </div>
+
+                  {/* Foto del Salón */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-300">🏫 Foto del Salón</label>
+                    <div className="flex items-center gap-4">
+                      {captureForm.photoSalonUrl ? (
+                        <img src={captureForm.photoSalonUrl} alt="Salón" className="w-24 h-24 object-cover rounded-lg"/>
+                      ) : (
+                        <div className="w-24 h-24 bg-amber-900/30 rounded-lg flex items-center justify-center">
+                          <ImageIcon className="w-8 h-8 text-amber-500" />
+                        </div>
+                      )}
+                      <label className="flex-1">
+                        <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'photoSalonUrl')} className="hidden"/>
+                        <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-yellow-500 hover:bg-yellow-900/20 transition-colors">
+                          {uploading === 'photoSalonUrl' ? <Loader2 className="w-5 h-5 animate-spin text-yellow-500" /> : <Upload className="w-5 h-5 text-gray-500" />}
+                          <span className="text-sm text-gray-400">{captureForm.photoSalonUrl ? 'Cambiar' : 'Subir foto'}</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Foto de la Manta */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-300">🧣 Foto de la Manta</label>
+                    <div className="flex items-center gap-4">
+                      {captureForm.photoMantaUrl ? (
+                        <img src={captureForm.photoMantaUrl} alt="Manta" className="w-24 h-24 object-cover rounded-lg"/>
+                      ) : (
+                        <div className="w-24 h-24 bg-orange-900/30 rounded-lg flex items-center justify-center">
+                          <ImageIcon className="w-8 h-8 text-orange-500" />
+                        </div>
+                      )}
+                      <label className="flex-1">
+                        <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'photoMantaUrl')} className="hidden"/>
+                        <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-yellow-500 hover:bg-yellow-900/20 transition-colors">
+                          {uploading === 'photoMantaUrl' ? <Loader2 className="w-5 h-5 animate-spin text-yellow-500" /> : <Upload className="w-5 h-5 text-gray-500" />}
+                          <span className="text-sm text-gray-400">{captureForm.photoMantaUrl ? 'Cambiar' : 'Subir foto'}</span>
+                        </div>
+                      </label>
+                    </div>
                   </div>
                 </>
               )}
@@ -724,7 +855,11 @@ export default function LegacyCapturePage() {
               <button
                 onClick={saveCapture}
                 disabled={saving}
-                className="flex items-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
+                className={`flex items-center gap-2 px-6 py-2 text-white rounded-lg disabled:opacity-50 transition-colors ${
+                  captureForm.trainingLevel === 'BASIC' ? 'bg-blue-600 hover:bg-blue-700' :
+                  captureForm.trainingLevel === 'ADVANCED' ? 'bg-purple-600 hover:bg-purple-700' :
+                  'bg-yellow-600 hover:bg-yellow-700'
+                }`}
               >
                 {saving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

@@ -2,15 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { Camera, Clock, CheckCircle, Sparkles, Music, FileText, Users, Loader2 } from 'lucide-react';
+import { Camera, Clock, CheckCircle, Sparkles, Music, FileText, Users, Loader2, X, Eye } from 'lucide-react';
 
 interface LegacyStatus {
   hasLegacyPending: boolean;
+  shouldBlock: boolean;
   vision: {
     id: number;
     nombre: string;
-    fechaFin: string;
-    product: string;
     trainingLevel: 'BASIC' | 'ADVANCED' | 'PL';
   } | null;
   capture: {
@@ -32,6 +31,7 @@ interface LegacyStatus {
 export default function LegacyCaptureBlockingModal() {
   const { data: session } = useSession();
   const [show, setShow] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<LegacyStatus | null>(null);
 
@@ -43,11 +43,12 @@ export default function LegacyCaptureBlockingModal() {
 
   const checkLegacyStatus = async () => {
     try {
-      setLoading(true);
+      setLoading(false);
       const res = await fetch('/api/legacy-capture/my-status');
       const data = await res.json();
 
-      if (data.success && data.hasLegacyPending && data.capture?.status !== 'COMPLETE') {
+      // Solo mostrar si hay una captura en progreso y el usuario no lo cerró
+      if (data.success && data.hasLegacyPending && data.capture?.status !== 'COMPLETE' && !dismissed) {
         setStatus(data);
         setShow(true);
       } else {
@@ -55,23 +56,28 @@ export default function LegacyCaptureBlockingModal() {
       }
     } catch (error) {
       console.error('Error checking legacy status:', error);
-    } finally {
-      setLoading(false);
+      setShow(false);
     }
   };
 
   // Polling cada 30 segundos para verificar si el GC completó la captura
   useEffect(() => {
-    if (!show) return;
+    if (!show || dismissed) return;
 
     const interval = setInterval(() => {
       checkLegacyStatus();
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [show]);
+  }, [show, dismissed]);
 
-  if (!show || !status) return null;
+  // Función para cerrar el modal (el participante puede cerrar y seguir usando la app)
+  const handleDismiss = () => {
+    setDismissed(true);
+    setShow(false);
+  };
+
+  if (!show || !status || dismissed) return null;
 
   const isAdvanced = status.vision?.trainingLevel !== 'BASIC';
   const capture = status.capture;
@@ -96,7 +102,16 @@ export default function LegacyCaptureBlockingModal() {
 
   return (
     <div className="fixed inset-0 z-[100] bg-gradient-to-br from-purple-900/95 via-indigo-900/95 to-slate-900/95 backdrop-blur-md flex items-center justify-center p-4">
-      <div className="max-w-lg w-full bg-slate-900/90 border border-purple-500/30 rounded-3xl p-8 shadow-2xl shadow-purple-500/20">
+      <div className="max-w-lg w-full bg-slate-900/90 border border-purple-500/30 rounded-3xl p-8 shadow-2xl shadow-purple-500/20 relative">
+        {/* Botón para cerrar - El participante puede cerrar y seguir usando la app */}
+        <button
+          onClick={handleDismiss}
+          className="absolute top-4 right-4 p-2 rounded-full bg-slate-800 hover:bg-slate-700 text-gray-400 hover:text-white transition-colors"
+          title="Cerrar y continuar"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
         {/* Header */}
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 mb-4">
@@ -115,7 +130,6 @@ export default function LegacyCaptureBlockingModal() {
           <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 mb-6">
             <p className="text-sm text-purple-400 mb-1">Entrenamiento</p>
             <p className="text-lg font-bold text-white">{status.vision.nombre}</p>
-            <p className="text-sm text-purple-300">{status.vision.product}</p>
           </div>
         )}
 
@@ -215,9 +229,19 @@ export default function LegacyCaptureBlockingModal() {
           </p>
         </div>
 
+        {/* Botón para continuar */}
+        <button
+          onClick={handleDismiss}
+          className="w-full mt-4 py-3 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
+        >
+          <Eye className="w-4 h-4" />
+          Cerrar y continuar navegando
+        </button>
+
         {/* Footer */}
         <p className="text-center text-xs text-gray-500 mt-4">
-          Esta pantalla se actualizará automáticamente cuando tu GC complete la captura.
+          Puedes cerrar esta ventana y seguir usando la app. 
+          Tu GC capturará tu legacy cuando sea el momento.
         </p>
       </div>
     </div>

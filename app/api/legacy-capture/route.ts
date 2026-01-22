@@ -135,13 +135,18 @@ export async function GET(request: NextRequest) {
             fotoPerfilUrl: participante.profileImage,
             captureStatus: captura?.status || null,
             captureId: captura?.id || null,
+            // Campos BÁSICO
             hasPhotoWithGC: !!captura?.photoWithGCUrl,
             hasPhotoWithSquad: !!captura?.photoWithSquadUrl,
             hasPhotoBlueWall: !!captura?.photoBlueWallUrl,
-            // Solo para avanzado/PL
+            // Campos AVANZADO
             hasLullaby: !!captura?.lullabyTitle,
             hasContract: !!captura?.contractPhotoUrl,
             hasDeclaration: !!captura?.contractDeclaration,
+            // Campos PL
+            hasPlLullaby: !!captura?.plLullabyTitle,
+            hasPhotoSalon: !!captura?.photoSalonUrl,
+            hasPhotoManta: !!captura?.photoMantaUrl,
           };
         });
 
@@ -177,14 +182,9 @@ export async function GET(request: NextRequest) {
           requiredFields:
             trainingLevel === VisionLevel.BASIC
               ? ["photoWithGC", "photoWithSquad", "photoBlueWall"]
-              : [
-                  "photoWithGC",
-                  "photoWithSquad",
-                  "photoBlueWall",
-                  "lullaby",
-                  "contract",
-                  "declaration",
-                ],
+              : trainingLevel === VisionLevel.ADVANCED
+                ? ["photoWithGC", "photoWithSquad", "lullaby", "contract", "declaration"]
+                : ["photoWithGC", "photoWithSquad", "plLullaby", "photoSalon", "photoManta"], // PL
         };
       })
     );
@@ -227,16 +227,22 @@ export async function POST(request: NextRequest) {
       visionId,
       participantId,
       trainingLevel,
-      // Fotos básicas (todos los niveles)
+      // Campos BÁSICO (3 fotos)
       photoWithGCUrl,
       photoWithSquadUrl,
       photoBlueWallUrl,
-      // Campos avanzados (solo ADVANCED y PL)
+      // Campos AVANZADO (fotos + canción + contrato)
       lullabyTitle,
       lullabyArtist,
       lullabyAudioUrl,
       contractPhotoUrl,
       contractDeclaration,
+      // Campos PL (fotos + canción PL + salón + manta)
+      plLullabyTitle,
+      plLullabyArtist,
+      plLullabyAudioUrl,
+      photoSalonUrl,
+      photoMantaUrl,
     } = body;
 
     if (!visionId || !participantId) {
@@ -280,45 +286,72 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Determinar estado de la captura
+    // Determinar estado de la captura según nivel
     let status: "PENDING" | "IN_PROGRESS" | "COMPLETED" = "PENDING";
     
-    const hasBasicPhotos = !!(photoWithGCUrl || capturaExistente?.photoWithGCUrl) &&
-                          !!(photoWithSquadUrl || capturaExistente?.photoWithSquadUrl) &&
-                          !!(photoBlueWallUrl || capturaExistente?.photoBlueWallUrl);
-
     if (level === 'BASIC') {
-      status = hasBasicPhotos ? "COMPLETED" : "IN_PROGRESS";
-    } else {
-      // ADVANCED o PL requieren más campos
-      const hasAdvancedFields = !!(lullabyTitle || capturaExistente?.lullabyTitle) &&
-                               !!(contractPhotoUrl || capturaExistente?.contractPhotoUrl) &&
-                               !!(contractDeclaration || capturaExistente?.contractDeclaration);
+      // BÁSICO: 3 fotos requeridas
+      const hasPhoto1 = !!(photoWithGCUrl || capturaExistente?.photoWithGCUrl);
+      const hasPhoto2 = !!(photoWithSquadUrl || capturaExistente?.photoWithSquadUrl);
+      const hasPhoto3 = !!(photoBlueWallUrl || capturaExistente?.photoBlueWallUrl);
       
-      if (hasBasicPhotos && hasAdvancedFields) {
+      if (hasPhoto1 && hasPhoto2 && hasPhoto3) {
         status = "COMPLETED";
-      } else if (hasBasicPhotos || hasAdvancedFields) {
+      } else if (hasPhoto1 || hasPhoto2 || hasPhoto3) {
+        status = "IN_PROGRESS";
+      }
+    } else if (level === 'ADVANCED') {
+      // AVANZADO: 2 fotos + canción + contrato + declaración
+      const hasPhoto1 = !!(photoWithGCUrl || capturaExistente?.photoWithGCUrl);
+      const hasPhoto2 = !!(photoWithSquadUrl || capturaExistente?.photoWithSquadUrl);
+      const hasLullaby = !!(lullabyTitle || capturaExistente?.lullabyTitle);
+      const hasContract = !!(contractPhotoUrl || capturaExistente?.contractPhotoUrl);
+      const hasDeclaration = !!(contractDeclaration || capturaExistente?.contractDeclaration);
+      
+      if (hasPhoto1 && hasPhoto2 && hasLullaby && hasContract && hasDeclaration) {
+        status = "COMPLETED";
+      } else if (hasPhoto1 || hasPhoto2 || hasLullaby || hasContract || hasDeclaration) {
+        status = "IN_PROGRESS";
+      }
+    } else {
+      // PL: 2 fotos + canción PL + foto salón + foto manta
+      const hasPhoto1 = !!(photoWithGCUrl || capturaExistente?.photoWithGCUrl);
+      const hasPhoto2 = !!(photoWithSquadUrl || capturaExistente?.photoWithSquadUrl);
+      const hasPlLullaby = !!(plLullabyTitle || capturaExistente?.plLullabyTitle);
+      const hasSalon = !!(photoSalonUrl || capturaExistente?.photoSalonUrl);
+      const hasManta = !!(photoMantaUrl || capturaExistente?.photoMantaUrl);
+      
+      if (hasPhoto1 && hasPhoto2 && hasPlLullaby && hasSalon && hasManta) {
+        status = "COMPLETED";
+      } else if (hasPhoto1 || hasPhoto2 || hasPlLullaby || hasSalon || hasManta) {
         status = "IN_PROGRESS";
       }
     }
 
-    // Datos a guardar - LegacyCaptureSession usa gcId, no gameChangerId
-    // También requiere productId, usaremos visionId como referencia temporal
-    const captureData = {
+    // Datos a guardar
+    const captureData: any = {
       visionId: parseInt(visionId),
       participantId: parseInt(participantId),
       gcId: gcId,
-      productId: parseInt(visionId), // Usando visionId como productId temporalmente
       level: level as ProductLevelType,
       status,
+      // Campos que se usan en todos los niveles
       ...(photoWithGCUrl && { photoWithGCUrl }),
       ...(photoWithSquadUrl && { photoWithSquadUrl }),
+      // Campos BÁSICO
       ...(photoBlueWallUrl && { photoBlueWallUrl }),
+      // Campos AVANZADO
       ...(lullabyTitle && { lullabyTitle }),
       ...(lullabyArtist && { lullabyArtist }),
       ...(lullabyAudioUrl && { lullabyAudioUrl }),
       ...(contractPhotoUrl && { contractPhotoUrl }),
       ...(contractDeclaration && { contractDeclaration }),
+      // Campos PL
+      ...(plLullabyTitle && { plLullabyTitle }),
+      ...(plLullabyArtist && { plLullabyArtist }),
+      ...(plLullabyAudioUrl && { plLullabyAudioUrl }),
+      ...(photoSalonUrl && { photoSalonUrl }),
+      ...(photoMantaUrl && { photoMantaUrl }),
     };
 
     let captura;

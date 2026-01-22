@@ -4409,24 +4409,33 @@ model LegacyCaptureSession {
   gcId                    Int                 // Game Changer que captura
   participantId           Int                 // Participante objetivo
   visionId                Int
-  productId               Int
-  level                   ProductLevelType    // BASIC o ADVANCED
+  productId               Int?                // Opcional - puede no haber producto asociado
+  level                   ProductLevelType    // BASIC, ADVANCED o PL
   
   // Estado general
   status                  LegacyCaptureStatus @default(PENDING)
   completedAt             DateTime?
   
-  // === Campos BÁSICO ===
-  photoWithGCUrl          String?             // Foto con el GC
-  photoWithSquadUrl       String?             // Foto con mini grupo
-  photoBlueWallUrl        String?             // Foto pared azul (icónica)
+  // === Campos BÁSICO (solo estos 3) ===
+  photoWithGCUrl          String?             // Foto con el GC (BASIC)
+  photoWithSquadUrl       String?             // Foto con mini grupo (BASIC)
+  photoBlueWallUrl        String?             // Foto pared azul icónica (BASIC)
   
-  // === Campos AVANZADO (adicionales) ===
-  lullabyTitle            String?             // Nombre canción de cuna
-  lullabyArtist           String?             // Artista de la canción
-  lullabyAudioUrl         String?             // Audio grabado (si la cantaron)
-  contractPhotoUrl        String?             // Foto del contrato firmado
-  contractDeclaration     String?             @db.Text // Transcripción "Yo soy..."
+  // === Campos AVANZADO (fotos + canción + contrato) ===
+  // photoWithGCUrl y photoWithSquadUrl también se usan en ADVANCED
+  lullabyTitle            String?             // Nombre canción de cuna (ADVANCED)
+  lullabyArtist           String?             // Artista de la canción (ADVANCED)
+  lullabyAudioUrl         String?             // Audio grabado (ADVANCED)
+  contractPhotoUrl        String?             // Foto del contrato firmado (ADVANCED)
+  contractDeclaration     String?             @db.Text // Transcripción "Yo soy..." (ADVANCED)
+  
+  // === Campos PL (fotos + canción PL + salón + manta) ===
+  // photoWithGCUrl y photoWithSquadUrl también se usan en PL
+  plLullabyTitle          String?             // Nombre canción de cuna PL
+  plLullabyArtist         String?             // Artista canción PL
+  plLullabyAudioUrl       String?             // Audio grabado PL
+  photoSalonUrl           String?             // Foto del salón (PL)
+  photoMantaUrl           String?             // Foto de la manta (PL)
   
   // Metadata
   capturedAt              DateTime            @default(now())
@@ -4436,9 +4445,9 @@ model LegacyCaptureSession {
   GC                      Usuario             @relation("GCLegacyCaptures", fields: [gcId], references: [id])
   Participant             Usuario             @relation("ParticipantLegacyCaptures", fields: [participantId], references: [id])
   Vision                  Vision              @relation("VisionLegacyCaptures", fields: [visionId], references: [id])
-  Product                 SchoolProduct       @relation("ProductLegacyCaptures", fields: [productId], references: [id])
+  Product                 SchoolProduct?      @relation("ProductLegacyCaptures", fields: [productId], references: [id])
   
-  @@unique([participantId, productId]) // Una sesión por participante por producto
+  @@unique([participantId, visionId]) // Una sesión por participante por visión
   @@index([gcId])
   @@index([status])
   @@index([visionId])

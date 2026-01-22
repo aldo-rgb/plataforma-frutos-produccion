@@ -70,8 +70,8 @@ export async function POST(request: NextRequest) {
       ? "LEGACY_CAPTURE" 
       : "QUANTUM_ALBUM";
 
-    // Subir a Cloudinary
-    const result = await uploadImage(buffer, preset, customFolder);
+    // Subir a Cloudinary (pasar el mime type del archivo)
+    const result = await uploadImage(buffer, preset, customFolder, file.type);
 
     // Generar thumbnail URL
     const thumbnailUrl = getThumbnailUrl(result.secure_url);
@@ -86,10 +86,19 @@ export async function POST(request: NextRequest) {
       format: result.format,
       size: result.bytes,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error uploading to Cloudinary:", error);
+    console.error("Error details:", {
+      message: error?.message,
+      name: error?.name,
+      http_code: error?.http_code,
+      error: error?.error
+    });
     return NextResponse.json(
-      { error: "Error al subir la imagen" },
+      { 
+        error: "Error al subir la imagen",
+        details: error?.message || 'Unknown error'
+      },
       { status: 500 }
     );
   }

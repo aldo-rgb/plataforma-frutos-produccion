@@ -105,15 +105,20 @@ interface LegacyCaptureForm {
   participantImage: string | null;
   visionId: number | null;
   trainingLevel: 'BASIC' | 'ADVANCED' | 'PL';
-  // Campos básicos
+  // Campos BÁSICO (3 fotos)
   photoWithGCUrl: string;
   photoWithSquadUrl: string;
   photoBlueWallUrl: string;
-  // Campos avanzados
+  // Campos AVANZADO (fotos + canción + contrato)
   lullabyTitle: string;
   lullabyArtist: string;
   contractPhotoUrl: string;
   contractDeclaration: string;
+  // Campos PL (fotos + canción PL + salón + manta)
+  plLullabyTitle: string;
+  plLullabyArtist: string;
+  photoSalonUrl: string;
+  photoMantaUrl: string;
 }
 
 export default function SquadManagerWidget() {
@@ -167,6 +172,18 @@ export default function SquadManagerWidget() {
   const [legacyForm, setLegacyForm] = useState<LegacyCaptureForm | null>(null);
   const [savingLegacy, setSavingLegacy] = useState(false);
   const [uploadingField, setUploadingField] = useState<string | null>(null);
+
+  // Estado para Toast notifications
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
+
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
+  };
 
   useEffect(() => {
     loadData();
@@ -291,12 +308,14 @@ export default function SquadManagerWidget() {
           idx === 0 ? { ...s, name: newAtomName.trim() } : s
         ));
         setShowRenameModal(false);
+        showNotification('Nombre guardado exitosamente', 'success');
       } else {
         console.error('Error del servidor:', data.error);
-        alert(data.error || 'Error al guardar el nombre');
+        showNotification(data.error || 'Error al guardar el nombre', 'error');
       }
     } catch (error) {
       console.error('Error saving atom name:', error);
+      showNotification('Error de conexión', 'error');
     } finally {
       setSavingName(false);
     }
@@ -341,13 +360,14 @@ export default function SquadManagerWidget() {
         await loadAvailableSlots();
         await loadData();
         setSelectedMember(null);
+        showNotification('Horario asignado exitosamente', 'success');
       } else {
         console.error('Error:', data.error, data.details);
-        alert(data.error || 'Error al asignar horario');
+        showNotification(data.error || 'Error al asignar horario', 'error');
       }
     } catch (error) {
       console.error('Error assigning schedule:', error);
-      alert('Error de conexión al asignar horario');
+      showNotification('Error de conexión al asignar horario', 'error');
     } finally {
       setAssigningSchedule(false);
     }
@@ -410,13 +430,14 @@ export default function SquadManagerWidget() {
         setShowDropConfirm(false);
         setDropReason('');
         loadData(); // Recargar datos
+        showNotification('Participante marcado como DROP', 'success');
       } else {
         console.error('Error:', data.error);
-        alert(data.error || 'Error al marcar como DROP');
+        showNotification(data.error || 'Error al marcar como DROP', 'error');
       }
     } catch (error) {
       console.error('Error marking drop:', error);
-      alert('Error al marcar como DROP');
+      showNotification('Error al marcar como DROP', 'error');
     } finally {
       setMarkingDrop(false);
     }
@@ -436,13 +457,20 @@ export default function SquadManagerWidget() {
       participantImage: member.user.imagen,
       visionId: squad ? parseInt(squad.id.split('-')[0]) : null, // Extraer visionId del squadId si está en formato "visionId-..."
       trainingLevel: level,
+      // Campos BÁSICO
       photoWithGCUrl: '',
       photoWithSquadUrl: '',
       photoBlueWallUrl: '',
+      // Campos AVANZADO
       lullabyTitle: '',
       lullabyArtist: '',
       contractPhotoUrl: '',
       contractDeclaration: '',
+      // Campos PL
+      plLullabyTitle: '',
+      plLullabyArtist: '',
+      photoSalonUrl: '',
+      photoMantaUrl: '',
     });
     setShowLegacyModal(true);
     
@@ -473,13 +501,20 @@ export default function SquadManagerWidget() {
                   setLegacyForm(prev => prev ? {
                     ...prev,
                     visionId: visionConCaptura.visionId,
+                    // Campos BÁSICO
                     photoWithGCUrl: c.photoWithGCUrl || '',
                     photoWithSquadUrl: c.photoWithSquadUrl || '',
                     photoBlueWallUrl: c.photoBlueWallUrl || '',
+                    // Campos AVANZADO
                     lullabyTitle: c.lullabyTitle || '',
                     lullabyArtist: c.lullabyArtist || '',
                     contractPhotoUrl: c.contractPhotoUrl || '',
                     contractDeclaration: c.contractDeclaration || '',
+                    // Campos PL
+                    plLullabyTitle: c.plLullabyTitle || '',
+                    plLullabyArtist: c.plLullabyArtist || '',
+                    photoSalonUrl: c.photoSalonUrl || '',
+                    photoMantaUrl: c.photoMantaUrl || '',
                   } : null);
                 }
               }
@@ -519,12 +554,13 @@ export default function SquadManagerWidget() {
           ...legacyForm,
           [field]: result.photoUrl,
         });
+        showNotification('Imagen subida exitosamente', 'success');
       } else {
-        alert(result.error || 'Error al subir imagen');
+        showNotification(result.error || 'Error al subir imagen', 'error');
       }
     } catch (error) {
       console.error('Error uploading:', error);
-      alert('Error al subir la imagen');
+      showNotification('Error al subir la imagen', 'error');
     } finally {
       setUploadingField(null);
     }
@@ -543,13 +579,20 @@ export default function SquadManagerWidget() {
           visionId: legacyForm.visionId,
           participantId: legacyForm.participantId,
           trainingLevel: legacyForm.trainingLevel,
+          // Campos BÁSICO
           photoWithGCUrl: legacyForm.photoWithGCUrl || null,
           photoWithSquadUrl: legacyForm.photoWithSquadUrl || null,
           photoBlueWallUrl: legacyForm.photoBlueWallUrl || null,
+          // Campos AVANZADO
           lullabyTitle: legacyForm.lullabyTitle || null,
           lullabyArtist: legacyForm.lullabyArtist || null,
           contractPhotoUrl: legacyForm.contractPhotoUrl || null,
           contractDeclaration: legacyForm.contractDeclaration || null,
+          // Campos PL
+          plLullabyTitle: legacyForm.plLullabyTitle || null,
+          plLullabyArtist: legacyForm.plLullabyArtist || null,
+          photoSalonUrl: legacyForm.photoSalonUrl || null,
+          photoMantaUrl: legacyForm.photoMantaUrl || null,
         }),
       });
 
@@ -557,13 +600,13 @@ export default function SquadManagerWidget() {
       if (res.ok && data.success) {
         setShowLegacyModal(false);
         setLegacyForm(null);
-        alert('✅ Legacy guardado exitosamente');
+        showNotification('Legacy guardado exitosamente', 'success');
       } else {
-        alert(data.error || 'Error al guardar el legacy');
+        showNotification(data.error || 'Error al guardar el legacy', 'error');
       }
     } catch (error) {
       console.error('Error saving legacy:', error);
-      alert('Error al guardar el legacy');
+      showNotification('Error al guardar el legacy', 'error');
     } finally {
       setSavingLegacy(false);
     }
@@ -1333,6 +1376,13 @@ export default function SquadManagerWidget() {
                 <div>
                   <h3 className="text-lg font-semibold text-white">Legacy Capture</h3>
                   <p className="text-sm text-pink-300">{legacyForm.participantName}</p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    legacyForm.trainingLevel === 'BASIC' ? 'bg-blue-500/20 text-blue-300' :
+                    legacyForm.trainingLevel === 'ADVANCED' ? 'bg-purple-500/20 text-purple-300' :
+                    'bg-yellow-500/20 text-yellow-300'
+                  }`}>
+                    {legacyForm.trainingLevel}
+                  </span>
                 </div>
               </div>
               <button
@@ -1345,141 +1395,119 @@ export default function SquadManagerWidget() {
 
             {/* Body - Scrollable */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {/* Fotos Básicas */}
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-white flex items-center gap-2">
-                  <Camera className="w-4 h-4 text-pink-400" />
-                  Fotos del Entrenamiento
-                </h4>
+              
+              {/* ========== CAMPOS BÁSICO (3 fotos) ========== */}
+              {legacyForm.trainingLevel === 'BASIC' && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-white flex items-center gap-2">
+                    <Camera className="w-4 h-4 text-blue-400" />
+                    Fotos del Entrenamiento Básico
+                  </h4>
 
-                {/* Foto con GC */}
-                <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
-                  <label className="text-xs text-slate-400 mb-2 block">Foto con Game Changer</label>
-                  {legacyForm.photoWithGCUrl ? (
-                    <div className="relative">
-                      <img 
-                        src={legacyForm.photoWithGCUrl} 
-                        alt="Foto con GC" 
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
-                      <button
-                        onClick={() => setLegacyForm({...legacyForm, photoWithGCUrl: ''})}
-                        className="absolute top-2 right-2 bg-red-500/80 p-1 rounded-full"
-                      >
-                        <X className="w-3 h-3 text-white" />
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-pink-500/50 transition-colors">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => handleLegacyImageUpload(e, 'photoWithGCUrl')}
-                        disabled={uploadingField !== null}
-                      />
-                      {uploadingField === 'photoWithGCUrl' ? (
-                        <Loader2 className="w-6 h-6 text-pink-400 animate-spin" />
-                      ) : (
-                        <>
-                          <Upload className="w-6 h-6 text-slate-500 mb-1" />
-                          <span className="text-xs text-slate-500">Subir foto</span>
-                        </>
-                      )}
-                    </label>
-                  )}
+                  {/* Foto con GC */}
+                  <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+                    <label className="text-xs text-slate-400 mb-2 block">📸 Foto con Game Changer</label>
+                    {legacyForm.photoWithGCUrl ? (
+                      <div className="relative">
+                        <img src={legacyForm.photoWithGCUrl} alt="Foto con GC" className="w-full h-32 object-cover rounded-lg"/>
+                        <button onClick={() => setLegacyForm({...legacyForm, photoWithGCUrl: ''})} className="absolute top-2 right-2 bg-red-500/80 p-1 rounded-full">
+                          <X className="w-3 h-3 text-white" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-blue-500/50 transition-colors">
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleLegacyImageUpload(e, 'photoWithGCUrl')} disabled={uploadingField !== null}/>
+                        {uploadingField === 'photoWithGCUrl' ? <Loader2 className="w-6 h-6 text-blue-400 animate-spin" /> : <><Upload className="w-6 h-6 text-slate-500 mb-1" /><span className="text-xs text-slate-500">Subir foto</span></>}
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Foto con Squad */}
+                  <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+                    <label className="text-xs text-slate-400 mb-2 block">👥 Foto con Squad/Átomo</label>
+                    {legacyForm.photoWithSquadUrl ? (
+                      <div className="relative">
+                        <img src={legacyForm.photoWithSquadUrl} alt="Foto con Squad" className="w-full h-32 object-cover rounded-lg"/>
+                        <button onClick={() => setLegacyForm({...legacyForm, photoWithSquadUrl: ''})} className="absolute top-2 right-2 bg-red-500/80 p-1 rounded-full">
+                          <X className="w-3 h-3 text-white" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-blue-500/50 transition-colors">
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleLegacyImageUpload(e, 'photoWithSquadUrl')} disabled={uploadingField !== null}/>
+                        {uploadingField === 'photoWithSquadUrl' ? <Loader2 className="w-6 h-6 text-blue-400 animate-spin" /> : <><Upload className="w-6 h-6 text-slate-500 mb-1" /><span className="text-xs text-slate-500">Subir foto</span></>}
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Foto Pared Azul */}
+                  <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+                    <label className="text-xs text-slate-400 mb-2 block">🔵 Foto en Pared Azul</label>
+                    {legacyForm.photoBlueWallUrl ? (
+                      <div className="relative">
+                        <img src={legacyForm.photoBlueWallUrl} alt="Pared Azul" className="w-full h-32 object-cover rounded-lg"/>
+                        <button onClick={() => setLegacyForm({...legacyForm, photoBlueWallUrl: ''})} className="absolute top-2 right-2 bg-red-500/80 p-1 rounded-full">
+                          <X className="w-3 h-3 text-white" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-blue-500/50 transition-colors">
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleLegacyImageUpload(e, 'photoBlueWallUrl')} disabled={uploadingField !== null}/>
+                        {uploadingField === 'photoBlueWallUrl' ? <Loader2 className="w-6 h-6 text-blue-400 animate-spin" /> : <><Upload className="w-6 h-6 text-slate-500 mb-1" /><span className="text-xs text-slate-500">Subir foto</span></>}
+                      </label>
+                    )}
+                  </div>
                 </div>
+              )}
 
-                {/* Foto con Squad */}
-                <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
-                  <label className="text-xs text-slate-400 mb-2 block">Foto con Squad/Átomo</label>
-                  {legacyForm.photoWithSquadUrl ? (
-                    <div className="relative">
-                      <img 
-                        src={legacyForm.photoWithSquadUrl} 
-                        alt="Foto con Squad" 
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
-                      <button
-                        onClick={() => setLegacyForm({...legacyForm, photoWithSquadUrl: ''})}
-                        className="absolute top-2 right-2 bg-red-500/80 p-1 rounded-full"
-                      >
-                        <X className="w-3 h-3 text-white" />
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-pink-500/50 transition-colors">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => handleLegacyImageUpload(e, 'photoWithSquadUrl')}
-                        disabled={uploadingField !== null}
-                      />
-                      {uploadingField === 'photoWithSquadUrl' ? (
-                        <Loader2 className="w-6 h-6 text-pink-400 animate-spin" />
-                      ) : (
-                        <>
-                          <Upload className="w-6 h-6 text-slate-500 mb-1" />
-                          <span className="text-xs text-slate-500">Subir foto</span>
-                        </>
-                      )}
-                    </label>
-                  )}
-                </div>
-
-                {/* Foto Pared Azul */}
-                <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
-                  <label className="text-xs text-slate-400 mb-2 block">Foto en Pared Azul</label>
-                  {legacyForm.photoBlueWallUrl ? (
-                    <div className="relative">
-                      <img 
-                        src={legacyForm.photoBlueWallUrl} 
-                        alt="Pared Azul" 
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
-                      <button
-                        onClick={() => setLegacyForm({...legacyForm, photoBlueWallUrl: ''})}
-                        className="absolute top-2 right-2 bg-red-500/80 p-1 rounded-full"
-                      >
-                        <X className="w-3 h-3 text-white" />
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-pink-500/50 transition-colors">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => handleLegacyImageUpload(e, 'photoBlueWallUrl')}
-                        disabled={uploadingField !== null}
-                      />
-                      {uploadingField === 'photoBlueWallUrl' ? (
-                        <Loader2 className="w-6 h-6 text-pink-400 animate-spin" />
-                      ) : (
-                        <>
-                          <Upload className="w-6 h-6 text-slate-500 mb-1" />
-                          <span className="text-xs text-slate-500">Subir foto</span>
-                        </>
-                      )}
-                    </label>
-                  )}
-                </div>
-              </div>
-
-              {/* Campos Avanzados - Solo si nivel es ADVANCED o PL */}
-              {(legacyForm.trainingLevel === 'ADVANCED' || legacyForm.trainingLevel === 'PL') && (
-                <div className="space-y-3 pt-2 border-t border-slate-800">
+              {/* ========== CAMPOS AVANZADO (fotos + canción + contrato) ========== */}
+              {legacyForm.trainingLevel === 'ADVANCED' && (
+                <div className="space-y-3">
                   <h4 className="text-sm font-medium text-white flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-purple-400" />
-                    Datos Avanzados
+                    Legacy Entrenamiento Avanzado
                   </h4>
+
+                  {/* Foto con GC */}
+                  <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+                    <label className="text-xs text-slate-400 mb-2 block">📸 Foto con Game Changer</label>
+                    {legacyForm.photoWithGCUrl ? (
+                      <div className="relative">
+                        <img src={legacyForm.photoWithGCUrl} alt="Foto con GC" className="w-full h-32 object-cover rounded-lg"/>
+                        <button onClick={() => setLegacyForm({...legacyForm, photoWithGCUrl: ''})} className="absolute top-2 right-2 bg-red-500/80 p-1 rounded-full">
+                          <X className="w-3 h-3 text-white" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-purple-500/50 transition-colors">
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleLegacyImageUpload(e, 'photoWithGCUrl')} disabled={uploadingField !== null}/>
+                        {uploadingField === 'photoWithGCUrl' ? <Loader2 className="w-6 h-6 text-purple-400 animate-spin" /> : <><Upload className="w-6 h-6 text-slate-500 mb-1" /><span className="text-xs text-slate-500">Subir foto</span></>}
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Foto con Squad */}
+                  <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+                    <label className="text-xs text-slate-400 mb-2 block">👥 Foto con Squad/Átomo</label>
+                    {legacyForm.photoWithSquadUrl ? (
+                      <div className="relative">
+                        <img src={legacyForm.photoWithSquadUrl} alt="Foto con Squad" className="w-full h-32 object-cover rounded-lg"/>
+                        <button onClick={() => setLegacyForm({...legacyForm, photoWithSquadUrl: ''})} className="absolute top-2 right-2 bg-red-500/80 p-1 rounded-full">
+                          <X className="w-3 h-3 text-white" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-purple-500/50 transition-colors">
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleLegacyImageUpload(e, 'photoWithSquadUrl')} disabled={uploadingField !== null}/>
+                        {uploadingField === 'photoWithSquadUrl' ? <Loader2 className="w-6 h-6 text-purple-400 animate-spin" /> : <><Upload className="w-6 h-6 text-slate-500 mb-1" /><span className="text-xs text-slate-500">Subir foto</span></>}
+                      </label>
+                    )}
+                  </div>
 
                   {/* Canción de Cuna */}
                   <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
                     <label className="text-xs text-slate-400 mb-2 block flex items-center gap-1">
-                      <Music className="w-3 h-3" />
-                      Canción de Cuna
+                      <Music className="w-3 h-3" /> Canción de Cuna
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       <input
@@ -1487,14 +1515,14 @@ export default function SquadManagerWidget() {
                         placeholder="Título de la canción"
                         value={legacyForm.lullabyTitle}
                         onChange={(e) => setLegacyForm({...legacyForm, lullabyTitle: e.target.value})}
-                        className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-pink-500"
+                        className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-purple-500"
                       />
                       <input
                         type="text"
                         placeholder="Artista"
                         value={legacyForm.lullabyArtist}
                         onChange={(e) => setLegacyForm({...legacyForm, lullabyArtist: e.target.value})}
-                        className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-pink-500"
+                        className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-purple-500"
                       />
                     </div>
                   </div>
@@ -1502,54 +1530,138 @@ export default function SquadManagerWidget() {
                   {/* Foto del Contrato */}
                   <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
                     <label className="text-xs text-slate-400 mb-2 block flex items-center gap-1">
-                      <FileText className="w-3 h-3" />
-                      Foto del Contrato
+                      <FileText className="w-3 h-3" /> Foto del Contrato
                     </label>
                     {legacyForm.contractPhotoUrl ? (
                       <div className="relative">
-                        <img 
-                          src={legacyForm.contractPhotoUrl} 
-                          alt="Contrato" 
-                          className="w-full h-32 object-cover rounded-lg"
-                        />
-                        <button
-                          onClick={() => setLegacyForm({...legacyForm, contractPhotoUrl: ''})}
-                          className="absolute top-2 right-2 bg-red-500/80 p-1 rounded-full"
-                        >
+                        <img src={legacyForm.contractPhotoUrl} alt="Contrato" className="w-full h-32 object-cover rounded-lg"/>
+                        <button onClick={() => setLegacyForm({...legacyForm, contractPhotoUrl: ''})} className="absolute top-2 right-2 bg-red-500/80 p-1 rounded-full">
                           <X className="w-3 h-3 text-white" />
                         </button>
                       </div>
                     ) : (
-                      <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-pink-500/50 transition-colors">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => handleLegacyImageUpload(e, 'contractPhotoUrl')}
-                          disabled={uploadingField !== null}
-                        />
-                        {uploadingField === 'contractPhotoUrl' ? (
-                          <Loader2 className="w-6 h-6 text-pink-400 animate-spin" />
-                        ) : (
-                          <>
-                            <Upload className="w-6 h-6 text-slate-500 mb-1" />
-                            <span className="text-xs text-slate-500">Subir foto</span>
-                          </>
-                        )}
+                      <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-purple-500/50 transition-colors">
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleLegacyImageUpload(e, 'contractPhotoUrl')} disabled={uploadingField !== null}/>
+                        {uploadingField === 'contractPhotoUrl' ? <Loader2 className="w-6 h-6 text-purple-400 animate-spin" /> : <><Upload className="w-6 h-6 text-slate-500 mb-1" /><span className="text-xs text-slate-500">Subir foto</span></>}
                       </label>
                     )}
                   </div>
 
                   {/* Declaración */}
                   <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
-                    <label className="text-xs text-slate-400 mb-2 block">Declaración del Participante</label>
+                    <label className="text-xs text-slate-400 mb-2 block">📝 Declaración del Participante</label>
                     <textarea
-                      placeholder="Escribe la declaración..."
+                      placeholder='Escribe la declaración "Yo soy..."'
                       value={legacyForm.contractDeclaration}
                       onChange={(e) => setLegacyForm({...legacyForm, contractDeclaration: e.target.value})}
                       rows={3}
-                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-pink-500 resize-none"
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-purple-500 resize-none"
                     />
+                  </div>
+                </div>
+              )}
+
+              {/* ========== CAMPOS PL (fotos + canción PL + salón + manta) ========== */}
+              {legacyForm.trainingLevel === 'PL' && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-white flex items-center gap-2">
+                    <Star className="w-4 h-4 text-yellow-400" />
+                    Legacy Programa de Liderazgo
+                  </h4>
+
+                  {/* Foto con GC */}
+                  <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+                    <label className="text-xs text-slate-400 mb-2 block">📸 Foto con Game Changer</label>
+                    {legacyForm.photoWithGCUrl ? (
+                      <div className="relative">
+                        <img src={legacyForm.photoWithGCUrl} alt="Foto con GC" className="w-full h-32 object-cover rounded-lg"/>
+                        <button onClick={() => setLegacyForm({...legacyForm, photoWithGCUrl: ''})} className="absolute top-2 right-2 bg-red-500/80 p-1 rounded-full">
+                          <X className="w-3 h-3 text-white" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-yellow-500/50 transition-colors">
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleLegacyImageUpload(e, 'photoWithGCUrl')} disabled={uploadingField !== null}/>
+                        {uploadingField === 'photoWithGCUrl' ? <Loader2 className="w-6 h-6 text-yellow-400 animate-spin" /> : <><Upload className="w-6 h-6 text-slate-500 mb-1" /><span className="text-xs text-slate-500">Subir foto</span></>}
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Foto con Squad */}
+                  <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+                    <label className="text-xs text-slate-400 mb-2 block">👥 Foto con Squad/Átomo</label>
+                    {legacyForm.photoWithSquadUrl ? (
+                      <div className="relative">
+                        <img src={legacyForm.photoWithSquadUrl} alt="Foto con Squad" className="w-full h-32 object-cover rounded-lg"/>
+                        <button onClick={() => setLegacyForm({...legacyForm, photoWithSquadUrl: ''})} className="absolute top-2 right-2 bg-red-500/80 p-1 rounded-full">
+                          <X className="w-3 h-3 text-white" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-yellow-500/50 transition-colors">
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleLegacyImageUpload(e, 'photoWithSquadUrl')} disabled={uploadingField !== null}/>
+                        {uploadingField === 'photoWithSquadUrl' ? <Loader2 className="w-6 h-6 text-yellow-400 animate-spin" /> : <><Upload className="w-6 h-6 text-slate-500 mb-1" /><span className="text-xs text-slate-500">Subir foto</span></>}
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Canción de Cuna PL */}
+                  <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+                    <label className="text-xs text-slate-400 mb-2 block flex items-center gap-1">
+                      <Music className="w-3 h-3" /> Canción de Cuna (PL)
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        placeholder="Título de la canción"
+                        value={legacyForm.plLullabyTitle}
+                        onChange={(e) => setLegacyForm({...legacyForm, plLullabyTitle: e.target.value})}
+                        className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-yellow-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Artista"
+                        value={legacyForm.plLullabyArtist}
+                        onChange={(e) => setLegacyForm({...legacyForm, plLullabyArtist: e.target.value})}
+                        className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-yellow-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Foto del Salón */}
+                  <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+                    <label className="text-xs text-slate-400 mb-2 block">🏫 Foto del Salón</label>
+                    {legacyForm.photoSalonUrl ? (
+                      <div className="relative">
+                        <img src={legacyForm.photoSalonUrl} alt="Salón" className="w-full h-32 object-cover rounded-lg"/>
+                        <button onClick={() => setLegacyForm({...legacyForm, photoSalonUrl: ''})} className="absolute top-2 right-2 bg-red-500/80 p-1 rounded-full">
+                          <X className="w-3 h-3 text-white" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-yellow-500/50 transition-colors">
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleLegacyImageUpload(e, 'photoSalonUrl')} disabled={uploadingField !== null}/>
+                        {uploadingField === 'photoSalonUrl' ? <Loader2 className="w-6 h-6 text-yellow-400 animate-spin" /> : <><Upload className="w-6 h-6 text-slate-500 mb-1" /><span className="text-xs text-slate-500">Subir foto</span></>}
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Foto de la Manta */}
+                  <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
+                    <label className="text-xs text-slate-400 mb-2 block">🧣 Foto de la Manta</label>
+                    {legacyForm.photoMantaUrl ? (
+                      <div className="relative">
+                        <img src={legacyForm.photoMantaUrl} alt="Manta" className="w-full h-32 object-cover rounded-lg"/>
+                        <button onClick={() => setLegacyForm({...legacyForm, photoMantaUrl: ''})} className="absolute top-2 right-2 bg-red-500/80 p-1 rounded-full">
+                          <X className="w-3 h-3 text-white" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center h-24 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-yellow-500/50 transition-colors">
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleLegacyImageUpload(e, 'photoMantaUrl')} disabled={uploadingField !== null}/>
+                        {uploadingField === 'photoMantaUrl' ? <Loader2 className="w-6 h-6 text-yellow-400 animate-spin" /> : <><Upload className="w-6 h-6 text-slate-500 mb-1" /><span className="text-xs text-slate-500">Subir foto</span></>}
+                      </label>
+                    )}
                   </div>
                 </div>
               )}
@@ -1567,7 +1679,11 @@ export default function SquadManagerWidget() {
               </Button>
               <Button
                 onClick={handleSaveLegacy}
-                className="flex-1 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white"
+                className={`flex-1 text-white ${
+                  legacyForm.trainingLevel === 'BASIC' ? 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600' :
+                  legacyForm.trainingLevel === 'ADVANCED' ? 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600' :
+                  'bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600'
+                }`}
                 disabled={savingLegacy || uploadingField !== null}
               >
                 {savingLegacy ? (
@@ -1583,6 +1699,30 @@ export default function SquadManagerWidget() {
                 )}
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div className="fixed top-4 right-4 z-[100] animate-fade-in">
+          <div className={`rounded-lg shadow-2xl p-4 flex items-center gap-3 ${
+            toastType === 'success' 
+              ? 'bg-green-600 text-white' 
+              : 'bg-red-600 text-white'
+          }`}>
+            {toastType === 'success' ? (
+              <Sparkles className="w-5 h-5" />
+            ) : (
+              <AlertCircle className="w-5 h-5" />
+            )}
+            <span className="font-medium">{toastMessage}</span>
+            <button 
+              onClick={() => setShowToast(false)}
+              className="ml-2 hover:opacity-80"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
