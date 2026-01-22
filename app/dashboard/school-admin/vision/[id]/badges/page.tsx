@@ -156,29 +156,34 @@ export default function BadgesPage() {
     setNfcMessage(`📱 Acerca el gafete NFC de: ${queue[0].nombre}`);
     
     // Start NFC writing for first badge
-    writeNfcBadge(queue[0], 0);
+    startNfcSession(queue[0], 0);
   };
 
-  // Nueva función simplificada que usa write() directamente
-  // Web NFC write() espera automáticamente a que se acerque una tarjeta
-  const writeNfcBadge = async (currentItem: NFCWriteQueue, index: number) => {
+  // Función que inicia una sesión NFC para escribir un gafete
+  // Usa scan() para detectar la tarjeta, y write() en el mismo ndef cuando se detecta
+  const startNfcSession = async (currentItem: NFCWriteQueue, index: number) => {
     if (!nfcSupported) return;
 
-    // Prevenir escrituras duplicadas
+    // Prevenir sesiones duplicadas
     if (isWriting) {
-      console.log('Already writing, skipping...');
+      console.log('Already in NFC session, skipping...');
       return;
     }
 
     setIsWriting(true);
     setNfcStatus('waiting');
     setNfcMessage(`📱 Acerca el gafete NFC de: ${currentItem.nombre}`);
+    
+    // Actualizar estado en la cola
+    setNfcQueue(prev => prev.map((item, idx) => 
+      idx === index ? { ...item, status: 'writing' } : item
+    ));
 
     try {
       // Cancelar operación previa si existe
       if (abortControllerRef) {
         abortControllerRef.abort();
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
 
       const abortController = new AbortController();
@@ -187,73 +192,108 @@ export default function BadgesPage() {
       // @ts-ignore - NDEFReader is not in TypeScript types yet
       const ndef = new (window as any).NDEFReader();
       
-      // Actualizar mensaje
-      setNfcQueue(prev => prev.map((item, idx) => 
-        idx === index ? { ...item, status: 'writing' } : item
-      ));
-      setNfcStatus('writing');
-      setNfcMessage(`✏️ Esperando tarjeta para: ${currentItem.nombre}...`);
+      // Flag para evitar múltiples escrituras
+      let hasWritten = false;
 
-      // write() espera automáticamente a que se acerque una tarjeta
-      // No necesitamos scan() antes
-      await ndef.write(
-        {
-          records: [
-            {
-              recordType: "url",
-              data: `https://frutos.app/u/${currentItem.referralCode}`
-            },
-            {
-              recordType: "text",
-              data: JSON.stringify({
-                type: 'frutos-badge',
-                userId: currentItem.userId,
-                code: currentItem.referralCode,
-                name: currentItem.nombre,
-                level: level,
-                visionId: visionId,
-                timestamp: new Date().toISOString()
-              })
+      // Cuando se detecta una tarjeta
+      ndef.onreading = async () => {
+        if (hasWritten) return;
+        hasWritten = true;
+        
+        setNfcStatus('writing');
+        setNfcMessage(`✏️ Escribiendo gafete de: ${currentItem.nombre}...`);
+        
+        try {
+          // Escribir usando la MISMA instancia de ndef
+          await ndef.write({
+            records: [
+              {
+                recordType: "url",
+                data: `https://frutos.app/u/${currentItem.referralCode}`
+              },
+              {
+                recordType: "text", 
+                data: JSON.stringify({
+                  type: 'frutos-badge',
+                  userId: currentItem.userId,
+                  code: currentItem.referralCode,
+                  name: currentItem.nombre,
+                  level: level,
+                  visionId: visionId,
+                  timestamp: new Date().toISOString()
+                })
+              }
+            ]
+          });
+
+          // ¡Éxito!
+          if (navigator.vibrate) {
+            navigator.vibrate([100, 50, 100, 50, 100]);
+          }
+          playSuccessSound();
+
+          // Actualizar estado del queue
+          setNfcQueue(prev => prev.map((item, idx) => 
+            idx === index ? { ...item, status: 'success' } : item
+          ));
+
+          setNfcStatus('success');
+          setNfcMessage(`✅ ¡Gafete grabado! ${currentItem.nombre}`);
+          setIsWriting(false);
+          
+          // Cancelar el scan actual
+          abortController.abort();
+
+          // Pasar al siguiente después de un delay
+          setTimeout(() => {
+            const nextIndex = index + 1;
+            if (nextIndex < nfcQueue.length) {
+              setCurrentNfcIndex(nextIndex);
+              // Iniciar sesión para el siguiente gafete
+              startNfcSession(nfcQueue[nextIndex], nextIndex);
+            } else {
+              setNfcStatus('idle');
+              setNfcMessage('🎉 ¡Todos los gafetes han sido grabados!');
+              setAbortControllerRef(null);
             }
-          ]
-        },
-        { signal: abortController.signal }
-      );
+          }, 1500);
 
-      // ¡Éxito!
-      if (navigator.vibrate) {
-        navigator.vibrate([100, 50, 100, 50, 100]);
-      }
-      playSuccessSound();
+        } catch (writeError: any) {
+          console.error('NFC Write Error:', writeError);
+          hasWritten = false; // Permitir reintento
+          setIsWriting(false);
+          
+          if (navigator.vibrate) {
+            navigator.vibrate([300, 100, 300]);
+          }
 
-      // Actualizar estado del queue
-      setNfcQueue(prev => prev.map((item, idx) => 
-        idx === index ? { ...item, status: 'success' } : item
-      ));
-
-      setNfcStatus('success');
-      setNfcMessage(`✅ ¡Gafete grabado! ${currentItem.nombre}`);
-      setIsWriting(false);
-
-      // Pasar al siguiente después de un delay
-      setTimeout(() => {
-        const nextIndex = index + 1;
-        if (nextIndex < nfcQueue.length) {
-          setCurrentNfcIndex(nextIndex);
-          // Grabar el siguiente gafete
-          writeNfcBadge(nfcQueue[nextIndex], nextIndex);
-        } else {
-          setNfcStatus('idle');
-          setNfcMessage('🎉 ¡Todos los gafetes han sido grabados!');
-          setAbortControllerRef(null);
+          let errorMsg = writeError.message || 'Error al escribir';
+          if (writeError.name === 'NetworkError') {
+            errorMsg = 'La tarjeta se alejó. Mantenla cerca y vuelve a acercarla.';
+          }
+          
+          setNfcQueue(prev => prev.map((item, idx) => 
+            idx === index ? { ...item, status: 'error', error: errorMsg } : item
+          ));
+          setNfcStatus('error');
+          setNfcMessage(`❌ Error: ${errorMsg}`);
         }
-      }, 1500);
+      };
+
+      ndef.onreadingerror = () => {
+        setNfcStatus('error');
+        setNfcMessage('❌ Error al leer tarjeta. Acércala de nuevo.');
+      };
+
+      // Iniciar el scan - esto esperará a que se acerque una tarjeta
+      await ndef.scan({ signal: abortController.signal });
+      console.log('NFC scan started, waiting for card...');
 
     } catch (error: any) {
-      console.error('NFC Write Error:', error);
+      console.error('NFC Session Error:', error);
       setIsWriting(false);
       
-      // Ignorar errores de abort (cancelación intencional)
+      // Ignorar errores de abort
       if (error.name === 'AbortError') {
         return;
       }
@@ -267,10 +307,6 @@ export default function BadgesPage() {
         errorMsg = 'Permiso NFC denegado. Permite el acceso en tu navegador.';
       } else if (error.name === 'NotSupportedError') {
         errorMsg = 'NFC no soportado en este dispositivo.';
-      } else if (error.name === 'NetworkError') {
-        errorMsg = 'La tarjeta se alejó. Mantenla cerca durante la escritura.';
-      } else if (error.name === 'NotReadableError') {
-        errorMsg = 'No se pudo leer la tarjeta. Verifica que sea una tarjeta NFC válida.';
       }
 
       setNfcQueue(prev => prev.map((item, idx) => 
@@ -289,7 +325,8 @@ export default function BadgesPage() {
         idx === index ? { ...it, status: 'pending', error: undefined } : it
       ));
       setCurrentNfcIndex(index);
-      writeNfcBadge(item, index);
+      setIsWriting(false); // Reset flag
+      startNfcSession(item, index);
     }
   };
 
@@ -311,7 +348,7 @@ export default function BadgesPage() {
     if (currentNfcIndex < nfcQueue.length) {
       setIsWriting(false);
       setNfcStatus('waiting');
-      writeNfcBadge(nfcQueue[currentNfcIndex], currentNfcIndex);
+      startNfcSession(nfcQueue[currentNfcIndex], currentNfcIndex);
     }
   };
 
@@ -333,7 +370,7 @@ export default function BadgesPage() {
       setNfcStatus('waiting');
       // Pequeño delay antes del siguiente
       setTimeout(() => {
-        writeNfcBadge(nfcQueue[nextIndex], nextIndex);
+        startNfcSession(nfcQueue[nextIndex], nextIndex);
       }, 500);
     } else {
       setNfcStatus('idle');
