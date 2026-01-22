@@ -16,13 +16,25 @@ export async function POST(request: Request) {
 
     const userId = parseInt(session.user.id);
     const body = await request.json();
-    const { scannedUserId, badgeNumber, nfcId } = body;
+    const { scannedUserId, badgeNumber, nfcId, referralCode } = body;
+    
+    console.log('🔍 Buddy scan request:', { scannedUserId, badgeNumber, nfcId, referralCode, fromUser: userId });
 
     // Determinar el ID del usuario escaneado
     let targetUserId: number | null = null;
 
     if (scannedUserId) {
+      // ID directo
       targetUserId = parseInt(scannedUserId);
+      console.log('📌 Using scannedUserId:', targetUserId);
+    } else if (referralCode) {
+      // Buscar por referralCode (código del gafete/QR)
+      const userByCode = await prisma.usuario.findUnique({
+        where: { referralCode: referralCode.toUpperCase() },
+        select: { id: true, nombre: true }
+      });
+      targetUserId = userByCode?.id || null;
+      console.log('📌 Búsqueda por referralCode:', referralCode, '→', userByCode ? `ID ${userByCode.id} (${userByCode.nombre})` : 'NO ENCONTRADO');
     } else if (badgeNumber) {
       // Buscar por número de gafete
       const checkIn = await prisma.checkInRecord.findFirst({
@@ -30,18 +42,23 @@ export async function POST(request: Request) {
         select: { userId: true }
       });
       targetUserId = checkIn?.userId || null;
+      console.log('📌 Búsqueda por badgeNumber:', badgeNumber, '→', targetUserId || 'NO ENCONTRADO');
     } else if (nfcId) {
-      // Buscar por NFC ID (podría estar en el badge)
+      // Buscar por NFC ID
       const checkIn = await prisma.checkInRecord.findFirst({
         where: { badgeNumber: nfcId },
         select: { userId: true }
       });
       targetUserId = checkIn?.userId || null;
+      console.log('📌 Búsqueda por nfcId:', nfcId, '→', targetUserId || 'NO ENCONTRADO');
     }
 
     if (!targetUserId) {
+      const searchedFor = referralCode || scannedUserId || badgeNumber || nfcId || 'ningún dato';
+      console.log('❌ No se encontró usuario con:', searchedFor);
       return NextResponse.json({ 
-        error: 'No se pudo identificar al participante' 
+        error: `No se encontró participante con código: ${searchedFor}`,
+        code: 'USER_NOT_FOUND'
       }, { status: 400 });
     }
 
@@ -50,6 +67,8 @@ export async function POST(request: Request) {
         error: 'No puedes ser tu propio buddy 😅' 
       }, { status: 400 });
     }
+
+    console.log('✅ Target user found:', targetUserId);
 
     // Obtener visión del usuario actual (ADVANCED o PL)
     const myEnrollment = await prisma.vision_enrollments.findFirst({
