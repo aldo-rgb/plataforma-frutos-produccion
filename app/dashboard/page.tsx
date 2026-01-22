@@ -17,7 +17,6 @@ import RankingWidget from "@/components/dashboard/RankingWidget";
 import PendingMentorReviewsWidget from "@/components/dashboard/PendingMentorReviewsWidget";
 import MedicalFormWidget from "@/components/dashboard/MedicalFormWidget";
 import IdentityHeroSection from "@/components/dashboard/identity/IdentityHeroSection";
-import PendingTicketBanner from "@/components/dashboard/PendingTicketBanner";
 import BitacoraAlertWidget from "@/components/dashboard/BitacoraAlertWidget";
 import LegacyCaptureBlockingModal from "@/components/dashboard/LegacyCaptureBlockingModal";
 
@@ -531,9 +530,6 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       {/* NOTIFICACIONES IMPORTANTES (Cambio de Mentor, etc.) */}
       <NotificationBanner />
-
-      {/* ALERTA DE TICKETS PENDIENTES DE PAGO */}
-      <PendingTicketBanner />
 
       {/* ALERTA DE BITÁCORA DE INICIO - Para usuarios ADVANCED sin completar */}
       <BitacoraAlertWidget />
