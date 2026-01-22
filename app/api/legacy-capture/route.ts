@@ -5,63 +5,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { CaptureStatus, TrainingLevel } from "@prisma/client";
+import { VisionLevel, ProductLevelType } from "@prisma/client";
+
+export const dynamic = 'force-dynamic';
 
 // GET: Obtener lista de participantes del entrenamiento actual del GC
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    const userId = parseInt(session.user.id);
     const { searchParams } = new URL(request.url);
-    const visionId = searchParams.get("visionId");
+    const visionIdParam = searchParams.get("visionId");
 
-    // Verificar que el usuario es un GC
+    // Obtener el usuario y verificar que es GC
     const usuario = await prisma.usuario.findUnique({
-      where: { id: userId },
-      include: {
-        roles: {
-          include: {
-            role: true,
-          },
-        },
-        assignedVisionsAsGC: {
-          where: visionId
-            ? { id: parseInt(visionId) }
-            : {
-                status: {
-                  in: ["REGISTRATION_OPEN", "IN_PROGRESS"],
-                },
-              },
-          include: {
-            school: {
-              include: {
-                organization: true,
-              },
-            },
-            product: true,
-            participantes: {
-              include: {
-                usuario: {
-                  select: {
-                    id: true,
-                    nombreCompleto: true,
-                    fotoPerfilUrl: true,
-                    email: true,
-                    telefono: true,
-                  },
-                },
-              },
-            },
-          },
-          orderBy: {
-            fechaInicio: "desc",
-          },
-        },
-      },
+      where: { email: session.user.email },
+      select: { 
+        id: true, 
+        nombre: true, 
+        rol: true,
+        profileImage: true 
+      }
     });
 
     if (!usuario) {
@@ -71,42 +38,71 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const isGC = usuario.roles.some(
-      (r) => r.role.nombre === "GameChanger" || r.role.nombre === "Admin"
-    );
-
-    if (!isGC) {
+    // Verificar rol de GC o Admin
+    if (usuario.rol !== 'GAMECHANGER' && usuario.rol !== 'ADMINISTRADOR' && usuario.rol !== 'SUPER_ADMIN') {
       return NextResponse.json(
         { error: "No tienes permisos de Game Changer" },
         { status: 403 }
       );
     }
 
-    // Obtener visiones activas donde es GC
-    const visionesActivas = usuario.assignedVisionsAsGC;
+    // Obtener las visiones donde el usuario es GC
+    const visionesGC = await prisma.visionGameChanger.findMany({
+      where: { 
+        gameChangerId: usuario.id,
+        ...(visionIdParam ? { visionId: parseInt(visionIdParam) } : {})
+      },
+      include: {
+        Vision: {
+          include: {
+            Organization: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      }
+    });
 
-    if (visionesActivas.length === 0) {
+    if (visionesGC.length === 0) {
       return NextResponse.json({
         visiones: [],
         message: "No tienes entrenamientos activos asignados",
       });
     }
 
-    // Formatear respuesta con participantes y su estado de captura
+    // Para cada visión, obtener los participantes asignados a este GC
     const visionesConCaptura = await Promise.all(
-      visionesActivas.map(async (vision) => {
-        // Determinar el nivel del entrenamiento
-        const productName = vision.product.nombre.toLowerCase();
-        const trainingLevel: TrainingLevel = productName.includes("avanzado")
-          ? TrainingLevel.ADVANCED
-          : productName.includes("pl") || productName.includes("líder")
-          ? TrainingLevel.PL
-          : TrainingLevel.BASIC;
+      visionesGC.map(async (vgc) => {
+        const vision = vgc.Vision;
+        const trainingLevel = vgc.level;
+
+        // Obtener participantes asignados a este GC en esta visión
+        const participantesAsignados = await prisma.visionParticipante.findMany({
+          where: {
+            visionId: vision.id,
+            gameChangerId: usuario.id
+          },
+          include: {
+            Usuario_VisionParticipante_participanteIdToUsuario: {
+              select: {
+                id: true,
+                nombre: true,
+                email: true,
+                telefono: true,
+                profileImage: true
+              }
+            }
+          }
+        });
 
         // Obtener capturas existentes para esta visión
         const capturasExistentes = await prisma.legacyCaptureSession.findMany({
           where: {
             visionId: vision.id,
+            gcId: usuario.id
           },
         });
 
@@ -115,14 +111,16 @@ export async function GET(request: NextRequest) {
         );
 
         // Mapear participantes con su estado de captura
-        const participantesConEstado = vision.participantes.map((p) => {
-          const captura = capturasMap.get(p.usuarioId);
+        const participantesConEstado = participantesAsignados.map((p) => {
+          const participante = p.Usuario_VisionParticipante_participanteIdToUsuario;
+          const captura = capturasMap.get(participante.id);
+          
           return {
-            id: p.usuarioId,
-            nombreCompleto: p.usuario.nombreCompleto,
-            fotoPerfilUrl: p.usuario.fotoPerfilUrl,
-            email: p.usuario.email,
-            telefono: p.usuario.telefono,
+            id: participante.id,
+            nombre: participante.nombre,
+            email: participante.email,
+            telefono: participante.telefono,
+            profileImage: participante.profileImage,
             captureStatus: captura?.status || null,
             captureId: captura?.id || null,
             hasPhotoWithGC: !!captura?.photoWithGCUrl,
@@ -135,29 +133,37 @@ export async function GET(request: NextRequest) {
           };
         });
 
+        // Determinar fecha de fin según nivel
+        let endDate: Date | null = null;
+        if (trainingLevel === VisionLevel.BASIC) {
+          endDate = vision.endDate;
+        } else if (trainingLevel === VisionLevel.ADVANCED) {
+          endDate = vision.advancedEndDate;
+        } else if (trainingLevel === VisionLevel.PL) {
+          endDate = vision.plWeekend3EndDate || vision.plWeekend2EndDate || vision.plWeekend1EndDate;
+        }
+
         return {
           visionId: vision.id,
           visionNombre: vision.nombre,
-          school: vision.school.nombre,
-          organization: vision.school.organization.nombre,
-          product: vision.product.nombre,
+          organization: vision.Organization?.name || "Sin organización",
           trainingLevel,
-          fechaInicio: vision.fechaInicio,
-          fechaFin: vision.fechaFin,
-          status: vision.status,
+          startDate: trainingLevel === VisionLevel.BASIC ? vision.startDate 
+                   : trainingLevel === VisionLevel.ADVANCED ? vision.advancedStartDate
+                   : vision.plWeekend1StartDate,
+          endDate,
           totalParticipantes: participantesConEstado.length,
           capturaCompleta: participantesConEstado.filter(
-            (p) => p.captureStatus === CaptureStatus.COMPLETE
+            (p) => p.captureStatus === "COMPLETED"
           ).length,
-          capturaParcial: participantesConEstado.filter(
-            (p) => p.captureStatus === CaptureStatus.PARTIAL
+          capturaPendiente: participantesConEstado.filter(
+            (p) => p.captureStatus === "IN_PROGRESS"
           ).length,
-          sinCaptura: participantesConEstado.filter((p) => !p.captureStatus)
-            .length,
+          sinCaptura: participantesConEstado.filter((p) => !p.captureStatus).length,
           participantes: participantesConEstado,
           // Campos requeridos según nivel
           requiredFields:
-            trainingLevel === TrainingLevel.BASIC
+            trainingLevel === VisionLevel.BASIC
               ? ["photoWithGC", "photoWithSquad", "photoBlueWall"]
               : [
                   "photoWithGC",
@@ -172,14 +178,14 @@ export async function GET(request: NextRequest) {
     );
 
     return NextResponse.json({
-      gcId: userId,
-      gcName: usuario.nombreCompleto,
+      gcId: usuario.id,
+      gcName: usuario.nombre,
       visiones: visionesConCaptura,
     });
   } catch (error) {
     console.error("Error en GET /api/legacy-capture:", error);
     return NextResponse.json(
-      { error: "Error interno del servidor" },
+      { error: "Error interno del servidor", details: String(error) },
       { status: 500 }
     );
   }
@@ -189,21 +195,31 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    const gcId = parseInt(session.user.id);
+    const usuario = await prisma.usuario.findUnique({
+      where: { email: session.user.email },
+      select: { id: true, rol: true }
+    });
+
+    if (!usuario || (usuario.rol !== 'GAMECHANGER' && usuario.rol !== 'ADMINISTRADOR')) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    }
+
+    const gcId = usuario.id;
     const body = await request.json();
 
     const {
       visionId,
       participantId,
-      // Fotos básicas
+      trainingLevel,
+      // Fotos básicas (todos los niveles)
       photoWithGCUrl,
       photoWithSquadUrl,
       photoBlueWallUrl,
-      // Campos avanzado/PL
+      // Campos avanzados (solo ADVANCED y PL)
       lullabyTitle,
       lullabyArtist,
       lullabyAudioUrl,
@@ -218,233 +234,160 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar que el GC está asignado a esta visión
-    const vision = await prisma.vision.findFirst({
+    // Verificar que el participante está asignado a este GC
+    const asignacion = await prisma.visionParticipante.findFirst({
       where: {
-        id: visionId,
-        gcId: gcId,
-      },
-      include: {
-        product: true,
-        participantes: {
-          where: {
-            usuarioId: participantId,
-          },
-        },
-      },
+        visionId: parseInt(visionId),
+        participanteId: parseInt(participantId),
+        gameChangerId: gcId
+      }
     });
 
-    if (!vision) {
+    if (!asignacion) {
       return NextResponse.json(
-        { error: "No tienes acceso a este entrenamiento" },
+        { error: "Este participante no está asignado a ti" },
         { status: 403 }
       );
     }
 
-    if (vision.participantes.length === 0) {
-      return NextResponse.json(
-        { error: "El participante no está inscrito en este entrenamiento" },
-        { status: 400 }
-      );
-    }
+    // Determinar el nivel del training (convertir a ProductLevelType)
+    const level = (trainingLevel as string) || 'BASIC';
 
-    // Determinar nivel de entrenamiento
-    const productName = vision.product.nombre.toLowerCase();
-    const trainingLevel: TrainingLevel = productName.includes("avanzado")
-      ? TrainingLevel.ADVANCED
-      : productName.includes("pl") || productName.includes("líder")
-      ? TrainingLevel.PL
-      : TrainingLevel.BASIC;
-
-    // Verificar si ya existe una captura
-    let existingCapture = await prisma.legacyCaptureSession.findFirst({
+    // Buscar captura existente
+    const capturaExistente = await prisma.legacyCaptureSession.findFirst({
       where: {
-        visionId,
-        participantId,
+        visionId: parseInt(visionId),
+        participantId: parseInt(participantId),
       },
     });
 
-    // Preparar datos de actualización
-    const captureData: any = {
-      visionId,
-      participantId,
-      gcId,
-      trainingLevel,
-      updatedAt: new Date(),
+    // Determinar estado de la captura
+    let status: "PENDING" | "IN_PROGRESS" | "COMPLETED" = "PENDING";
+    
+    const hasBasicPhotos = !!(photoWithGCUrl || capturaExistente?.photoWithGCUrl) &&
+                          !!(photoWithSquadUrl || capturaExistente?.photoWithSquadUrl) &&
+                          !!(photoBlueWallUrl || capturaExistente?.photoBlueWallUrl);
+
+    if (level === 'BASIC') {
+      status = hasBasicPhotos ? "COMPLETED" : "IN_PROGRESS";
+    } else {
+      // ADVANCED o PL requieren más campos
+      const hasAdvancedFields = !!(lullabyTitle || capturaExistente?.lullabyTitle) &&
+                               !!(contractPhotoUrl || capturaExistente?.contractPhotoUrl) &&
+                               !!(contractDeclaration || capturaExistente?.contractDeclaration);
+      
+      if (hasBasicPhotos && hasAdvancedFields) {
+        status = "COMPLETED";
+      } else if (hasBasicPhotos || hasAdvancedFields) {
+        status = "IN_PROGRESS";
+      }
+    }
+
+    // Datos a guardar - LegacyCaptureSession usa gcId, no gameChangerId
+    // También requiere productId, usaremos visionId como referencia temporal
+    const captureData = {
+      visionId: parseInt(visionId),
+      participantId: parseInt(participantId),
+      gcId: gcId,
+      productId: parseInt(visionId), // Usando visionId como productId temporalmente
+      level: level as ProductLevelType,
+      status,
+      ...(photoWithGCUrl && { photoWithGCUrl }),
+      ...(photoWithSquadUrl && { photoWithSquadUrl }),
+      ...(photoBlueWallUrl && { photoBlueWallUrl }),
+      ...(lullabyTitle && { lullabyTitle }),
+      ...(lullabyArtist && { lullabyArtist }),
+      ...(lullabyAudioUrl && { lullabyAudioUrl }),
+      ...(contractPhotoUrl && { contractPhotoUrl }),
+      ...(contractDeclaration && { contractDeclaration }),
     };
 
-    // Campos básicos (para todos los niveles)
-    if (photoWithGCUrl !== undefined) captureData.photoWithGCUrl = photoWithGCUrl;
-    if (photoWithSquadUrl !== undefined) captureData.photoWithSquadUrl = photoWithSquadUrl;
-    if (photoBlueWallUrl !== undefined) captureData.photoBlueWallUrl = photoBlueWallUrl;
-
-    // Campos solo para ADVANCED y PL
-    if (trainingLevel !== TrainingLevel.BASIC) {
-      if (lullabyTitle !== undefined) captureData.lullabyTitle = lullabyTitle;
-      if (lullabyArtist !== undefined) captureData.lullabyArtist = lullabyArtist;
-      if (lullabyAudioUrl !== undefined) captureData.lullabyAudioUrl = lullabyAudioUrl;
-      if (contractPhotoUrl !== undefined) captureData.contractPhotoUrl = contractPhotoUrl;
-      if (contractDeclaration !== undefined) captureData.contractDeclaration = contractDeclaration;
-    }
-
-    // Calcular estado de captura
-    let status: CaptureStatus;
-    
-    if (trainingLevel === TrainingLevel.BASIC) {
-      const basicComplete =
-        (captureData.photoWithGCUrl || existingCapture?.photoWithGCUrl) &&
-        (captureData.photoWithSquadUrl || existingCapture?.photoWithSquadUrl) &&
-        (captureData.photoBlueWallUrl || existingCapture?.photoBlueWallUrl);
-      
-      const basicPartial =
-        (captureData.photoWithGCUrl || existingCapture?.photoWithGCUrl) ||
-        (captureData.photoWithSquadUrl || existingCapture?.photoWithSquadUrl) ||
-        (captureData.photoBlueWallUrl || existingCapture?.photoBlueWallUrl);
-
-      status = basicComplete
-        ? CaptureStatus.COMPLETE
-        : basicPartial
-        ? CaptureStatus.PARTIAL
-        : CaptureStatus.PENDING;
-    } else {
-      // ADVANCED o PL
-      const advancedComplete =
-        (captureData.photoWithGCUrl || existingCapture?.photoWithGCUrl) &&
-        (captureData.photoWithSquadUrl || existingCapture?.photoWithSquadUrl) &&
-        (captureData.photoBlueWallUrl || existingCapture?.photoBlueWallUrl) &&
-        (captureData.lullabyTitle || existingCapture?.lullabyTitle) &&
-        (captureData.contractPhotoUrl || existingCapture?.contractPhotoUrl) &&
-        (captureData.contractDeclaration || existingCapture?.contractDeclaration);
-
-      const advancedPartial =
-        (captureData.photoWithGCUrl || existingCapture?.photoWithGCUrl) ||
-        (captureData.photoWithSquadUrl || existingCapture?.photoWithSquadUrl) ||
-        (captureData.photoBlueWallUrl || existingCapture?.photoBlueWallUrl) ||
-        (captureData.lullabyTitle || existingCapture?.lullabyTitle) ||
-        (captureData.contractPhotoUrl || existingCapture?.contractPhotoUrl) ||
-        (captureData.contractDeclaration || existingCapture?.contractDeclaration);
-
-      status = advancedComplete
-        ? CaptureStatus.COMPLETE
-        : advancedPartial
-        ? CaptureStatus.PARTIAL
-        : CaptureStatus.PENDING;
-    }
-
-    captureData.status = status;
-
-    // Crear o actualizar
-    let capture;
-    if (existingCapture) {
-      capture = await prisma.legacyCaptureSession.update({
-        where: { id: existingCapture.id },
-        data: captureData,
+    let captura;
+    if (capturaExistente) {
+      // Actualizar existente
+      captura = await prisma.legacyCaptureSession.update({
+        where: { id: capturaExistente.id },
+        data: {
+          ...captureData,
+          updatedAt: new Date(),
+        },
       });
     } else {
-      capture = await prisma.legacyCaptureSession.create({
+      // Crear nueva
+      captura = await prisma.legacyCaptureSession.create({
         data: captureData,
       });
     }
 
     return NextResponse.json({
       success: true,
-      capture: {
-        id: capture.id,
-        status: capture.status,
-        trainingLevel: capture.trainingLevel,
-        hasPhotoWithGC: !!capture.photoWithGCUrl,
-        hasPhotoWithSquad: !!capture.photoWithSquadUrl,
-        hasPhotoBlueWall: !!capture.photoBlueWallUrl,
-        hasLullaby: !!capture.lullabyTitle,
-        hasContract: !!capture.contractPhotoUrl,
-        hasDeclaration: !!capture.contractDeclaration,
-      },
-      message:
-        status === CaptureStatus.COMPLETE
-          ? "¡Captura completa!"
-          : "Captura guardada parcialmente",
+      message: capturaExistente ? "Captura actualizada" : "Captura creada",
+      capture: captura,
     });
   } catch (error) {
     console.error("Error en POST /api/legacy-capture:", error);
     return NextResponse.json(
-      { error: "Error interno del servidor" },
+      { error: "Error interno del servidor", details: String(error) },
       { status: 500 }
     );
   }
 }
 
-// GET: Obtener captura específica de un participante
+// PUT: Actualizar una captura específica
 export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { visionId, participantId } = body;
+    const usuario = await prisma.usuario.findUnique({
+      where: { email: session.user.email },
+      select: { id: true, rol: true }
+    });
 
-    if (!visionId || !participantId) {
+    if (!usuario || (usuario.rol !== 'GAMECHANGER' && usuario.rol !== 'ADMINISTRADOR')) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { captureId, ...updateData } = body;
+
+    if (!captureId) {
       return NextResponse.json(
-        { error: "visionId y participantId son requeridos" },
+        { error: "captureId es requerido" },
         { status: 400 }
       );
     }
 
-    const capture = await prisma.legacyCaptureSession.findFirst({
+    // Verificar que la captura pertenece a este GC
+    const capturaExistente = await prisma.legacyCaptureSession.findFirst({
       where: {
-        visionId,
-        participantId,
-      },
-      include: {
-        participant: {
-          select: {
-            id: true,
-            nombreCompleto: true,
-            fotoPerfilUrl: true,
-          },
-        },
-        vision: {
-          select: {
-            nombre: true,
-            product: {
-              select: {
-                nombre: true,
-              },
-            },
-          },
-        },
+        id: parseInt(captureId),
+        gcId: usuario.id
+      }
+    });
+
+    if (!capturaExistente) {
+      return NextResponse.json(
+        { error: "Captura no encontrada o no tienes permisos" },
+        { status: 404 }
+      );
+    }
+
+    // Actualizar
+    const captura = await prisma.legacyCaptureSession.update({
+      where: { id: parseInt(captureId) },
+      data: {
+        ...updateData,
+        updatedAt: new Date(),
       },
     });
 
-    if (!capture) {
-      return NextResponse.json({
-        capture: null,
-        message: "No hay captura para este participante aún",
-      });
-    }
-
     return NextResponse.json({
-      capture: {
-        id: capture.id,
-        status: capture.status,
-        trainingLevel: capture.trainingLevel,
-        participant: capture.participant,
-        vision: capture.vision,
-        // Fotos
-        photoWithGCUrl: capture.photoWithGCUrl,
-        photoWithSquadUrl: capture.photoWithSquadUrl,
-        photoBlueWallUrl: capture.photoBlueWallUrl,
-        // Avanzado
-        lullabyTitle: capture.lullabyTitle,
-        lullabyArtist: capture.lullabyArtist,
-        lullabyAudioUrl: capture.lullabyAudioUrl,
-        contractPhotoUrl: capture.contractPhotoUrl,
-        contractDeclaration: capture.contractDeclaration,
-        // Timestamps
-        createdAt: capture.createdAt,
-        updatedAt: capture.updatedAt,
-      },
+      success: true,
+      message: "Captura actualizada",
+      capture: captura,
     });
   } catch (error) {
     console.error("Error en PUT /api/legacy-capture:", error);
