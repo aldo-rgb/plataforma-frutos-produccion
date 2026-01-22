@@ -233,13 +233,17 @@ export default function QRScanner({ onScan, defaultMode, enabled = true }: QRSca
 
   // Detener scanner y liberar cámara completamente
   const stopScanner = async () => {
-    console.log('🛑 Deteniendo scanner...');
+    console.log('🛑 Deteniendo scanner QR...');
     
     // Primero detener el scanner de html5-qrcode
     if (scannerRef.current) {
       try {
-        await scannerRef.current.stop();
-        console.log('✅ Scanner detenido');
+        const state = scannerRef.current.getState();
+        if (state === 2) { // SCANNING
+          await scannerRef.current.stop();
+        }
+        await scannerRef.current.clear();
+        console.log('✅ Scanner QR detenido y limpiado');
       } catch (error) {
         console.error('Error stopping scanner:', error);
       }
@@ -248,26 +252,19 @@ export default function QRScanner({ onScan, defaultMode, enabled = true }: QRSca
     
     // Liberar cualquier stream de video activo en el DOM
     try {
-      const videoElement = document.querySelector('#qr-reader video') as HTMLVideoElement;
-      if (videoElement && videoElement.srcObject) {
-        const stream = videoElement.srcObject as MediaStream;
-        stream.getTracks().forEach(track => {
-          track.stop();
-          console.log('✅ Track detenido:', track.kind);
-        });
-        videoElement.srcObject = null;
-      }
+      const videoElements = document.querySelectorAll('video');
+      videoElements.forEach(videoElement => {
+        if (videoElement && videoElement.srcObject) {
+          const stream = videoElement.srcObject as MediaStream;
+          stream.getTracks().forEach(track => {
+            track.stop();
+            console.log('✅ Video track detenido:', track.kind, track.label);
+          });
+          videoElement.srcObject = null;
+        }
+      });
     } catch (e) {
       console.error('Error liberando video:', e);
-    }
-    
-    // Liberar TODOS los streams de MediaDevices activos
-    try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      // No podemos detener streams desde enumerateDevices, pero el log ayuda
-      console.log('📷 Dispositivos:', devices.filter(d => d.kind === 'videoinput').length);
-    } catch (e) {
-      // Ignorar
     }
     
     setIsScanning(false);

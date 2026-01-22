@@ -27,14 +27,16 @@ export default function WebcamCapture({ onCapture, userName }: WebcamCaptureProp
   // Verificar permisos de cámara al montar - con delay para que el QR scanner libere la cámara
   useEffect(() => {
     const checkCamera = async () => {
-      // Esperar 1 segundo para que el QR scanner libere la cámara
+      // Esperar 2 segundos para que el QR scanner libere la cámara completamente
       console.log('📷 WebcamCapture: Esperando que se libere la cámara...');
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
       setIsInitializing(false);
       
       try {
         console.log('📷 WebcamCapture: Intentando acceder a la cámara...');
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'user' } 
+        });
         stream.getTracks().forEach(track => track.stop());
         setCameraError(null);
         console.log('✅ WebcamCapture: Cámara disponible');
@@ -44,6 +46,20 @@ export default function WebcamCapture({ onCapture, userName }: WebcamCaptureProp
           setCameraError('Permiso de cámara denegado. Por favor habilita el acceso a la cámara.');
         } else if (err.name === 'NotFoundError') {
           setCameraError('No se encontró ninguna cámara en este dispositivo.');
+        } else if (err.name === 'NotReadableError' || err.message?.includes('Could not start')) {
+          // La cámara está ocupada, intentar de nuevo
+          console.log('📷 WebcamCapture: Cámara ocupada, reintentando en 2s...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          try {
+            const stream2 = await navigator.mediaDevices.getUserMedia({ 
+              video: { facingMode: 'user' } 
+            });
+            stream2.getTracks().forEach(track => track.stop());
+            setCameraError(null);
+            console.log('✅ WebcamCapture: Cámara disponible en segundo intento');
+          } catch (err2: any) {
+            setCameraError('La cámara está ocupada. Recarga la página e intenta de nuevo.');
+          }
         } else {
           setCameraError('Error al acceder a la cámara: ' + err.message);
         }

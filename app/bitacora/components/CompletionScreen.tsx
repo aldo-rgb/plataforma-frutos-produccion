@@ -96,7 +96,7 @@ export default function CompletionScreen() {
           transition={{ delay: 1 }}
           className="mt-12 text-gray-600 text-sm italic max-w-md mx-auto"
         >
-          "El primer paso hacia el cambio es la consciencia. El segundo paso es la aceptación."
+          "El salto hacia el cambio es la consciencia. Posiblemente es la aceptación."
         </motion.p>
       </motion.div>
     </motion.div>
