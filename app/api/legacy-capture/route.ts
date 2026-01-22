@@ -129,10 +129,10 @@ export async function GET(request: NextRequest) {
           
           return {
             id: participante.id,
-            nombre: participante.nombre,
+            nombreCompleto: participante.nombre,
             email: participante.email,
             telefono: participante.telefono,
-            profileImage: participante.profileImage,
+            fotoPerfilUrl: participante.profileImage,
             captureStatus: captura?.status || null,
             captureId: captura?.id || null,
             hasPhotoWithGC: !!captura?.photoWithGCUrl,
