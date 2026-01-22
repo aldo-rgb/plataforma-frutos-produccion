@@ -145,7 +145,8 @@ export async function GET(request: NextRequest) {
 
     // Combinar resultados
     const participantesFromEnrollments = enrollments.map(e => ({
-      id: e.id,
+      id: e.id, // ID del enrollment
+      userId: e.Usuario_vision_enrollments_userIdToUsuario?.id || null, // ID del usuario
       nombre: e.Usuario_vision_enrollments_userIdToUsuario?.nombre || 'Sin nombre',
       email: e.Usuario_vision_enrollments_userIdToUsuario?.email || '',
       telefono: e.Usuario_vision_enrollments_userIdToUsuario?.telefono || null,
@@ -160,7 +161,8 @@ export async function GET(request: NextRequest) {
     }));
 
     const participantesFromPreRegistros = preRegistros.map(pr => ({
-      id: pr.id,
+      id: pr.id, // ID del pre-registro
+      userId: pr.user?.id || null, // ID del usuario
       nombre: pr.user?.nombre || 'Sin nombre',
       email: pr.user?.email || '',
       telefono: pr.user?.telefono || null,

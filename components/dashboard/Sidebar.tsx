@@ -447,6 +447,52 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
           </div>
         )}
 
+        {/* Panel de Director de Escuela (SCHOOL_ADMIN) */}
+        {usuario.rol === 'SCHOOL_ADMIN' && (
+          <div className="pt-6 mt-6 border-t border-slate-800">
+            <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">🏫 Mi Escuela</p>
+            
+            <Link 
+              href="/dashboard/school-admin/branding"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/school-admin/branding'
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-purple-900/20'
+              }`}
+            >
+              <Sparkles size={18} className="text-purple-400" />
+              <span>Personalizar Login</span>
+            </Link>
+
+            <Link 
+              href="/dashboard/director/treasury/batches"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname.startsWith('/dashboard/director/treasury')
+                  ? 'bg-emerald-600 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-emerald-900/20'
+              }`}
+            >
+              <DollarSign size={18} className="text-emerald-400" />
+              <span>Gestión Financiera</span>
+            </Link>
+
+            <Link 
+              href="/dashboard/coordinador/visiones"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname.startsWith('/dashboard/coordinador/visiones') || pathname.startsWith('/dashboard/director/visiones')
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-blue-900/20'
+              }`}
+            >
+              <Users size={18} className="text-blue-400" />
+              <span>Mis Visiones</span>
+            </Link>
+          </div>
+        )}
+
         {/* Panel Maestro (Basado en Permisos) */}
         {(usuario.rol === 'ADMINISTRADOR' || allowedMenuItems.some(item => item.section === 'Panel Maestro')) && (
           <div className="pt-6 mt-6 border-t border-slate-800">
