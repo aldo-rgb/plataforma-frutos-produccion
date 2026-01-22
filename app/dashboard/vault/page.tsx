@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Camera, Filter, Sparkles, Award, TrendingUp, Image as ImageIcon, Info, X, Video, User, Trash2 } from 'lucide-react';
+import { Camera, Filter, Sparkles, Award, TrendingUp, Image as ImageIcon, Info, X, Video, User, Trash2, BookOpen } from 'lucide-react';
 import Image from 'next/image';
 import TimeCapsuleVideoModal from '@/components/vault/TimeCapsuleVideoModal';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import QuantumAlbumTab from '@/components/vault/QuantumAlbumTab';
 
 interface Evidencia {
   id: number;
@@ -39,7 +40,7 @@ export default function TheVaultPage() {
   const [selectedAvatar, setSelectedAvatar] = useState<Avatar | null>(null);
   const [showRarityGuide, setShowRarityGuide] = useState(false);
   const [showTimeCapsule, setShowTimeCapsule] = useState(false);
-  const [activeTab, setActiveTab] = useState<'evidencias' | 'avatares'>('evidencias');
+  const [activeTab, setActiveTab] = useState<'evidencias' | 'avatares' | 'album'>('evidencias');
 
   useEffect(() => {
     fetchEvidencias();
@@ -173,6 +174,19 @@ export default function TheVaultPage() {
             <User className="w-5 h-5" />
             <span>Avatares ({avatares.length})</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('album')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
+              activeTab === 'album'
+                ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white'
+                : 'bg-black/30 border border-purple-500/30 text-gray-400 hover:text-white'
+            }`}
+          >
+            <BookOpen className="w-5 h-5" />
+            <span>Álbum Cuántico</span>
+            <Sparkles className="w-4 h-4 text-yellow-400" />
+          </button>
         </div>
 
         {activeTab === 'evidencias' && (
@@ -301,36 +315,36 @@ export default function TheVaultPage() {
             <div className="max-w-7xl mx-auto px-6">
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {evidenciasFiltradas.map((evidencia) => (
-              <div
-                key={evidencia.id}
-                onClick={() => setSelectedImage(evidencia)}
-                className={`relative aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-all hover:scale-105 ${rarityColors[evidencia.rarity]}`}
-              >
-                <Image
-                  src={evidencia.fotoUrl}
-                  alt={evidencia.descripcion}
-                  fill
-                  className="object-cover"
-                />
-                
-                {/* Overlay con info */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity">
-                  <div className="absolute bottom-0 left-0 right-0 p-3">
-                    <p className="text-xs text-gray-300 mb-1">{evidencia.area}</p>
-                    <p className="text-sm font-bold">{rarityLabels[evidencia.rarity]}</p>
+                  <div
+                    key={evidencia.id}
+                    onClick={() => setSelectedImage(evidencia)}
+                    className={`relative aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-all hover:scale-105 ${rarityColors[evidencia.rarity]}`}
+                  >
+                    <Image
+                      src={evidencia.fotoUrl}
+                      alt={evidencia.descripcion}
+                      fill
+                      className="object-cover"
+                    />
+                    
+                    {/* Overlay con info */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity">
+                      <div className="absolute bottom-0 left-0 right-0 p-3">
+                        <p className="text-xs text-gray-300 mb-1">{evidencia.area}</p>
+                        <p className="text-sm font-bold">{rarityLabels[evidencia.rarity]}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Badge de rareza en esquina */}
+                    {evidencia.rarity !== 'COMMON' && (
+                      <div className="absolute top-2 right-2 backdrop-blur-sm bg-black/50 rounded-full px-2 py-1">
+                        <span className="text-xs">{rarityLabels[evidencia.rarity].split(' ')[0]}</span>
+                      </div>
+                    )}
                   </div>
-                </div>
-                
-                {/* Badge de rareza en esquina */}
-                {evidencia.rarity !== 'COMMON' && (
-                  <div className="absolute top-2 right-2 backdrop-blur-sm bg-black/50 rounded-full px-2 py-1">
-                    <span className="text-xs">{rarityLabels[evidencia.rarity].split(' ')[0]}</span>
-                  </div>
-                )}
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
           )}
         </>
       )}
@@ -410,6 +424,13 @@ export default function TheVaultPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* TAB DE ÁLBUM CUÁNTICO */}
+      {activeTab === 'album' && (
+        <div className="max-w-7xl mx-auto px-6">
+          <QuantumAlbumTab />
+        </div>
       )}
 
       {/* MODAL DE AVATAR AMPLIADO */}

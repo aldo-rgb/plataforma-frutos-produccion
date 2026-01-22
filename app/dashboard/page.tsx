@@ -19,6 +19,7 @@ import MedicalFormWidget from "@/components/dashboard/MedicalFormWidget";
 import IdentityHeroSection from "@/components/dashboard/identity/IdentityHeroSection";
 import PendingTicketBanner from "@/components/dashboard/PendingTicketBanner";
 import BitacoraAlertWidget from "@/components/dashboard/BitacoraAlertWidget";
+import LegacyCaptureBlockingModal from "@/components/dashboard/LegacyCaptureBlockingModal";
 
 export default async function DashboardPage() {
   // 1. Obtener sesión y datos frescos
@@ -555,9 +556,7 @@ export default async function DashboardPage() {
       )}
 
       {/* WIDGET: NOTIFICACIONES DE CALIFICACIÓN DE MENTOR */}
-      {(usuario.role === 'PARTICIPANTE' || usuario.role === 'LIDER') && (
-        <PendingMentorReviewsWidget />
-      )}
+      <PendingMentorReviewsWidget />
 
       {/* ============================================ */}
       {/* IDENTITY HERO SECTION: Badge + Progress Bar   */}
@@ -703,6 +702,11 @@ export default async function DashboardPage() {
       {/* MODAL DE CAMBIO DE ORGANIZACIÓN             */}
       {/* ============================================ */}
       <OrganizationChangeModal />
+
+      {/* ============================================ */}
+      {/* MODAL DE LEGACY CAPTURE (ÚLTIMO DÍA)        */}
+      {/* ============================================ */}
+      <LegacyCaptureBlockingModal />
 
       {/* Aquí abajo irían tus Widgets de "Avance General" y "Evidencias" */}
       {/* ... */}

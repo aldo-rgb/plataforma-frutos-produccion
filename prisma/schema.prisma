@@ -1617,6 +1617,11 @@ model SchoolProduct {
   GameChangerSurveys         GameChangerSurvey[]         @relation("GCSurveyProduct")
   GameChangerLocks           GameChangerLockStatus[]     @relation("GCLockProduct")
   DirectorAudit              DirectorAudit?              @relation("DirectorAuditProduct")
+  
+  // Álbum Cuántico y Legacy Capture
+  CollectiblePhotos          CollectiblePhoto[]          @relation("PhotoProduct")
+  LegacyCaptureSessions      LegacyCaptureSession[]      @relation("ProductLegacyCaptures")
+  UserSongs                  UserSong[]                  @relation("ProductSongs")
 
   @@index([isActive])
   @@index([levelType])
@@ -2250,6 +2255,17 @@ model Usuario {
   BuddyInitiated                                                         BuddyPair[]                     @relation("BuddyInitiator")
   BuddyReceived                                                          BuddyPair[]                     @relation("BuddyReceiver")
   BuddyBroken                                                            BuddyPair[]                     @relation("BuddyBrokenBy")
+  
+  // Álbum Cuántico - Fotos Coleccionables
+  CollectiblePhotos                                                      CollectiblePhoto[]              @relation("UserCollectiblePhotos")
+  ValidatedPhotos                                                        CollectiblePhoto[]              @relation("PhotoValidator")
+  
+  // Legacy Capture - Captura de datos críticos
+  LegacyCapturesAsGC                                                     LegacyCaptureSession[]          @relation("GCLegacyCaptures")
+  LegacyCapturesAsParticipant                                            LegacyCaptureSession[]          @relation("ParticipantLegacyCaptures")
+  
+  // Canciones Memorables
+  UserSongs                                                              UserSong[]                      @relation("UserSongs")
 
   @@index([communityOrganizationId])
 }
@@ -2318,6 +2334,11 @@ model Vision {
   weekly_payout_summary         weekly_payout_summary[]
   AdvancedQuestionnaires        AdvancedQuestionnaire[]
   BuddyPairs                    BuddyPair[]
+  
+  // Álbum Cuántico y Legacy Capture
+  CollectiblePhotos             CollectiblePhoto[]              @relation("PhotoVision")
+  LegacyCaptureSessions         LegacyCaptureSession[]          @relation("VisionLegacyCaptures")
+  UserSongs                     UserSong[]                      @relation("VisionSongs")
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -4308,3 +4329,193 @@ enum BuddyStatus {
   BROKEN        // Pacto roto (por abandono, etc.)
 }
 
+// ============================================
+// ÁLBUM CUÁNTICO - Sistema de Fotos Coleccionables
+// ============================================
+
+// Plantilla de cada foto coleccionable (las 50+ fotos posibles)
+model CollectiblePhotoTemplate {
+  id              Int                     @id @default(autoincrement())
+  slot            Int                     @unique // Número de slot 1-50+
+  name            String                  // "El Guardián", "El Espejo", etc.
+  description     String                  @db.Text // Descripción emotiva
+  category        PhotoCategory           // TRIBU, ARTEFACTOS, MOMENTOS, etc.
+  emoji           String                  // 📸, 🎭, etc.
+  requiredLevels  ProductLevelType[]      @default([BASIC, ADVANCED]) // Qué niveles pueden desbloquear
+  pointsReward    Int                     @default(50) // Puntos Cuánticos
+  validationRule  PhotoValidationRule     @default(MANUAL) // Tipo de validación
+  aiPrompt        String?                 @db.Text // Prompt para validación IA si aplica
+  isActive        Boolean                 @default(true)
+  sortOrder       Int                     @default(0) // Para ordenar dentro de categoría
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  
+  // Relaciones
+  UserPhotos      CollectiblePhoto[]
+  
+  @@index([category])
+  @@index([isActive])
+}
+
+// Foto subida por el usuario para un slot específico
+model CollectiblePhoto {
+  id              Int                       @id @default(autoincrement())
+  userId          Int
+  templateId      Int
+  photoUrl        String                    // URL principal (Cloudinary)
+  thumbnailUrl    String?                   // URL de thumbnail
+  publicId        String?                   // Cloudinary public_id para eliminación
+  
+  // Metadata de captura
+  capturedAt      DateTime                  @default(now())
+  capturedDuring  ProductLevelType?         // Durante qué nivel de entrenamiento
+  visionId        Int?
+  productId       Int?
+  
+  // Estado y validación
+  status          PhotoStatus               @default(PENDING)
+  validatedAt     DateTime?
+  validatedBy     Int?                      // ID del staff que validó (null si fue IA/auto)
+  aiValidation    Json?                     // Respuesta de IA si aplica
+  rejectionReason String?
+  
+  // Puntos otorgados
+  pointsAwarded   Int                       @default(0)
+  awardedAt       DateTime?
+  
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  
+  // Relaciones
+  User            Usuario                   @relation("UserCollectiblePhotos", fields: [userId], references: [id], onDelete: Cascade)
+  Template        CollectiblePhotoTemplate  @relation(fields: [templateId], references: [id])
+  Vision          Vision?                   @relation("PhotoVision", fields: [visionId], references: [id])
+  Product         SchoolProduct?            @relation("PhotoProduct", fields: [productId], references: [id])
+  Validator       Usuario?                  @relation("PhotoValidator", fields: [validatedBy], references: [id])
+  
+  @@unique([userId, templateId]) // Un usuario solo puede tener una foto por slot
+  @@index([userId])
+  @@index([status])
+  @@index([visionId])
+}
+
+// ============================================
+// LEGACY CAPTURE - Captura de datos críticos por GC
+// ============================================
+
+// Sesión de captura de datos críticos (fotos, contratos, canciones)
+model LegacyCaptureSession {
+  id                      Int                 @id @default(autoincrement())
+  gcId                    Int                 // Game Changer que captura
+  participantId           Int                 // Participante objetivo
+  visionId                Int
+  productId               Int
+  level                   ProductLevelType    // BASIC o ADVANCED
+  
+  // Estado general
+  status                  LegacyCaptureStatus @default(PENDING)
+  completedAt             DateTime?
+  
+  // === Campos BÁSICO ===
+  photoWithGCUrl          String?             // Foto con el GC
+  photoWithSquadUrl       String?             // Foto con mini grupo
+  photoBlueWallUrl        String?             // Foto pared azul (icónica)
+  
+  // === Campos AVANZADO (adicionales) ===
+  lullabyTitle            String?             // Nombre canción de cuna
+  lullabyArtist           String?             // Artista de la canción
+  lullabyAudioUrl         String?             // Audio grabado (si la cantaron)
+  contractPhotoUrl        String?             // Foto del contrato firmado
+  contractDeclaration     String?             @db.Text // Transcripción "Yo soy..."
+  
+  // Metadata
+  capturedAt              DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  
+  // Relaciones
+  GC                      Usuario             @relation("GCLegacyCaptures", fields: [gcId], references: [id])
+  Participant             Usuario             @relation("ParticipantLegacyCaptures", fields: [participantId], references: [id])
+  Vision                  Vision              @relation("VisionLegacyCaptures", fields: [visionId], references: [id])
+  Product                 SchoolProduct       @relation("ProductLegacyCaptures", fields: [productId], references: [id])
+  
+  @@unique([participantId, productId]) // Una sesión por participante por producto
+  @@index([gcId])
+  @@index([status])
+  @@index([visionId])
+}
+
+// ============================================
+// CANCIONES MEMORABLES - Canciones por nivel (PL tendrá más)
+// ============================================
+
+model UserSong {
+  id              Int                 @id @default(autoincrement())
+  userId          Int
+  visionId        Int?
+  productId       Int?
+  level           ProductLevelType
+  
+  // Tipo de canción
+  songType        SongType            // LULLABY, GRADUATION, POWER, etc.
+  
+  // Datos de la canción
+  title           String              // Nombre de la canción
+  artist          String?             // Artista
+  audioUrl        String?             // URL si fue grabada
+  spotifyUrl      String?             // URL de Spotify si aplica
+  youtubeUrl      String?             // URL de YouTube si aplica
+  notes           String?             @db.Text // Notas/significado personal
+  
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  
+  // Relaciones
+  User            Usuario             @relation("UserSongs", fields: [userId], references: [id], onDelete: Cascade)
+  Vision          Vision?             @relation("VisionSongs", fields: [visionId], references: [id])
+  Product         SchoolProduct?      @relation("ProductSongs", fields: [productId], references: [id])
+  
+  @@unique([userId, level, songType]) // Una canción por tipo por nivel
+  @@index([userId])
+  @@index([level])
+}
+
+// ============================================
+// ENUMS para el sistema de fotos y legacy capture
+// ============================================
+
+enum PhotoCategory {
+  TRIBU       // Conexiones humanas (1-10)
+  ARTEFACTOS  // Símbolos y objetos (11-20)
+  MOMENTOS    // Acción y energía (21-30)
+  REFLEJOS    // Introspección (31-40)
+  ENTORNO     // Easter eggs del venue (41-50)
+}
+
+enum PhotoValidationRule {
+  MANUAL        // Requiere aprobación de staff
+  AI_PERSON     // IA debe detectar persona(s)
+  AI_BADGE      // IA debe detectar gafete/texto
+  AI_GROUP      // IA debe detectar grupo de personas
+  AI_OBJECT     // IA debe detectar objeto específico
+  AUTO_APPROVE  // Se aprueba automáticamente
+}
+
+enum PhotoStatus {
+  PENDING   // Subida, esperando validación
+  APPROVED  // Validada y puntos otorgados
+  REJECTED  // Rechazada (razón en rejectionReason)
+}
+
+enum LegacyCaptureStatus {
+  PENDING       // Sin iniciar
+  IN_PROGRESS   // En proceso de captura
+  COMPLETED     // Todos los campos requeridos completos
+}
+
+enum SongType {
+  LULLABY         // Canción de cuna (Avanzado)
+  GRADUATION      // Canción de graduación
+  POWER           // Canción de poder personal
+  TRANSFORMATION  // Canción de transformación (PL)
+  VICTORY         // Canción de victoria (PL)
+}
