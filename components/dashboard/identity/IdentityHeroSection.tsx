@@ -166,7 +166,7 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
           </>
         )}
 
-        {/* PL: Mostrar TribeManagementWidget + PromiseWidget */}
+        {/* PL: Mostrar TribeManagementWidget + PromiseWidget + BuddySystemWidget (al final) */}
         {level === 'PL' && (
           <>
             <TribeManagementWidget 
@@ -177,6 +177,7 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
               hasCompletedCarta={cartaData?.hasCompletedCarta}
               promises={cartaData?.promises}
             />
+            <BuddySystemWidget />
           </>
         )}
 

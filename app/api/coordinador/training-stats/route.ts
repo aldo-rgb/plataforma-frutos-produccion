@@ -358,26 +358,6 @@ export async function GET(request: Request) {
           }
         });
         
-        // Obtener participantes ADVANCED que DECLARARON ASISTENCIA (confirmaron que van)
-        // Primero obtener los enrollments de ADVANCED, luego contar los que tienen tracking con CONFIRMED/ASISTE
-        const advancedEnrollmentsWithTracking = await prisma.vision_enrollments.findMany({
-          where: {
-            visionId: currentProduct.visionId,
-            level: 'ADVANCED',
-            enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
-          },
-          include: {
-            BasicCallTracking: {
-              select: { attendanceStatus: true }
-            }
-          }
-        });
-        
-        const advancedDeclared = advancedEnrollmentsWithTracking.filter(
-          e => e.BasicCallTracking?.attendanceStatus === 'CONFIRMED' || 
-               e.BasicCallTracking?.attendanceStatus === 'ASISTE'
-        ).length;
-        
         // Buscar producto PL de la misma visión
         const plProduct = activeProducts.find(
           p => p.levelType === 'PL' && p.visionId === currentProduct.visionId
@@ -386,29 +366,19 @@ export async function GET(request: Request) {
         let plEnrolled = 0;
         let plPending = 0;
         
+        // DECLARADOS = Pre-registros a PL (PENDING + PAID, los que pasaron por El Cruce)
+        // INSCRITOS = Ya inscritos en PL (vision_enrollments con level='PL')
+        
         if (plProduct) {
-          // Pre-registros para PL (usando AdvancedPreRegistration)
+          // Pre-registros PENDING para PL
           plPending = await prisma.advancedPreRegistration.count({
             where: {
-              OR: [
-                { targetProductId: plProduct.id },
-                { currentProductId: plProduct.id }
-              ],
+              currentProductId: currentProduct.id, // Vienen de ADVANCED
               status: 'PENDING'
             }
           });
           
-          const plPaid = await prisma.advancedPreRegistration.count({
-            where: {
-              OR: [
-                { targetProductId: plProduct.id },
-                { currentProductId: plProduct.id }
-              ],
-              status: 'PAID'
-            }
-          });
-          
-          // Enrollments de PL
+          // Enrollments de PL (ya pagaron y están inscritos)
           if (currentProduct.visionId) {
             plEnrolled = await prisma.vision_enrollments.count({
               where: {
@@ -418,31 +388,50 @@ export async function GET(request: Request) {
               }
             });
           }
+        } else {
+          // Sin producto PL, buscar pre-registros desde este producto ADVANCED hacia cualquier PL
+          plPending = await prisma.advancedPreRegistration.count({
+            where: {
+              currentProductId: currentProduct.id,
+              status: 'PENDING'
+            }
+          });
           
-          plEnrolled = Math.max(plEnrolled, plPaid);
+          // Inscritos en PL de la misma visión
+          if (currentProduct.visionId) {
+            plEnrolled = await prisma.vision_enrollments.count({
+              where: {
+                visionId: currentProduct.visionId,
+                level: 'PL',
+                enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+              }
+            });
+          }
         }
         
-        // Widget DECLARADOS: participantes que confirmaron asistencia / total inscritos ADVANCED
-        declaradosNumerator = advancedDeclared;
+        // Total de DECLARADOS = Pre-registros pendientes + Ya inscritos en PL
+        const totalDeclarados = plPending + plEnrolled;
+        
+        // Widget DECLARADOS: total que declararon ir a PL / total inscritos ADVANCED
+        declaradosNumerator = totalDeclarados;
         declaradosDenominator = advancedEnrolledCount;
         
-        // Widget INSCRITOS: pagados/inscritos en PL / total declarados ADVANCED
+        // Widget INSCRITOS: ya inscritos en PL / total declarados
         inscritosNumerator = plEnrolled;
-        inscritosDenominator = advancedDeclared > 0 ? advancedDeclared : advancedEnrolledCount;
+        inscritosDenominator = totalDeclarados > 0 ? totalDeclarados : advancedEnrolledCount;
         
         nextLevelStats = {
           pending: plPending,
           enrolled: plEnrolled,
-          total: plPending + plEnrolled
+          total: totalDeclarados
         };
         
-        console.log('[training-stats] ADVANCED - Enrolled:', advancedEnrolledCount, 'Declared:', advancedDeclared);
-        console.log('[training-stats] NEXT LEVEL (PL) - Enrolled:', plEnrolled);
+        console.log('[training-stats] ADVANCED - Enrolled:', advancedEnrolledCount);
+        console.log('[training-stats] NEXT LEVEL (PL) - Pending:', plPending, 'Enrolled:', plEnrolled, 'TotalDeclarados:', totalDeclarados);
         console.log('[training-stats] Declarados:', declaradosNumerator, '/', declaradosDenominator);
         console.log('[training-stats] Inscritos:', inscritosNumerator, '/', inscritosDenominator);
         
         if (!plProduct) {
-          // No hay producto PL
           console.log('[training-stats] No hay producto PL para esta visión');
         }
       }

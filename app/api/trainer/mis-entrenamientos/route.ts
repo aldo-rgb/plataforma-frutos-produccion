@@ -161,7 +161,9 @@ export async function GET(request: NextRequest) {
     const visionIdsFromProducts = [...new Set(productos.filter(p => p.visionId).map(p => p.visionId!))]
     const inscritosPorVision = new Map<number, number>()
     const inscritosAdvancedPorVision = new Map<number, number>()
+    const inscritosPLPorVision = new Map<number, number>()
     const asistieronPorVision = new Map<number, number>()
+    const asistieronAdvancedPorVision = new Map<number, number>()
     
     if (visionIdsFromProducts.length > 0) {
       // Inscritos en BASIC
@@ -209,11 +211,46 @@ export async function GET(request: NextRequest) {
       advancedEnrollmentCounts.forEach(e => {
         inscritosAdvancedPorVision.set(e.visionId, e._count.id)
       })
+      
+      // Inscritos en PL (los que ya pagaron PL - para productos ADVANCED)
+      const plEnrollmentCounts = await prisma.vision_enrollments.groupBy({
+        by: ['visionId'],
+        where: {
+          visionId: { in: visionIdsFromProducts },
+          level: 'PL',
+          enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+        },
+        _count: { id: true }
+      })
+      
+      plEnrollmentCounts.forEach(e => {
+        inscritosPLPorVision.set(e.visionId, e._count.id)
+      })
+      
+      // Asistieron ADVANCED (para productos ADVANCED)
+      const advancedAttendedCounts = await prisma.vision_enrollments.groupBy({
+        by: ['visionId'],
+        where: {
+          visionId: { in: visionIdsFromProducts },
+          level: 'ADVANCED',
+          attendanceStatus: 'ATTENDED'
+        },
+        _count: { id: true }
+      })
+      
+      advancedAttendedCounts.forEach(e => {
+        asistieronAdvancedPorVision.set(e.visionId, e._count.id)
+      })
     }
     
     const productosConEstado = productos.map(p => {
       let estado = 'PROXIMO'
-      if (p.startDate && p.endDate) {
+      
+      // Si trainingStatus es IN_PROGRESS, siempre mostrar como EN_CURSO
+      // independientemente de las fechas (el trainer aún no lo ha cerrado)
+      if (p.trainingStatus === 'IN_PROGRESS') {
+        estado = 'EN_CURSO'
+      } else if (p.startDate && p.endDate) {
         const start = new Date(p.startDate)
         const end = new Date(p.endDate)
         if (now >= start && now <= end) {
@@ -229,16 +266,30 @@ export async function GET(request: NextRequest) {
       }
 
       // Para productos BASIC: participantesPagados = inscritos en ADVANCED de la misma visión
-      // Para productos ADVANCED: usar el conteo de pre-registros pagados
+      // Para productos ADVANCED: participantesPagados = inscritos en PL de la misma visión
       const esBASIC = p.levelType === 'BASIC'
-      const pagadosAvanzado = esBASIC && p.visionId 
-        ? (inscritosAdvancedPorVision.get(p.visionId) || 0)
-        : (pagadosPorProducto.get(p.id) || 0)
+      const esADVANCED = p.levelType === 'ADVANCED'
+      
+      let pagadosAvanzado = 0
+      if (esBASIC && p.visionId) {
+        pagadosAvanzado = inscritosAdvancedPorVision.get(p.visionId) || 0
+      } else if (esADVANCED && p.visionId) {
+        pagadosAvanzado = inscritosPLPorVision.get(p.visionId) || 0
+      } else {
+        pagadosAvanzado = pagadosPorProducto.get(p.id) || 0
+      }
       
       // Asistieron = vision_enrollments con attendanceStatus = 'ATTENDED'
-      const asistieron = esBASIC && p.visionId
-        ? (asistieronPorVision.get(p.visionId) || 0)
-        : p._count.CheckInRecord
+      // Para BASIC: asistieron al BASIC
+      // Para ADVANCED: asistieron al ADVANCED
+      let asistieron = 0
+      if (esBASIC && p.visionId) {
+        asistieron = asistieronPorVision.get(p.visionId) || 0
+      } else if (esADVANCED && p.visionId) {
+        asistieron = asistieronAdvancedPorVision.get(p.visionId) || 0
+      } else {
+        asistieron = p._count.CheckInRecord
+      }
 
       return {
         ...p,
@@ -296,7 +347,7 @@ export async function GET(request: NextRequest) {
 
     // Total confirmados - depende del nivel del trainer
     // Si es trainer BÁSICO: confirmados = pre-registros PAGADOS a AVANZADO (de sus productos BASIC)
-    // Si es trainer AVANZADO: confirmados = pre-registros PAGADOS a PL (de sus productos ADVANCED)
+    // Si es trainer AVANZADO: confirmados = inscritos en PL (los que ya pagaron y están en vision_enrollments)
     // Si es trainer PL: confirmados = inscritos PL en sus visiones
     let totalConfirmadosAvanzado = 0
     if (allVisionIds.length > 0) {
@@ -312,16 +363,14 @@ export async function GET(request: NextRequest) {
           })
         }
       } else if (isAdvancedTrainer) {
-        // Trainer de AVANZADO ve cuántos ya pagaron PL (desde sus productos ADVANCED)
-        const advancedProductIds = advancedProducts.map(p => p.id)
-        if (advancedProductIds.length > 0) {
-          totalConfirmadosAvanzado = await prisma.advancedPreRegistration.count({
-            where: {
-              currentProductId: { in: advancedProductIds },
-              status: 'PAID'
-            }
-          })
-        }
+        // Trainer de AVANZADO ve cuántos ya están INSCRITOS en PL (pagaron y se inscribieron)
+        totalConfirmadosAvanzado = await prisma.vision_enrollments.count({
+          where: {
+            visionId: { in: allVisionIds },
+            level: 'PL',
+            enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+          }
+        })
       } else if (isPLTrainer) {
         // Trainer de PL ve inscritos en PL
         totalConfirmadosAvanzado = await prisma.vision_enrollments.count({
@@ -336,7 +385,10 @@ export async function GET(request: NextRequest) {
 
     // Total pre-registros (declarados) - depende del nivel del trainer
     // Si es trainer BÁSICO: declarados = pre-registros PENDING a AVANZADO (de sus productos BASIC)
-    // Si es trainer AVANZADO: declarados = todos los que declararon ir a PL (PENDING + PAID)
+    // Si es trainer AVANZADO: declarados = TODOS los que van a PL:
+    //   - Pre-registros PENDING (declararon pero no han pagado)
+    //   - Pre-registros PAID (declararon y pagaron pero aún no inscritos)
+    //   - Inscritos en PL (ya completaron el proceso)
     let totalDeclarados = 0
     if (isBasicTrainer) {
       const basicProductIds = basicProducts.map(p => p.id)
@@ -349,17 +401,33 @@ export async function GET(request: NextRequest) {
         })
       }
     } else if (isAdvancedTrainer) {
-      // Para trainers de avanzado, mostrar TODOS los declarados a PL (PENDING + PAID)
-      // porque un "declarado" es alguien que dijo que iba, haya pagado o no
+      // Para trainers de avanzado, contar TODOS los que van a PL
+      // Opción: Contar inscritos en PL (incluye a todos los que ya pagaron y se inscribieron)
+      // + Pre-registros PENDING (los que declararon pero aún no pagan)
+      
+      // 1. Contar inscritos en PL (los que ya completaron todo el proceso)
+      const inscritosPL = await prisma.vision_enrollments.count({
+        where: {
+          visionId: { in: allVisionIds },
+          level: 'PL',
+          enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+        }
+      })
+      
+      // 2. Contar pre-registros PENDING (declararon pero no han pagado)
       const advancedProductIds = advancedProducts.map(p => p.id)
+      let preRegistrosPending = 0
       if (advancedProductIds.length > 0) {
-        totalDeclarados = await prisma.advancedPreRegistration.count({
+        preRegistrosPending = await prisma.advancedPreRegistration.count({
           where: {
             currentProductId: { in: advancedProductIds },
-            status: { in: ['PENDING', 'PAID'] }
+            status: 'PENDING'
           }
         })
       }
+      
+      // Total = Inscritos PL + Pre-registros pendientes
+      totalDeclarados = inscritosPL + preRegistrosPending
     }
 
     return NextResponse.json({

@@ -122,13 +122,13 @@ export async function POST(request: Request) {
     // Generar nombre automático si no se proporciona
     const groupName = name || `Átomo ${user.nombre?.split(' ')[0] || 'GC'}`;
 
-    // Crear el grupo
+    // Crear el grupo - usar la organizationId de la visión, no del usuario
     const squad = await prisma.smallGroup.create({
       data: {
         name: groupName,
         visionId: parseInt(visionId),
         leaderId: user.id,
-        organizationId: user.organizationId,
+        organizationId: vision.organizationId!,
         productId: productId ? parseInt(productId) : null,
         level: level,
         maxSize: maxSize,

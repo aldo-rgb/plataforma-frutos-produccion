@@ -374,7 +374,7 @@ export default function TrainerDashboard() {
                 {data.stats.isBasicTrainer 
                   ? 'Pre-registros Avanzado / Inscritos Básico'
                   : data.stats.isAdvancedTrainer 
-                  ? 'Pre-registros PL / Inscritos Avanzado'
+                  ? 'Declarados / Inscritos Avanzado'
                   : 'Pre-registros / Inscritos'}
               </span>
               <span className="text-amber-400 text-xs">Click para ver →</span>
@@ -411,7 +411,7 @@ export default function TrainerDashboard() {
                 {data.stats.isBasicTrainer 
                   ? 'Pagados Avanzado / Pre-registros'
                   : data.stats.isAdvancedTrainer 
-                  ? 'Ya inscritos / Pre-registros PL'
+                  ? 'Ya inscritos / Declarados'
                   : 'Confirmados / Pre-registros'}
               </span>
               <span className="text-green-400 text-xs">Click para ver →</span>

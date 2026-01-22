@@ -51,35 +51,36 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // Obtener visión del usuario actual
+    // Obtener visión del usuario actual (ADVANCED o PL)
     const myEnrollment = await prisma.vision_enrollments.findFirst({
       where: {
         userId,
-        level: 'ADVANCED',
+        level: { in: ['ADVANCED', 'PL'] },
         enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
       },
-      select: { visionId: true }
+      select: { visionId: true, level: true },
+      orderBy: { level: 'desc' }
     });
 
     if (!myEnrollment) {
       return NextResponse.json({ 
-        error: 'Debes estar en entrenamiento AVANZADO' 
+        error: 'Debes estar en entrenamiento AVANZADO o PL' 
       }, { status: 400 });
     }
 
-    // Verificar que el target esté en la misma visión y nivel
+    // Verificar que el target esté en la misma visión y nivel ADVANCED o PL
     const targetEnrollment = await prisma.vision_enrollments.findFirst({
       where: {
         userId: targetUserId,
         visionId: myEnrollment.visionId,
-        level: 'ADVANCED',
+        level: { in: ['ADVANCED', 'PL'] },
         enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
       }
     });
 
     if (!targetEnrollment) {
       return NextResponse.json({ 
-        error: 'Esta persona no está en tu mismo entrenamiento AVANZADO',
+        error: 'Esta persona no está en tu mismo entrenamiento AVANZADO o PL',
         code: 'DIFFERENT_VISION'
       }, { status: 400 });
     }

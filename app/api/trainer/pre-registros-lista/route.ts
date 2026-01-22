@@ -49,34 +49,53 @@ export async function GET(request: Request) {
       select: { id: true }
     })
 
-    // 2. Obtener productos via VisionStaff
+    // 2. Obtener productos via VisionStaff y determinar nivel del trainer
     const visionStaffAssignments = await prisma.visionStaff.findMany({
       where: {
         userId: usuario.id,
         role: { in: ['BASIC_TRAINER', 'ADVANCED_TRAINER', 'PL_TRAINER'] }
       },
-      select: { visionId: true }
+      select: { visionId: true, level: true, role: true }
     })
 
     const visionIds = [...new Set(visionStaffAssignments.map(v => v.visionId))]
     
-    let productosViaVision: { id: number }[] = []
+    // Determinar qué nivel de trainer es
+    const trainerLevels = new Set(visionStaffAssignments.map(v => v.level))
+    const isBasicTrainer = trainerLevels.has('BASIC')
+    const isAdvancedTrainer = trainerLevels.has('ADVANCED')
+    const isPLTrainer = trainerLevels.has('PL')
+    
+    let productosViaVision: { id: number; levelType: string }[] = []
     if (visionIds.length > 0) {
       productosViaVision = await prisma.schoolProduct.findMany({
         where: {
           visionId: { in: visionIds },
           isActive: true
         },
-        select: { id: true }
+        select: { id: true, levelType: true }
       })
     }
 
-    const productIds = [...new Set([
-      ...productosDirectos.map(p => p.id),
-      ...productosViaVision.map(p => p.id)
-    ])]
+    // Filtrar productos por nivel del trainer
+    const basicProductIds = productosViaVision.filter(p => p.levelType === 'BASIC').map(p => p.id)
+    const advancedProductIds = productosViaVision.filter(p => p.levelType === 'ADVANCED').map(p => p.id)
+    const plProductIds = productosViaVision.filter(p => p.levelType === 'PL').map(p => p.id)
 
-    if (productIds.length === 0) {
+    // Determinar qué productos usar como "currentProductId" según el nivel del trainer
+    // - Trainer BASIC: ver pre-registros desde productos BASIC (hacia ADVANCED)
+    // - Trainer ADVANCED: ver pre-registros desde productos ADVANCED (hacia PL)
+    let relevantCurrentProductIds: number[] = []
+    if (isAdvancedTrainer) {
+      relevantCurrentProductIds = advancedProductIds
+    } else if (isBasicTrainer) {
+      relevantCurrentProductIds = basicProductIds
+    } else {
+      // Fallback: usar todos los productos
+      relevantCurrentProductIds = [...basicProductIds, ...advancedProductIds]
+    }
+
+    if (relevantCurrentProductIds.length === 0) {
       return NextResponse.json({
         success: true,
         preRegistros: [],
@@ -84,33 +103,13 @@ export async function GET(request: Request) {
       })
     }
 
-    // Si se pide PAID, buscar en vision_enrollments (los que ya están inscritos en ADVANCED)
+    // Si se pide PAID, buscar en vision_enrollments (los que ya están inscritos en el siguiente nivel)
     if (statusFilter === 'PAID') {
-      // Obtener las visiones de los productos
-      const productos = await prisma.schoolProduct.findMany({
-        where: { id: { in: productIds } },
-        select: { visionId: true, levelType: true }
-      })
+      // Para trainer ADVANCED: buscar inscritos en PL
+      // Para trainer BASIC: buscar inscritos en ADVANCED
+      const targetLevel = isAdvancedTrainer ? 'PL' : 'ADVANCED'
       
-      const visionIdsFromProducts = productos
-        .filter(p => p.visionId && p.levelType === 'ADVANCED')
-        .map(p => p.visionId as number)
-      
-      // Si no hay productos ADVANCED, buscar todos los ADVANCED de la organización
-      let finalVisionIds = visionIdsFromProducts
-      if (finalVisionIds.length === 0 && usuario.organizationId) {
-        const advancedProducts = await prisma.schoolProduct.findMany({
-          where: {
-            organizationId: usuario.organizationId,
-            levelType: 'ADVANCED',
-            isActive: true
-          },
-          select: { visionId: true }
-        })
-        finalVisionIds = advancedProducts.filter(p => p.visionId).map(p => p.visionId as number)
-      }
-      
-      if (finalVisionIds.length === 0) {
+      if (visionIds.length === 0) {
         return NextResponse.json({
           success: true,
           preRegistros: [],
@@ -118,11 +117,11 @@ export async function GET(request: Request) {
         })
       }
       
-      // Buscar enrollments de ADVANCED con status ENROLLED/ACTIVE
+      // Buscar enrollments del nivel target con status ENROLLED/ACTIVE
       const enrollments = await prisma.vision_enrollments.findMany({
         where: {
-          visionId: { in: finalVisionIds },
-          level: 'ADVANCED',
+          visionId: { in: visionIds },
+          level: targetLevel,
           enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
         },
         include: {
@@ -147,6 +146,7 @@ export async function GET(request: Request) {
       })
       
       // Formatear como pre-registros para mantener compatibilidad
+      const targetLevelName = isAdvancedTrainer ? 'PL' : 'Avanzado'
       const formattedEnrollments = enrollments.map(e => ({
         id: e.id.toString(),
         status: 'PAID',
@@ -166,7 +166,7 @@ export async function GET(request: Request) {
                   e.Usuario_vision_enrollments_userIdToUsuario?.profileImage || null
         },
         currentProduct: null,
-        targetProduct: { id: 0, name: 'Avanzado', levelType: 'ADVANCED' },
+        targetProduct: { id: 0, name: targetLevelName, levelType: targetLevel },
         scannedBy: e.Usuario_vision_enrollments_invitedByToUsuario ? {
           id: e.Usuario_vision_enrollments_invitedByToUsuario.id,
           nombre: e.Usuario_vision_enrollments_invitedByToUsuario.nombre
@@ -176,10 +176,7 @@ export async function GET(request: Request) {
       // También contar pre-registros PENDING para el total
       const pendingCount = await prisma.advancedPreRegistration.count({
         where: {
-          OR: [
-            { currentProductId: { in: productIds } },
-            { targetProductId: { in: productIds } }
-          ],
+          currentProductId: { in: relevantCurrentProductIds },
           status: 'PENDING'
         }
       })
@@ -191,19 +188,18 @@ export async function GET(request: Request) {
       })
     }
 
-    // Para PENDING o 'all', seguir con la lógica original de pre-registros
+    // Para PENDING o 'all', seguir con la lógica de pre-registros
+    // Solo buscar por currentProductId (desde donde vienen los usuarios)
     // Construir filtro de status
     const statusWhere = statusFilter === 'all' 
       ? { status: { in: [PreRegistrationStatus.PENDING, PreRegistrationStatus.PAID] as PreRegistrationStatus[] } }
       : { status: statusFilter as PreRegistrationStatus }
 
     // Obtener pre-registros con información de usuario
+    // Solo buscar por currentProductId (desde donde vienen los usuarios según el nivel del trainer)
     const preRegistros = await prisma.advancedPreRegistration.findMany({
       where: {
-        OR: [
-          { currentProductId: { in: productIds } },
-          { targetProductId: { in: productIds } }
-        ],
+        currentProductId: { in: relevantCurrentProductIds },
         ...statusWhere
       },
       include: {
@@ -263,12 +259,15 @@ export async function GET(request: Request) {
         .map(pr => pr.targetProduct!.visionId as number)
       
       if (userIds.length > 0 && targetVisionIds.length > 0) {
-        // Buscar quienes ya están inscritos en ADVANCED
+        // Buscar quienes ya están inscritos en el nivel target
+        // Para trainer BASIC: verificar inscritos en ADVANCED
+        // Para trainer ADVANCED: verificar inscritos en PL
+        const checkLevel = isAdvancedTrainer ? 'PL' : 'ADVANCED'
         const alreadyEnrolled = await prisma.vision_enrollments.findMany({
           where: {
             userId: { in: userIds },
             visionId: { in: targetVisionIds },
-            level: 'ADVANCED',
+            level: checkLevel,
             enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
           },
           select: { userId: true }

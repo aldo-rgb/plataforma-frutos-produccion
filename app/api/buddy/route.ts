@@ -33,21 +33,22 @@ export async function GET() {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // Buscar enrollment activo en ADVANCED
+    // Buscar enrollment activo en ADVANCED o PL
     const enrollment = await prisma.vision_enrollments.findFirst({
       where: {
         userId,
-        level: 'ADVANCED',
+        level: { in: ['ADVANCED', 'PL'] },
         enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
       },
-      select: { visionId: true }
+      select: { visionId: true, level: true },
+      orderBy: { level: 'desc' } // PL tiene prioridad si tiene ambos
     });
 
     if (!enrollment) {
       return NextResponse.json({
         success: true,
         status: 'NOT_IN_ADVANCED',
-        message: 'No estás en entrenamiento avanzado'
+        message: 'Debes estar en entrenamiento AVANZADO o PL'
       });
     }
 
@@ -171,19 +172,20 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { action, targetUserId, buddyPairId, phone, address } = body;
 
-    // Obtener visión del usuario
+    // Obtener visión del usuario (ADVANCED o PL)
     const enrollment = await prisma.vision_enrollments.findFirst({
       where: {
         userId,
-        level: 'ADVANCED',
+        level: { in: ['ADVANCED', 'PL'] },
         enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
       },
-      select: { visionId: true }
+      select: { visionId: true, level: true },
+      orderBy: { level: 'desc' }
     });
 
     if (!enrollment) {
       return NextResponse.json({ 
-        error: 'Debes estar en entrenamiento AVANZADO para usar el Buddy System' 
+        error: 'Debes estar en entrenamiento AVANZADO o PL para usar el Buddy System' 
       }, { status: 400 });
     }
 
@@ -217,12 +219,12 @@ export async function POST(request: Request) {
         }, { status: 400 });
       }
 
-      // Verificar que el target esté en la misma visión y nivel
+      // Verificar que el target esté en la misma visión y nivel ADVANCED o PL
       const targetEnrollment = await prisma.vision_enrollments.findFirst({
         where: {
           userId: targetUserId,
           visionId,
-          level: 'ADVANCED',
+          level: { in: ['ADVANCED', 'PL'] },
           enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
         }
       });
