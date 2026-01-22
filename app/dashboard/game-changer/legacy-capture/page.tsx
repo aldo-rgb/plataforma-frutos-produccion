@@ -691,7 +691,7 @@ export default function LegacyCapturePage() {
                   {/* Declaración */}
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-300">
-                      ✨ Declaración del Participante
+                      ✨ Contrato del Participante
                     </label>
                     <textarea
                       placeholder="Escribe la declaración que el participante quiere mostrar en su dashboard..."
