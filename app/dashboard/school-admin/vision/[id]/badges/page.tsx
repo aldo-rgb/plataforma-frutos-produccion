@@ -54,6 +54,7 @@ export default function BadgesPage() {
   const [currentNfcIndex, setCurrentNfcIndex] = useState(0);
   const [nfcStatus, setNfcStatus] = useState<'idle' | 'writing' | 'success' | 'error'>('idle');
   const [nfcError, setNfcError] = useState('');
+  const [nfcDebug, setNfcDebug] = useState(''); // DEBUG LOG VISUAL
   const nfcAbortRef = useRef<AbortController | null>(null);
 
   // Check NFC Support
@@ -157,20 +158,25 @@ export default function BadgesPage() {
 
   // FUNCIÓN EXACTA DE BadgePreview.tsx QUE SÍ FUNCIONA
   const handleWriteNFC = async () => {
+    setNfcDebug('1. Iniciando...');
     console.log('=== handleWriteNFC called ===');
     
     if (!('NDEFReader' in window)) {
+      setNfcDebug('ERROR: NDEFReader no existe');
       console.log('NDEFReader NOT in window');
       alert('Tu dispositivo no soporta NFC');
       return;
     }
+    setNfcDebug('2. NDEFReader existe');
     console.log('NDEFReader found in window');
 
     const currentItem = nfcQueue[currentNfcIndex];
     if (!currentItem) {
+      setNfcDebug('ERROR: No hay item actual');
       console.log('No current item found');
       return;
     }
+    setNfcDebug('3. Item: ' + currentItem.referralCode);
     console.log('Current item:', currentItem);
 
     // Cancelar cualquier operación anterior
@@ -181,26 +187,32 @@ export default function BadgesPage() {
 
     setNfcStatus('writing');
     setNfcError('');
+    setNfcDebug('4. Status=writing');
     console.log('Status set to writing');
 
     try {
+      setNfcDebug('5. Creando NDEFReader...');
       console.log('Creating NDEFReader...');
       const ndef = new (window as any).NDEFReader();
       const abortController = new AbortController();
       nfcAbortRef.current = abortController;
       
+      setNfcDebug('6. Llamando scan()...');
       console.log('Starting scan with await...');
       // IMPORTANTE: En Android, primero hacemos scan para activar el lector NFC
       // y detectar cuando se acerca la tarjeta - CON AWAIT
       await ndef.scan({ signal: abortController.signal });
+      setNfcDebug('7. Scan OK - ACERCA TARJETA');
       console.log('Scan started successfully, waiting for card...');
       
       // Escuchar cuando se detecta una tarjeta
       ndef.onreading = async (event: any) => {
+        setNfcDebug('8. TARJETA DETECTADA!');
         console.log('=== onreading triggered ===');
         try {
           console.log('NFC Tag detected:', event?.serialNumber);
           
+          setNfcDebug('9. Escribiendo...');
           console.log('Writing to card...');
           // Tarjeta detectada, ahora escribimos con overwrite: true
           await ndef.write({
@@ -211,6 +223,7 @@ export default function BadgesPage() {
               }
             ]
           }, { overwrite: true });
+          setNfcDebug('10. ESCRITO OK!');
           console.log('Write successful!');
           
           // Vibrar para indicar éxito
@@ -244,6 +257,7 @@ export default function BadgesPage() {
           
         } catch (writeError: any) {
           console.error('Error writing NFC:', writeError);
+          setNfcDebug('ERROR WRITE: ' + writeError.message);
           abortController.abort();
           nfcAbortRef.current = null;
           
@@ -263,12 +277,14 @@ export default function BadgesPage() {
       
       ndef.onreadingerror = (event: any) => {
         console.error('NFC reading error:', event);
+        setNfcDebug('ERROR READ: ' + JSON.stringify(event));
         setNfcError('Error al leer tarjeta. Intenta con NTAG 213');
         setNfcStatus('error');
       };
 
     } catch (error: any) {
       console.error('Error initializing NFC:', error);
+      setNfcDebug('ERROR INIT: ' + error.message);
       nfcAbortRef.current = null;
       setNfcError(error.message || 'Error de NFC');
       setNfcStatus('error');
@@ -563,6 +579,13 @@ export default function BadgesPage() {
                   />
                 </div>
               </div>
+
+              {/* DEBUG LOG - VISIBLE */}
+              {nfcDebug && (
+                <div className="mb-4 p-3 bg-yellow-500/20 border border-yellow-500/50 rounded-lg">
+                  <p className="text-yellow-300 font-mono text-sm">🔍 {nfcDebug}</p>
+                </div>
+              )}
 
               {/* Si ya terminamos todos */}
               {nfcQueue.every(q => q.status === 'success') ? (
