@@ -92,7 +92,7 @@ export default function PendingTicketBanner() {
                 {hasCredit ? (
                   <>
                     <h3 className="font-bold text-cyan-400 text-base sm:text-lg leading-tight">
-                      ¡Tienes ${totalAmountPaid.toLocaleString()} a favor!
+                      ¡Tienes ${totalAmountPaid.toLocaleString('es-MX')} a favor!
                     </h3>
                     <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
                       ✨ POSIBILIDAD DISPONIBLE
