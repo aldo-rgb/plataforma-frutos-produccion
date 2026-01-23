@@ -1029,6 +1029,9 @@ model Organization {
   anticiposEnabled                                      Boolean                         @default(false)
   anticipoAmount                                        Decimal?                        @db.Decimal(10, 2)
   anticipoDeadlineHours                                 Int                             @default(13) // Hora límite (1 PM = 13)
+  // Configuración de transferencias de tickets
+  transfersEnabled                                      Boolean                         @default(false)
+  transferDeadlineDays                                  Int                             @default(0) // Días antes del evento para permitir transferencia (0 = no permitido)
   AbandonedCheckout                                     AbandonedCheckout[]
   CashBatches                                           CashBatch[]
   CheckInRecord                                         CheckInRecord[]

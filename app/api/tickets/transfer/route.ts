@@ -53,6 +53,8 @@ export async function POST(request: Request) {
           select: {
             id: true,
             name: true,
+            transfersEnabled: true,
+            transferDeadlineDays: true,
           },
         },
       },
@@ -62,6 +64,14 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, error: 'Ticket no encontrado' },
         { status: 404 }
+      );
+    }
+
+    // Validar que la organización permita transferencias
+    if (!ticket.organization?.transfersEnabled) {
+      return NextResponse.json(
+        { success: false, error: 'Esta organización no permite transferencias de tickets' },
+        { status: 400 }
       );
     }
 
@@ -97,7 +107,8 @@ export async function POST(request: Request) {
 
     const now = new Date();
     const visionStartDate = new Date(ticket.vision.startDate);
-    const transferDeadline = new Date(visionStartDate.getTime() + (60 * 60 * 1000));
+    const deadlineDays = ticket.organization.transferDeadlineDays || 0;
+    const transferDeadline = new Date(visionStartDate.getTime() - (deadlineDays * 24 * 60 * 60 * 1000));
 
     if (now > transferDeadline) {
       return NextResponse.json(

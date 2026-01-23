@@ -54,6 +54,13 @@ export default function DefaultPricesPage() {
     saving: false,
   });
 
+  // Configuración de transferencias
+  const [transfersConfig, setTransfersConfig] = useState({
+    enabled: false,
+    deadlineDays: 1, // Días antes del evento
+    saving: false,
+  });
+
   // Estado global de moneda
   const [globalCurrency, setGlobalCurrency] = useState<'MXN' | 'USD'>('MXN');
 
@@ -75,6 +82,7 @@ export default function DefaultPricesPage() {
     } else {
       fetchDefaultPrices();
       fetchAnticiposConfig();
+      fetchTransfersConfig();
     }
   }, [status, session]);
 
@@ -115,6 +123,46 @@ export default function DefaultPricesPage() {
       showNotification('error', 'Error al guardar configuración');
     } finally {
       setAnticiposConfig(prev => ({ ...prev, saving: false }));
+    }
+  };
+
+  const fetchTransfersConfig = async () => {
+    try {
+      const res = await fetch('/api/school-admin/transfers-config');
+      const data = await res.json();
+      if (data.success) {
+        setTransfersConfig(prev => ({
+          ...prev,
+          enabled: data.transfersEnabled || false,
+          deadlineDays: data.transferDeadlineDays || 1,
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching transfers config:', error);
+    }
+  };
+
+  const handleSaveTransfers = async () => {
+    setTransfersConfig(prev => ({ ...prev, saving: true }));
+    try {
+      const res = await fetch('/api/school-admin/transfers-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transfersEnabled: transfersConfig.enabled,
+          transferDeadlineDays: transfersConfig.deadlineDays,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showNotification('success', '✅ Configuración de transferencias guardada');
+      } else {
+        showNotification('error', data.error || 'Error al guardar');
+      }
+    } catch (error) {
+      showNotification('error', 'Error al guardar configuración');
+    } finally {
+      setTransfersConfig(prev => ({ ...prev, saving: false }));
     }
   };
 
@@ -449,6 +497,107 @@ export default function DefaultPricesPage() {
           {!anticiposConfig.enabled && (
             <p className="text-slate-500 text-sm italic">
               Activa los anticipos para permitir pagos parciales en Básico
+            </p>
+          )}
+        </div>
+
+        {/* Sección de Transferencias */}
+        <div className="bg-gradient-to-br from-cyan-900/30 to-blue-900/30 border-2 border-cyan-500/30 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-cyan-500/20 rounded-xl flex items-center justify-center">
+                <span className="text-2xl">🔄</span>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">Transferencia de Tickets</h2>
+                <p className="text-slate-400 text-sm">Permite que los usuarios transfieran sus tickets a otras personas</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setTransfersConfig(prev => ({ ...prev, enabled: !prev.enabled }))}
+              className={`p-2 rounded-lg transition-all ${
+                transfersConfig.enabled 
+                  ? 'bg-cyan-500 text-white' 
+                  : 'bg-slate-700 text-slate-400'
+              }`}
+            >
+              {transfersConfig.enabled ? (
+                <ToggleRight size={32} />
+              ) : (
+                <ToggleLeft size={32} />
+              )}
+            </button>
+          </div>
+
+          {transfersConfig.enabled && (
+            <div className="space-y-4 mt-4 pt-4 border-t border-cyan-500/20">
+              {/* Días antes del evento */}
+              <div>
+                <label className="text-white font-semibold text-sm mb-2 block flex items-center gap-2">
+                  <Clock size={16} />
+                  Transferencias permitidas hasta (días antes del evento)
+                </label>
+                <select
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white font-bold text-lg"
+                  value={transfersConfig.deadlineDays}
+                  onChange={(e) => setTransfersConfig(prev => ({ 
+                    ...prev, 
+                    deadlineDays: parseInt(e.target.value) || 1 
+                  }))}
+                >
+                  <option value={0}>Hasta el día del evento</option>
+                  <option value={1}>1 día antes</option>
+                  <option value={2}>2 días antes</option>
+                  <option value={3}>3 días antes</option>
+                  <option value={5}>5 días antes</option>
+                  <option value={7}>1 semana antes</option>
+                </select>
+                <p className="text-slate-400 text-xs mt-1">
+                  Los usuarios podrán transferir sus tickets hasta esta fecha límite
+                </p>
+              </div>
+
+              {/* Info de cómo funciona */}
+              <div className="bg-cyan-900/20 border border-cyan-500/30 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-cyan-200/80">
+                    <p className="font-semibold text-cyan-300 mb-1">¿Cómo funciona?</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      <li>El usuario puede transferir desde la sección "Mis Tickets"</li>
+                      <li>Debe ingresar el email del destinatario</li>
+                      <li>Si el destinatario no existe, se creará su cuenta automáticamente</li>
+                      <li>Un ticket <strong>solo puede transferirse UNA vez</strong></li>
+                      <li>Se transfieren TODOS los tickets del usuario para esa visión (Básico, Avanzado, PL)</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botón Guardar */}
+              <button
+                onClick={handleSaveTransfers}
+                disabled={transfersConfig.saving}
+                className="w-full py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white rounded-lg font-bold transition-all flex items-center justify-center gap-2"
+              >
+                {transfersConfig.saving ? (
+                  <>
+                    <Loader2 className="animate-spin" size={18} />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Save size={18} />
+                    Guardar Configuración de Transferencias
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {!transfersConfig.enabled && (
+            <p className="text-slate-500 text-sm italic">
+              Activa las transferencias para permitir que los usuarios cedan sus tickets
             </p>
           )}
         </div>

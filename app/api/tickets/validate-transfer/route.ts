@@ -37,13 +37,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // Buscar ticket
+    // Buscar ticket con organización
     const ticket = await prisma.ticket.findUnique({
       where: { id: ticketId },
       include: {
         vision: {
           select: {
             startDate: true,
+          },
+        },
+        organization: {
+          select: {
+            transfersEnabled: true,
+            transferDeadlineDays: true,
           },
         },
       },
@@ -53,6 +59,14 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, error: 'Ticket no encontrado' },
         { status: 404 }
+      );
+    }
+
+    // Validar que la organización permita transferencias
+    if (!ticket.organization?.transfersEnabled) {
+      return NextResponse.json(
+        { success: false, error: 'Esta organización no permite transferencias de tickets' },
+        { status: 400 }
       );
     }
 
@@ -80,14 +94,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validar tiempo límite (1 hora después del inicio)
+    // Validar tiempo límite basado en configuración de organización
     const now = new Date();
     const visionStartDate = new Date(ticket.vision.startDate);
-    const transferDeadline = new Date(visionStartDate.getTime() + (60 * 60 * 1000)); // +1 hora
+    const deadlineDays = ticket.organization.transferDeadlineDays || 0;
+    const transferDeadline = new Date(visionStartDate.getTime() - (deadlineDays * 24 * 60 * 60 * 1000));
 
     if (now > transferDeadline) {
+      const deadlineText = deadlineDays === 0 
+        ? 'el día del evento' 
+        : `${deadlineDays} día(s) antes del evento`;
       return NextResponse.json(
-        { success: false, error: 'El tiempo para transferir este ticket ha expirado (1 hora después del inicio del evento)' },
+        { success: false, error: `El tiempo para transferir este ticket ha expirado. La fecha límite era ${deadlineText}.` },
         { status: 400 }
       );
     }
