@@ -37,12 +37,15 @@ export default function MisParticipantesPage() {
   const [loading, setLoading] = useState(true);
   const [expandedVision, setExpandedVision] = useState<number | null>(null);
 
+  // Roles de coordinador permitidos
+  const COORDINATOR_ROLES = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
-    } else if (session?.user?.rol !== 'COORDINADOR') {
+    } else if (session?.user?.rol && !COORDINATOR_ROLES.includes(session.user.rol)) {
       router.push('/dashboard');
-    } else {
+    } else if (session?.user?.rol) {
       fetchParticipantes();
     }
   }, [status, session]);

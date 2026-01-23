@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+// Roles de coordinador permitidos
+const COORDINATOR_ROLES = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -15,7 +18,7 @@ export async function GET() {
       where: { email: session.user.email }
     });
 
-    if (!coordinador || coordinador.rol !== 'COORDINADOR') {
+    if (!coordinador || !COORDINATOR_ROLES.includes(coordinador.rol)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
