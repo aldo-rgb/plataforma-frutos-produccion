@@ -327,6 +327,10 @@ export async function GET() {
       // Si tiene ticket de PL con pago parcial, el saldo es lo que ya pagó
       apartadoSaldo = Number(apartadoTicketPL.amountPaid);
     }
+    
+    // Precio de PL para mostrar: si tiene crédito del combo, usar precio del combo ($9,000)
+    // Si no tiene crédito, usar el precio individual del PL ($5,500 promo o $11,000 base)
+    const plDisplayPromoPrice = hasApartadoCredit ? comboPrice : plPromoPrice;
 
     // Obtener próxima visión de PL (para Panorama 3)
     // Nota: PL usa plWeekend1StartDate como fecha de inicio
@@ -377,7 +381,7 @@ export async function GET() {
       prices: {
         ADVANCED: advancedPromoPrice,        // Precio promo avanzado solo
         ADVANCED_BASE: advancedBasePrice,    // Precio base avanzado
-        PL: plPromoPrice,                    // Precio promo PL
+        PL: plDisplayPromoPrice,             // Precio promo PL (combo si tiene crédito, individual si no)
         PL_BASE: plBasePrice,                // Precio base PL  
         COMBO: comboPrice,                   // Precio del combo promo
         COMBO_BASE: comboBasePrice,          // Precio base combo (para tachar)
