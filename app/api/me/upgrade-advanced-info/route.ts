@@ -51,12 +51,54 @@ export async function GET() {
     // Fecha actual para comparar
     const now = new Date();
 
+    // Verificar si el PL está realmente pagado o solo es un apartado/reserva
+    let plIsPaidComplete = false;
+    let plTicketInfo = null;
+    
+    if (plEnrollment) {
+      // Buscar el ticket de PL para verificar su estado de pago
+      const plTicket = await prisma.ticket.findFirst({
+        where: {
+          ownerId: userId,
+          level: 'PL',
+          visionId: plEnrollment.visionId,
+        },
+        select: {
+          id: true,
+          status: true,
+          type: true,
+          amountPaid: true,
+          costAtPurchase: true,
+          paymentStatus: true,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+      
+      if (plTicket) {
+        plTicketInfo = plTicket;
+        // El PL está pagado completo si:
+        // - status es ACTIVE y paymentStatus es PAID o GIFT
+        // - O amountPaid >= costAtPurchase
+        const isPaid = 
+          (plTicket.status === 'ACTIVE' && ['PAID', 'GIFT'].includes(plTicket.paymentStatus as string)) ||
+          (Number(plTicket.amountPaid) >= Number(plTicket.costAtPurchase || 0) && Number(plTicket.costAtPurchase) > 0);
+        
+        plIsPaidComplete = isPaid;
+      }
+    }
+
     // Determinar el panorama del usuario basándose en el trainingStatus del SchoolProduct
     let panorama: UserPanorama = 'NO_INSCRITO';
     
-    if (plEnrollment) {
-      // Si ya tiene PL, ya está completamente inscrito
+    if (plEnrollment && plIsPaidComplete) {
+      // Si ya tiene PL PAGADO COMPLETO, ya está completamente inscrito
       panorama = 'YA_INSCRITO_PL';
+    } else if (plEnrollment && !plIsPaidComplete) {
+      // Tiene enrollment de PL pero NO está pagado completo (es apartado/reserva)
+      // Debe poder pagar - tratarlo como AVANZADO_EN_CURSO para que pueda acceder a pago PL
+      panorama = 'AVANZADO_EN_CURSO';
     } else if (advancedEnrollment) {
       // Si tiene ADVANCED pero no PL, está en avanzado en curso
       panorama = 'AVANZADO_EN_CURSO';

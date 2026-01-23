@@ -190,12 +190,13 @@ export async function GET(request: Request) {
 
     const userId = typeof session.user.id === 'string' ? parseInt(session.user.id) : session.user.id;
 
-    // Find user's PL ticket that's either PROMO_AVAILABLE or RESERVED
-    const plTicket = await prisma.ticket.findFirst({
+    // Find user's PL ticket that needs payment
+    // Include any PL ticket that isn't fully paid
+    const plTickets = await prisma.ticket.findMany({
       where: {
         ownerId: userId,
         level: 'PL',
-        status: { in: ['PROMO_AVAILABLE', 'RESERVED', 'PENDING_PAYMENT'] as any },
+        status: { notIn: ['CANCELLED', 'EXPIRED', 'USED'] as any },
       },
       include: {
         vision: {
@@ -215,6 +216,16 @@ export async function GET(request: Request) {
       orderBy: {
         createdAt: 'desc',
       },
+    });
+    
+    // Filter to find a ticket that needs payment
+    const plTicket = plTickets.find(t => {
+      // If paymentStatus is PAID or GIFT and amountPaid >= costAtPurchase, it's fully paid
+      const isPaid = ['PAID', 'GIFT'].includes(t.paymentStatus as string);
+      const isFullyPaid = Number(t.amountPaid) >= Number(t.costAtPurchase || 0) && Number(t.costAtPurchase) > 0;
+      
+      // Return tickets that are NOT fully paid
+      return !isPaid || !isFullyPaid;
     });
 
     if (!plTicket) {
