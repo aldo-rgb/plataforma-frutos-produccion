@@ -96,20 +96,40 @@ export async function GET(request: NextRequest) {
     // Solo los que tienen trainingStatus != COMPLETED (aún relevantes para el cruce)
     const now = new Date()
     
+    // Primero, obtener visiones donde el Avanzado ya inició (para excluir sus BASIC)
+    const visionesConAvanzadoIniciado = await prisma.vision.findMany({
+      where: {
+        advancedStartDate: { lte: now }
+      },
+      select: { id: true }
+    })
+    const visionIdsAvanzadoIniciado = visionesConAvanzadoIniciado.map(v => v.id)
+    
     const whereProduct: any = {
       levelType: "BASIC",
       isActive: true,
       // Excluir entrenamientos completados
-      trainingStatus: { not: 'COMPLETED' }
+      trainingStatus: { not: 'COMPLETED' },
+      // Excluir BASIC de visiones donde el Avanzado ya inició
+      visionId: { notIn: visionIdsAvanzadoIniciado }
     }
     
     if (productId) {
       whereProduct.id = parseInt(productId)
     }
     
-    // Aplicar filtro de visión
+    // Aplicar filtro de visión (combinar con el notIn existente)
     if (allowedVisionIds.length > 0) {
-      whereProduct.visionId = { in: allowedVisionIds }
+      // Filtrar allowedVisionIds para excluir las que ya iniciaron Avanzado
+      const filteredVisionIds = allowedVisionIds.filter(id => !visionIdsAvanzadoIniciado.includes(id))
+      if (filteredVisionIds.length === 0) {
+        // Todas las visiones del usuario ya iniciaron Avanzado
+        return NextResponse.json({
+          participantes: [],
+          stats: { total: 0, sinCruzar: 0, cruzaron: 0 }
+        })
+      }
+      whereProduct.visionId = { in: filteredVisionIds }
     } else if (!isAdmin) {
       // Si no es admin y no tiene visiones asignadas, no mostrar nada
       console.log(`[participantes-pendientes] No vision assignments, returning empty`)
