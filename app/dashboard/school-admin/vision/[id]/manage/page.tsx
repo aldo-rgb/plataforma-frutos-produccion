@@ -971,6 +971,11 @@ export default function VisionManagePage() {
                                 )}
                               </div>
                               <div className="text-slate-400 text-xs truncate">{gc.usuario.email}</div>
+                              {gc.usuario.telefono && (
+                                <div className="text-cyan-400 text-xs truncate flex items-center gap-1">
+                                  <span>📱</span> {gc.usuario.telefono}
+                                </div>
+                              )}
                               <div className="text-yellow-400 text-xs mt-1">
                                 {new Date(gc.assignedAt).toLocaleDateString('es-MX')}
                               </div>
@@ -1322,6 +1327,11 @@ export default function VisionManagePage() {
                                 )}
                               </div>
                               <div className="text-slate-400 text-xs truncate">{gc.usuario.email}</div>
+                              {gc.usuario.telefono && (
+                                <div className="text-cyan-400 text-xs truncate flex items-center gap-1">
+                                  <span>📱</span> {gc.usuario.telefono}
+                                </div>
+                              )}
                               <div className="text-orange-400 text-xs mt-1">
                                 {new Date(gc.assignedAt).toLocaleDateString('es-MX')}
                               </div>
@@ -1675,6 +1685,11 @@ export default function VisionManagePage() {
                                 )}
                               </div>
                               <div className="text-slate-400 text-xs truncate">{gc.usuario.email}</div>
+                              {gc.usuario.telefono && (
+                                <div className="text-cyan-400 text-xs truncate flex items-center gap-1">
+                                  <span>📱</span> {gc.usuario.telefono}
+                                </div>
+                              )}
                               <div className="text-purple-400 text-xs mt-1">
                                 {new Date(gc.assignedAt).toLocaleDateString('es-MX')}
                               </div>

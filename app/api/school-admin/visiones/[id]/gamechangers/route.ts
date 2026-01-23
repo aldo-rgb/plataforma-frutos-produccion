@@ -62,6 +62,7 @@ export async function GET(
             id: true,
             nombre: true,
             email: true,
+            telefono: true,
             profileImage: true,
           },
         },
