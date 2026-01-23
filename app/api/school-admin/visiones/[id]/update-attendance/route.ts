@@ -153,22 +153,34 @@ export async function POST(
     let checkInRecordCreated = false;
     
     if (attendanceStatus === 'ATTENDED' && previousStatus !== 'ATTENDED') {
-      // Verificar si ya existe un CheckInRecord para este usuario y visión
-      const existingCheckIn = await prisma.checkInRecord.findFirst({
+      // Obtener el producto correspondiente al nivel
+      const product = await prisma.schoolProduct.findFirst({
         where: {
-          visitorId: enrollment.userId,
-          visionId: visionId
+          visionId: visionId,
+          levelType: enrollment.level || 'BASIC'
         }
       });
 
-      if (!existingCheckIn) {
+      // Verificar si ya existe un CheckInRecord para este usuario, visión y producto
+      const existingCheckIn = await prisma.checkInRecord.findFirst({
+        where: {
+          userId: enrollment.userId,
+          visionId: visionId,
+          productId: product?.id
+        }
+      });
+
+      if (!existingCheckIn && organizationId && product) {
         await prisma.checkInRecord.create({
           data: {
-            visitorId: enrollment.userId,
+            userId: enrollment.userId,
+            organizationId: organizationId,
+            productId: product.id,
             visionId: visionId,
+            enrollmentId: enrollment.id,
             checkInTime: new Date(),
-            staffId: usuario.id,
-            status: 'COMPLETED',
+            checkInMethod: 'MANUAL_SEARCH',
+            checkedInBy: usuario.id,
             notes: `Check-in manual por coordinador (${usuario.rol})`
           }
         });
