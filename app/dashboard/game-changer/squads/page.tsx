@@ -71,14 +71,15 @@ export default function SquadBuilderPage() {
   const searchParams = useSearchParams();
   
   const visionId = searchParams.get('visionId');
-  const level = searchParams.get('level') || 'BASIC';
+  const levelParam = searchParams.get('level');
   
   // States
   const [squad, setSquad] = useState<Squad | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [visions, setVisions] = useState<Vision[]>([]);
   const [selectedVisionId, setSelectedVisionId] = useState<string>(visionId || '');
-  const [selectedLevel, setSelectedLevel] = useState<string>(level);
+  const [activeTrainingLevel, setActiveTrainingLevel] = useState<string | null>(null);
+  const [selectedLevel, setSelectedLevel] = useState<string>(levelParam || 'BASIC');
   const [loading, setLoading] = useState(true);
   const [scannerMode, setScannerMode] = useState<ScannerMode>('idle');
   const [manualCode, setManualCode] = useState('');
@@ -128,6 +129,33 @@ export default function SquadBuilderPage() {
     fetchOrgInfo();
   }, []);
 
+  // Load active training level from my-stats
+  useEffect(() => {
+    const fetchActiveLevel = async () => {
+      try {
+        const res = await fetch('/api/gc-calls/my-stats');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.trainingInfo?.level) {
+            const level = data.trainingInfo.level;
+            setActiveTrainingLevel(level);
+            // Si no hay nivel en URL, usar el nivel activo
+            if (!levelParam) {
+              setSelectedLevel(level);
+            }
+            // Si hay targetVisionId, usarlo como visión seleccionada
+            if (data.targetVisionId && !visionId) {
+              setSelectedVisionId(data.targetVisionId.toString());
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching active level:', err);
+      }
+    };
+    fetchActiveLevel();
+  }, [levelParam, visionId]);
+
   // Load available visions
   useEffect(() => {
     const fetchVisions = async () => {
@@ -135,14 +163,29 @@ export default function SquadBuilderPage() {
         const res = await fetch('/api/vision/available');
         if (res.ok) {
           const data = await res.json();
-          setVisions(data.visions || []);
+          const loadedVisions = data.visions || [];
+          setVisions(loadedVisions);
+          
+          // Si no hay visión seleccionada y hay visiones disponibles, seleccionar la primera
+          // que tenga el nivel activo asignado
+          if (!selectedVisionId && loadedVisions.length > 0 && activeTrainingLevel) {
+            const visionWithLevel = loadedVisions.find((v: Vision) => 
+              v.assignedLevels?.includes(activeTrainingLevel)
+            );
+            if (visionWithLevel) {
+              setSelectedVisionId(visionWithLevel.id.toString());
+            }
+          } else if (!selectedVisionId && loadedVisions.length === 1) {
+            // Si solo hay una visión, seleccionarla automáticamente
+            setSelectedVisionId(loadedVisions[0].id.toString());
+          }
         }
       } catch (err) {
         console.error('Error fetching visions:', err);
       }
     };
     fetchVisions();
-  }, []);
+  }, [activeTrainingLevel]);
 
   // Load or create squad when vision/level changes
   useEffect(() => {
