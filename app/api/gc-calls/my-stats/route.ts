@@ -267,6 +267,7 @@ export async function GET() {
     // 3. Si BASIC ya no debe mostrarse pero no hay ADVANCED, indicar que necesita crear ADVANCED
     let activeTrainingInfo = null;
     let needsAdvancedSquad = false;
+    let targetVisionId: number | null = null;
     
     // Buscar squad de ADVANCED activo
     const advancedSquad = squads.find(s => s.level === 'ADVANCED');
@@ -301,6 +302,7 @@ export async function GET() {
             // Solo mostrar opción de crear squad ADVANCED si tiene asignación para ese nivel
             if (gcAdvancedAssignment) {
               needsAdvancedSquad = true;
+              targetVisionId = visionId; // Guardar visionId para crear el squad
               // Calcular info del entrenamiento Avanzado aunque no tenga squad
               const totalDays = 4;
               const staffCallDays = [2, 3, 4];
@@ -339,6 +341,8 @@ export async function GET() {
       trainingInfo: activeTrainingInfo,
       // Indica si el GC necesita crear un squad de Avanzado
       needsAdvancedSquad,
+      // VisionId objetivo para crear el nuevo squad
+      targetVisionId,
     });
   } catch (error) {
     console.error('Error fetching GC stats:', error);

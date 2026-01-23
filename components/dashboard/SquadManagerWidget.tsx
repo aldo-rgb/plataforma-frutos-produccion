@@ -33,6 +33,7 @@ interface Squad {
   id: string;
   name: string;
   level: string;
+  visionId?: number;
   membersCount: number;
   maxSize: number;
   members?: SquadMember[];
@@ -136,6 +137,7 @@ export default function SquadManagerWidget() {
   const [todayCallStatus, setTodayCallStatus] = useState<Record<number, TodayCallStatus>>({});
   const [trainingInfo, setTrainingInfo] = useState<TrainingInfo | null>(null);
   const [needsAdvancedSquad, setNeedsAdvancedSquad] = useState(false);
+  const [targetVisionId, setTargetVisionId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   
   // Estado para el modal de registro de llamada
@@ -257,6 +259,10 @@ export default function SquadManagerWidget() {
           }
           // Guardar si necesita crear squad de Avanzado
           setNeedsAdvancedSquad(statsData.needsAdvancedSquad || false);
+          // Guardar el visionId objetivo para crear el nuevo átomo
+          if (statsData.targetVisionId) {
+            setTargetVisionId(statsData.targetVisionId);
+          }
           
           setStats(prev => ({
             ...prev,
@@ -345,6 +351,14 @@ export default function SquadManagerWidget() {
 
   // Función para crear nuevo átomo
   const handleCreateNewAtom = async () => {
+    // Obtener visionId del squad existente o del API
+    const visionId = targetVisionId || squads[0]?.visionId;
+    
+    if (!visionId) {
+      showNotification('No se pudo determinar la visión', 'error');
+      return;
+    }
+    
     setCreatingAtom(true);
     try {
       const res = await fetch('/api/squads', {
@@ -352,7 +366,8 @@ export default function SquadManagerWidget() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           name: newAtomLevel === 'ADVANCED' ? 'Mi Átomo Avanzado' : 'Mi Átomo PL',
-          level: newAtomLevel 
+          level: newAtomLevel,
+          visionId: visionId
         }),
       });
 
