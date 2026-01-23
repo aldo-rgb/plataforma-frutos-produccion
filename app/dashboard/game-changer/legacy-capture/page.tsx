@@ -174,11 +174,12 @@ export default function LegacyCapturePage() {
         showToast('Imagen subida correctamente', 'success');
       } else {
         console.error('Upload error:', result);
-        showToast(result.error || result.details || 'Error al subir imagen', 'error');
+        const errorMsg = result.details || result.error || 'Error al subir imagen';
+        showToast(errorMsg, 'error');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading:', error);
-      showToast('Error al subir la imagen', 'error');
+      showToast(error?.message || 'Error al subir la imagen', 'error');
     } finally {
       setUploading(null);
     }

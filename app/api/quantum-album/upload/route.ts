@@ -109,12 +109,25 @@ export async function POST(request: NextRequest) {
       message: error?.message,
       name: error?.name,
       http_code: error?.http_code,
-      error: error?.error
+      cloudinaryError: error?.error
     });
+    
+    // Construir mensaje de error más descriptivo
+    let errorMessage = 'Error al subir la imagen';
+    let details = error?.message || 'Unknown error';
+    
+    // Extraer más información del error de Cloudinary
+    if (error?.error?.message) {
+      details = error.error.message;
+    }
+    if (error?.http_code) {
+      details += ` (HTTP ${error.http_code})`;
+    }
+    
     return NextResponse.json(
       { 
-        error: "Error al subir la imagen",
-        details: error?.message || 'Unknown error'
+        error: errorMessage,
+        details: details
       },
       { status: 500 }
     );
