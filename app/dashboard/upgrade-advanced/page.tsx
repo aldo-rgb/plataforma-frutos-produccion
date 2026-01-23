@@ -427,26 +427,59 @@ export default function UpgradeAdvancedPage() {
             <div className="border-t border-slate-700 pt-4">
               {hasApartadoCredit && prices && prices.APARTADO_SALDO > 0 ? (
                 <div className="space-y-2">
-                  <div className="flex justify-between text-slate-400">
-                    <span>Precio promo PL:</span>
-                    <span className="line-through">${formatPrice(prices.PL)}</span>
+                  <div className="flex justify-between text-slate-500">
+                    <span>Precio base:</span>
+                    <span className="line-through">${formatPrice(prices.PL_BASE)}</span>
+                  </div>
+                  <div className="flex justify-between text-yellow-400 font-semibold">
+                    <span>🔥 Precio promo:</span>
+                    <span>${formatPrice(prices.PL)}</span>
                   </div>
                   <div className="flex justify-between text-emerald-400">
-                    <span>Tu saldo a favor:</span>
+                    <span>✨ Tu saldo a favor:</span>
                     <span>-${formatPrice(prices.APARTADO_SALDO)}</span>
                   </div>
-                  <div className="flex justify-between text-white text-xl font-bold pt-2 border-t border-slate-600">
-                    <span>Total a pagar:</span>
-                    <span className="text-yellow-400">${formatPrice(Math.max(0, prices.PL - prices.APARTADO_SALDO))}</span>
+                  <div className="flex justify-between items-center text-white text-xl font-bold pt-3 mt-2 border-t border-slate-600">
+                    <span>Disponible por solo:</span>
+                    <span className="text-2xl text-yellow-400">${formatPrice(Math.max(0, prices.PL - prices.APARTADO_SALDO))}</span>
                   </div>
                 </div>
               ) : (
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Precio:</span>
-                  <span className="text-3xl font-black text-yellow-400">${formatPrice(prices?.PL || 9000)}</span>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-slate-500">
+                    <span>Precio base:</span>
+                    <span className="line-through">${formatPrice(prices?.PL_BASE || 11000)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-yellow-400 font-semibold">🔥 Precio promo:</span>
+                    <span className="text-3xl font-black text-yellow-400">${formatPrice(prices?.PL || 9000)}</span>
+                  </div>
                 </div>
               )}
             </div>
+
+            {/* Quantum AI Highlight */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.4 }}
+              className="mt-4 p-4 bg-gradient-to-r from-purple-600/20 via-cyan-500/20 to-blue-600/20 border border-purple-500/40 rounded-xl"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-purple-500 to-cyan-500 rounded-lg">
+                  <Zap className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="font-bold text-white flex items-center gap-2">
+                    Incluye acceso a Quantum AI
+                    <span className="px-2 py-0.5 bg-purple-500/30 rounded text-[10px] text-purple-300 font-bold">EXCLUSIVO</span>
+                  </p>
+                  <p className="text-sm text-slate-400">
+                    Mentoría asistida por Inteligencia Artificial para acelerar tu crecimiento
+                  </p>
+                </div>
+              </div>
+            </motion.div>
 
             <div className="mt-4 grid grid-cols-2 gap-3">
               {[
