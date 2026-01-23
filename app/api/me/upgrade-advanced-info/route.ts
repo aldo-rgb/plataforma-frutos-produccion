@@ -354,16 +354,16 @@ export async function GET() {
       },
     }) : null;
 
-    // Fecha límite de promoción: 8 PM del último día del básico
+    // Fecha límite de promoción: 11 PM del último día del avanzado
     let promoDeadlineDate: string | null = null;
-    if (currentVision?.basicEndDate) {
-      const basicEnd = currentVision.basicEndDate instanceof Date 
-        ? currentVision.basicEndDate 
-        : new Date(currentVision.basicEndDate);
+    if (currentVision?.advancedEndDate) {
+      const advancedEnd = currentVision.advancedEndDate instanceof Date 
+        ? currentVision.advancedEndDate 
+        : new Date(currentVision.advancedEndDate);
       
-      // Crear fecha con hora 20:00 (8 PM) del último día del básico
-      const promoDeadline = new Date(basicEnd);
-      promoDeadline.setHours(20, 0, 0, 0); // 8 PM
+      // Crear fecha con hora 23:00 (11 PM) del último día del avanzado
+      const promoDeadline = new Date(advancedEnd);
+      promoDeadline.setHours(23, 0, 0, 0); // 11 PM
       promoDeadlineDate = promoDeadline.toISOString();
     }
 
