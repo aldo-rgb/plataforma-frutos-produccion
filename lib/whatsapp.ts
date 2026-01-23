@@ -156,6 +156,103 @@ export async function sendOrganicWelcomeMessage(
 }
 
 /**
+ * Plantilla C: Anticipo - Checkout Abandonado
+ * Variables: [nombre, visionNombre, anticipoAmount, totalPrice, paymentUrl]
+ */
+export async function sendAnticipoReminderMessage(
+  phoneNumber: string,
+  nombre: string,
+  visionNombre: string,
+  anticipoAmount: number,
+  totalPrice: number,
+  paymentUrl?: string
+): Promise<SendMessageResult> {
+  const url = paymentUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.frutos.com'}/dashboard/my-tickets`;
+  
+  return sendWhatsAppMessage(
+    phoneNumber,
+    'anticipo_reminder_template', // Debe estar aprobado en Meta
+    [
+      nombre,
+      visionNombre,
+      `$${anticipoAmount.toLocaleString()}`,
+      `$${totalPrice.toLocaleString()}`,
+      url
+    ]
+  );
+}
+
+/**
+ * Plantilla D: Mensaje de texto libre (para probar sin plantilla aprobada)
+ * Usa el tipo "text" en lugar de "template"
+ */
+export async function sendWhatsAppTextMessage(
+  phoneNumber: string,
+  message: string
+): Promise<SendMessageResult> {
+  try {
+    const cleanPhone = phoneNumber.replace(/[^\d+]/g, '');
+    
+    const {
+      WHATSAPP_PHONE_NUMBER_ID,
+      WHATSAPP_ACCESS_TOKEN,
+      WHATSAPP_API_VERSION = 'v18.0'
+    } = process.env;
+
+    if (!WHATSAPP_PHONE_NUMBER_ID || !WHATSAPP_ACCESS_TOKEN) {
+      console.warn('⚠️ WhatsApp credentials not configured. Message not sent.');
+      return {
+        success: false,
+        error: 'WhatsApp credentials not configured'
+      };
+    }
+
+    const url = `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
+
+    const payload = {
+      messaging_product: 'whatsapp',
+      to: cleanPhone,
+      type: 'text',
+      text: {
+        body: message
+      }
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('❌ WhatsApp API Error:', data);
+      return {
+        success: false,
+        error: data.error?.message || 'Failed to send message'
+      };
+    }
+
+    console.log('✅ WhatsApp text message sent:', data.messages?.[0]?.id);
+    return {
+      success: true,
+      messageId: data.messages?.[0]?.id
+    };
+
+  } catch (error: any) {
+    console.error('❌ Error sending WhatsApp text message:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+/**
  * Genera un Magic Link Token seguro
  */
 export function generateMagicLinkToken(): string {

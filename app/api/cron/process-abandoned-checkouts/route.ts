@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
+import { sendWhatsAppTextMessage } from '@/lib/whatsapp';
 
 // Este endpoint procesa checkouts abandonados:
 // 1. Encuentra registros IN_CHECKOUT con más de 5 minutos
@@ -60,6 +61,7 @@ export async function POST(request: Request) {
       processed: 0,
       ticketsCreated: 0,
       emailsSent: 0,
+      whatsappSent: 0,
       errors: [] as string[],
     };
 
@@ -220,6 +222,43 @@ export async function POST(request: Request) {
         } catch (emailError) {
           console.error('Error sending email:', emailError);
           results.errors.push(`Checkout ${checkout.id}: Error enviando email`);
+        }
+
+        // Enviar WhatsApp si tiene número de teléfono
+        if (checkout.phone) {
+          try {
+            const whatsappMessage = `🎓 ¡Hola ${checkout.firstName || checkout.user?.nombre || 'Participante'}!
+
+Notamos que no completaste tu inscripción a *${checkout.vision.nombre}*.
+
+💳 *¡Reserva tu lugar con solo $${anticipoAmountNum.toLocaleString()} MXN!*
+
+📋 Precio total: $${totalPrice.toLocaleString()} MXN
+💰 Anticipo: $${anticipoAmountNum.toLocaleString()} MXN
+📅 Restante: $${remaining.toLocaleString()} MXN
+
+👉 Completa tu pago aquí:
+${process.env.NEXTAUTH_URL}/dashboard/my-tickets
+
+⚠️ Los anticipos no son reembolsables. El pago restante debe completarse antes de la 1:00 PM del primer día de la visión.
+
+- ${checkout.organization.name}`;
+
+            const whatsappResult = await sendWhatsAppTextMessage(
+              checkout.phone,
+              whatsappMessage
+            );
+            
+            if (whatsappResult.success) {
+              results.whatsappSent++;
+              console.log(`✅ WhatsApp enviado a ${checkout.phone}`);
+            } else {
+              console.warn(`⚠️ WhatsApp no enviado: ${whatsappResult.error}`);
+            }
+          } catch (whatsappError) {
+            console.error('Error sending WhatsApp:', whatsappError);
+            // No agregamos a errors porque WhatsApp es opcional
+          }
         }
 
         results.processed++;
