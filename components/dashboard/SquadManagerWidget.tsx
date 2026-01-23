@@ -168,6 +168,11 @@ export default function SquadManagerWidget() {
   // Estado para el modal de Post Entreno
   const [showPostEntrenoModal, setShowPostEntrenoModal] = useState(false);
 
+  // Estado para crear nuevo átomo
+  const [showCreateAtomModal, setShowCreateAtomModal] = useState(false);
+  const [newAtomLevel, setNewAtomLevel] = useState<'BASIC' | 'ADVANCED' | 'PL'>('ADVANCED');
+  const [creatingAtom, setCreatingAtom] = useState(false);
+
   // Estado para el modal de Legacy Capture
   const [showLegacyModal, setShowLegacyModal] = useState(false);
   const [legacyForm, setLegacyForm] = useState<LegacyCaptureForm | null>(null);
@@ -332,6 +337,44 @@ export default function SquadManagerWidget() {
     } finally {
       setSavingName(false);
     }
+  };
+
+  // Función para crear nuevo átomo
+  const handleCreateNewAtom = async () => {
+    setCreatingAtom(true);
+    try {
+      const res = await fetch('/api/squads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          name: newAtomLevel === 'ADVANCED' ? 'Mi Átomo Avanzado' : 'Mi Átomo PL',
+          level: newAtomLevel 
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setShowCreateAtomModal(false);
+        showNotification(`Átomo de ${newAtomLevel === 'ADVANCED' ? 'Avanzado' : 'PL'} creado exitosamente`, 'success');
+        // Recargar datos para mostrar el nuevo squad
+        await loadData();
+      } else {
+        showNotification(data.error || 'Error al crear el átomo', 'error');
+      }
+    } catch (error) {
+      console.error('Error creating atom:', error);
+      showNotification('Error de conexión', 'error');
+    } finally {
+      setCreatingAtom(false);
+    }
+  };
+
+  // Verificar si necesita crear átomo para el nivel actual
+  const needsNewAtomForLevel = () => {
+    if (!trainingInfo) return false;
+    const currentLevel = trainingInfo.level;
+    const hasSquadForLevel = squads.some(s => s.level === currentLevel);
+    return !hasSquadForLevel && squads.length > 0;
   };
 
   const loadAvailableSlots = async () => {
@@ -757,6 +800,38 @@ export default function SquadManagerWidget() {
           </div>
         )}
 
+        {/* Banner para crear nuevo átomo cuando cambia de nivel */}
+        {needsNewAtomForLevel() && trainingInfo && (
+          <div className="rounded-lg p-4 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-amber-500/20">
+                  <UserPlus className="w-5 h-5 text-amber-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-white">
+                    ¡Inicia el entrenamiento {trainingInfo.level === 'ADVANCED' ? 'Avanzado' : 'PL'}!
+                  </p>
+                  <p className="text-xs text-amber-200/70">
+                    Crea un nuevo átomo para este nivel
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => {
+                  setNewAtomLevel(trainingInfo.level as 'ADVANCED' | 'PL');
+                  setShowCreateAtomModal(true);
+                }}
+                className="bg-amber-500 hover:bg-amber-600 text-white"
+                size="sm"
+              >
+                <UserPlus className="w-4 h-4 mr-2" />
+                Crear Átomo
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Stats rápidas - Solo mostrar si es día de llamadas o entrenamiento terminó */}
         <div className="grid grid-cols-3 gap-2">
           <div className="bg-white/5 rounded-lg p-3 text-center">
@@ -998,6 +1073,71 @@ export default function SquadManagerWidget() {
                 className="flex-1 bg-indigo-500 hover:bg-indigo-600"
               >
                 {savingName ? 'Guardando...' : 'Guardar'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Crear Nuevo Átomo */}
+      {showCreateAtomModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-amber-500/30 rounded-2xl w-full max-w-sm overflow-hidden">
+            {/* Header */}
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-amber-400" />
+                <h3 className="text-lg font-semibold text-white">Crear Nuevo Átomo</h3>
+              </div>
+              <button
+                onClick={() => setShowCreateAtomModal(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-4 space-y-4">
+              <div className="bg-amber-500/10 rounded-lg p-3 border border-amber-500/20">
+                <p className="text-sm text-amber-200">
+                  Vas a crear un átomo para el nivel <strong>{newAtomLevel === 'ADVANCED' ? 'Avanzado' : 'PL'}</strong>.
+                </p>
+                <p className="text-xs text-amber-200/70 mt-1">
+                  Podrás agregar participantes después de crearlo.
+                </p>
+              </div>
+              <p className="text-sm text-slate-400">
+                Se creará con el nombre &quot;Mi Átomo {newAtomLevel === 'ADVANCED' ? 'Avanzado' : 'PL'}&quot;. 
+                Puedes editarlo después.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-800 flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowCreateAtomModal(false)}
+                className="flex-1 border-slate-700"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleCreateNewAtom}
+                disabled={creatingAtom}
+                className="flex-1 bg-amber-500 hover:bg-amber-600"
+              >
+                {creatingAtom ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creando...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Crear Átomo
+                  </>
+                )}
               </Button>
             </div>
           </div>
