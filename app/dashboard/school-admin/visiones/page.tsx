@@ -1278,8 +1278,8 @@ export default function VisionesSchoolAdminPage() {
                       className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-green-500"
                     >
                       <option value="">Seleccionar coordinador básico...</option>
-                      {coordinadores.filter(c => c.rol === 'COORDINATOR_BASIC').map(coord => (
-                        <option key={coord.id} value={coord.id}>{coord.nombre}</option>
+                      {coordinadores.filter(c => c.rol === 'COORDINATOR_BASIC' || c.rol === 'SCHOOL_ADMIN').map(coord => (
+                        <option key={coord.id} value={coord.id}>{coord.nombre} {coord.rol === 'SCHOOL_ADMIN' ? '(Director)' : ''}</option>
                       ))}
                     </select>
                   </div>
@@ -1355,8 +1355,8 @@ export default function VisionesSchoolAdminPage() {
                       className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-orange-500"
                     >
                       <option value="">Seleccionar coordinador avanzado...</option>
-                      {coordinadores.filter(c => c.rol === 'COORDINATOR_ADVANCED').map(coord => (
-                        <option key={coord.id} value={coord.id}>{coord.nombre}</option>
+                      {coordinadores.filter(c => c.rol === 'COORDINATOR_ADVANCED' || c.rol === 'SCHOOL_ADMIN').map(coord => (
+                        <option key={coord.id} value={coord.id}>{coord.nombre} {coord.rol === 'SCHOOL_ADMIN' ? '(Director)' : ''}</option>
                       ))}
                     </select>
                   </div>
@@ -1415,8 +1415,8 @@ export default function VisionesSchoolAdminPage() {
                       className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-purple-500"
                     >
                       <option value="">Seleccionar coordinador...</option>
-                      {coordinadores.filter(c => c.rol === 'COORDINADOR').map(coord => (
-                        <option key={coord.id} value={coord.id}>{coord.nombre}</option>
+                      {coordinadores.filter(c => c.rol === 'COORDINADOR' || c.rol === 'SCHOOL_ADMIN').map(coord => (
+                        <option key={coord.id} value={coord.id}>{coord.nombre} {coord.rol === 'SCHOOL_ADMIN' ? '(Director)' : ''}</option>
                       ))}
                     </select>
                   </div>
