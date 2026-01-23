@@ -50,9 +50,9 @@ export default function PendingTicketBanner() {
   };
 
   // Calcular saldo a favor y monto restante
-  const totalAmountPaid = pendingTickets.reduce((sum, ticket) => sum + ticket.amountPaid, 0);
+  const totalAmountPaid = pendingTickets.reduce((sum, ticket) => sum + Number(ticket.amountPaid || 0), 0);
   const totalPending = pendingTickets.reduce((sum, ticket) => {
-    return sum + (ticket.costAtPurchase - ticket.amountPaid);
+    return sum + (Number(ticket.costAtPurchase || 0) - Number(ticket.amountPaid || 0));
   }, 0);
   
   const hasCredit = totalAmountPaid > 0;
