@@ -160,13 +160,16 @@ export async function processBacklogForAllPaidLevels(
     }
 
     // ========================================
-    // 3. CANCELAR TICKETS DE NIVELES SUPERIORES (si aplica)
+    // 3. CANCELAR TICKETS ORIGINALES (incluye el nivel trigger y superiores)
     // Distinguir entre tickets PAGADOS COMPLETOS vs RESERVADOS (depósito)
     // ========================================
     const reservedLevelsLostDeposit: VisionLevel[] = []; // Niveles que pierden depósito
     
     for (const level of levelsToProcess) {
-      if (LEVEL_ORDER.indexOf(level) > triggerIndex) {
+      // Cancelar TODOS los tickets de los niveles a procesar (incluyendo el trigger)
+      const levelIndex = LEVEL_ORDER.indexOf(level);
+      
+      if (levelIndex >= triggerIndex) {
         // Buscar ticket de este nivel (ACTIVE o RESERVED)
         const existingTicket = await prisma.ticket.findFirst({
           where: {

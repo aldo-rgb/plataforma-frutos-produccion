@@ -20,6 +20,8 @@ interface QuantumCredentialProps {
       nombre: string;
       startDate: string;
       advancedStartDate?: string | null;
+      advancedEndDate?: string | null;
+      plStartDate?: string | null;
     };
     organization: {
       name: string;
@@ -280,6 +282,35 @@ export function QuantumCredential({ ticket, userName, userInitials, userPhoto }:
           <DataRow label="LEVEL" value={config.levelText} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment || isPromoAvailable || isReserved} />
           <DataRow label="STATUS" value={isPromoAvailable ? 'PROMO $9,000' : isReserved ? 'RESERVADO' : isPendingPayment ? 'PAGO PENDIENTE' : isExpiredPayment ? 'EXPIRADO' : config.status} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment || isPromoAvailable || isReserved} />
           <DataRow label="VISION" value={ticket.vision.nombre.substring(0, 12)} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment || isPromoAvailable || isReserved} />
+          {/* Fecha según nivel */}
+          {(() => {
+            // Para BASIC: mostrar fecha de inicio básico
+            if (ticket.level === 'BASIC' && ticket.vision.startDate) {
+              const date = new Date(ticket.vision.startDate);
+              const formatted = date.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }).toUpperCase();
+              return <DataRow label="FECHA" value={formatted} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment} />;
+            }
+            // Para ADVANCED: mostrar fecha de inicio avanzado
+            if (ticket.level === 'ADVANCED' && ticket.vision.advancedStartDate) {
+              const date = new Date(ticket.vision.advancedStartDate);
+              const formatted = date.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }).toUpperCase();
+              return <DataRow label="FECHA" value={formatted} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment} />;
+            }
+            // Para PL: mostrar fecha solo si ya terminó el avanzado
+            if (ticket.level === 'PL') {
+              const advEndDate = ticket.vision.advancedEndDate ? new Date(ticket.vision.advancedEndDate) : null;
+              const now = new Date();
+              // Solo mostrar si el avanzado ya terminó
+              if (advEndDate && now > advEndDate && ticket.vision.plStartDate) {
+                const date = new Date(ticket.vision.plStartDate);
+                const formatted = date.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }).toUpperCase();
+                return <DataRow label="FECHA" value={formatted} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment || isPromoAvailable || isReserved} />;
+              }
+              // Si aún no termina avanzado, mostrar "PRÓXIMAMENTE"
+              return <DataRow label="FECHA" value="PRÓXIMAMENTE" color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment || isPromoAvailable || isReserved} />;
+            }
+            return null;
+          })()}
         </div>
 
         {/* Bottom Section - QR, Payment Button, or Expired Message */}
