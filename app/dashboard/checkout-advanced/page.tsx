@@ -290,8 +290,10 @@ export default function CheckoutAdvancedPage() {
   };
 
   // Format date
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return 'Próximamente';
     const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return 'Próximamente';
     return date.toLocaleDateString('es-MX', {
       weekday: 'long',
       day: 'numeric',
