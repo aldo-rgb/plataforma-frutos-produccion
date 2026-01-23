@@ -981,17 +981,19 @@ export default function VisionManagePage() {
                               </div>
                             </div>
                           </div>
-                          {/* Botón de toggle capitán */}
-                          <button
-                            onClick={() => toggleCaptain(gc.id, gc.isCaptain)}
-                            className={`mt-3 w-full py-2 rounded-lg text-sm font-bold transition-all ${
-                              gc.isCaptain
-                                ? 'bg-slate-700 hover:bg-slate-600 text-slate-300'
-                                : 'bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 border border-amber-500/50'
-                            }`}
-                          >
-                            {gc.isCaptain ? '✖ Quitar Capitán' : '👑 Hacer Capitán'}
-                          </button>
+                          {/* Botón de toggle capitán - solo mostrar si es capitán o no hay capitán en este nivel */}
+                          {(gc.isCaptain || !gameChangers.filter((g: any) => g.level === 'BASIC').some((g: any) => g.isCaptain)) && (
+                            <button
+                              onClick={() => toggleCaptain(gc.id, gc.isCaptain)}
+                              className={`mt-3 w-full py-2 rounded-lg text-sm font-bold transition-all ${
+                                gc.isCaptain
+                                  ? 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                                  : 'bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 border border-amber-500/50'
+                              }`}
+                            >
+                              {gc.isCaptain ? '✖ Quitar Capitán' : '👑 Hacer Capitán'}
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -999,7 +1001,7 @@ export default function VisionManagePage() {
                 </div>
               </div>
 
-              {/* Registros Nivel BÁSICO */}
+              {/* Registros Nivel BÁSICO */
               <div className="bg-gradient-to-br from-green-900/30 to-slate-900/50 rounded-xl border-2 border-green-500/30 overflow-hidden">
                 <div className="bg-green-900/40 p-6 border-b border-green-500/30">
                   <div className="flex items-center justify-between">
@@ -1337,17 +1339,19 @@ export default function VisionManagePage() {
                               </div>
                             </div>
                           </div>
-                          {/* Botón de toggle capitán */}
-                          <button
-                            onClick={() => toggleCaptain(gc.id, gc.isCaptain)}
-                            className={`mt-3 w-full py-2 rounded-lg text-sm font-bold transition-all ${
-                              gc.isCaptain
-                                ? 'bg-slate-700 hover:bg-slate-600 text-slate-300'
-                                : 'bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 border border-amber-500/50'
-                            }`}
-                          >
-                            {gc.isCaptain ? '✖ Quitar Capitán' : '👑 Hacer Capitán'}
-                          </button>
+                          {/* Botón de toggle capitán - solo mostrar si es capitán o no hay capitán en este nivel */}
+                          {(gc.isCaptain || !gameChangers.filter((g: any) => g.level === 'ADVANCED').some((g: any) => g.isCaptain)) && (
+                            <button
+                              onClick={() => toggleCaptain(gc.id, gc.isCaptain)}
+                              className={`mt-3 w-full py-2 rounded-lg text-sm font-bold transition-all ${
+                                gc.isCaptain
+                                  ? 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                                  : 'bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 border border-amber-500/50'
+                              }`}
+                            >
+                              {gc.isCaptain ? '✖ Quitar Capitán' : '👑 Hacer Capitán'}
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1355,7 +1359,7 @@ export default function VisionManagePage() {
                 </div>
               </div>
 
-              {/* Registros Nivel AVANZADO */}
+              {/* Registros Nivel AVANZADO */
               <div className="bg-gradient-to-br from-orange-900/30 to-slate-900/50 rounded-xl border-2 border-orange-500/30 overflow-hidden">
                 <div className="bg-orange-900/40 p-6 border-b border-orange-500/30">
                   <div className="flex items-center justify-between">
@@ -1695,17 +1699,19 @@ export default function VisionManagePage() {
                               </div>
                             </div>
                           </div>
-                          {/* Botón de toggle capitán */}
-                          <button
-                            onClick={() => toggleCaptain(gc.id, gc.isCaptain)}
-                            className={`mt-3 w-full py-2 rounded-lg text-sm font-bold transition-all ${
-                              gc.isCaptain
-                                ? 'bg-slate-700 hover:bg-slate-600 text-slate-300'
-                                : 'bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 border border-amber-500/50'
-                            }`}
-                          >
-                            {gc.isCaptain ? '✖ Quitar Capitán' : '👑 Hacer Capitán'}
-                          </button>
+                          {/* Botón de toggle capitán - solo mostrar si es capitán o no hay capitán en este nivel */}
+                          {(gc.isCaptain || !gameChangers.filter((g: any) => g.level === 'PL').some((g: any) => g.isCaptain)) && (
+                            <button
+                              onClick={() => toggleCaptain(gc.id, gc.isCaptain)}
+                              className={`mt-3 w-full py-2 rounded-lg text-sm font-bold transition-all ${
+                                gc.isCaptain
+                                  ? 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                                  : 'bg-amber-500/20 hover:bg-amber-500/40 text-amber-400 border border-amber-500/50'
+                              }`}
+                            >
+                              {gc.isCaptain ? '✖ Quitar Capitán' : '👑 Hacer Capitán'}
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
