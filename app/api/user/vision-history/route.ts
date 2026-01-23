@@ -45,8 +45,18 @@ export async function GET(request: NextRequest) {
             }
           },
           members: {
-            // Para historial, contar todos los miembros (activos e inactivos)
-            select: { userId: true }
+            // Para historial, incluir datos de los miembros
+            include: {
+              user: {
+                select: { 
+                  id: true, 
+                  nombre: true, 
+                  imagen: true,
+                  profileImage: true,
+                  email: true 
+                }
+              }
+            }
           }
         },
         orderBy: { createdAt: 'desc' }
@@ -76,11 +86,20 @@ export async function GET(request: NextRequest) {
             levels.push(atomo.level);
           }
           
+          // Incluir lista de participantes con sus datos
+          const participantesList = atomo.members.map(m => ({
+            id: m.user.id,
+            nombre: m.user.nombre,
+            imagen: m.user.profileImage || m.user.imagen,
+            email: m.user.email
+          }));
+          
           atomosEnVision.push({
             id: atomo.id,
             name: atomo.name,
             level: atomo.level,
-            membersCount: atomo.members.length
+            membersCount: atomo.members.length,
+            members: participantesList
           });
           
           // Contar participantes únicos en esta visión

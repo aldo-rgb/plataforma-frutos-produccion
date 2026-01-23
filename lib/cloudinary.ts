@@ -46,7 +46,7 @@ export const UPLOAD_PRESETS = {
 };
 
 /**
- * Sube una imagen a Cloudinary usando unsigned upload
+ * Sube una imagen a Cloudinary usando upload firmado (más confiable)
  */
 export async function uploadImage(
   file: Buffer | string,
@@ -63,16 +63,24 @@ export async function uploadImage(
   
   const folder = customFolder ? `${config.folder}/${customFolder}` : config.folder;
   
-  const result = await cloudinary.uploader.unsigned_upload(
-    uploadData,
-    'ml_default',
-    {
-      folder: folder,
-      resource_type: config.resource_type,
-    }
-  );
-  
-  return result as CloudinaryUploadResult;
+  try {
+    const result = await cloudinary.uploader.upload(
+      uploadData,
+      {
+        folder: folder,
+        resource_type: config.resource_type,
+      }
+    );
+    
+    return result as CloudinaryUploadResult;
+  } catch (error: any) {
+    console.error('Cloudinary upload error:', {
+      message: error?.message,
+      error: error?.error,
+      http_code: error?.http_code
+    });
+    throw error;
+  }
 }
 
 /**
@@ -88,16 +96,24 @@ export async function uploadAudio(
     ? `data:audio/webm;base64,${file.toString('base64')}`
     : file;
   
-  const result = await cloudinary.uploader.unsigned_upload(
-    uploadData,
-    'ml_default',
-    {
-      folder: customFolder ? `${config.folder}/${customFolder}` : config.folder,
-      resource_type: config.resource_type,
-    }
-  );
-  
-  return result as CloudinaryUploadResult;
+  try {
+    const result = await cloudinary.uploader.upload(
+      uploadData,
+      {
+        folder: customFolder ? `${config.folder}/${customFolder}` : config.folder,
+        resource_type: config.resource_type,
+      }
+    );
+    
+    return result as CloudinaryUploadResult;
+  } catch (error: any) {
+    console.error('Cloudinary audio upload error:', {
+      message: error?.message,
+      error: error?.error,
+      http_code: error?.http_code
+    });
+    throw error;
+  }
 }
 
 /**

@@ -1031,7 +1031,7 @@ export default function SquadManagerWidget() {
             <Link href="/dashboard/game-changer/squads" className="block">
               <Button variant="outline" className="w-full border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/10 text-xs px-2">
                 <UserPlus className="w-4 h-4 mr-1" />
-                Miembros
+                Agregar Miembros
               </Button>
             </Link>
             <Button 

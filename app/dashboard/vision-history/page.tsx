@@ -28,11 +28,19 @@ interface Product {
   surveyCompleted?: boolean;
 }
 
+interface AtomoMember {
+  id: number;
+  nombre: string;
+  imagen: string | null;
+  email: string;
+}
+
 interface Atomo {
   id: string;
   name: string;
   level: string;
   membersCount: number;
+  members?: AtomoMember[];
 }
 
 interface Vision {
@@ -471,26 +479,72 @@ export default function VisionHistoryPage() {
                           <Users className="w-4 h-4" />
                           Mis Átomos ({vision.totalAtomos || vision.atomos.length})
                         </p>
-                        <div className="space-y-2">
+                        <div className="space-y-4">
                           {vision.atomos.map((atomo) => (
                             <div
                               key={atomo.id}
-                              className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl"
+                              className="bg-slate-800/50 rounded-xl overflow-hidden"
                             >
-                              <div className="flex items-center gap-3">
-                                <div className="p-2 bg-purple-500/20 rounded-lg">
-                                  <Star className="w-4 h-4 text-purple-400" />
+                              {/* Header del átomo */}
+                              <div className="flex items-center justify-between p-3 border-b border-slate-700/30">
+                                <div className="flex items-center gap-3">
+                                  <div className="p-2 bg-purple-500/20 rounded-lg">
+                                    <Star className="w-4 h-4 text-purple-400" />
+                                  </div>
+                                  <div>
+                                    <p className="text-white font-medium text-sm">{atomo.name}</p>
+                                    <p className="text-slate-500 text-xs">
+                                      {atomo.membersCount} participantes
+                                    </p>
+                                  </div>
                                 </div>
-                                <div>
-                                  <p className="text-white font-medium text-sm">{atomo.name}</p>
-                                  <p className="text-slate-500 text-xs">
-                                    {atomo.membersCount} participantes
+                                <div className="flex items-center gap-2">
+                                  {getLevelBadge(atomo.level)}
+                                </div>
+                              </div>
+                              
+                              {/* Lista de participantes */}
+                              {atomo.members && atomo.members.length > 0 && (
+                                <div className="p-3 space-y-2">
+                                  {atomo.members.map((member) => (
+                                    <div
+                                      key={member.id}
+                                      className="flex items-center gap-3 p-2 bg-slate-700/30 rounded-lg"
+                                    >
+                                      <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                                        {member.imagen ? (
+                                          <img
+                                            src={member.imagen}
+                                            alt={member.nombre}
+                                            className="w-full h-full object-cover"
+                                          />
+                                        ) : (
+                                          <span className="text-white text-xs font-bold">
+                                            {member.nombre.charAt(0).toUpperCase()}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-white text-sm font-medium truncate">
+                                          {member.nombre}
+                                        </p>
+                                        <p className="text-slate-500 text-xs truncate">
+                                          {member.email}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              {/* Mensaje si no hay participantes */}
+                              {(!atomo.members || atomo.members.length === 0) && (
+                                <div className="p-3">
+                                  <p className="text-slate-500 text-xs text-center">
+                                    Sin participantes asignados
                                   </p>
                                 </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {getLevelBadge(atomo.level)}
-                              </div>
+                              )}
                             </div>
                           ))}
                         </div>

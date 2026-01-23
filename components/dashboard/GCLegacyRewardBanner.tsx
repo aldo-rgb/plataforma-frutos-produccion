@@ -103,7 +103,6 @@ export default function GCLegacyRewardBanner() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
-        className="mb-4"
       >
         <div className={`relative overflow-hidden rounded-2xl border-2 ${
           claimed
