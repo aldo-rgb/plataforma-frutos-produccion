@@ -788,6 +788,31 @@ export default function SchoolAdminDashboard() {
               <TreasuryQuickWidget isAdmin={true} />
             </div>
 
+            {/* Widget de Checkouts Abandonados */}
+            <Link href="/dashboard/school-admin/abandoned-checkouts" className="block">
+              <div className="bg-gradient-to-br from-orange-900/50 via-red-900/30 to-slate-900 border-2 border-orange-500/30 rounded-xl md:rounded-2xl p-4 md:p-6 transition-all cursor-pointer group hover:border-orange-500/50 hover:shadow-lg hover:shadow-orange-500/10 relative overflow-hidden">
+                {/* Decorative elements */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full blur-2xl -z-10"></div>
+                
+                <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+                  <div className="p-2 md:p-3 bg-orange-500/20 group-hover:bg-orange-500/30 rounded-lg md:rounded-xl transition-colors flex-shrink-0">
+                    <ShoppingCart size={20} className="text-orange-300 md:w-6 md:h-6" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-bold text-white text-xs md:text-sm uppercase line-clamp-2">
+                      🛒 Checkouts Abandonados
+                    </h3>
+                    <p className="text-[10px] md:text-xs text-orange-300 line-clamp-1">
+                      Recupera ventas perdidas con anticipos
+                    </p>
+                  </div>
+                </div>
+                <p className="text-[10px] md:text-xs text-slate-400 line-clamp-2">
+                  Visualiza quién abandonó el checkout y envía emails para recuperar la venta
+                </p>
+              </div>
+            </Link>
+
             {/* Widget de QR de Organización */}
             <div 
               onClick={() => {
