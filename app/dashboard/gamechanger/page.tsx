@@ -268,7 +268,7 @@ export default async function GameChangerDashboardPage() {
   const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       {/* NOTIFICACIONES IMPORTANTES */}
       <NotificationBanner />
 
@@ -287,18 +287,14 @@ export default async function GameChangerDashboardPage() {
         cartaStatus={carta?.estado as any}
       />
 
-      {/* ============================================ */}
-      {/* QR PERSONAL - WIDGET PARA INVITAR            */}
-      {/* ============================================ */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <PersonalQRWidget 
-          userName={usuario.nombre}
-          userId={usuario.id}
-          userEmail={usuario.email}
-          referralCode={usuario.referralCode || undefined}
-          organizationId={usuario.organizationId}
-        />
-      </div>
+      {/* QR PERSONAL */}
+      <PersonalQRWidget 
+        userName={usuario.nombre}
+        userId={usuario.id}
+        userEmail={usuario.email}
+        referralCode={usuario.referralCode || undefined}
+        organizationId={usuario.organizationId}
+      />
 
       {/* ZONA SUPERIOR: Hero Section */}
       {isAuthorized && (
