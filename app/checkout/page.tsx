@@ -87,6 +87,9 @@ function CheckoutContent() {
   const [prices, setPrices] = useState<PriceConfig | null>(null);
   const [loading, setLoading] = useState(true);
   
+  // Checkout tracking for abandoned cart
+  const [checkoutId, setCheckoutId] = useState<string | null>(null);
+  
   // UI states
   const [step, setStep] = useState<'ticket' | 'payment' | 'confirm'>('ticket');
   const [ticketSelection, setTicketSelection] = useState<TicketSelection>('BASIC_ONLY');
@@ -104,6 +107,48 @@ function CheckoutContent() {
   // Processing states
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
+
+  // Track checkout for abandoned cart detection
+  const trackCheckoutStart = async (data: RegistrationData, price: number) => {
+    try {
+      const res = await fetch('/api/checkout/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          visionId: data.visionId,
+          email: data.email,
+          phone: data.telefono,
+          firstName: data.nombre?.split(' ')[0],
+          lastName: data.nombre?.split(' ').slice(1).join(' '),
+          originalPrice: price,
+        }),
+      });
+      const result = await res.json();
+      if (result.success && result.checkoutId) {
+        setCheckoutId(result.checkoutId);
+        // Store in sessionStorage for recovery
+        sessionStorage.setItem('checkoutTrackingId', result.checkoutId);
+      }
+    } catch (e) {
+      console.error('Error tracking checkout:', e);
+    }
+  };
+
+  // Remove tracking when checkout completes
+  const clearCheckoutTracking = async () => {
+    const trackingId = checkoutId || sessionStorage.getItem('checkoutTrackingId');
+    if (trackingId) {
+      try {
+        await fetch(`/api/checkout/track?checkoutId=${trackingId}`, {
+          method: 'DELETE',
+        });
+        sessionStorage.removeItem('checkoutTrackingId');
+        setCheckoutId(null);
+      } catch (e) {
+        console.error('Error clearing checkout tracking:', e);
+      }
+    }
+  };
 
   useEffect(() => {
     // Check if we have registration data
@@ -152,6 +197,14 @@ function CheckoutContent() {
       setLoading(false);
     }
   };
+
+  // Start checkout tracking when we have registration data and prices
+  useEffect(() => {
+    if (registrationData && prices && registrationData.visionId && !checkoutId) {
+      // Track checkout start for abandoned cart detection
+      trackCheckoutStart(registrationData, prices.BASIC);
+    }
+  }, [registrationData, prices]);
 
   const validateGiftCode = async () => {
     if (!giftCode.trim()) {
@@ -345,6 +398,9 @@ function CheckoutContent() {
 
       // Clear session storage
       sessionStorage.removeItem('pendingRegistration');
+
+      // Clear checkout tracking (user completed payment)
+      await clearCheckoutTracking();
 
       // Calculate total tickets created
       const ticketsCreated = codesToRedeem.reduce((sum, p) => {
