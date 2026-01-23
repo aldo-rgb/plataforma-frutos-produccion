@@ -204,9 +204,11 @@ export default function UpgradeAdvancedPage() {
         // Apartado: Hoy paga Combo promo ($9,000)
         return prices.COMBO;
       case 'PL_BASE':
-        return prices.PL_BASE;
+        // Durante avanzado: usar precio promo ($9,000)
+        return prices.PL;
       case 'PL_CON_CREDITO':
-        return Math.max(0, prices.PL_BASE - prices.APARTADO_SALDO);
+        // Con crédito: precio promo - saldo a favor
+        return Math.max(0, prices.PL - prices.APARTADO_SALDO);
       default:
         return 0;
     }
@@ -426,22 +428,22 @@ export default function UpgradeAdvancedPage() {
               {hasApartadoCredit && prices && prices.APARTADO_SALDO > 0 ? (
                 <div className="space-y-2">
                   <div className="flex justify-between text-slate-400">
-                    <span>Precio base PL:</span>
-                    <span className="line-through">${formatPrice(prices.PL_BASE)}</span>
+                    <span>Precio promo PL:</span>
+                    <span className="line-through">${formatPrice(prices.PL)}</span>
                   </div>
                   <div className="flex justify-between text-emerald-400">
-                    <span>Tu crédito de apartado:</span>
+                    <span>Tu saldo a favor:</span>
                     <span>-${formatPrice(prices.APARTADO_SALDO)}</span>
                   </div>
                   <div className="flex justify-between text-white text-xl font-bold pt-2 border-t border-slate-600">
                     <span>Total a pagar:</span>
-                    <span className="text-yellow-400">${formatPrice(Math.max(0, prices.PL_BASE - prices.APARTADO_SALDO))}</span>
+                    <span className="text-yellow-400">${formatPrice(Math.max(0, prices.PL - prices.APARTADO_SALDO))}</span>
                   </div>
                 </div>
               ) : (
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400">Precio:</span>
-                  <span className="text-3xl font-black text-yellow-400">${formatPrice(prices?.PL_BASE || 11000)}</span>
+                  <span className="text-3xl font-black text-yellow-400">${formatPrice(prices?.PL || 9000)}</span>
                 </div>
               )}
             </div>

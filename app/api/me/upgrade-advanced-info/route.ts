@@ -285,9 +285,8 @@ export async function GET() {
     const comboBasePrice = comboBaseConfigured || 14500;
     
     // Verificar si el usuario tiene crédito de apartado
-    // Un usuario tiene "apartado" si tiene un ticket ADVANCED pagado con tipo COMBO_PARTIAL
-    // o si pagó solo el avanzado y tiene pendiente el PL
-    const apartadoTicket = await prisma.ticket.findFirst({
+    // OPCIÓN 1: Ticket ADVANCED con tipo COMBO_PARTIAL
+    const apartadoTicketAdvanced = await prisma.ticket.findFirst({
       where: {
         ownerId: userId,
         level: 'ADVANCED',
@@ -300,11 +299,34 @@ export async function GET() {
         amountPaid: true,
       },
     });
-
-    // El crédito de apartado es el precio promo de PL que se comprometió a pagar
-    const hasApartadoCredit = !!apartadoTicket;
-    // El saldo a favor es el precio promo del PL (lo que ya "apartó")
-    const apartadoSaldo = hasApartadoCredit ? plPromoPrice : 0;
+    
+    // OPCIÓN 2: Ticket de PL con pago parcial (amountPaid > 0)
+    const apartadoTicketPL = await prisma.ticket.findFirst({
+      where: {
+        ownerId: userId,
+        level: 'PL',
+        status: { in: ['PENDING_PAYMENT', 'RESERVED'] },
+        paymentStatus: { in: ['PARTIAL', 'PENDING'] },
+      },
+      select: {
+        id: true,
+        costAtPurchase: true,
+        amountPaid: true,
+      },
+    });
+    
+    // Determinar si tiene crédito y cuánto
+    const hasApartadoCredit = !!apartadoTicketAdvanced || (!!apartadoTicketPL && Number(apartadoTicketPL.amountPaid || 0) > 0);
+    
+    // Calcular el saldo a favor
+    let apartadoSaldo = 0;
+    if (apartadoTicketAdvanced) {
+      // Si tiene COMBO_PARTIAL, el saldo es el precio promo de PL
+      apartadoSaldo = plPromoPrice;
+    } else if (apartadoTicketPL && Number(apartadoTicketPL.amountPaid || 0) > 0) {
+      // Si tiene ticket de PL con pago parcial, el saldo es lo que ya pagó
+      apartadoSaldo = Number(apartadoTicketPL.amountPaid);
+    }
 
     // Obtener próxima visión de PL (para Panorama 3)
     // Nota: PL usa plWeekend1StartDate como fecha de inicio
