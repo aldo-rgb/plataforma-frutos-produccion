@@ -38,15 +38,15 @@ interface BacklogTicketResult {
  * 
  * 1. DROP/BACKLOG en BÁSICO (teniendo trilogía pagada):
  *    - Genera ticket BASIC para siguiente visión
- *    - Genera ticket ADVANCED para siguiente visión
- *    - Genera ticket PL para siguiente visión
+ *    - Genera ticket ADVANCED para siguiente visión (si estaba PAGADO COMPLETO)
+ *    - Genera ticket PL para siguiente visión (si estaba PAGADO COMPLETO)
  *    → El usuario tendrá que repetir toda la trilogía en la siguiente visión
  * 
- * 2. DROP/BACKLOG en AVANZADO (ya pasó básico, tenía PL pagado):
+ * 2. DROP/BACKLOG en AVANZADO (ya pasó básico, tenía PL):
  *    - Genera ticket ADVANCED para siguiente visión
- *    - CANCELA el ticket/enrollment de PL de la visión actual
- *    - RE-CREA ticket PL para la siguiente visión
- *    → El usuario hará ADVANCED + PL en la siguiente visión
+ *    - Si PL estaba RESERVED (solo depósito): CANCELA y PIERDE el depósito
+ *    - Si PL estaba ACTIVE (pagado completo): CANCELA y RE-CREA para siguiente
+ *    → El usuario hará ADVANCED (+PL si lo tenía pagado completo) en la siguiente visión
  * 
  * 3. DROP/BACKLOG en LIDERATO (ya pasó básico y avanzado):
  *    - Solo genera ticket PL para siguiente visión
@@ -55,6 +55,7 @@ interface BacklogTicketResult {
  * REGLA IMPORTANTE:
  * - Cada nivel tiene UNA sola oportunidad de reposición
  * - Si ya usaste tu oportunidad de BASIC, no recibes otro ticket de BASIC
+ * - Tickets RESERVED (apartados/depósitos) NO generan reposición - se pierde el depósito
  */
 export async function processBacklogForAllPaidLevels(
   userId: number,
@@ -160,48 +161,84 @@ export async function processBacklogForAllPaidLevels(
 
     // ========================================
     // 3. CANCELAR TICKETS DE NIVELES SUPERIORES (si aplica)
+    // Distinguir entre tickets PAGADOS COMPLETOS vs RESERVADOS (depósito)
     // ========================================
+    const reservedLevelsLostDeposit: VisionLevel[] = []; // Niveles que pierden depósito
+    
     for (const level of levelsToProcess) {
       if (LEVEL_ORDER.indexOf(level) > triggerIndex) {
-        // Buscar ticket activo de este nivel para esta visión
+        // Buscar ticket de este nivel (ACTIVE o RESERVED)
         const existingTicket = await prisma.ticket.findFirst({
           where: {
             ownerId: userId,
             visionId: currentVisionId,
             level: level,
-            status: 'ACTIVE'
+            status: { in: ['ACTIVE', 'RESERVED', 'PENDING_PAYMENT'] }
+          },
+          select: {
+            id: true,
+            status: true,
+            amountPaid: true,
+            costAtPurchase: true,
+            type: true
           }
         });
 
         if (existingTicket) {
+          // Cancelar el ticket
           await prisma.ticket.update({
             where: { id: existingTicket.id },
             data: { status: 'CANCELLED' }
           });
           
-          cancelledTickets.push({ level, ticketId: existingTicket.id });
-          console.log(`🚫 Ticket ${level} cancelado: ${existingTicket.id}`);
+          // Determinar si era RESERVED (solo depósito) - pierde el dinero
+          const isReservedOrPartialPayment = 
+            (existingTicket.status as string) === 'RESERVED' ||
+            (existingTicket.type as string) === 'PROMO_RESERVED' ||
+            (Number(existingTicket.amountPaid) > 0 && 
+             Number(existingTicket.amountPaid) < Number(existingTicket.costAtPurchase || 0));
+          
+          if (isReservedOrPartialPayment) {
+            // Ticket con depósito parcial - NO genera reposición, pierde el dinero
+            reservedLevelsLostDeposit.push(level);
+            console.log(`💸 Ticket ${level} RESERVADO cancelado - depósito perdido: $${existingTicket.amountPaid}`);
+          } else {
+            // Ticket pagado completo - SÍ genera reposición
+            cancelledTickets.push({ level, ticketId: existingTicket.id });
+            console.log(`🚫 Ticket ${level} PAGADO cancelado: ${existingTicket.id} - generará reposición`);
+          }
         }
 
-        // Marcar enrollment de niveles superiores
+        // Marcar enrollment de niveles superiores como CANCELLED (no MOVED)
         const enrollmentToUpdate = userEnrollments.find(e => e.level === level);
         if (enrollmentToUpdate && enrollmentToUpdate.attendanceStatus !== 'ATTENDED') {
+          const isLostDeposit = reservedLevelsLostDeposit.includes(level);
           await prisma.vision_enrollments.update({
             where: { id: enrollmentToUpdate.id },
             data: { 
-              attendanceStatus: 'MOVED',
-              enrollmentStatus: 'MOVED_TO_NEXT'
+              attendanceStatus: isLostDeposit ? 'CANCELLED' : 'MOVED',
+              enrollmentStatus: isLostDeposit ? 'CANCELLED' : 'MOVED_TO_NEXT'
             }
           });
-          console.log(`📦 Enrollment ${level} marcado como MOVED`);
+          console.log(`📦 Enrollment ${level} marcado como ${isLostDeposit ? 'CANCELLED' : 'MOVED'}`);
         }
       }
     }
+    
+    // Filtrar niveles a procesar: excluir los que perdieron depósito
+    const levelsToCreateTickets = levelsToProcess.filter(
+      level => !reservedLevelsLostDeposit.includes(level)
+    );
+    
+    console.log(`📋 Niveles que generarán ticket de reposición: ${levelsToCreateTickets.join(', ') || 'ninguno'}`);
+    if (reservedLevelsLostDeposit.length > 0) {
+      console.log(`💸 Niveles que perdieron depósito (sin reposición): ${reservedLevelsLostDeposit.join(', ')}`);
+    }
 
     // ========================================
-    // 4. CREAR TICKETS PARA CADA NIVEL
+    // 4. CREAR TICKETS PARA CADA NIVEL (solo los que califican)
     // ========================================
-    for (const level of levelsToProcess) {
+    for (const level of levelsToCreateTickets) {
       const isCascaded = LEVEL_ORDER.indexOf(level) > triggerIndex;
       
       const result = await createSingleLevelTicket(
@@ -223,26 +260,48 @@ export async function processBacklogForAllPaidLevels(
       
       results.push(result);
     }
+    
+    // Agregar info de niveles que perdieron depósito (sin ticket creado)
+    for (const level of reservedLevelsLostDeposit) {
+      results.push({
+        level,
+        success: false,
+        error: 'Depósito perdido - ticket era RESERVADO (no pagado completo)',
+        alreadyUsedBacklog: false
+      });
+    }
 
     // ========================================
     // 5. ENVIAR NOTIFICACIONES
     // ========================================
     const successfulTickets = results.filter(r => r.success);
     const failedAlreadyUsed = results.filter(r => r.alreadyUsedBacklog);
+    const lostDeposits = results.filter(r => r.error?.includes('Depósito perdido'));
 
-    if (successfulTickets.length > 0) {
+    if (successfulTickets.length > 0 || lostDeposits.length > 0) {
       const reasonLabel = reasonType === 'DROP' ? 'DROP (baja)' : 'BACKLOG';
       const levelsCreated = successfulTickets.map(t => getLevelLabel(t.level)).join(', ');
       
       let message = '';
       
-      if (cancelledTickets.length > 0) {
+      if (cancelledTickets.length > 0 || lostDeposits.length > 0) {
         const levelsCancelled = cancelledTickets.map(c => getLevelLabel(c.level)).join(', ');
-        message = `Por tu situación de ${reasonLabel} en ${getLevelLabel(triggerLevel)}, se han reorganizado tus tickets:\n\n` +
-          `✅ Tickets generados para siguiente visión: ${levelsCreated}\n` +
-          `🔄 Tickets movidos de visión actual: ${levelsCancelled}\n\n` +
-          `Deberás completar estos niveles en la próxima visión.`;
-      } else {
+        const levelsLost = lostDeposits.map(l => getLevelLabel(l.level)).join(', ');
+        
+        message = `Por tu situación de ${reasonLabel} en ${getLevelLabel(triggerLevel)}, se han reorganizado tus tickets:\n\n`;
+        
+        if (levelsCreated) {
+          message += `✅ Tickets generados para siguiente visión: ${levelsCreated}\n`;
+        }
+        if (levelsCancelled) {
+          message += `🔄 Tickets movidos de visión actual: ${levelsCancelled}\n`;
+        }
+        if (levelsLost) {
+          message += `❌ Niveles cancelados (depósito perdido): ${levelsLost}\n`;
+        }
+        
+        message += `\nDeberás completar los niveles asignados en la próxima visión.`;
+      } else if (successfulTickets.length > 0) {
         message = isPendingAssignment
           ? `Se te han generado ${successfulTickets.length} ticket(s) de cortesía por ${reasonLabel} para: ${levelsCreated}. No hay próximo entrenamiento programado aún. ⚠️ Solo tienes UNA oportunidad de reposición por nivel.`
           : `Se te han asignado ${successfulTickets.length} ticket(s) para "${targetVision.nombre}" (${levelsCreated}). ⚠️ Esta es tu ÚNICA oportunidad de reposición por nivel.`;
@@ -254,6 +313,20 @@ export async function processBacklogForAllPaidLevels(
           type: 'OTHER',
           title: `🎫 Tickets de Reposición - ${reasonLabel}`,
           message: message,
+          relatedId: currentVisionId
+        }
+      });
+    }
+    
+    // Notificación específica para depósitos perdidos
+    if (lostDeposits.length > 0) {
+      const levelsLost = lostDeposits.map(l => getLevelLabel(l.level)).join(', ');
+      await prisma.notification.create({
+        data: {
+          userId: userId,
+          type: 'SYSTEM_ALERT',
+          title: '💸 Depósito Perdido',
+          message: `Tu depósito/apartado para ${levelsLost} se ha perdido debido a tu inasistencia a ${getLevelLabel(triggerLevel)}. Los anticipos no son reembolsables cuando no se completa el nivel anterior.`,
           relatedId: currentVisionId
         }
       });
