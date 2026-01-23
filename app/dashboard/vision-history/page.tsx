@@ -28,6 +28,13 @@ interface Product {
   surveyCompleted?: boolean;
 }
 
+interface Atomo {
+  id: string;
+  name: string;
+  level: string;
+  membersCount: number;
+}
+
 interface Vision {
   id: number;
   nombre: string;
@@ -40,7 +47,10 @@ interface Vision {
   assignedAt: string;
   role: string;
   level?: string;
+  levels?: string[];
   products?: Product[];
+  atomos?: Atomo[];
+  totalAtomos?: number;
 }
 
 interface HistoryData {
@@ -338,6 +348,16 @@ export default function VisionHistoryPage() {
                       <div className="flex flex-wrap gap-2">
                         {getRoleBadge(vision.role)}
                         {vision.level && getLevelBadge(vision.level)}
+                        {/* Mostrar niveles para GCs */}
+                        {vision.levels && vision.levels.map(level => (
+                          <span key={level}>{getLevelBadge(level)}</span>
+                        ))}
+                        {/* Mostrar cantidad de átomos */}
+                        {vision.totalAtomos !== undefined && vision.totalAtomos > 0 && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/20 text-purple-400 border border-purple-500/50">
+                            {vision.totalAtomos} {vision.totalAtomos === 1 ? 'átomo' : 'átomos'}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -373,7 +393,7 @@ export default function VisionHistoryPage() {
                   </div>
                 </div>
 
-                {/* Contenido expandido - Solo para Trainers con productos */}
+                {/* Contenido expandido - Para Trainers con productos */}
                 <AnimatePresence>
                   {expandedVision === vision.id && vision.products && vision.products.length > 0 && (
                     <motion.div
@@ -432,6 +452,62 @@ export default function VisionHistoryPage() {
                             </div>
                           ))}
                         </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Contenido expandido - Para Game Changers con átomos */}
+                <AnimatePresence>
+                  {expandedVision === vision.id && vision.atomos && vision.atomos.length > 0 && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="border-t border-slate-700/50"
+                    >
+                      <div className="p-4 bg-slate-900/50">
+                        <p className="text-sm text-slate-400 mb-3 flex items-center gap-2">
+                          <Users className="w-4 h-4" />
+                          Mis Átomos ({vision.totalAtomos || vision.atomos.length})
+                        </p>
+                        <div className="space-y-2">
+                          {vision.atomos.map((atomo) => (
+                            <div
+                              key={atomo.id}
+                              className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 bg-purple-500/20 rounded-lg">
+                                  <Star className="w-4 h-4 text-purple-400" />
+                                </div>
+                                <div>
+                                  <p className="text-white font-medium text-sm">{atomo.name}</p>
+                                  <p className="text-slate-500 text-xs">
+                                    {atomo.membersCount} participantes
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {getLevelBadge(atomo.level)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {/* Mostrar niveles asignados si no hay átomos creados aún */}
+                        {vision.levels && vision.levels.length > 0 && vision.atomos.length === 0 && (
+                          <div className="mt-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+                            <p className="text-amber-400 text-sm">
+                              Niveles asignados: {vision.levels.map(l => 
+                                l === 'BASIC' ? 'Básico' : l === 'ADVANCED' ? 'Avanzado' : l === 'PL' ? 'Liderato' : l
+                              ).join(', ')}
+                            </p>
+                            <p className="text-amber-300/70 text-xs mt-1">
+                              Aún no has creado átomos para esta visión
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   )}
