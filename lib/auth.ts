@@ -54,13 +54,29 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Contraseña incorrecta")
         }
 
-        // 5. Retornar objeto usuario (excluyendo password, incluyendo flags de onboarding)
+        // 5. Verificar si el usuario está usando la contraseña por defecto "Quantum123."
+        // Si es así, marcar para que deba cambiarla
+        const DEFAULT_PASSWORD = 'Quantum123.';
+        const isUsingDefaultPassword = credentials.password === DEFAULT_PASSWORD;
+        
+        let requirePasswordChange = user.requirePasswordChange || false;
+        
+        if (isUsingDefaultPassword && !requirePasswordChange) {
+          // Actualizar el flag en la base de datos
+          await prisma.usuario.update({
+            where: { id: user.id },
+            data: { requirePasswordChange: true }
+          });
+          requirePasswordChange = true;
+        }
+
+        // 6. Retornar objeto usuario (excluyendo password, incluyendo flags de onboarding)
         return {
           id: user.id,
           email: user.email,
           nombre: user.nombre,
           rol: user.rol,
-          requirePasswordChange: user.requirePasswordChange || false,
+          requirePasswordChange: requirePasswordChange,
           wizardCompleted: user.wizardCompleted || false,
           onboardingOrigin: user.onboardingOrigin || 'ORGANIC_SIGNUP',
           organizationId: user.organizacionId || undefined,
