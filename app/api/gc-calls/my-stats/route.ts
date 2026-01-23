@@ -288,23 +288,35 @@ export async function GET() {
           const now = new Date();
           now.setHours(0, 0, 0, 0);
           if (now >= advStartDate) {
-            needsAdvancedSquad = true;
-            // Calcular info del entrenamiento Avanzado aunque no tenga squad
-            const totalDays = 4;
-            const staffCallDays = [2, 3, 4];
-            const diffTime = now.getTime() - advStartDate.getTime();
-            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-            const currentDay = diffDays + 1;
-            const isStaffCallDay = currentDay >= 1 && currentDay <= totalDays && staffCallDays.includes(currentDay);
+            // Verificar si el GC tiene asignación VisionGameChanger para esta visión
+            const visionId = basicSquad.visionId;
+            const gcAssignment = await prisma.visionGameChanger.findFirst({
+              where: {
+                gameChangerId: user.id,
+                visionId: visionId,
+              },
+            });
             
-            activeTrainingInfo = {
-              currentDay,
-              totalDays,
-              isStaffCallDay,
-              staffCallDays,
-              level: 'ADVANCED',
-              showInDashboard: true,
-            };
+            // Solo mostrar opción de crear squad ADVANCED si tiene asignación
+            if (gcAssignment) {
+              needsAdvancedSquad = true;
+              // Calcular info del entrenamiento Avanzado aunque no tenga squad
+              const totalDays = 4;
+              const staffCallDays = [2, 3, 4];
+              const diffTime = now.getTime() - advStartDate.getTime();
+              const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+              const currentDay = diffDays + 1;
+              const isStaffCallDay = currentDay >= 1 && currentDay <= totalDays && staffCallDays.includes(currentDay);
+              
+              activeTrainingInfo = {
+                currentDay,
+                totalDays,
+                isStaffCallDay,
+                staffCallDays,
+                level: 'ADVANCED',
+                showInDashboard: true,
+              };
+            }
           }
         }
       }
