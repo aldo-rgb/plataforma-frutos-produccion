@@ -8,6 +8,23 @@ import { uploadImage, getThumbnailUrl } from "@/lib/cloudinary";
 
 export async function POST(request: NextRequest) {
   try {
+    // Verificar configuración de Cloudinary
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+    
+    if (!cloudName || !apiKey || !apiSecret) {
+      console.error('Cloudinary config missing:', { 
+        cloudName: !!cloudName, 
+        apiKey: !!apiKey, 
+        apiSecret: !!apiSecret 
+      });
+      return NextResponse.json(
+        { error: "Configuración de Cloudinary incompleta" },
+        { status: 500 }
+      );
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
