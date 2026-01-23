@@ -212,35 +212,8 @@ export default function SquadManagerWidget() {
 
   const loadData = async () => {
     try {
-      // Cargar squads CON miembros
-      const squadsRes = await fetch('/api/squads?includeMembers=true');
-      if (squadsRes.ok) {
-        const squadsData = await squadsRes.json();
-        console.log('📦 Squads data:', squadsData);
-        if (squadsData.success && squadsData.squads) {
-          setSquads(squadsData.squads);
-          const totalMembers = squadsData.squads.reduce((sum: number, s: Squad) => sum + s.membersCount, 0);
-          
-          // Combinar todos los miembros de todos los squads
-          const members: SquadMember[] = [];
-          squadsData.squads.forEach((squad: Squad) => {
-            console.log('📦 Squad members:', squad.name, squad.members?.length, squad.members);
-            if (squad.members) {
-              members.push(...squad.members);
-            }
-          });
-          console.log('📦 All members:', members.length, members);
-          setAllMembers(members);
-          
-          setStats(prev => ({
-            ...prev,
-            totalSquads: squadsData.squads.length,
-            totalMembers
-          }));
-        }
-      }
-
-      // Cargar estadísticas de llamadas del GC
+      // Primero cargar stats para saber el nivel activo
+      let activeLevel = 'BASIC';
       const statsRes = await fetch('/api/gc-calls/my-stats');
       if (statsRes.ok) {
         const statsData = await statsRes.json();
@@ -256,6 +229,7 @@ export default function SquadManagerWidget() {
           // Guardar información del entrenamiento
           if (statsData.trainingInfo) {
             setTrainingInfo(statsData.trainingInfo);
+            activeLevel = statsData.trainingInfo.level || 'BASIC';
           }
           // Guardar si necesita crear squad de Avanzado
           setNeedsAdvancedSquad(statsData.needsAdvancedSquad || false);
@@ -269,6 +243,38 @@ export default function SquadManagerWidget() {
             membersWithoutCall: statsData.stats?.membersWithoutCall || 0,
             todayCalls: statsData.stats?.todayCalls || 0,
             completedToday: statsData.stats?.completedToday || 0
+          }));
+        }
+      }
+
+      // Cargar squads CON miembros
+      const squadsRes = await fetch('/api/squads?includeMembers=true');
+      if (squadsRes.ok) {
+        const squadsData = await squadsRes.json();
+        console.log('📦 Squads data:', squadsData);
+        if (squadsData.success && squadsData.squads) {
+          // Filtrar squads por el nivel activo
+          const activeSquads = squadsData.squads.filter((s: Squad) => s.level === activeLevel);
+          console.log('📦 Active level:', activeLevel, 'Active squads:', activeSquads.length);
+          
+          setSquads(activeSquads);
+          const totalMembers = activeSquads.reduce((sum: number, s: Squad) => sum + s.membersCount, 0);
+          
+          // Solo mostrar miembros del squad del nivel activo
+          const members: SquadMember[] = [];
+          activeSquads.forEach((squad: Squad) => {
+            console.log('📦 Squad members:', squad.name, squad.members?.length, squad.members);
+            if (squad.members) {
+              members.push(...squad.members);
+            }
+          });
+          console.log('📦 All members:', members.length, members);
+          setAllMembers(members);
+          
+          setStats(prev => ({
+            ...prev,
+            totalSquads: activeSquads.length,
+            totalMembers
           }));
         }
       }
