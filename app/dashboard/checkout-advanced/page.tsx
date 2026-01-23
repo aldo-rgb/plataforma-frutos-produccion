@@ -31,9 +31,10 @@ interface PriceConfig {
   COMBO: number;
   COMBO_BASE: number;
   APARTADO: number;
+  APARTADO_SALDO?: number;
 }
 
-type PackageType = 'ADVANCED_ONLY' | 'COMBO' | 'APARTADO';
+type PackageType = 'ADVANCED_ONLY' | 'COMBO' | 'APARTADO' | 'PL_BASE' | 'PL_CON_CREDITO';
 
 interface UpgradeData {
   type: string;
@@ -327,7 +328,9 @@ export default function CheckoutAdvancedPage() {
           </button>
           <h1 className="text-lg font-bold text-white flex items-center gap-2">
             <Wallet className="w-5 h-5 text-purple-500" />
-            Pago - Avanzado
+            {upgradeData?.packageType === 'PL_BASE' || upgradeData?.packageType === 'PL_CON_CREDITO' 
+              ? 'Pago - Tu VIDA (PL)' 
+              : 'Pago - Avanzado'}
           </h1>
           <div className="w-20" />
         </div>
@@ -355,6 +358,8 @@ export default function CheckoutAdvancedPage() {
                         ? 'Combo Avanzado + PL' 
                         : upgradeData.packageType === 'APARTADO'
                         ? 'Apartado - Avanzado + PL'
+                        : upgradeData.packageType === 'PL_BASE' || upgradeData.packageType === 'PL_CON_CREDITO'
+                        ? 'Tu VIDA (Participación Libre)'
                         : 'Entrenamiento Avanzado'}
                     </h2>
                     <p className="text-slate-400 flex items-center gap-2 mt-1">
@@ -376,6 +381,8 @@ export default function CheckoutAdvancedPage() {
                       ? 'Inversión Combo (Avanzado + PL)'
                       : upgradeData.packageType === 'APARTADO'
                       ? 'Apartado hoy'
+                      : upgradeData.packageType === 'PL_BASE' || upgradeData.packageType === 'PL_CON_CREDITO'
+                      ? 'Inversión Tu VIDA'
                       : 'Inversión Avanzado'}
                   </span>
                   <div className="flex items-baseline gap-3">
@@ -386,6 +393,8 @@ export default function CheckoutAdvancedPage() {
                       <span className="text-lg text-slate-500 line-through">
                         ${(upgradeData.packageType === 'COMBO' 
                           ? upgradeData.prices.COMBO_BASE 
+                          : upgradeData.packageType === 'PL_BASE' || upgradeData.packageType === 'PL_CON_CREDITO'
+                          ? upgradeData.prices.PL_BASE
                           : upgradeData.prices.ADVANCED_BASE
                         ).toLocaleString()}
                       </span>
@@ -417,6 +426,21 @@ export default function CheckoutAdvancedPage() {
                       </div>
                       <span className="text-xl font-bold text-orange-400">
                         ${upgradeData.pendingDebt.toLocaleString()} MXN
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Mostrar crédito si tiene PL_CON_CREDITO */}
+                {upgradeData.packageType === 'PL_CON_CREDITO' && upgradeData.prices?.APARTADO_SALDO && upgradeData.prices.APARTADO_SALDO > 0 && (
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-emerald-400 font-medium text-sm">✨ Saldo a favor aplicado</p>
+                        <p className="text-xs text-slate-400">Por tu pago de apartado anterior</p>
+                      </div>
+                      <span className="text-xl font-bold text-emerald-400">
+                        -${upgradeData.prices.APARTADO_SALDO.toLocaleString()} MXN
                       </span>
                     </div>
                   </div>
