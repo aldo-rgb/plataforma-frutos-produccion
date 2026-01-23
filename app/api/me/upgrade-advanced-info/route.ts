@@ -328,9 +328,11 @@ export async function GET() {
       apartadoSaldo = Number(apartadoTicketPL.amountPaid);
     }
     
-    // Precio de PL para mostrar: si tiene crédito del combo, usar precio del combo ($9,000)
-    // Si no tiene crédito, usar el precio individual del PL ($5,500 promo o $11,000 base)
-    const plDisplayPromoPrice = hasApartadoCredit ? comboPrice : plPromoPrice;
+    // Precio de PL para mostrar:
+    // Durante el avanzado (panorama AVANZADO_EN_CURSO), SIEMPRE usar precio del combo ($9,000)
+    // porque es la promo de "inscríbete durante tu avanzado"
+    // Después del avanzado, usar el precio individual del PL
+    const plDisplayPromoPrice = panorama === 'AVANZADO_EN_CURSO' ? comboPrice : plPromoPrice;
 
     // Obtener próxima visión de PL (para Panorama 3)
     // Nota: PL usa plWeekend1StartDate como fecha de inicio
