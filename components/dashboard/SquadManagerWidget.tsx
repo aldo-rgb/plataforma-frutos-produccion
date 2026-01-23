@@ -135,6 +135,7 @@ export default function SquadManagerWidget() {
   const [memberSchedules, setMemberSchedules] = useState<Record<number, string>>({});
   const [todayCallStatus, setTodayCallStatus] = useState<Record<number, TodayCallStatus>>({});
   const [trainingInfo, setTrainingInfo] = useState<TrainingInfo | null>(null);
+  const [needsAdvancedSquad, setNeedsAdvancedSquad] = useState(false);
   const [loading, setLoading] = useState(true);
   
   // Estado para el modal de registro de llamada
@@ -254,6 +255,9 @@ export default function SquadManagerWidget() {
           if (statsData.trainingInfo) {
             setTrainingInfo(statsData.trainingInfo);
           }
+          // Guardar si necesita crear squad de Avanzado
+          setNeedsAdvancedSquad(statsData.needsAdvancedSquad || false);
+          
           setStats(prev => ({
             ...prev,
             membersWithoutCall: statsData.stats?.membersWithoutCall || 0,
@@ -371,6 +375,10 @@ export default function SquadManagerWidget() {
 
   // Verificar si necesita crear átomo para el nivel actual
   const needsNewAtomForLevel = () => {
+    // Usar el flag que viene del API (más confiable)
+    if (needsAdvancedSquad) return true;
+    
+    // Fallback: verificar localmente
     if (!trainingInfo) return false;
     const currentLevel = trainingInfo.level;
     const hasSquadForLevel = squads.some(s => s.level === currentLevel);

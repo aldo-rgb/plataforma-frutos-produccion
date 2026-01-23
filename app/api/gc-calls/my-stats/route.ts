@@ -261,8 +261,54 @@ export async function GET() {
     // Contar llamadas completadas hoy
     const completedToday = Object.values(todayCallStatus).filter(s => s.status === 'completed').length;
 
-    // Determinar si hoy es día de llamada de staff (tomamos el primer squad activo)
-    const firstSquadInfo = squads.length > 0 ? squadTrainingInfo[squads[0].id] : null;
+    // Determinar el training info más relevante:
+    // 1. Si hay un squad de ADVANCED que debe mostrarse, usar ese
+    // 2. Si hay un squad de BASIC que debe mostrarse, usar ese
+    // 3. Si BASIC ya no debe mostrarse pero no hay ADVANCED, indicar que necesita crear ADVANCED
+    let activeTrainingInfo = null;
+    let needsAdvancedSquad = false;
+    
+    // Buscar squad de ADVANCED activo
+    const advancedSquad = squads.find(s => s.level === 'ADVANCED');
+    const basicSquad = squads.find(s => s.level === 'BASIC');
+    
+    if (advancedSquad && squadTrainingInfo[advancedSquad.id]?.showInDashboard) {
+      activeTrainingInfo = squadTrainingInfo[advancedSquad.id];
+    } else if (basicSquad) {
+      const basicInfo = squadTrainingInfo[basicSquad.id];
+      if (basicInfo?.showInDashboard) {
+        activeTrainingInfo = basicInfo;
+      } else {
+        // BÁSICO ya terminó/no debe mostrarse y no hay AVANZADO
+        // Verificar si el Avanzado ya inició
+        const vision = basicSquad.vision;
+        if (vision?.advancedStartDate) {
+          const advStartDate = new Date(vision.advancedStartDate);
+          advStartDate.setHours(0, 0, 0, 0);
+          const now = new Date();
+          now.setHours(0, 0, 0, 0);
+          if (now >= advStartDate) {
+            needsAdvancedSquad = true;
+            // Calcular info del entrenamiento Avanzado aunque no tenga squad
+            const totalDays = 4;
+            const staffCallDays = [2, 3, 4];
+            const diffTime = now.getTime() - advStartDate.getTime();
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            const currentDay = diffDays + 1;
+            const isStaffCallDay = currentDay >= 1 && currentDay <= totalDays && staffCallDays.includes(currentDay);
+            
+            activeTrainingInfo = {
+              currentDay,
+              totalDays,
+              isStaffCallDay,
+              staffCallDays,
+              level: 'ADVANCED',
+              showInDashboard: true,
+            };
+          }
+        }
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -276,8 +322,10 @@ export async function GET() {
       todayCallStatus, // Mapa de userId -> estado de llamada del día
       // Información de entrenamiento por squad
       squadTrainingInfo,
-      // Resumen del día de entrenamiento actual (del primer squad)
-      trainingInfo: firstSquadInfo,
+      // Resumen del día de entrenamiento actual (del nivel activo)
+      trainingInfo: activeTrainingInfo,
+      // Indica si el GC necesita crear un squad de Avanzado
+      needsAdvancedSquad,
     });
   } catch (error) {
     console.error('Error fetching GC stats:', error);
