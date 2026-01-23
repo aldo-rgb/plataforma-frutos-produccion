@@ -1,7 +1,61 @@
 'use client';
 
 import { useState } from 'react';
-import { ShoppingBag, ShoppingCart, Zap, Lock, X, Plus, Trash2, ChevronRight, CheckCircle2, AlertTriangle, CreditCard, Globe, Smartphone, DollarSign, Tag } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { ShoppingBag, ShoppingCart, Zap, Lock, X, Plus, Trash2, ChevronRight, CheckCircle2, AlertTriangle, CreditCard, Globe, Smartphone, DollarSign, Tag, Construction, Wrench } from 'lucide-react';
+
+// Componente de "En Construcción" para usuarios no admin
+function EnConstruccionPage() {
+  return (
+    <div className="min-h-[80vh] flex items-center justify-center p-4">
+      <div className="text-center max-w-md">
+        {/* Icono animado */}
+        <div className="relative mb-8">
+          <div className="w-32 h-32 mx-auto bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-full flex items-center justify-center">
+            <Construction className="w-16 h-16 text-amber-400 animate-pulse" />
+          </div>
+          <div className="absolute -right-2 top-0">
+            <Wrench className="w-8 h-8 text-slate-400 animate-bounce" />
+          </div>
+        </div>
+        
+        {/* Título */}
+        <h1 className="text-3xl font-bold text-white mb-4">
+          🚧 En Construcción
+        </h1>
+        
+        {/* Descripción */}
+        <p className="text-slate-400 text-lg mb-6">
+          Estamos trabajando en la <span className="text-amber-400 font-semibold">Tienda de Canje</span> para traerte una experiencia increíble.
+        </p>
+        
+        {/* Mensaje adicional */}
+        <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-4 mb-6">
+          <p className="text-slate-300 text-sm">
+            Pronto podrás canjear tus <span className="text-cyan-400 font-semibold">Puntos Cuánticos</span> por productos exclusivos, experiencias únicas y mucho más.
+          </p>
+        </div>
+        
+        {/* Indicador de progreso simulado */}
+        <div className="space-y-2">
+          <div className="flex justify-between text-xs text-slate-500">
+            <span>Progreso del desarrollo</span>
+            <span>75%</span>
+          </div>
+          <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+            <div className="h-full w-3/4 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full animate-pulse"></div>
+          </div>
+        </div>
+        
+        {/* Etiqueta */}
+        <div className="mt-8 inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/30 rounded-full">
+          <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></span>
+          <span className="text-amber-400 text-sm font-medium">Próximamente disponible</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // --- MOCK DATA: PRODUCTOS ---
 const PRODUCTOS = [
@@ -18,6 +72,23 @@ const PRODUCTOS = [
 const CATEGORIAS = ['TODOS', 'ROPA', 'ACCESORIOS', 'EXPERIENCIA'];
 
 export default function CanjearPuntosPage() {
+  const { data: session } = useSession();
+  const userRole = session?.user?.rol;
+  
+  // Verificar si es admin o super admin
+  const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
+  
+  // Si no es admin, mostrar página de construcción
+  if (!isAdmin) {
+    return <EnConstruccionPage />;
+  }
+
+  // ---- A partir de aquí solo ADMIN y SUPER_ADMIN ven la tienda ----
+  return <TiendaCompleta />;
+}
+
+// Componente de la tienda completa (solo para admins)
+function TiendaCompleta() {
   const [filtroCategoria, setFiltroCategoria] = useState('TODOS');
   const [misPuntos, setMisPuntos] = useState(6000); 
   
