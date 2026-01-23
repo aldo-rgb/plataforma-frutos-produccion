@@ -1025,6 +1025,11 @@ model Organization {
   loginWelcomeMessage                                   String?                         @default("Bienvenido al Portal de Entrenamiento")
   showPoweredBy                                         Boolean                         @default(true)
   customLoginEnabled                                    Boolean                         @default(false)
+  // Configuración de anticipos para Básico
+  anticiposEnabled                                      Boolean                         @default(false)
+  anticipoAmount                                        Decimal?                        @db.Decimal(10, 2)
+  anticipoDeadlineHours                                 Int                             @default(13) // Hora límite (1 PM = 13)
+  AbandonedCheckout                                     AbandonedCheckout[]
   CashBatches                                           CashBatch[]
   CheckInRecord                                         CheckInRecord[]
   DefaultPrice                                          DefaultPrice[]
@@ -2266,6 +2271,9 @@ model Usuario {
   
   // Canciones Memorables
   UserSongs                                                              UserSong[]                      @relation("UserSongs")
+  
+  // Checkouts abandonados
+  AbandonedCheckouts                                                     AbandonedCheckout[]
 
   @@index([communityOrganizationId])
 }
@@ -2339,6 +2347,9 @@ model Vision {
   CollectiblePhotos             CollectiblePhoto[]              @relation("PhotoVision")
   LegacyCaptureSessions         LegacyCaptureSession[]          @relation("VisionLegacyCaptures")
   UserSongs                     UserSong[]                      @relation("VisionSongs")
+  
+  // Checkouts abandonados
+  AbandonedCheckouts            AbandonedCheckout[]
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -2667,12 +2678,16 @@ model Ticket {
   amountPaid     Decimal             @default(0) @db.Decimal(10, 2)
   costAtPurchase Decimal?            @db.Decimal(10, 2)
   giftCodeId     Int?
+  isAnticipo     Boolean             @default(false) // Indica si fue creado por anticipo
   giftCode       GiftCode?           @relation(fields: [giftCodeId], references: [id])
   organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   owner          Usuario             @relation("TicketOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   referrer       Usuario?            @relation("TicketReferrer", fields: [transferredTo], references: [id])
   vision         Vision              @relation(fields: [visionId], references: [id], onDelete: Cascade)
   transactions   TicketTransaction[]
+  
+  // Relación con checkout abandonado
+  AbandonedCheckout AbandonedCheckout[]
 
   @@index([ownerId])
   @@index([organizationId])
@@ -3833,6 +3848,8 @@ enum TicketType {
   PROMO_50
   SCHOLARSHIP
   COMBO_PARTIAL
+  PROMO_RESERVABLE   // Ticket con precio promo disponible (puede reservar con depósito)
+  PROMO_RESERVED     // Ticket con precio promo asegurado (ya pagó depósito)
 }
 
 enum TicketStatus {
@@ -3841,6 +3858,8 @@ enum TicketStatus {
   TRANSFERRED
   EXPIRED
   CANCELLED
+  PROMO_AVAILABLE    // Promo disponible, puede reservar con depósito
+  RESERVED           // Reservado con depósito, puede pagar el resto
 }
 
 enum TicketPaymentStatus {
@@ -4527,4 +4546,63 @@ enum SongType {
   POWER           // Canción de poder personal
   TRANSFORMATION  // Canción de transformación (PL)
   VICTORY         // Canción de victoria (PL)
+}
+
+// Modelo para rastrear checkouts abandonados y ofrecer anticipos
+model AbandonedCheckout {
+  id              String                  @id @default(cuid())
+  
+  // Usuario que abandonó (puede ser null si no completó registro)
+  userId          Int?
+  user            Usuario?                @relation(fields: [userId], references: [id])
+  
+  // Datos del intento de registro
+  email           String
+  phone           String?
+  firstName       String?
+  lastName        String?
+  
+  // Visión a la que intentaba inscribirse
+  visionId        Int
+  vision          Vision                  @relation(fields: [visionId], references: [id])
+  
+  // Organización
+  organizationId  Int
+  organization    Organization            @relation(fields: [organizationId], references: [id])
+  
+  // Precio y monto
+  originalPrice   Decimal                 @db.Decimal(10, 2)
+  anticipoAmount  Decimal?                @db.Decimal(10, 2)
+  
+  // Ticket creado (si se crea al abandonar)
+  ticketId        String?
+  ticket          Ticket?                 @relation(fields: [ticketId], references: [id])
+  
+  // Estado del abandono
+  status          AbandonedCheckoutStatus @default(ABANDONED)
+  
+  // Timestamps
+  checkoutStartedAt DateTime              @default(now())
+  abandonedAt       DateTime?
+  emailSentAt       DateTime?
+  convertedAt       DateTime?             // Cuando pagó (anticipo o completo)
+  
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  
+  @@index([userId])
+  @@index([email])
+  @@index([visionId])
+  @@index([organizationId])
+  @@index([status])
+  @@index([checkoutStartedAt])
+}
+
+enum AbandonedCheckoutStatus {
+  IN_CHECKOUT       // Usuario en proceso de checkout
+  ABANDONED         // Abandonó (5 min sin actividad)
+  EMAIL_SENT        // Se envió email de anticipo
+  CONVERTED_ANTICIPO // Pagó anticipo
+  CONVERTED_FULL    // Pagó completo
+  EXPIRED           // Expiró sin pagar
 }

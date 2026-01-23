@@ -1001,7 +1001,7 @@ export default function VisionManagePage() {
                 </div>
               </div>
 
-              {/* Registros Nivel BÁSICO */
+              {/* Registros Nivel BÁSICO */}
               <div className="bg-gradient-to-br from-green-900/30 to-slate-900/50 rounded-xl border-2 border-green-500/30 overflow-hidden">
                 <div className="bg-green-900/40 p-6 border-b border-green-500/30">
                   <div className="flex items-center justify-between">
@@ -1359,7 +1359,7 @@ export default function VisionManagePage() {
                 </div>
               </div>
 
-              {/* Registros Nivel AVANZADO */
+              {/* Registros Nivel AVANZADO */}
               <div className="bg-gradient-to-br from-orange-900/30 to-slate-900/50 rounded-xl border-2 border-orange-500/30 overflow-hidden">
                 <div className="bg-orange-900/40 p-6 border-b border-orange-500/30">
                   <div className="flex items-center justify-between">

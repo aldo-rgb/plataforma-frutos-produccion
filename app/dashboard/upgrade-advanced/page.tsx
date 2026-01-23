@@ -367,25 +367,8 @@ export default function UpgradeAdvancedPage() {
             </p>
           </motion.div>
 
-          {/* Next PL Vision Info */}
-          {nextPLVision && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-gradient-to-r from-yellow-900/30 to-amber-900/20 border border-yellow-500/30 rounded-xl p-4 mb-6"
-            >
-              <div className="flex items-center gap-3">
-                <Calendar className="w-5 h-5 text-yellow-400" />
-                <div>
-                  <p className="font-medium text-white">Próximo PL: {nextPLVision.name}</p>
-                  <p className="text-sm text-slate-400">
-                    Inicia: {formatDate(nextPLVision.startDate)}
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          )}
+          {/* Next PL Vision Info - Oculto para no mostrar fecha antes del pago */}
+          {/* La información del PL se mostrará después de completar la inscripción */}
 
           {/* Crédito de Apartado si existe */}
           {hasApartadoCredit && prices && prices.APARTADO_SALDO > 0 && (

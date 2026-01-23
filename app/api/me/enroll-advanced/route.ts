@@ -248,15 +248,50 @@ export async function POST(request: Request) {
             type: 'STANDARD',
             status: 'ACTIVE',
             paymentStatus: 'PAID',
-            costAtPurchase: prices?.ADVANCED_BASE || amountPaid,
-            amountPaid: packageType === 'APARTADO' ? (prices?.ADVANCED_BASE || amountPaid) : amountPaid,
+            costAtPurchase: prices?.ADVANCED || amountPaid,
+            amountPaid: amountPaid,
             isTransferable: false,
             validUntil: vision.advancedEndDate || null,
           },
         });
 
-        // If COMBO or APARTADO, also create PL enrollment and ticket
-        if (packageType === 'COMBO' || packageType === 'APARTADO') {
+        // If COMBO, APARTADO, or ADVANCED_PROMO, also create PL enrollment and ticket
+        // ADVANCED_PROMO: Creates a PL ticket with PROMO_AVAILABLE status (can pay $1,500 to reserve)
+        if (packageType === 'COMBO' || packageType === 'APARTADO' || packageType === 'ADVANCED_PROMO') {
+          // Determine PL enrollment status based on package type
+          const plEnrollmentStatus = packageType === 'COMBO' ? 'ACTIVE' : 'PENDING';
+          const plPaymentStatus = packageType === 'COMBO' ? 'PAID' : 'PENDING';
+          
+          // Determine PL ticket status
+          let plTicketStatus = 'ACTIVE';
+          let plTicketType = 'STANDARD';
+          
+          if (packageType === 'APARTADO') {
+            plTicketStatus = 'PENDING_PAYMENT';
+            plTicketType = 'APARTADO';
+          } else if (packageType === 'ADVANCED_PROMO') {
+            plTicketStatus = 'PROMO_AVAILABLE'; // Special status: user can pay $1,500 to reserve promo
+            plTicketType = 'PROMO_RESERVABLE';
+          }
+          
+          // Calculate PL cost based on package type
+          // COMBO: precio incluido en combo
+          // APARTADO: precio promo $5,500 (modelo antiguo)
+          // ADVANCED_PROMO: precio promo durante avanzado $9,000, puede reservar con $1,500
+          let plCost = prices?.PL_BASE || 11000;
+          let plAmountPaid = 0;
+          
+          if (packageType === 'COMBO') {
+            plCost = prices?.PL || 5500;
+            plAmountPaid = plCost;
+          } else if (packageType === 'APARTADO') {
+            plCost = prices?.PL || 5500; // Promo price for apartado (modelo antiguo)
+          } else if (packageType === 'ADVANCED_PROMO') {
+            // Precio promo durante avanzado: $9,000
+            // Este es el precio que pagará si reserva con $1,500 durante básico
+            plCost = 9000; // Precio promo fijo durante avanzado
+          }
+          
           // Create PL enrollment
           plEnrollment = await tx.vision_enrollments.create({
             data: {
@@ -264,12 +299,36 @@ export async function POST(request: Request) {
               visionId: visionId,
               coordinatorId: basicEnrollment.coordinatorId,
               level: 'PL',
-              enrollmentStatus: packageType === 'COMBO' ? 'ACTIVE' : 'PENDING', // APARTADO = pending
-              paymentStatus: packageType === 'COMBO' ? 'PAID' : 'PENDING',
+              enrollmentStatus: plEnrollmentStatus,
+              paymentStatus: plPaymentStatus,
               enrolledAt: new Date(),
               updatedAt: new Date(),
             },
           });
+
+          // Calculate deadlines based on package type
+          // ADVANCED_PROMO: Deposit deadline is 11 PM of last day of BASIC training
+          // Payment deadline (for promo price) is 11 PM of last day of ADVANCED training
+          let depositDeadline: Date | null = null;
+          let promoDeadline: Date | null = null;
+          
+          if (packageType === 'ADVANCED_PROMO') {
+            // Deposit deadline: 11 PM of last day of BASIC (before advanced starts)
+            if (vision.advancedStartDate) {
+              depositDeadline = new Date(vision.advancedStartDate);
+              depositDeadline.setDate(depositDeadline.getDate() - 1);
+              depositDeadline.setHours(23, 0, 0, 0); // 11 PM
+            }
+            
+            // Promo payment deadline: 11 PM of last day of ADVANCED
+            if (vision.advancedEndDate) {
+              promoDeadline = new Date(vision.advancedEndDate);
+              promoDeadline.setHours(23, 0, 0, 0); // 11 PM
+            }
+          } else {
+            // For other package types, use PL end date
+            promoDeadline = vision.plWeekend3EndDate ? new Date(vision.plWeekend3EndDate) : null;
+          }
 
           // Create PL ticket
           plTicket = await tx.ticket.create({
@@ -278,13 +337,15 @@ export async function POST(request: Request) {
               organizationId: organizationId,
               visionId: visionId,
               level: 'PL',
-              type: 'STANDARD',
-              status: packageType === 'COMBO' ? 'ACTIVE' : 'PENDING_PAYMENT', // APARTADO = pending payment
-              paymentStatus: packageType === 'COMBO' ? 'PAID' : 'PENDING', // APARTADO = pending payment
-              costAtPurchase: prices?.PL || pendingDebt,
-              amountPaid: packageType === 'COMBO' ? (prices?.PL || 0) : 0, // APARTADO hasn't paid PL yet
+              type: plTicketType,
+              status: plTicketStatus,
+              paymentStatus: plPaymentStatus,
+              costAtPurchase: plCost,
+              amountPaid: plAmountPaid,
               isTransferable: false,
-              validUntil: vision.plWeekend3EndDate || null,
+              // For PROMO_RESERVABLE: validUntil = deposit deadline (11 PM last day of basic)
+              // After deposit, it will be updated to promo payment deadline
+              validUntil: packageType === 'ADVANCED_PROMO' ? depositDeadline : promoDeadline,
             },
           });
         }

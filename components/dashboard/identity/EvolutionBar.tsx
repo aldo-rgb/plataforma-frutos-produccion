@@ -184,7 +184,8 @@ export default function EvolutionBar({ currentLevel, nextMilestone, onUpgradeCli
             {config.description}
           </span>
         </div>
-        {nextMilestone?.deadline && (
+        {/* Solo mostrar fecha si NO está bloqueado (ya pagó) */}
+        {nextMilestone?.deadline && !nextMilestone?.isLocked && (
           <div className="flex items-center gap-1 text-xs text-slate-400">
             <Calendar className="w-3 h-3" />
             <span>

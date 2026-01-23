@@ -11,6 +11,10 @@ import {
   CheckCircle,
   AlertCircle,
   Tag,
+  Clock,
+  ToggleLeft,
+  ToggleRight,
+  AlertTriangle,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -43,6 +47,13 @@ export default function DefaultPricesPage() {
     COMBO_ADV_PL: { basePrice: 9500, promoPrice: null as number | null, promoDeadline: '', currency: 'MXN' as 'MXN' | 'USD' },
   });
 
+  // Configuración de anticipos
+  const [anticiposConfig, setAnticiposConfig] = useState({
+    enabled: false,
+    amount: 500,
+    saving: false,
+  });
+
   // Estado global de moneda
   const [globalCurrency, setGlobalCurrency] = useState<'MXN' | 'USD'>('MXN');
 
@@ -63,8 +74,49 @@ export default function DefaultPricesPage() {
       router.push('/dashboard');
     } else {
       fetchDefaultPrices();
+      fetchAnticiposConfig();
     }
   }, [status, session]);
+
+  const fetchAnticiposConfig = async () => {
+    try {
+      const res = await fetch('/api/school-admin/anticipos-config');
+      const data = await res.json();
+      if (data.success) {
+        setAnticiposConfig(prev => ({
+          ...prev,
+          enabled: data.anticiposEnabled || false,
+          amount: data.anticipoAmount || 500,
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching anticipos config:', error);
+    }
+  };
+
+  const handleSaveAnticipos = async () => {
+    setAnticiposConfig(prev => ({ ...prev, saving: true }));
+    try {
+      const res = await fetch('/api/school-admin/anticipos-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          anticiposEnabled: anticiposConfig.enabled,
+          anticipoAmount: anticiposConfig.amount,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showNotification('success', '✅ Configuración de anticipos guardada');
+      } else {
+        showNotification('error', data.error || 'Error al guardar');
+      }
+    } catch (error) {
+      showNotification('error', 'Error al guardar configuración');
+    } finally {
+      setAnticiposConfig(prev => ({ ...prev, saving: false }));
+    }
+  };
 
   const fetchDefaultPrices = async () => {
     try {
@@ -294,6 +346,111 @@ export default function DefaultPricesPage() {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Anticipos Section - Only for Basic */}
+        <div className="mb-8 bg-gradient-to-br from-amber-900/30 to-slate-900/50 border-2 border-amber-500/30 rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="text-4xl">💳</div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-white">Anticipos para Básico</h3>
+              <p className="text-slate-400 text-sm">
+                Permite que usuarios que abandonan el checkout reserven su lugar con un anticipo
+              </p>
+            </div>
+            <button
+              onClick={() => setAnticiposConfig(prev => ({ ...prev, enabled: !prev.enabled }))}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all"
+            >
+              {anticiposConfig.enabled ? (
+                <ToggleRight className="w-10 h-10 text-amber-400" />
+              ) : (
+                <ToggleLeft className="w-10 h-10 text-slate-500" />
+              )}
+            </button>
+          </div>
+
+          {anticiposConfig.enabled && (
+            <div className="space-y-4 mt-4 pt-4 border-t border-amber-500/20">
+              {/* Monto del anticipo */}
+              <div>
+                <label className="text-white font-semibold text-sm mb-2 block flex items-center gap-2">
+                  <DollarSign size={16} />
+                  Monto del Anticipo ({globalCurrency === 'MXN' ? '$' : 'USD $'})
+                </label>
+                <input
+                  type="number"
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white font-bold text-lg"
+                  value={anticiposConfig.amount}
+                  onChange={(e) => setAnticiposConfig(prev => ({ 
+                    ...prev, 
+                    amount: parseFloat(e.target.value) || 0 
+                  }))}
+                  min="100"
+                  step="100"
+                  placeholder="500"
+                />
+                <p className="text-slate-400 text-xs mt-1">
+                  Este monto se ofrecerá a usuarios que abandonen el proceso de pago
+                </p>
+              </div>
+
+              {/* Info de cómo funciona */}
+              <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Clock className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-amber-200/80">
+                    <p className="font-semibold text-amber-300 mb-1">¿Cómo funciona?</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      <li>Si un usuario abandona el checkout por 5 minutos, se le enviará un email</li>
+                      <li>Se le creará un ticket pendiente que podrá ver en "Mis Tickets"</li>
+                      <li>Puede pagar el anticipo para reservar su lugar</li>
+                      <li>Tiene hasta la <strong>1 PM del primer día</strong> de la visión para completar el pago</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Warning */}
+              <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-red-200/80">
+                    <p className="font-semibold text-red-300 mb-1">Importante</p>
+                    <p className="text-xs">
+                      Los anticipos <strong>no son reembolsables ni transferibles</strong>. 
+                      Si el usuario no completa el pago antes del deadline, pierde el anticipo.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botón Guardar */}
+              <button
+                onClick={handleSaveAnticipos}
+                disabled={anticiposConfig.saving}
+                className="w-full py-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white rounded-lg font-bold transition-all flex items-center justify-center gap-2"
+              >
+                {anticiposConfig.saving ? (
+                  <>
+                    <Loader2 className="animate-spin" size={18} />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Save size={18} />
+                    Guardar Configuración de Anticipos
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {!anticiposConfig.enabled && (
+            <p className="text-slate-500 text-sm italic">
+              Activa los anticipos para permitir pagos parciales en Básico
+            </p>
+          )}
         </div>
 
         {/* Price Cards */}

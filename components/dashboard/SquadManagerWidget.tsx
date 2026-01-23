@@ -868,11 +868,15 @@ export default function SquadManagerWidget() {
             <p className="text-xs text-gray-400">Miembros</p>
           </div>
           <div className="bg-white/5 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-emerald-400">{stats.completedToday}</p>
+            <p className="text-2xl font-bold text-emerald-400">
+              {allMembers.filter(m => todayCallStatus[m.user.id]?.status === 'completed').length}
+            </p>
             <p className="text-xs text-gray-400">Hoy ✓</p>
           </div>
           <div className="bg-white/5 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-amber-400">{stats.totalMembers - stats.completedToday}</p>
+            <p className="text-2xl font-bold text-amber-400">
+              {allMembers.filter(m => todayCallStatus[m.user.id]?.status !== 'completed').length}
+            </p>
             <p className="text-xs text-gray-400">Pendientes</p>
           </div>
         </div>

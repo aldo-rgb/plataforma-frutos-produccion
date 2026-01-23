@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import QRCode from 'react-qr-code';
-import { CreditCard, AlertTriangle, XCircle } from 'lucide-react';
+import { CreditCard, AlertTriangle, XCircle, CheckCircle, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
 interface QuantumCredentialProps {
@@ -77,12 +77,21 @@ export function QuantumCredential({ ticket, userName, userInitials, userPhoto }:
   const isBacklogTicket = ticket.type === 'SCHOLARSHIP' && ticket.paymentStatus === 'GIFT';
   const isNonTransferable = ticket.isTransferable === false;
   
+  // Check for new PL promo states
+  const isPromoAvailable = ticket.status === 'PROMO_AVAILABLE' && ticket.level === 'PL';
+  const isReserved = ticket.status === 'RESERVED' && ticket.level === 'PL';
+  
   // Check if it's a PL ticket with pending payment and deadline has passed
   const isExpiredPayment = isPendingPaymentBase && ticket.level === 'PL' && isPaymentDeadlinePassed(ticket.vision.advancedStartDate);
-  const isPendingPayment = isPendingPaymentBase && !isExpiredPayment;
+  const isPendingPayment = (isPendingPaymentBase || isPromoAvailable || isReserved) && !isExpiredPayment;
   
   const config = levelConfig[ticket.level as keyof typeof levelConfig] || levelConfig.BASIC;
-  const primaryColor = isActive ? config.color : isPendingPayment ? '#f97316' : isExpiredPayment ? '#ef4444' : '#64748b';
+  
+  // Determine primary color based on state
+  let primaryColor = isActive ? config.color : isPendingPayment ? '#f97316' : isExpiredPayment ? '#ef4444' : '#64748b';
+  if (isPromoAvailable) primaryColor = '#06b6d4'; // Cyan for promo available
+  if (isReserved) primaryColor = '#10b981'; // Green for reserved
+  
   const pendingAmount = (ticket.costAtPurchase || 0) - (ticket.amountPaid || 0);
   
   return (
@@ -149,7 +158,7 @@ export function QuantumCredential({ ticket, userName, userInitials, userPhoto }:
                 color: primaryColor,
               }}
             >
-              {isActive ? '▸ ACCESS GRANTED ◂' : isPendingPayment ? '▸ PAGO PENDIENTE ◂' : isExpiredPayment ? '▸ TICKET EXPIRADO ◂' : '▸ ACCESS EXPIRED ◂'}
+              {isActive ? '▸ ACCESS GRANTED ◂' : isPromoAvailable ? '▸ PROMO DISPONIBLE ◂' : isReserved ? '▸ LUGAR RESERVADO ◂' : isPendingPayment ? '▸ PAGO PENDIENTE ◂' : isExpiredPayment ? '▸ TICKET EXPIRADO ◂' : '▸ ACCESS EXPIRED ◂'}
             </p>
           </div>
           
@@ -267,15 +276,101 @@ export function QuantumCredential({ ticket, userName, userInitials, userPhoto }:
 
         {/* User Data */}
         <div className="relative z-10 px-4 space-y-1.5">
-          <DataRow label="CODENAME" value={userName.split(' ')[0].toUpperCase()} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment} />
-          <DataRow label="LEVEL" value={config.levelText} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment} />
-          <DataRow label="STATUS" value={isPendingPayment ? 'PAGO PENDIENTE' : isExpiredPayment ? 'EXPIRADO' : config.status} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment} />
-          <DataRow label="VISION" value={ticket.vision.nombre.substring(0, 12)} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment} />
+          <DataRow label="CODENAME" value={userName.split(' ')[0].toUpperCase()} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment || isPromoAvailable || isReserved} />
+          <DataRow label="LEVEL" value={config.levelText} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment || isPromoAvailable || isReserved} />
+          <DataRow label="STATUS" value={isPromoAvailable ? 'PROMO $9,000' : isReserved ? 'RESERVADO' : isPendingPayment ? 'PAGO PENDIENTE' : isExpiredPayment ? 'EXPIRADO' : config.status} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment || isPromoAvailable || isReserved} />
+          <DataRow label="VISION" value={ticket.vision.nombre.substring(0, 12)} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment || isPromoAvailable || isReserved} />
         </div>
 
         {/* Bottom Section - QR, Payment Button, or Expired Message */}
         <div className="absolute bottom-0 left-0 right-0 p-3">
-          {isExpiredPayment ? (
+          {isPromoAvailable ? (
+            /* Promo Available - Show deposit button */
+            <div className="space-y-2">
+              <div 
+                className="p-2 rounded-lg text-center"
+                style={{
+                  background: 'rgba(6, 182, 212, 0.1)',
+                  border: '1px solid rgba(6, 182, 212, 0.3)',
+                }}
+              >
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <Sparkles className="w-3 h-3 text-cyan-400" />
+                  <span className="text-[10px] text-cyan-400 font-bold tracking-wide" style={{ fontFamily: 'monospace' }}>
+                    PRECIO PROMO DISPONIBLE
+                  </span>
+                </div>
+                <p className="text-lg font-black text-cyan-400" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                  $9,000 MXN
+                </p>
+                <p className="text-[10px] text-cyan-400/70 mt-0.5" style={{ fontFamily: 'monospace' }}>
+                  Reserva con $1,500 • Precio base: $11,000
+                </p>
+              </div>
+              
+              <Link 
+                href="/dashboard/pay-pl"
+                className="block w-full"
+              >
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full py-2 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer text-white"
+                  style={{
+                    background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+                    boxShadow: '0 4px 15px rgba(6, 182, 212, 0.4)',
+                    fontFamily: 'Orbitron, sans-serif',
+                  }}
+                >
+                  <CreditCard className="w-4 h-4" />
+                  <span>VER OPCIONES</span>
+                </motion.div>
+              </Link>
+            </div>
+          ) : isReserved ? (
+            /* Reserved - Show remaining payment button */
+            <div className="space-y-2">
+              <div 
+                className="p-2 rounded-lg text-center"
+                style={{
+                  background: 'rgba(34, 197, 94, 0.1)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                }}
+              >
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <CheckCircle className="w-3 h-3 text-green-400" />
+                  <span className="text-[10px] text-green-400 font-bold tracking-wide" style={{ fontFamily: 'monospace' }}>
+                    PROMO RESERVADA
+                  </span>
+                </div>
+                <p className="text-lg font-black text-green-400" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                  Saldo: $7,500 MXN
+                </p>
+                <p className="text-[10px] text-green-400/70 mt-0.5" style={{ fontFamily: 'monospace' }}>
+                  Depósito: $1,500 ✓ • Precio promo asegurado
+                </p>
+              </div>
+              
+              <Link 
+                href="/dashboard/pay-pl"
+                className="block w-full"
+              >
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full py-2 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer text-white"
+                  style={{
+                    background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                    boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
+                    fontFamily: 'Orbitron, sans-serif',
+                  }}
+                >
+                  <CreditCard className="w-4 h-4" />
+                  <span>PAGAR SALDO</span>
+                </motion.div>
+              </Link>
+            </div>
+          ) : isExpiredPayment ? (
             /* Expired Payment Section */
             <div className="space-y-2">
               <div 
