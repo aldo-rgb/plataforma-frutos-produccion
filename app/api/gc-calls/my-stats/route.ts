@@ -288,17 +288,18 @@ export async function GET() {
           const now = new Date();
           now.setHours(0, 0, 0, 0);
           if (now >= advStartDate) {
-            // Verificar si el GC tiene asignación VisionGameChanger para esta visión
+            // Verificar si el GC tiene asignación VisionGameChanger para ADVANCED en esta visión
             const visionId = basicSquad.visionId;
-            const gcAssignment = await prisma.visionGameChanger.findFirst({
+            const gcAdvancedAssignment = await prisma.visionGameChanger.findFirst({
               where: {
                 gameChangerId: user.id,
                 visionId: visionId,
+                level: 'ADVANCED',
               },
             });
             
-            // Solo mostrar opción de crear squad ADVANCED si tiene asignación
-            if (gcAssignment) {
+            // Solo mostrar opción de crear squad ADVANCED si tiene asignación para ese nivel
+            if (gcAdvancedAssignment) {
               needsAdvancedSquad = true;
               // Calcular info del entrenamiento Avanzado aunque no tenga squad
               const totalDays = 4;
