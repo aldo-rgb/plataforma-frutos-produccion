@@ -79,7 +79,8 @@ export default function SquadBuilderPage() {
   const [visions, setVisions] = useState<Vision[]>([]);
   const [selectedVisionId, setSelectedVisionId] = useState<string>(visionId || '');
   const [activeTrainingLevel, setActiveTrainingLevel] = useState<string | null>(null);
-  const [selectedLevel, setSelectedLevel] = useState<string>(levelParam || 'BASIC');
+  const [selectedLevel, setSelectedLevel] = useState<string>(levelParam || '');
+  const [levelDetermined, setLevelDetermined] = useState<boolean>(!!levelParam); // Si viene por URL, ya está determinado
   const [loading, setLoading] = useState(true);
   const [scannerMode, setScannerMode] = useState<ScannerMode>('idle');
   const [manualCode, setManualCode] = useState('');
@@ -147,10 +148,27 @@ export default function SquadBuilderPage() {
             if (data.targetVisionId && !visionId) {
               setSelectedVisionId(data.targetVisionId.toString());
             }
+          } else {
+            // Si no hay training info, usar BASIC por defecto
+            if (!levelParam) {
+              setSelectedLevel('BASIC');
+            }
+          }
+        } else {
+          // Error en el API, usar BASIC por defecto
+          if (!levelParam) {
+            setSelectedLevel('BASIC');
           }
         }
       } catch (err) {
         console.error('Error fetching active level:', err);
+        // En caso de error, usar BASIC por defecto
+        if (!levelParam) {
+          setSelectedLevel('BASIC');
+        }
+      } finally {
+        // Marcar que ya se determinó el nivel
+        setLevelDetermined(true);
       }
     };
     fetchActiveLevel();
@@ -189,6 +207,11 @@ export default function SquadBuilderPage() {
 
   // Load or create squad when vision/level changes
   useEffect(() => {
+    // Esperar a que se determine el nivel correcto antes de cargar squads
+    if (!levelDetermined || !selectedLevel) {
+      return;
+    }
+    
     if (!selectedVisionId) {
       setLoading(false);
       return;
@@ -203,7 +226,7 @@ export default function SquadBuilderPage() {
         const res = await fetch(`/api/squads?visionId=${selectedVisionId}&level=${selectedLevel}&includeMembers=true`);
         const data = await res.json();
         
-        console.log('📦 Squad data:', data);
+        console.log('📦 Squad data for level', selectedLevel, ':', data);
         
         if (data.success && data.squads?.length > 0) {
           // Find my squad (as leader)
@@ -230,7 +253,7 @@ export default function SquadBuilderPage() {
     };
 
     fetchOrCreateSquad();
-  }, [selectedVisionId, selectedLevel, session?.user?.id]);
+  }, [selectedVisionId, selectedLevel, session?.user?.id, levelDetermined]);
 
   // Guardar nombre del átomo
   const saveAtomName = async () => {
