@@ -614,15 +614,14 @@ export default function VisionesSchoolAdminPage() {
                     className="w-full sm:flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors"
                   >
                     <Users size={14} className="sm:w-4 sm:h-4" />
-                    Administrar
+                    Detalles Tu Vida
                   </Link>
                   <Link
                     href={`/dashboard/school-admin/vision/${vision.id}/manage`}
                     className="w-full sm:flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors"
                   >
                     <Eye size={14} className="sm:w-4 sm:h-4" />
-                    <span className="hidden xs:inline">Configurar</span>
-                    <span className="xs:hidden">Config</span>
+                    Detalles
                   </Link>
                 </div>
               </div>
