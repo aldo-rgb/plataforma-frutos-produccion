@@ -250,14 +250,22 @@ export default function CoordinadorBasicoDashboard() {
       const newCountdowns: {[key: number]: string} = {};
 
       productos.forEach(producto => {
-        if (!producto.startDate) return;
+        // Usar fecha efectiva según tipo de producto
+        const isPL = producto.levelType === 'PL';
+        const effectiveStart = isPL 
+          ? producto.plWeekend1StartDate 
+          : producto.startDate;
+          
+        if (!effectiveStart) return;
 
-        const startDate = new Date(producto.startDate);
-        startDate.setHours(9, 0, 0, 0); // 9 AM
+        // Inicio del primer día del entrenamiento (medianoche)
+        const startDate = new Date(effectiveStart);
+        startDate.setHours(0, 0, 0, 0);
 
         const diff = startDate.getTime() - now.getTime();
         
-        if (diff > 0 && diff <= 24 * 60 * 60 * 1000) { // Menos de 24 horas
+        // Countdown: 24h antes hasta que inicie el día (medianoche)
+        if (diff > 0 && diff <= 24 * 60 * 60 * 1000) {
           const hours = Math.floor(diff / (1000 * 60 * 60));
           const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
           const seconds = Math.floor((diff % (1000 * 60)) / 1000);
@@ -488,31 +496,31 @@ export default function CoordinadorBasicoDashboard() {
                   const now = new Date();
                   
                   // Lógica de Check-In:
-                  // - Countdown: 24h antes hasta las 9 AM del día del entrenamiento
-                  // - Botón Check-In: Desde las 9 AM hasta las 11 PM del primer día
-                  // - En curso (sin Check-In): Después de las 11 PM
+                  // - Countdown: 24h antes hasta medianoche del día del entrenamiento
+                  // - Botón Check-In: Todo el primer día (00:00 a 23:59:59)
+                  // - En curso: A partir del segundo día
                   
                   let showCheckInButton = false;
                   let showInProgress = false;
                   
                   if (effectiveStartDate) {
-                    // El Check-In siempre empieza a las 9 AM del día del entrenamiento
-                    const checkInStartTime = new Date(effectiveStartDate);
-                    checkInStartTime.setHours(9, 0, 0, 0);
+                    // Inicio del primer día (medianoche 00:00:00)
+                    const dayStart = new Date(effectiveStartDate);
+                    dayStart.setHours(0, 0, 0, 0);
                     
-                    // 11 PM del día del entrenamiento (límite de Check-In)
-                    const checkInDeadline = new Date(effectiveStartDate);
-                    checkInDeadline.setHours(23, 0, 0, 0);
+                    // Fin del primer día (23:59:59.999)
+                    const dayEnd = new Date(effectiveStartDate);
+                    dayEnd.setHours(23, 59, 59, 999);
                     
-                    // Botón Check-In: desde las 9 AM hasta las 11 PM
-                    showCheckInButton = now >= checkInStartTime && now <= checkInDeadline;
+                    // Botón Check-In: todo el primer día
+                    showCheckInButton = now >= dayStart && now <= dayEnd;
                     
-                    // En curso (sin botón): después de las 11 PM
-                    showInProgress = now > checkInDeadline;
+                    // En curso: a partir del segundo día
+                    showInProgress = now > dayEnd;
                   }
                   
                   const isCompleted = producto.trainingStatus === 'COMPLETED';
-                  const showCountdown = countdown[producto.id]; // Ya calculado en el useEffect (24h antes hasta 9 AM)
+                  const showCountdown = countdown[producto.id]; // Calculado en useEffect (24h antes hasta medianoche)
 
                   // Determinar la URL del link - si no tiene visionId, ir al producto directamente
                   const linkHref = producto.visionId 
@@ -603,7 +611,7 @@ export default function CoordinadorBasicoDashboard() {
 
                           {/* Status y botones - ahora en su propia fila en móvil */}
                           <div className="flex items-center justify-end sm:justify-start">
-                          {/* Countdown: 24h antes hasta 9 AM del día del entrenamiento */}
+                          {/* Countdown: 24h antes hasta medianoche del día del entrenamiento */}
                           {showCountdown && !isCompleted && (
                             <button
                               onClick={(e) => {
@@ -630,7 +638,7 @@ export default function CoordinadorBasicoDashboard() {
                             </div>
                           )}
 
-                          {/* Botón Check-In: desde 9 AM hasta 1 PM del primer día */}
+                          {/* Botón Check-In: todo el primer día del entrenamiento */}
                           {showCheckInButton && !isCompleted && !showCountdown && (
                             <button
                               onClick={(e) => {
@@ -645,7 +653,7 @@ export default function CoordinadorBasicoDashboard() {
                             </button>
                           )}
 
-                          {/* En curso (después de las 11 PM): sin botón Check-In */}
+                          {/* En curso: a partir del segundo día */}
                           {showInProgress && !isCompleted && (
                             <div className="flex items-center gap-2 text-green-400 text-xs sm:text-sm font-semibold">
                               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
