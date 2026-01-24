@@ -514,10 +514,15 @@ export default function CoordinadorBasicoDashboard() {
                   const isCompleted = producto.trainingStatus === 'COMPLETED';
                   const showCountdown = countdown[producto.id]; // Ya calculado en el useEffect (24h antes hasta 9 AM)
 
+                  // Determinar la URL del link - si no tiene visionId, ir al producto directamente
+                  const linkHref = producto.visionId 
+                    ? `/dashboard/school-admin/vision/${producto.visionId}/manage`
+                    : `/dashboard/school-admin/productos/${producto.id}`;
+
                   return (
                     <Link
                       key={producto.id}
-                      href={`/dashboard/school-admin/vision/${producto.visionId}/manage`}
+                      href={linkHref}
                       className="block"
                     >
                       <div className={`rounded-xl p-5 transition-all cursor-pointer group hover:scale-[1.02] ${
