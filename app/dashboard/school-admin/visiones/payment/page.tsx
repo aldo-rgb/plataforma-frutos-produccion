@@ -133,6 +133,13 @@ export default function VisionPaymentPage() {
       console.log('📦 Resultado:', result);
 
       if (result.success) {
+        // Si requiere redirección a Stripe, redirigir
+        if (result.requiresRedirect && result.checkoutUrl) {
+          console.log('🔄 Redirigiendo a Stripe Checkout:', result.checkoutUrl);
+          window.location.href = result.checkoutUrl;
+          return;
+        }
+        
         console.log('✅ Pago exitoso, redirigiendo...');
         // Redirigir a página de éxito
         router.push('/dashboard/school-admin/visiones?payment=success');

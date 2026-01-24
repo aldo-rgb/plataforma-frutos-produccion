@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import Stripe from 'stripe';
+
+// Inicializar Stripe
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  apiVersion: '2024-06-20',
+});
 
 export async function POST(req: NextRequest) {
   try {
@@ -69,7 +75,55 @@ export async function POST(req: NextRequest) {
       console.error('Error parseando paymentData:', error);
     }
 
-    // Marcar orden como completada (simulación de pago)
+    // 🔵 SI ES STRIPE, CREAR SESIÓN DE CHECKOUT REAL
+    if (paymentMethod === 'stripe' && process.env.STRIPE_SECRET_KEY) {
+      console.log('🔵 [CHECKOUT] Creando sesión de Stripe Checkout...');
+      
+      try {
+        const checkoutSession = await stripe.checkout.sessions.create({
+          payment_method_types: ['card'],
+          line_items: [
+            {
+              price_data: {
+                currency: 'mxn',
+                product_data: {
+                  name: `Mentorías - ${existingPaymentData.visionName || 'Visión'}`,
+                  description: `${existingPaymentData.totalStudents || order.quantity} estudiantes × 18 llamadas`,
+                },
+                unit_amount: Math.round(order.amount * 100), // Stripe usa centavos
+              },
+              quantity: 1,
+            },
+          ],
+          mode: 'payment',
+          success_url: `${process.env.NEXTAUTH_URL}/api/school-admin/visiones/stripe-success?session_id={CHECKOUT_SESSION_ID}&orderId=${orderId}`,
+          cancel_url: `${process.env.NEXTAUTH_URL}/dashboard/school-admin/visiones/payment?orderId=${orderId}&payment=cancelled`,
+          metadata: {
+            orderId: orderId,
+            visionId: existingPaymentData.visionId?.toString() || '',
+            userId: user.id.toString(),
+            organizationId: user.organizationId?.toString() || '',
+          },
+        });
+
+        console.log('✅ [CHECKOUT] Sesión de Stripe creada:', checkoutSession.id);
+
+        return NextResponse.json({
+          success: true,
+          requiresRedirect: true,
+          checkoutUrl: checkoutSession.url,
+          sessionId: checkoutSession.id,
+        });
+      } catch (stripeError: any) {
+        console.error('❌ [CHECKOUT] Error de Stripe:', stripeError);
+        return NextResponse.json({
+          error: 'Error al crear sesión de pago con Stripe',
+          details: stripeError.message,
+        }, { status: 500 });
+      }
+    }
+
+    // Para PayPal y MercadoPago, simular pago (por ahora)
     const updatedOrder = await prisma.licenseOrder.update({
       where: { id: orderId },
       data: {
