@@ -9,6 +9,7 @@ interface Vision {
   isActive: boolean;
   startDate?: string;
   endDate?: string;
+  plWeekend3EndDate?: string; // Fecha real de fin de toda la visión (después de PL)
   _count: {
     VisionParticipante: number;
     VisionGameChanger: number;
@@ -22,8 +23,12 @@ interface VisionesWidgetProps {
 }
 
 export default function VisionesWidget({ visiones, userRole, loading }: VisionesWidgetProps) {
-  // Para todos los tipos de coordinador, usar la ruta de coordinador
-  const baseUrl = userRole === 'SCHOOL_ADMIN' ? '/dashboard/director/visiones' : '/dashboard/coordinador/visiones';
+  // COORDINADOR usa la ruta de school-admin, los demás coordinadores usan su ruta específica
+  const baseUrl = userRole === 'SCHOOL_ADMIN' 
+    ? '/dashboard/director/visiones' 
+    : userRole === 'COORDINADOR'
+      ? '/dashboard/school-admin/visiones'
+      : '/dashboard/coordinador/visiones';
   
   // Debug log
   console.log('🔍 VisionesWidget - visiones recibidas:', visiones);
@@ -86,9 +91,12 @@ export default function VisionesWidget({ visiones, userRole, loading }: Visiones
         <div className="space-y-3">
           {activeVisiones.slice(0, 6).map((vision) => {
             const startDate = vision.startDate ? new Date(vision.startDate) : null;
-            const endDate = vision.endDate ? new Date(vision.endDate) : null;
+            // Usar plWeekend3EndDate como fecha de fin real si existe, sino endDate del básico
+            const realEndDate = vision.plWeekend3EndDate 
+              ? new Date(vision.plWeekend3EndDate) 
+              : (vision.endDate ? new Date(vision.endDate) : null);
             const now = new Date();
-            const daysRemaining = endDate ? Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null;
+            const daysRemaining = realEndDate ? Math.ceil((realEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null;
 
             return (
               <Link
@@ -139,11 +147,11 @@ export default function VisionesWidget({ visiones, userRole, loading }: Visiones
                     </div>
                   </div>
 
-                  {endDate && daysRemaining !== null && (
+                  {realEndDate && daysRemaining !== null && (
                     <div className="mt-3 pt-3 border-t border-slate-700/50">
                       <div className="flex items-center gap-2">
-                        <Clock size={14} className={daysRemaining <= 7 ? 'text-red-400' : 'text-slate-400'} />
-                        <span className={`text-xs font-medium ${daysRemaining <= 7 ? 'text-red-400' : 'text-slate-400'}`}>
+                        <Clock size={14} className={daysRemaining <= 7 && daysRemaining > 0 ? 'text-red-400' : 'text-slate-400'} />
+                        <span className={`text-xs font-medium ${daysRemaining <= 7 && daysRemaining > 0 ? 'text-red-400' : 'text-slate-400'}`}>
                           {daysRemaining > 0 
                             ? `${daysRemaining} día${daysRemaining !== 1 ? 's' : ''} restante${daysRemaining !== 1 ? 's' : ''}`
                             : 'Finalizada'

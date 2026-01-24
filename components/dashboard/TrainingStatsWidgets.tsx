@@ -24,7 +24,12 @@ interface TrainingStats {
     id: number;
     name: string;
     levelType: string;
+    visionId?: number;
   }[];
+  activeVision?: {
+    id: number;
+    nombre: string;
+  } | null;
 }
 
 export default function TrainingStatsWidgets() {
@@ -91,32 +96,43 @@ export default function TrainingStatsWidgets() {
       </div>
 
       {/* Widget de Llamadas Pendientes */}
-      <Link href="/dashboard/coordinador/llamadas" className="block">
-        <div className="bg-gradient-to-br from-amber-900/40 to-slate-900/80 border-2 border-amber-500/30 rounded-2xl p-6 hover:border-amber-500/50 transition-all group cursor-pointer">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-amber-500/20 rounded-xl">
-              <Ticket className="w-6 h-6 text-amber-400" />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-1">
-                LLAMADAS PENDIENTES
-              </p>
-              <p className="text-4xl font-black text-white mb-2">
-                {stats.calls.pending}<span className="text-2xl text-slate-500">/{stats.calls.total}</span>
-              </p>
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-slate-400">
-                  Gestión de llamadas del día
-                </p>
-                <div className="flex items-center gap-1 text-amber-400 group-hover:translate-x-1 transition-transform">
-                  <span className="text-sm font-medium">Ir a llamadas</span>
-                  <ChevronRight className="w-4 h-4" />
+      {(() => {
+        // Determinar la URL correcta basándose en la visión activa y nivel PL
+        const plProduct = stats.activeProducts.find(p => p.levelType === 'PL');
+        const visionId = plProduct?.visionId || stats.activeVision?.id;
+        const callsHref = visionId 
+          ? `/dashboard/school-admin/vision/${visionId}/call-management?level=PL`
+          : '/dashboard/coordinador/visiones';
+        
+        return (
+          <Link href={callsHref} className="block">
+            <div className="bg-gradient-to-br from-amber-900/40 to-slate-900/80 border-2 border-amber-500/30 rounded-2xl p-6 hover:border-amber-500/50 transition-all group cursor-pointer">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-amber-500/20 rounded-xl">
+                  <Ticket className="w-6 h-6 text-amber-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-1">
+                    LLAMADAS PENDIENTES
+                  </p>
+                  <p className="text-4xl font-black text-white mb-2">
+                    {stats.calls.pending}<span className="text-2xl text-slate-500">/{stats.calls.total}</span>
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-slate-400">
+                      Gestión de llamadas de Liderato
+                    </p>
+                    <div className="flex items-center gap-1 text-amber-400 group-hover:translate-x-1 transition-transform">
+                      <span className="text-sm font-medium">Ir a llamadas</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </Link>
+          </Link>
+        );
+      })()}
 
       {/* Widget de Declarados */}
       <Link href="/dashboard/coordinador/pre-registros" className="block">

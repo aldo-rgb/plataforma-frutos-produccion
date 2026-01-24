@@ -13,8 +13,8 @@ export async function GET(req: Request) {
 
     const user = session.user as any;
 
-    // Verificar que el usuario sea SCHOOL_ADMIN
-    if (user.rol !== 'SCHOOL_ADMIN') {
+    // Verificar que el usuario sea SCHOOL_ADMIN o COORDINADOR
+    if (!['SCHOOL_ADMIN', 'COORDINADOR'].includes(user.rol)) {
       return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
     }
 

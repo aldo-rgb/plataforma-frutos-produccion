@@ -488,7 +488,7 @@ export default function CoordinadorDashboard() {
           </Link>
 
           {/* Gestionar Visiones */}
-          <Link href="/dashboard/coordinador/visiones" className="block h-full">
+          <Link href="/dashboard/school-admin/visiones" className="block h-full">
             <div className="h-full bg-gradient-to-br from-emerald-900/50 to-slate-900 border-2 border-emerald-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/10 flex flex-col">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-3 bg-emerald-500/20 group-hover:bg-emerald-500/30 rounded-xl transition-colors">

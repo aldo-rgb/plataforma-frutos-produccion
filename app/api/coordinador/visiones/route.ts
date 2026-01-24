@@ -60,8 +60,14 @@ export async function GET() {
       include: {
         _count: {
           select: {
-            VisionParticipante: true,
-            VisionGameChanger: true
+            VisionGameChanger: true,
+            // Contar SOLO participantes de Liderato (PL) activos
+            vision_enrollments: {
+              where: {
+                level: 'PL',
+                enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+              }
+            }
           }
         }
       },
@@ -70,18 +76,28 @@ export async function GET() {
       }
     });
 
-    console.log('✅ Visiones encontradas:', visiones.length);
-    if (visiones.length > 0) {
-      console.log('📋 Lista de visiones:', visiones.map(v => ({
+    // Transformar los datos para mantener compatibilidad con el widget
+    const visionesConConteo = visiones.map(v => ({
+      ...v,
+      _count: {
+        VisionParticipante: v._count.vision_enrollments, // Usar el conteo de enrollments
+        VisionGameChanger: v._count.VisionGameChanger
+      }
+    }));
+
+    console.log('✅ Visiones encontradas:', visionesConConteo.length);
+    if (visionesConConteo.length > 0) {
+      console.log('📋 Lista de visiones:', visionesConConteo.map(v => ({
         id: v.id,
         nombre: v.nombre,
-        coordinadorId: v.coordinadorId
+        coordinadorId: v.coordinadorId,
+        participantes: v._count.VisionParticipante
       })));
     }
 
     return NextResponse.json({
       success: true,
-      visiones
+      visiones: visionesConConteo
     });
 
   } catch (error: any) {

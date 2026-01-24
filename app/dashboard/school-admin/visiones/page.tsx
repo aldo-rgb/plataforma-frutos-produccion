@@ -115,7 +115,7 @@ export default function VisionesSchoolAdminPage() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
-    } else if (session?.user?.rol !== 'SCHOOL_ADMIN') {
+    } else if (!['SCHOOL_ADMIN', 'COORDINADOR'].includes(session?.user?.rol || '')) {
       router.push('/dashboard');
     } else {
       fetchVisiones();
@@ -495,7 +495,13 @@ export default function VisionesSchoolAdminPage() {
               </p>
             </div>
           </div>
-          {/* Botón Nuevo Liderato removido */}
+          <Link
+            href="/dashboard/school-admin/productos"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition-colors"
+          >
+            <Plus size={18} />
+            Crear Nueva Visión
+          </Link>
         </div>
 
         {/* Stats Cards */}
@@ -610,18 +616,18 @@ export default function VisionesSchoolAdminPage() {
 
                 <div className="flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2">
                   <Link
-                    href={`/dashboard/school-admin/visiones/${vision.id}`}
-                    className="w-full sm:flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors"
-                  >
-                    <Users size={14} className="sm:w-4 sm:h-4" />
-                    Detalles Tu Vida
-                  </Link>
-                  <Link
                     href={`/dashboard/school-admin/vision/${vision.id}/manage`}
                     className="w-full sm:flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors"
                   >
                     <Eye size={14} className="sm:w-4 sm:h-4" />
-                    Detalles
+                    Ver Detalles Visión
+                  </Link>
+                  <Link
+                    href={`/dashboard/school-admin/visiones/${vision.id}`}
+                    className="w-full sm:flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors"
+                  >
+                    <Users size={14} className="sm:w-4 sm:h-4" />
+                    Ver Detalles Liderato
                   </Link>
                 </div>
               </div>

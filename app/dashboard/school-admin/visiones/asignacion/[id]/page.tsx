@@ -1141,7 +1141,7 @@ export default function AsignacionMentoresPage() {
 
                           {/* Botón ver perfil */}
                           <button
-                            onClick={() => window.open(`/dashboard/school-admin/mentores/${mentor.PerfilMentor?.id}`, '_blank')}
+                            onClick={() => window.open(`/dashboard/school-admin/mentores/${mentor.id}?type=user`, '_blank')}
                             className="w-full bg-gradient-to-r from-[#7B2CBF] to-[#9D4EDD] hover:from-[#9D4EDD] hover:to-[#7B2CBF] text-white font-bold py-3 rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-[#7B2CBF]/50"
                           >
                             <Info className="w-4 h-4" />

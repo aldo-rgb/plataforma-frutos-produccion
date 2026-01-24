@@ -263,7 +263,7 @@ export default function VisionDetailPage() {
   const { showToast, toasts } = useToast();
 
   useEffect(() => {
-    if (session?.user?.rol === 'SCHOOL_ADMIN') {
+    if (session?.user?.rol === 'SCHOOL_ADMIN' || session?.user?.rol === 'COORDINADOR') {
       fetchVisionDetails();
       fetchCredits();
       fetchMentores();
@@ -364,12 +364,9 @@ export default function VisionDetailPage() {
 
       const data = await response.json();
       
-      // Filtrar solo líderes con horarios configurados
-      const lideresConHorarios = (data.lideres || []).filter((lider: any) => 
-        lider.perfilCompleto && lider.tieneHorarios
-      );
-      
-      setLideres(lideresConHorarios);
+      // Los mentores privados (LIDER) NO requieren tener horarios configurados
+      // Son mentores internos de la organización
+      setLideres(data.lideres || []);
     } catch (error) {
       console.error('Error al cargar líderes:', error);
       showToast({
@@ -1493,55 +1490,55 @@ export default function VisionDetailPage() {
         )}
         
         {/* Botones de Acción - Organizado por grupos */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 mb-6">
           {/* Fila 1: Configuración y Gestión */}
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             <button
               onClick={() => setShowEditAreasModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-purple-500/30"
+              className="inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-purple-500/30"
             >
-              <Edit size={18} />
-              Configurar Áreas
+              <Edit size={16} />
+              <span className="whitespace-nowrap">Configurar Áreas</span>
             </button>
             <button
               onClick={() => setShowExtendDateModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-emerald-500/30"
+              className="inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-emerald-500/30"
             >
-              <Calendar size={18} />
-              Extender Fecha
+              <Calendar size={16} />
+              <span className="whitespace-nowrap">Extender Fecha</span>
             </button>
             <button
               onClick={() => setShowRandomAssignModal(true)}
               disabled={randomAssigning || (participantes.length === 0 && gameChangers.length === 0)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-indigo-500/30"
+              className="inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-indigo-500/30 sm:col-span-2 lg:col-span-1"
             >
-              <Users size={18} />
-              {randomAssigning ? 'Asignando...' : 'Asignación Aleatoria'}
+              <Users size={16} />
+              <span className="whitespace-nowrap">{randomAssigning ? 'Asignando...' : 'Asignación Aleatoria'}</span>
             </button>
           </div>
           
           {/* Fila 2: Agregar Participantes */}
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             <button
               onClick={() => setShowQRModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-pink-500/30"
+              className="inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-pink-500/30"
             >
-              <QrCode size={18} />
-              Generar QR
+              <QrCode size={16} />
+              <span className="whitespace-nowrap">Generar QR</span>
             </button>
             <button
               onClick={() => setShowAddTeamModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-cyan-500/30"
+              className="inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-cyan-500/30"
             >
-              <Users size={18} />
-              Agregar Game Changer
+              <Users size={16} />
+              <span className="whitespace-nowrap">Agregar Game Changer</span>
             </button>
             <button
               onClick={() => setShowAddModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-purple-500/30"
+              className="inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-purple-500/30 sm:col-span-2 lg:col-span-1"
             >
-              <UserPlus size={18} />
-              Agregar Participante
+              <UserPlus size={16} />
+              <span className="whitespace-nowrap">Agregar Participante</span>
             </button>
           </div>
         </div>

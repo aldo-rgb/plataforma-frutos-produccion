@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { 
   ArrowLeft, User, Award, Star, MapPin, 
   BookOpen, Target, Calendar, Briefcase, Mail, Phone,
@@ -47,7 +47,9 @@ interface Mentor {
 export default function VerPerfilMentorSchoolAdminPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const mentorId = params.id as string;
+  const searchType = searchParams.get('type');
 
   const [mentor, setMentor] = useState<Mentor | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,12 +57,16 @@ export default function VerPerfilMentorSchoolAdminPage() {
 
   useEffect(() => {
     cargarMentor();
-  }, [mentorId]);
+  }, [mentorId, searchType]);
 
   const cargarMentor = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/school-admin/mentores/${mentorId}`);
+      // Pasar el parámetro type si viene en la URL
+      const url = searchType 
+        ? `/api/school-admin/mentores/${mentorId}?type=${searchType}`
+        : `/api/school-admin/mentores/${mentorId}`;
+      const res = await fetch(url);
       const data = await res.json();
 
       if (data.success) {

@@ -22,27 +22,58 @@ export async function GET(
 
     const { id } = await params;
     const mentorId = parseInt(id);
+    
+    // Verificar si viene con type=user para buscar por usuarioId
+    const { searchParams } = new URL(req.url);
+    const searchType = searchParams.get('type');
 
-    const mentor = await prisma.perfilMentor.findUnique({
-      where: { id: mentorId },
-      include: {
-        Usuario: {
-          select: {
-            id: true,
-            nombre: true,
-            email: true,
-            imagen: true,
-            profileImage: true,
-            jobTitle: true,
-            isActive: true,
-            accumulatedMissedCalls: true,
+    let mentor;
+    
+    if (searchType === 'user') {
+      // Buscar por usuarioId (ID del usuario)
+      mentor = await prisma.perfilMentor.findUnique({
+        where: { usuarioId: mentorId },
+        include: {
+          Usuario: {
+            select: {
+              id: true,
+              nombre: true,
+              email: true,
+              imagen: true,
+              profileImage: true,
+              jobTitle: true,
+              isActive: true,
+              accumulatedMissedCalls: true,
+            },
+          },
+          ServicioMentoria: {
+            orderBy: { precioTotal: 'asc' },
           },
         },
-        ServicioMentoria: {
-          orderBy: { precioTotal: 'asc' },
+      });
+    } else {
+      // Buscar por id del perfil (comportamiento original)
+      mentor = await prisma.perfilMentor.findUnique({
+        where: { id: mentorId },
+        include: {
+          Usuario: {
+            select: {
+              id: true,
+              nombre: true,
+              email: true,
+              imagen: true,
+              profileImage: true,
+              jobTitle: true,
+              isActive: true,
+              accumulatedMissedCalls: true,
+            },
+          },
+          ServicioMentoria: {
+            orderBy: { precioTotal: 'asc' },
+          },
         },
-      },
-    });
+      });
+    }
 
     if (!mentor) {
       return NextResponse.json(

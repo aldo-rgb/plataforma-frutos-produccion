@@ -121,8 +121,38 @@ export async function GET(
       );
     }
 
-    // Obtener participantes de la visión
-    const participantes = await prisma.visionParticipante.findMany({
+    // Determinar el nivel activo de la visión basado en los productos
+    // Prioridad: IN_PROGRESS > REGISTRATION_OPEN > nivel más alto COMPLETED
+    const visionProducts = await prisma.schoolProduct.findMany({
+      where: { visionId, type: 'CORE_TRAINING', isActive: true },
+      select: { levelType: true, trainingStatus: true },
+      orderBy: { levelType: 'desc' } // PL > ADVANCED > BASIC
+    });
+
+    let activeLevel: 'BASIC' | 'ADVANCED' | 'PL' = 'BASIC';
+    
+    // Buscar primero uno en progreso
+    const inProgress = visionProducts.find(p => p.trainingStatus === 'IN_PROGRESS');
+    if (inProgress) {
+      activeLevel = inProgress.levelType as 'BASIC' | 'ADVANCED' | 'PL';
+    } else {
+      // Buscar uno en registro abierto
+      const registrationOpen = visionProducts.find(p => p.trainingStatus === 'REGISTRATION_OPEN');
+      if (registrationOpen) {
+        activeLevel = registrationOpen.levelType as 'BASIC' | 'ADVANCED' | 'PL';
+      } else {
+        // Usar el nivel más alto completado
+        const completed = visionProducts.filter(p => p.trainingStatus === 'COMPLETED');
+        if (completed.length > 0) {
+          activeLevel = completed[0].levelType as 'BASIC' | 'ADVANCED' | 'PL'; // Ya está ordenado desc
+        }
+      }
+    }
+
+    console.log('📊 Nivel activo de la visión:', activeLevel);
+
+    // Obtener participantes de VisionParticipante (legacy)
+    const visionParticipantes = await prisma.visionParticipante.findMany({
       where: { visionId },
       include: {
         Usuario_VisionParticipante_participanteIdToUsuario: {
@@ -177,9 +207,88 @@ export async function GET(
       },
     });
 
-    // Obtener game changers de la visión
+    // Si VisionParticipante está vacío, obtener de vision_enrollments del nivel activo
+    let participantes: any[] = visionParticipantes;
+    
+    if (visionParticipantes.length === 0) {
+      const enrollments = await prisma.vision_enrollments.findMany({
+        where: { 
+          visionId,
+          level: activeLevel,
+          // Excluir usuarios DROP, BACKLOG y MOVED de la lista activa
+          OR: [
+            { attendanceStatus: null },
+            { attendanceStatus: { notIn: ['DROP', 'BACKLOG', 'MOVED'] } }
+          ],
+          // También excluir por enrollmentStatus
+          enrollmentStatus: { notIn: ['MOVED_TO_NEXT', 'CANCELLED', 'DROP'] },
+          droppedAt: null,
+        },
+        include: {
+          Usuario_vision_enrollments_userIdToUsuario: {
+            select: {
+              id: true,
+              nombre: true,
+              email: true,
+              telefono: true,
+              tier: true,
+              assignedMentorId: true,
+              Usuario_Usuario_assignedMentorIdToUsuario: {
+                select: {
+                  id: true,
+                  nombre: true,
+                  email: true,
+                  imagen: true,
+                },
+              },
+              CartaFrutos: {
+                select: {
+                  id: true,
+                  estado: true,
+                },
+              },
+              LicenseAssignment_LicenseAssignment_userIdToUsuario: {
+                where: {
+                  visionId: visionId,
+                  isActive: true
+                },
+                select: {
+                  id: true,
+                  licenseCode: true,
+                  activatedAt: true,
+                  assignedAt: true,
+                  expiresAt: true
+                },
+                take: 1
+              }
+            },
+          },
+        },
+        orderBy: {
+          enrolledAt: 'desc',
+        },
+      });
+
+      // Transformar enrollments al formato esperado de participantes
+      participantes = enrollments.map(e => ({
+        id: e.id,
+        participanteId: e.userId,
+        gameChangerId: null,
+        Usuario_VisionParticipante_participanteIdToUsuario: e.Usuario_vision_enrollments_userIdToUsuario,
+        Usuario_VisionParticipante_gameChangerIdToUsuario: null,
+        createdAt: e.enrolledAt.toISOString(),
+        // Campos adicionales del enrollment
+        enrollmentStatus: e.enrollmentStatus,
+        paymentStatus: e.paymentStatus,
+        level: e.level,
+      }));
+
+      console.log(`📋 Usando ${participantes.length} participantes de vision_enrollments (nivel: ${activeLevel})`);
+    }
+
+    // Obtener game changers de la visión filtrados por el nivel activo
     const gameChangers = await prisma.visionGameChanger.findMany({
-      where: { visionId },
+      where: { visionId, level: activeLevel },
       include: {
         Usuario_VisionGameChanger_gameChangerIdToUsuario: {
           select: {
@@ -371,6 +480,7 @@ export async function GET(
       },
       participantes,
       gameChangers,
+      activeLevel, // Nivel activo de la visión (para saber qué Game Changers se muestran)
       mentoresAsignados: mentoresConCostos,
       cicloInfo,
       productos: productos.map(p => ({

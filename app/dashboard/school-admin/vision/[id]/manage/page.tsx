@@ -177,6 +177,29 @@ export default function VisionManagePage() {
   const [gcSelectedLevel, setGcSelectedLevel] = useState('BASIC');
   const [gcRegistering, setGcRegistering] = useState(false);
 
+  // Estados para modal de desasignar Game Changer
+  const [unassignModal, setUnassignModal] = useState<{
+    show: boolean;
+    gameChanger: any;
+    level: string;
+    loading: boolean;
+    checking: boolean;
+    hasMembers: boolean;
+    members: any[];
+    availableGameChangers: any[];
+    reassignments: { [memberId: string]: number };
+  }>({
+    show: false,
+    gameChanger: null,
+    level: '',
+    loading: false,
+    checking: false,
+    hasMembers: false,
+    members: [],
+    availableGameChangers: [],
+    reassignments: {},
+  });
+
   // Estados para modal de restablecer contraseña
   const [resetPasswordUser, setResetPasswordUser] = useState<{id: number; nombre: string} | null>(null);
   const [resettingPassword, setResettingPassword] = useState(false);
@@ -362,6 +385,111 @@ export default function VisionManagePage() {
         type: 'error'
       });
     }
+  };
+
+  // Función para abrir modal de desasignar Game Changer
+  const openUnassignModal = async (gc: any, level: string) => {
+    setUnassignModal({
+      show: true,
+      gameChanger: gc,
+      level,
+      loading: false,
+      checking: true,
+      hasMembers: false,
+      members: [],
+      availableGameChangers: [],
+      reassignments: {},
+    });
+
+    try {
+      // Verificar si tiene participantes asignados en este nivel
+      const res = await fetch(`/api/school-admin/visiones/${visionId}/gamechangers/unassign?gameChangerId=${gc.usuario.id}&level=${level}`);
+      const data = await res.json();
+
+      if (data.success) {
+        setUnassignModal(prev => ({
+          ...prev,
+          checking: false,
+          hasMembers: data.hasMembers,
+          members: data.members || [],
+          availableGameChangers: data.availableGameChangers || [],
+        }));
+      } else {
+        setUnassignModal(prev => ({ ...prev, checking: false }));
+        setToast({ show: true, message: data.error || 'Error al verificar', type: 'error' });
+      }
+    } catch (error) {
+      console.error('Error checking game changer members:', error);
+      setUnassignModal(prev => ({ ...prev, checking: false }));
+    }
+  };
+
+  // Función para confirmar desasignación
+  const confirmUnassign = async () => {
+    const { gameChanger, hasMembers, members, reassignments } = unassignModal;
+    
+    // Verificar que todos los miembros tengan reasignación si hay miembros
+    if (hasMembers && members.length > 0) {
+      const allReassigned = members.every(m => reassignments[m.id]);
+      if (!allReassigned) {
+        setToast({ show: true, message: 'Debes reasignar todos los participantes', type: 'error' });
+        return;
+      }
+    }
+
+    setUnassignModal(prev => ({ ...prev, loading: true }));
+
+    try {
+      const reassignmentArray = Object.entries(reassignments).map(([memberId, newGcId]) => ({
+        memberId,
+        newGameChangerId: newGcId,
+      }));
+
+      const res = await fetch(`/api/school-admin/visiones/${visionId}/gamechangers/unassign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          gameChangerId: gameChanger.id,
+          reassignments: reassignmentArray,
+        })
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        setGameChangers(prev => prev.filter(gc => gc.id !== gameChanger.id));
+        setToast({ show: true, message: '✅ Game Changer desasignado exitosamente', type: 'success' });
+        setUnassignModal({
+          show: false,
+          gameChanger: null,
+          level: '',
+          loading: false,
+          checking: false,
+          hasMembers: false,
+          members: [],
+          availableGameChangers: [],
+          reassignments: {},
+        });
+      } else {
+        setToast({ show: true, message: data.error || 'Error al desasignar', type: 'error' });
+        setUnassignModal(prev => ({ ...prev, loading: false }));
+      }
+    } catch (error) {
+      console.error('Error unassigning game changer:', error);
+      setToast({ show: true, message: 'Error de conexión', type: 'error' });
+      setUnassignModal(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  // Función para actualizar reasignación de un miembro
+  const updateReassignment = (memberId: string, newGcId: number) => {
+    setUnassignModal(prev => ({
+      ...prev,
+      reassignments: {
+        ...prev.reassignments,
+        [memberId]: newGcId,
+      }
+    }));
   };
 
   const fetchBasicEnrollments = async () => {
@@ -994,6 +1122,13 @@ export default function VisionManagePage() {
                               {gc.isCaptain ? '✖ Quitar Capitán' : '👑 Hacer Capitán'}
                             </button>
                           )}
+                          {/* Botón de desasignar */}
+                          <button
+                            onClick={() => openUnassignModal(gc, 'BASIC')}
+                            className="mt-2 w-full py-2 rounded-lg text-sm font-bold transition-all bg-red-500/20 hover:bg-red-500/40 text-red-400 border border-red-500/50"
+                          >
+                            ✖ Desasignar
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -1117,7 +1252,6 @@ export default function VisionManagePage() {
                             <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Game Changer</th>
                             <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Fecha de Registro</th>
                             <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Asistencia</th>
-                            <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Acciones</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1207,16 +1341,6 @@ export default function VisionManagePage() {
                                   <option value="DROP" className="bg-slate-800 text-gray-300">🚫 Drop</option>
                                   <option value="BACKLOG" className="bg-slate-800 text-amber-300">⏳ Backlog</option>
                                 </select>
-                              </td>
-                              <td className="py-4 px-4">
-                                <button
-                                  onClick={() => handleResetPassword(enrollment.userId, enrollment.Usuario?.nombre)}
-                                  disabled={resettingPassword && resetPasswordUser?.id === enrollment.userId}
-                                  className="p-2 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors disabled:opacity-50"
-                                  title="Restablecer contraseña"
-                                >
-                                  <Key className="w-4 h-4" />
-                                </button>
                               </td>
                             </tr>
                           ))}
@@ -1352,6 +1476,13 @@ export default function VisionManagePage() {
                               {gc.isCaptain ? '✖ Quitar Capitán' : '👑 Hacer Capitán'}
                             </button>
                           )}
+                          {/* Botón de desasignar */}
+                          <button
+                            onClick={() => openUnassignModal(gc, 'ADVANCED')}
+                            className="mt-2 w-full py-2 rounded-lg text-sm font-bold transition-all bg-red-500/20 hover:bg-red-500/40 text-red-400 border border-red-500/50"
+                          >
+                            ✖ Desasignar
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -1712,6 +1843,13 @@ export default function VisionManagePage() {
                               {gc.isCaptain ? '✖ Quitar Capitán' : '👑 Hacer Capitán'}
                             </button>
                           )}
+                          {/* Botón de desasignar */}
+                          <button
+                            onClick={() => openUnassignModal(gc, 'PL')}
+                            className="mt-2 w-full py-2 rounded-lg text-sm font-bold transition-all bg-red-500/20 hover:bg-red-500/40 text-red-400 border border-red-500/50"
+                          >
+                            ✖ Desasignar
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -2354,6 +2492,156 @@ export default function VisionManagePage() {
           )}
         </div>
       </div>
+
+      {/* Modal de Desasignar Game Changer */}
+      {unassignModal.show && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl border-2 border-red-500/30 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="bg-red-900/40 p-6 border-b border-red-500/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center text-2xl">
+                    ⚠️
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-red-300">Desasignar Game Changer</h3>
+                    <p className="text-red-400/60 text-sm">
+                      Nivel: {unassignModal.level === 'BASIC' ? 'Básico' : unassignModal.level === 'ADVANCED' ? 'Avanzado' : 'Liderato'}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setUnassignModal(prev => ({ ...prev, show: false }))}
+                  className="text-slate-400 hover:text-white transition-colors text-2xl"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            
+            {/* Content */}
+            <div className="p-6">
+              {unassignModal.checking ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin text-4xl mb-4">⏳</div>
+                  <p className="text-slate-400">Verificando participantes asignados...</p>
+                </div>
+              ) : (
+                <>
+                  {/* Info del Game Changer */}
+                  <div className="bg-slate-800/50 rounded-xl p-4 mb-6 border border-slate-700">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 bg-gradient-to-br from-red-500 to-orange-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                        {unassignModal.gameChanger?.usuario?.nombre?.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-white font-bold text-lg">{unassignModal.gameChanger?.usuario?.nombre}</p>
+                        <p className="text-slate-400 text-sm">{unassignModal.gameChanger?.usuario?.email}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {!unassignModal.hasMembers ? (
+                    /* Sin participantes - puede desasignar directamente */
+                    <div className="text-center py-6">
+                      <div className="text-6xl mb-4">✅</div>
+                      <p className="text-green-400 text-lg font-semibold mb-2">
+                        Este Game Changer no tiene participantes asignados
+                      </p>
+                      <p className="text-slate-400 text-sm mb-6">
+                        Puedes desasignarlo sin afectar a ningún participante
+                      </p>
+                      <button
+                        onClick={confirmUnassign}
+                        disabled={unassignModal.loading}
+                        className="px-8 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white rounded-xl font-bold shadow-lg transition-all disabled:opacity-50"
+                      >
+                        {unassignModal.loading ? 'Desasignando...' : '✖ Confirmar Desasignación'}
+                      </button>
+                    </div>
+                  ) : (
+                    /* Con participantes - debe reasignar */
+                    <>
+                      <div className="bg-amber-900/30 border border-amber-500/30 rounded-xl p-4 mb-6">
+                        <div className="flex items-start gap-3">
+                          <span className="text-2xl">⚠️</span>
+                          <div>
+                            <p className="text-amber-300 font-bold">¡Atención!</p>
+                            <p className="text-amber-200/80 text-sm">
+                              Este Game Changer tiene <span className="font-bold">{unassignModal.members.length} participante(s)</span> asignado(s) en su mini grupo.
+                              Debes reasignarlos a otro Game Changer antes de desasignarlo.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {unassignModal.availableGameChangers.length === 0 ? (
+                        <div className="text-center py-6 bg-red-900/20 rounded-xl border border-red-500/30">
+                          <div className="text-6xl mb-4">🚫</div>
+                          <p className="text-red-300 font-semibold">No hay otros Game Changers disponibles</p>
+                          <p className="text-slate-400 text-sm mt-2">
+                            Debes agregar otro Game Changer en este nivel antes de poder desasignar a este
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <h4 className="text-white font-bold mb-4">Reasignar Participantes:</h4>
+                          <div className="space-y-3 max-h-60 overflow-y-auto">
+                            {unassignModal.members.map((member: any) => (
+                              <div key={member.id} className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                                <div className="flex items-center justify-between gap-4">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-cyan-600 rounded-full flex items-center justify-center text-white font-bold">
+                                      {member.nombre?.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <p className="text-white font-semibold">{member.nombre}</p>
+                                      <p className="text-slate-400 text-xs">{member.email}</p>
+                                    </div>
+                                  </div>
+                                  <select
+                                    value={unassignModal.reassignments[member.id] || ''}
+                                    onChange={(e) => updateReassignment(member.id, parseInt(e.target.value))}
+                                    className="bg-slate-700 text-white border border-slate-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                                  >
+                                    <option value="">Seleccionar GC...</option>
+                                    {unassignModal.availableGameChangers.map((gc: any) => (
+                                      <option key={gc.id} value={gc.id}>
+                                        {gc.nombre}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="mt-6 flex gap-4">
+                            <button
+                              onClick={() => setUnassignModal(prev => ({ ...prev, show: false }))}
+                              className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-all"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              onClick={confirmUnassign}
+                              disabled={unassignModal.loading || unassignModal.members.some(m => !unassignModal.reassignments[m.id])}
+                              className="flex-1 px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white rounded-xl font-bold shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {unassignModal.loading ? 'Procesando...' : '✖ Desasignar y Reasignar'}
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Registro de Game Changer */}
       {showGameChangerModal && (

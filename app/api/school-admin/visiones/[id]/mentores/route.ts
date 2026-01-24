@@ -214,17 +214,11 @@ export async function GET(
       console.log(`  - ${m.nombre} (${m.email}): ${m.CallAvailability.length} horarios DISCIPLINE`);
     });
 
-    // Filtrar mentores privados que tengan horarios válidos
-    const mentoresPrivadosConHorarios = mentoresPrivados.filter((m: any) => {
-      const tieneHorarios = m.CallAvailability && m.CallAvailability.length > 0;
-      const tieneHorariosValidos = tieneHorarios && m.CallAvailability.some((ca: any) => 
-        esHorarioDisciplinaValido(ca.startTime, ca.endTime)
-      );
-      console.log(`  🔍 Filtrando ${m.nombre}: tieneHorarios=${tieneHorarios}, tieneHorariosValidos=${tieneHorariosValidos}`);
-      return tieneHorariosValidos;
-    });
+    // Los mentores privados (LIDER) NO requieren horarios DISCIPLINE para ser asignados
+    // Son mentores internos de la organización que pueden configurar horarios después
+    const mentoresPrivadosConHorarios = mentoresPrivados; // No filtrar por horarios
 
-    console.log('✅ Mentores PRIVADOS con horarios válidos:', mentoresPrivadosConHorarios.length);
+    console.log('✅ Mentores PRIVADOS disponibles para asignar:', mentoresPrivadosConHorarios.length);
 
     // Calcular espacios disponibles para mentores privados
     const mentoresPrivadosConEspacios = await Promise.all(
@@ -251,12 +245,9 @@ export async function GET(
       })
     );
 
-    // Combinar mentores contratados y privados (sin duplicados)
-    const mentoresContratadosIds = new Set(mentoresConEspacios.map(m => m.id));
-    const mentoresPrivadosUnicos = mentoresPrivadosConEspacios.filter(
-      m => !mentoresContratadosIds.has(m.id)
-    );
-    const todosMentoresDisponibles = [...mentoresConEspacios, ...mentoresPrivadosUnicos];
+    // 🎯 SEPARAR: Mentores Certificados (MENTOR) vs Mentores Privados (LIDER)
+    // El catálogo de "Mentores Certificados" solo debe mostrar rol MENTOR
+    // Los LIDER van en su propia sección como "Mentores Privados"
 
     return NextResponse.json({
       mentoresAsignados: mentoresAsignadosConInfo.map((vm: any) => ({
@@ -271,7 +262,8 @@ export async function GET(
           rol: vm.Usuario_VisionMentor_mentorIdToUsuario?.rol // Incluir rol del mentor
         }
       })),
-      mentoresDisponibles: todosMentoresDisponibles.map(m => ({
+      // 🎯 mentoresDisponibles = SOLO mentores certificados (rol MENTOR)
+      mentoresDisponibles: mentoresConEspacios.map(m => ({
         id: m.id,
         nombre: m.nombre,
         email: m.email,
@@ -279,9 +271,22 @@ export async function GET(
         isActive: m.isActive,
         accumulatedMissedCalls: m.accumulatedMissedCalls || 0,
         PerfilMentor: m.PerfilMentor,
-        tieneHorarios: true, // Siempre true porque ya filtramos
-        rol: m.rol, // Incluir rol para identificar LIDERs
-        availabilityInfo: m.availabilityInfo, // ⭐ Información de espacios disponibles
+        tieneHorarios: m.CallAvailability && m.CallAvailability.length > 0,
+        rol: m.rol,
+        availabilityInfo: m.availabilityInfo,
+      })),
+      // 🏢 lideresDisponibles = mentores privados de la organización (rol LIDER)
+      lideresDisponibles: mentoresPrivadosConEspacios.map(m => ({
+        id: m.id,
+        nombre: m.nombre,
+        email: m.email,
+        imagen: m.imagen,
+        isActive: m.isActive,
+        accumulatedMissedCalls: m.accumulatedMissedCalls || 0,
+        PerfilMentor: m.PerfilMentor,
+        tieneHorarios: m.CallAvailability && m.CallAvailability.length > 0,
+        rol: m.rol,
+        availabilityInfo: m.availabilityInfo,
       }))
     });
 

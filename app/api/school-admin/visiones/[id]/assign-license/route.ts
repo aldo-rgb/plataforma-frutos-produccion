@@ -18,21 +18,25 @@ function generateLicenseCode(): string {
   return code;
 }
 
+// Roles permitidos para asignar licencias
+const ALLOWED_ROLES = ['SCHOOL_ADMIN', 'COORDINADOR'];
+
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.rol !== 'SCHOOL_ADMIN') {
+    if (!session?.user || !ALLOWED_ROLES.includes(session.user.rol as string)) {
       return NextResponse.json(
         { success: false, error: 'No autorizado' },
         { status: 401 }
       );
     }
 
-    const visionId = parseInt(params.id);
+    const { id } = await params;
+    const visionId = parseInt(id);
     const { participanteId } = await request.json();
 
     if (isNaN(visionId) || !participanteId) {
@@ -67,7 +71,7 @@ export async function POST(
       );
     }
 
-    // Verificar que el usuario está en la visión (puede ser participante o game changer)
+    // Verificar que el usuario está en la visión (puede ser participante, game changer o enrollment)
     const visionParticipante = await prisma.visionParticipante.findFirst({
       where: {
         visionId,
@@ -82,7 +86,15 @@ export async function POST(
       },
     });
 
-    if (!visionParticipante && !visionGameChanger) {
+    // También verificar en vision_enrollments
+    const visionEnrollment = await prisma.vision_enrollments.findFirst({
+      where: {
+        visionId,
+        userId: participanteId,
+      },
+    });
+
+    if (!visionParticipante && !visionGameChanger && !visionEnrollment) {
       return NextResponse.json(
         { success: false, error: 'El usuario no está en esta visión' },
         { status: 400 }
@@ -102,22 +114,20 @@ export async function POST(
       );
     }
 
-    // Verificar créditos disponibles
-    const schoolCredit = await prisma.schoolCredit.findFirst({
-      where: {
-        organizationId: director.organizationId,
-        isActive: true,
-      },
+    // Verificar créditos disponibles usando licensesAvailable de la organización
+    const organization = await prisma.organization.findUnique({
+      where: { id: director.organizationId },
+      select: { licensesAvailable: true },
     });
 
-    if (!schoolCredit) {
+    if (!organization) {
       return NextResponse.json(
-        { success: false, error: 'No se encontró registro de créditos' },
+        { success: false, error: 'No se encontró la organización' },
         { status: 404 }
       );
     }
 
-    const availableCredits = schoolCredit.totalPurchased - schoolCredit.totalAllocated;
+    const availableCredits = organization.licensesAvailable ?? 0;
 
     if (availableCredits < 1) {
       return NextResponse.json(
@@ -163,12 +173,12 @@ export async function POST(
         },
       });
 
-      // Incrementar totalAllocated en SchoolCredit
-      await tx.schoolCredit.update({
-        where: { id: schoolCredit.id },
+      // Decrementar licensesAvailable en la organización
+      await tx.organization.update({
+        where: { id: director.organizationId },
         data: {
-          totalAllocated: {
-            increment: 1,
+          licensesAvailable: {
+            decrement: 1,
           },
         },
       });

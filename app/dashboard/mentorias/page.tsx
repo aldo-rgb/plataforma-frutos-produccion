@@ -561,39 +561,48 @@ export default function MentoriasPage() {
   // 📋 MODO CATÁLOGO: Vista para múltiples mentores
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4 md:p-6">
       
-      {/* Header */}
-      <div className="max-w-7xl mx-auto mb-8">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h1 className="text-4xl font-bold text-white mb-2">
+      {/* Header - Responsive */}
+      <div className="max-w-7xl mx-auto mb-6 md:mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2">
               👋 Encuentra a tu Mentor Ideal
             </h1>
-            <p className="text-slate-400 text-lg">
+            <p className="text-slate-400 text-sm sm:text-base md:text-lg">
               Conecta con expertos que te llevarán al siguiente nivel
             </p>
           </div>
           
-          {/* Botón Ver Mis Llamadas */}
+          {/* Botón Ver Mis Llamadas - Fixed en móvil */}
           <button
             onClick={() => router.push('/dashboard/student/mis-sesiones')}
-            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg hover:shadow-purple-500/50 whitespace-nowrap"
+            className="hidden sm:flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 md:px-6 py-2 md:py-3 rounded-xl font-semibold transition-all shadow-lg hover:shadow-purple-500/50 whitespace-nowrap text-sm md:text-base"
           >
-            <Calendar size={20} />
+            <Calendar size={18} />
             Mis Llamadas Agendadas
           </button>
         </div>
+        
+        {/* Botón flotante para móvil */}
+        <button
+          onClick={() => router.push('/dashboard/student/mis-sesiones')}
+          className="sm:hidden fixed bottom-6 right-4 z-50 flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-full font-medium shadow-2xl shadow-purple-900/50 text-sm"
+        >
+          <Calendar size={16} />
+          Mis Llamadas
+        </button>
       </div>
 
-      {/* Filtros */}
-      <div className="max-w-7xl mx-auto mb-8">
-        <div className="flex gap-3">
+      {/* Filtros - Scrollable en móvil */}
+      <div className="max-w-7xl mx-auto mb-6 md:mb-8">
+        <div className="flex gap-2 md:gap-3 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide">
           {['TODOS', 'JUNIOR', 'SENIOR', 'MASTER'].map((nivel) => (
             <button
               key={nivel}
               onClick={() => setFiltro(nivel)}
-              className={`px-6 py-2 rounded-lg font-medium transition-all ${
+              className={`px-4 md:px-6 py-2 rounded-lg font-medium transition-all whitespace-nowrap text-sm md:text-base flex-shrink-0 ${
                 filtro === nivel
                   ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/50'
                   : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
@@ -605,8 +614,8 @@ export default function MentoriasPage() {
         </div>
       </div>
 
-      {/* Grid de Mentores */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Grid de Mentores - Responsive */}
+      <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {mentoresFiltrados.map((mentor) => {
           const badge = getNivelBadge(mentor.nivel);
           return (
@@ -761,10 +770,30 @@ export default function MentoriasPage() {
         })}
       </div>
 
-      {/* Estado vacío */}
+      {/* Estado vacío - Mejorado para móvil */}
       {mentoresFiltrados.length === 0 && (
-        <div className="max-w-7xl mx-auto text-center py-20">
-          <p className="text-slate-400 text-lg">No hay mentores disponibles con este filtro</p>
+        <div className="max-w-7xl mx-auto text-center py-12 md:py-20 px-4">
+          <div className="bg-slate-800/50 rounded-2xl p-6 md:p-10 border border-slate-700 max-w-md mx-auto">
+            <div className="w-16 h-16 md:w-20 md:h-20 bg-purple-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Users className="w-8 h-8 md:w-10 md:h-10 text-purple-400" />
+            </div>
+            <h3 className="text-lg md:text-xl font-semibold text-white mb-2">
+              No hay mentores disponibles
+            </h3>
+            <p className="text-slate-400 text-sm md:text-base">
+              {filtro !== 'TODOS' 
+                ? `No encontramos mentores de nivel ${filtro.toLowerCase()} en este momento.`
+                : 'No hay mentores disponibles en este momento. Intenta más tarde.'}
+            </p>
+            {filtro !== 'TODOS' && (
+              <button
+                onClick={() => setFiltro('TODOS')}
+                className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                Ver todos los mentores
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -774,16 +803,16 @@ export default function MentoriasPage() {
           <div className="bg-slate-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-700">
             
             {/* Header del Modal */}
-            <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-6 flex justify-between items-start z-10">
-              <div className="flex items-center gap-4">
+            <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-4 sm:p-6 flex justify-between items-start z-10">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <img
                   src={mentorSeleccionado.imagen}
                   alt={mentorSeleccionado.nombre}
-                  className="w-16 h-16 rounded-full object-cover"
+                  className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover"
                 />
                 <div>
-                  <h2 className="text-2xl font-bold text-white">{mentorSeleccionado.nombre}</h2>
-                  <p className="text-purple-400">{mentorSeleccionado.especialidad}</p>
+                  <h2 className="text-lg sm:text-2xl font-bold text-white">{mentorSeleccionado.nombre}</h2>
+                  <p className="text-purple-400 text-sm sm:text-base">{mentorSeleccionado.especialidad}</p>
                 </div>
               </div>
               <button
@@ -795,7 +824,7 @@ export default function MentoriasPage() {
             </div>
 
             {/* Body del Modal */}
-            <div className="p-6 space-y-6">
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
               
               {/* Selector de Servicio */}
               <div>
@@ -832,7 +861,7 @@ export default function MentoriasPage() {
               </div>
 
               {/* Fecha y Hora */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-slate-300 mb-2">
                     Fecha Preferida

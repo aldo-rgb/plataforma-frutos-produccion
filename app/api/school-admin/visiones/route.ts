@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    if (!user || user.rol !== 'SCHOOL_ADMIN') {
+    if (!user || !['SCHOOL_ADMIN', 'COORDINADOR'].includes(user.rol || '')) {
       return NextResponse.json(
         { success: false, error: 'No autorizado' },
         { status: 403 }

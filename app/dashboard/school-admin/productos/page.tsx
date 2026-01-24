@@ -498,7 +498,7 @@ export default function ProductosPage() {
                 onClick={() => router.push('/dashboard/school-admin/visiones?openModal=vision-builder')}
                 className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-xl font-bold shadow-xl transition-all flex items-center gap-2 whitespace-nowrap"
               >
-                🎯 Vision Builder
+                🎯 Crear Vision Nueva
               </button>
               {/* Nuevo Liderato Button */}
               <button

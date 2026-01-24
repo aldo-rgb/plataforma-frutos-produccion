@@ -140,8 +140,44 @@ export async function GET(request: Request) {
       }
     });
 
-    // Obtener la visión activa (la más reciente con productos activos)
-    const activeVision = activeProducts.find(p => p.Vision)?.Vision || null;
+    // Obtener la visión activa según el rol del usuario
+    // COORDINADOR maneja PL, COORDINATOR_BASIC maneja BASIC, COORDINATOR_ADVANCED maneja ADVANCED
+    // Primero intentamos encontrar una visión que tenga enrollments del nivel correspondiente
+    let activeVision = null;
+    
+    if (user.rol === 'COORDINADOR') {
+      // Para COORDINADOR, buscar la visión con producto PL que tenga enrollments de PL
+      const plProducts = activeProducts.filter(p => p.levelType === 'PL' && p.Vision);
+      console.log('[training-stats] PL Products for org', orgId, ':', plProducts.map(p => ({ id: p.id, name: p.name, visionId: p.visionId })));
+      
+      // Verificar cuál tiene enrollments de PL
+      for (const plProduct of plProducts) {
+        if (plProduct.visionId) {
+          const plCount = await prisma.vision_enrollments.count({
+            where: { visionId: plProduct.visionId, level: 'PL' }
+          });
+          console.log('[training-stats] Vision', plProduct.visionId, 'has', plCount, 'PL enrollments');
+          if (plCount > 0) {
+            activeVision = plProduct.Vision;
+            console.log('[training-stats] Found PL vision with', plCount, 'enrollments:', plProduct.visionId);
+            break;
+          }
+        }
+      }
+      // Fallback: usar el primer producto PL disponible
+      if (!activeVision) {
+        activeVision = plProducts[0]?.Vision || activeProducts.find(p => p.Vision)?.Vision || null;
+        console.log('[training-stats] Using fallback vision:', activeVision?.id);
+      }
+    } else if (user.rol === 'COORDINATOR_ADVANCED') {
+      // Para COORDINATOR_ADVANCED, buscar la visión con producto ADVANCED activo
+      const advProduct = activeProducts.find(p => p.levelType === 'ADVANCED' && p.Vision);
+      activeVision = advProduct?.Vision || activeProducts.find(p => p.Vision)?.Vision || null;
+    } else {
+      // Para otros roles, usar la primera visión disponible
+      activeVision = activeProducts.find(p => p.Vision)?.Vision || null;
+    }
+    console.log('[training-stats] Active vision for role', user.rol, ':', activeVision?.id, activeVision?.nombre);
     
     // Obtener TODOS los productos ADVANCED activos
     const advancedProducts = activeProducts.filter(p => p.levelType === 'ADVANCED');
@@ -486,13 +522,25 @@ export async function GET(request: Request) {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
+    // Determinar qué nivel de enrollments filtrar según el rol
+    let enrollmentLevelFilter: any = {};
+    if (user.rol === 'COORDINADOR') {
+      // Para rol COORDINADOR, solo mostrar llamadas de Liderato (PL)
+      enrollmentLevelFilter = { level: 'PL' };
+    } else if (user.rol === 'COORDINATOR_BASIC') {
+      enrollmentLevelFilter = { level: 'BASIC' };
+    } else if (user.rol === 'COORDINATOR_ADVANCED') {
+      enrollmentLevelFilter = { level: 'ADVANCED' };
+    }
+
     // Obtener los participantes de visiones activas para filtrar llamadas
     const participantIds = await prisma.vision_enrollments.findMany({
       where: {
         visionId: {
           in: visionIds
         },
-        enrollmentStatus: 'ENROLLED'
+        enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] },
+        ...enrollmentLevelFilter
       },
       select: {
         userId: true
