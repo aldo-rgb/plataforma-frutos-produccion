@@ -45,13 +45,16 @@ export async function GET(
     const enrollmentLevel = product.levelType ? levelMapping[product.levelType] : null;
 
     // Contar participantes inscritos en esta visión con el nivel correcto
+    // Incluir tanto ENROLLED como ACTIVE (ambos son participantes válidos)
     let enrolledCount = 0;
     if (product.visionId && enrollmentLevel) {
       enrolledCount = await prisma.vision_enrollments.count({
         where: {
           visionId: product.visionId,
           level: enrollmentLevel as any, // Cast para el enum
-          enrollmentStatus: 'ENROLLED'
+          enrollmentStatus: {
+            in: ['ENROLLED', 'ACTIVE']
+          }
         }
       });
     } else if (product.visionId) {
@@ -59,7 +62,9 @@ export async function GET(
       enrolledCount = await prisma.vision_enrollments.count({
         where: {
           visionId: product.visionId,
-          enrollmentStatus: 'ENROLLED'
+          enrollmentStatus: {
+            in: ['ENROLLED', 'ACTIVE']
+          }
         }
       });
     }
