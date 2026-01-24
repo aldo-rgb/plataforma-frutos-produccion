@@ -16,7 +16,13 @@ export async function GET() {
       select: { 
         id: true, 
         rol: true,
-        organizationId: true
+        organizationId: true,
+        organization: {
+          select: {
+            id: true,
+            masterOrganizationId: true
+          }
+        }
       }
     });
 
@@ -41,6 +47,22 @@ export async function GET() {
       });
     }
 
+    // Obtener todos los IDs de organizaciones que pertenecen al mismo master
+    const masterOrgId = usuario.organization?.masterOrganizationId;
+    
+    let allowedOrganizationIds: number[] = [usuario.organizationId];
+    
+    if (masterOrgId) {
+      // Buscar todas las organizaciones que pertenecen al mismo master
+      const siblingOrgs = await prisma.organization.findMany({
+        where: {
+          masterOrganizationId: masterOrgId
+        },
+        select: { id: true }
+      });
+      allowedOrganizationIds = siblingOrgs.map(org => org.id);
+    }
+
     // Buscar todos los productos activos de la organización (todos los niveles y tipos)
     // Un producto está activo si:
     // 1. Aún no ha terminado (endDate >= ahora) O
@@ -63,14 +85,14 @@ export async function GET() {
     const productosActivos = await prisma.schoolProduct.findMany({
       where: {
         OR: [
-          // Productos de la organización del usuario
+          // Productos de las organizaciones del mismo master
           {
             Vision: {
-              organizationId: usuario.organizationId
+              organizationId: { in: allowedOrganizationIds }
             }
           },
           {
-            organizationId: usuario.organizationId
+            organizationId: { in: allowedOrganizationIds }
           },
           // Si es TRAINER, incluir productos donde es trainer (cualquier org)
           ...(isTrainer ? [{ trainerId: usuario.id }] : [])
