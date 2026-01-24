@@ -17,7 +17,7 @@ export async function GET() {
         id: true, 
         rol: true,
         organizationId: true,
-        organization: {
+        Organization_Usuario_organizationIdToOrganization: {
           select: {
             id: true,
             masterOrganizationId: true
@@ -48,7 +48,7 @@ export async function GET() {
     }
 
     // Obtener todos los IDs de organizaciones que pertenecen al mismo master
-    const masterOrgId = usuario.organization?.masterOrganizationId;
+    const masterOrgId = usuario.Organization_Usuario_organizationIdToOrganization?.masterOrganizationId;
     
     let allowedOrganizationIds: number[] = [usuario.organizationId];
     
