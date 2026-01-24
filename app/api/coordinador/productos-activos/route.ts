@@ -84,31 +84,40 @@ export async function GET() {
     // Para productos PL, usar plWeekend3EndDate si endDate es null
     const productosActivos = await prisma.schoolProduct.findMany({
       where: {
-        OR: [
-          // Productos de las organizaciones del mismo master
+        AND: [
+          // Filtro de organización
           {
-            Vision: {
-              organizationId: { in: allowedOrganizationIds }
-            }
+            OR: [
+              // Productos de las organizaciones del mismo master
+              {
+                Vision: {
+                  organizationId: { in: allowedOrganizationIds }
+                }
+              },
+              {
+                organizationId: { in: allowedOrganizationIds }
+              },
+              // Si es TRAINER, incluir productos donde es trainer (cualquier org)
+              ...(isTrainer ? [{ trainerId: usuario.id }] : [])
+            ]
           },
+          // Filtros de estado
+          { isActive: true },
+          { trainingStatus: { not: 'COMPLETED' } },
+          // Filtro de fechas
           {
-            organizationId: { in: allowedOrganizationIds }
-          },
-          // Si es TRAINER, incluir productos donde es trainer (cualquier org)
-          ...(isTrainer ? [{ trainerId: usuario.id }] : [])
-        ],
-        isActive: true,
-        trainingStatus: { not: 'COMPLETED' },
-        // Incluir productos con endDate >= hoy O productos PL con plWeekend3EndDate >= hoy
-        OR: [
-          { endDate: { gte: startOfToday } },
-          { 
-            levelType: 'PL',
-            plWeekend3EndDate: { gte: startOfToday }
-          },
-          {
-            levelType: 'PL',
-            plWeekend1EndDate: { gte: startOfToday }
+            OR: [
+              { endDate: { gte: startOfToday } },
+              { endDate: null }, // Productos sin endDate también
+              { 
+                levelType: 'PL',
+                plWeekend3EndDate: { gte: startOfToday }
+              },
+              {
+                levelType: 'PL',
+                plWeekend1EndDate: { gte: startOfToday }
+              }
+            ]
           }
         ]
       },
