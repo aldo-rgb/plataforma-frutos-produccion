@@ -44,21 +44,24 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId, de
   const [keyboardBuffer, setKeyboardBuffer] = useState('');
   const [nfcSupported, setNfcSupported] = useState(false);
   const [nfcMode, setNfcMode] = useState<NFCMode>('none');
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
   const keyboardTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const nfcReaderRef = useRef<any>(null);
   const nfcBufferRef = useRef<string>('');
   const nfcTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Detectar si es dispositivo móvil
-  const isMobile = typeof window !== 'undefined' && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  const isAndroid = typeof window !== 'undefined' && /Android/i.test(navigator.userAgent);
-
-  // Verificar soporte NFC (nativo o USB)
+  // Verificar soporte NFC (nativo o USB) - Solo en cliente
   useEffect(() => {
     const checkNFC = async () => {
+      // Detectar dispositivo en el cliente
+      const userAgent = navigator.userAgent;
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+      const isAndroid = /Android/i.test(userAgent);
+      const isIOS = /iPad|iPhone|iPod/.test(userAgent);
       const hasNDEFReader = 'NDEFReader' in window;
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       const nativeSupported = hasNDEFReader && !isIOS && isAndroid;
+      
+      setIsMobileDevice(isMobile);
       
       // Debug info
       console.log('🔍 NFC Check:', {
@@ -67,22 +70,24 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId, de
         isAndroid,
         isMobile,
         nativeSupported,
-        userAgent: navigator.userAgent,
+        userAgent,
       });
       
       if (nativeSupported) {
         // Chrome Android con Web NFC nativo
+        console.log('📱 NFC Native mode enabled');
         setNfcSupported(true);
         setNfcMode('native');
         setChannelStatus(prev => ({ ...prev, nfc: 'inactive' }));
       } else if (!isMobile) {
         // Escritorio: habilitar modo USB NFC
+        console.log('💻 NFC USB mode enabled for desktop');
         setNfcSupported(true);
         setNfcMode('usb');
         setChannelStatus(prev => ({ ...prev, nfc: 'usb_ready' }));
-        console.log('💻 NFC USB mode enabled for desktop');
       } else {
         // iOS u otro móvil sin soporte
+        console.log('❌ NFC not supported on this device');
         setNfcSupported(false);
         setNfcMode('none');
         setChannelStatus(prev => ({ ...prev, nfc: 'unsupported' }));
@@ -90,7 +95,7 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId, de
     };
     
     checkNFC();
-  }, [isAndroid, isMobile]);
+  }, []);
 
   const triggerHaptic = useCallback((pattern: number[]) => {
     if (navigator.vibrate) {
@@ -411,7 +416,7 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId, de
         <p>🔫 Usa pistola USB (detecta entrada rápida)</p>
         {nfcMode === 'native' && <p>📱 Tap con tarjeta NFC (Android)</p>}
         {nfcMode === 'usb' && <p>🔌 Conecta lector NFC USB para escanear tarjetas</p>}
-        {nfcMode === 'none' && isMobile && <p className="text-yellow-500">⚠️ NFC no disponible en este dispositivo</p>}
+        {nfcMode === 'none' && isMobileDevice && <p className="text-yellow-500">⚠️ NFC no disponible en este dispositivo</p>}
       </div>
     </div>
   );
