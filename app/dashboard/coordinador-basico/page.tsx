@@ -517,6 +517,18 @@ export default function CoordinadorBasicoDashboard() {
                     
                     // En curso: a partir del segundo día
                     showInProgress = now > dayEnd;
+                    
+                    // DEBUG LOG
+                    console.log(`[Check-In Debug] Producto: ${producto.name} (ID: ${producto.id})`);
+                    console.log(`  - isPL: ${isPL}`);
+                    console.log(`  - plWeekend1StartDate raw: ${producto.plWeekend1StartDate}`);
+                    console.log(`  - effectiveStartDate: ${effectiveStartDate.toISOString()}`);
+                    console.log(`  - now: ${now.toISOString()}`);
+                    console.log(`  - dayStart: ${dayStart.toISOString()}`);
+                    console.log(`  - dayEnd: ${dayEnd.toISOString()}`);
+                    console.log(`  - now >= dayStart: ${now >= dayStart}`);
+                    console.log(`  - now <= dayEnd: ${now <= dayEnd}`);
+                    console.log(`  - showCheckInButton: ${showCheckInButton}`);
                   }
                   
                   const isCompleted = producto.trainingStatus === 'COMPLETED';

@@ -34,9 +34,28 @@ export async function GET(
       return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
     }
 
-    // Contar participantes inscritos en esta visión (ENROLLED)
+    // Mapear levelType del producto al level de vision_enrollments
+    // BASIC -> BASIC, ADVANCED -> ADVANCED, PL -> PL
+    const levelMapping: Record<string, string> = {
+      'BASIC': 'BASIC',
+      'ADVANCED': 'ADVANCED',
+      'PL': 'PL'
+    };
+    
+    const enrollmentLevel = product.levelType ? levelMapping[product.levelType] : null;
+
+    // Contar participantes inscritos en esta visión con el nivel correcto
     let enrolledCount = 0;
-    if (product.visionId) {
+    if (product.visionId && enrollmentLevel) {
+      enrolledCount = await prisma.vision_enrollments.count({
+        where: {
+          visionId: product.visionId,
+          level: enrollmentLevel as any, // Cast para el enum
+          enrollmentStatus: 'ENROLLED'
+        }
+      });
+    } else if (product.visionId) {
+      // Si no hay levelType, contar todos (comportamiento anterior)
       enrolledCount = await prisma.vision_enrollments.count({
         where: {
           visionId: product.visionId,
@@ -78,7 +97,7 @@ export async function GET(
         brandColor: product.Organization?.brandColor || '#1E40AF'
       },
       stats: {
-        enrolled: enrolledCount,      // Total de participantes inscritos
+        enrolled: enrolledCount,      // Total de participantes inscritos al nivel específico
         checkedIn: checkInCount,      // Asistencias de hoy
         pending: pendingCount         // Pendientes de check-in
       }
