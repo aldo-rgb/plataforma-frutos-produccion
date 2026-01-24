@@ -85,6 +85,7 @@ function CheckoutTicketContent() {
   const [success, setSuccess] = useState(false);
 
   // Payment state
+  const [paymentMethod, setPaymentMethod] = useState<'GIFT_CODE' | 'CARD'>('GIFT_CODE');
   const [giftCode, setGiftCode] = useState('');
   const [validatingCode, setValidatingCode] = useState(false);
   const [appliedCode, setAppliedCode] = useState<GiftCodeData | null>(null);
@@ -177,6 +178,28 @@ function CheckoutTicketContent() {
     setError(null);
 
     try {
+      // If paying with card, redirect to payment gateway
+      if (paymentMethod === 'CARD' && finalAmount > 0) {
+        const paymentRes = await fetch('/api/tickets/create-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ticketId: ticket.id,
+            amount: finalAmount,
+          }),
+        });
+
+        const paymentData = await paymentRes.json();
+
+        if (!paymentData.success || !paymentData.paymentUrl) {
+          throw new Error(paymentData.error || 'Error al crear el pago');
+        }
+
+        // Redirect to payment gateway
+        window.location.href = paymentData.paymentUrl;
+        return;
+      }
+
       // Redeem the gift code if applied
       if (appliedCode) {
         const redeemRes = await fetch('/api/gift-codes/redeem', {
@@ -350,46 +373,91 @@ function CheckoutTicketContent() {
           </div>
         )}
 
-        {/* Payment Method */}
+        {/* Payment Method Selection */}
         <div className="bg-[#161b22]/80 rounded-xl border border-gray-700/50 p-4 mb-6">
           <div className="flex items-center gap-2 mb-4">
-            <Banknote className="w-5 h-5 text-purple-400" />
-            <h3 className="font-semibold text-white">Código de Referencia</h3>
+            <CreditCard className="w-5 h-5 text-purple-400" />
+            <h3 className="font-semibold text-white">Método de Pago</h3>
           </div>
 
-          <div className="flex gap-2 mb-4">
-            <input
-              type="text"
-              value={giftCode}
-              onChange={(e) => setGiftCode(e.target.value.toUpperCase())}
-              placeholder="CODIGO-REFERENCIA"
-              className="flex-1 bg-[#0d1117] border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-orange-500 focus:outline-none"
-            />
+          <div className="grid grid-cols-2 gap-3 mb-4">
             <button
-              onClick={validateGiftCode}
-              disabled={validatingCode || !giftCode.trim()}
-              className="px-4 py-3 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              onClick={() => setPaymentMethod('GIFT_CODE')}
+              className={`p-3 rounded-xl border-2 transition-all ${
+                paymentMethod === 'GIFT_CODE'
+                  ? 'border-orange-500 bg-orange-500/10'
+                  : 'border-gray-700 hover:border-gray-600'
+              }`}
             >
-              {validatingCode ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Validar'}
+              <Banknote className={`w-5 h-5 mx-auto mb-1 ${paymentMethod === 'GIFT_CODE' ? 'text-orange-400' : 'text-gray-400'}`} />
+              <p className={`text-sm font-medium ${paymentMethod === 'GIFT_CODE' ? 'text-white' : 'text-gray-400'}`}>
+                Código
+              </p>
+            </button>
+            <button
+              onClick={() => setPaymentMethod('CARD')}
+              className={`p-3 rounded-xl border-2 transition-all ${
+                paymentMethod === 'CARD'
+                  ? 'border-orange-500 bg-orange-500/10'
+                  : 'border-gray-700 hover:border-gray-600'
+              }`}
+            >
+              <CreditCard className={`w-5 h-5 mx-auto mb-1 ${paymentMethod === 'CARD' ? 'text-orange-400' : 'text-gray-400'}`} />
+              <p className={`text-sm font-medium ${paymentMethod === 'CARD' ? 'text-white' : 'text-gray-400'}`}>
+                Tarjeta
+              </p>
             </button>
           </div>
 
-          {/* Applied Code */}
-          {appliedCode && (
-            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-emerald-400" />
-                <div>
-                  <p className="text-sm font-medium text-emerald-400">{appliedCode.code}</p>
-                  <p className="text-xs text-gray-400">Descuento: ${appliedCode.value.toLocaleString()}</p>
-                </div>
+          {/* Gift Code Input */}
+          {paymentMethod === 'GIFT_CODE' && (
+            <>
+              <div className="flex gap-2 mb-4">
+                <input
+                  type="text"
+                  value={giftCode}
+                  onChange={(e) => setGiftCode(e.target.value.toUpperCase())}
+                  placeholder="CODIGO-REFERENCIA"
+                  className="flex-1 bg-[#0d1117] border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-orange-500 focus:outline-none"
+                />
+                <button
+                  onClick={validateGiftCode}
+                  disabled={validatingCode || !giftCode.trim()}
+                  className="px-4 py-3 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {validatingCode ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Validar'}
+                </button>
               </div>
-              <button
-                onClick={() => setAppliedCode(null)}
-                className="text-gray-400 hover:text-white"
-              >
-                ✕
-              </button>
+
+              {/* Applied Code */}
+              {appliedCode && (
+                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-emerald-400" />
+                    <div>
+                      <p className="text-sm font-medium text-emerald-400">{appliedCode.code}</p>
+                      <p className="text-xs text-gray-400">Descuento: ${appliedCode.value.toLocaleString()}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setAppliedCode(null)}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Card Payment Info */}
+          {paymentMethod === 'CARD' && (
+            <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 text-center">
+              <CreditCard className="w-8 h-8 text-purple-400 mx-auto mb-2" />
+              <p className="text-white font-medium mb-1">Pago con tarjeta</p>
+              <p className="text-gray-400 text-sm">
+                Serás redirigido a la pasarela de pago segura
+              </p>
             </div>
           )}
         </div>
@@ -438,18 +506,28 @@ function CheckoutTicketContent() {
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={processPayment}
-          disabled={processing || (finalAmount > 0 && !appliedCode)}
+          disabled={processing || (finalAmount > 0 && paymentMethod === 'GIFT_CODE' && !appliedCode)}
           className="w-full py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-orange-500/30 hover:shadow-orange-500/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
           {processing ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              <span>Procesando...</span>
+              <span>{paymentMethod === 'CARD' ? 'Redirigiendo...' : 'Procesando...'}</span>
+            </>
+          ) : finalAmount === 0 ? (
+            <>
+              <CheckCircle className="w-5 h-5" />
+              <span>Activar Ticket</span>
+            </>
+          ) : paymentMethod === 'CARD' ? (
+            <>
+              <CreditCard className="w-5 h-5" />
+              <span>Pagar ${finalAmount.toLocaleString()} MXN</span>
             </>
           ) : (
             <>
               <CreditCard className="w-5 h-5" />
-              <span>{finalAmount === 0 ? 'Activar Ticket' : 'Pagar Ticket'}</span>
+              <span>Pagar Ticket</span>
             </>
           )}
         </motion.button>

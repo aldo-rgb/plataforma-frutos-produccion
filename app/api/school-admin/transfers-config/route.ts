@@ -40,6 +40,11 @@ export async function GET() {
       select: {
         transfersEnabled: true,
         transferDeadlineDays: true,
+        bankName: true,
+        bankAccountHolder: true,
+        bankAccountClabe: true,
+        bankAccountNumber: true,
+        bankReference: true,
       },
     });
 
@@ -47,6 +52,11 @@ export async function GET() {
       success: true,
       transfersEnabled: org?.transfersEnabled || false,
       transferDeadlineDays: org?.transferDeadlineDays || 1,
+      bankName: org?.bankName || '',
+      bankAccountHolder: org?.bankAccountHolder || '',
+      bankAccountClabe: org?.bankAccountClabe || '',
+      bankAccountNumber: org?.bankAccountNumber || '',
+      bankReference: org?.bankReference || '',
     });
   } catch (error) {
     console.error('Error getting transfers config:', error);
@@ -90,13 +100,34 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { transfersEnabled, transferDeadlineDays } = body;
+    const { 
+      transfersEnabled, 
+      transferDeadlineDays,
+      bankName,
+      bankAccountHolder,
+      bankAccountClabe,
+      bankAccountNumber,
+      bankReference,
+    } = body;
+
+    // Validar CLABE si se proporciona
+    if (bankAccountClabe && bankAccountClabe.length !== 18) {
+      return NextResponse.json(
+        { success: false, error: 'La CLABE debe tener 18 dígitos' },
+        { status: 400 }
+      );
+    }
 
     await prisma.organization.update({
       where: { id: user.organizationId },
       data: {
         transfersEnabled: transfersEnabled ?? false,
         transferDeadlineDays: transferDeadlineDays ?? 1,
+        bankName: bankName || null,
+        bankAccountHolder: bankAccountHolder || null,
+        bankAccountClabe: bankAccountClabe || null,
+        bankAccountNumber: bankAccountNumber || null,
+        bankReference: bankReference || null,
       },
     });
 

@@ -332,3 +332,138 @@ export async function sendVisionPasswordEmail(
 
   return sendEmail(email, subject, html);
 }
+
+/**
+ * Plantilla: Email de Anticipo para Checkout Abandonado
+ */
+export async function sendAnticipoEmail(
+  email: string,
+  data: {
+    firstName?: string;
+    lastName?: string;
+    visionName: string;
+    originalPrice: number;
+    anticipoAmount: number;
+    deadlineHours: number;
+    paymentUrl: string;
+    orgName: string;
+  }
+): Promise<SendEmailResult> {
+  const nombre = data.firstName || 'Participante';
+  const deadline = new Date();
+  deadline.setHours(deadline.getHours() + data.deadlineHours);
+  
+  const deadlineFormatted = deadline.toLocaleDateString('es-MX', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const subject = `¡Reserva tu lugar en ${data.visionName}! - Anticipo disponible`;
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Reserva tu lugar</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0f172a;">
+      <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+        
+        <!-- Header con gradiente -->
+        <div style="background: linear-gradient(135deg, #9333ea 0%, #4f46e5 50%, #06b6d4 100%); border-radius: 16px 16px 0 0; padding: 40px 30px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">
+            ¡No pierdas tu lugar! 🎯
+          </h1>
+          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">
+            ${data.visionName}
+          </p>
+        </div>
+
+        <!-- Contenido principal -->
+        <div style="background: #1e293b; padding: 40px 30px; border-radius: 0 0 16px 16px;">
+          
+          <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+            Hola <strong>${nombre}</strong>,
+          </p>
+          
+          <p style="color: #94a3b8; font-size: 15px; line-height: 1.6; margin: 0 0 30px 0;">
+            Notamos que no completaste tu registro en <strong style="color: #e2e8f0;">${data.visionName}</strong>. 
+            ¡No te preocupes! Puedes asegurar tu lugar con un <strong style="color: #10b981;">anticipo</strong> y completar el pago después.
+          </p>
+
+          <!-- Detalles del anticipo -->
+          <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 25px; margin: 25px 0;">
+            <h3 style="color: #10b981; margin: 0 0 20px 0; font-size: 18px;">
+              💰 Detalles del Anticipo
+            </h3>
+            
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+              <span style="color: #94a3b8;">Precio total del programa:</span>
+              <span style="color: #e2e8f0; font-weight: bold;">$${data.originalPrice.toLocaleString('es-MX')} MXN</span>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+              <span style="color: #94a3b8;">Anticipo para reservar:</span>
+              <span style="color: #10b981; font-weight: bold; font-size: 18px;">$${data.anticipoAmount.toLocaleString('es-MX')} MXN</span>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; padding-top: 12px; border-top: 1px solid rgba(16, 185, 129, 0.2);">
+              <span style="color: #94a3b8;">Resto a pagar después:</span>
+              <span style="color: #e2e8f0;">$${(data.originalPrice - data.anticipoAmount).toLocaleString('es-MX')} MXN</span>
+            </div>
+          </div>
+
+          <!-- Fecha límite -->
+          <div style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 12px; padding: 20px; margin: 25px 0;">
+            <p style="color: #fbbf24; font-size: 14px; line-height: 1.6; margin: 0;">
+              ⏰ <strong>Fecha límite:</strong> ${deadlineFormatted}
+            </p>
+            <p style="color: #94a3b8; font-size: 13px; margin: 10px 0 0 0;">
+              Después de esta fecha, la oferta de anticipo ya no estará disponible.
+            </p>
+          </div>
+
+          <!-- Botón CTA -->
+          <div style="text-align: center; margin: 35px 0;">
+            <a href="${data.paymentUrl}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; text-decoration: none; padding: 18px 50px; border-radius: 12px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
+              ✨ Pagar Anticipo Ahora
+            </a>
+          </div>
+
+          <!-- Beneficios -->
+          <div style="margin: 30px 0;">
+            <p style="color: #e2e8f0; font-size: 15px; margin: 0 0 15px 0; font-weight: bold;">
+              ¿Por qué pagar el anticipo?
+            </p>
+            <ul style="color: #94a3b8; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+              <li>✅ <strong style="color: #e2e8f0;">Asegura tu lugar</strong> - Los cupos son limitados</li>
+              <li>✅ <strong style="color: #e2e8f0;">Flexibilidad de pago</strong> - Completa el resto después</li>
+              <li>✅ <strong style="color: #e2e8f0;">Sin riesgos</strong> - Comienza tu transformación hoy</li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div style="text-align: center; padding-top: 30px;">
+          <p style="color: #64748b; font-size: 12px; line-height: 1.6; margin: 0;">
+            Este correo fue enviado por <strong style="color: #94a3b8;">${data.orgName}</strong>
+          </p>
+          <p style="color: #475569; font-size: 11px; margin: 10px 0 0 0;">
+            Si tienes dudas, responde a este correo o contáctanos.
+          </p>
+        </div>
+
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendEmail(email, subject, html);
+}

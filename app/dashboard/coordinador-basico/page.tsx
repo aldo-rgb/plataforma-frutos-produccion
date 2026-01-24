@@ -480,31 +480,35 @@ export default function CoordinadorBasicoDashboard() {
             ) : (
               <div className="space-y-4">
                 {productos.map((producto: any) => {
-                  const startDate = producto.startDate ? new Date(producto.startDate) : null;
+                  // Para PL, usar plWeekend1StartDate; para otros, usar startDate
+                  const isPL = producto.levelType === 'PL';
+                  const effectiveStartDate = isPL 
+                    ? (producto.plWeekend1StartDate ? new Date(producto.plWeekend1StartDate) : null)
+                    : (producto.startDate ? new Date(producto.startDate) : null);
                   const now = new Date();
                   
                   // Lógica de Check-In:
-                  // - Countdown: 24h antes de las 9 AM hasta las 9 AM del día del entrenamiento
-                  // - Botón Check-In: Desde las 9 AM hasta la 1 PM del primer día
-                  // - En curso (sin Check-In): Después de la 1 PM
+                  // - Countdown: 24h antes hasta las 9 AM del día del entrenamiento
+                  // - Botón Check-In: Desde las 9 AM hasta las 11 PM del primer día
+                  // - En curso (sin Check-In): Después de las 11 PM
                   
                   let showCheckInButton = false;
                   let showInProgress = false;
                   
-                  if (startDate) {
-                    // 9 AM del día del entrenamiento
-                    const trainingStart9AM = new Date(startDate);
-                    trainingStart9AM.setHours(9, 0, 0, 0);
+                  if (effectiveStartDate) {
+                    // El Check-In siempre empieza a las 9 AM del día del entrenamiento
+                    const checkInStartTime = new Date(effectiveStartDate);
+                    checkInStartTime.setHours(9, 0, 0, 0);
                     
-                    // 8 PM del día del entrenamiento (límite de Check-In)
-                    const checkInDeadline8PM = new Date(startDate);
-                    checkInDeadline8PM.setHours(20, 0, 0, 0);
+                    // 11 PM del día del entrenamiento (límite de Check-In)
+                    const checkInDeadline = new Date(effectiveStartDate);
+                    checkInDeadline.setHours(23, 0, 0, 0);
                     
-                    // Botón Check-In: entre 9 AM y 8 PM del primer día
-                    showCheckInButton = now >= trainingStart9AM && now <= checkInDeadline8PM;
+                    // Botón Check-In: desde las 9 AM hasta las 11 PM
+                    showCheckInButton = now >= checkInStartTime && now <= checkInDeadline;
                     
-                    // En curso (sin botón): después de las 8 PM del primer día
-                    showInProgress = now > checkInDeadline8PM;
+                    // En curso (sin botón): después de las 11 PM
+                    showInProgress = now > checkInDeadline;
                   }
                   
                   const isCompleted = producto.trainingStatus === 'COMPLETED';
@@ -523,21 +527,21 @@ export default function CoordinadorBasicoDashboard() {
                           ? 'bg-gradient-to-br from-green-900/40 via-emerald-900/30 to-slate-900 border-2 border-green-500/50 shadow-lg shadow-green-500/10'
                           : 'bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-2 border-slate-700/50 hover:border-cyan-500/50'
                       }`}>
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex-1">
-                            <h3 className="text-white font-bold text-lg mb-1 group-hover:text-cyan-400 transition-colors">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-3">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-white font-bold text-base sm:text-lg mb-1 group-hover:text-cyan-400 transition-colors truncate">
                               {producto.name}
                             </h3>
                             {producto.description && (
-                              <p className="text-slate-400 text-sm line-clamp-1">
+                              <p className="text-slate-400 text-xs sm:text-sm line-clamp-1">
                                 {producto.description}
                               </p>
                             )}
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 flex-wrap">
                             {/* Badge de Tipo (Workshop/Training) */}
                             {producto.type && (
-                              <div className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+                              <div className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${
                                 producto.type === 'WORKSHOP' 
                                   ? 'bg-purple-500/20 text-purple-400 border-purple-500/50'
                                   : producto.type === 'EXTRA_WORKSHOP'
@@ -545,13 +549,13 @@ export default function CoordinadorBasicoDashboard() {
                                   : 'bg-blue-500/20 text-blue-400 border-blue-500/50'
                               }`}>
                                 {producto.type === 'WORKSHOP' ? '🎯 Taller' : 
-                                 producto.type === 'EXTRA_WORKSHOP' ? '✨ Taller Extra' : 
-                                 '📚 Entrenamiento'}
+                                 producto.type === 'EXTRA_WORKSHOP' ? '✨ Extra' : 
+                                 '📚 Entrena...'}
                               </div>
                             )}
                             {/* Badge de Nivel */}
                             {producto.levelType && producto.levelType !== 'NONE' && (
-                              <div className={`px-3 py-1 rounded-full text-xs font-semibold border ${
+                              <div className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${
                                 producto.levelType === 'BASIC' 
                                   ? 'bg-green-500/20 text-green-400 border-green-500/50'
                                   : producto.levelType === 'INTERMEDIATE'
@@ -572,10 +576,10 @@ export default function CoordinadorBasicoDashboard() {
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4 text-sm">
-                            <div className="flex items-center gap-2">
-                              <Calendar size={14} className="text-slate-400" />
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm">
+                            <div className="flex items-center gap-1 sm:gap-2">
+                              <Calendar size={14} className="text-slate-400 flex-shrink-0" />
                               <span className="text-slate-300">
                                 {startDate ? new Date(startDate).toLocaleDateString('es-ES', { 
                                   day: 'numeric', 
@@ -584,14 +588,16 @@ export default function CoordinadorBasicoDashboard() {
                                 }) : 'Sin fecha'}
                               </span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Users size={14} className="text-slate-400" />
+                            <div className="flex items-center gap-1 sm:gap-2">
+                              <Users size={14} className="text-slate-400 flex-shrink-0" />
                               <span className="text-slate-300">
                                 {producto.currentEnrollment || 0}/{producto.maxCapacity || 0}
                               </span>
                             </div>
                           </div>
 
+                          {/* Status y botones - ahora en su propia fila en móvil */}
+                          <div className="flex items-center justify-end sm:justify-start">
                           {/* Countdown: 24h antes hasta 9 AM del día del entrenamiento */}
                           {showCountdown && !isCompleted && (
                             <button
@@ -634,13 +640,14 @@ export default function CoordinadorBasicoDashboard() {
                             </button>
                           )}
 
-                          {/* En curso (después de 1 PM): sin botón Check-In */}
+                          {/* En curso (después de las 11 PM): sin botón Check-In */}
                           {showInProgress && !isCompleted && (
-                            <div className="flex items-center gap-2 text-green-400 text-sm font-semibold">
+                            <div className="flex items-center gap-2 text-green-400 text-xs sm:text-sm font-semibold">
                               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                               En curso
                             </div>
                           )}
+                          </div>
                         </div>
                       </div>
                     </Link>

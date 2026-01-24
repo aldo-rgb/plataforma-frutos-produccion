@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { sendAnticipoEmail } from '@/lib/email';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,12 +14,25 @@ export async function GET(request: NextRequest) {
 
     const user = await prisma.usuario.findUnique({
       where: { id: parseInt(session.user.id) },
-      include: { organization: true }
+      select: { 
+        rol: true, 
+        organizationId: true 
+      }
     });
 
     if (!user?.organizationId) {
       return NextResponse.json({ error: 'Sin organización' }, { status: 400 });
     }
+
+    // Obtener configuración de la organización
+    const organization = await prisma.organization.findUnique({
+      where: { id: user.organizationId },
+      select: {
+        anticiposEnabled: true,
+        anticipoAmount: true,
+        anticipoDeadlineHours: true
+      }
+    });
 
     // Obtener parámetros de filtro
     const { searchParams } = new URL(request.url);
@@ -142,9 +156,9 @@ export async function GET(request: NextRequest) {
 
     // Configuración de anticipos de la organización
     const orgConfig = {
-      anticiposEnabled: user.organization?.anticiposEnabled || false,
-      anticipoAmount: user.organization?.anticipoAmount || 0,
-      anticipoDeadlineHours: user.organization?.anticipoDeadlineHours || 72
+      anticiposEnabled: organization?.anticiposEnabled || false,
+      anticipoAmount: organization?.anticipoAmount || 0,
+      anticipoDeadlineHours: organization?.anticipoDeadlineHours || 72
     };
 
     return NextResponse.json({
@@ -206,7 +220,10 @@ export async function POST(request: NextRequest) {
 
     const user = await prisma.usuario.findUnique({
       where: { id: parseInt(session.user.id) },
-      include: { organization: true }
+      select: { 
+        rol: true, 
+        organizationId: true 
+      }
     });
 
     if (!user?.organizationId) {
@@ -240,8 +257,29 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Anticipos no habilitados' }, { status: 400 });
       }
 
-      // Aquí deberías llamar a tu función de envío de email
-      // Por ahora solo actualizamos el estado
+      // Construir URL de pago con anticipo
+      const paymentUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/checkout?org=${checkout.organizationId}&vision=${checkout.visionId}&anticipo=true&email=${encodeURIComponent(checkout.email)}`;
+
+      // Enviar email real
+      const emailResult = await sendAnticipoEmail(checkout.email, {
+        firstName: checkout.firstName || undefined,
+        lastName: checkout.lastName || undefined,
+        visionName: checkout.vision?.nombre || 'el programa',
+        originalPrice: checkout.originalPrice?.toNumber() || 0,
+        anticipoAmount: checkout.organization.anticipoAmount?.toNumber() || 1500,
+        deadlineHours: checkout.organization.anticipoDeadlineHours || 72,
+        paymentUrl,
+        orgName: checkout.organization.name || 'Quantum'
+      });
+
+      if (!emailResult.success) {
+        console.error('Error enviando email de anticipo:', emailResult.error);
+        return NextResponse.json({ 
+          error: `Error enviando email: ${emailResult.error}` 
+        }, { status: 500 });
+      }
+
+      // Actualizar estado del checkout
       await prisma.abandonedCheckout.update({
         where: { id: checkoutId },
         data: {
@@ -252,7 +290,8 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({ 
         success: true, 
-        message: 'Email reenviado correctamente' 
+        message: 'Email de anticipo enviado correctamente',
+        emailId: emailResult.messageId
       });
     }
 

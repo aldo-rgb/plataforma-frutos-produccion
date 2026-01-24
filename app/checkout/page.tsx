@@ -76,7 +76,7 @@ interface PriceConfig {
 }
 
 type TicketSelection = 'BASIC_ONLY' | 'FULL_VISION';
-type PaymentMethod = 'GIFT_CODE' | 'STRIPE' | 'PAYPAL' | 'TRANSFER';
+type PaymentMethod = 'GIFT_CODE' | 'STRIPE';
 
 function CheckoutContent() {
   const router = useRouter();
@@ -387,12 +387,36 @@ function CheckoutContent() {
         }
       }
 
-      // If there's remaining balance, process card payment
+      // If there's remaining balance, process card payment with organization's gateway
       if (remainingBalance > 0 && paymentMethod === 'STRIPE') {
-        // TODO: Integrate with Stripe for remaining balance
-        // For now, show coming soon message
-        setError('El pago con tarjeta estará disponible próximamente. Contacta a tu administrador para completar el pago.');
-        setProcessing(false);
+        // Call the payment API to redirect to the organization's payment gateway
+        const paymentRes = await fetch('/api/checkout/create-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            organizationId: registrationData.organizationId,
+            visionId: registrationData.visionId,
+            amount: remainingBalance,
+            ticketSelection: ticketSelection,
+            userData: {
+              nombre: registrationData.nombre,
+              email: registrationData.email,
+              apodo: registrationData.apodo,
+              telefono: registrationData.telefono,
+              password: registrationData.password,
+            },
+            appliedCodes: codesToRedeem.map(p => p.code),
+          }),
+        });
+
+        const paymentData = await paymentRes.json();
+
+        if (!paymentData.success || !paymentData.paymentUrl) {
+          throw new Error(paymentData.error || 'Error al crear el pago');
+        }
+
+        // Redirect to payment gateway
+        window.location.href = paymentData.paymentUrl;
         return;
       }
 
@@ -755,7 +779,7 @@ function CheckoutContent() {
               )}
               
               {/* Payment Methods - Now supports multiple */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+              <div className="grid grid-cols-2 gap-3 mb-6">
                 <button
                   onClick={() => setPaymentMethod('GIFT_CODE')}
                   className={`p-4 rounded-xl border-2 transition-all ${
@@ -792,37 +816,6 @@ function CheckoutContent() {
                   </span>
                 </button>
 
-                <button
-                  onClick={() => setPaymentMethod('PAYPAL')}
-                  className={`p-4 rounded-xl border-2 transition-all relative opacity-50 cursor-not-allowed ${
-                    paymentMethod === 'PAYPAL'
-                      ? 'border-blue-500 bg-blue-500/10'
-                      : 'border-slate-700 bg-slate-900/50'
-                  }`}
-                  disabled
-                >
-                  <div className="absolute top-1 right-1">
-                    <span className="text-[10px] bg-slate-700 px-1 rounded text-slate-400">Pronto</span>
-                  </div>
-                  <Building2 className={`mx-auto mb-2 text-slate-400`} size={24} />
-                  <span className="text-sm font-medium text-slate-300">PayPal</span>
-                </button>
-
-                <button
-                  onClick={() => setPaymentMethod('TRANSFER')}
-                  className={`p-4 rounded-xl border-2 transition-all relative opacity-50 cursor-not-allowed ${
-                    paymentMethod === 'TRANSFER'
-                      ? 'border-green-500 bg-green-500/10'
-                      : 'border-slate-700 bg-slate-900/50'
-                  }`}
-                  disabled
-                >
-                  <div className="absolute top-1 right-1">
-                    <span className="text-[10px] bg-slate-700 px-1 rounded text-slate-400">Pronto</span>
-                  </div>
-                  <QrCode className={`mx-auto mb-2 text-slate-400`} size={24} />
-                  <span className="text-sm font-medium text-slate-300">Transferencia</span>
-                </button>
               </div>
 
               {/* Gift Code Input */}

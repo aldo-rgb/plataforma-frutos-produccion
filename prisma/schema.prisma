@@ -1032,6 +1032,12 @@ model Organization {
   // Configuración de transferencias de tickets
   transfersEnabled                                      Boolean                         @default(false)
   transferDeadlineDays                                  Int                             @default(0) // Días antes del evento para permitir transferencia (0 = no permitido)
+  // Configuración de cuenta bancaria para transferencias
+  bankName                                              String?                         // Nombre del banco (ej: BBVA, Banamex)
+  bankAccountHolder                                     String?                         // Nombre del titular de la cuenta
+  bankAccountClabe                                      String?                         // CLABE interbancaria (18 dígitos)
+  bankAccountNumber                                     String?                         // Número de cuenta (opcional)
+  bankReference                                         String?                         // Referencia o concepto sugerido
   AbandonedCheckout                                     AbandonedCheckout[]
   CashBatches                                           CashBatch[]
   CheckInRecord                                         CheckInRecord[]
@@ -1064,6 +1070,12 @@ model Organization {
   coordinator_commission_config                         coordinator_commission_config[]
   coordinator_commissions                               coordinator_commissions[]
   weekly_payout_summary                                 weekly_payout_summary[]
+  
+  // Legacy Builder - Crowdfunding
+  LegacyProjects                                        LegacyProject[]
+
+  // Directorio de Talentos
+  BusinessProfiles                                      BusinessProfile[]
 
   @@index([masterOrganizationId])
   @@index([slug])
@@ -2278,6 +2290,18 @@ model Usuario {
   // Checkouts abandonados
   AbandonedCheckouts                                                     AbandonedCheckout[]
 
+  // Legacy Builder - Crowdfunding
+  LegacyCampaignsCaptain                                                 LegacyCampaign[]                @relation("LegacyCampaignCaptain")
+  LegacyCampaignMemberships                                              LegacyCampaignMember[]
+  LegacyDonations                                                        LegacyDonation[]
+  LegacyExpensesRequested                                                LegacyExpense[]                 @relation("LegacyExpenseRequester")
+  LegacyExpensesAudited                                                  LegacyExpense[]                 @relation("LegacyExpenseAuditor")
+  LegacyExpensesDispersed                                                LegacyExpense[]                 @relation("LegacyExpenseDisperser")
+
+  // Directorio de Talentos - Bolsa de Trabajo
+  BusinessProfile                                                        BusinessProfile?
+  ServiceReviewsWritten                                                  ServiceReview[]                 @relation("ReviewAuthor")
+
   @@index([communityOrganizationId])
 }
 
@@ -2353,6 +2377,12 @@ model Vision {
   
   // Checkouts abandonados
   AbandonedCheckouts            AbandonedCheckout[]
+  
+  // Legacy Builder - Crowdfunding
+  LegacyCampaigns               LegacyCampaign[]
+
+  // Directorio de Talentos
+  BusinessProfiles              BusinessProfile[]
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -4609,3 +4639,412 @@ enum AbandonedCheckoutStatus {
   CONVERTED_FULL    // Pagó completo
   EXPIRED           // Expiró sin pagar
 }
+
+// ============================================
+// LEGACY BUILDER - Sistema de Crowdfunding Auditado
+// ============================================
+
+// Proyecto Global (Legado Maestro) - Nivel 1
+model LegacyProject {
+  id              Int                 @id @default(autoincrement())
+  
+  // Información básica
+  title           String              // "Techo Casa Hogar"
+  slug            String              @unique // URL amigable
+  description     String?             @db.Text
+  story           String?             @db.Text // Historia/manifiesto
+  videoUrl        String?             // Embed YouTube/Vimeo
+  
+  // Imágenes
+  coverImage      String?             // Imagen de portada
+  galleryImages   String[]            // Galería de fotos
+  
+  // Meta financiera
+  goalAmount      Decimal             @db.Decimal(12, 2) // Meta total (ej. $500,000)
+  raisedAmount    Decimal             @default(0) @db.Decimal(12, 2) // Recaudado total
+  
+  // Organización propietaria
+  organizationId  Int
+  organization    Organization        @relation(fields: [organizationId], references: [id])
+  
+  // Estado
+  status          LegacyProjectStatus @default(DRAFT)
+  isPublic        Boolean             @default(false)
+  isFeatured      Boolean             @default(false)
+  
+  // Categoría
+  category        String?             // "Vivienda", "Educación", "Salud"
+  
+  // Fechas
+  startDate       DateTime?
+  endDate         DateTime?
+  
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  
+  // Relaciones
+  campaigns       LegacyCampaign[]
+  
+  @@index([organizationId])
+  @@index([slug])
+  @@index([status])
+  @@index([isPublic])
+}
+
+// Campaña de Visión (Child Campaign) - Nivel 2
+model LegacyCampaign {
+  id              Int                  @id @default(autoincrement())
+  
+  // Proyecto padre
+  projectId       Int
+  project         LegacyProject        @relation(fields: [projectId], references: [id])
+  
+  // Visión que lidera la campaña
+  visionId        Int
+  vision          Vision               @relation(fields: [visionId], references: [id])
+  
+  // Capitán de la campaña (líder)
+  captainId       Int
+  captain         Usuario              @relation("LegacyCampaignCaptain", fields: [captainId], references: [id])
+  
+  // Información de la campaña
+  title           String               // "Visión Águilas por la Casa Hogar"
+  slug            String               @unique
+  description     String?              @db.Text
+  story           String?              @db.Text
+  videoUrl        String?
+  
+  // Imágenes
+  coverImage      String?
+  logoImage       String?
+  
+  // Meta financiera
+  goalAmount      Decimal              @db.Decimal(12, 2) // Meta del equipo (ej. $50,000)
+  raisedAmount    Decimal              @default(0) @db.Decimal(12, 2) // Recaudado
+  availableAmount Decimal              @default(0) @db.Decimal(12, 2) // Disponible (recaudado - gastado)
+  
+  // Estado
+  status          LegacyCampaignStatus @default(DRAFT)
+  isPublic        Boolean              @default(false)
+  
+  // Fechas
+  startDate       DateTime?
+  endDate         DateTime?
+  
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  
+  // Relaciones
+  donations       LegacyDonation[]
+  expenses        LegacyExpense[]
+  members         LegacyCampaignMember[]
+  
+  @@index([projectId])
+  @@index([visionId])
+  @@index([captainId])
+  @@index([slug])
+  @@index([status])
+}
+
+// Miembros de la campaña (para gamificación/leaderboard)
+model LegacyCampaignMember {
+  id              Int              @id @default(autoincrement())
+  
+  campaignId      Int
+  campaign        LegacyCampaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  userId          Int
+  user            Usuario          @relation(fields: [userId], references: [id])
+  
+  // Código de referido único para tracking
+  referralCode    String           @unique @default(cuid())
+  referralUrl     String?          // URL personalizada
+  
+  // Stats de recaudación
+  totalRaised     Decimal          @default(0) @db.Decimal(12, 2)
+  donationsCount  Int              @default(0)
+  
+  // Rol en la campaña
+  role            CampaignMemberRole @default(MEMBER)
+  
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  
+  // Donaciones referidas por este miembro
+  referredDonations LegacyDonation[]
+  
+  @@unique([campaignId, userId])
+  @@index([campaignId])
+  @@index([userId])
+  @@index([referralCode])
+}
+
+// Donaciones
+model LegacyDonation {
+  id              Int                  @id @default(autoincrement())
+  
+  // Campaña que recibe la donación
+  campaignId      Int
+  campaign        LegacyCampaign       @relation(fields: [campaignId], references: [id])
+  
+  // Donador (puede ser anónimo)
+  donorName       String?
+  donorEmail      String
+  donorPhone      String?
+  isAnonymous     Boolean              @default(false)
+  
+  // Usuario registrado (opcional)
+  userId          Int?
+  user            Usuario?             @relation(fields: [userId], references: [id])
+  
+  // Referido por (tracking)
+  referredById    Int?
+  referredBy      LegacyCampaignMember? @relation(fields: [referredById], references: [id])
+  
+  // Monto
+  amount          Decimal              @db.Decimal(12, 2)
+  currency        String               @default("MXN")
+  
+  // Pago
+  paymentMethod   String?              // "stripe", "mercadopago", "transfer"
+  paymentId       String?              // ID de la transacción externa
+  paymentStatus   DonationPaymentStatus @default(PENDING)
+  
+  // Mensaje de dedicación
+  message         String?              @db.Text
+  showMessage     Boolean              @default(true) // Mostrar en muro
+  
+  // Estado del dinero
+  moneyStatus     DonationMoneyStatus  @default(COLLECTED)
+  
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  
+  @@index([campaignId])
+  @@index([userId])
+  @@index([referredById])
+  @@index([donorEmail])
+  @@index([paymentStatus])
+  @@index([moneyStatus])
+}
+
+// Solicitudes de Gasto
+model LegacyExpense {
+  id              Int                  @id @default(autoincrement())
+  
+  // Campaña que solicita el gasto
+  campaignId      Int
+  campaign        LegacyCampaign       @relation(fields: [campaignId], references: [id])
+  
+  // Quién solicita
+  requestedById   Int
+  requestedBy     Usuario              @relation("LegacyExpenseRequester", fields: [requestedById], references: [id])
+  
+  // Detalles del gasto
+  concept         String               // "50 bultos cemento"
+  description     String?              @db.Text
+  amount          Decimal              @db.Decimal(12, 2)
+  
+  // Proveedor
+  providerName    String?
+  providerRFC     String?
+  providerBank    String?
+  providerClabe   String?
+  
+  // Evidencia/Comprobantes
+  quotationUrl    String?              // Cotización
+  invoiceUrl      String?              // Factura
+  evidenceUrls    String[]             // Fotos adicionales
+  
+  // Estado de auditoría
+  status          LegacyExpenseStatus  @default(REQUESTED)
+  
+  // Auditoría
+  auditedById     Int?
+  auditedBy       Usuario?             @relation("LegacyExpenseAuditor", fields: [auditedById], references: [id])
+  auditedAt       DateTime?
+  auditComments   String?              @db.Text
+  
+  // Dispersión
+  dispersedById   Int?
+  dispersedBy     Usuario?             @relation("LegacyExpenseDisperser", fields: [dispersedById], references: [id])
+  dispersedAt     DateTime?
+  dispersalRef    String?              // Referencia SPEI/transferencia
+  
+  // Publicación
+  isPublished     Boolean              @default(false)
+  publishedAt     DateTime?
+  publicImageUrl  String?              // Imagen para mostrar público
+  
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  
+  @@index([campaignId])
+  @@index([requestedById])
+  @@index([status])
+  @@index([isPublished])
+}
+
+// ============================================
+// ENUMS para Legacy Builder
+// ============================================
+
+enum LegacyProjectStatus {
+  DRAFT           // Borrador
+  ACTIVE          // Activo y recibiendo donaciones
+  PAUSED          // Pausado temporalmente
+  COMPLETED       // Meta alcanzada
+  CANCELLED       // Cancelado
+}
+
+enum LegacyCampaignStatus {
+  DRAFT           // Borrador
+  PENDING_REVIEW  // Pendiente de aprobación
+  ACTIVE          // Activo
+  PAUSED          // Pausado
+  COMPLETED       // Completado
+  CANCELLED       // Cancelado
+}
+
+enum CampaignMemberRole {
+  CAPTAIN         // Líder de la campaña
+  COORDINATOR     // Coordinador
+  MEMBER          // Miembro regular
+}
+
+enum DonationMoneyStatus {
+  PENDING         // Pago pendiente
+  COLLECTED       // Dinero recibido en cuenta concentradora
+  ALLOCATED       // Asignado a un gasto
+  DISBURSED       // Ya se dispersó
+}
+
+enum LegacyExpenseStatus {
+  REQUESTED       // Solicitado por la visión
+  UNDER_REVIEW    // En revisión por auditor
+  APPROVED        // Aprobado por auditor
+  REJECTED        // Rechazado (con comentarios)
+  PAID_OUT        // Transferencia realizada
+  PUBLISHED       // Publicado en transparencia
+}
+
+enum DonationPaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+// ============================================
+// DIRECTORIO DE TALENTOS - Bolsa de Trabajo Interna
+// ============================================
+
+model BusinessProfile {
+  id                  Int                    @id @default(autoincrement())
+  userId              Int                    @unique
+  organizationId      Int
+  visionId            Int?
+  
+  // Información del perfil
+  headline            String                 @db.VarChar(100)     // "Arquitecto Bioclimático"
+  categoryId          Int
+  description         String                 @db.Text             // El pitch
+  discountOffer       String                 @db.VarChar(200)     // "15% de descuento para la comunidad"
+  
+  // Ubicación
+  city                String
+  state               String
+  coverageZone        String?                                     // Zona de cobertura adicional
+  
+  // Contacto
+  whatsappPhone       String                 @db.VarChar(20)
+  email               String?
+  website             String?
+  
+  // Portafolio
+  galleryImages       String[]               @default([])         // Hasta 5 fotos
+  logoUrl             String?
+  
+  // Reputación (caché para queries rápidos)
+  avgRating           Float                  @default(0)          // Promedio de calificaciones
+  totalReviews        Int                    @default(0)          // Total de reseñas
+  oneStarCount        Int                    @default(0)          // Contador de 1 estrella (para auto-ban)
+  
+  // Estados y badges
+  status              BusinessProfileStatus  @default(PENDING)
+  isVerified          Boolean                @default(false)      // Tick azul si graduó de PL
+  isPLGraduate        Boolean                @default(false)      // Marco dorado
+  
+  // Timestamps
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  suspendedAt         DateTime?                                   // Si fue suspendido
+  suspensionReason    String?
+  
+  // Relaciones
+  user                Usuario                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization        Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  vision              Vision?                @relation(fields: [visionId], references: [id])
+  category            BusinessCategory       @relation(fields: [categoryId], references: [id])
+  reviews             ServiceReview[]        @relation("ProfileReviews")
+  
+  @@index([organizationId])
+  @@index([visionId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([avgRating])
+  @@index([city, state])
+}
+
+model BusinessCategory {
+  id              Int               @id @default(autoincrement())
+  name            String            @unique                       // "Salud", "Construcción", etc.
+  slug            String            @unique
+  icon            String?                                         // Emoji o nombre de icono
+  description     String?
+  isActive        Boolean           @default(true)
+  sortOrder       Int               @default(0)
+  
+  profiles        BusinessProfile[]
+  
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model ServiceReview {
+  id                  Int             @id @default(autoincrement())
+  profileId           Int                                         // Perfil que recibe la reseña
+  authorId            Int                                         // Usuario que escribe
+  
+  rating              Int                                         // 1-5 estrellas
+  comment             String          @db.Text                    // Comentario obligatorio (min 10 chars)
+  didHireService      Boolean         @default(false)             // "Declaro que contraté este servicio"
+  
+  // Metadatos
+  isPublic            Boolean         @default(true)
+  isVerified          Boolean         @default(false)             // Si se verificó la contratación
+  
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  
+  // Relaciones
+  profile             BusinessProfile @relation("ProfileReviews", fields: [profileId], references: [id], onDelete: Cascade)
+  author              Usuario         @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  
+  // Un usuario solo puede dejar una reseña por perfil
+  @@unique([profileId, authorId])
+  @@index([profileId])
+  @@index([authorId])
+  @@index([rating])
+  @@index([createdAt])
+}
+
+enum BusinessProfileStatus {
+  PENDING           // Pendiente de aprobación
+  ACTIVE            // Activo y visible
+  HIDDEN            // Oculto por el usuario
+  SUSPENDED         // Suspendido por admin
+  BANNED            // Baneado (5+ reseñas de 1 estrella)
+}
+

@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { 
   LayoutDashboard, Trophy, Target, BarChart3, User, LogOut, 
   UserPlus, DollarSign, Package, Shield, 
-  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode
+  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode, Store, Star
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { MENU_ITEMS } from '@/config/menuPermissions';
@@ -490,6 +490,19 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
               <Users size={18} className="text-blue-400" />
               <span>Mis Visiones</span>
             </Link>
+
+            <Link 
+              href="/dashboard/school-admin/legacy-audit"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/school-admin/legacy-audit'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-emerald-900/20'
+              }`}
+            >
+              <Gift size={18} className="text-emerald-400" />
+              <span>Auditar Donaciones</span>
+            </Link>
           </div>
         )}
 
@@ -928,6 +941,49 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
           >
             <CreditCard size={18} />
             <span>Membresía</span>
+          </Link>
+
+          {/* Legacy Builder - Donaciones */}
+          <Link 
+            href="/dashboard/legacy-builder" 
+            onClick={handleLinkClick}
+            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
+              pathname.startsWith('/dashboard/legacy-builder')
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/20' 
+                : 'text-slate-400 hover:bg-gradient-to-r hover:from-emerald-900/30 hover:to-teal-900/30 hover:text-emerald-300'
+            }`}
+          >
+            <Gift size={18} className="text-emerald-400 group-hover:text-emerald-300" />
+            <span className="font-medium">Legacy Builder</span>
+            <span className="ml-auto text-xs bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full">Nuevo</span>
+          </Link>
+
+          {/* Directorio de Talentos - Mercado */}
+          <Link 
+            href="/dashboard/mercado" 
+            onClick={handleLinkClick}
+            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
+              pathname.startsWith('/dashboard/mercado')
+                ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg shadow-orange-500/20' 
+                : 'text-slate-400 hover:bg-gradient-to-r hover:from-orange-900/30 hover:to-amber-900/30 hover:text-orange-300'
+            }`}
+          >
+            <Store size={18} className="text-orange-400 group-hover:text-orange-300" />
+            <span className="font-medium">Directorio Talentos</span>
+          </Link>
+
+          {/* Mi Negocio - Perfil Empresarial */}
+          <Link 
+            href="/dashboard/mi-negocio" 
+            onClick={handleLinkClick}
+            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
+              pathname === '/dashboard/mi-negocio'
+                ? 'bg-gradient-to-r from-yellow-600 to-orange-600 text-white shadow-lg shadow-yellow-500/20' 
+                : 'text-slate-400 hover:bg-gradient-to-r hover:from-yellow-900/30 hover:to-orange-900/30 hover:text-yellow-300'
+            }`}
+          >
+            <Briefcase size={18} className="text-yellow-400 group-hover:text-yellow-300" />
+            <span className="font-medium">Mi Negocio</span>
           </Link>
 
           {/* Mi QR Personal - Solo para PARTICIPANTE, LIDER, GAMECHANGER */}

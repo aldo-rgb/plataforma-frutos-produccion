@@ -59,6 +59,7 @@ export async function GET() {
     const isTrainer = usuario.rol === 'TRAINER'
 
     // Primero obtener productos no completados (en curso o próximos)
+    // Para productos PL, usar plWeekend3EndDate si endDate es null
     const productosActivos = await prisma.schoolProduct.findMany({
       where: {
         OR: [
@@ -76,7 +77,18 @@ export async function GET() {
         ],
         isActive: true,
         trainingStatus: { not: 'COMPLETED' },
-        endDate: { gte: startOfToday }
+        // Incluir productos con endDate >= hoy O productos PL con plWeekend3EndDate >= hoy
+        OR: [
+          { endDate: { gte: startOfToday } },
+          { 
+            levelType: 'PL',
+            plWeekend3EndDate: { gte: startOfToday }
+          },
+          {
+            levelType: 'PL',
+            plWeekend1EndDate: { gte: startOfToday }
+          }
+        ]
       },
       orderBy: {
         startDate: 'asc'
@@ -89,6 +101,12 @@ export async function GET() {
         levelType: true,
         startDate: true,
         endDate: true,
+        plWeekend1StartDate: true,
+        plWeekend1EndDate: true,
+        plWeekend2StartDate: true,
+        plWeekend2EndDate: true,
+        plWeekend3StartDate: true,
+        plWeekend3EndDate: true,
         maxCapacity: true,
         currentEnrollment: true,
         visionId: true,

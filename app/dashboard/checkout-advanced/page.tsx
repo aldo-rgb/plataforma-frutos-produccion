@@ -209,7 +209,7 @@ export default function CheckoutAdvancedPage() {
   const handleProcessUpgrade = async () => {
     if (!upgradeData) return;
 
-    // Check if fully paid
+    // Check if fully paid (for gift codes) or if paying with card
     if (remaining > 0 && paymentMethod !== 'STRIPE') {
       setError(`Aún falta por pagar $${remaining.toLocaleString()} MXN`);
       return;
@@ -219,6 +219,33 @@ export default function CheckoutAdvancedPage() {
     setError('');
 
     try {
+      // If paying with card (STRIPE/MercadoPago), redirect to payment gateway
+      if (paymentMethod === 'STRIPE' && remaining > 0) {
+        const paymentRes = await fetch('/api/checkout-advanced/create-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            visionId: upgradeData.targetVisionId,
+            organizationId: upgradeData.targetOrganizationId,
+            packageType: upgradeData.packageType || 'ADVANCED_ONLY',
+            amount: remaining,
+            pendingDebt: upgradeData.pendingDebt || 0,
+            prices: upgradeData.prices,
+            appliedCodes: appliedPayments.filter(p => p.type === 'GIFT_CODE').map(p => p.code),
+          }),
+        });
+
+        const paymentData = await paymentRes.json();
+
+        if (!paymentData.success || !paymentData.paymentUrl) {
+          throw new Error(paymentData.error || 'Error al crear el pago');
+        }
+
+        // Redirect to Mercado Pago
+        window.location.href = paymentData.paymentUrl;
+        return;
+      }
+
       // First, redeem all gift codes (payment codes)
       const giftCodes = appliedPayments.filter(p => p.type === 'GIFT_CODE');
       
@@ -359,7 +386,7 @@ export default function CheckoutAdvancedPage() {
                         : upgradeData.packageType === 'APARTADO'
                         ? 'Apartado - Avanzado + PL'
                         : upgradeData.packageType === 'PL_BASE' || upgradeData.packageType === 'PL_CON_CREDITO'
-                        ? 'Tu VIDA (Participación Libre)'
+                        ? 'Tu VIDA'
                         : 'Entrenamiento Avanzado'}
                     </h2>
                     <p className="text-slate-400 flex items-center gap-2 mt-1">
@@ -576,16 +603,20 @@ export default function CheckoutAdvancedPage() {
                 </div>
               )}
 
-              {/* Stripe Payment (Coming Soon) */}
+              {/* Stripe Payment (MercadoPago) */}
               {paymentMethod === 'STRIPE' && remaining > 0 && (
                 <div className="p-6 bg-slate-800/50 rounded-xl text-center">
-                  <CreditCard className="w-12 h-12 text-slate-500 mx-auto mb-3" />
-                  <p className="text-slate-400 mb-2">
-                    Pago con tarjeta próximamente disponible
+                  <CreditCard className="w-12 h-12 text-purple-400 mx-auto mb-3" />
+                  <p className="text-white font-medium mb-2">
+                    Pago con tarjeta de crédito/débito
                   </p>
-                  <p className="text-sm text-slate-500">
-                    Contacta a tu administrador para otras opciones de pago
+                  <p className="text-slate-400 text-sm mb-4">
+                    Serás redirigido a Mercado Pago para completar tu pago de forma segura
                   </p>
+                  <div className="flex items-center justify-center gap-2 text-emerald-400 text-sm">
+                    <Shield className="w-4 h-4" />
+                    Pago 100% seguro
+                  </div>
                 </div>
               )}
             </motion.div>
@@ -642,13 +673,18 @@ export default function CheckoutAdvancedPage() {
               <div className="p-6 border-t border-slate-800">
                 <button
                   onClick={handleProcessUpgrade}
-                  disabled={processing || (remaining > 0 && paymentMethod !== 'STRIPE')}
+                  disabled={processing || (remaining > 0 && paymentMethod === 'GIFT_CODE')}
                   className="w-full py-4 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 disabled:from-slate-700 disabled:to-slate-600 disabled:cursor-not-allowed text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all"
                 >
                   {processing ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      Procesando...
+                      {paymentMethod === 'STRIPE' ? 'Redirigiendo a pago...' : 'Procesando...'}
+                    </>
+                  ) : paymentMethod === 'STRIPE' && remaining > 0 ? (
+                    <>
+                      Pagar con Tarjeta
+                      <CreditCard className="w-5 h-5" />
                     </>
                   ) : (
                     <>

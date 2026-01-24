@@ -47,12 +47,12 @@ interface Vision {
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
-  'IN_CHECKOUT': { label: 'En checkout', color: 'bg-blue-100 text-blue-800', icon: ShoppingCart },
-  'ABANDONED': { label: 'Abandonado', color: 'bg-yellow-100 text-yellow-800', icon: AlertTriangle },
-  'EMAIL_SENT': { label: 'Email enviado', color: 'bg-purple-100 text-purple-800', icon: Mail },
-  'CONVERTED_ANTICIPO': { label: 'Pagó anticipo', color: 'bg-green-100 text-green-800', icon: CheckCircle },
-  'CONVERTED_FULL': { label: 'Pagó completo', color: 'bg-emerald-100 text-emerald-800', icon: CheckCircle },
-  'EXPIRED': { label: 'Expirado', color: 'bg-gray-100 text-gray-800', icon: XCircle }
+  'IN_CHECKOUT': { label: 'En checkout', color: 'bg-blue-500/20 text-blue-400 border border-blue-500/30', icon: ShoppingCart },
+  'ABANDONED': { label: 'Abandonado', color: 'bg-amber-500/20 text-amber-400 border border-amber-500/30', icon: AlertTriangle },
+  'EMAIL_SENT': { label: 'Email enviado', color: 'bg-purple-500/20 text-purple-400 border border-purple-500/30', icon: Mail },
+  'CONVERTED_ANTICIPO': { label: 'Pagó anticipo', color: 'bg-green-500/20 text-green-400 border border-green-500/30', icon: CheckCircle },
+  'CONVERTED_FULL': { label: 'Pagó completo', color: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30', icon: CheckCircle },
+  'EXPIRED': { label: 'Expirado', color: 'bg-slate-500/20 text-slate-400 border border-slate-500/30', icon: XCircle }
 };
 
 export default function AbandonedCheckoutsPage() {
@@ -166,30 +166,30 @@ export default function AbandonedCheckoutsPage() {
 
   if (authStatus === 'loading' || loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-slate-950 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link 
               href="/dashboard/school-admin"
-              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+              className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
             >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
+              <ArrowLeft className="w-5 h-5 text-slate-400" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <ShoppingCart className="w-7 h-7 text-emerald-600" />
+              <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                <ShoppingCart className="w-7 h-7 text-amber-500" />
                 Checkouts Abandonados
               </h1>
-              <p className="text-gray-600 text-sm mt-1">
+              <p className="text-slate-400 text-sm mt-1">
                 Recupera ventas perdidas con el sistema de anticipos
               </p>
             </div>
@@ -197,14 +197,14 @@ export default function AbandonedCheckoutsPage() {
           <div className="flex gap-2">
             <button
               onClick={fetchData}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center gap-2 transition-colors"
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg flex items-center gap-2 transition-colors border border-slate-700"
             >
               <RefreshCw className="w-4 h-4" />
               Actualizar
             </button>
             <button
               onClick={exportToCSV}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg flex items-center gap-2 transition-colors"
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg flex items-center gap-2 transition-colors"
             >
               <Download className="w-4 h-4" />
               Exportar CSV
@@ -214,16 +214,16 @@ export default function AbandonedCheckoutsPage() {
 
         {/* Config Alert */}
         {orgConfig && !orgConfig.anticiposEnabled && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-yellow-800">Sistema de anticipos desactivado</p>
-              <p className="text-yellow-700 text-sm">
+              <p className="font-medium text-amber-400">Sistema de anticipos desactivado</p>
+              <p className="text-amber-300/70 text-sm">
                 Activa el sistema de anticipos en{' '}
-                <Link href="/dashboard/school-admin/precios" className="underline font-medium">
+                <Link href="/dashboard/school-admin/precios" className="underline font-medium text-amber-400 hover:text-amber-300">
                   Configuración de Precios
                 </Link>
-                {' '}para enviar emails automáticos a clientes que abandonan el checkout.
+                {' '}para detectar y registrar checkouts abandonados automáticamente.
               </p>
             </div>
           </div>
@@ -232,50 +232,50 @@ export default function AbandonedCheckoutsPage() {
         {/* Stats Cards */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <div className="bg-slate-900 rounded-xl p-5 border border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-yellow-100 rounded-lg">
-                  <AlertTriangle className="w-6 h-6 text-yellow-600" />
+                <div className="p-3 bg-amber-500/20 rounded-lg">
+                  <AlertTriangle className="w-6 h-6 text-amber-400" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Abandonados</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalAbandoned}</p>
+                  <p className="text-sm text-slate-400">Abandonados</p>
+                  <p className="text-2xl font-bold text-white">{stats.totalAbandoned}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <div className="bg-slate-900 rounded-xl p-5 border border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-green-100 rounded-lg">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
+                <div className="p-3 bg-green-500/20 rounded-lg">
+                  <CheckCircle className="w-6 h-6 text-green-400" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Recuperados</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalConverted}</p>
+                  <p className="text-sm text-slate-400">Recuperados</p>
+                  <p className="text-2xl font-bold text-white">{stats.totalConverted}</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <div className="bg-slate-900 rounded-xl p-5 border border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-emerald-100 rounded-lg">
-                  <TrendingUp className="w-6 h-6 text-emerald-600" />
+                <div className="p-3 bg-cyan-500/20 rounded-lg">
+                  <TrendingUp className="w-6 h-6 text-cyan-400" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Tasa de recuperación</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.conversionRate}%</p>
+                  <p className="text-sm text-slate-400">Tasa de recuperación</p>
+                  <p className="text-2xl font-bold text-white">{stats.conversionRate}%</p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <div className="bg-slate-900 rounded-xl p-5 border border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-blue-100 rounded-lg">
-                  <DollarSign className="w-6 h-6 text-blue-600" />
+                <div className="p-3 bg-purple-500/20 rounded-lg">
+                  <DollarSign className="w-6 h-6 text-purple-400" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Ingresos recuperados</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm text-slate-400">Ingresos recuperados</p>
+                  <p className="text-2xl font-bold text-white">
                     {formatCurrency(Number(stats.recoveredRevenue))}
                   </p>
                 </div>
@@ -286,8 +286,8 @@ export default function AbandonedCheckoutsPage() {
 
         {/* Status Summary */}
         {stats && (
-          <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-            <h3 className="font-semibold text-gray-900 mb-4">Resumen por Estado</h3>
+          <div className="bg-slate-900 rounded-xl p-5 border border-slate-800">
+            <h3 className="font-semibold text-white mb-4">Resumen por Estado</h3>
             <div className="flex flex-wrap gap-3">
               {Object.entries(STATUS_CONFIG).map(([key, config]) => {
                 const count = stats.byStatus[key] || 0;
@@ -298,13 +298,13 @@ export default function AbandonedCheckoutsPage() {
                     onClick={() => setFilterStatus(filterStatus === key ? 'all' : key)}
                     className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
                       filterStatus === key 
-                        ? 'ring-2 ring-emerald-500 ring-offset-2' 
+                        ? 'ring-2 ring-amber-500 ring-offset-2 ring-offset-slate-900' 
                         : ''
                     } ${config.color}`}
                   >
                     <Icon className="w-4 h-4" />
                     <span className="font-medium">{config.label}</span>
-                    <span className="bg-white/50 px-2 py-0.5 rounded-full text-sm">
+                    <span className="bg-slate-800/50 px-2 py-0.5 rounded-full text-sm">
                       {count}
                     </span>
                   </button>
@@ -315,18 +315,18 @@ export default function AbandonedCheckoutsPage() {
         )}
 
         {/* Filters */}
-        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+        <div className="bg-slate-900 rounded-xl p-5 border border-slate-800">
           <div className="flex items-center gap-2 mb-4">
-            <Filter className="w-5 h-5 text-gray-500" />
-            <h3 className="font-semibold text-gray-900">Filtros</h3>
+            <Filter className="w-5 h-5 text-slate-400" />
+            <h3 className="font-semibold text-white">Filtros</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm text-gray-600 mb-1">Visión</label>
+              <label className="block text-sm text-slate-400 mb-1">Visión</label>
               <select
                 value={filterVision}
                 onChange={(e) => setFilterVision(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
               >
                 <option value="">Todas las visiones</option>
                 {visions.map(v => (
@@ -335,21 +335,21 @@ export default function AbandonedCheckoutsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm text-gray-600 mb-1">Fecha inicio</label>
+              <label className="block text-sm text-slate-400 mb-1">Fecha inicio</label>
               <input
                 type="date"
                 value={filterStartDate}
                 onChange={(e) => setFilterStartDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-600 mb-1">Fecha fin</label>
+              <label className="block text-sm text-slate-400 mb-1">Fecha fin</label>
               <input
                 type="date"
                 value={filterEndDate}
                 onChange={(e) => setFilterEndDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
               />
             </div>
             <div className="flex items-end">
@@ -360,7 +360,7 @@ export default function AbandonedCheckoutsPage() {
                   setFilterStartDate('');
                   setFilterEndDate('');
                 }}
-                className="w-full px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                className="w-full px-4 py-2 text-slate-400 hover:bg-slate-800 rounded-lg transition-colors border border-slate-700"
               >
                 Limpiar filtros
               </button>
@@ -369,25 +369,25 @@ export default function AbandonedCheckoutsPage() {
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-100">
+              <thead className="bg-slate-800/50 border-b border-slate-700">
                 <tr>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Cliente</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Visión</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Precio</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Estado</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Fecha</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-600">Acciones</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-slate-300">Cliente</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-slate-300">Visión</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-slate-300">Precio</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-slate-300">Estado</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-slate-300">Fecha</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-slate-300">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-slate-800">
                 {checkouts.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                      <ShoppingCart className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                      <p className="font-medium">No hay checkouts abandonados</p>
+                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                      <ShoppingCart className="w-12 h-12 mx-auto mb-3 text-slate-600" />
+                      <p className="font-medium text-slate-300">No hay checkouts abandonados</p>
                       <p className="text-sm">Los registros aparecerán aquí cuando alguien abandone el proceso de pago</p>
                     </td>
                   </tr>
@@ -397,25 +397,25 @@ export default function AbandonedCheckoutsPage() {
                     const StatusIcon = statusConfig.icon;
 
                     return (
-                      <tr key={checkout.id} className="hover:bg-gray-50">
+                      <tr key={checkout.id} className="hover:bg-slate-800/50">
                         <td className="px-6 py-4">
                           <div>
-                            <p className="font-medium text-gray-900">{checkout.fullName}</p>
-                            <p className="text-sm text-gray-500">{checkout.email}</p>
+                            <p className="font-medium text-white">{checkout.fullName}</p>
+                            <p className="text-sm text-slate-400">{checkout.email}</p>
                             {checkout.phone && (
-                              <p className="text-sm text-gray-400">{checkout.phone}</p>
+                              <p className="text-sm text-slate-500">{checkout.phone}</p>
                             )}
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className="text-gray-900">{checkout.visionName}</span>
+                          <span className="text-slate-300">{checkout.visionName}</span>
                         </td>
                         <td className="px-6 py-4">
-                          <p className="font-medium text-gray-900">
+                          <p className="font-medium text-white">
                             {formatCurrency(checkout.originalPrice)}
                           </p>
                           {checkout.anticipoAmount && (
-                            <p className="text-sm text-emerald-600">
+                            <p className="text-sm text-green-400">
                               Anticipo: {formatCurrency(checkout.anticipoAmount)}
                             </p>
                           )}
@@ -426,17 +426,17 @@ export default function AbandonedCheckoutsPage() {
                             {statusConfig.label}
                           </span>
                           {checkout.emailSentAt && (
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-slate-500 mt-1">
                               Email: {formatDate(checkout.emailSentAt)}
                             </p>
                           )}
                         </td>
                         <td className="px-6 py-4">
-                          <p className="text-sm text-gray-900">
+                          <p className="text-sm text-slate-300">
                             {formatDate(checkout.checkoutStartedAt)}
                           </p>
                           {checkout.abandonedAt && (
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-slate-500">
                               Abandonó: {formatDate(checkout.abandonedAt)}
                             </p>
                           )}
@@ -448,7 +448,7 @@ export default function AbandonedCheckoutsPage() {
                                 <button
                                   onClick={() => handleAction(checkout.id, 'resend_email')}
                                   disabled={actionLoading === checkout.id || !orgConfig?.anticiposEnabled}
-                                  className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors disabled:opacity-50"
+                                  className="p-2 text-purple-400 hover:bg-purple-500/20 rounded-lg transition-colors disabled:opacity-50"
                                   title={!orgConfig?.anticiposEnabled ? 'Anticipos desactivados' : 'Reenviar email'}
                                 >
                                   <Send className="w-4 h-4" />
@@ -456,7 +456,7 @@ export default function AbandonedCheckoutsPage() {
                                 <button
                                   onClick={() => handleAction(checkout.id, 'mark_expired')}
                                   disabled={actionLoading === checkout.id}
-                                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+                                  className="p-2 text-slate-400 hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-50"
                                   title="Marcar como expirado"
                                 >
                                   <XCircle className="w-4 h-4" />
@@ -466,7 +466,7 @@ export default function AbandonedCheckoutsPage() {
                             {checkout.ticketId && (
                               <Link
                                 href={`/dashboard/school-admin/treasury?ticket=${checkout.ticketId}`}
-                                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                className="p-2 text-amber-400 hover:bg-amber-500/20 rounded-lg transition-colors"
                                 title="Ver ticket"
                               >
                                 <Eye className="w-4 h-4" />
