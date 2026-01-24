@@ -81,13 +81,40 @@ export async function GET(
       );
     }
 
-    // Verificar que la visión pertenece a la organización del director
+    // Verificar que la visión pertenece a la organización del usuario o a una del mismo master
     const user = await prisma.usuario.findUnique({
       where: { id: session.user.id },
-      select: { organizationId: true },
+      select: { 
+        organizationId: true,
+        Organization_Usuario_organizationIdToOrganization: {
+          select: { masterOrganizationId: true }
+        }
+      },
     });
 
-    if (!user?.organizationId || vision.organizationId !== user.organizationId) {
+    if (!user?.organizationId) {
+      return NextResponse.json(
+        { success: false, error: 'No tienes acceso a esta visión' },
+        { status: 403 }
+      );
+    }
+
+    // Obtener el masterOrganizationId de la visión
+    const visionOrg = await prisma.organization.findUnique({
+      where: { id: vision.organizationId },
+      select: { masterOrganizationId: true }
+    });
+
+    const userMasterOrgId = user.Organization_Usuario_organizationIdToOrganization?.masterOrganizationId;
+    const visionMasterOrgId = visionOrg?.masterOrganizationId;
+
+    // Permitir acceso si:
+    // 1. La visión pertenece a la misma organización del usuario, O
+    // 2. Ambas organizaciones pertenecen al mismo master
+    const sameOrg = vision.organizationId === user.organizationId;
+    const sameMaster = userMasterOrgId && visionMasterOrgId && userMasterOrgId === visionMasterOrgId;
+
+    if (!sameOrg && !sameMaster) {
       return NextResponse.json(
         { success: false, error: 'No tienes acceso a esta visión' },
         { status: 403 }
