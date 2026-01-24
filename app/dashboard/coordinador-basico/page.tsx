@@ -586,7 +586,7 @@ export default function CoordinadorBasicoDashboard() {
                             <div className="flex items-center gap-1 sm:gap-2">
                               <Calendar size={14} className="text-slate-400 flex-shrink-0" />
                               <span className="text-slate-300">
-                                {startDate ? new Date(startDate).toLocaleDateString('es-ES', { 
+                                {effectiveStartDate ? effectiveStartDate.toLocaleDateString('es-ES', { 
                                   day: 'numeric', 
                                   month: 'short',
                                   year: 'numeric'
