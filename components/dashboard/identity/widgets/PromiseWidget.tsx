@@ -38,7 +38,7 @@ export default function PromiseWidget({ promises, hasCompletedCarta }: PromiseWi
             <FileText className="w-8 h-8 text-slate-600" />
           </div>
           <p className="text-sm text-slate-400 mb-4">
-            Completa tu Carta F.R.U.T.O.S. 
+            Completa tu Carta 
           </p>
           <Link
             href="/dashboard/carta"

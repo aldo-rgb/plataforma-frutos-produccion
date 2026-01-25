@@ -753,7 +753,12 @@ export default function CartaWizardRelacional() {
   // Obtener lista plana de objetivos del Paso 2 para iterar en Paso 3
   const getObjetivosFlattened = (): { areaKey: string; areaName: string; areaEmoji: string; objetivo: Meta; index: number; total: number }[] => {
     const flattened: any[] = [];
-    areasActivas.forEach(area => {
+    // Filtrar áreas de servicio si el usuario no es PL
+    const areasParaObjetivos = userLevel === 'PL' 
+      ? areasActivas 
+      : areasActivas.filter(a => a.key !== 'servicioTrans' && a.key !== 'servicioComun');
+    
+    areasParaObjetivos.forEach(area => {
       const objetivos = identidadesPorArea[area.key] || [];
       objetivos.forEach((objetivo, idx) => {
         flattened.push({
@@ -1146,8 +1151,13 @@ export default function CartaWizardRelacional() {
     const flattened: any[] = [];
     const seenIds = new Set<string>();
     
+    // Filtrar áreas de servicio si el usuario no es PL
+    const areasParaMetas = userLevel === 'PL' 
+      ? areasActivas 
+      : areasActivas.filter(a => a.key !== 'servicioTrans' && a.key !== 'servicioComun');
+    
     // Iterar sobre cada objetivo del Paso 2
-    areasActivas.forEach(area => {
+    areasParaMetas.forEach(area => {
       const objetivos = identidadesPorArea[area.key] || [];
       
       objetivos.forEach((objetivo) => {
@@ -1190,7 +1200,7 @@ export default function CartaWizardRelacional() {
     });
     
     return flattened;
-  }, [areasActivas, identidadesPorArea, metasPorArea]);
+  }, [areasActivas, identidadesPorArea, metasPorArea, userLevel]);
 
   const currentMetaData = metasFlattened[currentMetaIndex];
 
@@ -1827,13 +1837,19 @@ export default function CartaWizardRelacional() {
               </div>
             )}
 
-            {areasActivas.map((area) => {
-              const fieldValue = declaracionesSer[area.key] || '';
-              const isValid = validateYoSoy(fieldValue);
-              const showValidation = fieldValue.trim().length > 0;
+            {(() => {
+              // Filtrar áreas de servicio si el usuario no es PL
+              const areasVisiblesStep1 = userLevel === 'PL' 
+                ? areasActivas 
+                : areasActivas.filter(a => a.key !== 'servicioTrans' && a.key !== 'servicioComun');
               
-              return (
-                <div key={area.key} className="bg-[#1a1b1f] border-2 border-gray-800 rounded-xl p-5 hover:border-purple-500/50 transition-all">
+              return areasVisiblesStep1.map((area) => {
+                const fieldValue = declaracionesSer[area.key] || '';
+                const isValid = validateYoSoy(fieldValue);
+                const showValidation = fieldValue.trim().length > 0;
+                
+                return (
+                  <div key={area.key} className="bg-[#1a1b1f] border-2 border-gray-800 rounded-xl p-5 hover:border-purple-500/50 transition-all">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="text-3xl">{area.emoji}</div>
                     <div className="flex-1">
@@ -1879,15 +1895,15 @@ export default function CartaWizardRelacional() {
                   />
                 </div>
               );
-            })}
+            });
+            })()}
           </div>
         )}
 
         {/* Paso 2: Identidades (Múltiples) */}
         {currentStep === 2 && (() => {
-          // Filtrar áreas de servicio si el usuario no está en nivel Liderato (ADVANCED o PL)
-          const isLiderato = userLevel === 'ADVANCED' || userLevel === 'PL';
-          const areasVisiblesStep2 = isLiderato 
+          // Filtrar áreas de servicio si el usuario no es PL (solo PL = Liderato)
+          const areasVisiblesStep2 = userLevel === 'PL' 
             ? areasActivas 
             : areasActivas.filter(a => a.key !== 'servicioTrans' && a.key !== 'servicioComun');
           
@@ -2362,7 +2378,7 @@ export default function CartaWizardRelacional() {
                         </p>
                         <div className="bg-black/30 rounded-lg p-4 mb-4">
                           <p className="text-gray-300 text-sm">
-                            📊 <strong>Resumen:</strong> {metasFlattened.length} acciones configuradas en {areasActivas.length} áreas de vida
+                            📊 <strong>Resumen:</strong> {metasFlattened.length} acciones configuradas en {(userLevel === 'PL' ? areasActivas : areasActivas.filter(a => a.key !== 'servicioTrans' && a.key !== 'servicioComun')).length} áreas de vida
                           </p>
                         </div>
                         <button
