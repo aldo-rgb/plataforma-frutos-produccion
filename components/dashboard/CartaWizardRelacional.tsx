@@ -72,6 +72,9 @@ export default function CartaWizardRelacional() {
   const [objetivoInvitados, setObjetivoInvitados] = useState<number | null>(null);
   const [visionEndDate, setVisionEndDate] = useState<string | null>(null);
   
+  // NUEVO: Nivel del usuario (BASIC, ADVANCED, PL) - para controlar si puede enviar carta
+  const [userLevel, setUserLevel] = useState<string | null>(null);
+  
   // PASO 1: Declaración del Ser (NUEVO)
   const [declaracionesSer, setDeclaracionesSer] = useState<Record<string, string>>({});
   const [showQuantumModal, setShowQuantumModal] = useState(false);
@@ -416,6 +419,13 @@ export default function CartaWizardRelacional() {
       const perteneceGrupo = areasConfigData.perteneceAGrupo || false;
       transformationTargetValue = areasConfigData.transformationGuestsTarget || null;
       const visionEndDateValue = areasConfigData.visionEndDate || null;
+      const userLevelValue = areasConfigData.userLevel || null;
+      
+      // Guardar nivel del usuario
+      if (userLevelValue) {
+        setUserLevel(userLevelValue);
+        console.log(`📊 Nivel del usuario: ${userLevelValue}`);
+      }
       
       // Guardar objetivo de invitados si existe
       if (transformationTargetValue) {
@@ -434,6 +444,7 @@ export default function CartaWizardRelacional() {
       
       console.log('🔍 Respuesta de /api/areas-config:', {
         perteneceAGrupo: perteneceGrupo,
+        userLevel: userLevelValue,
         totalAreasDevueltas: areasHabilitadas.length,
         areas: areasHabilitadas.map((a: any) => ({ key: a.areaKey, enabled: a.enabled }))
       });
@@ -2548,14 +2559,35 @@ export default function CartaWizardRelacional() {
               <ChevronRight size={20} />
             </button>
           ) : (
-            // En el paso 5, mostrar "Enviar" cuando se tenga avatar
+            // En el paso 5:
+            // - BASIC/ADVANCED: Solo mostrar mensaje de "Carta Completada" (no tienen mentor)
+            // - PL: Mostrar botón "Enviar para Revisión"
             <div className="flex items-center gap-2 sm:gap-3">
-              {/* Lógica de habilitación del botón:
-                  - Debe pasar TODAS las validaciones (canSubmit)
-                  - Si estado es BORRADOR: Habilitado solo si canSubmit()
-                  - Si estado es EN_REVISION: Solo habilitado si hasChanges Y canSubmit()
+              {/* 
+                LÓGICA POR NIVEL:
+                - BASIC/ADVANCED: No pueden enviar a revisión (no tienen mentor asignado)
+                  → Mostrar mensaje de éxito cuando completen el avatar
+                - PL: Pueden enviar a revisión
+                  → Mostrar botón de enviar
               */}
-              {(() => {
+              {(userLevel === 'BASIC' || userLevel === 'ADVANCED') ? (
+                // Usuarios BASIC/ADVANCED - Solo completar carta, sin enviar
+                hasAvatar ? (
+                  <div className="flex items-center gap-3 bg-gradient-to-r from-green-600/20 to-emerald-600/20 border border-green-500/50 rounded-xl px-4 sm:px-6 py-2 sm:py-3">
+                    <CheckCircle2 className="text-green-400 w-5 h-5 sm:w-6 sm:h-6" />
+                    <div>
+                      <p className="text-green-300 font-bold text-sm sm:text-base">¡Carta de Frutos Completada!</p>
+                      <p className="text-green-200 text-xs sm:text-sm">Tu avatar ha sido generado. Tu carta está lista.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-[10px] sm:text-xs text-yellow-400 max-w-xs">
+                    ⚠️ Genera tu Avatar Cuántico para completar la carta
+                  </div>
+                )
+              ) : (
+                // Usuarios PL - Pueden enviar a revisión
+                (() => {
                 const allStepsValid = canSubmit();
                 const shouldEnable = allStepsValid && (estado === 'BORRADOR' || hasChanges);
                 const buttonOpacity = shouldEnable ? '' : 'opacity-50 cursor-not-allowed';
@@ -2575,7 +2607,8 @@ export default function CartaWizardRelacional() {
                   metasFlattened: metasFlattened.length,
                   estado,
                   hasChanges,
-                  shouldEnable
+                  shouldEnable,
+                  userLevel
                 });
                 
                 return (
@@ -2618,10 +2651,11 @@ export default function CartaWizardRelacional() {
                     )}
                   </>
                 );
-              })()}
+              })()
+              )}
               
               {/* Mostrar estado de progreso mientras se configuran las metas */}
-              {!validateStep3() && (
+              {userLevel === 'PL' && !validateStep3() && (
                 <div className="px-6 py-3 bg-gray-800/50 border border-gray-700 text-gray-400 rounded-xl font-bold flex items-center gap-2">
                   <AlertCircle size={20} />
                   Configura todas las metas ({metasConfiguradas.length}/{metasFlattened.length})

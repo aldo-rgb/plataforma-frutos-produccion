@@ -88,6 +88,9 @@ export async function GET(req: NextRequest) {
     let perteneceAGrupo = !!visionParticipante;
 
     // Si no es VisionParticipante, verificar si tiene vision_enrollments (inscrito al programa)
+    // También obtener el nivel del usuario para filtrar áreas
+    let userLevel: string | null = null;
+    
     if (!perteneceAGrupo) {
       const enrollment = await prisma.vision_enrollments.findFirst({
         where: {
@@ -118,7 +121,28 @@ export async function GET(req: NextRequest) {
         console.log('🔍 Usuario tiene enrollment en Vision:', enrollment.Vision.nombre);
         perteneceAGrupo = true;
         visionConfig = enrollment.Vision;
+        userLevel = enrollment.level;
+        console.log('📊 Nivel del usuario desde enrollment:', userLevel);
       }
+    } else {
+      // Si es VisionParticipante, buscar su enrollment para obtener el nivel
+      const enrollment = await prisma.vision_enrollments.findFirst({
+        where: { userId },
+        orderBy: { enrolledAt: 'desc' },
+        select: { level: true }
+      });
+      userLevel = enrollment?.level || null;
+      console.log('📊 Nivel del usuario (VisionParticipante):', userLevel);
+    }
+    
+    // Si no encontramos nivel en enrollment, usar currentVisionLevel del usuario
+    if (!userLevel) {
+      const userWithLevel = await prisma.usuario.findUnique({
+        where: { id: userId },
+        select: { currentVisionLevel: true }
+      });
+      userLevel = userWithLevel?.currentVisionLevel || null;
+      console.log('📊 Nivel del usuario desde currentVisionLevel:', userLevel);
     }
 
     // Si pertenece a una Vision, SIEMPRE usar la configuración de la Vision
@@ -153,13 +177,25 @@ export async function GET(req: NextRequest) {
         console.log('  ✅ OCIO enabled');
         areasFromVision.push({ areaKey: 'ocio', enabled: true });
       }
-      if (visionConfig.forceTransformationArea) {
-        console.log('  ✅ SERVICIO TRANS enabled');
-        areasFromVision.push({ areaKey: 'servicioTrans', enabled: true });
-      }
-      if (visionConfig.forceCommunityServiceArea) {
-        console.log('  ✅ SERVICIO COMUN enabled');
-        areasFromVision.push({ areaKey: 'servicioComun', enabled: true });
+      
+      // =====================================================
+      // FILTRO POR NIVEL: Áreas de servicio SOLO para nivel PL
+      // BASIC y ADVANCED NO ven servicioTrans ni servicioComun
+      // =====================================================
+      const isPLLevel = userLevel === 'PL';
+      console.log(`📊 Nivel actual: ${userLevel} | Es PL: ${isPLLevel}`);
+      
+      if (isPLLevel) {
+        if (visionConfig.forceTransformationArea) {
+          console.log('  ✅ SERVICIO TRANS enabled (nivel PL)');
+          areasFromVision.push({ areaKey: 'servicioTrans', enabled: true });
+        }
+        if (visionConfig.forceCommunityServiceArea) {
+          console.log('  ✅ SERVICIO COMUN enabled (nivel PL)');
+          areasFromVision.push({ areaKey: 'servicioComun', enabled: true });
+        }
+      } else {
+        console.log('  ⛔ SERVICIO TRANS/COMUN ocultos (nivel BASIC/ADVANCED)');
       }
 
       console.log(`📋 Total áreas habilitadas: ${areasFromVision.length}`);
@@ -171,7 +207,8 @@ export async function GET(req: NextRequest) {
         isDefault: false,
         visionName: visionConfig.nombre,
         transformationGuestsTarget: visionConfig.transformationGuestsTarget,
-        visionEndDate: visionConfig.endDate
+        visionEndDate: visionConfig.endDate,
+        userLevel // Incluir nivel del usuario en la respuesta
       });
     }
 
