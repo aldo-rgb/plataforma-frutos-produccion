@@ -38,10 +38,13 @@ export async function POST(
     const mentor = await prisma.usuario.findFirst({
       where: {
         id: mentorId,
-        rol: 'MENTOR',
         isActive: true
       },
-      include: {
+      select: {
+        id: true,
+        nombre: true,
+        rol: true,
+        organizationId: true,
         CallAvailability: {
           where: {
             type: 'DISCIPLINE',
@@ -63,6 +66,69 @@ export async function POST(
         { error: 'El mentor no tiene horarios de llamadas de disciplina configurados' },
         { status: 400 }
       );
+    }
+
+    // 🚫 VALIDAR LÍMITE DE PAQUETES PARA MENTORES PROFESIONALES
+    if (mentor.rol === 'MENTOR') {
+      // Obtener paquetes contratados para este mentor en esta visión
+      const paquetesContratados = await prisma.mentorPackageOrder.findMany({
+        where: {
+          visionId,
+          mentorId,
+          status: 'COMPLETED'
+        },
+        select: { cantidad: true }
+      });
+
+      const totalPaquetes = paquetesContratados.reduce((sum, p) => sum + p.cantidad, 0);
+
+      // Contar usuarios ya asignados a este mentor en esta visión
+      const usuariosAsignados = await prisma.vision_enrollments.count({
+        where: {
+          visionId,
+          level: 'PL',
+          enrollmentStatus: { in: ['ENROLLED', 'ACTIVE', 'COMPLETED'] },
+          Usuario_vision_enrollments_userIdToUsuario: {
+            assignedMentorId: mentorId
+          }
+        }
+      });
+
+      // Si el usuario actual ya tiene este mentor asignado, no contar (es un cambio)
+      const usuarioActual = await prisma.usuario.findUnique({
+        where: { id: userId },
+        select: { assignedMentorId: true }
+      });
+
+      const esReasignacion = usuarioActual?.assignedMentorId === mentorId;
+
+      if (!esReasignacion && totalPaquetes > 0 && usuariosAsignados >= totalPaquetes) {
+        return NextResponse.json(
+          { 
+            error: `El mentor "${mentor.nombre}" ya tiene ${usuariosAsignados} usuarios asignados y solo se contrataron ${totalPaquetes} paquete(s). Contrata más paquetes para asignar más usuarios.`,
+            details: {
+              mentorNombre: mentor.nombre,
+              paquetesContratados: totalPaquetes,
+              usuariosAsignados
+            }
+          },
+          { status: 400 }
+        );
+      }
+
+      // Si no hay paquetes contratados, no permitir asignar
+      if (totalPaquetes === 0) {
+        return NextResponse.json(
+          { 
+            error: `No hay paquetes contratados para el mentor "${mentor.nombre}" en esta visión. Debes contratar paquetes primero.`,
+            details: {
+              mentorNombre: mentor.nombre,
+              paquetesContratados: 0
+            }
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Verificar que el usuario existe y tiene licencia

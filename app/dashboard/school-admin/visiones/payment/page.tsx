@@ -289,7 +289,7 @@ export default function VisionPaymentPage() {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Stripe */}
+            {/* Stripe - Activo */}
             <button
               onClick={() => setPaymentMethod('stripe')}
               className={`p-6 rounded-xl border-2 transition-all text-left ${
@@ -319,61 +319,39 @@ export default function VisionPaymentPage() {
               </p>
             </button>
 
-            {/* PayPal */}
-            <button
-              onClick={() => setPaymentMethod('paypal')}
-              className={`p-6 rounded-xl border-2 transition-all text-left ${
-                paymentMethod === 'paypal'
-                  ? 'border-blue-500 bg-blue-500/10'
-                  : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
-              }`}
+            {/* PayPal - Deshabilitado */}
+            <div
+              className="p-6 rounded-xl border-2 border-slate-700/50 bg-slate-800/30 text-left opacity-50 cursor-not-allowed relative"
             >
-              <div className="flex items-center gap-3 mb-2">
-                <div
-                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                    paymentMethod === 'paypal'
-                      ? 'border-blue-500 bg-blue-500'
-                      : 'border-slate-600'
-                  }`}
-                >
-                  {paymentMethod === 'paypal' && (
-                    <CheckCircle size={16} className="text-white" />
-                  )}
-                </div>
-                <h3 className="text-white font-bold">PayPal</h3>
+              <div className="absolute top-2 right-2 bg-slate-600 text-xs text-slate-300 px-2 py-0.5 rounded">
+                Próximamente
               </div>
-              <p className="text-slate-400 text-sm">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-6 h-6 rounded-full border-2 border-slate-600 flex items-center justify-center">
+                </div>
+                <h3 className="text-slate-400 font-bold">PayPal</h3>
+              </div>
+              <p className="text-slate-500 text-sm">
                 Paga de forma segura con PayPal
               </p>
-            </button>
+            </div>
 
-            {/* Mercado Pago */}
-            <button
-              onClick={() => setPaymentMethod('mercadopago')}
-              className={`p-6 rounded-xl border-2 transition-all text-left ${
-                paymentMethod === 'mercadopago'
-                  ? 'border-cyan-500 bg-cyan-500/10'
-                  : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
-              }`}
+            {/* Mercado Pago - Deshabilitado */}
+            <div
+              className="p-6 rounded-xl border-2 border-slate-700/50 bg-slate-800/30 text-left opacity-50 cursor-not-allowed relative"
             >
-              <div className="flex items-center gap-3 mb-2">
-                <div
-                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                    paymentMethod === 'mercadopago'
-                      ? 'border-cyan-500 bg-cyan-500'
-                      : 'border-slate-600'
-                  }`}
-                >
-                  {paymentMethod === 'mercadopago' && (
-                    <CheckCircle size={16} className="text-white" />
-                  )}
-                </div>
-                <h3 className="text-white font-bold">Mercado Pago</h3>
+              <div className="absolute top-2 right-2 bg-slate-600 text-xs text-slate-300 px-2 py-0.5 rounded">
+                Próximamente
               </div>
-              <p className="text-slate-400 text-sm">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-6 h-6 rounded-full border-2 border-slate-600 flex items-center justify-center">
+                </div>
+                <h3 className="text-slate-400 font-bold">Mercado Pago</h3>
+              </div>
+              <p className="text-slate-500 text-sm">
                 Paga con tarjeta, débito o efectivo en México
               </p>
-            </button>
+            </div>
           </div>
         </div>
 

@@ -260,6 +260,9 @@ export default function VisionDetailPage() {
   const [mentorToReplace, setMentorToReplace] = useState<{id: number, nombre: string} | null>(null);
   const [selectedReplacementMentor, setSelectedReplacementMentor] = useState<number | null>(null);
   const [replacingMentor, setReplacingMentor] = useState(false);
+  const [showPlCaptainModal, setShowPlCaptainModal] = useState(false);
+  const [plCaptain, setPlCaptain] = useState<{id: number, nombre: string, email: string, imagen: string | null} | null>(null);
+  const [assigningPlCaptain, setAssigningPlCaptain] = useState(false);
   const { showToast, toasts } = useToast();
 
   useEffect(() => {
@@ -316,11 +319,28 @@ export default function VisionDetailPage() {
           p.Usuario_VisionParticipante_participanteIdToUsuario?.CartaFrutos?.some((c: any) => c.estado !== 'BORRADOR')
         );
         setAreasConfigLocked(hasActiveParticipants || false);
+        
+        // Cargar capitán PL
+        fetchPlCaptain();
       }
     } catch (error) {
       console.error('Error fetching vision:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPlCaptain = async () => {
+    try {
+      const res = await fetch(`/api/school-admin/visiones/${visionId}/pl-captain`);
+      const data = await res.json();
+      if (data.success && data.captain) {
+        setPlCaptain(data.captain);
+      } else {
+        setPlCaptain(null);
+      }
+    } catch (error) {
+      console.error('Error fetching PL captain:', error);
     }
   };
 
@@ -818,6 +838,75 @@ export default function VisionDetailPage() {
       });
     } finally {
       setAssigningGameChanger(false);
+    }
+  };
+
+  // Asignar Capitán PL
+  const handleAssignPlCaptain = async (userId: number) => {
+    try {
+      setAssigningPlCaptain(true);
+      const res = await fetch(`/api/school-admin/visiones/${visionId}/pl-captain`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setShowPlCaptainModal(false);
+        setPlCaptain(data.captain);
+        showToast({
+          message: data.message || 'Capitán PL asignado exitosamente',
+          type: 'success'
+        });
+      } else {
+        showToast({
+          message: data.error || 'Error al asignar Capitán PL',
+          type: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Error assigning PL captain:', error);
+      showToast({
+        message: 'Error al asignar Capitán PL',
+        type: 'error'
+      });
+    } finally {
+      setAssigningPlCaptain(false);
+    }
+  };
+
+  // Remover Capitán PL
+  const handleRemovePlCaptain = async () => {
+    try {
+      setAssigningPlCaptain(true);
+      const res = await fetch(`/api/school-admin/visiones/${visionId}/pl-captain`, {
+        method: 'DELETE',
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setPlCaptain(null);
+        showToast({
+          message: 'Capitán PL removido exitosamente',
+          type: 'success'
+        });
+      } else {
+        showToast({
+          message: data.error || 'Error al remover Capitán PL',
+          type: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Error removing PL captain:', error);
+      showToast({
+        message: 'Error al remover Capitán PL',
+        type: 'error'
+      });
+    } finally {
+      setAssigningPlCaptain(false);
     }
   };
 
@@ -1510,22 +1599,42 @@ export default function VisionDetailPage() {
             <button
               onClick={() => setShowRandomAssignModal(true)}
               disabled={randomAssigning || (participantes.length === 0 && gameChangers.length === 0)}
-              className="inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-indigo-500/30 sm:col-span-2 lg:col-span-1"
+              className="inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-indigo-500/30"
             >
               <Users size={16} />
               <span className="whitespace-nowrap">{randomAssigning ? 'Asignando...' : 'Asignación Aleatoria'}</span>
+            </button>
+            {/* Botón Asignar/Cambiar Capitán PL */}
+            <button
+              onClick={() => setShowPlCaptainModal(true)}
+              disabled={participantes.length === 0}
+              className={`inline-flex items-center justify-center gap-2 px-3 py-2.5 ${
+                plCaptain 
+                  ? 'bg-amber-600 hover:bg-amber-700' 
+                  : 'bg-yellow-600 hover:bg-yellow-700'
+              } disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg ${
+                plCaptain ? 'hover:shadow-amber-500/30' : 'hover:shadow-yellow-500/30'
+              }`}
+            >
+              <span className="text-lg">👑</span>
+              <span className="whitespace-nowrap">
+                {plCaptain ? 'Cambiar Capitán' : 'Asignar Capitán'}
+              </span>
             </button>
           </div>
           
           {/* Fila 2: Agregar Participantes */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            <button
-              onClick={() => setShowQRModal(true)}
-              className="inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-pink-500/30"
-            >
-              <QrCode size={16} />
-              <span className="whitespace-nowrap">Generar QR</span>
-            </button>
+            {/* Generar QR - Solo visible para SCHOOL_ADMIN */}
+            {session?.user?.rol === 'SCHOOL_ADMIN' && (
+              <button
+                onClick={() => setShowQRModal(true)}
+                className="inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-pink-500/30"
+              >
+                <QrCode size={16} />
+                <span className="whitespace-nowrap">Generar QR</span>
+              </button>
+            )}
             <button
               onClick={() => setShowAddTeamModal(true)}
               className="inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-semibold transition-all hover:shadow-lg hover:shadow-cyan-500/30"
@@ -1809,7 +1918,7 @@ export default function VisionDetailPage() {
                                   
                                   <div className="flex items-center gap-1 text-xs text-emerald-400">
                                     <span>✅</span>
-                                    <span>Sin costo adicional</span>
+                                    <span>Mentor</span>
                                   </div>
                                 </div>
                               </div>
@@ -2083,13 +2192,21 @@ export default function VisionDetailPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          p.Usuario_VisionParticipante_participanteIdToUsuario.tier === 'PREMIUM'
-                            ? 'bg-purple-900/20 text-purple-400 border border-purple-600'
-                            : 'bg-cyan-900/20 text-cyan-400 border border-cyan-600'
-                        }`}>
-                          {p.Usuario_VisionParticipante_participanteIdToUsuario.tier || 'FREE'}
-                        </span>
+                        {(() => {
+                          const hasLicense = !!p.Usuario_VisionParticipante_participanteIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode;
+                          const tier = hasLicense ? 'STANDARD' : (p.Usuario_VisionParticipante_participanteIdToUsuario.tier === 'PREMIUM' ? 'PREMIUM' : 'FREE');
+                          return (
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              tier === 'PREMIUM'
+                                ? 'bg-purple-900/20 text-purple-400 border border-purple-600'
+                                : tier === 'STANDARD'
+                                ? 'bg-green-900/20 text-green-400 border border-green-600'
+                                : 'bg-cyan-900/20 text-cyan-400 border border-cyan-600'
+                            }`}>
+                              {tier}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4 text-center">
                         {p.Usuario_VisionParticipante_participanteIdToUsuario.Usuario_Usuario_assignedMentorIdToUsuario ? (
@@ -2318,13 +2435,21 @@ export default function VisionDetailPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.tier === 'PREMIUM'
-                            ? 'bg-purple-900/20 text-purple-400 border border-purple-600'
-                            : 'bg-cyan-900/20 text-cyan-400 border border-cyan-600'
-                        }`}>
-                          {gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.tier || 'FREE'}
-                        </span>
+                        {(() => {
+                          const hasLicense = !!gc.Usuario_VisionGameChanger_gameChangerIdToUsuario?.LicenseAssignment_LicenseAssignment_userIdToUsuario?.[0]?.licenseCode;
+                          const tier = hasLicense ? 'STANDARD' : (gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.tier === 'PREMIUM' ? 'PREMIUM' : 'FREE');
+                          return (
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              tier === 'PREMIUM'
+                                ? 'bg-purple-900/20 text-purple-400 border border-purple-600'
+                                : tier === 'STANDARD'
+                                ? 'bg-green-900/20 text-green-400 border border-green-600'
+                                : 'bg-cyan-900/20 text-cyan-400 border border-cyan-600'
+                            }`}>
+                              {tier}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4 text-center">
                         {gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.Usuario_Usuario_assignedMentorIdToUsuario ? (
@@ -3818,6 +3943,127 @@ export default function VisionDetailPage() {
             <div className="mt-6 pt-6 border-t border-slate-700 flex justify-end">
               <button
                 onClick={() => setShowMentoresPrivadosModal(false)}
+                className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Asignar Capitán PL */}
+      {showPlCaptainModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-amber-500/30 rounded-xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="text-3xl">👑</span>
+              <div>
+                <h2 className="text-2xl font-bold text-white">
+                  {plCaptain ? 'Cambiar Capitán PL' : 'Asignar Capitán PL'}
+                </h2>
+                <p className="text-slate-400 text-sm">
+                  Selecciona un participante para designarlo como capitán de la visión
+                </p>
+              </div>
+            </div>
+
+            {/* Capitán Actual */}
+            {plCaptain && (
+              <div className="mb-6 p-4 bg-amber-900/20 border border-amber-500/30 rounded-xl">
+                <p className="text-xs text-amber-400 font-semibold mb-2 uppercase">Capitán Actual</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {plCaptain.imagen ? (
+                      <img
+                        src={plCaptain.imagen}
+                        alt={plCaptain.nombre}
+                        className="w-12 h-12 rounded-full object-cover ring-2 ring-amber-400"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-bold ring-2 ring-amber-400">
+                        {plCaptain.nombre.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-semibold text-white flex items-center gap-2">
+                        {plCaptain.nombre}
+                        <span className="text-amber-400">👑</span>
+                      </p>
+                      <p className="text-sm text-slate-400">{plCaptain.email}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleRemovePlCaptain}
+                    disabled={assigningPlCaptain}
+                    className="px-3 py-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2"
+                  >
+                    <XCircle size={16} />
+                    Remover
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Lista de Participantes */}
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              <p className="text-xs text-slate-400 font-semibold uppercase mb-3">Seleccionar Nuevo Capitán</p>
+              {participantes.length === 0 ? (
+                <div className="py-8 text-center">
+                  <Users className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+                  <p className="text-slate-400">No hay participantes en esta visión</p>
+                </div>
+              ) : (
+                participantes.map((p) => {
+                  const usuario = p.Usuario_VisionParticipante_participanteIdToUsuario;
+                  const isCurrentCaptain = plCaptain?.id === usuario.id;
+                  
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => !isCurrentCaptain && handleAssignPlCaptain(usuario.id)}
+                      disabled={isCurrentCaptain || assigningPlCaptain}
+                      className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${
+                        isCurrentCaptain
+                          ? 'bg-amber-900/20 border-amber-500/50 cursor-default'
+                          : 'bg-slate-800/50 border-slate-700 hover:border-amber-500/50 hover:bg-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
+                          isCurrentCaptain
+                            ? 'bg-gradient-to-br from-amber-400 to-amber-600'
+                            : 'bg-gradient-to-br from-purple-500 to-pink-500'
+                        }`}>
+                          {usuario.nombre.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="text-left">
+                          <p className="font-semibold text-white flex items-center gap-2">
+                            {usuario.nombre}
+                            {isCurrentCaptain && <span className="text-amber-400">👑</span>}
+                          </p>
+                          <p className="text-xs text-slate-400">{usuario.email}</p>
+                        </div>
+                      </div>
+                      {!isCurrentCaptain && (
+                        <span className="px-3 py-1.5 bg-amber-500/20 text-amber-400 rounded-lg text-sm font-medium">
+                          Seleccionar
+                        </span>
+                      )}
+                      {isCurrentCaptain && (
+                        <span className="px-3 py-1.5 bg-amber-500/30 text-amber-300 rounded-lg text-sm font-medium">
+                          Capitán Actual
+                        </span>
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-slate-700 flex justify-end">
+              <button
+                onClick={() => setShowPlCaptainModal(false)}
                 className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-colors"
               >
                 Cerrar

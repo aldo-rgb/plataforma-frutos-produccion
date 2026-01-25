@@ -20,7 +20,6 @@ export async function GET() {
     }
 
     // Obtener enrollment de visión (incluyendo attendanceStatus para detectar DROP)
-    // Ordenar por nivel descendente para obtener el nivel más alto (PL > ADVANCED > BASIC)
     const visionEnrollments = await prisma.vision_enrollments.findMany({
       where: { 
         userId: usuario.id,
@@ -42,12 +41,28 @@ export async function GET() {
       }
     });
 
-    // Ordenar para obtener el nivel más alto: PL > ADVANCED > BASIC
+    // NUEVO: Determinar el nivel REAL basado en asistencia (attendanceStatus = 'ATTENDED')
+    // El usuario solo puede estar en un nivel si ha ASISTIDO a ese nivel
+    // Prioridad: PL > ADVANCED > BASIC (pero solo si tienen asistencia)
     const levelPriority: Record<string, number> = { 'PL': 3, 'ADVANCED': 2, 'BASIC': 1 };
-    const sortedEnrollments = visionEnrollments.sort((a, b) => 
+    
+    // Primero, buscar el enrollment con attendanceStatus = 'ATTENDED' de nivel más alto
+    const attendedEnrollments = visionEnrollments.filter(e => e.attendanceStatus === 'ATTENDED');
+    const sortedAttendedEnrollments = attendedEnrollments.sort((a, b) => 
       (levelPriority[b.level] || 0) - (levelPriority[a.level] || 0)
     );
-    const visionEnrollment = sortedEnrollments[0] || null;
+    
+    // El enrollment principal para mostrar el nivel es el de mayor nivel CON asistencia
+    // Si no tiene asistencia en ninguno, usar el de mayor nivel inscrito (para mostrar progreso)
+    let visionEnrollment = sortedAttendedEnrollments[0] || null;
+    
+    // Si no tiene ninguno con asistencia, usar el enrollment más alto para referencia de visión
+    if (!visionEnrollment && visionEnrollments.length > 0) {
+      const sortedAll = visionEnrollments.sort((a, b) => 
+        (levelPriority[b.level] || 0) - (levelPriority[a.level] || 0)
+      );
+      visionEnrollment = sortedAll[0];
+    }
 
     // Verificar si el usuario está marcado como DROP
     const isDropped = visionEnrollment?.attendanceStatus === 'DROP';
@@ -83,12 +98,19 @@ export async function GET() {
       }
     });
 
-    // Determinar el nivel actual del usuario
+    // Determinar el nivel actual del usuario basado en ASISTENCIA
+    // El nivel real es el más alto donde el usuario tiene attendanceStatus = 'ATTENDED'
     let currentLevel: 'BASIC' | 'ADVANCED' | 'PL' | 'LOBO_SOLITARIO' = 'LOBO_SOLITARIO';
     
-    // Obtener el nivel del enrollment si existe
-    if (visionEnrollment?.level) {
-      currentLevel = visionEnrollment.level as 'BASIC' | 'ADVANCED' | 'PL';
+    // El nivel se determina por el enrollment con ASISTENCIA de mayor nivel
+    const highestAttendedEnrollment = sortedAttendedEnrollments[0];
+    
+    if (highestAttendedEnrollment?.level) {
+      // Tiene asistencia en algún nivel - ese es su nivel actual
+      currentLevel = highestAttendedEnrollment.level as 'BASIC' | 'ADVANCED' | 'PL';
+    } else if (visionEnrollment?.level) {
+      // No tiene asistencia pero está inscrito - mostrar BASIC como nivel inicial
+      currentLevel = 'BASIC';
     } else if (usuario.currentVisionLevel) {
       currentLevel = usuario.currentVisionLevel as 'BASIC' | 'ADVANCED' | 'PL';
     } else if (visionParticipante) {

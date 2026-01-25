@@ -58,7 +58,7 @@ export async function POST(
         visionId,
       },
       include: {
-        Mentor: {
+        Usuario_VisionMentor_mentorIdToUsuario: {
           include: {
             CallAvailability: {
               where: {
@@ -72,7 +72,7 @@ export async function POST(
     });
 
     const mentoresConHorarios = mentoresDisponibles.filter(
-      (vm) => vm.Mentor.CallAvailability && vm.Mentor.CallAvailability.length > 0
+      (vm) => vm.Usuario_VisionMentor_mentorIdToUsuario.CallAvailability && vm.Usuario_VisionMentor_mentorIdToUsuario.CallAvailability.length > 0
     );
 
     if (mentoresConHorarios.length === 0) {
@@ -85,6 +85,67 @@ export async function POST(
       );
     }
 
+    // Obtener paquetes contratados para cada mentor en esta visión
+    const mentorIds = mentoresConHorarios.map(m => m.mentorId);
+    const paquetesContratados = await prisma.mentorPackageOrder.findMany({
+      where: {
+        visionId,
+        mentorId: { in: mentorIds },
+        status: 'COMPLETED'
+      },
+      select: {
+        mentorId: true,
+        cantidad: true
+      }
+    });
+
+    // Crear mapa de límites por mentor (cantidad de paquetes = slots disponibles)
+    const limitesPorMentor = new Map<number, number>();
+    paquetesContratados.forEach(p => {
+      const actual = limitesPorMentor.get(p.mentorId) || 0;
+      limitesPorMentor.set(p.mentorId, actual + p.cantidad);
+    });
+
+    // Contar usuarios ya asignados a cada mentor en esta visión
+    const asignacionesActuales = await prisma.vision_enrollments.findMany({
+      where: {
+        visionId,
+        level: 'PL',
+        enrollmentStatus: { in: ['ENROLLED', 'ACTIVE', 'COMPLETED'] }
+      },
+      include: {
+        Usuario_vision_enrollments_userIdToUsuario: {
+          select: { id: true, assignedMentorId: true }
+        }
+      }
+    });
+
+    const conteoActualPorMentor = new Map<number, number>();
+    asignacionesActuales.forEach(e => {
+      const mentorId = e.Usuario_vision_enrollments_userIdToUsuario.assignedMentorId;
+      if (mentorId) {
+        conteoActualPorMentor.set(mentorId, (conteoActualPorMentor.get(mentorId) || 0) + 1);
+      }
+    });
+
+    // Crear estructura de mentores con disponibilidad
+    const mentoresDisponiblesConLimite = mentoresConHorarios.map(m => {
+      const limite = limitesPorMentor.get(m.mentorId);
+      const asignados = conteoActualPorMentor.get(m.mentorId) || 0;
+      const esLider = m.Usuario_VisionMentor_mentorIdToUsuario.rol === 'LIDER';
+      
+      return {
+        mentorId: m.mentorId,
+        nombre: m.Usuario_VisionMentor_mentorIdToUsuario.nombre || 'Mentor',
+        esLider,
+        limite: esLider ? Infinity : (limite ?? 0), // Líderes sin límite, mentores profesionales según paquetes
+        asignados,
+        disponibles: esLider ? Infinity : Math.max(0, (limite ?? 0) - asignados)
+      };
+    });
+
+    console.log('[random-assign] Disponibilidad de mentores:', mentoresDisponiblesConLimite);
+
     // Obtener Game Changers de la visión
     const gameChangersDisponibles = await prisma.visionGameChanger.findMany({
       where: { visionId },
@@ -93,11 +154,15 @@ export async function POST(
 
     const gameChangerIds = gameChangersDisponibles.map((gc) => gc.gameChangerId);
 
-    // Obtener participantes sin mentor o sin game changer
-    const participantes = await prisma.visionParticipante.findMany({
-      where: { visionId },
+    // Obtener participantes PL sin mentor asignado
+    const enrollments = await prisma.vision_enrollments.findMany({
+      where: { 
+        visionId,
+        level: 'PL',
+        enrollmentStatus: { in: ['ENROLLED', 'ACTIVE', 'COMPLETED'] }
+      },
       include: {
-        Participante: {
+        Usuario_vision_enrollments_userIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -107,14 +172,34 @@ export async function POST(
       },
     });
 
+    // También obtener VisionParticipante para asignar gameChangers
+    const visionParticipantes = await prisma.visionParticipante.findMany({
+      where: { visionId },
+      select: { participanteId: true, gameChangerId: true },
+    });
+    
+    // Crear un map para acceso rápido
+    const vpMap = new Map(visionParticipantes.map(vp => [vp.participanteId, vp]));
+
     let mentorAssignments = 0;
     let gameChangerAssignments = 0;
     const errors: string[] = [];
+    const skippedByLimit: string[] = [];
 
-    // Función para obtener mentor aleatorio
-    const getRandomMentor = () => {
-      const randomIndex = Math.floor(Math.random() * mentoresConHorarios.length);
-      return mentoresConHorarios[randomIndex].Mentor.id;
+    console.log(`[random-assign] Vision ${visionId}: ${enrollments.length} PL enrollments, ${mentoresConHorarios.length} mentores, ${gameChangerIds.length} GCs`);
+
+    // Función para obtener mentor con disponibilidad (round-robin respetando límites)
+    const getNextAvailableMentor = () => {
+      // Primero intentar con mentores que tengan disponibilidad
+      const disponibles = mentoresDisponiblesConLimite.filter(m => m.disponibles > 0);
+      
+      if (disponibles.length === 0) {
+        return null; // No hay mentores disponibles
+      }
+      
+      // Elegir el que tenga menos asignados (balanceo)
+      disponibles.sort((a, b) => a.asignados - b.asignados);
+      return disponibles[0];
     };
 
     // Función para obtener game changer aleatorio
@@ -125,31 +210,41 @@ export async function POST(
     };
 
     // Asignar mentores y game changers aleatoriamente
-    for (const participante of participantes) {
+    for (const enrollment of enrollments) {
+      const userData = enrollment.Usuario_vision_enrollments_userIdToUsuario;
+      const vpData = vpMap.get(userData.id); // Buscar en VisionParticipante si existe
+      
       try {
-        const updates: any = {};
-
         // Asignar mentor si no tiene
-        if (!participante.Participante.assignedMentorId) {
-          const mentorId = getRandomMentor();
+        if (!userData.assignedMentorId) {
+          const mentorDisponible = getNextAvailableMentor();
           
-          await prisma.usuario.update({
-            where: { id: participante.Participante.id },
-            data: { assignedMentorId: mentorId },
-          });
+          if (mentorDisponible) {
+            await prisma.usuario.update({
+              where: { id: userData.id },
+              data: { assignedMentorId: mentorDisponible.mentorId },
+            });
 
-          mentorAssignments++;
+            // Actualizar contadores
+            mentorDisponible.asignados++;
+            mentorDisponible.disponibles = mentorDisponible.esLider ? Infinity : Math.max(0, mentorDisponible.limite - mentorDisponible.asignados);
+            
+            mentorAssignments++;
+          } else {
+            skippedByLimit.push(`${userData.nombre}: No hay mentores con paquetes disponibles`);
+          }
         }
 
         // Asignar game changer si no tiene y hay disponibles
-        if (!participante.gameChangerId && gameChangerIds.length > 0) {
+        // Si existe en VisionParticipante, actualizar ahí
+        if (vpData && !vpData.gameChangerId && gameChangerIds.length > 0) {
           const gameChangerId = getRandomGameChanger();
           
           if (gameChangerId) {
             await prisma.visionParticipante.updateMany({
               where: {
                 visionId,
-                participanteId: participante.Participante.id,
+                participanteId: userData.id,
               },
               data: {
                 gameChangerId,
@@ -160,20 +255,26 @@ export async function POST(
           }
         }
       } catch (error: any) {
-        console.error(`Error asignando a ${participante.Participante.nombre}:`, error);
-        errors.push(`${participante.Participante.nombre}: ${error.message}`);
+        console.error(`Error asignando a ${userData.nombre}:`, error);
+        errors.push(`${userData.nombre}: ${error.message}`);
       }
     }
 
     return NextResponse.json({
       success: true,
-      message: `Asignación completada: ${mentorAssignments} mentores y ${gameChangerAssignments} game changers asignados`,
+      message: `Asignación completada: ${mentorAssignments} mentores y ${gameChangerAssignments} game changers asignados${skippedByLimit.length > 0 ? `. ${skippedByLimit.length} usuario(s) no asignados por límite de paquetes.` : ''}`,
       details: {
         mentorAssignments,
         gameChangerAssignments,
-        totalParticipantes: participantes.length,
+        totalParticipantes: enrollments.length,
         mentoresDisponibles: mentoresConHorarios.length,
         gameChangersDisponibles: gameChangerIds.length,
+        mentoresLimites: mentoresDisponiblesConLimite.map(m => ({
+          nombre: m.nombre,
+          limite: m.limite === Infinity ? 'Sin límite (Líder)' : m.limite,
+          asignados: m.asignados
+        })),
+        skippedByLimit: skippedByLimit.length > 0 ? skippedByLimit : undefined,
         errors: errors.length > 0 ? errors : undefined,
       },
     });

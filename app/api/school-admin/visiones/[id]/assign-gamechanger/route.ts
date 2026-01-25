@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+const ALLOWED_ROLES = ['SCHOOL_ADMIN', 'ADMINISTRADOR', 'COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
+
 // POST - Asignar Game Changer a Participante
 export async function POST(
   request: NextRequest,
@@ -11,7 +13,7 @@ export async function POST(
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || session.user.rol !== 'SCHOOL_ADMIN') {
+    if (!session?.user || !ALLOWED_ROLES.includes(session.user.rol as string)) {
       return NextResponse.json(
         { success: false, error: 'No autorizado' },
         { status: 401 }
