@@ -1884,7 +1884,14 @@ export default function CartaWizardRelacional() {
         )}
 
         {/* Paso 2: Identidades (Múltiples) */}
-        {currentStep === 2 && (
+        {currentStep === 2 && (() => {
+          // Filtrar áreas de servicio si el usuario no está en nivel Liderato (ADVANCED o PL)
+          const isLiderato = userLevel === 'ADVANCED' || userLevel === 'PL';
+          const areasVisiblesStep2 = isLiderato 
+            ? areasActivas 
+            : areasActivas.filter(a => a.key !== 'servicioTrans' && a.key !== 'servicioComun');
+          
+          return (
           <div className="space-y-6">
             {/* Sugerencia Inteligente del Coach */}
             {showSmartSuggestion && (
@@ -1941,7 +1948,7 @@ export default function CartaWizardRelacional() {
               </div>
             </div>
 
-            {areasActivas.map((area) => (
+            {areasVisiblesStep2.map((area) => (
               <div key={area.key} className="bg-[#1a1b1f] border-2 border-gray-800 rounded-xl p-6">
                 {/* Botón de sugerencias QUANTUM */}
                 <div className="mb-4 flex items-center justify-between">
@@ -2038,7 +2045,8 @@ export default function CartaWizardRelacional() {
               </div>
             ))}
           </div>
-        )}
+        );
+        })()}
 
         {/* Paso 3: Metas Dinámicas - ITERATIVO POR OBJETIVO */}
         {currentStep === 3 && (
