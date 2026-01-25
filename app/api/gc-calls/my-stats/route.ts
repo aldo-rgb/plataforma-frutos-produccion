@@ -24,6 +24,24 @@ export async function GET() {
       return NextResponse.json({ success: false, error: 'Usuario no encontrado' }, { status: 404 });
     }
 
+    // Obtener las asignaciones como GameChanger (para saber en qué niveles está registrado)
+    const gcAssignments = await prisma.visionGameChanger.findMany({
+      where: { gameChangerId: user.id },
+      include: {
+        Vision: {
+          select: {
+            id: true,
+            startDate: true,
+            endDate: true,
+            advancedStartDate: true,
+            advancedEndDate: true,
+            plWeekend1StartDate: true,
+            plWeekend1EndDate: true,
+          },
+        },
+      },
+    });
+
     // Obtener todos los squads donde este GC es líder
     const squads = await prisma.smallGroup.findMany({
       where: {
@@ -41,6 +59,12 @@ export async function GET() {
             endDate: true,
             advancedStartDate: true,
             advancedEndDate: true,
+            plWeekend1StartDate: true,
+            plWeekend1EndDate: true,
+            plWeekend2StartDate: true,
+            plWeekend2EndDate: true,
+            plWeekend3StartDate: true,
+            plWeekend3EndDate: true,
           },
         },
       },
@@ -49,32 +73,122 @@ export async function GET() {
     // Calcular información del día de entrenamiento para cada squad
     // Básico: 3 días - Día 1 llegan, Días 2 y 3 llamada de staff
     // Avanzado: 4 días - Día 1 llegan, Días 2, 3 y 4 llamada de staff
+    // PL: 3 fines de semana de 2 días cada uno = 6 días totales
     const squadTrainingInfo: Record<string, {
       currentDay: number | null;
       totalDays: number;
       isStaffCallDay: boolean;
       staffCallDays: number[];
       level: string;
+      showInDashboard?: boolean;
+      plWeekendInfo?: {
+        currentWeekend: number | null;
+        isWeekendActive: boolean;
+        weekendDay: number | null;
+      };
     }> = {};
 
     squads.forEach(squad => {
       const vision = squad.vision;
       const level = squad.level || 'BASIC';
-      const totalDays = level === 'ADVANCED' ? 4 : 3;
-      const staffCallDays = level === 'ADVANCED' ? [2, 3, 4] : [2, 3];
+      
+      // Configuración por nivel
+      let totalDays: number;
+      let staffCallDays: number[];
+      
+      if (level === 'PL') {
+        totalDays = 6; // 3 fines de semana x 2 días
+        staffCallDays = [1, 2, 3, 4, 5, 6]; // Todos los días de PL requieren seguimiento
+      } else if (level === 'ADVANCED') {
+        totalDays = 4;
+        staffCallDays = [2, 3, 4];
+      } else {
+        totalDays = 3;
+        staffCallDays = [2, 3];
+      }
       
       let currentDay: number | null = null;
       let isStaffCallDay = false;
+      let plWeekendInfo: { currentWeekend: number | null; isWeekendActive: boolean; weekendDay: number | null } | undefined;
 
       // Obtener fecha de inicio según el nivel
       let startDate: Date | null = null;
-      if (level === 'ADVANCED' && vision?.advancedStartDate) {
+      let endDate: Date | null = null;
+      
+      if (level === 'PL') {
+        // Para PL, calcular en qué fin de semana estamos
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        
+        const weekends = [
+          { start: vision?.plWeekend1StartDate, end: vision?.plWeekend1EndDate, num: 1 },
+          { start: vision?.plWeekend2StartDate, end: vision?.plWeekend2EndDate, num: 2 },
+          { start: vision?.plWeekend3StartDate, end: vision?.plWeekend3EndDate, num: 3 },
+        ];
+        
+        let activeWeekend: { start: Date; end: Date; num: number } | null = null;
+        let lastEndedWeekend: { start: Date; end: Date; num: number } | null = null;
+        
+        for (const w of weekends) {
+          if (w.start && w.end) {
+            const wStart = new Date(w.start);
+            const wEnd = new Date(w.end);
+            wStart.setHours(0, 0, 0, 0);
+            wEnd.setHours(23, 59, 59, 999);
+            
+            if (now >= wStart && now <= wEnd) {
+              activeWeekend = { start: wStart, end: wEnd, num: w.num };
+              break;
+            }
+            
+            if (now > wEnd) {
+              lastEndedWeekend = { start: wStart, end: wEnd, num: w.num };
+            }
+          }
+        }
+        
+        if (activeWeekend) {
+          // Estamos en un fin de semana activo
+          const diffTime = now.getTime() - activeWeekend.start.getTime();
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+          const weekendDay = diffDays + 1; // 1 o 2
+          currentDay = (activeWeekend.num - 1) * 2 + weekendDay; // 1-2, 3-4, 5-6
+          isStaffCallDay = true; // Durante PL siempre hay seguimiento
+          
+          plWeekendInfo = {
+            currentWeekend: activeWeekend.num,
+            isWeekendActive: true,
+            weekendDay,
+          };
+        } else if (lastEndedWeekend) {
+          // No estamos en un fin de semana, pero ya terminó al menos uno
+          currentDay = lastEndedWeekend.num * 2; // El último día del último fin de semana completado
+          isStaffCallDay = false;
+          
+          plWeekendInfo = {
+            currentWeekend: lastEndedWeekend.num,
+            isWeekendActive: false,
+            weekendDay: null,
+          };
+        } else {
+          // Aún no ha iniciado ningún fin de semana de PL
+          currentDay = 0;
+          plWeekendInfo = {
+            currentWeekend: null,
+            isWeekendActive: false,
+            weekendDay: null,
+          };
+        }
+      } else if (level === 'ADVANCED' && vision?.advancedStartDate) {
         startDate = new Date(vision.advancedStartDate);
+        endDate = vision?.advancedEndDate ? new Date(vision.advancedEndDate) : null;
       } else if (vision?.startDate) {
         startDate = new Date(vision.startDate);
+        endDate = vision?.endDate ? new Date(vision.endDate) : null;
       }
 
-      if (startDate) {
+      // Para BASIC y ADVANCED, calcular currentDay basado en startDate
+      if (level !== 'PL' && startDate) {
         const now = new Date();
         now.setHours(0, 0, 0, 0);
         startDate.setHours(0, 0, 0, 0);
@@ -91,6 +205,7 @@ export async function GET() {
       // Determinar si el átomo debe mostrarse en el dashboard
       // Para BASIC: se muestra hasta que inicie el Avanzado (o 14 días después si no hay Avanzado)
       // Para ADVANCED: se muestra hasta 14 días después de que termine
+      // Para PL: se muestra mientras los fines de semana estén activos o hasta 14 días después del último
       let showInDashboard = true;
       const now = new Date();
       now.setHours(0, 0, 0, 0);
@@ -108,10 +223,21 @@ export async function GET() {
           // No hay Avanzado programado - usar lógica de 14 días después
           showInDashboard = false;
         }
-      } else {
+      } else if (level === 'ADVANCED') {
         // ADVANCED: ocultar 14 días después de que termine
         if (currentDay !== null && currentDay > totalDays + 14) {
           showInDashboard = false;
+        }
+      } else if (level === 'PL') {
+        // PL: mostrar mientras haya fines de semana pendientes o hasta 14 días después del último
+        if (vision?.plWeekend3EndDate) {
+          const plEnd = new Date(vision.plWeekend3EndDate);
+          plEnd.setHours(0, 0, 0, 0);
+          const diffTime = now.getTime() - plEnd.getTime();
+          const daysSinceEnd = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+          if (daysSinceEnd > 14) {
+            showInDashboard = false;
+          }
         }
       }
 
@@ -122,6 +248,7 @@ export async function GET() {
         staffCallDays,
         level,
         showInDashboard,
+        plWeekendInfo,
       };
     });
 
@@ -262,18 +389,22 @@ export async function GET() {
     const completedToday = Object.values(todayCallStatus).filter(s => s.status === 'completed').length;
 
     // Determinar el training info más relevante:
-    // 1. Si hay un squad de ADVANCED que debe mostrarse, usar ese
-    // 2. Si hay un squad de BASIC que debe mostrarse, usar ese
-    // 3. Si BASIC ya no debe mostrarse pero no hay ADVANCED, indicar que necesita crear ADVANCED
+    // 1. Si hay un squad de PL que debe mostrarse, usar ese
+    // 2. Si hay un squad de ADVANCED que debe mostrarse, usar ese
+    // 3. Si hay un squad de BASIC que debe mostrarse, usar ese
+    // 4. Si no hay squads, usar las asignaciones de VisionGameChanger para determinar el nivel
     let activeTrainingInfo = null;
     let needsAdvancedSquad = false;
     let targetVisionId: number | null = null;
     
-    // Buscar squad de ADVANCED activo
+    // Buscar squads por nivel (prioridad: PL > ADVANCED > BASIC)
+    const plSquad = squads.find(s => s.level === 'PL');
     const advancedSquad = squads.find(s => s.level === 'ADVANCED');
     const basicSquad = squads.find(s => s.level === 'BASIC');
     
-    if (advancedSquad && squadTrainingInfo[advancedSquad.id]?.showInDashboard) {
+    if (plSquad && squadTrainingInfo[plSquad.id]?.showInDashboard) {
+      activeTrainingInfo = squadTrainingInfo[plSquad.id];
+    } else if (advancedSquad && squadTrainingInfo[advancedSquad.id]?.showInDashboard) {
       activeTrainingInfo = squadTrainingInfo[advancedSquad.id];
     } else if (basicSquad) {
       const basicInfo = squadTrainingInfo[basicSquad.id];
@@ -323,6 +454,67 @@ export async function GET() {
           }
         }
       }
+    }
+
+    // Si no hay activeTrainingInfo pero hay asignaciones de VisionGameChanger,
+    // usar el nivel más alto asignado para indicar al frontend qué nivel usar
+    if (!activeTrainingInfo && gcAssignments.length > 0) {
+      // Prioridad: PL > ADVANCED > BASIC
+      const levelPriority = ['PL', 'ADVANCED', 'BASIC'];
+      const sortedAssignments = [...gcAssignments].sort((a, b) => {
+        return levelPriority.indexOf(a.level) - levelPriority.indexOf(b.level);
+      });
+      
+      const highestLevelAssignment = sortedAssignments[0];
+      const level = highestLevelAssignment.level;
+      const vision = highestLevelAssignment.Vision;
+      
+      // Determinar fechas según el nivel
+      let totalDays = 3;
+      let staffCallDays = [2, 3];
+      let startDate: Date | null = null;
+      
+      if (level === 'PL' && vision?.plWeekend1StartDate) {
+        startDate = new Date(vision.plWeekend1StartDate);
+        totalDays = 3; // PL tiene 3 fines de semana, pero simplificamos
+        staffCallDays = [2, 3];
+      } else if (level === 'ADVANCED' && vision?.advancedStartDate) {
+        startDate = new Date(vision.advancedStartDate);
+        totalDays = 4;
+        staffCallDays = [2, 3, 4];
+      } else if (vision?.startDate) {
+        startDate = new Date(vision.startDate);
+        totalDays = 3;
+        staffCallDays = [2, 3];
+      }
+      
+      let currentDay: number | null = null;
+      let isStaffCallDay = false;
+      
+      if (startDate) {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        startDate.setHours(0, 0, 0, 0);
+        
+        const diffTime = now.getTime() - startDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        currentDay = diffDays + 1;
+        
+        if (currentDay >= 1 && currentDay <= totalDays) {
+          isStaffCallDay = staffCallDays.includes(currentDay);
+        }
+      }
+      
+      activeTrainingInfo = {
+        currentDay,
+        totalDays,
+        isStaffCallDay,
+        staffCallDays,
+        level,
+        showInDashboard: true,
+      };
+      
+      targetVisionId = highestLevelAssignment.visionId;
     }
 
     return NextResponse.json({

@@ -47,10 +47,12 @@ export default function LegacyCaptureBlockingModal() {
       const res = await fetch('/api/legacy-capture/my-status');
       const data = await res.json();
 
-      // Solo mostrar si hay una captura en progreso y el usuario no lo cerró
-      if (data.success && data.hasLegacyPending && data.capture?.status !== 'COMPLETE' && !dismissed) {
+      // Ya NO mostramos el modal automáticamente - solo guardamos el estado
+      // El usuario puede consultar sus fotos desde otro lugar del dashboard
+      if (data.success && data.hasLegacyPending) {
         setStatus(data);
-        setShow(true);
+        // NO mostramos el modal automáticamente - setShow(false)
+        setShow(false);
       } else {
         setShow(false);
       }
@@ -60,16 +62,14 @@ export default function LegacyCaptureBlockingModal() {
     }
   };
 
-  // Polling cada 30 segundos para verificar si el GC completó la captura
-  useEffect(() => {
-    if (!show || dismissed) return;
-
-    const interval = setInterval(() => {
-      checkLegacyStatus();
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [show, dismissed]);
+  // Ya no hacemos polling - el modal no se muestra automáticamente
+  // useEffect(() => {
+  //   if (!show || dismissed) return;
+  //   const interval = setInterval(() => {
+  //     checkLegacyStatus();
+  //   }, 30000);
+  //   return () => clearInterval(interval);
+  // }, [show, dismissed]);
 
   // Función para cerrar el modal (el participante puede cerrar y seguir usando la app)
   const handleDismiss = () => {

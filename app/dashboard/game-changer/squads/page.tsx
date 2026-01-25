@@ -328,7 +328,7 @@ export default function SquadBuilderPage() {
       // Ensure we have a squad
       const currentSquad = await ensureSquad();
       if (!currentSquad) {
-        setError('No se pudo crear el escuadrón');
+        setError('No se pudo crear el atomo');
         vibrate([200, 100, 200]); // Error pattern
         return;
       }

@@ -99,6 +99,11 @@ interface TrainingInfo {
   staffCallDays: number[];
   level: string;
   showInDashboard?: boolean;
+  plWeekendInfo?: {
+    currentWeekend: number | null;
+    isWeekendActive: boolean;
+    weekendDay: number | null;
+  };
 }
 
 interface LegacyCaptureForm {
@@ -796,15 +801,28 @@ export default function SquadManagerWidget() {
                 <Badge 
                   variant="secondary" 
                   className={`text-xs ${
-                    trainingInfo.level === 'ADVANCED' 
-                      ? 'bg-purple-500/20 text-purple-300' 
-                      : 'bg-indigo-500/20 text-indigo-300'
+                    trainingInfo.level === 'PL'
+                      ? 'bg-amber-500/20 text-amber-300'
+                      : trainingInfo.level === 'ADVANCED' 
+                        ? 'bg-purple-500/20 text-purple-300' 
+                        : 'bg-indigo-500/20 text-indigo-300'
                   }`}
                 >
-                  {trainingInfo.level === 'ADVANCED' ? 'Avanzado' : 'Básico'}
+                  {trainingInfo.level === 'PL' ? 'PL/Liderato' : trainingInfo.level === 'ADVANCED' ? 'Avanzado' : 'Básico'}
                 </Badge>
               </div>
-              {trainingInfo.isStaffCallDay ? (
+              {trainingInfo.level === 'PL' ? (
+                trainingInfo.plWeekendInfo?.isWeekendActive ? (
+                  <span className="text-xs text-amber-300 flex items-center gap-1">
+                    <Phone className="w-3 h-3" />
+                    Fin de semana {trainingInfo.plWeekendInfo.currentWeekend} - Día {trainingInfo.plWeekendInfo.weekendDay}
+                  </span>
+                ) : (
+                  <span className="text-xs text-blue-300">
+                    Entre fines de semana
+                  </span>
+                )
+              ) : trainingInfo.isStaffCallDay ? (
                 <span className="text-xs text-amber-300 flex items-center gap-1">
                   <Phone className="w-3 h-3" />
                   Día de llamadas
@@ -818,13 +836,24 @@ export default function SquadManagerWidget() {
           </div>
         )}
 
-        {/* Mensaje cuando entrenamiento terminó */}
-        {trainingInfo && trainingInfo.currentDay !== null && trainingInfo.currentDay > trainingInfo.totalDays && (
+        {/* Mensaje cuando entrenamiento terminó - Solo para BASIC/ADVANCED cuando currentDay > totalDays */}
+        {trainingInfo && trainingInfo.level !== 'PL' && trainingInfo.currentDay !== null && trainingInfo.currentDay > trainingInfo.totalDays && (
           <div className="rounded-lg p-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-purple-400" />
               <span className="text-sm font-medium text-white">Entrenamiento completado</span>
               <span className="text-xs text-purple-300 ml-auto">Llamadas Post-Entreno activas</span>
+            </div>
+          </div>
+        )}
+        
+        {/* Mensaje para PL cuando terminó el fin de semana 3 */}
+        {trainingInfo && trainingInfo.level === 'PL' && trainingInfo.plWeekendInfo?.currentWeekend === 3 && !trainingInfo.plWeekendInfo?.isWeekendActive && (
+          <div className="rounded-lg p-3 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-amber-400" />
+              <span className="text-sm font-medium text-white">PL Completado</span>
+              <span className="text-xs text-amber-300 ml-auto">Llamadas Post-Entreno activas</span>
             </div>
           </div>
         )}
@@ -1794,7 +1823,7 @@ export default function SquadManagerWidget() {
                   {/* Canción de Cuna PL */}
                   <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
                     <label className="text-xs text-slate-400 mb-2 block flex items-center gap-1">
-                      <Music className="w-3 h-3" /> Canción de Cuna (PL)
+                      <Music className="w-3 h-3" /> Canción de Vuelo
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       <input

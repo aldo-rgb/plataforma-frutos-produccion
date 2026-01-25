@@ -54,6 +54,20 @@ export async function GET(
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
+    // Buscar licencia activa en LicenseAssignment (fuente principal de licencias)
+    const activeLicense = await prisma.licenseAssignment.findFirst({
+      where: { 
+        userId: userId,
+        isActive: true
+      },
+      select: {
+        licenseCode: true
+      }
+    });
+
+    // Usar licenseCode de LicenseAssignment si existe, sino del usuario directamente
+    const effectiveLicenseCode = activeLicense?.licenseCode || usuario.licenseCode;
+
     // Validar que el usuario pertenezca a la misma organización
     if (usuarioActual.rol === 'SCHOOL_ADMIN' && usuario.organizationId !== usuarioActual.organizationId) {
       return NextResponse.json({ error: 'No autorizado para ver este usuario' }, { status: 403 });
@@ -61,7 +75,10 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      usuario
+      usuario: {
+        ...usuario,
+        licenseCode: effectiveLicenseCode
+      }
     });
 
   } catch (error) {

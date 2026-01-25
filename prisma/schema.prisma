@@ -2301,6 +2301,11 @@ model Usuario {
   // Directorio de Talentos - Bolsa de Trabajo
   BusinessProfile                                                        BusinessProfile?
   ServiceReviewsWritten                                                  ServiceReview[]                 @relation("ReviewAuthor")
+  
+  // Llamadas semanales PL
+  PLCallsScheduled                                                       PLWeeklyCall[]                  @relation("PLCallScheduledBy")
+  PLCallsCancelled                                                       PLWeeklyCall[]                  @relation("PLCallCancelledBy")
+  PLCallAttendances                                                      PLCallAttendance[]              @relation("PLCallAttendances")
 
   @@index([communityOrganizationId])
 }
@@ -2383,6 +2388,9 @@ model Vision {
 
   // Directorio de Talentos
   BusinessProfiles              BusinessProfile[]
+  
+  // Llamadas semanales PL
+  PLWeeklyCalls                 PLWeeklyCall[]                  @relation("VisionPLCalls")
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -3052,6 +3060,7 @@ model SmallGroup {
   vision           Vision             @relation(fields: [visionId], references: [id], onDelete: Cascade)
   members          SmallGroupMember[]
   TrainerMissions  TrainerMission[]
+  PLWeeklyCalls    PLWeeklyCall[]     @relation("SquadPLCalls")
 
   @@unique([visionId, leaderId, level])
   @@index([visionId])
@@ -3194,6 +3203,99 @@ model TrainerIntervention {
   @@index([callLogId])
   @@index([trainerId])
   @@index([type])
+}
+
+// ============================================
+// SISTEMA DE LLAMADAS SEMANALES PL
+// ============================================
+
+// Llamada semanal de PL (átomo o grupo)
+model PLWeeklyCall {
+  id                String              @id @default(uuid())
+  visionId          Int
+  squadId           String?             // null = llamada de grupo (toda la visión)
+  callType          PLCallType          // ATOM o GROUP
+  weekNumber        Int                 // 1, 2, 3 (semana entre fines de semana)
+  
+  // Agendado
+  scheduledDate     DateTime            @db.Date
+  scheduledTime     String              // "09:00"
+  duration          Int                 @default(30) // minutos
+  
+  // Quien agenda
+  scheduledById     Int                 // GC para átomo, Capitán/Coordinador para grupo
+  
+  // Estado
+  status            PLCallStatus        @default(SCHEDULED)
+  completedAt       DateTime?
+  cancelledAt       DateTime?
+  cancelledBy       Int?
+  cancelReason      String?
+  
+  // Notas generales de la llamada
+  generalNotes      String?             @db.Text
+  
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  
+  // Relaciones
+  vision            Vision              @relation("VisionPLCalls", fields: [visionId], references: [id])
+  squad             SmallGroup?         @relation("SquadPLCalls", fields: [squadId], references: [id])
+  scheduledBy       Usuario             @relation("PLCallScheduledBy", fields: [scheduledById], references: [id])
+  cancelledByUser   Usuario?            @relation("PLCallCancelledBy", fields: [cancelledBy], references: [id])
+  attendances       PLCallAttendance[]
+  
+  @@unique([squadId, weekNumber]) // Solo una llamada de átomo por semana por squad
+  @@unique([visionId, callType, weekNumber], map: "unique_vision_group_call_per_week") // Solo una llamada de grupo por semana por visión
+  @@index([visionId])
+  @@index([squadId])
+  @@index([weekNumber])
+  @@index([status])
+  @@index([scheduledDate])
+}
+
+// Asistencia a llamada PL (un registro por participante por llamada)
+model PLCallAttendance {
+  id              String              @id @default(uuid())
+  callId          String
+  participantId   Int
+  
+  // Asistencia
+  attended        Boolean?            // null = sin registrar, true = asistió, false = no asistió
+  attendedAt      DateTime?
+  
+  // Calificación del GC sobre el participante
+  rating          Int?                // 1-5 estrellas
+  notes           String?             @db.Text
+  
+  // Para marcar si está en riesgo
+  isAtRisk        Boolean             @default(false)
+  riskNotes       String?
+  
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  
+  // Relaciones
+  call            PLWeeklyCall        @relation(fields: [callId], references: [id], onDelete: Cascade)
+  participant     Usuario             @relation("PLCallAttendances", fields: [participantId], references: [id])
+  
+  @@unique([callId, participantId]) // Un participante solo puede tener un registro por llamada
+  @@index([callId])
+  @@index([participantId])
+  @@index([attended])
+}
+
+enum PLCallType {
+  ATOM    // Llamada de átomo (solo participantes del mini grupo)
+  GROUP   // Llamada de grupo (todos los participantes PL de la visión)
+}
+
+enum PLCallStatus {
+  SCHEDULED   // Agendada
+  IN_PROGRESS // En curso
+  COMPLETED   // Completada
+  CANCELLED   // Cancelada
+  NO_SHOW     // Nadie se presentó
 }
 
 model GCCallAttempt {
@@ -4025,6 +4127,8 @@ enum CallSlotStatus {
 enum GCCallType {
   TRAINING      // Llamadas durante el entrenamiento
   POST_TRAINING // Llamadas post-entrenamiento (seguimiento)
+  PL_ATOM       // Llamada semanal de átomo PL
+  PL_GROUP      // Llamada semanal de grupo PL (toda la visión)
 }
 
 enum CallStatus {

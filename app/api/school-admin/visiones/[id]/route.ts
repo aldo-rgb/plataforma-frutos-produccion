@@ -207,10 +207,25 @@ export async function GET(
       },
     });
 
-    // Si VisionParticipante está vacío, obtener de vision_enrollments del nivel activo
-    let participantes: any[] = visionParticipantes;
+    // PRIMERO verificar si hay vision_enrollments (sistema nuevo)
+    // Si existen, usarlos como fuente principal y complementar con gameChangerId de VisionParticipante
+    const enrollmentsCount = await prisma.vision_enrollments.count({
+      where: { 
+        visionId,
+        level: activeLevel,
+        OR: [
+          { attendanceStatus: null },
+          { attendanceStatus: { notIn: ['DROP', 'BACKLOG', 'MOVED'] } }
+        ],
+        enrollmentStatus: { notIn: ['MOVED_TO_NEXT', 'CANCELLED', 'DROP'] },
+        droppedAt: null,
+      }
+    });
+
+    let participantes: any[] = [];
     
-    if (visionParticipantes.length === 0) {
+    // Si hay enrollments, SIEMPRE usarlos como fuente principal
+    if (enrollmentsCount > 0) {
       const enrollments = await prisma.vision_enrollments.findMany({
         where: { 
           visionId,
@@ -269,21 +284,56 @@ export async function GET(
         },
       });
 
+      // Obtener VisionParticipante para buscar gameChangerId de cada usuario
+      const userIds = enrollments.map(e => e.userId);
+      const visionParticipantesForGC = await prisma.visionParticipante.findMany({
+        where: { 
+          visionId, 
+          participanteId: { in: userIds } 
+        },
+        include: {
+          Usuario_VisionParticipante_gameChangerIdToUsuario: {
+            select: {
+              id: true,
+              nombre: true,
+              email: true,
+              imagen: true,
+            },
+          },
+        }
+      });
+      
+      // Crear mapa de gameChanger por participanteId
+      const gcMap = new Map(visionParticipantesForGC.map(vp => [
+        vp.participanteId, 
+        { 
+          gameChangerId: vp.gameChangerId, 
+          gameChanger: vp.Usuario_VisionParticipante_gameChangerIdToUsuario 
+        }
+      ]));
+
       // Transformar enrollments al formato esperado de participantes
-      participantes = enrollments.map(e => ({
-        id: e.id,
-        participanteId: e.userId,
-        gameChangerId: null,
-        Usuario_VisionParticipante_participanteIdToUsuario: e.Usuario_vision_enrollments_userIdToUsuario,
-        Usuario_VisionParticipante_gameChangerIdToUsuario: null,
-        createdAt: e.enrolledAt.toISOString(),
-        // Campos adicionales del enrollment
-        enrollmentStatus: e.enrollmentStatus,
-        paymentStatus: e.paymentStatus,
-        level: e.level,
-      }));
+      participantes = enrollments.map(e => {
+        const gcData = gcMap.get(e.userId);
+        return {
+          id: e.id,
+          participanteId: e.userId,
+          gameChangerId: gcData?.gameChangerId || null,
+          Usuario_VisionParticipante_participanteIdToUsuario: e.Usuario_vision_enrollments_userIdToUsuario,
+          Usuario_VisionParticipante_gameChangerIdToUsuario: gcData?.gameChanger || null,
+          createdAt: e.enrolledAt.toISOString(),
+          // Campos adicionales del enrollment
+          enrollmentStatus: e.enrollmentStatus,
+          paymentStatus: e.paymentStatus,
+          level: e.level,
+        };
+      });
 
       console.log(`📋 Usando ${participantes.length} participantes de vision_enrollments (nivel: ${activeLevel})`);
+    } else {
+      // FALLBACK: Si NO hay vision_enrollments, usar VisionParticipante (sistema legacy)
+      participantes = visionParticipantes;
+      console.log(`📋 Usando ${participantes.length} participantes de VisionParticipante (legacy)`);
     }
 
     // Obtener game changers de la visión filtrados por el nivel activo

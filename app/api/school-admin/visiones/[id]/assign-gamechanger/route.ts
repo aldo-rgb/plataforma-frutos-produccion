@@ -88,16 +88,31 @@ export async function POST(
       );
     }
 
-    // Actualizar la asignación
-    await prisma.visionParticipante.updateMany({
+    // Verificar si ya existe VisionParticipante para este usuario
+    const existingVP = await prisma.visionParticipante.findFirst({
       where: {
         visionId,
         participanteId,
       },
-      data: {
-        gameChangerId,
-      },
     });
+
+    if (existingVP) {
+      // Actualizar la asignación existente
+      await prisma.visionParticipante.update({
+        where: { id: existingVP.id },
+        data: { gameChangerId },
+      });
+    } else {
+      // Crear VisionParticipante si no existe (para usuarios que solo están en vision_enrollments)
+      await prisma.visionParticipante.create({
+        data: {
+          visionId,
+          participanteId,
+          gameChangerId,
+          asignadoPorId: session.user.id,
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,
