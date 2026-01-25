@@ -382,7 +382,7 @@ export async function GET(request: Request) {
         
       } else if (currentProduct.levelType === 'ADVANCED') {
         // ESTOY EN AVANZADO → Mostrar estadísticas de pase a LIDERATO (PL)
-        nextLevel = 'TU VIDA';
+        nextLevel = 'Liderato';
         nextLevelName = currentVisionName;
         
         // Obtener total de inscritos en AVANZADO (denominador para declarados)

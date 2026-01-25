@@ -32,11 +32,11 @@ const nextLevelConfig = {
   },
   ADVANCED: {
     nextLevel: 'PL',
-    nextLevelName: 'Tu Vida',
+    nextLevelName: 'Liderato',
     icon: Crown,
     color: '#FFD700',
     description: 'Preparación para el Salto',
-    cta: 'Elegir Tu Vida',
+    cta: 'Elegir Liderato',
   },
   PL: {
     nextLevel: null,

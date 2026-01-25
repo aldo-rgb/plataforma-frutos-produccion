@@ -44,7 +44,7 @@ export default function PendingTicketBanner() {
     const labels: Record<string, string> = {
       'BASIC': 'Básico',
       'ADVANCED': 'Avanzado',
-      'PL': 'Tu VIDA',
+      'PL': 'Liderato',
     };
     return labels[level] || level;
   };

@@ -2307,6 +2307,26 @@ model Usuario {
   PLCallsCancelled                                                       PLWeeklyCall[]                  @relation("PLCallCancelledBy")
   PLCallAttendances                                                      PLCallAttendance[]              @relation("PLCallAttendances")
 
+  // Legacy Vision Builder - Capitanías PL
+  TribeOaths                                                             TribeOath[]                     @relation("UserTribeOaths")
+  CaptainAssignments                                                     TribeCaptainAssignment[]        @relation("UserCaptainAssignments")
+  NominatedCaptains                                                      TribeCaptainAssignment[]        @relation("NominatedCaptains")
+  CaptaincyNotifications                                                 CaptaincyNotification[]         @relation("UserCaptaincyNotifications")
+  CreatedFundCampaigns                                                   TribeFundCampaign[]             @relation("CreatedFundCampaigns")
+  FundContributions                                                      TribeFundContribution[]         @relation("UserFundContributions")
+  VerifiedContributions                                                  TribeFundContribution[]         @relation("VerifiedContributions")
+  TribeSizes                                                             TribeMemberSize[]               @relation("UserTribeSizes")
+  SubmittedLogoProposals                                                 TribeLogoProposal[]             @relation("SubmittedLogoProposals")
+  LogoVotes                                                              TribeLogoVote[]                 @relation("UserLogoVotes")
+  CreatedTribeTasks                                                      TribeTask[]                     @relation("CreatedTribeTasks")
+  AssignedTribeTasks                                                     TribeTask[]                     @relation("AssignedTribeTasks")
+  FoodAllergies                                                          TribeFoodAllergy[]              @relation("UserFoodAllergies")
+  SubmittedAuditChecklists                                               TribeAuditChecklist[]           @relation("SubmittedAuditChecklists")
+  ReportedBreaches                                                       TribeBreachReport[]             @relation("ReportedBreaches")
+  UserBreaches                                                           TribeBreachReport[]             @relation("UserBreaches")
+  ResolvedBreaches                                                       TribeBreachReport[]             @relation("ResolvedBreaches")
+  InvitedGraduationGuests                                                GraduationGuest[]               @relation("InvitedGraduationGuests")
+
   @@index([communityOrganizationId])
 }
 
@@ -2391,6 +2411,18 @@ model Vision {
   
   // Llamadas semanales PL
   PLWeeklyCalls                 PLWeeklyCall[]                  @relation("VisionPLCalls")
+
+  // Legacy Vision Builder - Capitanías PL
+  TribeOaths                    TribeOath[]                     @relation("VisionTribeOaths")
+  TribeCaptaincies              TribeCaptaincy[]                @relation("VisionCaptaincies")
+  TribeFundCampaigns            TribeFundCampaign[]             @relation("VisionFundCampaigns")
+  TribeMemberSizes              TribeMemberSize[]               @relation("VisionMemberSizes")
+  TribeLogoProposals            TribeLogoProposal[]             @relation("VisionLogoProposals")
+  TribeTasks                    TribeTask[]                     @relation("VisionTribeTasks")
+  TribeFoodAllergies            TribeFoodAllergy[]              @relation("VisionFoodAllergies")
+  TribeAuditChecklists          TribeAuditChecklist[]           @relation("VisionAuditChecklists")
+  TribeBreachReports            TribeBreachReport[]             @relation("VisionBreachReports")
+  GraduationGuests              GraduationGuest[]               @relation("VisionGraduationGuests")
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -5150,5 +5182,448 @@ enum BusinessProfileStatus {
   HIDDEN            // Oculto por el usuario
   SUSPENDED         // Suspendido por admin
   BANNED            // Baneado (5+ reseñas de 1 estrella)
+}
+
+// ============================================
+// LEGACY VISION BUILDER - CAPITANÍAS PL
+// Sistema de gestión de roles de tribu para PL
+// ============================================
+
+// Juramento de las 16 Promesas (Fase 1)
+model TribeOath {
+  id                  Int             @id @default(autoincrement())
+  userId              Int
+  visionId            Int
+  
+  // Firma digital
+  signatureText       String          // Nombre completo escrito por el usuario
+  signatureImageUrl   String?         // Firma táctil (opcional)
+  signedAt            DateTime        @default(now())
+  
+  // Metadatos
+  ipAddress           String?
+  userAgent           String?
+  
+  // Relaciones
+  user                Usuario         @relation("UserTribeOaths", fields: [userId], references: [id], onDelete: Cascade)
+  vision              Vision          @relation("VisionTribeOaths", fields: [visionId], references: [id], onDelete: Cascade)
+  
+  // Un usuario solo puede firmar una vez por visión
+  @@unique([userId, visionId])
+  @@index([visionId])
+  @@index([signedAt])
+}
+
+// Roles/Capitanías de la Tribu (Fase 2 y 3)
+model TribeCaptaincy {
+  id                  Int                   @id @default(autoincrement())
+  visionId            Int
+  roleType            TribeCaptaincyRole    // Tipo de capitanía
+  
+  // Configuración
+  maxCaptains         Int                   @default(1)   // Cuántos pueden tener este rol
+  isActive            Boolean               @default(true)
+  
+  // Metadatos
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  
+  // Relaciones
+  vision              Vision                @relation("VisionCaptaincies", fields: [visionId], references: [id], onDelete: Cascade)
+  assignments         TribeCaptainAssignment[]
+  
+  // Una capitanía por rol por visión
+  @@unique([visionId, roleType])
+  @@index([visionId])
+  @@index([roleType])
+}
+
+// Asignación de Capitanes (quién tiene qué rol)
+model TribeCaptainAssignment {
+  id                  Int                   @id @default(autoincrement())
+  captaincyId         Int
+  userId              Int
+  
+  // Estado de confirmación
+  status              CaptainAssignmentStatus @default(PENDING)
+  nominatedBy         Int?                  // Quién lo nominó (GC/Staff/otro)
+  nominatedAt         DateTime              @default(now())
+  acceptedAt          DateTime?
+  rejectedAt          DateTime?
+  
+  // Permisos específicos (JSON flexible)
+  permissions         Json?                 // {"can_create_payment_links": true, etc}
+  
+  // Metadatos
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  
+  // Relaciones
+  captaincy           TribeCaptaincy        @relation(fields: [captaincyId], references: [id], onDelete: Cascade)
+  user                Usuario               @relation("UserCaptainAssignments", fields: [userId], references: [id], onDelete: Cascade)
+  nominator           Usuario?              @relation("NominatedCaptains", fields: [nominatedBy], references: [id])
+  notifications       CaptaincyNotification[]
+  
+  // Un usuario solo puede tener un mismo rol una vez
+  @@unique([captaincyId, userId])
+  @@index([userId])
+  @@index([status])
+}
+
+// Notificaciones de Postulación
+model CaptaincyNotification {
+  id                  Int                   @id @default(autoincrement())
+  assignmentId        Int
+  userId              Int
+  
+  // Estado
+  isRead              Boolean               @default(false)
+  readAt              DateTime?
+  
+  // Mensaje
+  title               String
+  message             String                @db.Text
+  
+  createdAt           DateTime              @default(now())
+  
+  // Relaciones
+  assignment          TribeCaptainAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  user                Usuario               @relation("UserCaptaincyNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, isRead])
+  @@index([assignmentId])
+}
+
+// Widgets/Funcionalidades específicas por rol
+model CaptainWidget {
+  id                  Int                   @id @default(autoincrement())
+  roleType            TribeCaptaincyRole
+  
+  // Configuración del widget
+  widgetType          String                // "TOWER_CONTROL", "VAULT", "IDENTITY_MANAGER", etc
+  name                String                // Nombre visible
+  description         String?               @db.Text
+  icon                String?               // Nombre del icono o emoji
+  route               String?               // Ruta del dashboard widget
+  
+  // Permisos requeridos
+  requiredPermissions Json?                 // Lista de permisos necesarios
+  
+  isActive            Boolean               @default(true)
+  sortOrder           Int                   @default(0)
+  
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  
+  @@unique([roleType, widgetType])
+  @@index([roleType])
+  @@index([isActive])
+}
+
+// Datos específicos del Tesorero - Campañas de recaudación
+model TribeFundCampaign {
+  id                  Int                   @id @default(autoincrement())
+  visionId            Int
+  createdById         Int                   // Tesorero que la creó
+  
+  title               String
+  description         String?               @db.Text
+  targetAmount        Float
+  currentAmount       Float                 @default(0)
+  currency            String                @default("MXN")
+  
+  deadline            DateTime?
+  status              FundCampaignStatus    @default(ACTIVE)
+  
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  
+  // Relaciones
+  vision              Vision                @relation("VisionFundCampaigns", fields: [visionId], references: [id], onDelete: Cascade)
+  createdBy           Usuario               @relation("CreatedFundCampaigns", fields: [createdById], references: [id])
+  contributions       TribeFundContribution[]
+  
+  @@index([visionId])
+  @@index([status])
+}
+
+model TribeFundContribution {
+  id                  Int                   @id @default(autoincrement())
+  campaignId          Int
+  userId              Int
+  
+  amount              Float
+  evidenceUrl         String?               // Comprobante de pago
+  notes               String?
+  
+  status              PaymentStatus         @default(PENDING)
+  verifiedBy          Int?
+  verifiedAt          DateTime?
+  
+  createdAt           DateTime              @default(now())
+  
+  // Relaciones
+  campaign            TribeFundCampaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user                Usuario               @relation("UserFundContributions", fields: [userId], references: [id])
+  verifier            Usuario?              @relation("VerifiedContributions", fields: [verifiedBy], references: [id])
+  
+  @@index([campaignId])
+  @@index([userId])
+  @@index([status])
+}
+
+// Datos del Capitán de Playeras - Tallas
+model TribeMemberSize {
+  id                  Int                   @id @default(autoincrement())
+  userId              Int
+  visionId            Int
+  
+  shirtSize           ShirtSize
+  submittedAt         DateTime              @default(now())
+  
+  // Relaciones
+  user                Usuario               @relation("UserTribeSizes", fields: [userId], references: [id], onDelete: Cascade)
+  vision              Vision                @relation("VisionMemberSizes", fields: [visionId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, visionId])
+  @@index([visionId])
+}
+
+// Propuestas de Logo para votación
+model TribeLogoProposal {
+  id                  Int                   @id @default(autoincrement())
+  visionId            Int
+  submittedById       Int
+  
+  imageUrl            String
+  description         String?
+  
+  status              LogoProposalStatus    @default(PENDING)
+  
+  createdAt           DateTime              @default(now())
+  
+  // Relaciones
+  vision              Vision                @relation("VisionLogoProposals", fields: [visionId], references: [id], onDelete: Cascade)
+  submittedBy         Usuario               @relation("SubmittedLogoProposals", fields: [submittedById], references: [id])
+  votes               TribeLogoVote[]
+  
+  @@index([visionId])
+  @@index([status])
+}
+
+model TribeLogoVote {
+  id                  Int                   @id @default(autoincrement())
+  proposalId          Int
+  userId              Int
+  
+  votedAt             DateTime              @default(now())
+  
+  // Relaciones
+  proposal            TribeLogoProposal     @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  user                Usuario               @relation("UserLogoVotes", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([proposalId, userId])
+  @@index([proposalId])
+}
+
+// Tareas compartidas de la Tribu (Capitán Comunitaria)
+model TribeTask {
+  id                  Int                   @id @default(autoincrement())
+  visionId            Int
+  createdById         Int
+  assignedToId        Int?
+  
+  title               String
+  description         String?               @db.Text
+  category            String?               // "COMUNITARIA", "GRADUACION", "GENERAL"
+  
+  dueDate             DateTime?
+  isCompleted         Boolean               @default(false)
+  completedAt         DateTime?
+  
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  
+  // Relaciones
+  vision              Vision                @relation("VisionTribeTasks", fields: [visionId], references: [id], onDelete: Cascade)
+  createdBy           Usuario               @relation("CreatedTribeTasks", fields: [createdById], references: [id])
+  assignedTo          Usuario?              @relation("AssignedTribeTasks", fields: [assignedToId], references: [id])
+  
+  @@index([visionId])
+  @@index([assignedToId])
+  @@index([isCompleted])
+}
+
+// Alergias alimentarias (Capitán de Comidas)
+model TribeFoodAllergy {
+  id                  Int                   @id @default(autoincrement())
+  userId              Int
+  visionId            Int
+  
+  allergies           String[]              // Lista de alergias
+  dietaryRestrictions String?               // Vegetariano, vegano, etc
+  notes               String?
+  
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  
+  // Relaciones
+  user                Usuario               @relation("UserFoodAllergies", fields: [userId], references: [id], onDelete: Cascade)
+  vision              Vision                @relation("VisionFoodAllergies", fields: [visionId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, visionId])
+  @@index([visionId])
+}
+
+// Checklist de Auditoría Diaria (Capitán Vestimenta/Limpieza)
+model TribeAuditChecklist {
+  id                  Int                   @id @default(autoincrement())
+  visionId            Int
+  submittedById       Int                   // Capitán que envía
+  
+  auditDate           DateTime              @db.Date
+  
+  // Checklist items
+  salonClean          Boolean               @default(false)
+  bathroomsClean      Boolean               @default(false)
+  trashRemoved        Boolean               @default(false)
+  dressCodeCompliant  Boolean               @default(false)
+  
+  notes               String?               @db.Text
+  notifiedCaptain     Boolean               @default(false)   // Si se notificó al Capitán de Tribu
+  
+  createdAt           DateTime              @default(now())
+  
+  // Relaciones
+  vision              Vision                @relation("VisionAuditChecklists", fields: [visionId], references: [id], onDelete: Cascade)
+  submittedBy         Usuario               @relation("SubmittedAuditChecklists", fields: [submittedById], references: [id])
+  
+  @@unique([visionId, auditDate])
+  @@index([visionId])
+  @@index([auditDate])
+}
+
+// Reportes de Quiebre (Guardián del Contexto)
+model TribeBreachReport {
+  id                  Int                   @id @default(autoincrement())
+  visionId            Int
+  reportedById        Int                   // Guardián que reporta
+  reportedUserId      Int                   // Usuario que quebró regla
+  
+  breachType          String                // "TARDANZA", "DROGAS", "INCUMPLIMIENTO", etc
+  description         String                @db.Text
+  evidenceUrls        String[]
+  
+  severity            BreachSeverity        @default(MEDIUM)
+  status              BreachReportStatus    @default(PENDING)
+  
+  // Resolución
+  resolvedById        Int?
+  resolvedAt          DateTime?
+  resolution          String?               @db.Text
+  
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  
+  // Relaciones
+  vision              Vision                @relation("VisionBreachReports", fields: [visionId], references: [id], onDelete: Cascade)
+  reportedBy          Usuario               @relation("ReportedBreaches", fields: [reportedById], references: [id])
+  reportedUser        Usuario               @relation("UserBreaches", fields: [reportedUserId], references: [id])
+  resolvedBy          Usuario?              @relation("ResolvedBreaches", fields: [resolvedById], references: [id])
+  
+  @@index([visionId])
+  @@index([reportedUserId])
+  @@index([status])
+}
+
+// Invitados de Graduación (Capitán de Graduación)
+model GraduationGuest {
+  id                  Int                   @id @default(autoincrement())
+  visionId            Int
+  invitedById         Int                   // Miembro de la tribu que invita
+  
+  guestName           String
+  guestRelation       String?               // "Mamá", "Papá", "Hermano", etc
+  guestPhone          String?
+  guestEmail          String?
+  
+  // Ticket QR
+  ticketCode          String                @unique @default(cuid())
+  ticketUsed          Boolean               @default(false)
+  ticketUsedAt        DateTime?
+  
+  createdAt           DateTime              @default(now())
+  
+  // Relaciones
+  vision              Vision                @relation("VisionGraduationGuests", fields: [visionId], references: [id], onDelete: Cascade)
+  invitedBy           Usuario               @relation("InvitedGraduationGuests", fields: [invitedById], references: [id])
+  
+  @@index([visionId])
+  @@index([invitedById])
+  @@index([ticketCode])
+}
+
+// ============================================
+// ENUMS PARA CAPITANÍAS PL
+// ============================================
+
+enum TribeCaptaincyRole {
+  TRIBE_CAPTAIN           // Capitán de Tribu
+  TRIBE_CO_CAPTAIN        // Co-Capitán de Tribu
+  TREASURER               // Tesorero
+  SHIRTS_LOGO             // Capitán de Playeras y Logo
+  CONTRIBUTION_BASIC      // Capitán de Contribución Básicos
+  CONTRIBUTION_ADVANCED   // Capitán de Contribución Avanzados
+  COMMUNITY_SERVICE       // Capitán de Comunitaria Grupal
+  BOOKS_MOVIES            // Capitán de Libros y Películas
+  FOOD                    // Capitán de Comidas
+  CLEANLINESS             // Capitán de Vestimenta y Limpieza
+  CONTEXT_GUARDIAN        // Guardián del Contexto
+  GRADUATION_CAPTAIN      // Capitán de Graduación
+}
+
+enum CaptainAssignmentStatus {
+  PENDING                 // Nominado, esperando aceptación
+  ACCEPTED                // Aceptó el cargo
+  REJECTED                // Rechazó el cargo
+  REMOVED                 // Removido del cargo
+}
+
+enum FundCampaignStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum ShirtSize {
+  XS
+  S
+  M
+  L
+  XL
+  XXL
+  XXXL
+}
+
+enum LogoProposalStatus {
+  PENDING
+  VOTING
+  APPROVED
+  REJECTED
+}
+
+enum BreachSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum BreachReportStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
 }
 

@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { 
   LayoutDashboard, Trophy, Target, BarChart3, User, LogOut, 
   UserPlus, DollarSign, Package, Shield, 
-  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode, Store, Star
+  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode, Store, Star, Crown
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { MENU_ITEMS } from '@/config/menuPermissions';
@@ -38,6 +38,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
   const [cartaStatus, setCartaStatus] = useState<string | null>(null);
   const [showUpsellModal, setShowUpsellModal] = useState(false);
   const [upsellMessage, setUpsellMessage] = useState('');
+  const [isPLParticipant, setIsPLParticipant] = useState(false);
   const [iaRecommendation, setIaRecommendation] = useState<{
     message: string;
     emoji: string;
@@ -52,6 +53,25 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
       onClose();
     }
   };
+
+  // Verificar si es participante PL
+  useEffect(() => {
+    const checkPLStatus = async () => {
+      try {
+        const response = await fetch('/api/legacy-vision-builder');
+        if (response.ok) {
+          const data = await response.json();
+          setIsPLParticipant(data.hasAccess === true);
+        }
+      } catch (error) {
+        console.error('Error checking PL status:', error);
+      }
+    };
+
+    if (usuario.rol === 'PARTICIPANTE') {
+      checkPLStatus();
+    }
+  }, [usuario.rol]);
 
   // Obtener estado de la carta
   useEffect(() => {
@@ -957,6 +977,23 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             <span className="font-medium">Legacy Builder</span>
             <span className="ml-auto text-xs bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full">Nuevo</span>
           </Link>
+
+          {/* Legacy Vision Builder - Solo para participantes PL */}
+          {isPLParticipant && (
+            <Link 
+              href="/dashboard/legacy-vision-builder" 
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
+                pathname.startsWith('/dashboard/legacy-vision-builder')
+                  ? 'bg-gradient-to-r from-yellow-600 to-amber-600 text-white shadow-lg shadow-yellow-500/20' 
+                  : 'text-slate-400 hover:bg-gradient-to-r hover:from-yellow-900/30 hover:to-amber-900/30 hover:text-yellow-300'
+              }`}
+            >
+              <Crown size={18} className="text-yellow-400 group-hover:text-yellow-300" />
+              <span className="font-medium">Capitanías PL</span>
+              <span className="ml-auto text-xs bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded-full">👑</span>
+            </Link>
+          )}
 
           {/* Directorio de Talentos - Mercado */}
           <Link 
