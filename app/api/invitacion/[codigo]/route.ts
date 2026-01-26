@@ -118,11 +118,12 @@ export async function GET(
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching invitation data:', error);
     return NextResponse.json({ 
       success: false, 
-      error: 'Error interno del servidor' 
+      error: 'Error interno del servidor',
+      details: error?.message || String(error)
     }, { status: 500 });
   }
 }
