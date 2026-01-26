@@ -109,6 +109,10 @@ export async function GET(request: NextRequest) {
                       select: { metaPrincipal: true, categoria: true }
                     }
                   }
+                },
+                // Cuestionario Avanzado (para obtener lifePurpose cuando no tiene carta)
+                AdvancedQuestionnaire: {
+                  select: { lifePurpose: true }
                 }
               }
             }
@@ -149,6 +153,10 @@ export async function GET(request: NextRequest) {
                       select: { metaPrincipal: true, categoria: true }
                     }
                   }
+                },
+                // Cuestionario Avanzado (para obtener lifePurpose cuando no tiene carta)
+                AdvancedQuestionnaire: {
+                  select: { lifePurpose: true }
                 }
               }
             }
@@ -189,6 +197,10 @@ export async function GET(request: NextRequest) {
                       select: { metaPrincipal: true, categoria: true }
                     }
                   }
+                },
+                // Cuestionario Avanzado (para obtener lifePurpose cuando no tiene carta)
+                AdvancedQuestionnaire: {
+                  select: { lifePurpose: true }
                 }
               }
             }
@@ -422,11 +434,15 @@ export async function GET(request: NextRequest) {
 
       // Helper para obtener salto cuántico (meta principal)
       const getSaltoQuantico = (user: any) => {
-        // Prioridad: Meta de la Carta > goals del usuario (parseado) > default
+        // Prioridad: Meta de la Carta > lifePurpose del cuestionario > goals del usuario > default
         const cartaMeta = user?.CartaFrutos?.[0]?.Meta?.[0]?.metaPrincipal
         if (cartaMeta) return cartaMeta
         
-        // Parsear goals si existe
+        // Si no tiene carta, usar lifePurpose del cuestionario avanzado
+        const lifePurpose = user?.AdvancedQuestionnaire?.lifePurpose
+        if (lifePurpose) return lifePurpose
+        
+        // Parsear goals si existe (fallback legacy)
         const goalsArray = parseGoals(user?.goals)
         if (goalsArray.length > 0) return goalsArray[0]
         

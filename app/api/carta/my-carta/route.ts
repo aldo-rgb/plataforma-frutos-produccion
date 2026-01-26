@@ -134,7 +134,8 @@ export async function PUT(req: Request) {
       'talentosDeclaracion', 'talentosDeclaracionStatus', 'talentosDeclaracionFeedback',
       'servicioTransDeclaracion', 'servicioTransDeclaracionStatus', 'servicioTransDeclaracionFeedback',
       'servicioComunDeclaracion', 'servicioComunDeclaracionStatus', 'servicioComunDeclaracionFeedback',
-      'feedbackMentor'
+      'feedbackMentor',
+      'wizardStep'
     ];
 
     // Filtrar solo campos permitidos
@@ -143,6 +144,11 @@ export async function PUT(req: Request) {
       if (allowedFields.includes(key)) {
         filteredData[key] = data[key];
       }
+    }
+
+    // Si wizardStep llega a 5, marcar wizardCompletedAt (carta prellenada)
+    if (data.wizardStep === 5 && carta.wizardStep !== 5) {
+      filteredData.wizardCompletedAt = new Date();
     }
 
     const updatedCarta = await prisma.cartaFrutos.update({

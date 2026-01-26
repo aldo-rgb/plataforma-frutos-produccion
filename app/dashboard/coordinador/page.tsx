@@ -18,6 +18,7 @@ import TrainingStatsWidgets from '@/components/dashboard/TrainingStatsWidgets';
 import BacklogsDropsWidget from '@/components/dashboard/BacklogsDropsWidget';
 import PersonalQRWidget from '@/components/dashboard/PersonalQRWidget';
 import { ElCruceAccessWidget } from '@/components/el-cruce';
+import CartaPrellenadaWidget from '@/components/dashboard/CartaPrellenadaWidget';
 
 interface DashboardData {
   overview: {
@@ -214,6 +215,11 @@ export default function CoordinadorDashboard() {
             trend="✅ Activos"
             color="yellow"
           />
+        </div>
+
+        {/* Widget de Cartas Prellenadas */}
+        <div className="mt-8">
+          <CartaPrellenadaWidget />
         </div>
 
         {/* Widgets de Estadísticas de Entrenamiento */}

@@ -2569,9 +2569,20 @@ export default function CartaWizardRelacional() {
           ) : currentStep === 4 ? (
             // En el paso 4, mostrar botón de "Siguiente" para ir al paso 5
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (canAdvanceToStep5()) {
                   setCurrentStep(5);
+                  // Guardar en BD que llegó al paso 5 (carta prellenada)
+                  try {
+                    await fetch('/api/carta/my-carta', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ wizardStep: 5 })
+                    });
+                    console.log('✅ Carta marcada como prellenada (paso 5)');
+                  } catch (e) {
+                    console.error('Error guardando wizardStep:', e);
+                  }
                 } else {
                   alert('⚠️ Completa la configuración de todas las acciones antes de continuar.');
                 }
@@ -2600,7 +2611,7 @@ export default function CartaWizardRelacional() {
                   <div className="flex items-center gap-3 bg-gradient-to-r from-green-600/20 to-emerald-600/20 border border-green-500/50 rounded-xl px-4 sm:px-6 py-2 sm:py-3">
                     <CheckCircle2 className="text-green-400 w-5 h-5 sm:w-6 sm:h-6" />
                     <div>
-                      <p className="text-green-300 font-bold text-sm sm:text-base">¡Carta de Frutos Completada!</p>
+                      <p className="text-green-300 font-bold text-sm sm:text-base">¡Carta Completada!</p>
                       <p className="text-green-200 text-xs sm:text-sm">Tu avatar ha sido generado. Tu carta está lista.</p>
                     </div>
                   </div>

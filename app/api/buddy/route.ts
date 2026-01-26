@@ -304,7 +304,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         status: 'MATCHED',
-        message: `¡Pacto sellado con ${updatedPair.initiator.apodo || updatedPair.initiator.nombre}!`
+        message: `¡Compromiso sellado con ${updatedPair.initiator.apodo || updatedPair.initiator.nombre}!`
       });
     }
 

@@ -274,7 +274,10 @@ export async function GET(request: Request) {
       },
       include: {
         vision: {
-          select: { endDate: true }
+          select: { 
+            endDate: true,
+            advancedEndDate: true
+          }
         },
         members: {
           where: { isActive: true },
@@ -287,7 +290,9 @@ export async function GET(request: Request) {
       squadId: squad?.id, 
       leaderId: squad?.leaderId,
       gcId,
-      visionEndDate: squad?.vision?.endDate 
+      level: squad?.level,
+      visionEndDate: squad?.vision?.endDate,
+      advancedEndDate: squad?.vision?.advancedEndDate
     });
 
     if (!squad) {
@@ -296,14 +301,18 @@ export async function GET(request: Request) {
         error: 'Átomo no encontrado' 
       }, { status: 404 });
     }
+    
+    // Determinar la fecha de fin correcta según el nivel
+    let trainingEndDate = squad.vision?.endDate;
+    if (squad.level === 'ADVANCED' && squad.vision?.advancedEndDate) {
+      trainingEndDate = squad.vision.advancedEndDate;
+    }
 
-    // Obtener llamadas post-entreno programadas (identificadas por cancelReason que empieza con POST_TRAINING)
+    // Obtener llamadas post-entreno programadas (identificadas por callType = POST_TRAINING)
     const scheduledCalls = await prisma.gCCallSlot.findMany({
       where: {
         squadId: squadId,
-        cancelReason: {
-          startsWith: 'POST_TRAINING:'
-        },
+        callType: 'POST_TRAINING',
         status: {
           in: ['SCHEDULED', 'CONFIRMED', 'COMPLETED']
         }
@@ -361,7 +370,8 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      trainingEndDate: squad.vision?.endDate,
+      trainingEndDate: trainingEndDate,
+      squadLevel: squad.level,
       totalMembers: memberIds.length,
       scheduledCount: scheduledParticipantIds.length,
       pendingCount: pendingParticipants.length,

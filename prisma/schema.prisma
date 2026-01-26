@@ -397,6 +397,8 @@ model CartaFrutos {
   talentosDeclaracionFeedback      String?
   feedbackMentor                   String?
   approvedAt                       DateTime?
+  wizardStep                       Int         @default(1)
+  wizardCompletedAt                DateTime?
   Usuario                          Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   Meta                             Meta[]
   Tarea                            Tarea[]
@@ -1077,6 +1079,12 @@ model Organization {
   // Directorio de Talentos
   BusinessProfiles                                      BusinessProfile[]
 
+  // Sistema de Arquetipos/Personajes
+  Archetypes                                            Archetype[]
+
+  // Reportes Anónimos de participantes de Visión
+  ReporteAnonimoVision                                  ReporteAnonimoVision[]
+
   @@index([masterOrganizationId])
   @@index([slug])
   @@index([status])
@@ -1519,6 +1527,48 @@ model ReporteAnonimo {
   @@index([solicitudMentoriaId])
 }
 
+// Reportes anónimos de participantes de visiones hacia personal de la organización
+model ReporteAnonimoVision {
+  id              Int       @id @default(autoincrement())
+  
+  // Quién reporta (anónimo para el reportado)
+  reporterId      Int
+  Reporter        Usuario   @relation("ReporteAnonimoVision_reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  
+  // Organización donde ocurre
+  organizationId  Int
+  Organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  // Persona reportada (opcional - puede ser reporte general)
+  reportedUserId  Int?
+  ReportedUser    Usuario?  @relation("ReporteAnonimoVision_reported", fields: [reportedUserId], references: [id], onDelete: SetNull)
+  
+  // Tipo de rol reportado: TRAINER, COORDINADOR, GAME_CHANGER, MENTOR, GENERAL
+  tipoReportado   String    @default("GENERAL")
+  
+  // Contenido del reporte
+  mensaje         String    @db.Text
+  categoria       String    @default("QUEJA") // QUEJA, SUGERENCIA, ACOSO, DISCRIMINACION, OTRO
+  
+  // Estado del reporte
+  estado          String    @default("PENDIENTE") // PENDIENTE, EN_REVISION, RESUELTO, ARCHIVADO
+  
+  // Respuesta del admin (no visible para el reporter)
+  notaInterna     String?   @db.Text
+  revisadoPor     Int?
+  RevisadoPorUser Usuario?  @relation("ReporteAnonimoVision_revisado", fields: [revisadoPor], references: [id])
+  revisadoAt      DateTime?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([organizationId])
+  @@index([reporterId])
+  @@index([reportedUserId])
+  @@index([estado])
+  @@index([createdAt])
+}
+
 model ResenasMentoria {
   id                Int               @id @default(autoincrement())
   solicitudId       Int               @unique
@@ -1642,6 +1692,12 @@ model SchoolProduct {
   CollectiblePhotos          CollectiblePhoto[]          @relation("PhotoProduct")
   LegacyCaptureSessions      LegacyCaptureSession[]      @relation("ProductLegacyCaptures")
   UserSongs                  UserSong[]                  @relation("ProductSongs")
+
+  // Sistema de Arquetipos/Personajes
+  ArchetypeAssignments       ArchetypeAssignment[]       @relation("ProductArchetypeAssignments")
+
+  // Sistema de Metamorfosis / El Escenario
+  MetamorfosisAssignments    MetamorfosisAssignment[]    @relation("ProductMetamorfosisAssignments")
 
   @@index([isActive])
   @@index([levelType])
@@ -2200,6 +2256,9 @@ model Usuario {
   RefundRequest_RefundRequest_studentIdToUsuario                         RefundRequest[]                 @relation("RefundRequest_studentIdToUsuario")
   ReporteAnonimo_ReporteAnonimo_estudianteIdToUsuario                    ReporteAnonimo[]                @relation("ReporteAnonimo_estudianteIdToUsuario")
   ReporteAnonimo_ReporteAnonimo_mentorIdToUsuario                        ReporteAnonimo[]                @relation("ReporteAnonimo_mentorIdToUsuario")
+  ReporteAnonimoVision_reporter                                          ReporteAnonimoVision[]          @relation("ReporteAnonimoVision_reporter")
+  ReporteAnonimoVision_reported                                          ReporteAnonimoVision[]          @relation("ReporteAnonimoVision_reported")
+  ReporteAnonimoVision_revisado                                          ReporteAnonimoVision[]          @relation("ReporteAnonimoVision_revisado")
   ResenasMentoria                                                        ResenasMentoria[]
   RewardHistory                                                          RewardHistory[]
   ProductCoordinator                                                     SchoolProduct[]                 @relation("ProductCoordinator")
@@ -2326,6 +2385,19 @@ model Usuario {
   UserBreaches                                                           TribeBreachReport[]             @relation("UserBreaches")
   ResolvedBreaches                                                       TribeBreachReport[]             @relation("ResolvedBreaches")
   InvitedGraduationGuests                                                GraduationGuest[]               @relation("InvitedGraduationGuests")
+  
+  // Sistema de Arquetipos / Personajes
+  TrainerArchetypes                                                      Archetype[]                     @relation("TrainerArchetypes")
+  ParticipantArchetypes                                                  ArchetypeAssignment[]           @relation("ParticipantArchetypes")
+  TrainerArchetypeAssignments                                            ArchetypeAssignment[]           @relation("TrainerArchetypeAssignments")
+
+  // Sistema de Metamorfosis / El Escenario
+  TrainerMetamorfosisBase                                                MetamorfosisBase[]              @relation("TrainerMetamorfosisBase")
+  TrainerMetamorfosisTransform                                           MetamorfosisTransform[]         @relation("TrainerMetamorfosisTransform")
+  TrainerMetamorfosisSong                                                MetamorfosisSong[]              @relation("TrainerMetamorfosisSong")
+  TrainerMetamorfosisCunaSong                                            MetamorfosisCunaSong[]          @relation("TrainerMetamorfosisCunaSong")
+  ParticipantMetamorfosis                                                MetamorfosisAssignment[]        @relation("ParticipantMetamorfosis")
+  TrainerMetamorfosisAssignments                                         MetamorfosisAssignment[]        @relation("TrainerMetamorfosisAssignments")
 
   @@index([communityOrganizationId])
 }
@@ -2423,6 +2495,12 @@ model Vision {
   TribeAuditChecklists          TribeAuditChecklist[]           @relation("VisionAuditChecklists")
   TribeBreachReports            TribeBreachReport[]             @relation("VisionBreachReports")
   GraduationGuests              GraduationGuest[]               @relation("VisionGraduationGuests")
+
+  // Sistema de Arquetipos/Personajes
+  ArchetypeAssignments          ArchetypeAssignment[]           @relation("VisionArchetypeAssignments")
+
+  // Sistema de Metamorfosis / El Escenario
+  MetamorfosisAssignments       MetamorfosisAssignment[]        @relation("VisionMetamorfosisAssignments")
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -3544,6 +3622,8 @@ enum AbsenceReportStatus {
 enum AdminTaskType {
   EXTRAORDINARY
   EVENT
+  ARCHETYPE_REVIEW
+  METAMORFOSIS_REVIEW
 }
 
 enum AlertType {
@@ -3731,6 +3811,7 @@ enum NotificationType {
   SYSTEM_ALERT
   OTHER
   AVATAR_RENEWAL_REMINDER
+  ARCHETYPE_ASSIGNMENT
 }
 
 enum OrganizationStatus {
@@ -4350,8 +4431,9 @@ model DirectorAudit {
   liderazgoCapitanias   Int?     // 1-10
   disciplinaPuntualidad String?  // 3 estados
   imagenStaff           String?  // 3 estados
-  imagenCoordinador     String?  // 3 estados
-  contextoAlineamiento  String?  // 3 estados
+  imagenEntrenador      String?  // 3 estados - Vestimenta del Entrenador
+  actitudEntrenador     String?  // 3 estados - Actitud del Entrenador
+  alineacionEntrenador  String?  // 3 estados - Alineación del Entrenador
   
   // Cierre
   observaciones         String?  @db.Text
@@ -4512,7 +4594,7 @@ model BuddyPair {
 
 enum BuddyStatus {
   PENDING       // A solicitó, esperando respuesta de B
-  MATCHED       // Ambos aceptaron - Pacto sellado
+  MATCHED       // Ambos aceptaron - Compromiso sellado
   REJECTED      // B rechazó la solicitud
   BROKEN        // Pacto roto (por abandono, etc.)
 }
@@ -5627,3 +5709,243 @@ enum BreachReportStatus {
   DISMISSED
 }
 
+// ==========================================
+// SISTEMA DE ARQUETIPOS / PERSONAJES
+// ==========================================
+
+enum ArchetypeCategory {
+  VICTIMA_DRAMA
+  NINO_BERRINCHUDO
+  MASCARA_DUREZA_EGO
+  SALVADORES_MARTIRES
+  INVISIBLES_SOLITARIOS
+  MASCARA_SOCIAL
+  CUSTOM
+}
+
+enum ArchetypeAssignmentStatus {
+  SENT
+  VIEWED
+  ACCEPTED
+  TRANSFORMED
+}
+
+// Personajes/Arquetipos creados por entrenadores
+model Archetype {
+  id              Int               @id @default(autoincrement())
+  trainerId       Int?              // null = personaje del sistema (predefinido)
+  organizationId  Int?              // Para personajes de organización
+  
+  name            String            // "La Llorona", "Hulk", etc.
+  category        ArchetypeCategory @default(CUSTOM)
+  maneraSerTag    String            // "VICTIMA", "IRA", "BERRINCHES", etc.
+  maneraSerLabel  String            // "Víctima / Sufrimiento Eterno"
+  
+  scriptFeedback  String            @db.Text  // El texto de feedback para el usuario
+  description     String?           @db.Text  // Descripción adicional para el trainer
+  
+  imageUrl        String?           // URL de la imagen/avatar del personaje
+  
+  isSystemDefault Boolean           @default(false) // true = personaje predefinido
+  isActive        Boolean           @default(true)
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  Trainer         Usuario?          @relation("TrainerArchetypes", fields: [trainerId], references: [id])
+  Organization    Organization?     @relation(fields: [organizationId], references: [id])
+  Assignments     ArchetypeAssignment[]
+  
+  @@index([trainerId])
+  @@index([organizationId])
+  @@index([category])
+  @@index([isSystemDefault])
+}
+
+// Asignaciones de arquetipos a participantes
+model ArchetypeAssignment {
+  id              Int                       @id @default(autoincrement())
+  archetypeId     Int
+  participantId   Int
+  assignedById    Int                       // El trainer que asignó
+  visionId        Int?
+  productId       Int?
+  
+  status          ArchetypeAssignmentStatus @default(SENT)
+  customNote      String?                   @db.Text  // Nota personalizada del trainer
+  
+  viewedAt        DateTime?
+  acceptedAt      DateTime?
+  transformedAt   DateTime?
+  
+  // Respuesta del participante
+  responseText    String?                   @db.Text
+  responseVideoUrl String?
+  
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  
+  Archetype       Archetype                 @relation(fields: [archetypeId], references: [id], onDelete: Cascade)
+  Participant     Usuario                   @relation("ParticipantArchetypes", fields: [participantId], references: [id])
+  AssignedBy      Usuario                   @relation("TrainerArchetypeAssignments", fields: [assignedById], references: [id])
+  Vision          Vision?                   @relation("VisionArchetypeAssignments", fields: [visionId], references: [id])
+  Product         SchoolProduct?            @relation("ProductArchetypeAssignments", fields: [productId], references: [id])
+  
+  @@index([archetypeId])
+  @@index([participantId])
+  @@index([assignedById])
+  @@index([visionId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ============================================
+// MÓDULO "EL ESCENARIO" (METAMORFOSIS)
+// ============================================
+
+// Personajes Base para Metamorfosis (el estado inicial)
+model MetamorfosisBase {
+  id              Int               @id @default(autoincrement())
+  trainerId       Int?              // null = predefinido del sistema
+  
+  name            String            // "Mimo", "Estatua", "Robot", etc.
+  description     String?           @db.Text
+  imageUrl        String?
+  
+  isSystemDefault Boolean           @default(false)
+  isActive        Boolean           @default(true)
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  Trainer         Usuario?          @relation("TrainerMetamorfosisBase", fields: [trainerId], references: [id])
+  Assignments     MetamorfosisAssignment[]
+  
+  @@index([trainerId])
+  @@index([isSystemDefault])
+}
+
+// Transformaciones (el estado final explosivo)
+model MetamorfosisTransform {
+  id              Int               @id @default(autoincrement())
+  trainerId       Int?              // null = predefinido del sistema
+  
+  name            String            // "Ricky Martin", "Shakira", etc.
+  description     String?           @db.Text
+  imageUrl        String?
+  
+  isSystemDefault Boolean           @default(false)
+  isActive        Boolean           @default(true)
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  Trainer         Usuario?          @relation("TrainerMetamorfosisTransform", fields: [trainerId], references: [id])
+  Assignments     MetamorfosisAssignment[]
+  
+  @@index([trainerId])
+  @@index([isSystemDefault])
+}
+
+// Canción principal (detonador de la metamorfosis)
+model MetamorfosisSong {
+  id              Int               @id @default(autoincrement())
+  trainerId       Int?              // null = predefinido del sistema
+  
+  title           String            // "Livin' la Vida Loca"
+  artist          String?           // "Ricky Martin"
+  spotifyUrl      String?           // URL de Spotify
+  previewUrl      String?           // URL de preview de audio
+  imageUrl        String?           // Carátula del álbum
+  
+  isSystemDefault Boolean           @default(false)
+  isActive        Boolean           @default(true)
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  Trainer         Usuario?          @relation("TrainerMetamorfosisSong", fields: [trainerId], references: [id])
+  Assignments     MetamorfosisAssignment[]
+  
+  @@index([trainerId])
+  @@index([isSystemDefault])
+}
+
+// Canción de Cuna (para el cierre emocional)
+model MetamorfosisCunaSong {
+  id              Int               @id @default(autoincrement())
+  trainerId       Int?              // null = predefinido del sistema
+  
+  title           String            // "Duérmete mi niño"
+  artist          String?           
+  spotifyUrl      String?           
+  previewUrl      String?           
+  imageUrl        String?           
+  
+  isSystemDefault Boolean           @default(false)
+  isActive        Boolean           @default(true)
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  Trainer         Usuario?          @relation("TrainerMetamorfosisCunaSong", fields: [trainerId], references: [id])
+  Assignments     MetamorfosisAssignment[]
+  
+  @@index([trainerId])
+  @@index([isSystemDefault])
+}
+
+// Asignaciones de Metamorfosis a participantes
+model MetamorfosisAssignment {
+  id              Int               @id @default(autoincrement())
+  participantId   Int
+  assignedById    Int               // El trainer que asignó
+  visionId        Int?
+  productId       Int?
+  
+  // La ecuación: [BASE] + [TRANSFORM] + [SONG] + [CUNA]
+  baseId          Int?              // Opcional (Modo Directo = null)
+  transformId     Int               // Obligatorio
+  songId          Int               // Obligatorio
+  cunaSongId      Int?              // Canción de cuna (opcional)
+  
+  includeBase     Boolean           @default(true)  // Toggle Modo Completo vs Directo
+  
+  status          MetamorfosisStatus @default(SENT)
+  customNote      String?           @db.Text
+  
+  // Frase construida (cache)
+  constructedPhrase String?         @db.Text
+  
+  viewedAt        DateTime?
+  performedAt     DateTime?
+  
+  // Respuesta del participante
+  responseVideoUrl String?
+  responseNote     String?          @db.Text
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  Base            MetamorfosisBase?      @relation(fields: [baseId], references: [id])
+  Transform       MetamorfosisTransform  @relation(fields: [transformId], references: [id])
+  Song            MetamorfosisSong       @relation(fields: [songId], references: [id])
+  CunaSong        MetamorfosisCunaSong?  @relation(fields: [cunaSongId], references: [id])
+  Participant     Usuario                @relation("ParticipantMetamorfosis", fields: [participantId], references: [id])
+  AssignedBy      Usuario                @relation("TrainerMetamorfosisAssignments", fields: [assignedById], references: [id])
+  Vision          Vision?                @relation("VisionMetamorfosisAssignments", fields: [visionId], references: [id])
+  Product         SchoolProduct?         @relation("ProductMetamorfosisAssignments", fields: [productId], references: [id])
+  
+  @@index([participantId])
+  @@index([assignedById])
+  @@index([visionId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum MetamorfosisStatus {
+  SENT
+  VIEWED
+  PERFORMED
+  COMPLETED
+}

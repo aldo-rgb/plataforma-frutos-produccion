@@ -14,6 +14,7 @@ import TreasuryQuickWidget from '@/components/dashboard/TreasuryQuickWidget';
 import BacklogsDropsWidget from '@/components/dashboard/BacklogsDropsWidget';
 import PersonalQRWidget from '@/components/dashboard/PersonalQRWidget';
 import { ElCruceAccessWidget } from '@/components/el-cruce';
+import CartaPrellenadaWidget from '@/components/dashboard/CartaPrellenadaWidget';
 
 interface DashboardData {
   overview: {
@@ -350,8 +351,13 @@ export default function CoordinadorBasicoDashboard() {
           </Link>
         </div>
 
+        {/* Widget de Cartas Prellenadas */}
+        <div className="mt-6">
+          <CartaPrellenadaWidget />
+        </div>
+
         {/* Widgets de Declarados e Inscritos */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           {/* Widget de Declarados */}
           <div onClick={handleOpenDeclarados} className="cursor-pointer">
             <div className="bg-gradient-to-br from-amber-900/40 to-slate-900/80 border-2 border-amber-500/30 rounded-2xl p-6 hover:border-amber-500/50 transition-all group">
@@ -422,13 +428,18 @@ export default function CoordinadorBasicoDashboard() {
         {/* Widget de Alertas Médicas */}
         <div className="mt-8">
           <MedicalAlertsWidget />
+          <MedicalAlertsWidget />
+        </div>
+
+        {/* Widget de Cartas Prellenadas */}
+        <div className="mt-8">
+          <CartaPrellenadaWidget />
         </div>
 
         {/* Widget Monitor de Llamadas */}
         <div className="mt-8">
           <GCCallsMonitorWidget />
         </div>
-
         {/* Widget de Tesorería Express */}
         <div className="mt-8">
           <TreasuryQuickWidget />

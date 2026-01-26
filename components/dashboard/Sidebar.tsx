@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { 
   LayoutDashboard, Trophy, Target, BarChart3, User, LogOut, 
-  UserPlus, DollarSign, Package, Shield, 
+  UserPlus, DollarSign, Package, Shield, Drama, Theater,
   CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode, Store, Star, Crown
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
@@ -39,6 +39,8 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
   const [showUpsellModal, setShowUpsellModal] = useState(false);
   const [upsellMessage, setUpsellMessage] = useState('');
   const [isPLParticipant, setIsPLParticipant] = useState(false);
+  const [hasActiveAdvanced, setHasActiveAdvanced] = useState(false);
+  const [reportesPendientes, setReportesPendientes] = useState(0);
   const [iaRecommendation, setIaRecommendation] = useState<{
     message: string;
     emoji: string;
@@ -53,6 +55,25 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
       onClose();
     }
   };
+
+  // Verificar si trainer tiene avanzado vigente
+  useEffect(() => {
+    const checkActiveAdvanced = async () => {
+      try {
+        const response = await fetch('/api/trainer/has-active-advanced');
+        if (response.ok) {
+          const data = await response.json();
+          setHasActiveAdvanced(data.hasActiveAdvanced === true);
+        }
+      } catch (error) {
+        console.error('Error checking active advanced:', error);
+      }
+    };
+
+    if (usuario.rol === 'TRAINER') {
+      checkActiveAdvanced();
+    }
+  }, [usuario.rol]);
 
   // Verificar si es participante PL
   useEffect(() => {
@@ -112,6 +133,29 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
 
     if (usuario.rol === 'PARTICIPANTE') {
       fetchIARecommendation();
+    }
+  }, [usuario.rol]);
+
+  // Obtener cantidad de reportes anónimos pendientes (para SCHOOL_ADMIN y ADMIN)
+  useEffect(() => {
+    const fetchReportesPendientes = async () => {
+      try {
+        const response = await fetch('/api/vision/reporte-anonimo');
+        if (response.ok) {
+          const data = await response.json();
+          // Contar solo los pendientes
+          const pendientes = Array.isArray(data) 
+            ? data.filter((r: any) => r.estado === 'PENDIENTE').length 
+            : 0;
+          setReportesPendientes(pendientes);
+        }
+      } catch (error) {
+        console.error('Error fetching reportes pendientes:', error);
+      }
+    };
+
+    if (usuario.rol === 'SCHOOL_ADMIN' || usuario.rol === 'ADMIN' || usuario.rol === 'ADMINISTRADOR') {
+      fetchReportesPendientes();
     }
   }, [usuario.rol]);
 
@@ -467,6 +511,39 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
           </div>
         )}
 
+        {/* Panel de Trainer - Personajes solo si tiene avanzado vigente */}
+        {usuario.rol === 'TRAINER' && hasActiveAdvanced && (
+          <div className="pt-6 mt-6 border-t border-slate-800">
+            <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">🎭 Herramientas Avanzado</p>
+            
+            <Link 
+              href="/dashboard/trainer/personajes"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/trainer/personajes' || pathname.startsWith('/dashboard/trainer/personajes')
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-purple-900/20'
+              }`}
+            >
+              <Drama size={18} className="text-purple-400" />
+              <span>Personajes</span>
+            </Link>
+
+            <Link 
+              href="/dashboard/trainer/metamorfosis"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/trainer/metamorfosis' || pathname.startsWith('/dashboard/trainer/metamorfosis')
+                  ? 'bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-fuchsia-900/20'
+              }`}
+            >
+              <Theater size={18} className="text-fuchsia-400" />
+              <span>Saltos Cuánticos</span>
+            </Link>
+          </div>
+        )}
+
         {/* Panel de Director de Escuela (SCHOOL_ADMIN) */}
         {usuario.rol === 'SCHOOL_ADMIN' && (
           <div className="pt-6 mt-6 border-t border-slate-800">
@@ -523,6 +600,31 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
               <Gift size={18} className="text-emerald-400" />
               <span>Auditar Donaciones</span>
             </Link>
+
+            <Link 
+              href="/dashboard/school-admin/reportes-anonimos"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/school-admin/reportes-anonimos'
+                  ? 'bg-gradient-to-r from-orange-600 to-red-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-orange-900/20'
+              }`}
+            >
+              <div className="relative">
+                <ShieldAlert size={18} className="text-orange-400" />
+                {reportesPendientes > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 animate-pulse">
+                    {reportesPendientes}
+                  </span>
+                )}
+              </div>
+              <span>Buzón Anónimo</span>
+              {reportesPendientes > 0 && (
+                <span className="ml-auto bg-red-500/20 text-red-400 text-xs px-2 py-0.5 rounded-full">
+                  {reportesPendientes} nuevo{reportesPendientes > 1 ? 's' : ''}
+                </span>
+              )}
+            </Link>
           </div>
         )}
 
@@ -562,7 +664,22 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
                 }`}
               >
                 <ShieldAlert size={18} className="text-orange-500" />
-                <span>Buzón Anónimo</span>
+                <span>Buzón Mentorías</span>
+              </Link>
+            )}
+
+            {/* Buzón Anónimo Visiones - Solo ADMIN y ADMINISTRADOR */}
+            {(usuario.rol === 'ADMIN' || usuario.rol === 'ADMINISTRADOR') && (
+              <Link 
+                href="/dashboard/school-admin/reportes-anonimos" 
+                className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                  pathname === '/dashboard/school-admin/reportes-anonimos'
+                    ? 'bg-gradient-to-r from-orange-600 to-red-600 text-white'
+                    : 'text-slate-400 hover:text-white hover:bg-red-900/20'
+                }`}
+              >
+                <ShieldAlert size={18} className="text-red-500" />
+                <span>Buzón Visiones</span>
               </Link>
             )}
 
@@ -648,6 +765,36 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
               >
                 <CalendarCheck size={18} className="text-cyan-500" />
                 <span>Gestión de Ciclos</span>
+              </Link>
+            )}
+
+            {/* Personajes del Sistema - Solo Admin */}
+            {(usuario.rol === 'ADMIN' || usuario.rol === 'ADMINISTRADOR') && (
+              <Link 
+                href="/dashboard/admin/personajes" 
+                className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                  pathname === '/dashboard/admin/personajes'
+                    ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg'
+                    : 'text-slate-400 hover:text-white hover:bg-cyan-900/20'
+                }`}
+              >
+                <Sparkles size={18} className="text-cyan-400" />
+                <span>Personajes del Sistema</span>
+              </Link>
+            )}
+
+            {/* Saltos Cuánticos del Sistema - Solo Admin */}
+            {(usuario.rol === 'ADMIN' || usuario.rol === 'ADMINISTRADOR') && (
+              <Link 
+                href="/dashboard/admin/saltos-cuanticos" 
+                className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                  pathname === '/dashboard/admin/saltos-cuanticos'
+                    ? 'bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white shadow-lg'
+                    : 'text-slate-400 hover:text-white hover:bg-fuchsia-900/20'
+                }`}
+              >
+                <Theater size={18} className="text-fuchsia-400" />
+                <span>Saltos Cuánticos</span>
               </Link>
             )}
 
@@ -1045,6 +1192,22 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
       <div className="p-4 border-t border-slate-800 space-y-2">
         {/* Instalar App PWA */}
         <InstallAppButton variant="sidebar" />
+
+        {/* Buzón Anónimo - Solo para PARTICIPANTE */}
+        {usuario.rol === 'PARTICIPANTE' && (
+          <Link
+            href="/dashboard/buzon-anonimo"
+            onClick={handleLinkClick}
+            className={`flex items-center gap-3 px-4 py-3 w-full rounded-lg transition-colors ${
+              pathname === '/dashboard/buzon-anonimo'
+                ? 'bg-gradient-to-r from-orange-600 to-red-600 text-white shadow-lg'
+                : 'text-slate-400 hover:bg-orange-900/20 hover:text-orange-300'
+            }`}
+          >
+            <ShieldAlert size={20} className="text-orange-400" />
+            <span>Buzón Anónimo</span>
+          </Link>
+        )}
         
         {/* Configuración */}
         <Link

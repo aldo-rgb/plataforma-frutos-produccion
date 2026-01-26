@@ -60,8 +60,9 @@ export default function DirectorAuditModal({
   const [liderazgoCapitanias, setLiderazgoCapitanias] = useState(5);
   const [disciplinaPuntualidad, setDisciplinaPuntualidad] = useState<ThreeState>(null);
   const [imagenStaff, setImagenStaff] = useState<ThreeState>(null);
-  const [imagenCoordinador, setImagenCoordinador] = useState<ThreeState>(null);
-  const [contextoAlineamiento, setContextoAlineamiento] = useState<ThreeState>(null);
+  const [imagenEntrenador, setImagenEntrenador] = useState<ThreeState>(null);
+  const [actitudEntrenador, setActitudEntrenador] = useState<ThreeState>(null);
+  const [alineacionEntrenador, setAlineacionEntrenador] = useState<ThreeState>(null);
 
   // Cierre
   const [observaciones, setObservaciones] = useState('');
@@ -222,8 +223,9 @@ export default function DirectorAuditModal({
           liderazgoCapitanias,
           disciplinaPuntualidad,
           imagenStaff,
-          imagenCoordinador,
-          contextoAlineamiento,
+          imagenEntrenador,
+          actitudEntrenador,
+          alineacionEntrenador,
           // Cierre
           observaciones: observaciones || null
         })
@@ -346,8 +348,9 @@ export default function DirectorAuditModal({
 
             <ThreeStateSelector label="Disciplina: Puntualidad (Inicio/Breaks)" value={disciplinaPuntualidad} onChange={setDisciplinaPuntualidad} />
             <ThreeStateSelector label="Imagen: Vestimenta del Staff" value={imagenStaff} onChange={setImagenStaff} />
-            <ThreeStateSelector label="Imagen: Vestimenta del Coordinador" value={imagenCoordinador} onChange={setImagenCoordinador} />
-            <ThreeStateSelector label="Contexto: Alineamiento (Actitud/Energía)" value={contextoAlineamiento} onChange={setContextoAlineamiento} />
+            <ThreeStateSelector label="Imagen: Vestimenta del Entrenador" value={imagenEntrenador} onChange={setImagenEntrenador} />
+            <ThreeStateSelector label="Actitud del Entrenador" value={actitudEntrenador} onChange={setActitudEntrenador} />
+            <ThreeStateSelector label="Alineación del Entrenador" value={alineacionEntrenador} onChange={setAlineacionEntrenador} />
           </div>
         );
 

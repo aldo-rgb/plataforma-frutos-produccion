@@ -183,7 +183,7 @@ export async function GET(request: NextRequest) {
             trainingLevel === VisionLevel.BASIC
               ? ["photoWithGC", "photoWithSquad", "photoBlueWall"]
               : trainingLevel === VisionLevel.ADVANCED
-                ? ["photoWithGC", "photoWithSquad", "lullaby", "contract", "declaration"]
+                ? ["photoWithGC", "photoWithSquad", "contract", "declaration"] // Sin canción de cuna
                 : ["photoWithGC", "photoWithSquad", "plLullaby", "photoSalon", "photoManta"], // PL
         };
       })
@@ -301,16 +301,15 @@ export async function POST(request: NextRequest) {
         status = "IN_PROGRESS";
       }
     } else if (level === 'ADVANCED') {
-      // AVANZADO: 2 fotos + canción + contrato + declaración
+      // AVANZADO: 2 fotos + contrato + declaración (sin canción de cuna)
       const hasPhoto1 = !!(photoWithGCUrl || capturaExistente?.photoWithGCUrl);
       const hasPhoto2 = !!(photoWithSquadUrl || capturaExistente?.photoWithSquadUrl);
-      const hasLullaby = !!(lullabyTitle || capturaExistente?.lullabyTitle);
       const hasContract = !!(contractPhotoUrl || capturaExistente?.contractPhotoUrl);
       const hasDeclaration = !!(contractDeclaration || capturaExistente?.contractDeclaration);
       
-      if (hasPhoto1 && hasPhoto2 && hasLullaby && hasContract && hasDeclaration) {
+      if (hasPhoto1 && hasPhoto2 && hasContract && hasDeclaration) {
         status = "COMPLETED";
-      } else if (hasPhoto1 || hasPhoto2 || hasLullaby || hasContract || hasDeclaration) {
+      } else if (hasPhoto1 || hasPhoto2 || hasContract || hasDeclaration) {
         status = "IN_PROGRESS";
       }
     } else {

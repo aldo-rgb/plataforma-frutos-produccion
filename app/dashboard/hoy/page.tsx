@@ -12,7 +12,9 @@ import PersonalTaskCard from '@/components/dashboard/PersonalTaskCard';
 import DashboardCalendarHeader from '@/components/dashboard/DashboardCalendarHeader';
 import UserLevelBadge from '@/components/dashboard/UserLevelBadge';
 import UpcomingCallCard from '@/components/dashboard/UpcomingCallCard';
-import { ChevronLeft, ChevronRight, Calendar, Sparkles, TrendingUp, Check, Zap, Phone, Plus, Target } from 'lucide-react';
+import ArchetypeTaskCard from '@/components/dashboard/ArchetypeTaskCard';
+import MetamorfosisTaskCard from '@/components/dashboard/MetamorfosisTaskCard';
+import { ChevronLeft, ChevronRight, Calendar, Sparkles, TrendingUp, Check, Zap, Phone, Plus, Target, User } from 'lucide-react';
 
 interface Task {
   id: string | number; // Puede ser number (carta) o string (admin/trainer)
@@ -475,7 +477,44 @@ export default function TodayPage() {
       }
     } catch (error) {
       console.error('Error submitting evidence:', error);
-      throw error;
+        throw error;
+    }
+  };
+
+  // Completar tarea de personaje (sin evidencia)
+  const handleCompleteArchetypeTask = async (submissionId: number) => {
+    try {
+      const response = await fetch('/api/tareas/complete-simple', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ submissionId })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Actualizar la tarea en el estado
+        setTasks(prev => prev.map(t => 
+          t.submissionId === submissionId
+            ? { ...t, status: 'COMPLETED' as const }
+            : t
+        ));
+
+        // Actualizar stats
+        setStats(prev => ({
+          ...prev,
+          completed: prev.completed + 1,
+          pending: prev.pending - 1,
+          completionRate: Math.round(((prev.completed + 1) / prev.total) * 100)
+        }));
+
+        console.log(`✅ Tarea de personaje completada. +${data.pointsEarned} puntos`);
+      } else {
+        throw new Error(data.error || 'Error al completar tarea');
+      }
+    } catch (error) {
+      console.error('Error completing archetype task:', error);
+      alert('Hubo un error al completar la tarea');
     }
   };
 
@@ -653,6 +692,58 @@ export default function TodayPage() {
                     />
                   ))}
                 </div>
+              </>
+            )}
+
+            {/* Personaje Asignado */}
+            {tasks.some(t => t.tipo === 'PERSONAJE') && (
+              <>
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-violet-400 font-bold mt-6 mb-3">
+                  <User size={14} />
+                  Personaje Asignado
+                </div>
+                {tasks
+                  .filter(t => t.tipo === 'PERSONAJE')
+                  .map(task => (
+                    <ArchetypeTaskCard 
+                      key={task.id}
+                      task={{
+                        id: String(task.id),
+                        submissionId: task.submissionId!,
+                        title: task.texto,
+                        description: task.metaContext,
+                        pointsReward: task.pointsReward,
+                        status: task.status
+                      }}
+                      onComplete={handleCompleteArchetypeTask}
+                    />
+                  ))}
+              </>
+            )}
+
+            {/* Salto Cuántico (Metamorfosis) */}
+            {tasks.some(t => t.tipo === 'SALTO_CUANTICO') && (
+              <>
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-cyan-400 font-bold mt-6 mb-3">
+                  <Zap size={14} />
+                  Salto Cuántico
+                </div>
+                {tasks
+                  .filter(t => t.tipo === 'SALTO_CUANTICO')
+                  .map(task => (
+                    <MetamorfosisTaskCard 
+                      key={task.id}
+                      task={{
+                        id: String(task.id),
+                        submissionId: task.submissionId!,
+                        title: task.texto,
+                        description: task.metaContext,
+                        pointsReward: task.pointsReward,
+                        status: task.status
+                      }}
+                      onComplete={handleCompleteArchetypeTask}
+                    />
+                  ))}
               </>
             )}
 

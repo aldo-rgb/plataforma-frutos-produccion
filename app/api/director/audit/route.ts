@@ -17,8 +17,8 @@ export async function POST(request: NextRequest) {
       select: { id: true, rol: true, nombre: true }
     });
 
-    if (!director || !['DIRECTOR', 'SCHOOL_ADMIN', 'COORDINADOR', 'ADMIN'].includes(director.rol)) {
-      return NextResponse.json({ error: 'Solo directores pueden enviar auditorías' }, { status: 403 });
+    if (!director || !['COORDINADOR', 'DIRECTOR', 'SCHOOL_ADMIN', 'ADMIN'].includes(director.rol)) {
+      return NextResponse.json({ error: 'Solo coordinadores pueden enviar auditorías' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -55,8 +55,9 @@ export async function POST(request: NextRequest) {
       liderazgoCapitanias,
       disciplinaPuntualidad,
       imagenStaff,
-      imagenCoordinador,
-      contextoAlineamiento,
+      imagenEntrenador,
+      actitudEntrenador,
+      alineacionEntrenador,
       // Cierre
       observaciones
     } = body;
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
       limpiezaGeneral, equipoSonido, visualesPantalla, materialesRotafolio,
       insumosBaul, cumplimientoTareas, mesaControl, climaAire, banosLimpieza,
       sillasEstado, pinturaParedes, brandingVinilos, disciplinaPuntualidad,
-      imagenStaff, imagenCoordinador, contextoAlineamiento
+      imagenStaff, imagenEntrenador, actitudEntrenador, alineacionEntrenador
     ];
 
     for (const field of threeStateFields) {
@@ -135,8 +136,9 @@ export async function POST(request: NextRequest) {
         liderazgoCapitanias,
         disciplinaPuntualidad,
         imagenStaff,
-        imagenCoordinador,
-        contextoAlineamiento,
+        imagenEntrenador,
+        actitudEntrenador,
+        alineacionEntrenador,
         // Cierre
         observaciones,
         certifiedAt: new Date()

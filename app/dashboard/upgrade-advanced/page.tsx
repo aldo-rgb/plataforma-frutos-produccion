@@ -362,7 +362,7 @@ export default function UpgradeAdvancedPage() {
               <Crown className="w-10 h-10 text-white" />
             </div>
             <h2 className="text-3xl font-bold text-white mb-2">
-              Inscríbete a TU VIDA
+              Programa de Liderato
             </h2>
             <p className="text-slate-400 max-w-md mx-auto">
               Estás cursando el nivel Avanzado. Continúa tu formación completa con PL.

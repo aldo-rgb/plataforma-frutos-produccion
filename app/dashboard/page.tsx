@@ -582,6 +582,11 @@ export default async function DashboardPage() {
       )}
 
       {/* ============================================ */}
+      {/* ZONA DE EJECUCIÓN DIARIA (Arriba de KPIs)   */}
+      {/* ============================================ */}
+      <ZonaEjecucionDiaria />
+
+      {/* ============================================ */}
       {/* ZONA MEDIA: KPIs + Programa Intensivo        */}
       {/* ============================================ */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -684,11 +689,6 @@ export default async function DashboardPage() {
           </div>
         )}
       </div>
-
-      {/* ============================================ */}
-      {/* ZONA DE EJECUCIÓN DIARIA (Siempre visible)  */}
-      {/* ============================================ */}
-      <ZonaEjecucionDiaria />
 
       {/* ============================================ */}
       {/* PROGRAMA INTENSIVO BANNER (Solo Onboarding)  */}

@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
-// GET - Obtener auditorías pendientes del Director/School Admin
+// GET - Obtener auditorías pendientes del Coordinador asignado al nivel
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,20 +17,17 @@ export async function GET(request: NextRequest) {
       select: { id: true, rol: true, organizationId: true }
     });
 
-    if (!user || !['SCHOOL_ADMIN', 'DIRECTOR', 'ADMIN'].includes(user.rol)) {
+    // Permitir COORDINADOR, SCHOOL_ADMIN, DIRECTOR y ADMIN
+    if (!user || !['COORDINADOR', 'SCHOOL_ADMIN', 'DIRECTOR', 'ADMIN'].includes(user.rol)) {
       return NextResponse.json({ pendingAudits: [] });
     }
 
-    if (!user.organizationId) {
-      return NextResponse.json({ pendingAudits: [] });
-    }
-
-    // Obtener productos COMPLETED de la organización del director
+    // Obtener productos COMPLETED donde el usuario es el coordinador asignado
     const completedProducts = await prisma.schoolProduct.findMany({
       where: {
-        organizationId: user.organizationId,
+        coordinatorId: user.id, // Solo productos donde es el coordinador asignado
         trainingStatus: 'COMPLETED',
-        type: 'CORE_TRAINING', // Solo entrenamientos core, no talleres extra
+        type: 'CORE_TRAINING',
       },
       select: {
         id: true,

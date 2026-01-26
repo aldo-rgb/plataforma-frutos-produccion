@@ -408,14 +408,35 @@ export async function GET(req: Request) {
     const formatAdminTask = (submission: any) => {
       const task = submission.AdminTask;
       const isEvent = task.type === 'EVENT';
+      const isArchetype = task.type === 'ARCHETYPE_REVIEW';
+      const isMetamorfosis = task.type === 'METAMORFOSIS_REVIEW';
+      
+      // Determinar el tipo de tarea
+      let tipo = 'EXTRAORDINARIA';
+      let area = 'Misión Especial';
+      let areaIcon = '⚡️';
+      
+      if (isArchetype) {
+        tipo = 'PERSONAJE';
+        area = 'Casting';
+        areaIcon = '🎭';
+      } else if (isMetamorfosis) {
+        tipo = 'SALTO_CUANTICO';
+        area = 'Salto Cuántico';
+        areaIcon = '⚡';
+      } else if (isEvent) {
+        tipo = 'EVENTO';
+        area = 'Evento';
+        areaIcon = '📅';
+      }
       
       return {
         id: `admin-${submission.id}`,
         submissionId: submission.id,
-        tipo: isEvent ? 'EVENTO' : 'EXTRAORDINARIA',
+        tipo,
         texto: task.titulo,
-        area: isEvent ? 'Evento' : 'Misión Especial',
-        areaIcon: isEvent ? '📅' : '⚡️',
+        area,
+        areaIcon,
         metaContext: task.descripcion || (isEvent ? `${task.lugar || 'Virtual'} - ${task.horaEvento || ''}` : 'Asignado por Mentoría'),
         fechaProgramada: (task.fechaEvento || task.fechaLimite || new Date()).toISOString(),
         status: submission.status,
@@ -488,8 +509,26 @@ export async function GET(req: Request) {
 
     console.log(`📦 Misiones trainer para mostrar hoy: ${misionesTrainerHoy.length}`);
 
+    // ========== FILTRAR TAREAS DE ARQUETIPOS ==========
+    const tareasArquetipos = tareasAdmin.filter(t => {
+      if (t.AdminTask.type !== 'ARCHETYPE_REVIEW') return false;
+      // Solo mostrar si está pendiente
+      return t.status === 'PENDING';
+    });
+    console.log(`🎭 Tareas de arquetipos pendientes: ${tareasArquetipos.length}`);
+
+    // ========== FILTRAR TAREAS DE METAMORFOSIS ==========
+    const tareasMetamorfosis = tareasAdmin.filter(t => {
+      if (t.AdminTask.type !== 'METAMORFOSIS_REVIEW') return false;
+      // Solo mostrar si está pendiente
+      return t.status === 'PENDING';
+    });
+    console.log(`⚡ Tareas de metamorfosis pendientes: ${tareasMetamorfosis.length}`);
+
     // ========== COMBINAR Y ORDENAR POR PRIORIDAD ==========
     const tareasHoy = [
+      ...tareasArquetipos.map(formatAdminTask), // Prioridad 0: Arquetipos (nuevos!)
+      ...tareasMetamorfosis.map(formatAdminTask), // Prioridad 0.5: Metamorfosis (Salto Cuántico)
       ...eventosHoy.map(formatAdminTask), // Prioridad 1: Eventos
       ...misionesTrainerHoy.map(formatTrainerMission), // Prioridad 2: Misiones del Trainer
       ...tareasExtraordinarias.map(formatAdminTask), // Prioridad 3: Extraordinarias
@@ -511,6 +550,7 @@ export async function GET(req: Request) {
     })));
 
     console.log('✅ Tareas procesadas:', {
+      arquetipos: tareasArquetipos.length,
       eventosHoy: eventosHoy.length,
       misionesTrainer: misionesTrainerHoy.length,
       extraordinarias: tareasExtraordinarias.length,
@@ -527,6 +567,7 @@ export async function GET(req: Request) {
       totalHoy: tareasHoy.length,
       totalRetrasadas: tareasRetrasadas.length,
       breakdown: {
+        arquetipos: tareasArquetipos.length,
         eventos: eventosHoy.length,
         misionesTrainer: misionesTrainerHoy.length,
         extraordinarias: tareasExtraordinarias.length,

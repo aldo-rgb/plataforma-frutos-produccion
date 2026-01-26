@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   BookOpen, Plus, Search, Filter, Edit2, Trash2, Copy,
   FileQuestion, Film, Zap, Heart, Clock, Award, Tag,
-  ChevronDown, ChevronUp, X, Save, AlertCircle
+  ChevronDown, ChevronUp, X, Save, AlertCircle, Drama, Theater
 } from 'lucide-react'
+import Link from 'next/link'
 
 interface Question {
   id?: number
@@ -54,10 +55,27 @@ export default function BibliotecaPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null)
   const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [hasActiveAdvanced, setHasActiveAdvanced] = useState(false)
 
   useEffect(() => {
     fetchTemplates()
   }, [search, filterType, filterTag])
+
+  // Verificar si tiene avanzado activo
+  useEffect(() => {
+    const checkActiveAdvanced = async () => {
+      try {
+        const res = await fetch('/api/trainer/has-active-advanced')
+        if (res.ok) {
+          const data = await res.json()
+          setHasActiveAdvanced(data.hasActiveAdvanced === true)
+        }
+      } catch (error) {
+        console.error('Error checking active advanced:', error)
+      }
+    }
+    checkActiveAdvanced()
+  }, [])
 
   const fetchTemplates = async () => {
     try {
@@ -184,6 +202,28 @@ export default function BibliotecaPage() {
                 <option key={tag} value={tag}>{tag}</option>
               ))}
             </select>
+          )}
+
+          {/* Botón Personajes (solo si tiene avanzado activo) */}
+          {hasActiveAdvanced && (
+            <Link
+              href="/dashboard/trainer/personajes"
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-purple-500/20 transition-all"
+            >
+              <Drama className="w-5 h-5" />
+              Personajes
+            </Link>
+          )}
+
+          {/* Botón Saltos Cuánticos (solo si tiene avanzado activo) */}
+          {hasActiveAdvanced && (
+            <Link
+              href="/dashboard/trainer/metamorfosis"
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-fuchsia-500/20 transition-all"
+            >
+              <Theater className="w-5 h-5" />
+              Saltos Cuánticos
+            </Link>
           )}
 
           {/* Botón crear */}

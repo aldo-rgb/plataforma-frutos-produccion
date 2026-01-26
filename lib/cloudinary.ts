@@ -88,12 +88,13 @@ export async function uploadImage(
  */
 export async function uploadAudio(
   file: Buffer | string,
-  customFolder?: string
+  customFolder?: string,
+  mimeType: string = 'audio/mpeg'
 ): Promise<CloudinaryUploadResult> {
   const config = UPLOAD_PRESETS.AUDIO;
   
   const uploadData = Buffer.isBuffer(file)
-    ? `data:audio/webm;base64,${file.toString('base64')}`
+    ? `data:${mimeType};base64,${file.toString('base64')}`
     : file;
   
   try {

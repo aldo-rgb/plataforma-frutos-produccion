@@ -393,9 +393,14 @@ export default function LegacyCapturePage() {
           <h3 className="font-semibold text-gray-100">
             Participantes ({filteredParticipantes.length})
           </h3>
-          {selectedVision?.trainingLevel !== 'BASIC' && (
+          {selectedVision?.trainingLevel === 'ADVANCED' && (
             <p className="text-sm text-purple-400 mt-1">
-              ✨ Entrenamiento {selectedVision?.trainingLevel} - Incluye canción de cuna y contrato
+              ✨ Entrenamiento AVANZADO - Incluye contrato y declaración
+            </p>
+          )}
+          {selectedVision?.trainingLevel === 'PL' && (
+            <p className="text-sm text-yellow-400 mt-1">
+              👑 Entrenamiento PL - Incluye canción de cuna, foto salón y manta
             </p>
           )}
         </div>
@@ -475,27 +480,29 @@ export default function LegacyCapturePage() {
                       <ImageIcon className="w-3 h-3 inline mr-1" />
                       Wall
                     </span>
-                    {selectedVision?.trainingLevel !== 'BASIC' && (
+                    {selectedVision?.trainingLevel === 'ADVANCED' && (
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs ${
+                          p.hasContract
+                            ? 'bg-green-900/50 text-green-400'
+                            : 'bg-gray-800 text-gray-500'
+                        }`}
+                      >
+                        <FileText className="w-3 h-3 inline mr-1" />
+                        📜
+                      </span>
+                    )}
+                    {selectedVision?.trainingLevel === 'PL' && (
                       <>
                         <span
                           className={`px-2 py-0.5 rounded text-xs ${
-                            p.hasLullaby
+                            p.hasPlLullaby
                               ? 'bg-green-900/50 text-green-400'
                               : 'bg-gray-800 text-gray-500'
                           }`}
                         >
                           <Music className="w-3 h-3 inline mr-1" />
                           🎵
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs ${
-                            p.hasContract
-                              ? 'bg-green-900/50 text-green-400'
-                              : 'bg-gray-800 text-gray-500'
-                          }`}
-                        >
-                          <FileText className="w-3 h-3 inline mr-1" />
-                          📜
                         </span>
                       </>
                     )}
@@ -591,7 +598,7 @@ export default function LegacyCapturePage() {
 
                   {/* Foto con Squad */}
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-300">👥 Foto con el Squad</label>
+                    <label className="block text-sm font-medium text-gray-300">👥 Foto con el Atomo</label>
                     <div className="flex items-center gap-4">
                       {captureForm.photoWithSquadUrl ? (
                         <img src={captureForm.photoWithSquadUrl} alt="Con Squad" className="w-24 h-24 object-cover rounded-lg"/>
@@ -642,7 +649,7 @@ export default function LegacyCapturePage() {
                       <span className="font-medium">Entrenamiento Avanzado</span>
                     </div>
                     <p className="text-sm text-purple-300/80">
-                      Fotos + Canción de Cuna + Contrato + Declaración
+                      Fotos + Contrato + Declaración
                     </p>
                   </div>
 
@@ -669,7 +676,7 @@ export default function LegacyCapturePage() {
 
                   {/* Foto con Squad */}
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-300">👥 Foto con el Squad</label>
+                    <label className="block text-sm font-medium text-gray-300">👥 Foto con el Atomo</label>
                     <div className="flex items-center gap-4">
                       {captureForm.photoWithSquadUrl ? (
                         <img src={captureForm.photoWithSquadUrl} alt="Con Squad" className="w-24 h-24 object-cover rounded-lg"/>
@@ -685,19 +692,6 @@ export default function LegacyCapturePage() {
                           <span className="text-sm text-gray-400">{captureForm.photoWithSquadUrl ? 'Cambiar' : 'Subir foto'}</span>
                         </div>
                       </label>
-                    </div>
-                  </div>
-
-                  {/* Canción de Cuna */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-300">🎵 Canción de Cuna</label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <input type="text" placeholder="Título de la canción" value={captureForm.lullabyTitle}
-                        onChange={(e) => setCaptureForm({...captureForm, lullabyTitle: e.target.value})}
-                        className="px-4 py-2 bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-purple-500"/>
-                      <input type="text" placeholder="Artista" value={captureForm.lullabyArtist}
-                        onChange={(e) => setCaptureForm({...captureForm, lullabyArtist: e.target.value})}
-                        className="px-4 py-2 bg-gray-800 border border-gray-700 text-gray-100 placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-purple-500"/>
                     </div>
                   </div>
 
@@ -768,7 +762,7 @@ export default function LegacyCapturePage() {
 
                   {/* Foto con Squad */}
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-300">👥 Foto con el Squad</label>
+                    <label className="block text-sm font-medium text-gray-300">👥 Foto con el Atomo</label>
                     <div className="flex items-center gap-4">
                       {captureForm.photoWithSquadUrl ? (
                         <img src={captureForm.photoWithSquadUrl} alt="Con Squad" className="w-24 h-24 object-cover rounded-lg"/>

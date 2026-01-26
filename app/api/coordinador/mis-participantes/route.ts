@@ -22,9 +22,9 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
-    console.log('✅ Coordinador:', coordinador.id, coordinador.nombre);
+    console.log('✅ Coordinador:', coordinador.id, coordinador.nombre, 'OrgId:', coordinador.organizationId);
 
-    // Obtener visiones del coordinador
+    // Obtener visiones de la organización del coordinador
     let visionesWhere: any = {};
     
     if (coordinador.organizationId) {
@@ -35,12 +35,25 @@ export async function GET() {
 
     console.log('🔍 Buscando visiones con:', visionesWhere);
 
+    // Obtener visiones
     const visiones = await prisma.vision.findMany({
       where: visionesWhere,
-      include: {
-        Participantes: {
+      select: { id: true, nombre: true }
+    });
+
+    console.log('✅ Visiones encontradas:', visiones.length);
+
+    // Para cada visión, obtener participantes desde vision_enrollments
+    const visionesConParticipantes = await Promise.all(
+      visiones.map(async (vision) => {
+        // Obtener enrollments de esta visión (usuarios activos)
+        const enrollments = await prisma.vision_enrollments.findMany({
+          where: {
+            visionId: vision.id,
+            enrollmentStatus: { in: ['ENROLLED', 'ACTIVE', 'COMPLETED'] }
+          },
           include: {
-            Participante: {
+            Usuario_vision_enrollments_userIdToUsuario: {
               select: {
                 id: true,
                 nombre: true,
@@ -68,47 +81,48 @@ export async function GET() {
               }
             }
           }
-        }
-      }
-    });
+        });
 
-    console.log('✅ Visiones encontradas:', visiones.length);
-    visiones.forEach(v => console.log('  -', v.nombre, ':', v.Participantes.length, 'participantes'));
+        console.log('  -', vision.nombre, ':', enrollments.length, 'enrollments');
 
-    // Organizar por visión y calcular ranking
-    const visionesConParticipantes = visiones.map(vision => {
-      const participantes = vision.Participantes
-        .filter(vp => vp.Participante.rol === 'PARTICIPANTE' || vp.Participante.rol === 'GAMECHANGER')
-        .map(vp => vp.Participante)
-        .sort((a, b) => (b.puntosGamificacion || 0) - (a.puntosGamificacion || 0))
-        .map((p, index) => ({
-          id: p.id,
-          nombre: p.nombre,
-          email: p.email,
-          profileImageUrl: p.profileImage,
-          condecoraciones: p.PerfilCompleto?.condecoraciones || [],
-          puntosCultivo: p.puntosGamificacion || 0,
-          puntosQuantum: p.puntosCuanticos || 0,
-          xp: p.experienciaXP || 0,
-          racha: p.completionStreak || 0,
-          tier: p.tier || 'Bronce',
-          ranking: index + 1,
-          cartaId: p.CartaFrutos[0]?.id,
-          cartaEstado: p.CartaFrutos[0]?.estado,
-          cartaAutorizada: p.CartaFrutos[0]?.autorizadoMentor === true,
-          mentoringStartDate: p.CartaFrutos[0]?.fechaCreacion
-        }));
+        // Filtrar y mapear participantes
+        const participantes = enrollments
+          .filter(e => e.Usuario_vision_enrollments_userIdToUsuario && 
+                       ['PARTICIPANTE', 'GAMECHANGER', 'STAFF'].includes(e.Usuario_vision_enrollments_userIdToUsuario.rol))
+          .map(e => e.Usuario_vision_enrollments_userIdToUsuario!)
+          .sort((a, b) => (b.puntosGamificacion || 0) - (a.puntosGamificacion || 0))
+          .map((p, index) => ({
+            id: p.id,
+            nombre: p.nombre,
+            email: p.email,
+            profileImageUrl: p.profileImage,
+            condecoraciones: p.PerfilCompleto?.condecoraciones || [],
+            puntosCultivo: p.puntosGamificacion || 0,
+            puntosQuantum: p.puntosCuanticos || 0,
+            xp: p.experienciaXP || 0,
+            racha: p.completionStreak || 0,
+            tier: p.tier || 'Bronce',
+            ranking: index + 1,
+            cartaId: p.CartaFrutos[0]?.id,
+            cartaEstado: p.CartaFrutos[0]?.estado,
+            cartaAutorizada: p.CartaFrutos[0]?.autorizadoMentor === true,
+            mentoringStartDate: p.CartaFrutos[0]?.fechaCreacion
+          }));
 
-      return {
-        visionId: vision.id,
-        visionNombre: vision.nombre,
-        participantes
-      };
-    }).filter(v => v.participantes.length > 0);
+        return {
+          visionId: vision.id,
+          visionNombre: vision.nombre,
+          participantes
+        };
+      })
+    );
+
+    // Filtrar visiones sin participantes
+    const visionesConDatos = visionesConParticipantes.filter(v => v.participantes.length > 0);
 
     return NextResponse.json({
       success: true,
-      visiones: visionesConParticipantes
+      visiones: visionesConDatos
     });
 
   } catch (error: any) {

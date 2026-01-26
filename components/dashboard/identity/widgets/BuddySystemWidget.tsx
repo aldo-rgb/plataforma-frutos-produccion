@@ -520,7 +520,7 @@ export default function BuddySystemWidget() {
             </div>
             <div>
               <h3 className="font-semibold text-white text-sm sm:text-base">Buddy System</h3>
-              <p className="text-[10px] sm:text-xs text-green-400">✓ Pacto sellado</p>
+              <p className="text-[10px] sm:text-xs text-green-400">✓ Compromiso sellado</p>
             </div>
           </div>
           <button
