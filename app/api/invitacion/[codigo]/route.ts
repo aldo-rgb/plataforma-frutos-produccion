@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
 
 // Force Node.js runtime for Prisma compatibility
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+// Create prisma instance directly to avoid singleton issues in serverless
+const prisma = new PrismaClient();
 
 export async function GET(
   request: NextRequest,
