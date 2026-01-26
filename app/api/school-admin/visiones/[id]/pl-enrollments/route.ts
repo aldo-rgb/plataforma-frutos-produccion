@@ -21,10 +21,12 @@ export async function GET(
     const visionId = parseInt(resolvedParams.id);
 
     // Buscar enrollments del nivel LIDERATO (PL) para esta visión
+    // Solo mostrar los que tienen pago completo (PAID, PAID_FULL, FULL, GIFT, SCHOLARSHIP)
     const enrollments = await prisma.vision_enrollments.findMany({
       where: {
         visionId,
-        level: 'PL'
+        level: 'PL',
+        paymentStatus: { in: ['PAID', 'PAID_FULL', 'FULL', 'GIFT', 'SCHOLARSHIP'] }
       },
       include: {
         Usuario_vision_enrollments_userIdToUsuario: {
