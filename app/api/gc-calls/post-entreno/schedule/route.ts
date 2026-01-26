@@ -328,12 +328,14 @@ export async function GET(request: Request) {
       ]
     });
 
-    // Obtener TODOS los slots ocupados del GC (para filtrar horarios disponibles)
+    // Obtener SOLO los slots de POST_TRAINING ocupados del GC (no los del entrenamiento regular)
+    // Las llamadas durante el entrenamiento NO deben bloquear horarios de post-entreno
     const allOccupiedSlots = await prisma.gCCallSlot.findMany({
       where: {
         availability: {
           gameChangerId: gcId
         },
+        callType: 'POST_TRAINING', // Solo slots de post-entreno
         status: {
           in: ['SCHEDULED', 'CONFIRMED']
         }
