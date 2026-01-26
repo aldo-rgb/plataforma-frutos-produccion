@@ -58,31 +58,15 @@ export async function GET(
         },
         orderBy: {
           fechaInicio: 'asc'
-        },
-        include: {
-          _count: {
-            select: {
-              enrollments: {
-                where: {
-                  status: {
-                    in: ['ENROLLED', 'CONFIRMED', 'ACTIVE']
-                  }
-                }
-              }
-            }
-          }
         }
       });
 
+      // Obtener precios de la organización
+      const orgPrices = await prisma.organizationPrices.findFirst({
+        where: { organizationId: orgId }
+      });
+
       if (vision) {
-        // Obtener precios de la organización
-        const orgPrices = await prisma.organizationPrices.findFirst({
-          where: { organizationId: orgId }
-        });
-
-        const maxParticipants = vision.maxParticipantes || 100;
-        const currentEnrolled = vision._count.enrollments;
-
         nextBasico = {
           id: vision.id,
           nombre: vision.nombre,
@@ -91,14 +75,10 @@ export async function GET(
           lugar: vision.lugar || null,
           precio: orgPrices?.basicPrice || 1500,
           currency: orgPrices?.currency || 'MXN',
-          cuposDisponibles: Math.max(0, maxParticipants - currentEnrolled)
+          cuposDisponibles: 50
         };
       } else {
-        // Si no hay visión futura, buscar precios de todos modos
-        const orgPrices = await prisma.organizationPrices.findFirst({
-          where: { organizationId: orgId }
-        });
-
+        // Si no hay visión futura, mostrar precios de todos modos
         nextBasico = {
           id: 0,
           nombre: 'Próximo Entrenamiento Básico',
