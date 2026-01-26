@@ -27,7 +27,8 @@ import {
   Save,
   Eye,
   PartyPopper,
-  Volume2
+  Volume2,
+  Gift
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
