@@ -349,6 +349,7 @@ export async function GET(request: Request) {
         level: squad.level,
         maxSize: squad.maxSize,
         isActive: squad.isActive,
+        visionId: squad.visionId,
         leader: squad.leader,
         vision: squad.vision,
         product: squad.product,

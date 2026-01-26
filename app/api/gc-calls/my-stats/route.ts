@@ -305,6 +305,7 @@ export async function GET() {
     });
 
     // Buscar los horarios de TODOS los miembros (sus slots programados)
+    // Separamos por tipo de llamada: TRAINING vs POST_TRAINING
     const allMemberSlots = await prisma.gCCallSlot.findMany({
       where: {
         participantId: { in: memberIds },
@@ -312,17 +313,33 @@ export async function GET() {
       select: { 
         participantId: true,
         scheduledTime: true,
+        callType: true,
       },
       orderBy: { bookedAt: 'desc' },
     });
 
     // Crear mapa de horarios: userId -> scheduledTime (el más reciente)
-    const memberSchedules: Record<number, string> = {};
+    // Ahora separamos por tipo de llamada
+    const memberSchedules: Record<number, string> = {}; // Para compatibilidad
+    const trainingSchedules: Record<number, string> = {}; // Llamadas durante entrenamiento
+    const postEntrenoSchedules: Record<number, string> = {}; // Llamadas post-entreno
     const membersWithAnyCall = new Set<number>();
     
     allMemberSlots.forEach(slot => {
       membersWithAnyCall.add(slot.participantId);
-      // Solo guardar el primero (más reciente por el orderBy)
+      
+      // Separar por tipo de llamada
+      if (slot.callType === 'POST_TRAINING') {
+        if (!postEntrenoSchedules[slot.participantId]) {
+          postEntrenoSchedules[slot.participantId] = slot.scheduledTime;
+        }
+      } else if (slot.callType === 'TRAINING') {
+        if (!trainingSchedules[slot.participantId]) {
+          trainingSchedules[slot.participantId] = slot.scheduledTime;
+        }
+      }
+      
+      // Para compatibilidad, guardar el más reciente en memberSchedules general
       if (!memberSchedules[slot.participantId]) {
         memberSchedules[slot.participantId] = slot.scheduledTime;
       }
@@ -525,7 +542,9 @@ export async function GET() {
         membersWithoutCall,
         completedToday,
       },
-      memberSchedules, // Mapa de userId -> horario
+      memberSchedules, // Mapa de userId -> horario (compatibilidad)
+      trainingSchedules, // Mapa de userId -> horario de llamadas TRAINING
+      postEntrenoSchedules, // Mapa de userId -> horario de llamadas POST_TRAINING
       todayCallStatus, // Mapa de userId -> estado de llamada del día
       // Información de entrenamiento por squad
       squadTrainingInfo,

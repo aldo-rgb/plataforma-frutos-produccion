@@ -171,6 +171,8 @@ export async function POST(request: Request) {
           targetType: 'USER',
           targetId: parseInt(participantId),
           fechaLimite: callDate,
+          fechaEvento: callDate, // Fecha del evento para que aparezca en "HOY"
+          horaEvento: call.time, // Hora del evento
           requiereEvidencia: false,
           isActive: true,
           createdBy: gcId,
@@ -200,6 +202,8 @@ export async function POST(request: Request) {
           targetType: 'USER',
           targetId: gcId,
           fechaLimite: callDate,
+          fechaEvento: callDate, // Fecha del evento para que aparezca en "HOY"
+          horaEvento: call.time, // Hora del evento
           requiereEvidencia: false,
           isActive: true,
           createdBy: gcId,

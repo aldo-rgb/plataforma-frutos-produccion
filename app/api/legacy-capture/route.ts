@@ -252,8 +252,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determinar el nivel del training
-    const level = (trainingLevel as string) || 'BASIC';
+    // Validar que visionId y participantId sean números válidos
+    const parsedVisionId = parseInt(String(visionId));
+    const parsedParticipantId = parseInt(String(participantId));
+    
+    if (isNaN(parsedVisionId) || isNaN(parsedParticipantId)) {
+      return NextResponse.json(
+        { error: "visionId y participantId deben ser números válidos" },
+        { status: 400 }
+      );
+    }
+
+    // Determinar el nivel del training - validar que sea uno de los valores permitidos
+    const validLevels = ['BASIC', 'ADVANCED', 'PL'];
+    const level = validLevels.includes(trainingLevel as string) ? (trainingLevel as string) : 'BASIC';
 
     // NOTA: No verificamos asignación al squad porque el GC accede desde su dashboard
     // donde ya solo ve a sus participantes asignados. La verificación causaba 
@@ -262,19 +274,19 @@ export async function POST(request: NextRequest) {
     // Buscar captura existente
     const capturaExistente = await prisma.legacyCaptureSession.findFirst({
       where: {
-        visionId: parseInt(visionId),
-        participantId: parseInt(participantId),
+        visionId: parsedVisionId,
+        participantId: parsedParticipantId,
       },
     });
 
-    // Determinar estado de la captura según nivel
+    // Determinar estado de la captura según nivel - usar solo los valores enviados (no los existentes)
     let status: "PENDING" | "IN_PROGRESS" | "COMPLETED" = "PENDING";
     
     if (level === 'BASIC') {
       // BÁSICO: 3 fotos requeridas
-      const hasPhoto1 = !!(photoWithGCUrl || capturaExistente?.photoWithGCUrl);
-      const hasPhoto2 = !!(photoWithSquadUrl || capturaExistente?.photoWithSquadUrl);
-      const hasPhoto3 = !!(photoBlueWallUrl || capturaExistente?.photoBlueWallUrl);
+      const hasPhoto1 = !!photoWithGCUrl;
+      const hasPhoto2 = !!photoWithSquadUrl;
+      const hasPhoto3 = !!photoBlueWallUrl;
       
       if (hasPhoto1 && hasPhoto2 && hasPhoto3) {
         status = "COMPLETED";
@@ -283,10 +295,10 @@ export async function POST(request: NextRequest) {
       }
     } else if (level === 'ADVANCED') {
       // AVANZADO: 2 fotos + contrato + declaración (sin canción de cuna)
-      const hasPhoto1 = !!(photoWithGCUrl || capturaExistente?.photoWithGCUrl);
-      const hasPhoto2 = !!(photoWithSquadUrl || capturaExistente?.photoWithSquadUrl);
-      const hasContract = !!(contractPhotoUrl || capturaExistente?.contractPhotoUrl);
-      const hasDeclaration = !!(contractDeclaration || capturaExistente?.contractDeclaration);
+      const hasPhoto1 = !!photoWithGCUrl;
+      const hasPhoto2 = !!photoWithSquadUrl;
+      const hasContract = !!contractPhotoUrl;
+      const hasDeclaration = !!contractDeclaration;
       
       if (hasPhoto1 && hasPhoto2 && hasContract && hasDeclaration) {
         status = "COMPLETED";
@@ -295,11 +307,11 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // PL: 2 fotos + canción PL + foto salón + foto manta
-      const hasPhoto1 = !!(photoWithGCUrl || capturaExistente?.photoWithGCUrl);
-      const hasPhoto2 = !!(photoWithSquadUrl || capturaExistente?.photoWithSquadUrl);
-      const hasPlLullaby = !!(plLullabyTitle || capturaExistente?.plLullabyTitle);
-      const hasSalon = !!(photoSalonUrl || capturaExistente?.photoSalonUrl);
-      const hasManta = !!(photoMantaUrl || capturaExistente?.photoMantaUrl);
+      const hasPhoto1 = !!photoWithGCUrl;
+      const hasPhoto2 = !!photoWithSquadUrl;
+      const hasPlLullaby = !!plLullabyTitle;
+      const hasSalon = !!photoSalonUrl;
+      const hasManta = !!photoMantaUrl;
       
       if (hasPhoto1 && hasPhoto2 && hasPlLullaby && hasSalon && hasManta) {
         status = "COMPLETED";
@@ -308,30 +320,30 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Datos a guardar
+    // Datos a guardar - incluir campos incluso si son null/vacíos para poder borrarlos
     const captureData: any = {
-      visionId: parseInt(visionId),
-      participantId: parseInt(participantId),
+      visionId: parsedVisionId,
+      participantId: parsedParticipantId,
       gcId: gcId,
       level: level as ProductLevelType,
       status,
-      // Campos que se usan en todos los niveles
-      ...(photoWithGCUrl && { photoWithGCUrl }),
-      ...(photoWithSquadUrl && { photoWithSquadUrl }),
+      // Campos que se usan en todos los niveles - siempre actualizar
+      photoWithGCUrl: photoWithGCUrl || null,
+      photoWithSquadUrl: photoWithSquadUrl || null,
       // Campos BÁSICO
-      ...(photoBlueWallUrl && { photoBlueWallUrl }),
+      photoBlueWallUrl: photoBlueWallUrl || null,
       // Campos AVANZADO
-      ...(lullabyTitle && { lullabyTitle }),
-      ...(lullabyArtist && { lullabyArtist }),
-      ...(lullabyAudioUrl && { lullabyAudioUrl }),
-      ...(contractPhotoUrl && { contractPhotoUrl }),
-      ...(contractDeclaration && { contractDeclaration }),
+      lullabyTitle: lullabyTitle || null,
+      lullabyArtist: lullabyArtist || null,
+      lullabyAudioUrl: lullabyAudioUrl || null,
+      contractPhotoUrl: contractPhotoUrl || null,
+      contractDeclaration: contractDeclaration || null,
       // Campos PL
-      ...(plLullabyTitle && { plLullabyTitle }),
-      ...(plLullabyArtist && { plLullabyArtist }),
-      ...(plLullabyAudioUrl && { plLullabyAudioUrl }),
-      ...(photoSalonUrl && { photoSalonUrl }),
-      ...(photoMantaUrl && { photoMantaUrl }),
+      plLullabyTitle: plLullabyTitle || null,
+      plLullabyArtist: plLullabyArtist || null,
+      plLullabyAudioUrl: plLullabyAudioUrl || null,
+      photoSalonUrl: photoSalonUrl || null,
+      photoMantaUrl: photoMantaUrl || null,
     };
 
     let captura;

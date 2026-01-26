@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   X, 
   Calendar, 
@@ -12,7 +12,8 @@ import {
   Users,
   CalendarPlus,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  Pencil
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -20,13 +21,6 @@ interface ParticipantInfo {
   odId: number;
   odName: string;
   odImage?: string | null;
-}
-
-interface CallSchedule {
-  dayOffset: number;
-  date: Date;
-  time: string;
-  label: string;
 }
 
 interface PostEntrenoScheduleModalProps {
@@ -51,18 +45,33 @@ export default function PostEntrenoScheduleModal({
   trainingEndDate: propTrainingEndDate,
   onScheduled
 }: PostEntrenoScheduleModalProps) {
-  const [step, setStep] = useState<'participant' | 'schedule' | 'confirm' | 'success'>('participant');
-  const [selectedParticipant, setSelectedParticipant] = useState<ParticipantInfo | null>(null);
-  const [callDays, setCallDays] = useState<number[]>(DEFAULT_CALL_DAYS);
-  const [callTime, setCallTime] = useState<string>('07:00'); // Default 7:00 AM
+  const [step, setStep] = useState<'days' | 'schedules' | 'success'>('days');
+  const [selectedDays, setSelectedDays] = useState<number[]>(DEFAULT_CALL_DAYS);
+  const [participantTimes, setParticipantTimes] = useState<Record<number, string>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [scheduledParticipants, setScheduledParticipants] = useState<Set<number>>(new Set());
   const [trainingEndDate, setTrainingEndDate] = useState<Date | null>(propTrainingEndDate || null);
   const [loadingVision, setLoadingVision] = useState(false);
   const [occupiedSlotsByDate, setOccupiedSlotsByDate] = useState<Record<string, string[]>>({});
+  const [scheduledCount, setScheduledCount] = useState(0);
+  const [alreadyScheduledIds, setAlreadyScheduledIds] = useState<Set<number>>(new Set());
+  const [editingParticipants, setEditingParticipants] = useState<Set<number>>(new Set()); // IDs de participantes que se están editando
+  const [scheduledTimes, setScheduledTimes] = useState<Record<number, string>>({}); // Horarios actuales de los ya agendados
 
-  // Cargar fecha de fin del entrenamiento si no viene como prop
+  // Inicializar horarios por defecto para cada participante
+  useEffect(() => {
+    const defaults: Record<number, string> = {};
+    members.forEach((m, idx) => {
+      // Asignar horarios escalonados: 7:00, 7:10, 7:20, etc.
+      const baseHour = 7;
+      const minutes = (idx * 10) % 60;
+      const hour = baseHour + Math.floor((idx * 10) / 60);
+      defaults[m.odId] = `${hour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    });
+    setParticipantTimes(defaults);
+  }, [members]);
+
+  // Cargar fecha de fin del entrenamiento
   useEffect(() => {
     if (!propTrainingEndDate && squadId) {
       fetchTrainingEndDate();
@@ -81,8 +90,20 @@ export default function PostEntrenoScheduleModal({
         if (data.occupiedSlotsByDate) {
           setOccupiedSlotsByDate(data.occupiedSlotsByDate);
         }
+        // Guardar IDs de participantes que ya tienen llamadas agendadas
         if (data.scheduledParticipants) {
-          setScheduledParticipants(new Set(data.scheduledParticipants));
+          setAlreadyScheduledIds(new Set(data.scheduledParticipants));
+        }
+        // Guardar horarios actuales de los ya agendados
+        if (data.callsByParticipant) {
+          const times: Record<number, string> = {};
+          for (const [participantId, calls] of Object.entries(data.callsByParticipant)) {
+            const callsArray = calls as any[];
+            if (callsArray.length > 0) {
+              times[parseInt(participantId)] = callsArray[0].scheduledTime;
+            }
+          }
+          setScheduledTimes(times);
         }
       }
     } catch (err) {
@@ -92,70 +113,24 @@ export default function PostEntrenoScheduleModal({
     }
   };
 
-  // Calcular las fechas de las llamadas basadas en el día de fin y los offsets
-  const calculateCallDates = (): CallSchedule[] => {
+  // Calcular las fechas basadas en los días seleccionados
+  const callDates = useMemo(() => {
     if (!trainingEndDate) return [];
-    
     const endDate = new Date(trainingEndDate);
     endDate.setHours(0, 0, 0, 0);
     
-    return callDays.map((dayOffset, index) => {
+    return selectedDays.map((dayOffset, index) => {
       const callDate = new Date(endDate);
       callDate.setDate(callDate.getDate() + dayOffset);
-      
-      const weekNum = dayOffset <= 4 ? 1 : 2;
-      const callNum = index + 1;
-      
       return {
         dayOffset,
         date: callDate,
-        time: callTime,
-        label: `Llamada ${callNum} (Semana ${weekNum})`
+        label: `Llamada ${index + 1}`
       };
     });
-  };
+  }, [trainingEndDate, selectedDays]);
 
-  const callDates = calculateCallDates();
-
-  // Auto-seleccionar primer horario disponible cuando cambian los días o se selecciona participante
-  useEffect(() => {
-    if (step === 'schedule' && callDates.length > 0) {
-      // Generar todas las opciones de tiempo
-      const times: string[] = [];
-      for (let h = 6; h <= 9; h++) {
-        for (let m = 0; m < 60; m += 10) {
-          if (h === 9 && m > 0) break;
-          times.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
-        }
-      }
-      
-      // Encontrar el primer horario disponible
-      const firstAvailable = times.find(time => {
-        for (const call of callDates) {
-          const dateKey = call.date.toISOString().split('T')[0];
-          const occupiedTimes = occupiedSlotsByDate[dateKey] || [];
-          if (occupiedTimes.includes(time)) {
-            return false;
-          }
-        }
-        return true;
-      });
-      
-      if (firstAvailable && firstAvailable !== callTime) {
-        // Verificar si el horario actual está ocupado
-        const currentIsOccupied = callDates.some(call => {
-          const dateKey = call.date.toISOString().split('T')[0];
-          return (occupiedSlotsByDate[dateKey] || []).includes(callTime);
-        });
-        
-        if (currentIsOccupied) {
-          setCallTime(firstAvailable);
-        }
-      }
-    }
-  }, [step, callDates, occupiedSlotsByDate]);
-
-  // Formatear fecha para mostrar
+  // Formatear fecha
   const formatDate = (date: Date) => {
     const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
     const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -170,123 +145,177 @@ export default function PostEntrenoScheduleModal({
     return `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
   };
 
-  // Cambiar día de una llamada
-  const handleDayChange = (index: number, newDay: number) => {
-    const newDays = [...callDays];
-    newDays[index] = newDay;
-    // Ordenar los días
-    newDays.sort((a, b) => a - b);
-    setCallDays(newDays);
-  };
-
-  // Guardar las llamadas para un participante
-  const handleSaveSchedule = async () => {
-    if (!selectedParticipant) {
-      setError('No hay participante seleccionado');
-      return;
-    }
+  // Generar calendario de 15 días
+  const calendarDays = useMemo(() => {
+    if (!trainingEndDate) return [];
+    const endDate = new Date(trainingEndDate);
+    endDate.setHours(0, 0, 0, 0);
     
-    if (!trainingEndDate) {
-      setError('No se pudo obtener la fecha de fin del entrenamiento');
-      return;
-    }
-    
-    if (callDates.length === 0) {
-      setError('No hay llamadas configuradas');
-      return;
-    }
-    
-    setSaving(true);
-    setError(null);
-    
-    console.log('📅 Enviando datos:', {
-      participantId: selectedParticipant.odId,
-      squadId,
-      trainingEndDate: trainingEndDate.toISOString(),
-      calls: callDates.map(call => ({
-        dayOffset: call.dayOffset,
-        date: call.date.toISOString(),
-        time: callTime
-      }))
-    });
-    
-    try {
-      const res = await fetch('/api/gc-calls/post-entreno/schedule', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          participantId: selectedParticipant.odId,
-          squadId,
-          trainingEndDate: trainingEndDate.toISOString(),
-          calls: callDates.map(call => ({
-            dayOffset: call.dayOffset,
-            date: call.date.toISOString(),
-            time: callTime
-          }))
-        })
+    const days = [];
+    for (let i = 1; i <= 15; i++) {
+      const date = new Date(endDate);
+      date.setDate(date.getDate() + i);
+      days.push({
+        dayOffset: i,
+        date,
+        dayName: ['D', 'L', 'M', 'M', 'J', 'V', 'S'][date.getDay()],
+        dayNum: date.getDate(),
+        isSelected: selectedDays.includes(i)
       });
-      
-      const data = await res.json();
-      console.log('📅 Respuesta:', data);
-      
-      if (data.success) {
-        setScheduledParticipants(prev => new Set([...prev, selectedParticipant.odId]));
-        setStep('success');
-        
-        // Después de 1.5 segundos, volver a la lista o cerrar
-        setTimeout(() => {
-          if (scheduledParticipants.size + 1 < members.length) {
-            // Hay más participantes por agendar
-            setSelectedParticipant(null);
-            setStep('participant');
-            // Recargar slots ocupados
-            fetchTrainingEndDate();
-          } else {
-            // Todos agendados
-            onScheduled?.();
-            onClose();
-          }
-        }, 1500);
-      } else {
-        setError(data.error || 'Error al guardar las llamadas');
+    }
+    return days;
+  }, [trainingEndDate, selectedDays]);
+
+  // Toggle día en el calendario
+  const toggleDay = (dayOffset: number) => {
+    if (selectedDays.includes(dayOffset)) {
+      // Quitar el día
+      setSelectedDays(prev => prev.filter(d => d !== dayOffset).sort((a, b) => a - b));
+    } else {
+      // Agregar el día (máximo 4)
+      if (selectedDays.length < 4) {
+        setSelectedDays(prev => [...prev, dayOffset].sort((a, b) => a - b));
       }
-    } catch (err) {
-      console.error('Error saving schedule:', err);
-      setError('Error de conexión');
-    } finally {
-      setSaving(false);
     }
   };
 
-  // Opciones de días disponibles (1-15)
-  const dayOptions = Array.from({ length: 15 }, (_, i) => i + 1);
+  // Opciones de horarios (6:00 AM - 9:00 AM cada 10 min)
+  const timeOptions: string[] = useMemo(() => {
+    const times: string[] = [];
+    for (let h = 6; h <= 9; h++) {
+      for (let m = 0; m < 60; m += 10) {
+        if (h === 9 && m > 0) break;
+        times.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
+      }
+    }
+    return times;
+  }, []);
 
-  // Verificar si un horario está ocupado en alguna de las fechas programadas
-  const isTimeOccupied = (time: string): boolean => {
+  // Verificar si un horario está ocupado en alguna de las fechas
+  // Excluir el horario del participante que se está editando
+  const isTimeOccupied = (time: string, excludeParticipantId?: number): boolean => {
     for (const call of callDates) {
       const dateKey = call.date.toISOString().split('T')[0];
       const occupiedTimes = occupiedSlotsByDate[dateKey] || [];
       if (occupiedTimes.includes(time)) {
+        // Si es el horario actual del participante que se está editando, no está ocupado para él
+        if (excludeParticipantId && scheduledTimes[excludeParticipantId] === time) {
+          continue;
+        }
         return true;
       }
     }
     return false;
   };
 
-  // Opciones de horarios (6:00 AM - 9:00 AM cada 10 min)
-  const allTimeOptions: string[] = [];
-  for (let h = 6; h <= 9; h++) {
-    for (let m = 0; m < 60; m += 10) {
-      if (h === 9 && m > 0) break; // Solo hasta 9:00 AM
-      allTimeOptions.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
+  // Participantes pendientes (no agendados O que están siendo editados)
+  const pendingMembers = useMemo(() => {
+    return members.filter(m => !alreadyScheduledIds.has(m.odId) || editingParticipants.has(m.odId));
+  }, [members, alreadyScheduledIds, editingParticipants]);
+
+  // Participantes ya agendados que NO se están editando
+  const scheduledMembers = useMemo(() => {
+    return members.filter(m => alreadyScheduledIds.has(m.odId) && !editingParticipants.has(m.odId));
+  }, [members, alreadyScheduledIds, editingParticipants]);
+
+  // Toggle edición de un participante
+  const toggleEditParticipant = (participantId: number) => {
+    setEditingParticipants(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(participantId)) {
+        newSet.delete(participantId);
+      } else {
+        newSet.add(participantId);
+        // Copiar el horario actual al formulario de edición
+        if (scheduledTimes[participantId]) {
+          setParticipantTimes(prevTimes => ({
+            ...prevTimes,
+            [participantId]: scheduledTimes[participantId]
+          }));
+        }
+      }
+      return newSet;
+    });
+  };
+
+  // Guardar todas las llamadas
+  const handleSaveAll = async () => {
+    if (selectedDays.length !== 4) {
+      setError('Debes seleccionar exactamente 4 días');
+      return;
     }
-  }
+
+    if (!trainingEndDate) {
+      setError('No se pudo obtener la fecha de fin del entrenamiento');
+      return;
+    }
+
+    if (pendingMembers.length === 0) {
+      setError('Todos los participantes ya están agendados');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    setScheduledCount(0);
+
+    let successCount = 0;
+    let lastError = null;
+
+    // Guardar solo para participantes PENDIENTES
+    for (const member of pendingMembers) {
+      const time = participantTimes[member.odId] || '07:00';
+      
+      try {
+        const res = await fetch('/api/gc-calls/post-entreno/schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            participantId: member.odId,
+            squadId,
+            trainingEndDate: trainingEndDate.toISOString(),
+            calls: callDates.map(call => ({
+              dayOffset: call.dayOffset,
+              date: call.date.toISOString(),
+              time
+            }))
+          })
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+          successCount++;
+          setScheduledCount(successCount);
+        } else {
+          lastError = data.error;
+        }
+      } catch (err) {
+        console.error('Error saving schedule for', member.odName, err);
+        lastError = 'Error de conexión';
+      }
+    }
+
+    setSaving(false);
+
+    if (successCount === pendingMembers.length) {
+      setStep('success');
+      setTimeout(() => {
+        onScheduled?.();
+        onClose();
+      }, 2000);
+    } else if (successCount > 0) {
+      setError(`Se agendaron ${successCount} de ${pendingMembers.length} participantes. ${lastError || ''}`);
+    } else {
+      setError(lastError || 'Error al guardar las llamadas');
+    }
+  };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-900/20 border border-emerald-500/30 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl shadow-emerald-500/10">
+      <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-900/20 border border-emerald-500/30 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl shadow-emerald-500/10">
         {/* Header */}
         <div className="p-5 border-b border-slate-800/50 bg-gradient-to-r from-emerald-500/10 to-teal-500/10">
           <div className="flex items-center justify-between">
@@ -296,7 +325,7 @@ export default function PostEntrenoScheduleModal({
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-white">Llamadas Post-Entreno</h3>
-                <p className="text-xs text-slate-400">{squadName} • 4 llamadas en 15 días</p>
+                <p className="text-xs text-slate-400">{squadName} • {members.length} participantes</p>
               </div>
             </div>
             <button
@@ -311,300 +340,324 @@ export default function PostEntrenoScheduleModal({
         {/* Progress indicator */}
         <div className="px-5 py-3 bg-slate-800/30 border-b border-slate-700/50">
           <div className="flex items-center gap-2 text-xs">
-            <span className={`px-2 py-1 rounded ${step === 'participant' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500'}`}>
-              1. Participante
+            <span className={`px-3 py-1.5 rounded-lg ${step === 'days' ? 'bg-emerald-500/20 text-emerald-400 font-medium' : 'text-slate-500'}`}>
+              1. Seleccionar Días
             </span>
             <ChevronRight className="w-4 h-4 text-slate-600" />
-            <span className={`px-2 py-1 rounded ${step === 'schedule' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500'}`}>
-              2. Horario
-            </span>
-            <ChevronRight className="w-4 h-4 text-slate-600" />
-            <span className={`px-2 py-1 rounded ${step === 'confirm' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-500'}`}>
-              3. Confirmar
+            <span className={`px-3 py-1.5 rounded-lg ${step === 'schedules' ? 'bg-emerald-500/20 text-emerald-400 font-medium' : 'text-slate-500'}`}>
+              2. Asignar Horarios
             </span>
           </div>
         </div>
 
         {/* Body */}
         <div className="max-h-[60vh] overflow-y-auto p-5">
-          {/* PASO 1: Seleccionar participante */}
-          {step === 'participant' && (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-300 mb-4">
-                Selecciona un participante para agendar sus 4 llamadas de seguimiento:
-              </p>
-              
-              <div className="space-y-2">
-                {members.map((member, index) => {
-                  const isScheduled = scheduledParticipants.has(member.odId);
-                  return (
+          {loadingVision && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 text-emerald-400 animate-spin" />
+              <span className="ml-2 text-slate-400">Cargando calendario...</span>
+            </div>
+          )}
+
+          {!loadingVision && !trainingEndDate && (
+            <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-400" />
+                <p className="text-sm text-amber-400">
+                  No se pudo obtener la fecha de fin del entrenamiento.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* PASO 1: Seleccionar días en calendario */}
+          {step === 'days' && !loadingVision && trainingEndDate && (
+            <div className="space-y-4">
+              <div className="text-center mb-4">
+                <p className="text-sm text-slate-300">
+                  Selecciona <span className="text-emerald-400 font-bold">4 días</span> para las llamadas de seguimiento
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Los mismos días aplicarán para todos los participantes
+                </p>
+              </div>
+
+              {/* Calendario visual */}
+              <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs text-slate-400 uppercase tracking-wider">Días después del entrenamiento</span>
+                  <span className="text-xs text-emerald-400 font-medium">{selectedDays.length}/4 seleccionados</span>
+                </div>
+                
+                {/* Grid de días */}
+                <div className="grid grid-cols-5 sm:grid-cols-8 gap-2">
+                  {calendarDays.map((day) => (
                     <button
-                      key={`participant-${member.odId || index}`}
-                      onClick={() => {
-                        if (!isScheduled) {
-                          setSelectedParticipant(member);
-                          setStep('schedule');
+                      key={day.dayOffset}
+                      onClick={() => toggleDay(day.dayOffset)}
+                      disabled={!day.isSelected && selectedDays.length >= 4}
+                      className={`
+                        relative p-2 rounded-xl text-center transition-all
+                        ${day.isSelected 
+                          ? 'bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30 scale-105' 
+                          : selectedDays.length >= 4
+                            ? 'bg-slate-800/30 text-slate-600 cursor-not-allowed'
+                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:scale-105'
                         }
-                      }}
-                      disabled={isScheduled}
-                      className={`w-full p-3 rounded-xl flex items-center justify-between transition-all ${
-                        isScheduled
-                          ? 'bg-emerald-500/10 border border-emerald-500/30 cursor-default'
-                          : 'bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 hover:border-emerald-500/30'
-                      }`}
+                      `}
                     >
-                      <div className="flex items-center gap-3">
-                        {member.odImage ? (
-                          <img 
-                            src={member.odImage} 
-                            alt={member.odName}
-                            className="w-10 h-10 rounded-full object-cover"
-                          />
-                        ) : (
+                      <div className="text-[10px] opacity-70">{day.dayName}</div>
+                      <div className="text-lg font-bold">{day.dayNum}</div>
+                      <div className="text-[10px] opacity-70">Día {day.dayOffset}</div>
+                      {day.isSelected && (
+                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-white rounded-full flex items-center justify-center shadow">
+                          <Check className="w-3 h-3 text-emerald-600" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Resumen de días seleccionados */}
+              {selectedDays.length > 0 && (
+                <div className="bg-emerald-500/10 rounded-xl p-4 border border-emerald-500/30">
+                  <p className="text-xs text-emerald-400 mb-2 font-medium">Días seleccionados:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedDays.map((dayOffset, idx) => {
+                      const dayInfo = calendarDays.find(d => d.dayOffset === dayOffset);
+                      return (
+                        <div key={dayOffset} className="flex items-center gap-2 bg-emerald-500/20 px-3 py-1.5 rounded-lg">
+                          <span className="w-5 h-5 rounded-full bg-emerald-500 text-white text-xs flex items-center justify-center font-bold">
+                            {idx + 1}
+                          </span>
+                          <span className="text-sm text-white">
+                            {dayInfo ? formatDate(dayInfo.date) : `Día ${dayOffset}`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <Button
+                onClick={() => setStep('schedules')}
+                disabled={selectedDays.length !== 4}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 h-12 text-base"
+              >
+                Continuar a Asignar Horarios
+                <ChevronRight className="w-5 h-5 ml-2" />
+              </Button>
+            </div>
+          )}
+
+          {/* PASO 2: Asignar horarios a cada participante */}
+          {step === 'schedules' && !loadingVision && trainingEndDate && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <button
+                  onClick={() => setStep('days')}
+                  className="flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Cambiar días
+                </button>
+                <div className="text-xs text-slate-500">
+                  Llamadas: {selectedDays.map((d, i) => calendarDays.find(c => c.dayOffset === d)?.date).filter(Boolean).map(d => formatDate(d!)).join(' • ')}
+                </div>
+              </div>
+
+              <div className="text-center mb-4">
+                <p className="text-sm text-slate-300">
+                  Asigna el horario para cada participante
+                </p>
+              </div>
+
+              {/* Participantes ya agendados (con opción de editar) */}
+              {scheduledMembers.length > 0 && (
+                <div className="bg-emerald-500/10 rounded-xl p-3 border border-emerald-500/30 mb-3">
+                  <p className="text-xs text-emerald-400 font-medium mb-2 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Ya agendados ({scheduledMembers.length})
+                  </p>
+                  <div className="space-y-2">
+                    {scheduledMembers.map(member => (
+                      <div key={member.odId} className="flex items-center justify-between bg-emerald-500/20 px-3 py-2 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-emerald-300">{member.odName}</span>
+                          <span className="text-xs text-emerald-400/70">
+                            {scheduledTimes[member.odId] ? formatTime(scheduledTimes[member.odId]) : ''}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => toggleEditParticipant(member.odId)}
+                          className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 transition-colors px-2 py-1 rounded hover:bg-emerald-500/20"
+                        >
+                          <Pencil className="w-3 h-3" />
+                          Cambiar
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Lista de participantes PENDIENTES o EN EDICIÓN con selector de hora */}
+              {pendingMembers.length > 0 ? (
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                  {pendingMembers.map((member, idx) => {
+                    const isEditing = editingParticipants.has(member.odId);
+                    return (
+                      <div 
+                        key={member.odId}
+                        className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
+                          isEditing 
+                            ? 'bg-amber-500/10 border-amber-500/30' 
+                            : 'bg-slate-800/50 border-slate-700/50 hover:border-emerald-500/30'
+                        }`}
+                      >
+                        {/* Avatar */}
+                        <div className="relative shrink-0">
+                          {member.odImage ? (
+                            <img 
+                              src={member.odImage} 
+                              alt={member.odName}
+                              className="w-10 h-10 rounded-full object-cover"
+                            />
+                          ) : (
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white font-bold">
                             {member.odName?.charAt(0) || '?'}
                           </div>
                         )}
-                        <div className="text-left">
-                          <p className="text-sm font-medium text-white">{member.odName}</p>
+                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-slate-700 rounded-full flex items-center justify-center text-[10px] text-white font-bold border border-slate-600">
+                          {idx + 1}
                         </div>
                       </div>
-                      {isScheduled ? (
-                        <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 text-xs">
-                          <CheckCircle2 className="w-3 h-3" />
-                          Agendado
-                        </span>
-                      ) : (
-                        <ChevronRight className="w-5 h-5 text-slate-500" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
 
-              {scheduledParticipants.size > 0 && (
-                <div className="mt-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-                  <p className="text-sm text-emerald-400">
-                    ✅ {scheduledParticipants.size} de {members.length} participantes agendados
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
+                      {/* Nombre */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">
+                          {member.odName}
+                          {isEditing && (
+                            <span className="ml-2 text-xs text-amber-400">(editando)</span>
+                          )}
+                        </p>
+                      </div>
 
-          {/* PASO 2: Configurar horario */}
-          {step === 'schedule' && selectedParticipant && (
-            <div className="space-y-4">
-              {/* Loading o error si no hay trainingEndDate */}
-              {loadingVision && (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 text-emerald-400 animate-spin" />
-                  <span className="ml-2 text-slate-400">Cargando fechas...</span>
-                </div>
-              )}
-              
-              {!loadingVision && !trainingEndDate && (
-                <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="w-5 h-5 text-amber-400" />
-                    <p className="text-sm text-amber-400">
-                      No se pudo obtener la fecha de fin del entrenamiento. El átomo puede no tener una visión asignada.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {!loadingVision && trainingEndDate && (
-                <>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50">
-                {selectedParticipant.odImage ? (
-                  <img 
-                    src={selectedParticipant.odImage} 
-                    alt={selectedParticipant.odName}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white font-bold">
-                    {selectedParticipant.odName?.charAt(0) || '?'}
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm font-medium text-white">{selectedParticipant.odName}</p>
-                  <p className="text-xs text-slate-400">Configurando 4 llamadas</p>
-                </div>
-              </div>
-
-              {/* Hora de las llamadas */}
-              <div>
-                <label className="text-sm text-slate-300 block mb-2">
-                  Hora para todas las llamadas:
-                </label>
-                <select
-                  value={callTime}
-                  onChange={(e) => setCallTime(e.target.value)}
-                  className="w-full p-3 rounded-lg bg-slate-800 border border-slate-700 text-white"
-                >
-                  {allTimeOptions.map(time => {
-                    const occupied = isTimeOccupied(time);
-                    return (
-                      <option 
-                        key={time} 
-                        value={time}
-                        disabled={occupied}
-                        className={occupied ? 'text-slate-500' : ''}
-                      >
-                        {formatTime(time)}{occupied ? ' (ocupado)' : ''}
-                      </option>
+                      {/* Selector de hora */}
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-slate-500" />
+                        <select
+                          value={participantTimes[member.odId] || '07:00'}
+                          onChange={(e) => setParticipantTimes(prev => ({
+                            ...prev,
+                            [member.odId]: e.target.value
+                          }))}
+                          className={`border text-white text-sm rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
+                            isEditing ? 'bg-amber-900/50 border-amber-500/50' : 'bg-slate-700 border-slate-600'
+                          }`}
+                        >
+                          {timeOptions.map(time => {
+                            const occupied = isTimeOccupied(time, isEditing ? member.odId : undefined);
+                            return (
+                              <option 
+                                key={time} 
+                                value={time}
+                                disabled={occupied}
+                              >
+                                {formatTime(time)}{occupied ? ' ⚠️' : ''}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        {isEditing && (
+                          <button
+                            onClick={() => toggleEditParticipant(member.odId)}
+                            className="text-xs text-slate-400 hover:text-white px-2"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    </div>
                     );
                   })}
-                </select>
-              </div>
-
-              {/* Días de las llamadas */}
-              <div>
-                <label className="text-sm text-slate-300 block mb-2">
-                  Días de las llamadas (después del entrenamiento):
-                </label>
-                <div className="space-y-2">
-                  {callDays.map((day, index) => (
-                    <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-slate-800/50 border border-slate-700/50">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${
-                        index < 2 ? 'bg-emerald-500' : 'bg-teal-500'
-                      }`}>
-                        {index + 1}
-                      </div>
-                      <div className="flex-1">
-                        <select
-                          value={day}
-                          onChange={(e) => handleDayChange(index, parseInt(e.target.value))}
-                          className="w-full p-2 rounded bg-slate-700 border border-slate-600 text-white text-sm"
-                        >
-                          {dayOptions.map(d => (
-                            <option key={d} value={d}>Día {d}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-white">
-                          {callDates[index] ? formatDate(callDates[index].date) : 'Cargando...'}
-                        </p>
-                        <p className="text-xs text-slate-400">
-                          {callDates[index]?.label || `Llamada ${index + 1}`}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
                 </div>
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedParticipant(null);
-                    setStep('participant');
-                  }}
-                  className="flex-1 border-slate-700"
-                >
-                  <ChevronLeft className="w-4 h-4 mr-1" />
-                  Atrás
-                </Button>
-                <Button
-                  onClick={() => setStep('confirm')}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                  disabled={!trainingEndDate || callDates.length === 0}
-                >
-                  Revisar
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
-                </>
+              ) : (
+                <div className="text-center py-8 bg-emerald-500/10 rounded-xl border border-emerald-500/30">
+                  <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
+                  <p className="text-white font-medium">¡Todos agendados!</p>
+                  <p className="text-sm text-slate-400 mt-1">Todos los participantes ya tienen sus llamadas programadas</p>
+                </div>
               )}
-            </div>
-          )}
-
-          {/* PASO 3: Confirmar */}
-          {step === 'confirm' && selectedParticipant && (
-            <div className="space-y-4">
-              <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-                <p className="text-sm text-emerald-400 font-medium mb-2">
-                  Resumen de llamadas para {selectedParticipant.odName}:
-                </p>
-                <div className="space-y-2">
-                  {callDates.map((call, index) => (
-                    <div key={index} className="flex items-center justify-between text-sm">
-                      <span className="text-slate-300">{call.label}</span>
-                      <span className="text-white font-medium">
-                        {formatDate(call.date)} • {formatTime(call.time)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
 
               {error && (
                 <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-red-400" />
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
                   <p className="text-sm text-red-400">{error}</p>
                 </div>
               )}
 
-              <div className="flex gap-2">
+              {pendingMembers.length > 0 && (
                 <Button
-                  variant="outline"
-                  onClick={() => setStep('schedule')}
-                  className="flex-1 border-slate-700"
+                  onClick={handleSaveAll}
                   disabled={saving}
-                >
-                  <ChevronLeft className="w-4 h-4 mr-1" />
-                  Modificar
-                </Button>
-                <Button
-                  onClick={handleSaveSchedule}
-                  disabled={saving}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 h-12 text-base"
                 >
                   {saving ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Guardando...
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Agendando... ({scheduledCount}/{pendingMembers.length})
                     </>
                   ) : (
                     <>
-                      <Check className="w-4 h-4 mr-1" />
-                      Confirmar
+                      <CheckCircle2 className="w-5 h-5 mr-2" />
+                      Agendar {pendingMembers.length} Participante{pendingMembers.length !== 1 ? 's' : ''}
                     </>
                   )}
                 </Button>
-              </div>
+              )}
             </div>
           )}
 
           {/* ÉXITO */}
-          {step === 'success' && selectedParticipant && (
-            <div className="text-center py-8">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-                <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+          {step === 'success' && (
+            <div className="text-center py-12">
+              <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 className="w-10 h-10 text-emerald-400" />
               </div>
-              <h4 className="text-lg font-semibold text-white mb-2">
-                ¡Llamadas Agendadas!
+              <h4 className="text-xl font-semibold text-white mb-2">
+                ¡Agendados!
               </h4>
-              <p className="text-sm text-slate-400">
-                Se agendaron 4 llamadas para {selectedParticipant.odName}
+              <p className="text-sm text-slate-400 mb-6">
+                Se agendaron las 4 llamadas para {scheduledCount} participante{scheduledCount !== 1 ? 's' : ''}
               </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {selectedDays.map((dayOffset, idx) => {
+                  const dayInfo = calendarDays.find(d => d.dayOffset === dayOffset);
+                  return (
+                    <div key={dayOffset} className="bg-emerald-500/20 px-3 py-1.5 rounded-lg">
+                      <span className="text-sm text-emerald-400">
+                        {dayInfo ? formatDate(dayInfo.date) : `Día ${dayOffset}`}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        {step === 'participant' && (
+        {step !== 'success' && (
           <div className="p-4 border-t border-slate-800/50 bg-slate-900/50">
             <Button
               variant="outline"
               onClick={onClose}
               className="w-full border-slate-700"
             >
-              Cerrar
+              Cancelar
             </Button>
           </div>
         )}

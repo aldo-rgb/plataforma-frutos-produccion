@@ -139,6 +139,8 @@ export default function SquadManagerWidget() {
   const [squads, setSquads] = useState<Squad[]>([]);
   const [allMembers, setAllMembers] = useState<SquadMember[]>([]);
   const [memberSchedules, setMemberSchedules] = useState<Record<number, string>>({});
+  const [trainingSchedules, setTrainingSchedules] = useState<Record<number, string>>({});
+  const [postEntrenoSchedules, setPostEntrenoSchedules] = useState<Record<number, string>>({});
   const [todayCallStatus, setTodayCallStatus] = useState<Record<number, TodayCallStatus>>({});
   const [trainingInfo, setTrainingInfo] = useState<TrainingInfo | null>(null);
   const [needsAdvancedSquad, setNeedsAdvancedSquad] = useState(false);
@@ -223,9 +225,15 @@ export default function SquadManagerWidget() {
       if (statsRes.ok) {
         const statsData = await statsRes.json();
         if (statsData.success) {
-          // Guardar horarios de los participantes
+          // Guardar horarios de los participantes (separados por tipo)
           if (statsData.memberSchedules) {
             setMemberSchedules(statsData.memberSchedules);
+          }
+          if (statsData.trainingSchedules) {
+            setTrainingSchedules(statsData.trainingSchedules);
+          }
+          if (statsData.postEntrenoSchedules) {
+            setPostEntrenoSchedules(statsData.postEntrenoSchedules);
           }
           // Guardar estado de llamadas del día
           if (statsData.todayCallStatus) {
@@ -411,6 +419,49 @@ export default function SquadManagerWidget() {
     return !hasSquadForLevel && squads.length > 0;
   };
 
+  // Obtener el horario correcto según el nivel y la fase del entrenamiento
+  // BÁSICO: Solo llamadas post-entreno (no hay llamadas de staff durante el entrenamiento)
+  // AVANZADO: Durante entrenamiento muestra TRAINING, después muestra POST_TRAINING
+  // AVANZADO último día después de 12pm: Ya cambia a POST_TRAINING
+  const getScheduleForMember = (memberId: number): string | undefined => {
+    const level = trainingInfo?.level;
+    const currentDay = trainingInfo?.currentDay;
+    const totalDays = trainingInfo?.totalDays;
+    
+    // Verificar si es el último día del entrenamiento después de las 12pm
+    const now = new Date();
+    const currentHour = now.getHours();
+    const isLastDayAfternoon = currentDay === totalDays && currentHour >= 12;
+    
+    // Determinar si estamos DURANTE el entrenamiento (no post)
+    // El último día después de las 12pm ya cuenta como post-entreno
+    const isDuringTraining = currentDay !== null && 
+                             currentDay !== undefined && 
+                             currentDay >= 1 && 
+                             totalDays && 
+                             currentDay <= totalDays &&
+                             !isLastDayAfternoon;
+    
+    // BÁSICO: No hay llamadas de staff durante el entrenamiento, solo post-entreno
+    if (level === 'BASIC') {
+      return postEntrenoSchedules[memberId];
+    }
+    
+    // AVANZADO: Durante el entrenamiento muestra TRAINING, después muestra POST_TRAINING
+    if (level === 'ADVANCED') {
+      if (isDuringTraining) {
+        // Durante el entrenamiento, mostrar horario de llamadas TRAINING
+        return trainingSchedules[memberId];
+      } else {
+        // Después del entrenamiento (o último día después de 12pm), mostrar POST_TRAINING
+        return postEntrenoSchedules[memberId];
+      }
+    }
+    
+    // Fallback: usar memberSchedules general
+    return memberSchedules[memberId];
+  };
+
   const loadAvailableSlots = async () => {
     setLoadingSlots(true);
     try {
@@ -538,14 +589,31 @@ export default function SquadManagerWidget() {
     // Determinar el nivel basado en trainingInfo o squad
     const level = (trainingInfo?.level as 'BASIC' | 'ADVANCED' | 'PL') || 'BASIC';
     
-    // Obtener el visionId del squad del miembro
+    // Obtener el visionId - primero del squad del miembro, luego de targetVisionId, luego del primer squad
     const squad = squads.find(s => s.members?.some(m => m.id === member.id));
+    const visionId = squad?.visionId || targetVisionId || squads[0]?.visionId || null;
+    
+    console.log('🔍 Opening legacy modal:', { 
+      memberId: member.id,
+      memberUserId: member.user.id,
+      memberUserName: member.user.nombre,
+      memberUser: member.user,
+      squadVisionId: squad?.visionId, 
+      targetVisionId, 
+      firstSquadVisionId: squads[0]?.visionId,
+      finalVisionId: visionId 
+    });
+    
+    if (!visionId) {
+      showNotification('Error: No se pudo determinar la visión del participante', 'error');
+      return;
+    }
     
     setLegacyForm({
       participantId: member.user.id,
       participantName: member.user.nombre,
       participantImage: member.user.imagen,
-      visionId: squad?.visionId || targetVisionId || null,
+      visionId: visionId,
       trainingLevel: level,
       // Campos BÁSICO
       photoWithGCUrl: '',
@@ -565,51 +633,56 @@ export default function SquadManagerWidget() {
     setShowLegacyModal(true);
     
     // Cargar datos existentes del legacy si los hay
-    loadExistingLegacy(member.user.id);
+    loadExistingLegacy(member.user.id, visionId);
   };
 
   // Cargar datos existentes del legacy
-  const loadExistingLegacy = async (participantId: number) => {
+  const loadExistingLegacy = async (participantId: number, visionId: number | null) => {
+    if (!visionId) {
+      console.log('🔍 No visionId for loadExistingLegacy');
+      return;
+    }
+    
     try {
-      const res = await fetch(`/api/legacy-capture?participantId=${participantId}`);
+      console.log('🔍 Loading legacy for participantId:', participantId, 'visionId:', visionId);
+      // Buscar directamente por participantId y visionId
+      const res = await fetch(`/api/legacy-capture/by-participant?participantId=${participantId}&visionId=${visionId}`);
+      console.log('🔍 Response status:', res.status);
+      
       if (res.ok) {
         const data = await res.json();
-        // Si hay datos existentes, actualizar el formulario
-        if (data.visiones) {
-          const visionConCaptura = data.visiones.find((v: any) => 
-            v.participantes?.some((p: any) => p.id === participantId && p.captureId)
-          );
-          if (visionConCaptura) {
-            const participante = visionConCaptura.participantes.find((p: any) => p.id === participantId);
-            if (participante && participante.captureId) {
-              // Cargar detalles de la captura existente
-              const captureRes = await fetch(`/api/legacy-capture/${participante.captureId}`);
-              if (captureRes.ok) {
-                const captureData = await captureRes.json();
-                if (captureData.success && captureData.capture) {
-                  const c = captureData.capture;
-                  setLegacyForm(prev => prev ? {
-                    ...prev,
-                    visionId: visionConCaptura.visionId,
-                    // Campos BÁSICO
-                    photoWithGCUrl: c.photoWithGCUrl || '',
-                    photoWithSquadUrl: c.photoWithSquadUrl || '',
-                    photoBlueWallUrl: c.photoBlueWallUrl || '',
-                    // Campos AVANZADO
-                    lullabyTitle: c.lullabyTitle || '',
-                    lullabyArtist: c.lullabyArtist || '',
-                    contractPhotoUrl: c.contractPhotoUrl || '',
-                    contractDeclaration: c.contractDeclaration || '',
-                    // Campos PL
-                    plLullabyTitle: c.plLullabyTitle || '',
-                    plLullabyArtist: c.plLullabyArtist || '',
-                    photoSalonUrl: c.photoSalonUrl || '',
-                    photoMantaUrl: c.photoMantaUrl || '',
-                  } : null);
-                }
-              }
-            }
+        console.log('📦 API Response:', data);
+        
+        if (data.success && data.capture) {
+          const c = data.capture;
+          console.log('📦 Loaded existing legacy for:', c.participantName, 'participantId:', c.participantId);
+          
+          // Verificar que el participantId coincide
+          if (c.participantId !== participantId) {
+            console.error('❌ MISMATCH! Capture participantId:', c.participantId, 'vs requested:', participantId);
+            return;
           }
+          
+          setLegacyForm(prev => prev ? {
+            ...prev,
+            visionId: c.visionId,
+            // Campos BÁSICO
+            photoWithGCUrl: c.photoWithGCUrl || '',
+            photoWithSquadUrl: c.photoWithSquadUrl || '',
+            photoBlueWallUrl: c.photoBlueWallUrl || '',
+            // Campos AVANZADO
+            lullabyTitle: c.lullabyTitle || '',
+            lullabyArtist: c.lullabyArtist || '',
+            contractPhotoUrl: c.contractPhotoUrl || '',
+            contractDeclaration: c.contractDeclaration || '',
+            // Campos PL
+            plLullabyTitle: c.plLullabyTitle || '',
+            plLullabyArtist: c.plLullabyArtist || '',
+            photoSalonUrl: c.photoSalonUrl || '',
+            photoMantaUrl: c.photoMantaUrl || '',
+          } : null);
+        } else {
+          console.log('📦 No existing capture found');
         }
       }
     } catch (error) {
@@ -660,6 +733,12 @@ export default function SquadManagerWidget() {
   const handleSaveLegacy = async () => {
     if (!legacyForm) return;
 
+    // Validar que tenemos visionId
+    if (!legacyForm.visionId) {
+      showNotification('Error: No se encontró el ID de la visión', 'error');
+      return;
+    }
+
     setSavingLegacy(true);
     try {
       const res = await fetch('/api/legacy-capture', {
@@ -692,7 +771,7 @@ export default function SquadManagerWidget() {
         setLegacyForm(null);
         showNotification('Legacy guardado exitosamente', 'success');
       } else {
-        showNotification(data.error || 'Error al guardar el legacy', 'error');
+        showNotification(data.error || data.details || 'Error al guardar el legacy', 'error');
       }
     } catch (error) {
       console.error('Error saving legacy:', error);
@@ -919,7 +998,7 @@ export default function SquadManagerWidget() {
             </h4>
             <div className="space-y-2 max-h-[320px] overflow-y-auto">
               {allMembers.map((member) => {
-                const schedule = memberSchedules[member.user.id];
+                const schedule = getScheduleForMember(member.user.id);
                 const callStatus = todayCallStatus[member.user.id];
                 const isCompleted = callStatus?.status === 'completed';
                 const needsRetry = callStatus?.status === 'pending_retry';
@@ -1422,7 +1501,7 @@ export default function SquadManagerWidget() {
                 </div>
                 <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
                   {allMembers.map((member) => {
-                    const schedule = memberSchedules[member.user.id];
+                    const schedule = getScheduleForMember(member.user.id);
                     const isSelected = selectedMember?.user.id === member.user.id;
                     return (
                       <button
@@ -1491,7 +1570,8 @@ export default function SquadManagerWidget() {
                   ) : (
                     <div className="grid grid-cols-3 gap-2">
                       {availableSlots.map((slot) => {
-                        const isCurrentUser = memberSchedules[selectedMember.user.id] === slot.time;
+                        const currentSchedule = getScheduleForMember(selectedMember.user.id);
+                        const isCurrentUser = currentSchedule === slot.time;
                         const isOccupied = slot.isOccupied && !isCurrentUser;
                         
                         return (
@@ -1717,29 +1797,6 @@ export default function SquadManagerWidget() {
                         {uploadingField === 'photoWithSquadUrl' ? <Loader2 className="w-6 h-6 text-purple-400 animate-spin" /> : <><Upload className="w-6 h-6 text-slate-500 mb-1" /><span className="text-xs text-slate-500">Subir foto</span></>}
                       </label>
                     )}
-                  </div>
-
-                  {/* Canción de Cuna */}
-                  <div className="bg-slate-800/50 rounded-xl p-3 border border-slate-700/50">
-                    <label className="text-xs text-slate-400 mb-2 block flex items-center gap-1">
-                      <Music className="w-3 h-3" /> Canción de Cuna
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="text"
-                        placeholder="Título de la canción"
-                        value={legacyForm.lullabyTitle}
-                        onChange={(e) => setLegacyForm({...legacyForm, lullabyTitle: e.target.value})}
-                        className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-purple-500"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Artista"
-                        value={legacyForm.lullabyArtist}
-                        onChange={(e) => setLegacyForm({...legacyForm, lullabyArtist: e.target.value})}
-                        className="px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-purple-500"
-                      />
-                    </div>
                   </div>
 
                   {/* Foto del Contrato */}
