@@ -509,7 +509,7 @@ export default function PersonalQRWidget({
               <div className="flex gap-3">
                 <button
                   onClick={async () => {
-                    // URL de invitación personalizada (sin código visible)
+                    // URL de invitación personalizada
                     const invitationURL = referralCode 
                       ? `${window.location.origin}/invitacion/${referralCode}`
                       : registrationURL;
@@ -527,52 +527,50 @@ ${invitationURL}
 
 ¡Te espero! 🚀`;
 
-                    // Generar el flyer personalizado con QR
-                    const flyerUrl = referralCode 
-                      ? `${window.location.origin}/api/og/flyer?codigo=${referralCode}`
-                      : null;
+                    // Abrir WhatsApp directamente (más confiable que Web Share API)
+                    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+                    window.open(whatsappUrl, '_blank');
+                  }}
+                  disabled={!referralCode && !registrationURL}
+                  className="flex-1 px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-xl transition-all flex items-center justify-center gap-2"
+                >
+                  <span>📱</span> WhatsApp
+                </button>
+                <button
+                  onClick={async () => {
+                    // URL de invitación personalizada
+                    const invitationURL = referralCode 
+                      ? `${window.location.origin}/invitacion/${referralCode}`
+                      : registrationURL;
 
-                    // Intentar compartir con imagen del flyer
-                    if (flyerUrl && navigator.share && navigator.canShare) {
-                      try {
-                        // Descargar el flyer generado
-                        const res = await fetch(flyerUrl);
-                        const blob = await res.blob();
-                        const file = new File([blob], `invitacion-basico-${userName.replace(/\s+/g, '-')}.png`, { type: 'image/png' });
-                        
-                        // Verificar si el navegador puede compartir archivos
-                        const shareData = {
-                          title: `Invitación al Entrenamiento Básico`,
-                          text: shareText,
-                          files: [file]
-                        };
-                        
-                        if (navigator.canShare(shareData)) {
-                          await navigator.share(shareData);
-                          return;
-                        }
-                      } catch (err) {
-                        console.log('Error sharing with flyer:', err);
-                      }
-                    }
-                    
-                    // Fallback: compartir solo texto
+                    const shareText = `🎓 ¡Te invito a vivir una experiencia que cambiará tu vida!
+
+✨ Entrenamiento Básico de Transformación Cuántica
+
+🌟 3 días intensivos de conciencia y romper creencias limitantes
+💫 Entrenamiento práctico para resultados reales  
+🤝 Una comunidad extraordinaria
+
+👉 Conoce más y regístrate aquí:
+${invitationURL}
+
+¡Te espero! 🚀`;
+
+                    // Usar Web Share API para otras apps
                     if (navigator.share) {
                       try {
                         await navigator.share({
                           title: `Invitación al Entrenamiento Básico`,
-                          text: shareText,
-                          url: invitationURL
+                          text: shareText
                         });
                       } catch (err) {
-                        // Si falla share, abrir WhatsApp directamente
-                        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
-                        window.open(whatsappUrl, '_blank');
+                        // Usuario canceló o error
+                        console.log('Share cancelled');
                       }
                     } else {
-                      // En desktop, abrir WhatsApp Web directamente
-                      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
-                      window.open(whatsappUrl, '_blank');
+                      // Copiar al portapapeles como fallback
+                      await navigator.clipboard.writeText(shareText);
+                      alert('Mensaje copiado al portapapeles');
                     }
                   }}
                   disabled={!referralCode && !registrationURL}
@@ -580,12 +578,27 @@ ${invitationURL}
                 >
                   <span>🔗</span> Compartir
                 </button>
+              </div>
+
+              {/* Botón de descargar flyer */}
+              <div className="mt-3">
                 <button 
-                  onClick={downloadQR}
-                  disabled={!premiumCardURL}
-                  className="flex-1 px-6 py-4 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                  onClick={async () => {
+                    if (!referralCode) return;
+                    
+                    // Descargar el flyer
+                    const flyerUrl = `${window.location.origin}/api/og/flyer?codigo=${referralCode}`;
+                    const link = document.createElement('a');
+                    link.href = flyerUrl;
+                    link.download = `flyer-invitacion-${userName.replace(/\s+/g, '-')}.png`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                  disabled={!referralCode}
+                  className="w-full px-6 py-3 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2"
                 >
-                  <span>📥</span> Descargar
+                  <span>📥</span> Descargar Flyer para enviar manualmente
                 </button>
               </div>
 
