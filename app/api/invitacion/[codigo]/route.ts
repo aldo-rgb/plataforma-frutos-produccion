@@ -12,7 +12,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Código no proporcionado' }, { status: 400 });
     }
 
-    // Buscar el usuario por su código de referido (consulta simplificada)
+    // Buscar el usuario por su código de referido
     const referrer = await prisma.usuario.findFirst({
       where: {
         referralCode: codigo
@@ -22,6 +22,13 @@ export async function GET(
         nombre: true,
         imagen: true,
         organizationId: true,
+        Organization_Usuario_organizationIdToOrganization: {
+          select: {
+            id: true,
+            name: true,
+            logoUrl: true,
+          }
+        }
       }
     });
 
@@ -32,35 +39,30 @@ export async function GET(
       }, { status: 404 });
     }
 
-    // Obtener organización por separado
-    let organization = null;
-    if (referrer.organizationId) {
-      organization = await prisma.organization.findUnique({
-        where: { id: referrer.organizationId },
-        select: {
-          id: true,
-          name: true,
-          logoUrl: true,
-        }
-      });
-    }
-
+    // Buscar el próximo Básico disponible de la organización
     const orgId = referrer.organizationId;
+    const organization = referrer.Organization_Usuario_organizationIdToOrganization;
+    
     let nextBasico = null;
     
     if (orgId) {
-      // Buscar visiones de tipo BASIC en la organización
+      // Buscar visiones activas en la organización (campos correctos del schema)
       const vision = await prisma.vision.findFirst({
         where: {
           organizationId: orgId,
-          tipo: 'BASIC',
-          status: 'ACTIVE',
-          fechaInicio: {
+          isActive: true,
+          startDate: {
             gte: new Date()
           }
         },
         orderBy: {
-          fechaInicio: 'asc'
+          startDate: 'asc'
+        },
+        select: {
+          id: true,
+          nombre: true,
+          startDate: true,
+          endDate: true,
         }
       });
 
@@ -73,9 +75,9 @@ export async function GET(
         nextBasico = {
           id: vision.id,
           nombre: vision.nombre,
-          fechaInicio: vision.fechaInicio?.toISOString() || null,
-          fechaFin: vision.fechaFin?.toISOString() || null,
-          lugar: vision.lugar || null,
+          fechaInicio: vision.startDate?.toISOString() || null,
+          fechaFin: vision.endDate?.toISOString() || null,
+          lugar: null,
           precio: orgPrices?.basicPrice || 1500,
           currency: orgPrices?.currency || 'MXN',
           cuposDisponibles: 50
@@ -116,12 +118,11 @@ export async function GET(
       }
     });
 
-  } catch (error: any) {
-    console.error('Error fetching invitation data:', error?.message || error);
+  } catch (error) {
+    console.error('Error fetching invitation data:', error);
     return NextResponse.json({ 
       success: false, 
-      error: 'Error interno del servidor',
-      details: error?.message || 'Unknown error'
+      error: 'Error interno del servidor' 
     }, { status: 500 });
   }
 }
