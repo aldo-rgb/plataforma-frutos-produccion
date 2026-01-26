@@ -345,7 +345,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fallback: diseño predeterminado si no hay imagen de fondo
+    // Fallback: diseño predeterminado profesional si no hay imagen de fondo
     return new ImageResponse(
       (
         <div
@@ -354,183 +354,389 @@ export async function GET(request: NextRequest) {
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
-            background: 'linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #7c3aed 100%)',
             position: 'relative',
-            padding: '40px',
+            overflow: 'hidden',
           }}
         >
-          {/* Badge de urgencia */}
-          {organization.flyerShowUrgencyBadge && (
-            <div
-              style={{
-                position: 'absolute',
-                top: '30px',
-                right: '30px',
-                background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-                color: 'white',
-                padding: '10px 24px',
-                borderRadius: '25px',
-                fontSize: '16px',
-                fontWeight: 800,
-                letterSpacing: '1px',
-              }}
-            >
-              {organization.flyerUrgencyText || 'CUPO LIMITADO'}
-            </div>
-          )}
-
-          {/* Logo */}
-          {organization.logoUrl && (
-            <img
-              src={organization.logoUrl}
-              style={{
-                width: '150px',
-                height: '80px',
-                objectFit: 'contain',
-                marginBottom: '20px',
-              }}
-            />
-          )}
-
-          {/* Título */}
+          {/* Fondo con gradiente estilo cósmico */}
           <div
             style={{
-              fontSize: '24px',
-              color: '#93c5fd',
-              letterSpacing: '4px',
-              marginBottom: '10px',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'linear-gradient(180deg, #0a1628 0%, #1a365d 35%, #2d3748 60%, #c9a227 100%)',
             }}
-          >
-            ENTRENAMIENTO
-          </div>
+          />
 
+          {/* Efecto de luz/aurora */}
           <div
             style={{
-              fontSize: '72px',
-              fontWeight: 900,
-              color: 'white',
-              lineHeight: 1,
+              position: 'absolute',
+              top: '10%',
+              left: '20%',
+              width: '60%',
+              height: '40%',
+              background: 'radial-gradient(ellipse, rgba(99, 179, 237, 0.25) 0%, transparent 70%)',
             }}
-          >
-            BÁSICO
-          </div>
+          />
 
+          {/* Efecto de estrellas/partículas */}
           <div
             style={{
-              fontSize: '80px',
-              fontWeight: 900,
-              color: '#93c5fd',
-              lineHeight: 1,
-              marginBottom: '30px',
+              position: 'absolute',
+              top: '5%',
+              right: '10%',
+              width: '8px',
+              height: '8px',
+              background: 'white',
+              borderRadius: '50%',
+              boxShadow: '0 0 20px 5px rgba(255,255,255,0.5)',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: '15%',
+              right: '25%',
+              width: '4px',
+              height: '4px',
+              background: 'white',
+              borderRadius: '50%',
+              boxShadow: '0 0 10px 2px rgba(255,255,255,0.3)',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: '8%',
+              left: '15%',
+              width: '6px',
+              height: '6px',
+              background: 'white',
+              borderRadius: '50%',
+              boxShadow: '0 0 15px 3px rgba(255,255,255,0.4)',
+            }}
+          />
+
+          {/* Contenido principal */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              padding: '50px 40px',
+              position: 'relative',
+              height: '100%',
             }}
           >
-            CUÁNTICO
-          </div>
-
-          {/* Visión */}
-          {nextVision && (
-            <div
-              style={{
-                background: '#93c5fd',
-                padding: '12px 30px',
-                marginBottom: '30px',
-                alignSelf: 'flex-start',
-              }}
-            >
-              <span
+            {/* Badge de urgencia */}
+            {(organization?.flyerShowUrgencyBadge ?? true) && (
+              <div
                 style={{
-                  fontSize: '20px',
-                  fontWeight: 700,
-                  color: '#0f172a',
-                  letterSpacing: '2px',
+                  position: 'absolute',
+                  top: '25px',
+                  right: '25px',
+                  background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+                  color: 'white',
+                  padding: '10px 24px',
+                  borderRadius: '25px',
+                  fontSize: '14px',
+                  fontWeight: 800,
+                  letterSpacing: '1px',
+                  boxShadow: '0 4px 20px rgba(220, 38, 38, 0.5)',
                 }}
               >
-                {nextVision.nombre?.toUpperCase()}
-              </span>
-            </div>
-          )}
+                {organization?.flyerUrgencyText || 'CUPO LIMITADO'}
+              </div>
+            )}
 
-          {/* Headline */}
-          {organization.flyerHeadline && (
+            {/* Logo o nombre de organización */}
+            {organization?.logoUrl ? (
+              <img
+                src={organization.logoUrl}
+                style={{
+                  width: '180px',
+                  height: '70px',
+                  objectFit: 'contain',
+                  marginBottom: '15px',
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  fontSize: '28px',
+                  fontWeight: 800,
+                  color: '#63b3ed',
+                  letterSpacing: '4px',
+                  marginBottom: '5px',
+                }}
+              >
+                {organization?.name?.toUpperCase() || 'QUANTUM MATTER'}
+              </div>
+            )}
+
+            {/* Subtítulo de organización */}
             <div
               style={{
-                fontSize: '26px',
+                fontSize: '12px',
+                color: '#94a3b8',
+                letterSpacing: '6px',
+                marginBottom: '25px',
+              }}
+            >
+              SER · HACER · TENER
+            </div>
+
+            {/* Caja principal con título */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                border: '3px solid rgba(99, 179, 237, 0.4)',
+                padding: '35px 60px',
+                marginBottom: '20px',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '18px',
+                  fontWeight: 600,
+                  color: '#63b3ed',
+                  letterSpacing: '8px',
+                  marginBottom: '10px',
+                }}
+              >
+                ENTRENAMIENTO
+              </div>
+
+              <div
+                style={{
+                  fontSize: '68px',
+                  fontWeight: 900,
+                  color: 'white',
+                  lineHeight: 0.95,
+                  marginBottom: '5px',
+                  textShadow: '0 4px 30px rgba(255,255,255,0.2)',
+                }}
+              >
+                BÁSICO
+              </div>
+
+              <div
+                style={{
+                  fontSize: '75px',
+                  fontWeight: 900,
+                  color: '#63b3ed',
+                  lineHeight: 0.95,
+                  textShadow: '0 4px 30px rgba(99,179,237,0.3)',
+                }}
+              >
+                CUÁNTICO
+              </div>
+            </div>
+
+            {/* Badge de visión */}
+            {nextVision && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: '#63b3ed',
+                  padding: '12px 40px',
+                  marginBottom: '25px',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: '18px',
+                    fontWeight: 700,
+                    color: '#0a1628',
+                    letterSpacing: '2px',
+                  }}
+                >
+                  {nextVision.nombre?.toUpperCase() || 'VISIÓN'}
+                  {fullLocation && ` | ${fullLocation.toUpperCase()}`}
+                </span>
+              </div>
+            )}
+
+            {/* Headline/Tagline */}
+            <div
+              style={{
+                fontSize: '22px',
                 fontStyle: 'italic',
                 color: '#e2e8f0',
                 marginBottom: '20px',
+                textAlign: 'center',
                 maxWidth: '80%',
               }}
             >
-              {organization.flyerHeadline}
+              {organization?.flyerHeadline || 'Rompe tus límites mentales y transforma tus resultados en 3 días'}
             </div>
-          )}
 
-          {/* Fechas */}
-          {visionDates && (
-            <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '30px' }}>
-              <div
-                style={{
-                  fontSize: '56px',
-                  fontWeight: 900,
-                  color: 'white',
-                }}
-              >
-                {visionDates.toUpperCase()}
-              </div>
-              {visionDays && (
+            {/* Fechas grandes */}
+            {visionDates && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px' }}>
                 <div
                   style={{
-                    fontSize: '16px',
-                    color: '#94a3b8',
-                    letterSpacing: '3px',
+                    fontSize: '52px',
+                    fontWeight: 900,
+                    color: 'white',
+                    textShadow: '0 2px 20px rgba(255,255,255,0.2)',
                   }}
                 >
-                  {visionDays}
+                  {visionDates.toUpperCase()}
                 </div>
-              )}
-            </div>
-          )}
-
-          {/* Footer */}
-          <div
-            style={{
-              marginTop: 'auto',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-end',
-              width: '100%',
-            }}
-          >
-            {/* Info */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {fullLocation && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'white', fontSize: '18px' }}>
-                  <span>📍</span>
-                  <span>{fullLocation}</span>
-                </div>
-              )}
-              {organization.flyerWhatsappNumber && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'white', fontSize: '18px' }}>
-                  <span>📱</span>
-                  <span>{organization.flyerWhatsappNumber}</span>
-                </div>
-              )}
-            </div>
-
-            {/* QR */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-              <div style={{ background: 'white', padding: '10px', borderRadius: '12px' }}>
-                {qrDataUrl ? (
-                  <img src={qrDataUrl} style={{ width: '100px', height: '100px' }} />
-                ) : (
-                  <div style={{ width: '100px', height: '100px', background: '#f1f5f9' }} />
+                {visionDays && (
+                  <div
+                    style={{
+                      fontSize: '14px',
+                      color: '#94a3b8',
+                      letterSpacing: '4px',
+                      marginTop: '5px',
+                    }}
+                  >
+                    {visionDays}
+                  </div>
                 )}
               </div>
-              <span style={{ color: 'white', fontSize: '14px' }}>
-                {organization.flyerCtaText || 'Escanea para registrarte'}
-              </span>
+            )}
+
+            {/* Sección inferior */}
+            <div
+              style={{
+                marginTop: 'auto',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-end',
+                width: '100%',
+                paddingBottom: '10px',
+              }}
+            >
+              {/* Info de contacto */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {fullLocation && !nextVision && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#e2e8f0', fontSize: '16px' }}>
+                    <span>📍</span>
+                    <span>{fullLocation}</span>
+                  </div>
+                )}
+                {organization?.flyerWhatsappNumber && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#e2e8f0', fontSize: '16px' }}>
+                    <div
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        background: '#25D366',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <span style={{ fontSize: '16px' }}>📱</span>
+                    </div>
+                    <span>{organization.flyerWhatsappNumber}</span>
+                  </div>
+                )}
+
+                {/* Invitado por (si no es preview) */}
+                {!isPreview && referrerName && referrerName !== 'Tu Nombre' && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      marginTop: '10px',
+                      padding: '10px 18px',
+                      background: 'rgba(99, 179, 237, 0.15)',
+                      borderRadius: '25px',
+                      border: '1px solid rgba(99, 179, 237, 0.3)',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #63b3ed 0%, #3182ce 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '18px',
+                        fontWeight: 700,
+                        color: 'white',
+                      }}
+                    >
+                      {referrerName.charAt(0).toUpperCase()}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ color: '#94a3b8', fontSize: '11px' }}>Te invita</span>
+                      <span style={{ color: 'white', fontSize: '15px', fontWeight: 600 }}>
+                        {referrerName}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* QR Code */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    background: 'white',
+                    padding: '12px',
+                    borderRadius: '16px',
+                    boxShadow: '0 8px 30px rgba(0,0,0,0.3)',
+                  }}
+                >
+                  {qrDataUrl ? (
+                    <img src={qrDataUrl} style={{ width: '110px', height: '110px' }} />
+                  ) : (
+                    <div
+                      style={{
+                        width: '110px',
+                        height: '110px',
+                        background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '8px',
+                      }}
+                    >
+                      <span style={{ fontSize: '40px' }}>📱</span>
+                    </div>
+                  )}
+                </div>
+                <span
+                  style={{
+                    color: 'white',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    textAlign: 'center',
+                  }}
+                >
+                  {organization?.flyerCtaText || 'Escanea para registrarte'}
+                </span>
+              </div>
             </div>
           </div>
+
+          {/* Barra inferior dorada */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: '6px',
+              background: 'linear-gradient(90deg, #c9a227 0%, #f6e05e 50%, #c9a227 100%)',
+            }}
+          />
         </div>
       ),
       {
@@ -542,6 +748,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error generating flyer:', error);
     
+    // Diseño de error profesional
     return new ImageResponse(
       (
         <div
@@ -550,17 +757,178 @@ export async function GET(request: NextRequest) {
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
+            position: 'relative',
+            overflow: 'hidden',
           }}
         >
-          <div style={{ fontSize: '48px', color: 'white', fontWeight: 700 }}>
-            Entrenamiento Básico
+          {/* Fondo con gradiente cósmico */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'linear-gradient(180deg, #0a1628 0%, #1a365d 35%, #2d3748 60%, #c9a227 100%)',
+            }}
+          />
+
+          {/* Efecto de luz */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '15%',
+              left: '25%',
+              width: '50%',
+              height: '35%',
+              background: 'radial-gradient(ellipse, rgba(99, 179, 237, 0.2) 0%, transparent 70%)',
+            }}
+          />
+
+          {/* Estrellas decorativas */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '8%',
+              right: '15%',
+              width: '8px',
+              height: '8px',
+              background: 'white',
+              borderRadius: '50%',
+              boxShadow: '0 0 20px 5px rgba(255,255,255,0.4)',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: '12%',
+              left: '20%',
+              width: '5px',
+              height: '5px',
+              background: 'white',
+              borderRadius: '50%',
+              boxShadow: '0 0 12px 3px rgba(255,255,255,0.3)',
+            }}
+          />
+
+          {/* Contenido */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              padding: '60px',
+              position: 'relative',
+            }}
+          >
+            {/* Subtítulo superior */}
+            <div
+              style={{
+                fontSize: '14px',
+                color: '#94a3b8',
+                letterSpacing: '8px',
+                marginBottom: '30px',
+              }}
+            >
+              SER · HACER · TENER
+            </div>
+
+            {/* Caja con título */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                border: '3px solid rgba(99, 179, 237, 0.4)',
+                padding: '50px 80px',
+                marginBottom: '40px',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '22px',
+                  fontWeight: 600,
+                  color: '#63b3ed',
+                  letterSpacing: '10px',
+                  marginBottom: '15px',
+                }}
+              >
+                ENTRENAMIENTO
+              </div>
+
+              <div
+                style={{
+                  fontSize: '90px',
+                  fontWeight: 900,
+                  color: 'white',
+                  lineHeight: 0.95,
+                  marginBottom: '5px',
+                  textShadow: '0 4px 30px rgba(255,255,255,0.15)',
+                }}
+              >
+                BÁSICO
+              </div>
+
+              <div
+                style={{
+                  fontSize: '100px',
+                  fontWeight: 900,
+                  color: '#63b3ed',
+                  lineHeight: 0.95,
+                  textShadow: '0 4px 30px rgba(99,179,237,0.25)',
+                }}
+              >
+                CUÁNTICO
+              </div>
+            </div>
+
+            {/* Tagline */}
+            <div
+              style={{
+                fontSize: '26px',
+                fontStyle: 'italic',
+                color: '#e2e8f0',
+                textAlign: 'center',
+                maxWidth: '80%',
+                marginBottom: '40px',
+              }}
+            >
+              Rompe tus límites mentales y transforma tus resultados en 3 días
+            </div>
+
+            {/* Badge */}
+            <div
+              style={{
+                background: '#63b3ed',
+                padding: '15px 50px',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '20px',
+                  fontWeight: 700,
+                  color: '#0a1628',
+                  letterSpacing: '3px',
+                }}
+              >
+                TRANSFORMACIÓN CUÁNTICA
+              </span>
+            </div>
           </div>
-          <div style={{ fontSize: '32px', color: '#93c5fd', marginTop: '16px' }}>
-            Transformación Cuántica
-          </div>
+
+          {/* Barra dorada inferior */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: '6px',
+              background: 'linear-gradient(90deg, #c9a227 0%, #f6e05e 50%, #c9a227 100%)',
+            }}
+          />
         </div>
       ),
       {
