@@ -63,6 +63,33 @@ export default function CoordinadorBasicoDashboard() {
   const [inscritosList, setInscritosList] = useState<any[]>([]);
   const [loadingDeclarados, setLoadingDeclarados] = useState(false);
   const [loadingInscritos, setLoadingInscritos] = useState(false);
+  const [updatingPayment, setUpdatingPayment] = useState<number | null>(null);
+
+  // Función para actualizar estado de pago
+  const updatePaymentStatus = async (enrollmentId: number, newStatus: string) => {
+    setUpdatingPayment(enrollmentId);
+    try {
+      const res = await fetch('/api/coordinador/actualizar-pago', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enrollmentId, paymentStatus: newStatus })
+      });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        // Refrescar ambas listas
+        fetchDeclaradosList();
+        fetchInscritosList();
+        fetchPreRegistros(); // Refrescar stats
+      } else {
+        console.error('Error actualizando pago:', result.error);
+        alert(result.error || 'Error actualizando pago');
+      }
+    } catch (error) {
+      console.error('Error actualizando pago:', error);
+    } finally {
+      setUpdatingPayment(null);
+    }
+  };
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -803,6 +830,18 @@ export default function CoordinadorBasicoDashboard() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
+                          {/* Selector de estado de pago */}
+                          <select
+                            value={participante.paymentStatus || 'PENDING'}
+                            onChange={(e) => updatePaymentStatus(participante.id, e.target.value)}
+                            disabled={updatingPayment === participante.id}
+                            className="px-2 py-1 bg-slate-700 border border-slate-600 rounded-lg text-xs text-white cursor-pointer hover:border-amber-500/50 transition-colors disabled:opacity-50"
+                          >
+                            <option value="PENDING">⏳ Pendiente</option>
+                            <option value="PARTIAL">💰 Parcial</option>
+                            <option value="PAID">✅ Pagado</option>
+                            <option value="GIFT">🎁 Cortesía</option>
+                          </select>
                           {participante.telefono && (
                             <a
                               href={`tel:${participante.telefono}`}

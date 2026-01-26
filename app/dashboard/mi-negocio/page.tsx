@@ -572,11 +572,37 @@ export default function QuantumBusinessBuilderPage() {
     }
   };
   
-  // Seleccionar un logo del modal
-  const selectLogoFromModal = (url: string) => {
-    setPreviewLogo(url);
-    setShowLogoModal(false);
-    setLogoOptions([]);
+  // Seleccionar un logo del modal y subirlo a Cloudinary para que sea permanente
+  const selectLogoFromModal = async (url: string) => {
+    setGeneratingLogo(true); // Mostrar loading mientras sube
+    
+    try {
+      // Subir la imagen de DALL-E a Cloudinary para que sea permanente
+      const response = await fetch('/api/upload/from-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          imageUrl: url,
+          folder: 'business-logos'
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setPreviewLogo(data.url); // URL permanente de Cloudinary
+      } else {
+        // Si falla el upload, usar la URL temporal (expirará)
+        console.warn('No se pudo subir a Cloudinary, usando URL temporal');
+        setPreviewLogo(url);
+      }
+    } catch (error) {
+      console.error('Error subiendo logo:', error);
+      setPreviewLogo(url); // Fallback a URL temporal
+    } finally {
+      setGeneratingLogo(false);
+      setShowLogoModal(false);
+      setLogoOptions([]);
+    }
   };
   
   // Regenerar logos en el modal

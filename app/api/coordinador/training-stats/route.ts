@@ -308,11 +308,13 @@ export async function GET(request: Request) {
         nextLevelName = currentVisionName;
         
         // Obtener total de inscritos en BÁSICO (denominador para declarados)
+        // Solo contar los que tienen pago completo
         const basicEnrolledCount = await prisma.vision_enrollments.count({
           where: {
             visionId: currentProduct.visionId,
             level: 'BASIC',
-            enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+            enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] },
+            paymentStatus: { in: ['PAID', 'PAID_FULL', 'FULL', 'GIFT', 'SCHOLARSHIP'] }
           }
         });
         
@@ -344,12 +346,13 @@ export async function GET(request: Request) {
             }
           });
           
-          // Enrollments de ADVANCED de la misma visión
+          // Enrollments de ADVANCED de la misma visión - SOLO CON PAGO COMPLETO
           const advEnrolled = await prisma.vision_enrollments.count({
             where: {
               visionId: currentProduct.visionId,
               level: 'ADVANCED',
-              enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+              enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] },
+              paymentStatus: { in: ['PAID', 'PAID_FULL', 'FULL', 'GIFT', 'SCHOLARSHIP'] }
             }
           });
           
@@ -386,11 +389,13 @@ export async function GET(request: Request) {
         nextLevelName = currentVisionName;
         
         // Obtener total de inscritos en AVANZADO (denominador para declarados)
+        // Solo contar los que tienen pago completo
         const advancedEnrolledCount = await prisma.vision_enrollments.count({
           where: {
             visionId: currentProduct.visionId,
             level: 'ADVANCED',
-            enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+            enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] },
+            paymentStatus: { in: ['PAID', 'PAID_FULL', 'FULL', 'GIFT', 'SCHOLARSHIP'] }
           }
         });
         
@@ -403,7 +408,7 @@ export async function GET(request: Request) {
         let plPending = 0;
         
         // DECLARADOS = Pre-registros a PL (PENDING + PAID, los que pasaron por El Cruce)
-        // INSCRITOS = Ya inscritos en PL (vision_enrollments con level='PL')
+        // INSCRITOS = Ya inscritos en PL (vision_enrollments con level='PL') CON PAGO COMPLETO
         
         if (plProduct) {
           // Pre-registros PENDING para PL
@@ -414,13 +419,14 @@ export async function GET(request: Request) {
             }
           });
           
-          // Enrollments de PL (ya pagaron y están inscritos)
+          // Enrollments de PL (ya pagaron y están inscritos) - SOLO CON PAGO COMPLETO
           if (currentProduct.visionId) {
             plEnrolled = await prisma.vision_enrollments.count({
               where: {
                 visionId: currentProduct.visionId,
                 level: 'PL',
-                enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+                enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] },
+                paymentStatus: { in: ['PAID', 'PAID_FULL', 'FULL', 'GIFT', 'SCHOLARSHIP'] }
               }
             });
           }
@@ -433,13 +439,14 @@ export async function GET(request: Request) {
             }
           });
           
-          // Inscritos en PL de la misma visión
+          // Inscritos en PL de la misma visión - SOLO CON PAGO COMPLETO
           if (currentProduct.visionId) {
             plEnrolled = await prisma.vision_enrollments.count({
               where: {
                 visionId: currentProduct.visionId,
                 level: 'PL',
-                enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
+                enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] },
+                paymentStatus: { in: ['PAID', 'PAID_FULL', 'FULL', 'GIFT', 'SCHOLARSHIP'] }
               }
             });
           }

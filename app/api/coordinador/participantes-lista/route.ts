@@ -67,12 +67,27 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Mapear status a enrollmentStatus
+    // Mapear status a enrollmentStatus y paymentStatus
     let enrollmentStatuses: string[] = [];
+    let paymentFilter: any = undefined;
+    
     if (status === 'PENDING') {
-      enrollmentStatuses = ['PENDING', 'DECLARED'];
+      // Pendientes de pago: incluye DECLARED y usuarios con deuda/pago parcial
+      enrollmentStatuses = ['PENDING', 'DECLARED', 'ENROLLED', 'ACTIVE'];
+      paymentFilter = { 
+        OR: [
+          { paymentStatus: null },
+          { paymentStatus: 'PENDING' },
+          { paymentStatus: 'PARTIAL' },
+          { paymentStatus: 'UNPAID' }
+        ]
+      };
     } else if (status === 'ENROLLED') {
+      // Inscritos: solo usuarios CON PAGO COMPLETO
       enrollmentStatuses = ['ENROLLED', 'ACTIVE'];
+      paymentFilter = { 
+        paymentStatus: { in: ['PAID', 'PAID_FULL', 'FULL', 'GIFT', 'SCHOLARSHIP'] }
+      };
     } else {
       enrollmentStatuses = [status];
     }
@@ -82,9 +97,14 @@ export async function GET(request: NextRequest) {
       where: {
         visionId: { in: visionIds },
         enrollmentStatus: { in: enrollmentStatuses },
-        level: level as any
+        level: level as any,
+        ...(paymentFilter || {})
       },
-      include: {
+      select: {
+        id: true,
+        enrollmentStatus: true,
+        paymentStatus: true,
+        createdAt: true,
         Usuario_vision_enrollments_userIdToUsuario: {
           select: {
             id: true,
@@ -152,6 +172,7 @@ export async function GET(request: NextRequest) {
       telefono: e.Usuario_vision_enrollments_userIdToUsuario?.telefono || null,
       imagen: e.Usuario_vision_enrollments_userIdToUsuario?.imagen || null,
       status: e.enrollmentStatus,
+      paymentStatus: e.paymentStatus,
       source: 'enrollment',
       // Datos del invitador
       invitador: e.Usuario_vision_enrollments_invitedByToUsuario ? {
