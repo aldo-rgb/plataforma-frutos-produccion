@@ -1040,6 +1040,8 @@ model Organization {
   bankAccountClabe                                      String?                         // CLABE interbancaria (18 dígitos)
   bankAccountNumber                                     String?                         // Número de cuenta (opcional)
   bankReference                                         String?                         // Referencia o concepto sugerido
+  // Imagen de fondo para invitaciones de WhatsApp
+  whatsappInviteImageUrl                                String?                         // URL de imagen de fondo para compartir invitaciones
   AbandonedCheckout                                     AbandonedCheckout[]
   CashBatches                                           CashBatch[]
   CheckInRecord                                         CheckInRecord[]

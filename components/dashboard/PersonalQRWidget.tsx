@@ -527,7 +527,31 @@ ${invitationURL}
 
 ¡Te espero! 🚀`;
 
-                    // En móvil, usar navigator.share si está disponible
+                    // Intentar compartir con imagen si está disponible
+                    if (premiumCardURL && navigator.share && navigator.canShare) {
+                      try {
+                        // Descargar la imagen y convertirla a File
+                        const res = await fetch(premiumCardURL);
+                        const blob = await res.blob();
+                        const file = new File([blob], `invitacion-basico-${userName.replace(/\s+/g, '-')}.png`, { type: 'image/png' });
+                        
+                        // Verificar si el navegador puede compartir archivos
+                        const shareData = {
+                          title: `Invitación al Entrenamiento Básico`,
+                          text: shareText,
+                          files: [file]
+                        };
+                        
+                        if (navigator.canShare(shareData)) {
+                          await navigator.share(shareData);
+                          return;
+                        }
+                      } catch (err) {
+                        console.log('Error sharing with image:', err);
+                      }
+                    }
+                    
+                    // Fallback: compartir solo texto
                     if (navigator.share) {
                       try {
                         await navigator.share({

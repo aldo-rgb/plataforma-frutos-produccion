@@ -26,7 +26,8 @@ export default function BrandingPage() {
     loginWelcomeMessage: 'Bienvenido al Portal de Entrenamiento',
     showPoweredBy: true,
     customLoginEnabled: false,
-    slug: ''
+    slug: '',
+    whatsappInviteImageUrl: ''
   });
 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -56,7 +57,8 @@ export default function BrandingPage() {
           loginWelcomeMessage: data.organization.loginWelcomeMessage || 'Bienvenido al Portal de Entrenamiento',
           showPoweredBy: data.organization.showPoweredBy ?? true,
           customLoginEnabled: data.organization.customLoginEnabled ?? false,
-          slug: data.organization.slug || ''
+          slug: data.organization.slug || '',
+          whatsappInviteImageUrl: data.organization.whatsappInviteImageUrl || ''
         });
       }
     } catch (error) {
@@ -276,6 +278,53 @@ export default function BrandingPage() {
                   }`}
                 />
               </button>
+            </div>
+
+            {/* Separador */}
+            <div className="border-t border-slate-600 pt-6 mt-6">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
+                📱 Imagen para Invitaciones de WhatsApp
+              </h3>
+              <p className="text-slate-400 text-sm mb-4">
+                Esta imagen se usará como fondo cuando tus usuarios compartan invitaciones por WhatsApp. 
+                Recomendamos una imagen de 1200x630 píxeles.
+              </p>
+              
+              {/* WhatsApp Image URL */}
+              <div>
+                <label className="text-white font-medium flex items-center gap-2">
+                  <Image size={18} className="text-green-400" />
+                  URL de Imagen para WhatsApp
+                </label>
+                <input
+                  type="url"
+                  value={branding.whatsappInviteImageUrl}
+                  onChange={(e) => setBranding({ ...branding, whatsappInviteImageUrl: e.target.value })}
+                  placeholder="https://ejemplo.com/invitacion-basico.jpg"
+                  className="w-full mt-2 px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                />
+              </div>
+
+              {/* Preview de imagen de WhatsApp */}
+              {branding.whatsappInviteImageUrl && (
+                <div className="mt-4">
+                  <p className="text-slate-400 text-sm mb-2">Vista previa:</p>
+                  <div className="relative rounded-lg overflow-hidden border border-slate-600">
+                    <img 
+                      src={branding.whatsappInviteImageUrl} 
+                      alt="Preview WhatsApp" 
+                      className="w-full h-auto max-h-64 object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+                      <p className="text-white font-bold text-sm">Entrenamiento Básico</p>
+                      <p className="text-slate-300 text-xs">Vista previa del link compartido</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Save Button */}

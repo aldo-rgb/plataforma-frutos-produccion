@@ -48,7 +48,8 @@ export async function GET(request: NextRequest) {
         loginBackgroundUrl: true,
         loginWelcomeMessage: true,
         showPoweredBy: true,
-        customLoginEnabled: true
+        customLoginEnabled: true,
+        whatsappInviteImageUrl: true
       }
     });
 
@@ -113,7 +114,8 @@ export async function PUT(request: NextRequest) {
       loginBackgroundUrl,
       loginWelcomeMessage,
       showPoweredBy,
-      customLoginEnabled
+      customLoginEnabled,
+      whatsappInviteImageUrl
     } = body;
 
     // Actualizar la organización
@@ -125,7 +127,8 @@ export async function PUT(request: NextRequest) {
         loginBackgroundUrl: loginBackgroundUrl || null,
         loginWelcomeMessage: loginWelcomeMessage || 'Bienvenido al Portal de Entrenamiento',
         showPoweredBy: showPoweredBy ?? true,
-        customLoginEnabled: customLoginEnabled ?? false
+        customLoginEnabled: customLoginEnabled ?? false,
+        whatsappInviteImageUrl: whatsappInviteImageUrl || null
       },
       select: {
         id: true,
@@ -136,7 +139,8 @@ export async function PUT(request: NextRequest) {
         loginBackgroundUrl: true,
         loginWelcomeMessage: true,
         showPoweredBy: true,
-        customLoginEnabled: true
+        customLoginEnabled: true,
+        whatsappInviteImageUrl: true
       }
     });
 

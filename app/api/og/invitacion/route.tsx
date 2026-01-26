@@ -12,16 +12,22 @@ export async function GET(request: NextRequest) {
     let referrerName = 'Un amigo';
     let orgName = 'FRUTOS';
     let orgLogo: string | null = null;
+    let whatsappBgImage: string | null = null;
+    let visionName = 'Próximo Entrenamiento';
+    let visionFechas = '';
+    let visionLugar = '';
 
     if (codigo) {
-      const referrer = await prisma.user.findFirst({
+      const referrer = await prisma.usuario.findFirst({
         where: { referralCode: codigo },
         select: {
           name: true,
+          organizationId: true,
           organization: {
             select: {
               name: true,
               logoUrl: true,
+              whatsappInviteImageUrl: true,
             }
           }
         }
@@ -31,9 +37,142 @@ export async function GET(request: NextRequest) {
         referrerName = referrer.name || 'Un amigo';
         orgName = referrer.organization?.name || 'FRUTOS';
         orgLogo = referrer.organization?.logoUrl || null;
+        whatsappBgImage = referrer.organization?.whatsappInviteImageUrl || null;
+
+        // Buscar la próxima visión activa de la organización
+        if (referrer.organizationId) {
+          const nextVision = await prisma.vision.findFirst({
+            where: {
+              organizationId: referrer.organizationId,
+              tipo: 'BASIC',
+              status: 'ACTIVE',
+              fechaInicio: { gte: new Date() }
+            },
+            orderBy: { fechaInicio: 'asc' },
+            select: {
+              nombre: true,
+              fechaInicio: true,
+              fechaFin: true,
+              lugar: true
+            }
+          });
+
+          if (nextVision) {
+            visionName = nextVision.nombre;
+            if (nextVision.fechaInicio) {
+              const inicio = new Date(nextVision.fechaInicio);
+              const fin = nextVision.fechaFin ? new Date(nextVision.fechaFin) : null;
+              
+              const formatDate = (d: Date) => d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+              visionFechas = fin 
+                ? `${formatDate(inicio)} - ${formatDate(fin)}`
+                : formatDate(inicio);
+            }
+            visionLugar = nextVision.lugar || '';
+          }
+        }
       }
     }
 
+    // Si hay imagen de fondo personalizada, usarla
+    if (whatsappBgImage) {
+      return new ImageResponse(
+        (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              position: 'relative',
+            }}
+          >
+            {/* Imagen de fondo */}
+            <img
+              src={whatsappBgImage}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+              }}
+            />
+            
+            {/* Overlay con información */}
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                padding: '30px',
+                background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 50%, transparent 100%)',
+              }}
+            >
+              {/* Badge de invitación */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  marginBottom: '15px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '20px',
+                    fontWeight: 700,
+                    color: 'white',
+                  }}
+                >
+                  {referrerName.charAt(0).toUpperCase()}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ color: '#94a3b8', fontSize: '14px' }}>Te invita</span>
+                  <span style={{ color: 'white', fontSize: '18px', fontWeight: 600 }}>
+                    {referrerName}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Botón de registro */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '12px 24px',
+                  background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
+                  borderRadius: '12px',
+                  color: 'white',
+                  fontSize: '18px',
+                  fontWeight: 700,
+                  alignSelf: 'flex-start',
+                }}
+              >
+                ¡Regístrate Ahora! →
+              </div>
+            </div>
+          </div>
+        ),
+        {
+          width: 1200,
+          height: 630,
+        }
+      );
+    }
+
+    // Fallback: Generar imagen con diseño predeterminado
     return new ImageResponse(
       (
         <div
@@ -94,6 +233,19 @@ export async function GET(request: NextRequest) {
               position: 'relative',
             }}
           >
+            {/* Logo de organización */}
+            {orgLogo && (
+              <img
+                src={orgLogo}
+                style={{
+                  width: '100px',
+                  height: '100px',
+                  objectFit: 'contain',
+                  marginBottom: '20px',
+                }}
+              />
+            )}
+
             {/* Badge */}
             <div
               style={{
@@ -116,14 +268,14 @@ export async function GET(request: NextRequest) {
             {/* Title */}
             <div
               style={{
-                fontSize: '64px',
+                fontSize: '56px',
                 fontWeight: 900,
                 background: 'linear-gradient(135deg, #ffffff 0%, #e0e7ff 50%, #ffffff 100%)',
                 backgroundClip: 'text',
                 color: 'transparent',
                 textAlign: 'center',
                 lineHeight: 1.1,
-                marginBottom: '20px',
+                marginBottom: '15px',
               }}
             >
               Entrenamiento Básico
@@ -132,16 +284,29 @@ export async function GET(request: NextRequest) {
             {/* Subtitle */}
             <div
               style={{
-                fontSize: '36px',
+                fontSize: '32px',
                 fontWeight: 700,
                 background: 'linear-gradient(135deg, #fbbf24 0%, #f97316 100%)',
                 backgroundClip: 'text',
                 color: 'transparent',
-                marginBottom: '40px',
+                marginBottom: '10px',
               }}
             >
               Transformación Cuántica
             </div>
+
+            {/* Vision name if available */}
+            {visionName && visionName !== 'Próximo Entrenamiento' && (
+              <div
+                style={{
+                  fontSize: '24px',
+                  color: '#94a3b8',
+                  marginBottom: '30px',
+                }}
+              >
+                {visionName} {visionFechas && `• ${visionFechas}`}
+              </div>
+            )}
 
             {/* Inviter */}
             <div
@@ -153,7 +318,7 @@ export async function GET(request: NextRequest) {
                 background: 'rgba(30, 27, 75, 0.8)',
                 border: '2px solid rgba(168, 85, 247, 0.4)',
                 borderRadius: '20px',
-                marginBottom: '40px',
+                marginBottom: '30px',
               }}
             >
               <div
@@ -178,30 +343,6 @@ export async function GET(request: NextRequest) {
                   {referrerName}
                 </span>
               </div>
-            </div>
-
-            {/* Features */}
-            <div
-              style={{
-                display: 'flex',
-                gap: '20px',
-                marginBottom: '30px',
-              }}
-            >
-              {['🎯 3 días intensivos', '💫 Transformación real', '🤝 Comunidad'].map((text, i) => (
-                <div
-                  key={i}
-                  style={{
-                    padding: '12px 20px',
-                    background: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: '12px',
-                    color: 'white',
-                    fontSize: '18px',
-                  }}
-                >
-                  {text}
-                </div>
-              ))}
             </div>
 
             {/* CTA */}
@@ -234,7 +375,7 @@ export async function GET(request: NextRequest) {
               }}
             >
               <span>🌟</span>
-              <span>{orgName} • quantummatter.app</span>
+              <span>{orgName}</span>
             </div>
           </div>
 
