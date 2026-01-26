@@ -545,7 +545,7 @@ export default function SquadManagerWidget() {
       participantId: member.user.id,
       participantName: member.user.nombre,
       participantImage: member.user.imagen,
-      visionId: squad ? parseInt(squad.id.split('-')[0]) : null, // Extraer visionId del squadId si está en formato "visionId-..."
+      visionId: squad?.visionId || targetVisionId || null,
       trainingLevel: level,
       // Campos BÁSICO
       photoWithGCUrl: '',
