@@ -527,36 +527,7 @@ ${invitationURL}
 
 ¡Te espero! 🚀`;
 
-                    // Abrir WhatsApp directamente (más confiable que Web Share API)
-                    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
-                    window.open(whatsappUrl, '_blank');
-                  }}
-                  disabled={!referralCode && !registrationURL}
-                  className="flex-1 px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-xl transition-all flex items-center justify-center gap-2"
-                >
-                  <span>📱</span> WhatsApp
-                </button>
-                <button
-                  onClick={async () => {
-                    // URL de invitación personalizada
-                    const invitationURL = referralCode 
-                      ? `${window.location.origin}/invitacion/${referralCode}`
-                      : registrationURL;
-
-                    const shareText = `🎓 ¡Te invito a vivir una experiencia que cambiará tu vida!
-
-✨ Entrenamiento Básico de Transformación Cuántica
-
-🌟 3 días intensivos de conciencia y romper creencias limitantes
-💫 Entrenamiento práctico para resultados reales  
-🤝 Una comunidad extraordinaria
-
-👉 Conoce más y regístrate aquí:
-${invitationURL}
-
-¡Te espero! 🚀`;
-
-                    // Usar Web Share API para otras apps
+                    // Usar Web Share API
                     if (navigator.share) {
                       try {
                         await navigator.share({
@@ -564,8 +535,9 @@ ${invitationURL}
                           text: shareText
                         });
                       } catch (err) {
-                        // Usuario canceló o error
-                        console.log('Share cancelled');
+                        // Usuario canceló o error - copiar al portapapeles
+                        await navigator.clipboard.writeText(shareText);
+                        alert('Mensaje copiado al portapapeles');
                       }
                     } else {
                       // Copiar al portapapeles como fallback
@@ -578,10 +550,6 @@ ${invitationURL}
                 >
                   <span>🔗</span> Compartir
                 </button>
-              </div>
-
-              {/* Botón de descargar flyer */}
-              <div className="mt-3">
                 <button 
                   onClick={async () => {
                     if (!referralCode) return;
@@ -596,9 +564,9 @@ ${invitationURL}
                     document.body.removeChild(link);
                   }}
                   disabled={!referralCode}
-                  className="w-full px-6 py-3 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                  className="flex-1 px-6 py-4 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2"
                 >
-                  <span>📥</span> Descargar Flyer para enviar manualmente
+                  <span>📥</span> Descargar Flyer
                 </button>
               </div>
 
