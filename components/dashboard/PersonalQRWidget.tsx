@@ -518,8 +518,8 @@ export default function PersonalQRWidget({
 
 ✨ Entrenamiento Básico de Transformación Cuántica
 
-🌟 3 días intensivos de crecimiento personal
-💫 Herramientas prácticas para resultados reales  
+🌟 3 días intensivos de conciencia y romper creencias limitantes
+💫 Entrenamiento práctico para resultados reales  
 🤝 Una comunidad extraordinaria
 
 👉 Conoce más y regístrate aquí:
