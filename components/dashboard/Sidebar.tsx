@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { 
   LayoutDashboard, Trophy, Target, BarChart3, User, LogOut, 
   UserPlus, DollarSign, Package, Shield, Drama, Theater,
-  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode, Store, Star, Crown
+  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode, Store, Star, Crown, Image
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { MENU_ITEMS } from '@/config/menuPermissions';
@@ -560,6 +560,19 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             >
               <Sparkles size={18} className="text-purple-400" />
               <span>Personalizar Login</span>
+            </Link>
+
+            <Link 
+              href="/dashboard/school-admin/flyer-designer"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/school-admin/flyer-designer'
+                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-cyan-900/20'
+              }`}
+            >
+              <Image size={18} className="text-cyan-400" />
+              <span>Personalizar Invitación</span>
             </Link>
 
             <Link 
