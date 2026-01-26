@@ -252,7 +252,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Determinar el nivel del training primero para usarlo en la verificación
+    const level = (trainingLevel as string) || 'BASIC';
+
     // Verificar que el participante está asignado a este GC a través de SmallGroup
+    // Debe coincidir con el nivel del entrenamiento que se está capturando
     const squadMembership = await prisma.smallGroupMember.findFirst({
       where: {
         userId: parseInt(participantId),
@@ -260,6 +264,7 @@ export async function POST(request: NextRequest) {
         group: {
           visionId: parseInt(visionId),
           leaderId: gcId,
+          level: level as any, // Filtrar por el nivel del entrenamiento
           isActive: true
         }
       },
@@ -274,9 +279,6 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       );
     }
-
-    // Determinar el nivel del training (convertir a ProductLevelType)
-    const level = (trainingLevel as string) || 'BASIC';
 
     // Buscar captura existente
     const capturaExistente = await prisma.legacyCaptureSession.findFirst({
