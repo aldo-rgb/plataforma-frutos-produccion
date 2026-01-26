@@ -39,13 +39,17 @@ export default function PendingMentorReviewsWidget() {
       const res = await fetch('/api/participante/pending-mentor-reviews');
       
       if (!res.ok) {
-        throw new Error('Error al cargar notificaciones');
+        // No lanzar error, simplemente no mostrar notificaciones
+        console.log('No hay notificaciones pendientes o usuario no autenticado');
+        setNotificaciones([]);
+        return;
       }
 
       const data = await res.json();
       setNotificaciones(data.notificaciones || []);
     } catch (error) {
       console.error('Error al cargar notificaciones:', error);
+      setNotificaciones([]);
     } finally {
       setLoading(false);
     }
