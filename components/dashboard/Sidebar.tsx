@@ -1110,6 +1110,9 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             <span>Membresía</span>
           </Link>
 
+          {/* SECCIÓN LIDERATO */}
+          <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2 mt-4">🚀 Liderato</p>
+
           {/* Legacy Builder - Donaciones */}
           <Link 
             href="/dashboard/legacy-builder" 
@@ -1125,22 +1128,20 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             <span className="ml-auto text-xs bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full">Nuevo</span>
           </Link>
 
-          {/* Legacy Vision Builder - Solo para participantes PL */}
-          {isPLParticipant && (
-            <Link 
-              href="/dashboard/legacy-vision-builder" 
-              onClick={handleLinkClick}
-              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
-                pathname.startsWith('/dashboard/legacy-vision-builder')
-                  ? 'bg-gradient-to-r from-yellow-600 to-amber-600 text-white shadow-lg shadow-yellow-500/20' 
-                  : 'text-slate-400 hover:bg-gradient-to-r hover:from-yellow-900/30 hover:to-amber-900/30 hover:text-yellow-300'
-              }`}
-            >
-              <Crown size={18} className="text-yellow-400 group-hover:text-yellow-300" />
-              <span className="font-medium">Capitanías PL</span>
-              <span className="ml-auto text-xs bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded-full">👑</span>
-            </Link>
-          )}
+          {/* Legacy Vision Builder - Capitanías */}
+          <Link 
+            href="/dashboard/legacy-vision-builder" 
+            onClick={handleLinkClick}
+            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
+              pathname.startsWith('/dashboard/legacy-vision-builder')
+                ? 'bg-gradient-to-r from-yellow-600 to-amber-600 text-white shadow-lg shadow-yellow-500/20' 
+                : 'text-slate-400 hover:bg-gradient-to-r hover:from-yellow-900/30 hover:to-amber-900/30 hover:text-yellow-300'
+            }`}
+          >
+            <Crown size={18} className="text-yellow-400 group-hover:text-yellow-300" />
+            <span className="font-medium">Capitanías</span>
+            <span className="ml-auto text-xs bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded-full">👑</span>
+          </Link>
 
           {/* Directorio de Talentos - Mercado */}
           <Link 

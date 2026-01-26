@@ -18,7 +18,10 @@ import {
   Gift,
   RefreshCw,
   X,
-  Phone
+  Phone,
+  Lock,
+  Crown,
+  ArrowLeft
 } from 'lucide-react';
 
 interface Category {
@@ -76,6 +79,7 @@ export default function MarketplacePage() {
   const [profiles, setProfiles] = useState<BusinessProfile[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
 
   // Filtros
   const [searchQuery, setSearchQuery] = useState('');
@@ -85,7 +89,27 @@ export default function MarketplacePage() {
   const [onlyVerified, setOnlyVerified] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Verificar acceso (Avanzado completado o PL)
+  useEffect(() => {
+    const checkLideratoAccess = async () => {
+      try {
+        const response = await fetch('/api/liderato-access');
+        if (response.ok) {
+          const data = await response.json();
+          setHasAccess(data.hasAccess === true);
+        } else {
+          setHasAccess(false);
+        }
+      } catch (error) {
+        console.error('Error checking Liderato access:', error);
+        setHasAccess(false);
+      }
+    };
+    checkLideratoAccess();
+  }, []);
+
   const fetchProfiles = useCallback(async (page = 1) => {
+    if (hasAccess !== true) return;
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -107,7 +131,7 @@ export default function MarketplacePage() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedCategory, selectedState, sortBy, onlyVerified]);
+  }, [searchQuery, selectedCategory, selectedState, sortBy, onlyVerified, hasAccess]);
 
   const fetchCategories = async () => {
     try {
@@ -122,9 +146,13 @@ export default function MarketplacePage() {
   };
 
   useEffect(() => {
-    fetchCategories();
-    fetchProfiles();
-  }, [fetchProfiles]);
+    if (hasAccess === true) {
+      fetchCategories();
+      fetchProfiles();
+    } else if (hasAccess === false) {
+      setLoading(false);
+    }
+  }, [hasAccess, fetchProfiles]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,6 +187,55 @@ export default function MarketplacePage() {
       </div>
     );
   };
+
+  // Pantalla de carga mientras verifica acceso
+  if (hasAccess === null) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  // Pantalla de acceso restringido
+  if (hasAccess === false) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-6">
+        <div className="max-w-md w-full">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-8 border border-slate-700/50 text-center">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
+              <Lock className="w-10 h-10 text-amber-400" />
+            </div>
+            
+            <h1 className="text-2xl font-bold text-white mb-3">
+              Contenido Exclusivo
+            </h1>
+            
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <Crown className="w-5 h-5 text-amber-400" />
+              <span className="text-amber-400 font-semibold">Programa de Liderato</span>
+            </div>
+            
+            <p className="text-slate-400 mb-6">
+              Esta sección está disponible para participantes 
+              <span className="text-amber-300 font-medium">inscritos en Programa de Liderato</span> que han 
+              <span className="text-emerald-300 font-medium">completado el nivel Avanzado</span>.
+            </p>
+            
+            <div className="space-y-3">
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold hover:shadow-lg hover:shadow-amber-500/25 transition-all flex items-center justify-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Volver al Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-4 md:p-6">

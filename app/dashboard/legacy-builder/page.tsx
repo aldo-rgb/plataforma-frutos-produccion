@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -15,7 +16,10 @@ import {
   ChevronRight,
   Sparkles,
   Copy,
-  Check
+  Check,
+  Lock,
+  Crown,
+  ArrowLeft
 } from 'lucide-react';
 
 interface Campaign {
@@ -55,14 +59,39 @@ interface Campaign {
 
 export default function LegacyBuilderPage() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [joiningCampaign, setJoiningCampaign] = useState<number | null>(null);
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+
+  // Verificar acceso (Avanzado completado o PL)
+  useEffect(() => {
+    const checkLideratoAccess = async () => {
+      try {
+        const response = await fetch('/api/liderato-access');
+        if (response.ok) {
+          const data = await response.json();
+          setHasAccess(data.hasAccess === true);
+        } else {
+          setHasAccess(false);
+        }
+      } catch (error) {
+        console.error('Error checking Liderato access:', error);
+        setHasAccess(false);
+      }
+    };
+    checkLideratoAccess();
+  }, []);
 
   useEffect(() => {
-    fetchCampaigns();
-  }, []);
+    if (hasAccess === true) {
+      fetchCampaigns();
+    } else if (hasAccess === false) {
+      setLoading(false);
+    }
+  }, [hasAccess]);
 
   const fetchCampaigns = async () => {
     try {
@@ -116,10 +145,50 @@ export default function LegacyBuilderPage() {
     return Math.min((raised / goal) * 100, 100);
   };
 
-  if (loading) {
+  if (loading || hasAccess === null) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+      </div>
+    );
+  }
+
+  // Pantalla de acceso restringido
+  if (hasAccess === false) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+        <div className="max-w-md w-full">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-8 border border-slate-700/50 text-center">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
+              <Lock className="w-10 h-10 text-amber-400" />
+            </div>
+            
+            <h1 className="text-2xl font-bold text-white mb-3">
+              Contenido Exclusivo
+            </h1>
+            
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <Crown className="w-5 h-5 text-amber-400" />
+              <span className="text-amber-400 font-semibold">Programa de Liderato</span>
+            </div>
+            
+            <p className="text-slate-400 mb-6">
+              Esta sección está disponible para participantes 
+              <span className="text-amber-300 font-medium">inscritos en Programa de Liderato</span> que han 
+              <span className="text-emerald-300 font-medium">completado el nivel Avanzado</span>.
+            </p>
+            
+            <div className="space-y-3">
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold hover:shadow-lg hover:shadow-amber-500/25 transition-all flex items-center justify-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Volver al Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

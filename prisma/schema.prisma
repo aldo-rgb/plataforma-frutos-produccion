@@ -2399,6 +2399,9 @@ model Usuario {
   ParticipantMetamorfosis                                                MetamorfosisAssignment[]        @relation("ParticipantMetamorfosis")
   TrainerMetamorfosisAssignments                                         MetamorfosisAssignment[]        @relation("TrainerMetamorfosisAssignments")
 
+  // Quantum Web Engine - Páginas Web
+  QuantumWebsite                                                         QuantumWebsite?
+
   @@index([communityOrganizationId])
 }
 
@@ -5949,3 +5952,127 @@ enum MetamorfosisStatus {
   PERFORMED
   COMPLETED
 }
+
+// ============================================
+// QUANTUM WEB ENGINE - Sistema de Páginas Web
+// ============================================
+
+model QuantumWebsite {
+  id                  Int               @id @default(autoincrement())
+  userId              Int               @unique
+  slug                String            @unique          // URL amigable: frutos.app/[slug]
+  
+  // Información del negocio
+  businessName        String            @db.VarChar(200)
+  businessDescription String?           @db.Text
+  businessCategory    String?           @db.VarChar(100)
+  
+  // Contacto
+  phone               String?           @db.VarChar(20)
+  whatsapp            String?           @db.VarChar(20)
+  email               String?           @db.VarChar(200)
+  address             String?           @db.Text
+  schedule            String?           @db.VarChar(200)
+  
+  // Redes sociales
+  instagram           String?           @db.VarChar(100)
+  facebook            String?           @db.VarChar(200)
+  
+  // Logo y media
+  logoUrl             String?
+  heroImageUrl        String?
+  galleryImages       String[]          @default([])
+  
+  // Template y diseño
+  templateId          String            @db.VarChar(50)   // minimalista, high-energy, etc.
+  templateStyle       String            @db.VarChar(50)
+  templateColors      Json                                // Colores del tema
+  templateFonts       Json                                // Fuentes del tema
+  
+  // Contenido generado por IA
+  heroTitle           String?           @db.VarChar(200)
+  heroSubtitle        String?           @db.VarChar(500)
+  aboutTitle          String?           @db.VarChar(200)
+  aboutText           String?           @db.Text
+  servicesTitle       String?           @db.VarChar(200)
+  services            Json?                               // Array de servicios
+  ctaText             String?           @db.VarChar(100)
+  testimonials        Json?                               // Array de testimonios
+  
+  // Secciones personalizadas
+  customSections      Json?                               // Secciones adicionales
+  
+  // Estado
+  isPublished         Boolean           @default(false)
+  publishedAt         DateTime?
+  
+  // Analytics
+  viewCount           Int               @default(0)
+  whatsappClicks      Int               @default(0)
+  phoneClicks         Int               @default(0)
+  
+  // Timestamps
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  
+  // Relaciones
+  user                Usuario           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products            QuantumProduct[]
+  pageViews           QuantumPageView[]
+  
+  @@index([slug])
+  @@index([isPublished])
+  @@index([businessCategory])
+  @@index([createdAt])
+}
+
+model QuantumProduct {
+  id                  Int               @id @default(autoincrement())
+  websiteId           Int
+  
+  name                String            @db.VarChar(200)
+  description         String?           @db.Text
+  price               Decimal           @db.Decimal(10, 2)
+  originalPrice       Decimal?          @db.Decimal(10, 2) // Precio tachado
+  image               String?
+  category            String?           @db.VarChar(100)
+  
+  inStock             Boolean           @default(true)
+  featured            Boolean           @default(false)
+  sortOrder           Int               @default(0)
+  
+  // Timestamps
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  
+  // Relaciones
+  website             QuantumWebsite    @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  
+  @@index([websiteId])
+  @@index([featured])
+  @@index([sortOrder])
+}
+
+model QuantumPageView {
+  id                  Int               @id @default(autoincrement())
+  websiteId           Int
+  
+  // Visitor info
+  visitorIp           String?           @db.VarChar(45)
+  userAgent           String?           @db.VarChar(500)
+  referrer            String?           @db.VarChar(500)
+  
+  // Geolocation
+  country             String?           @db.VarChar(50)
+  city                String?           @db.VarChar(100)
+  
+  // Timestamp
+  viewedAt            DateTime          @default(now())
+  
+  // Relaciones
+  website             QuantumWebsite    @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  
+  @@index([websiteId])
+  @@index([viewedAt])
+}
+

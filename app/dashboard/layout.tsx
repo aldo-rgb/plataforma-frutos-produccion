@@ -21,15 +21,13 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  // Validar que el email exista en la sesión
-  if (!session.user.email) {
-    redirect('/auth/signin');
-  }
+  // Email ya validado arriba
+  const userEmail = session.user.email;
 
   // 2. Obtener Datos Frescos de la BD (Capa de Datos Real)
   // Usamos el email de la sesión para buscar al usuario completo en PostgreSQL
   const usuarioReal = await prisma.usuario.findUnique({
-    where: { email: session.user.email },
+    where: { email: userEmail },
     include: {
       PerfilMentor: true, // Traemos datos del mentor si los necesitamos
       Organization_Usuario_organizationIdToOrganization: {
