@@ -527,11 +527,16 @@ ${invitationURL}
 
 ¡Te espero! 🚀`;
 
-                    // Intentar compartir con imagen si está disponible
-                    if (premiumCardURL && navigator.share && navigator.canShare) {
+                    // Generar el flyer personalizado con QR
+                    const flyerUrl = referralCode 
+                      ? `${window.location.origin}/api/og/flyer?codigo=${referralCode}`
+                      : null;
+
+                    // Intentar compartir con imagen del flyer
+                    if (flyerUrl && navigator.share && navigator.canShare) {
                       try {
-                        // Descargar la imagen y convertirla a File
-                        const res = await fetch(premiumCardURL);
+                        // Descargar el flyer generado
+                        const res = await fetch(flyerUrl);
                         const blob = await res.blob();
                         const file = new File([blob], `invitacion-basico-${userName.replace(/\s+/g, '-')}.png`, { type: 'image/png' });
                         
@@ -547,7 +552,7 @@ ${invitationURL}
                           return;
                         }
                       } catch (err) {
-                        console.log('Error sharing with image:', err);
+                        console.log('Error sharing with flyer:', err);
                       }
                     }
                     

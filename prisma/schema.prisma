@@ -1042,6 +1042,15 @@ model Organization {
   bankReference                                         String?                         // Referencia o concepto sugerido
   // Imagen de fondo para invitaciones de WhatsApp
   whatsappInviteImageUrl                                String?                         // URL de imagen de fondo para compartir invitaciones
+  // Configuración del Flyer de Invitación
+  flyerBackgroundUrl                                    String?                         // Imagen de fondo del flyer
+  flyerHeadline                                         String?                         // Texto principal/gancho
+  flyerSubheadline                                      String?                         // Subtítulo
+  flyerLocationDetail                                   String?                         // Detalle de ubicación (ej: "Zona Sur")
+  flyerShowUrgencyBadge                                 Boolean                         @default(true)
+  flyerUrgencyText                                      String?                         @default("CUPO LIMITADO")
+  flyerCtaText                                          String?                         @default("Escanea para registrarte")
+  flyerWhatsappNumber                                   String?                         // Número de WhatsApp para contacto
   AbandonedCheckout                                     AbandonedCheckout[]
   CashBatches                                           CashBatch[]
   CheckInRecord                                         CheckInRecord[]
