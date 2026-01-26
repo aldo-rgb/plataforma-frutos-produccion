@@ -116,11 +116,12 @@ export async function GET(
       }
     });
 
-  } catch (error) {
-    console.error('Error fetching invitation data:', error);
+  } catch (error: any) {
+    console.error('Error fetching invitation data:', error?.message || error);
     return NextResponse.json({ 
       success: false, 
-      error: 'Error interno del servidor' 
+      error: 'Error interno del servidor',
+      details: error?.message || 'Unknown error'
     }, { status: 500 });
   }
 }
