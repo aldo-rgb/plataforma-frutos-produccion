@@ -508,32 +508,45 @@ export default function PersonalQRWidget({
               {/* Botones de acción */}
               <div className="flex gap-3">
                 <button
-                  onClick={() => {
-                    if (premiumCardURL && navigator.share) {
-                      fetch(premiumCardURL)
-                        .then(res => res.blob())
-                        .then(blob => {
-                          const file = new File([blob], `${userName.replace(/\s+/g, '-')}-credencial-quantummatter.png`, { type: 'image/png' });
-                          const shareText = `🎓 ¡Bienvenido a tu registro para nuestro próximo Entrenamiento Básico!
+                  onClick={async () => {
+                    // URL de invitación personalizada (sin código visible)
+                    const invitationURL = referralCode 
+                      ? `${window.location.origin}/invitacion/${referralCode}`
+                      : registrationURL;
 
-✨ Transforma tu vida con el programa de Transformación Cuántica
+                    const shareText = `🎓 ¡Te invito a vivir una experiencia que cambiará tu vida!
 
-📲 Escanea el código QR de la imagen o haz clic en el siguiente enlace para registrarte:
+✨ Entrenamiento Básico de Transformación Cuántica
 
-👉 ${registrationURL}
+🌟 3 días intensivos de crecimiento personal
+💫 Herramientas prácticas para resultados reales  
+🤝 Una comunidad extraordinaria
 
-¡Te esperamos!`;
-                          navigator.share({
-                            title: `Registro Entrenamiento Básico - Transformación Cuántica`,
-                            text: shareText,
-                            files: [file]
-                          }).catch(err => console.log('Error sharing:', err));
+👉 Conoce más y regístrate aquí:
+${invitationURL}
+
+¡Te espero! 🚀`;
+
+                    // En móvil, usar navigator.share si está disponible
+                    if (navigator.share) {
+                      try {
+                        await navigator.share({
+                          title: `Invitación al Entrenamiento Básico`,
+                          text: shareText,
+                          url: invitationURL
                         });
-                    } else if (premiumCardURL) {
-                      downloadQR();
+                      } catch (err) {
+                        // Si falla share, abrir WhatsApp directamente
+                        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+                        window.open(whatsappUrl, '_blank');
+                      }
+                    } else {
+                      // En desktop, abrir WhatsApp Web directamente
+                      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+                      window.open(whatsappUrl, '_blank');
                     }
                   }}
-                  disabled={!premiumCardURL || generatingQR}
+                  disabled={!referralCode && !registrationURL}
                   className="flex-1 px-6 py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-slate-900 font-bold rounded-xl shadow-xl transition-all flex items-center justify-center gap-2"
                 >
                   <span>🔗</span> Compartir

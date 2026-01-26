@@ -57,7 +57,7 @@ export const CAPTAINCY_DEFINITIONS: Record<TribeCaptaincyRole, {
     widgetType: "TOWER_CONTROL",
     widgetName: "La Torre de Control",
     icon: "🎖️",
-    maxCaptains: 2,
+    maxCaptains: 1,
     permissions: ["can_send_push_notifications", "can_view_tribe_dashboard"],
   },
   TREASURER: {
@@ -77,17 +77,17 @@ export const CAPTAINCY_DEFINITIONS: Record<TribeCaptaincyRole, {
     widgetType: "IDENTITY_MANAGER",
     widgetName: "Gestor de Identidad",
     icon: "👕",
-    maxCaptains: 2,
+    maxCaptains: 1,
     permissions: ["can_manage_logo_voting", "can_collect_shirt_sizes"],
   },
   CONTRIBUTION_BASIC: {
     name: "Capitán de Contribución Básicos",
-    description: "Presencia activa en graduaciones y cunas de Básicos.",
+    description: "Presencia activa en graduaciones de Básicos.",
     mission: "Contribución en Entrenamientos Básicos",
     widgetType: "EVENT_LOGISTICS",
     widgetName: "Logística de Eventos",
     icon: "🎓",
-    maxCaptains: 3,
+    maxCaptains: 1,
     permissions: ["can_view_basic_calendar", "can_check_in_attendance"],
   },
   CONTRIBUTION_ADVANCED: {
@@ -97,7 +97,7 @@ export const CAPTAINCY_DEFINITIONS: Record<TribeCaptaincyRole, {
     widgetType: "EVENT_LOGISTICS",
     widgetName: "Logística de Eventos",
     icon: "🎓",
-    maxCaptains: 3,
+    maxCaptains: 1,
     permissions: ["can_view_advanced_calendar", "can_check_in_attendance"],
   },
   COMMUNITY_SERVICE: {
@@ -107,7 +107,7 @@ export const CAPTAINCY_DEFINITIONS: Record<TribeCaptaincyRole, {
     widgetType: "PROJECT_MANAGER",
     widgetName: "Project Manager Comunitaria",
     icon: "🤝",
-    maxCaptains: 2,
+    maxCaptains: 1,
     permissions: ["can_manage_community_proposals", "can_assign_tribe_tasks"],
   },
   BOOKS_MOVIES: {
@@ -117,7 +117,7 @@ export const CAPTAINCY_DEFINITIONS: Record<TribeCaptaincyRole, {
     widgetType: "LMS",
     widgetName: "Sistema de Aprendizaje",
     icon: "📚",
-    maxCaptains: 2,
+    maxCaptains: 1,
     permissions: ["can_view_homework_status", "can_send_homework_reminders"],
   },
   FOOD: {
@@ -127,7 +127,7 @@ export const CAPTAINCY_DEFINITIONS: Record<TribeCaptaincyRole, {
     widgetType: "MENU_PLANNER",
     widgetName: "Menú Planner",
     icon: "🍽️",
-    maxCaptains: 2,
+    maxCaptains: 1,
     permissions: ["can_manage_food_allergies", "can_coordinate_meals"],
   },
   CLEANLINESS: {
@@ -137,7 +137,7 @@ export const CAPTAINCY_DEFINITIONS: Record<TribeCaptaincyRole, {
     widgetType: "DAILY_AUDIT",
     widgetName: "Auditoría Diaria",
     icon: "✨",
-    maxCaptains: 2,
+    maxCaptains: 1,
     permissions: ["can_submit_audit_checklist", "can_report_issues"],
   },
   CONTEXT_GUARDIAN: {
@@ -157,7 +157,7 @@ export const CAPTAINCY_DEFINITIONS: Record<TribeCaptaincyRole, {
     widgetType: "EVENT_PLANNER",
     widgetName: "Event Planner Graduación",
     icon: "🎉",
-    maxCaptains: 2,
+    maxCaptains: 1,
     permissions: ["can_manage_guest_list", "can_generate_qr_tickets"],
   },
 };
@@ -199,7 +199,7 @@ export async function GET(request: NextRequest) {
       where: {
         userId: usuario.id,
         level: 'PL',
-        enrollmentStatus: 'CONFIRMED',
+        enrollmentStatus: { in: ['CONFIRMED', 'ACTIVE', 'ENROLLED'] },
         ...(targetVisionId ? { visionId: targetVisionId } : {}),
       },
       include: {
@@ -307,7 +307,7 @@ export async function GET(request: NextRequest) {
       where: {
         visionId: targetVisionId,
         level: 'PL',
-        enrollmentStatus: 'CONFIRMED'
+        enrollmentStatus: { in: ['CONFIRMED', 'ACTIVE', 'ENROLLED'] }
       },
       include: {
         Usuario_vision_enrollments_userIdToUsuario: {
@@ -461,13 +461,123 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // ACCIÓN: Nominar capitán (solo Staff/Admin puede hacer esto)
+    // ACCIÓN: Reclamar capitanía de tribu (primer participante que lo reclama)
+    if (action === 'claim_tribe_captain') {
+      // Verificar que el usuario tenga enrollment PL en esta visión
+      const plEnrollment = await prisma.vision_enrollments.findFirst({
+        where: {
+          userId: usuario.id,
+          visionId: parseInt(visionId),
+          level: 'PL',
+          enrollmentStatus: { in: ['CONFIRMED', 'ACTIVE', 'ENROLLED'] }
+        }
+      });
+
+      if (!plEnrollment) {
+        return NextResponse.json({ 
+          error: "Debes estar inscrito en PL para reclamar la capitanía" 
+        }, { status: 403 });
+      }
+
+      // Verificar que haya firmado el juramento
+      const oath = await prisma.tribeOath.findUnique({
+        where: {
+          userId_visionId: {
+            userId: usuario.id,
+            visionId: parseInt(visionId)
+          }
+        }
+      });
+
+      if (!oath) {
+        return NextResponse.json({ 
+          error: "Debes firmar el Juramento antes de reclamar la capitanía" 
+        }, { status: 400 });
+      }
+
+      // Buscar o crear la capitanía TRIBE_CAPTAIN
+      let captaincy = await prisma.tribeCaptaincy.findUnique({
+        where: {
+          visionId_roleType: {
+            visionId: parseInt(visionId),
+            roleType: 'TRIBE_CAPTAIN'
+          }
+        },
+        include: {
+          assignments: {
+            where: { status: { in: ['PENDING', 'ACCEPTED'] } }
+          }
+        }
+      });
+
+      // Verificar si ya hay un capitán
+      if (captaincy && captaincy.assignments.length > 0) {
+        return NextResponse.json({ 
+          error: "Ya hay un Capitán de Tribu asignado" 
+        }, { status: 400 });
+      }
+
+      // Crear la capitanía si no existe
+      if (!captaincy) {
+        captaincy = await prisma.tribeCaptaincy.create({
+          data: {
+            visionId: parseInt(visionId),
+            roleType: 'TRIBE_CAPTAIN',
+            maxCaptains: 1,
+          },
+          include: { assignments: true }
+        });
+      }
+
+      // Crear la asignación directamente como ACCEPTED (se auto-asigna)
+      const assignment = await prisma.tribeCaptainAssignment.create({
+        data: {
+          captaincyId: captaincy.id,
+          userId: usuario.id,
+          status: 'ACCEPTED',
+          acceptedAt: new Date(),
+          permissions: ['can_send_push_notifications', 'can_view_tribe_dashboard', 'can_view_attendance', 'can_assign_captains'],
+        }
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `¡${usuario.nombre} es ahora el Capitán de Tribu!`,
+        assignment: {
+          id: assignment.id,
+          roleType: 'TRIBE_CAPTAIN',
+          status: 'ACCEPTED',
+        }
+      });
+    }
+
+    // ACCIÓN: Nominar capitán (Staff o Capitán de Tribu puede hacer esto)
     if (action === 'nominate_captain') {
       const isStaff = ['ADMINISTRADOR', 'SUPER_ADMIN', 'GAMECHANGER', 'COORDINATOR', 'COORDINATOR_ADVANCED'].includes(usuario.rol);
       
-      if (!isStaff) {
+      // Verificar si es el Capitán de Tribu
+      const tribeCaptaincy = await prisma.tribeCaptaincy.findUnique({
+        where: {
+          visionId_roleType: {
+            visionId: parseInt(visionId),
+            roleType: 'TRIBE_CAPTAIN'
+          }
+        },
+        include: {
+          assignments: {
+            where: { 
+              userId: usuario.id,
+              status: 'ACCEPTED'
+            }
+          }
+        }
+      });
+      
+      const isTribeCaptain = tribeCaptaincy && tribeCaptaincy.assignments.length > 0;
+      
+      if (!isStaff && !isTribeCaptain) {
         return NextResponse.json({ 
-          error: "No tienes permisos para nominar capitanes" 
+          error: "Solo el Capitán de Tribu o Staff pueden asignar capitanías" 
         }, { status: 403 });
       }
 

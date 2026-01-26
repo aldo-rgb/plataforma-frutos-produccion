@@ -139,6 +139,12 @@ export default function LegacyVisionBuilderPage() {
   const [nominating, setNominating] = useState(false);
   const [respondingTo, setRespondingTo] = useState<number | null>(null);
   
+  // Modal para detalles de nominación
+  const [nominationModal, setNominationModal] = useState<{
+    show: boolean;
+    notification: PendingNotification | null;
+  }>({ show: false, notification: null });
+  
   const promisesContainerRef = useRef<HTMLDivElement>(null);
 
   // Toast notification
@@ -316,10 +322,38 @@ export default function LegacyVisionBuilderPage() {
     }
   };
 
-  const filteredMembers = data?.tribeMembers.filter(m =>
+  // Función para reclamar la capitanía de tribu
+  const handleClaimTribeCaptain = async () => {
+    setNominating(true);
+    try {
+      const res = await fetch('/api/legacy-vision-builder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'claim_tribe_captain',
+          visionId: data?.visionId,
+        }),
+      });
+
+      const result = await res.json();
+
+      if (res.ok) {
+        showToast('👑 ' + result.message, 'success');
+        await fetchData();
+      } else {
+        showToast(result.error || 'Error al reclamar capitanía', 'error');
+      }
+    } catch (error) {
+      showToast('Error de conexión', 'error');
+    } finally {
+      setNominating(false);
+    }
+  };
+
+  const filteredMembers = (data?.tribeMembers || []).filter(m =>
     m.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
     m.email.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  );
 
   if (status === 'loading' || loading) {
     return (
@@ -377,13 +411,13 @@ export default function LegacyVisionBuilderPage() {
         </div>
       )}
 
-      {/* Notificaciones Pendientes */}
+      {/* Notificaciones Pendientes - Solo botón Detalles */}
       {data.pendingNotifications.length > 0 && (
-        <div className="fixed top-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50 space-y-2">
+        <div className="fixed top-4 left-4 right-4 md:left-auto md:right-4 md:w-80 z-50 space-y-2">
           {data.pendingNotifications.map((notif) => (
             <div
               key={notif.id}
-              className="bg-gradient-to-r from-yellow-600/90 to-amber-600/90 backdrop-blur-sm rounded-xl p-4 shadow-lg border border-yellow-400/30"
+              className="bg-gradient-to-r from-yellow-600 to-amber-600 rounded-xl p-4 shadow-lg border border-yellow-400/30"
             >
               <div className="flex items-start gap-3">
                 <div className="p-2 bg-yellow-500/30 rounded-lg">
@@ -391,31 +425,139 @@ export default function LegacyVisionBuilderPage() {
                 </div>
                 <div className="flex-1">
                   <h4 className="font-semibold text-white text-sm">{notif.title}</h4>
-                  <p className="text-yellow-100/80 text-xs mt-1">{notif.message}</p>
-                  <div className="flex gap-2 mt-3">
-                    <button
-                      onClick={() => handleRespondNomination(notif.assignmentId, true)}
-                      disabled={respondingTo === notif.assignmentId}
-                      className="flex-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      {respondingTo === notif.assignmentId ? (
-                        <Loader2 className="w-4 h-4 animate-spin mx-auto" />
-                      ) : (
-                        'Acepto el Cargo'
-                      )}
-                    </button>
-                    <button
-                      onClick={() => handleRespondNomination(notif.assignmentId, false)}
-                      disabled={respondingTo === notif.assignmentId}
-                      className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      Rechazar
-                    </button>
-                  </div>
+                  <p className="text-yellow-100/80 text-xs mt-1 line-clamp-2">{notif.message}</p>
+                  <button
+                    onClick={() => setNominationModal({ show: true, notification: notif })}
+                    className="mt-3 w-full px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Star className="w-4 h-4" />
+                    Ver Detalles
+                  </button>
                 </div>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Modal de Detalles de Nominación */}
+      {nominationModal.show && nominationModal.notification && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-gray-900 rounded-2xl border border-yellow-600/30 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            {/* Header del Modal */}
+            <div className="bg-gradient-to-r from-yellow-600 to-amber-600 p-6 rounded-t-2xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-white/20 rounded-xl">
+                    <Crown className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">¡Has sido nominado!</h2>
+                    <p className="text-yellow-200 text-sm">Capitanía de la Tribu</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setNominationModal({ show: false, notification: null })}
+                  className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Contenido */}
+            <div className="p-6 space-y-6">
+              {/* Rol asignado */}
+              <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
+                <h3 className="text-lg font-bold text-yellow-400 mb-2">
+                  {(() => {
+                    const cap = data.captaincies.find(c => c.roleType === nominationModal.notification?.roleType);
+                    return cap ? `${cap.icon} ${cap.name}` : nominationModal.notification?.roleType;
+                  })()}
+                </h3>
+                <p className="text-gray-300 text-sm">
+                  {(() => {
+                    const cap = data.captaincies.find(c => c.roleType === nominationModal.notification?.roleType);
+                    return cap?.mission || '';
+                  })()}
+                </p>
+              </div>
+
+              {/* Descripción detallada */}
+              <div>
+                <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-yellow-400" />
+                  ¿Qué implica este rol?
+                </h4>
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  {(() => {
+                    const cap = data.captaincies.find(c => c.roleType === nominationModal.notification?.roleType);
+                    return cap?.description || '';
+                  })()}
+                </p>
+              </div>
+
+              {/* Responsabilidades */}
+              <div>
+                <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-yellow-400" />
+                  Tu Compromiso
+                </h4>
+                <ul className="space-y-2 text-sm text-gray-400">
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    <span>Asumir la responsabilidad de liderar esta área durante todo el programa</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    <span>Coordinar con tu tribu para lograr los objetivos del rol</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    <span>Reportar avances y mantener comunicación activa</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Pregunta */}
+              <div className="bg-yellow-900/30 border border-yellow-600/30 rounded-xl p-4 text-center">
+                <p className="text-yellow-200 font-medium">
+                  ¿Aceptas la responsabilidad ineludible de este cargo?
+                </p>
+              </div>
+
+              {/* Botones de acción */}
+              <div className="flex gap-3">
+                <button
+                  onClick={async () => {
+                    await handleRespondNomination(nominationModal.notification!.assignmentId, true);
+                    setNominationModal({ show: false, notification: null });
+                  }}
+                  disabled={respondingTo === nominationModal.notification?.assignmentId}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {respondingTo === nominationModal.notification?.assignmentId ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <CheckCircle className="w-5 h-5" />
+                      Acepto el Cargo
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={async () => {
+                    await handleRespondNomination(nominationModal.notification!.assignmentId, false);
+                    setNominationModal({ show: false, notification: null });
+                  }}
+                  disabled={respondingTo === nominationModal.notification?.assignmentId}
+                  className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
+                >
+                  Rechazar
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -584,121 +726,195 @@ export default function LegacyVisionBuilderPage() {
         {/* FASE 2: LA ELECCIÓN */}
         {currentPhase === 2 && (
           <div className="space-y-6">
-            {/* Panel de Asignación (Solo Staff) */}
-            {data.isStaff && (
-              <div className="bg-gray-900 rounded-2xl border border-yellow-600/30 overflow-hidden">
-                <div className="bg-gradient-to-r from-yellow-900/50 to-amber-900/50 p-6 border-b border-yellow-600/30">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 bg-yellow-600/30 rounded-xl">
-                      <UserPlus className="w-6 h-6 text-yellow-400" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-white">Panel de Asignación</h2>
-                      <p className="text-yellow-300/80 text-sm">
-                        Asigna capitanes a cada rol de la tribu
-                      </p>
-                    </div>
-                  </div>
-                </div>
+            {/* Determinar si hay Capitán de Tribu */}
+            {(() => {
+              const tribeCaptainRole = data.captaincies.find(c => c.roleType === 'TRIBE_CAPTAIN');
+              const hasTribeCaptain = tribeCaptainRole?.assignments.some(a => a.status === 'ACCEPTED');
+              const currentUserIsCaptain = tribeCaptainRole?.assignments.some(
+                a => a.userId === data.userId && a.status === 'ACCEPTED'
+              );
+              const canAssign = data.isStaff || currentUserIsCaptain;
 
-                <div className="p-6">
-                  {/* Selector de Rol */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Selecciona el rol a asignar:
-                    </label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                      {data.captaincies.map((cap) => {
-                        const RoleIcon = roleIcons[cap.roleType] || Star;
-                        const isFull = cap.confirmedCount + cap.pendingCount >= cap.maxCaptains;
-                        
-                        return (
-                          <button
-                            key={cap.roleType}
-                            onClick={() => setSelectedRole(selectedRole === cap.roleType ? null : cap.roleType)}
-                            disabled={isFull}
-                            className={`p-3 rounded-xl border transition-all text-left ${
-                              selectedRole === cap.roleType
-                                ? 'bg-yellow-600/20 border-yellow-500 text-yellow-400'
-                                : isFull
-                                  ? 'bg-gray-800/50 border-gray-700 text-gray-500 cursor-not-allowed'
-                                  : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-600'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <RoleIcon className="w-4 h-4" />
-                              <span className="text-xs font-medium truncate">{cap.name}</span>
-                            </div>
-                            <div className="text-xs mt-1 opacity-70">
-                              {cap.confirmedCount}/{cap.maxCaptains}
-                              {cap.pendingCount > 0 && ` (+${cap.pendingCount} pendiente)`}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Buscador de Miembros */}
-                  {selectedRole && (
-                    <div className="space-y-4 animate-in slide-in-from-top-2">
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
-                        <input
-                          type="text"
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          placeholder="Buscar miembro de la tribu..."
-                          className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl focus:ring-2 focus:ring-yellow-500"
-                        />
-                      </div>
-
-                      <div className="max-h-60 overflow-y-auto space-y-2">
-                        {filteredMembers.map((member) => {
-                          // Check if member is already assigned to this role
-                          const selectedCap = data.captaincies.find(c => c.roleType === selectedRole);
-                          const isAssigned = selectedCap?.assignments.some(
-                            a => a.userId === member.id && ['PENDING', 'ACCEPTED'].includes(a.status)
-                          );
-
-                          return (
-                            <button
-                              key={member.id}
-                              onClick={() => !isAssigned && handleNominateCapitan(member.id)}
-                              disabled={nominating || isAssigned}
-                              className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
-                                isAssigned
-                                  ? 'bg-gray-800/50 border border-gray-700 cursor-not-allowed'
-                                  : 'bg-gray-800 border border-gray-700 hover:border-yellow-600 hover:bg-gray-800/80'
-                              }`}
-                            >
-                              <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center overflow-hidden">
-                                {member.profileImage ? (
-                                  <img src={member.profileImage} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  <Users className="w-5 h-5 text-gray-500" />
-                                )}
-                              </div>
-                              <div className="flex-1 text-left">
-                                <p className="text-white font-medium">{member.nombre}</p>
-                                <p className="text-gray-500 text-xs">{member.email}</p>
-                              </div>
-                              {isAssigned ? (
-                                <span className="text-xs text-gray-500">Ya asignado</span>
-                              ) : nominating ? (
-                                <Loader2 className="w-5 h-5 animate-spin text-yellow-500" />
-                              ) : (
-                                <ChevronRight className="w-5 h-5 text-gray-600" />
-                              )}
-                            </button>
-                          );
-                        })}
+              return (
+                <>
+                  {/* Banner de Reclamar Capitanía (si no hay capitán) */}
+                  {!hasTribeCaptain && !data.isStaff && (
+                    <div className="bg-gradient-to-r from-yellow-900/80 to-amber-900/80 rounded-2xl border-2 border-yellow-500/50 overflow-hidden animate-pulse-slow">
+                      <div className="p-8 text-center">
+                        <div className="w-20 h-20 bg-yellow-500/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Crown className="w-10 h-10 text-yellow-400" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-white mb-2">
+                          ¡La Tribu Necesita un Líder!
+                        </h2>
+                        <p className="text-yellow-200/80 mb-6 max-w-md mx-auto">
+                          Sé el primero en tomar el mando. Como Capitán de Tribu serás responsable de 
+                          asignar las demás capitanías y liderar a tu equipo.
+                        </p>
+                        <button
+                          onClick={() => handleClaimTribeCaptain()}
+                          disabled={nominating}
+                          className="px-8 py-4 bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black font-bold text-lg rounded-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:transform-none flex items-center gap-3 mx-auto"
+                        >
+                          {nominating ? (
+                            <Loader2 className="w-6 h-6 animate-spin" />
+                          ) : (
+                            <>
+                              <Crown className="w-6 h-6" />
+                              Reclamar Capitanía de Tribu
+                            </>
+                          )}
+                        </button>
                       </div>
                     </div>
                   )}
-                </div>
-              </div>
-            )}
+
+                  {/* Panel de Asignación (Staff o Capitán de Tribu) */}
+                  {canAssign && (
+                    <div className="bg-gray-900 rounded-2xl border border-yellow-600/30 overflow-hidden">
+                      <div className="bg-gradient-to-r from-yellow-900/50 to-amber-900/50 p-6 border-b border-yellow-600/30">
+                        <div className="flex items-center gap-3">
+                          <div className="p-3 bg-yellow-600/30 rounded-xl">
+                            <UserPlus className="w-6 h-6 text-yellow-400" />
+                          </div>
+                          <div>
+                            <h2 className="text-xl font-bold text-white">Panel de Asignación</h2>
+                            <p className="text-yellow-300/80 text-sm">
+                              {currentUserIsCaptain 
+                                ? 'Como Capitán de Tribu, asigna los roles a tu equipo'
+                                : 'Asigna capitanes a cada rol de la tribu'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-6">
+                        {/* Selector de Rol */}
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Selecciona el rol a asignar:
+                          </label>
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                            {data.captaincies
+                              .filter(cap => cap.roleType !== 'TRIBE_CAPTAIN') // El capitán ya está asignado
+                              .map((cap) => {
+                                const RoleIcon = roleIcons[cap.roleType] || Star;
+                                const isFull = cap.confirmedCount + cap.pendingCount >= cap.maxCaptains;
+                                const hasPending = cap.pendingCount > 0;
+                                const hasConfirmed = cap.confirmedCount > 0;
+                              
+                                return (
+                                  <button
+                                    key={cap.roleType}
+                                    onClick={() => setSelectedRole(selectedRole === cap.roleType ? null : cap.roleType)}
+                                    disabled={isFull}
+                                    className={`p-3 rounded-xl border transition-all text-left ${
+                                      selectedRole === cap.roleType
+                                        ? 'bg-yellow-600/20 border-yellow-500 text-yellow-400'
+                                        : isFull
+                                          ? hasConfirmed 
+                                            ? 'bg-green-900/20 border-green-700 text-green-400 cursor-not-allowed'
+                                            : 'bg-yellow-900/20 border-yellow-700 text-yellow-400 cursor-not-allowed'
+                                          : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-600'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <RoleIcon className="w-4 h-4" />
+                                      <span className="text-xs font-medium truncate">{cap.name}</span>
+                                    </div>
+                                    {hasConfirmed && (
+                                      <div className="text-xs mt-1 text-green-400 flex items-center gap-1">
+                                        <CheckCircle className="w-3 h-3" /> Confirmado
+                                      </div>
+                                    )}
+                                    {hasPending && !hasConfirmed && (
+                                      <div className="text-xs mt-1 text-yellow-400 flex items-center gap-1">
+                                        <Clock className="w-3 h-3" /> Pendiente
+                                      </div>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                          </div>
+                        </div>
+
+                        {/* Buscador de Miembros */}
+                        {selectedRole && (
+                          <div className="space-y-4 animate-in slide-in-from-top-2">
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                              <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                placeholder="Buscar miembro de la tribu..."
+                                className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-700 text-white placeholder-gray-500 rounded-xl focus:ring-2 focus:ring-yellow-500"
+                              />
+                            </div>
+
+                            <div className="max-h-60 overflow-y-auto space-y-2">
+                              {filteredMembers.map((member) => {
+                                // Check if member is already assigned to this role
+                                const selectedCap = data.captaincies.find(c => c.roleType === selectedRole);
+                                const isAssigned = selectedCap?.assignments.some(
+                                  a => a.userId === member.id && ['PENDING', 'ACCEPTED'].includes(a.status)
+                                );
+
+                                return (
+                                  <button
+                                    key={member.id}
+                                    onClick={() => !isAssigned && handleNominateCapitan(member.id)}
+                                    disabled={nominating || isAssigned}
+                                    className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${
+                                      isAssigned
+                                        ? 'bg-gray-800/50 border border-gray-700 cursor-not-allowed'
+                                        : 'bg-gray-800 border border-gray-700 hover:border-yellow-600 hover:bg-gray-800/80'
+                                    }`}
+                                  >
+                                    <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center overflow-hidden">
+                                      {member.profileImage ? (
+                                        <img src={member.profileImage} alt="" className="w-full h-full object-cover" />
+                                      ) : (
+                                        <Users className="w-5 h-5 text-gray-500" />
+                                      )}
+                                    </div>
+                                    <div className="flex-1 text-left">
+                                      <p className="text-white font-medium">{member.nombre}</p>
+                                      <p className="text-gray-500 text-xs">{member.email}</p>
+                                    </div>
+                                    {isAssigned ? (
+                                      <span className="text-xs text-gray-500">Ya asignado</span>
+                                    ) : nominating ? (
+                                      <Loader2 className="w-5 h-5 animate-spin text-yellow-500" />
+                                    ) : (
+                                      <ChevronRight className="w-5 h-5 text-gray-600" />
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mensaje para participantes sin permisos */}
+                  {!canAssign && hasTribeCaptain && (
+                    <div className="bg-gray-900 rounded-2xl border border-gray-700 p-6 text-center">
+                      <Shield className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-300 mb-2">
+                        El Capitán de Tribu Asigna los Roles
+                      </h3>
+                      <p className="text-gray-500 text-sm">
+                        El Capitán de Tribu es quien designa las capitanías. 
+                        Espera a que te sea asignado un rol o contacta a tu capitán.
+                      </p>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
 
             {/* Tabla de Capitanías */}
             <div className="bg-gray-900 rounded-2xl border border-gray-800 overflow-hidden">
