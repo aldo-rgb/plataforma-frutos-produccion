@@ -106,7 +106,10 @@ export async function POST(request: Request) {
       },
     });
 
-    if (existingPLEnrollment) {
+    // Solo bloquear si el enrollment de PL ya está PAGADO
+    // Si está pendiente, permitimos que complete el pago
+    const paidStatuses = ['PAID', 'PAID_FULL', 'FULL', 'GIFT', 'SCHOLARSHIP'];
+    if (existingPLEnrollment && paidStatuses.includes(existingPLEnrollment.paymentStatus || '')) {
       return NextResponse.json(
         { success: false, error: 'Ya estás inscrito en el Liderato (PL)' },
         { status: 400 }
@@ -193,19 +196,43 @@ export async function POST(request: Request) {
           throw new Error('Debes tener una inscripción activa en Avanzado para comprar solo PL');
         }
 
-        // Create PL enrollment in the same vision as ADVANCED
-        plEnrollment = await tx.vision_enrollments.create({
-          data: {
+        // Check if there's an existing PENDING PL enrollment to update
+        const existingPendingPL = await tx.vision_enrollments.findFirst({
+          where: {
             userId: userId,
             visionId: effectiveVisionId,
-            coordinatorId: existingAdvanced.coordinatorId,
             level: 'PL',
-            enrollmentStatus: 'ACTIVE',
-            paymentStatus: 'PAID',
-            enrolledAt: new Date(),
-            updatedAt: new Date(),
+            paymentStatus: { in: ['PENDING', 'PARTIAL'] },
           },
         });
+
+        if (existingPendingPL) {
+          // Update the existing pending PL enrollment
+          plEnrollment = await tx.vision_enrollments.update({
+            where: { id: existingPendingPL.id },
+            data: {
+              enrollmentStatus: 'ACTIVE',
+              paymentStatus: 'PAID',
+              enrolledAt: new Date(),
+              updatedAt: new Date(),
+            },
+          });
+          console.log(`✅ Actualizando enrollment PL pendiente (ID: ${existingPendingPL.id}) a PAID`);
+        } else {
+          // Create new PL enrollment in the same vision as ADVANCED
+          plEnrollment = await tx.vision_enrollments.create({
+            data: {
+              userId: userId,
+              visionId: effectiveVisionId,
+              coordinatorId: existingAdvanced.coordinatorId,
+              level: 'PL',
+              enrollmentStatus: 'ACTIVE',
+              paymentStatus: 'PAID',
+              enrolledAt: new Date(),
+              updatedAt: new Date(),
+            },
+          });
+        }
 
         // Create PL ticket in the same vision as ADVANCED
         plTicket = await tx.ticket.create({
