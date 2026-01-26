@@ -43,7 +43,8 @@ export async function POST(request: NextRequest) {
             id: true, 
             leaderId: true, 
             visionId: true,
-            name: true 
+            name: true,
+            level: true  // Necesitamos el nivel del grupo
           }
         },
         user: {
@@ -68,58 +69,77 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Actualizar el enrollment a DROP
-    if (member.enrollmentId && member.enrollment) {
-      await prisma.vision_enrollments.update({
-        where: { id: member.enrollmentId },
-        data: { 
-          attendanceStatus: 'DROP',
-          droppedAt: new Date()
-        }
-      });
+    // ⚠️ IMPORTANTE: Buscar el enrollment CORRECTO basado en el nivel del grupo
+    // No usar member.enrollmentId porque puede estar desactualizado o ser de otro nivel
+    const groupLevel = member.group.level; // BASIC, ADVANCED, o PL
+    const visionId = member.group.visionId;
 
-      // Crear notificación de auditoría para el GC
-      await prisma.notification.create({
-        data: {
-          userId: gameChanger.id,
-          type: 'OTHER',
-          title: 'Participante Marcado como DROP',
-          message: `Marcaste a ${member.user.nombre} como DROP en el grupo "${member.group.name}". Razón: ${reason || 'No especificada'}`,
-          relatedId: member.enrollmentId
-        }
-      });
+    // Buscar el enrollment del usuario en el nivel y visión correctos
+    const correctEnrollment = await prisma.vision_enrollments.findFirst({
+      where: {
+        userId: member.user.id,
+        visionId: visionId,
+        level: groupLevel
+      }
+    });
 
-      // Crear notificación para el participante
-      await prisma.notification.create({
-        data: {
-          userId: member.user.id,
-          type: 'SYSTEM_ALERT',
-          title: 'Estado de Inscripción Actualizado',
-          message: `Tu inscripción en el entrenamiento ha sido marcada como DROP por tu Game Changer. Contacta a tu coordinador para más información.`,
-          relatedId: member.enrollmentId
-        }
-      });
-
-      console.log(`🚫 Participante ${member.user.nombre} marcado como DROP por GC ${gameChanger.nombre}`);
-    } else {
-      // Si no tiene enrollment, solo marcar el miembro como inactivo
-      await prisma.smallGroupMember.update({
-        where: { id: memberId },
-        data: { 
-          isActive: false,
-          removedAt: new Date(),
-          removedReason: reason || 'Abandonó el entrenamiento'
-        }
-      });
+    if (!correctEnrollment) {
+      return NextResponse.json({ 
+        error: `No se encontró enrollment de ${groupLevel} para este participante en esta visión` 
+      }, { status: 404 });
     }
+
+    // Actualizar el enrollment correcto a DROP
+    await prisma.vision_enrollments.update({
+      where: { id: correctEnrollment.id },
+      data: { 
+        attendanceStatus: 'DROP',
+        droppedAt: new Date()
+      }
+    });
+
+    // Crear notificación de auditoría para el GC
+    await prisma.notification.create({
+      data: {
+        userId: gameChanger.id,
+        type: 'OTHER',
+        title: 'Participante Marcado como DROP',
+        message: `Marcaste a ${member.user.nombre} como DROP en ${groupLevel} (grupo "${member.group.name}"). Razón: ${reason || 'No especificada'}`,
+        relatedId: correctEnrollment.id
+      }
+    });
+
+    // Crear notificación para el participante
+    await prisma.notification.create({
+      data: {
+        userId: member.user.id,
+        type: 'SYSTEM_ALERT',
+        title: 'Estado de Inscripción Actualizado',
+        message: `Tu inscripción en el entrenamiento ${groupLevel} ha sido marcada como DROP por tu Game Changer. Contacta a tu coordinador para más información.`,
+        relatedId: correctEnrollment.id
+      }
+    });
+
+    // Marcar el miembro del grupo como inactivo
+    await prisma.smallGroupMember.update({
+      where: { id: memberId },
+      data: { 
+        isActive: false,
+        removedAt: new Date(),
+        removedReason: reason || 'Abandonó el entrenamiento'
+      }
+    });
+
+    console.log(`🚫 Participante ${member.user.nombre} marcado como DROP en ${groupLevel} por GC ${gameChanger.nombre}`);
 
     return NextResponse.json({
       success: true,
-      message: 'Participante marcado como DROP correctamente',
+      message: `Participante marcado como DROP en ${groupLevel} correctamente`,
       participant: {
         id: member.user.id,
         nombre: member.user.nombre,
-        status: 'DROP'
+        status: 'DROP',
+        level: groupLevel
       }
     });
 
