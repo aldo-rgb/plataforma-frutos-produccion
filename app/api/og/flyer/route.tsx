@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import QRCode from 'qrcode';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,29 +19,38 @@ export async function GET(request: NextRequest) {
 
     // Si hay código de referido, obtener datos del usuario
     if (codigo) {
-      const referrer = await prisma.usuario.findFirst({
-        where: { referralCode: codigo },
-        select: {
-          nombre: true,
-          organizationId: true,
-        }
-      });
-
-      if (referrer) {
-        referrerName = referrer.nombre || 'Tu Nombre';
-        organizationId = referrer.organizationId;
-
-        // Generar QR con el link de invitación
-        const invitationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://quantummatter.app'}/invitacion/${codigo}`;
-        qrDataUrl = await QRCode.toDataURL(invitationUrl, {
-          width: 200,
-          margin: 1,
-          color: {
-            dark: '#000000',
-            light: '#ffffff'
-          },
-          errorCorrectionLevel: 'H'
+      try {
+        const referrer = await prisma.usuario.findFirst({
+          where: { referralCode: codigo },
+          select: {
+            nombre: true,
+            organizationId: true,
+          }
         });
+
+        if (referrer) {
+          referrerName = referrer.nombre || 'Tu Nombre';
+          organizationId = referrer.organizationId;
+
+          // Generar QR con el link de invitación
+          try {
+            const invitationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://quantummatter.app'}/invitacion/${codigo}`;
+            qrDataUrl = await QRCode.toDataURL(invitationUrl, {
+              width: 200,
+              margin: 1,
+              color: {
+                dark: '#000000',
+                light: '#ffffff'
+              },
+              errorCorrectionLevel: 'H'
+            });
+          } catch (qrError) {
+            console.error('Error generating QR:', qrError);
+            // Continuar sin QR
+          }
+        }
+      } catch (dbError) {
+        console.error('Error fetching user:', dbError);
       }
     }
 
@@ -748,7 +758,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error generating flyer:', error);
     
-    // Diseño de error profesional
+    // Diseño de error simple
     return new ImageResponse(
       (
         <div
@@ -757,178 +767,19 @@ export async function GET(request: NextRequest) {
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
-            position: 'relative',
-            overflow: 'hidden',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'linear-gradient(180deg, #0a1628 0%, #1a365d 100%)',
+            color: 'white',
+            fontFamily: 'sans-serif',
           }}
         >
-          {/* Fondo con gradiente cósmico */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'linear-gradient(180deg, #0a1628 0%, #1a365d 35%, #2d3748 60%, #c9a227 100%)',
-            }}
-          />
-
-          {/* Efecto de luz */}
-          <div
-            style={{
-              position: 'absolute',
-              top: '15%',
-              left: '25%',
-              width: '50%',
-              height: '35%',
-              background: 'radial-gradient(ellipse, rgba(99, 179, 237, 0.2) 0%, transparent 70%)',
-            }}
-          />
-
-          {/* Estrellas decorativas */}
-          <div
-            style={{
-              position: 'absolute',
-              top: '8%',
-              right: '15%',
-              width: '8px',
-              height: '8px',
-              background: 'white',
-              borderRadius: '50%',
-              boxShadow: '0 0 20px 5px rgba(255,255,255,0.4)',
-            }}
-          />
-          <div
-            style={{
-              position: 'absolute',
-              top: '12%',
-              left: '20%',
-              width: '5px',
-              height: '5px',
-              background: 'white',
-              borderRadius: '50%',
-              boxShadow: '0 0 12px 3px rgba(255,255,255,0.3)',
-            }}
-          />
-
-          {/* Contenido */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              padding: '60px',
-              position: 'relative',
-            }}
-          >
-            {/* Subtítulo superior */}
-            <div
-              style={{
-                fontSize: '14px',
-                color: '#94a3b8',
-                letterSpacing: '8px',
-                marginBottom: '30px',
-              }}
-            >
-              SER · HACER · TENER
-            </div>
-
-            {/* Caja con título */}
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                border: '3px solid rgba(99, 179, 237, 0.4)',
-                padding: '50px 80px',
-                marginBottom: '40px',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: '22px',
-                  fontWeight: 600,
-                  color: '#63b3ed',
-                  letterSpacing: '10px',
-                  marginBottom: '15px',
-                }}
-              >
-                ENTRENAMIENTO
-              </div>
-
-              <div
-                style={{
-                  fontSize: '90px',
-                  fontWeight: 900,
-                  color: 'white',
-                  lineHeight: 0.95,
-                  marginBottom: '5px',
-                  textShadow: '0 4px 30px rgba(255,255,255,0.15)',
-                }}
-              >
-                BÁSICO
-              </div>
-
-              <div
-                style={{
-                  fontSize: '100px',
-                  fontWeight: 900,
-                  color: '#63b3ed',
-                  lineHeight: 0.95,
-                  textShadow: '0 4px 30px rgba(99,179,237,0.25)',
-                }}
-              >
-                CUÁNTICO
-              </div>
-            </div>
-
-            {/* Tagline */}
-            <div
-              style={{
-                fontSize: '26px',
-                fontStyle: 'italic',
-                color: '#e2e8f0',
-                textAlign: 'center',
-                maxWidth: '80%',
-                marginBottom: '40px',
-              }}
-            >
-              Rompe tus límites mentales y transforma tus resultados en 3 días
-            </div>
-
-            {/* Badge */}
-            <div
-              style={{
-                background: '#63b3ed',
-                padding: '15px 50px',
-              }}
-            >
-              <span
-                style={{
-                  fontSize: '20px',
-                  fontWeight: 700,
-                  color: '#0a1628',
-                  letterSpacing: '3px',
-                }}
-              >
-                TRANSFORMACIÓN CUÁNTICA
-              </span>
-            </div>
+          <div style={{ fontSize: '60px', fontWeight: 700, marginBottom: '20px' }}>
+            ENTRENAMIENTO BÁSICO
           </div>
-
-          {/* Barra dorada inferior */}
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: '6px',
-              background: 'linear-gradient(90deg, #c9a227 0%, #f6e05e 50%, #c9a227 100%)',
-            }}
-          />
+          <div style={{ fontSize: '40px', color: '#63b3ed' }}>
+            TRANSFORMACIÓN CUÁNTICA
+          </div>
         </div>
       ),
       {
