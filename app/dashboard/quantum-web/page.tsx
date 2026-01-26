@@ -396,11 +396,18 @@ export default function QuantumWebEngine() {
             }
           }
           
-          // Cargar contenido si existe
-          if (site.content) {
-            const content = typeof site.content === 'string' ? JSON.parse(site.content) : site.content;
-            setWebContent(content);
-          }
+          // Cargar contenido desde los campos separados
+          const loadedContent = {
+            heroTitle: site.heroTitle || '',
+            heroSubtitle: site.heroSubtitle || '',
+            aboutTitle: site.aboutTitle || 'Sobre Nosotros',
+            aboutText: site.aboutText || '',
+            servicesTitle: site.servicesTitle || 'Nuestros Servicios',
+            services: site.services || [],
+            ctaText: site.ctaText || '¡Contáctanos!',
+            testimonials: site.testimonials || []
+          };
+          setWebContent(loadedContent);
           
           // Cargar productos si existen
           if (site.products && site.products.length > 0) {
@@ -410,12 +417,14 @@ export default function QuantumWebEngine() {
               description: p.description || '',
               price: p.price || 0,
               originalPrice: p.originalPrice,
-              image: p.imageUrl || '',
+              image: p.image || p.imageUrl || '',
               category: p.category || '',
               inStock: p.inStock !== false,
               featured: p.featured || false
             })));
             setSiteType('store');
+          } else {
+            setSiteType('landing');
           }
           
           // Ir directo a la preview para editar
