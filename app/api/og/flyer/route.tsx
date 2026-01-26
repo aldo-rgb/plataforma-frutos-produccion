@@ -21,13 +21,13 @@ export async function GET(request: NextRequest) {
       const referrer = await prisma.usuario.findFirst({
         where: { referralCode: codigo },
         select: {
-          name: true,
+          nombre: true,
           organizationId: true,
         }
       });
 
       if (referrer) {
-        referrerName = referrer.name || 'Tu Nombre';
+        referrerName = referrer.nombre || 'Tu Nombre';
         organizationId = referrer.organizationId;
 
         // Generar QR con el link de invitación

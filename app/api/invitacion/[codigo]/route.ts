@@ -13,16 +13,16 @@ export async function GET(
     }
 
     // Buscar el usuario por su código de referido
-    const referrer = await prisma.user.findFirst({
+    const referrer = await prisma.usuario.findFirst({
       where: {
         referralCode: codigo
       },
       select: {
         id: true,
-        name: true,
-        avatarUrl: true,
+        nombre: true,
+        imagen: true,
         organizationId: true,
-        organization: {
+        Organization_Usuario_organizationIdToOrganization: {
           select: {
             id: true,
             name: true,
@@ -41,6 +41,7 @@ export async function GET(
 
     // Buscar el próximo Básico disponible de la organización
     const orgId = referrer.organizationId;
+    const organization = referrer.Organization_Usuario_organizationIdToOrganization;
     
     let nextBasico = null;
     
@@ -116,13 +117,13 @@ export async function GET(
       data: {
         referrer: {
           id: referrer.id,
-          name: referrer.name || 'Invitado',
-          avatarUrl: referrer.avatarUrl
+          name: referrer.nombre || 'Invitado',
+          avatarUrl: referrer.imagen
         },
-        organization: referrer.organization ? {
-          id: referrer.organization.id,
-          name: referrer.organization.name,
-          logoUrl: referrer.organization.logoUrl
+        organization: organization ? {
+          id: organization.id,
+          name: organization.name,
+          logoUrl: organization.logoUrl
         } : {
           id: 1,
           name: 'FRUTOS',
