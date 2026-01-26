@@ -40,7 +40,7 @@ interface PostEntrenoScheduleModalProps {
 }
 
 // Días por defecto después del entrenamiento
-const DEFAULT_CALL_DAYS = [6, 8, 12, 14];
+const DEFAULT_CALL_DAYS = [2, 4, 8, 10];
 
 export default function PostEntrenoScheduleModal({
   isOpen,
