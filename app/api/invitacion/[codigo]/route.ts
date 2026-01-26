@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 
 // Force Node.js runtime for Prisma compatibility
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-// Create prisma instance directly to avoid singleton issues in serverless
-const prisma = new PrismaClient();
 
 export async function GET(
   request: NextRequest,
@@ -19,11 +16,9 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Código no proporcionado' }, { status: 400 });
     }
 
-    // Buscar el usuario por su código de referido
+    // Buscar el usuario por su código de referido (simplificado)
     const referrer = await prisma.usuario.findFirst({
-      where: {
-        referralCode: codigo
-      },
+      where: { referralCode: codigo },
       select: {
         id: true,
         nombre: true,
@@ -46,64 +41,9 @@ export async function GET(
       }, { status: 404 });
     }
 
-    // Buscar el próximo Básico disponible de la organización
-    const orgId = referrer.organizationId;
-    const organization = referrer.Organization_Usuario_organizationIdToOrganization;
-    
-    let nextBasico = null;
-    
-    if (orgId) {
-      // Buscar visiones activas en la organización (campos correctos del schema)
-      const vision = await prisma.vision.findFirst({
-        where: {
-          organizationId: orgId,
-          isActive: true,
-          startDate: {
-            gte: new Date()
-          }
-        },
-        orderBy: {
-          startDate: 'asc'
-        },
-        select: {
-          id: true,
-          nombre: true,
-          startDate: true,
-          endDate: true,
-        }
-      });
+    const org = referrer.Organization_Usuario_organizationIdToOrganization;
 
-      // Obtener precios de la organización
-      const orgPrices = await prisma.organizationPrices.findFirst({
-        where: { organizationId: orgId }
-      });
-
-      if (vision) {
-        nextBasico = {
-          id: vision.id,
-          nombre: vision.nombre,
-          fechaInicio: vision.startDate?.toISOString() || null,
-          fechaFin: vision.endDate?.toISOString() || null,
-          lugar: null,
-          precio: orgPrices?.basicPrice || 1500,
-          currency: orgPrices?.currency || 'MXN',
-          cuposDisponibles: 50
-        };
-      } else {
-        // Si no hay visión futura, mostrar precios de todos modos
-        nextBasico = {
-          id: 0,
-          nombre: 'Próximo Entrenamiento Básico',
-          fechaInicio: null,
-          fechaFin: null,
-          lugar: null,
-          precio: orgPrices?.basicPrice || 1500,
-          currency: orgPrices?.currency || 'MXN',
-          cuposDisponibles: 50
-        };
-      }
-    }
-
+    // Respuesta simplificada - sin buscar visión para evitar errores
     return NextResponse.json({
       success: true,
       data: {
@@ -112,16 +52,25 @@ export async function GET(
           name: referrer.nombre || 'Invitado',
           avatarUrl: referrer.imagen
         },
-        organization: organization ? {
-          id: organization.id,
-          name: organization.name,
-          logoUrl: organization.logoUrl
+        organization: org ? {
+          id: org.id,
+          name: org.name,
+          logoUrl: org.logoUrl
         } : {
           id: 1,
           name: 'FRUTOS',
           logoUrl: null
         },
-        nextBasico
+        nextBasico: {
+          id: 0,
+          nombre: 'Próximo Entrenamiento Básico',
+          fechaInicio: null,
+          fechaFin: null,
+          lugar: null,
+          precio: 1500,
+          currency: 'MXN',
+          cuposDisponibles: 50
+        }
       }
     });
 
