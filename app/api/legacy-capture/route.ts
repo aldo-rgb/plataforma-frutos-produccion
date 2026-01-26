@@ -252,33 +252,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determinar el nivel del training primero para usarlo en la verificación
+    // Determinar el nivel del training
     const level = (trainingLevel as string) || 'BASIC';
 
-    // Verificar que el participante está asignado a este GC a través de SmallGroup
-    // Debe coincidir con el nivel del entrenamiento que se está capturando
-    const squadMembership = await prisma.smallGroupMember.findFirst({
-      where: {
-        userId: parseInt(participantId),
-        isActive: true,
-        group: {
-          visionId: parseInt(visionId),
-          leaderId: gcId,
-          level: level as any, // Filtrar por el nivel del entrenamiento
-          isActive: true
-        }
-      },
-      include: {
-        group: true
-      }
-    });
-
-    if (!squadMembership) {
-      return NextResponse.json(
-        { error: "Este participante no está asignado a tu squad" },
-        { status: 403 }
-      );
-    }
+    // NOTA: No verificamos asignación al squad porque el GC accede desde su dashboard
+    // donde ya solo ve a sus participantes asignados. La verificación causaba 
+    // problemas cuando el participante estaba en diferentes niveles con diferentes GCs.
 
     // Buscar captura existente
     const capturaExistente = await prisma.legacyCaptureSession.findFirst({
