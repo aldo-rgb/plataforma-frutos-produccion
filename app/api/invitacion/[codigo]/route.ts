@@ -12,7 +12,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Código no proporcionado' }, { status: 400 });
     }
 
-    // Buscar el usuario por su código de referido
+    // Buscar el usuario por su código de referido (consulta simplificada)
     const referrer = await prisma.usuario.findFirst({
       where: {
         referralCode: codigo
@@ -22,13 +22,6 @@ export async function GET(
         nombre: true,
         imagen: true,
         organizationId: true,
-        Organization_Usuario_organizationIdToOrganization: {
-          select: {
-            id: true,
-            name: true,
-            logoUrl: true,
-          }
-        }
       }
     });
 
@@ -39,10 +32,20 @@ export async function GET(
       }, { status: 404 });
     }
 
-    // Buscar el próximo Básico disponible de la organización
+    // Obtener organización por separado
+    let organization = null;
+    if (referrer.organizationId) {
+      organization = await prisma.organization.findUnique({
+        where: { id: referrer.organizationId },
+        select: {
+          id: true,
+          name: true,
+          logoUrl: true,
+        }
+      });
+    }
+
     const orgId = referrer.organizationId;
-    const organization = referrer.Organization_Usuario_organizationIdToOrganization;
-    
     let nextBasico = null;
     
     if (orgId) {
