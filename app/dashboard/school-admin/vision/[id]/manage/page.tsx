@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { CheckCircle, XCircle, X, Key } from 'lucide-react';
+import { CheckCircle, XCircle, X, Key, ArrowRightLeft } from 'lucide-react';
 
 // Roles permitidos para acceder a esta página
 const ALLOWED_ROLES = [

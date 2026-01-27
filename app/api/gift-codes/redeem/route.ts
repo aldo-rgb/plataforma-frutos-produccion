@@ -260,29 +260,126 @@ async function redeemPaymentCode(code: string, userId: string | number, visionId
       );
     }
 
-    // Actualizar el código como REDEEMED
-    console.log('[REDEEM CASH] Actualizando código a REDEEMED para usuario:', user.id);
-    
-    const updatedCode = await prisma.paymentCode.update({
-      where: { id: paymentCode.id },
-      data: {
-        status: 'REDEEMED',
-        redeemedById: user.id,
-        redeemedAt: new Date(),
-      },
+    // Obtener el enrollment del usuario para determinar la visión
+    const enrollment = await prisma.vision_enrollments.findFirst({
+      where: { userId: user.id },
+      include: {
+        Vision: { select: { id: true, endDate: true } }
+      }
     });
 
-    console.log('[REDEEM CASH] Código actualizado:', { id: updatedCode.id, status: updatedCode.status });
+    if (!enrollment) {
+      return NextResponse.json(
+        { success: false, error: 'El usuario no tiene un enrollment activo' },
+        { status: 400 }
+      );
+    }
+
+    const amount = Number(paymentCode.amount);
+    const userVisionId = enrollment.visionId;
+
+    // Transacción para crear todo junto
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Actualizar el código como REDEEMED
+      console.log('[REDEEM CASH] Actualizando código a REDEEMED para usuario:', user.id);
+      
+      await tx.paymentCode.update({
+        where: { id: paymentCode.id },
+        data: {
+          status: 'REDEEMED',
+          redeemedById: user.id,
+          redeemedAt: new Date(),
+        },
+      });
+
+      // 2. Verificar si ya tiene ticket para esta visión y nivel
+      const existingTicket = await tx.ticket.findFirst({
+        where: {
+          ownerId: user.id,
+          visionId: userVisionId,
+          level: enrollment.level as 'BASIC' | 'ADVANCED' | 'PL'
+        }
+      });
+
+      let ticket = existingTicket;
+
+      // 3. Crear ticket si no existe
+      if (!existingTicket) {
+        console.log('[REDEEM CASH] Creando ticket BASIC para usuario:', user.id);
+        
+        ticket = await tx.ticket.create({
+          data: {
+            ownerId: user.id,
+            organizationId: paymentCode.organizationId,
+            visionId: userVisionId,
+            level: (enrollment.level as 'BASIC' | 'ADVANCED' | 'PL') || 'BASIC',
+            type: 'STANDARD',
+            status: 'ACTIVE',
+            paymentStatus: 'PAID',
+            costAtPurchase: amount,
+            amountPaid: amount,
+            isTransferable: true,
+            validUntil: enrollment.Vision?.endDate || null,
+          }
+        });
+
+        // 4. Crear transacción del ticket
+        await tx.ticketTransaction.create({
+          data: {
+            ticketId: ticket.id,
+            gateway: 'CASH_MANUAL',
+            transactionRef: code,
+            amount: amount,
+            currency: 'MXN',
+            status: 'SUCCESS',
+            metadata: {
+              paymentCodeId: paymentCode.id,
+              userId: user.id
+            }
+          }
+        });
+      }
+
+      // 5. Crear registro de pago
+      await tx.payment.create({
+        data: {
+          userId: user.id,
+          amount: amount,
+          description: `Pago ${enrollment.level || 'BÁSICO'} - Código ${code}`,
+          status: 'COMPLETED',
+          paymentMethod: 'CASH',
+          transactionId: code,
+          updatedAt: new Date()
+        }
+      });
+
+      // 6. Actualizar enrollment paymentStatus
+      await tx.vision_enrollments.update({
+        where: { id: enrollment.id },
+        data: { paymentStatus: 'PAID' }
+      });
+
+      console.log('[REDEEM CASH] Ticket y pago creados exitosamente');
+
+      return ticket;
+    });
+
+    console.log('[REDEEM CASH] Código canjeado y ticket generado:', result?.id);
 
     return NextResponse.json({
       success: true,
-      message: `💵 Código de pago canjeado: $${Number(paymentCode.amount).toLocaleString()} MXN`,
+      message: `💵 Código de pago canjeado: $${amount.toLocaleString()} MXN - Ticket generado`,
       paymentCode: {
         id: paymentCode.id,
         code: paymentCode.code,
-        amount: Number(paymentCode.amount),
+        amount: amount,
         status: 'REDEEMED',
       },
+      ticket: result ? {
+        id: result.id,
+        level: result.level,
+        status: result.status
+      } : null
     });
   } catch (error) {
     console.error('[REDEEM CASH] Error:', error);
