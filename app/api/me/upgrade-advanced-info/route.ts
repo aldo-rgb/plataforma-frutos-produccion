@@ -207,14 +207,16 @@ export async function GET() {
       },
     });
 
-    // Get visions with upcoming ADVANCED dates for each organization
+    // Get visions with ADVANCED dates (upcoming or currently in progress)
+    // Allow enrollment if advancedEndDate hasn't passed yet
     const orgsWithVisions = await Promise.all(
       organizations.map(async (org) => {
         const nextVision = await prisma.vision.findFirst({
           where: {
             organizationId: org.id,
             isActive: true,
-            advancedStartDate: { gte: now },
+            // Changed: Allow enrollment if ADVANCED hasn't ended yet (not just future ones)
+            advancedEndDate: { gte: now },
             enabledLevels: { has: 'ADVANCED' },
           },
           select: {

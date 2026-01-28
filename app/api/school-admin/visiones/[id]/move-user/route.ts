@@ -22,7 +22,7 @@ export async function POST(
 
     const sourceVisionId = parseInt(params.id);
     const body = await request.json();
-    const { userId, targetVisionId, level } = body;
+    const { userId, targetVisionId, level, moveAllLevels = true } = body;
 
     if (!userId || !targetVisionId) {
       return NextResponse.json(
@@ -36,7 +36,7 @@ export async function POST(
     // Verificar que la visión destino existe
     const targetVision = await prisma.vision.findUnique({
       where: { id: targetVisionIdInt },
-      select: { id: true, nombre: true, organizationId: true, endDate: true }
+      select: { id: true, nombre: true, organizationId: true, endDate: true, advancedEndDate: true, plWeekend3EndDate: true }
     });
 
     if (!targetVision) {
@@ -59,66 +59,86 @@ export async function POST(
       );
     }
 
-    // Obtener el enrollment actual
-    const currentEnrollment = await prisma.vision_enrollments.findFirst({
+    // Obtener TODOS los enrollments del usuario en la visión origen
+    const currentEnrollments = await prisma.vision_enrollments.findMany({
       where: {
         userId: user.id,
         visionId: sourceVisionId,
-        level: level || 'BASIC'
+        ...(moveAllLevels ? {} : { level: level || 'BASIC' })
       }
     });
 
-    if (!currentEnrollment) {
+    if (currentEnrollments.length === 0) {
       return NextResponse.json(
         { error: 'El usuario no tiene enrollment en la visión origen' },
         { status: 404 }
       );
     }
 
-    // Verificar si ya tiene enrollment en la visión destino
-    const existingEnrollment = await prisma.vision_enrollments.findFirst({
+    // Obtener los niveles que se van a mover
+    const levelsToMove = currentEnrollments.map(e => e.level);
+
+    // Verificar si ya tiene algún enrollment en la visión destino para los niveles a mover
+    const existingEnrollments = await prisma.vision_enrollments.findMany({
       where: {
         userId: user.id,
         visionId: targetVisionIdInt,
-        level: level || 'BASIC'
+        level: { in: levelsToMove }
       }
     });
 
-    if (existingEnrollment) {
+    if (existingEnrollments.length > 0) {
+      const existingLevels = existingEnrollments.map(e => e.level).join(', ');
       return NextResponse.json(
-        { error: 'El usuario ya tiene enrollment en la visión destino' },
+        { error: `El usuario ya tiene enrollment en la visión destino para: ${existingLevels}` },
         { status: 400 }
       );
     }
 
     // Realizar la transacción para mover el usuario
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Actualizar el enrollment a la nueva visión
-      const updatedEnrollment = await tx.vision_enrollments.update({
-        where: { id: currentEnrollment.id },
-        data: {
-          visionId: targetVisionIdInt,
-          coordinatorId: null // Resetear coordinador, se asignará según la nueva visión
-        }
-      });
+      const movedEnrollments = [];
+      const movedTickets = [];
 
-      // 2. Mover el ticket si existe
-      const ticket = await tx.ticket.findFirst({
+      // 1. Actualizar TODOS los enrollments a la nueva visión
+      for (const enrollment of currentEnrollments) {
+        const updatedEnrollment = await tx.vision_enrollments.update({
+          where: { id: enrollment.id },
+          data: {
+            visionId: targetVisionIdInt,
+            coordinatorId: null, // Resetear coordinador
+            updatedAt: new Date()
+          }
+        });
+        movedEnrollments.push(updatedEnrollment);
+      }
+
+      // 2. Mover TODOS los tickets que correspondan
+      const tickets = await tx.ticket.findMany({
         where: {
           ownerId: user.id,
           visionId: sourceVisionId,
-          level: level || 'BASIC'
+          level: { in: levelsToMove }
         }
       });
 
-      if (ticket) {
+      for (const ticket of tickets) {
+        // Determinar la fecha de validez según el nivel
+        let validUntil = targetVision.endDate;
+        if (ticket.level === 'ADVANCED' && targetVision.advancedEndDate) {
+          validUntil = targetVision.advancedEndDate;
+        } else if (ticket.level === 'PL' && targetVision.plWeekend3EndDate) {
+          validUntil = targetVision.plWeekend3EndDate;
+        }
+
         await tx.ticket.update({
           where: { id: ticket.id },
           data: {
             visionId: targetVisionIdInt,
-            validUntil: targetVision.endDate
+            validUntil: validUntil
           }
         });
+        movedTickets.push(ticket.level);
       }
 
       // 3. Actualizar VisionParticipante si existe
@@ -147,12 +167,13 @@ export async function POST(
       });
 
       return {
-        enrollment: updatedEnrollment,
-        ticketMoved: !!ticket
+        enrollmentsMoved: movedEnrollments.length,
+        ticketsMoved: movedTickets,
+        levelsMoved: levelsToMove
       };
     });
 
-    console.log(`[MOVE USER] Usuario ${user.nombre} (ID: ${user.id}) movido de Vision ${sourceVisionId} a Vision ${targetVisionIdInt}`);
+    console.log(`[MOVE USER] Usuario ${user.nombre} (ID: ${user.id}) movido de Vision ${sourceVisionId} a Vision ${targetVisionIdInt}. Niveles: ${result.levelsMoved.join(', ')}`);
 
     return NextResponse.json({
       success: true,

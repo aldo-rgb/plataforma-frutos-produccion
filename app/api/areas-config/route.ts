@@ -89,10 +89,12 @@ export async function GET(req: NextRequest) {
 
     // Si no es VisionParticipante, verificar si tiene vision_enrollments (inscrito al programa)
     // También obtener el nivel del usuario para filtrar áreas
+    // IMPORTANTE: El nivel debe ser el del entrenamiento ACTUALMENTE EN CURSO (trainingStatus = IN_PROGRESS)
     let userLevel: string | null = null;
     
     if (!perteneceAGrupo) {
-      const enrollment = await prisma.vision_enrollments.findFirst({
+      // Primero, obtener todos los enrollments del usuario
+      const enrollments = await prisma.vision_enrollments.findMany({
         where: {
           userId,
           enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
@@ -103,6 +105,7 @@ export async function GET(req: NextRequest) {
               id: true,
               nombre: true,
               transformationGuestsTarget: true,
+              endDate: true,
               forceFinanzasArea: true,
               forceRelacionesArea: true,
               forceTalentosArea: true,
@@ -117,21 +120,100 @@ export async function GET(req: NextRequest) {
         orderBy: { enrolledAt: 'desc' }
       });
 
-      if (enrollment?.Vision) {
-        console.log('🔍 Usuario tiene enrollment en Vision:', enrollment.Vision.nombre);
+      if (enrollments.length > 0) {
+        const firstEnrollment = enrollments[0];
+        const visionId = firstEnrollment.visionId;
+        
+        console.log('🔍 Usuario tiene enrollment en Vision:', firstEnrollment.Vision?.nombre);
         perteneceAGrupo = true;
-        visionConfig = enrollment.Vision;
-        userLevel = enrollment.level;
-        console.log('📊 Nivel del usuario desde enrollment:', userLevel);
+        visionConfig = firstEnrollment.Vision;
+        
+        // Determinar el nivel ACTIVO basándose en el SchoolProduct con trainingStatus = IN_PROGRESS
+        // Buscar productos activos (IN_PROGRESS) para esta visión
+        const activeProduct = await prisma.schoolProduct.findFirst({
+          where: {
+            visionId: visionId,
+            trainingStatus: 'IN_PROGRESS',
+            isActive: true
+          },
+          select: { levelType: true },
+          orderBy: { 
+            // Prioridad: BASIC > ADVANCED > PL (el más básico primero)
+            levelType: 'asc' 
+          }
+        });
+        
+        if (activeProduct) {
+          // Verificar que el usuario tenga enrollment para ese nivel
+          const hasEnrollmentForLevel = enrollments.some(e => e.level === activeProduct.levelType);
+          if (hasEnrollmentForLevel) {
+            userLevel = activeProduct.levelType;
+            console.log('📊 Nivel del usuario basado en entrenamiento activo (IN_PROGRESS):', userLevel);
+          } else {
+            // El usuario no tiene enrollment para el nivel en progreso
+            // Usar el nivel más bajo que tenga el usuario
+            const levelPriority = ['BASIC', 'ADVANCED', 'PL'];
+            for (const level of levelPriority) {
+              if (enrollments.some(e => e.level === level)) {
+                userLevel = level;
+                break;
+              }
+            }
+            console.log('📊 Nivel del usuario (sin entrenamiento activo para su nivel):', userLevel);
+          }
+        } else {
+          // No hay entrenamiento IN_PROGRESS, usar el nivel más bajo del usuario
+          const levelPriority = ['BASIC', 'ADVANCED', 'PL'];
+          for (const level of levelPriority) {
+            if (enrollments.some(e => e.level === level)) {
+              userLevel = level;
+              break;
+            }
+          }
+          console.log('📊 Nivel del usuario (sin entrenamiento IN_PROGRESS):', userLevel);
+        }
       }
     } else {
       // Si es VisionParticipante, buscar su enrollment para obtener el nivel
-      const enrollment = await prisma.vision_enrollments.findFirst({
+      // También verificar el trainingStatus del producto activo
+      const visionId = visionParticipante?.visionId;
+      
+      const enrollments = await prisma.vision_enrollments.findMany({
         where: { userId },
-        orderBy: { enrolledAt: 'desc' },
         select: { level: true }
       });
-      userLevel = enrollment?.level || null;
+      
+      if (visionId && enrollments.length > 0) {
+        // Buscar producto en progreso
+        const activeProduct = await prisma.schoolProduct.findFirst({
+          where: {
+            visionId: visionId,
+            trainingStatus: 'IN_PROGRESS',
+            isActive: true
+          },
+          select: { levelType: true }
+        });
+        
+        if (activeProduct && enrollments.some(e => e.level === activeProduct.levelType)) {
+          userLevel = activeProduct.levelType;
+        } else {
+          // Usar el nivel más bajo
+          const levelPriority = ['BASIC', 'ADVANCED', 'PL'];
+          for (const level of levelPriority) {
+            if (enrollments.some(e => e.level === level)) {
+              userLevel = level;
+              break;
+            }
+          }
+        }
+      } else {
+        const enrollment = await prisma.vision_enrollments.findFirst({
+          where: { userId },
+          orderBy: { enrolledAt: 'asc' }, // El más antiguo (nivel más bajo)
+          select: { level: true }
+        });
+        userLevel = enrollment?.level || null;
+      }
       console.log('📊 Nivel del usuario (VisionParticipante):', userLevel);
     }
     
