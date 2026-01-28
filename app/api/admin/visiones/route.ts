@@ -33,44 +33,57 @@ export async function GET() {
             email: true
           }
         },
-        VisionGameChanger: {
-          include: {
-            Usuario_VisionGameChanger_gameChangerIdToUsuario: {
-              select: {
-                id: true,
-                nombre: true,
-                email: true
-              }
-            }
+        Organization: {
+          select: {
+            id: true,
+            name: true
           }
         },
-        VisionParticipante: {
-          include: {
-            Usuario_VisionParticipante_participanteIdToUsuario: {
-              select: {
-                id: true,
-                nombre: true,
-                email: true
-              }
-            },
-            Usuario_VisionParticipante_gameChangerIdToUsuario: {
-              select: {
-                id: true,
-                nombre: true
-              }
-            }
+        vision_enrollments: {
+          select: {
+            id: true,
+            level: true,
+            enrollmentStatus: true,
+            attendanceStatus: true
           }
         },
         _count: {
           select: { 
-            VisionGameChanger: true,
-            VisionParticipante: true
+            vision_enrollments: true
           }
         }
       }
     });
 
-    return NextResponse.json({ visiones });
+    // Transformar los datos para contar por nivel usando vision_enrollments
+    // Niveles en DB: BASIC, ADVANCED, PL
+    const visionesTransformed = visiones.map(v => {
+      const activeEnrollments = v.vision_enrollments.filter(e => 
+        e.enrollmentStatus === 'ACTIVE' || e.enrollmentStatus === 'ENROLLED'
+      );
+      
+      const participantes = activeEnrollments.filter(e => e.level === 'BASIC').length;
+      const participantesAsistieron = activeEnrollments.filter(e => e.level === 'BASIC' && e.attendanceStatus === 'ATTENDED').length;
+      const gameChangers = activeEnrollments.filter(e => e.level === 'ADVANCED').length;
+      const gameChangersAsistieron = activeEnrollments.filter(e => e.level === 'ADVANCED' && e.attendanceStatus === 'ATTENDED').length;
+      const mentores = activeEnrollments.filter(e => e.level === 'PL').length;
+      const mentoresAsistieron = activeEnrollments.filter(e => e.level === 'PL' && e.attendanceStatus === 'ATTENDED').length;
+      
+      return {
+        ...v,
+        vision_enrollments: undefined, // No enviar enrollments individuales
+        _count: {
+          Participantes: participantes,
+          ParticipantesAsistieron: participantesAsistieron,
+          GameChangers: gameChangers,
+          GameChangersAsistieron: gameChangersAsistieron,
+          Mentores: mentores,
+          MentoresAsistieron: mentoresAsistieron
+        }
+      };
+    });
+
+    return NextResponse.json({ visiones: visionesTransformed });
 
   } catch (error) {
     console.error('Error loading visiones:', error);

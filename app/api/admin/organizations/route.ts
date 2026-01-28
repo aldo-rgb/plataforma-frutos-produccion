@@ -3,6 +3,15 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+// Función para convertir texto a Title Case (Primera letra mayúscula de cada palabra)
+function toTitleCase(str: string): string {
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -87,8 +96,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Normalizar el nombre a Title Case (primera letra mayúscula de cada palabra)
+    const normalizedName = toTitleCase(name);
+
     // Generar slug único
-    const slug = name
+    const slug = normalizedName
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
@@ -175,7 +187,7 @@ export async function POST(req: NextRequest) {
       const newSchoolAdmin = await prisma.usuario.create({
         data: {
           email: schoolAdminEmail,
-          nombre: `School Admin de ${name}`,
+          nombre: `School Admin de ${normalizedName}`,
           password: tempPassword,
           rol: 'SCHOOL_ADMIN',
           tier: 'STANDARD',
@@ -192,7 +204,7 @@ export async function POST(req: NextRequest) {
     // 🏫 PASO 3: Crear la organización con ambos roles asignados
     const organization = await prisma.organization.create({
       data: {
-        name,
+        name: normalizedName,
         slug,
         contactEmail,
         logoUrl: logoUrl || null,

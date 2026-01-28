@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Frutos Platform - Transforma tu Vida",
+  title: "Quantum Platform - Transforma tu Vida",
   description: "Plataforma de desarrollo personal con mentoría y seguimiento de metas",
   manifest: "/manifest.json",
   themeColor: "#050B14",

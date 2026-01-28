@@ -1161,7 +1161,7 @@ export default function QuantumWebEngine() {
                   onClick={() => setShowMapModal(true)}
                 >
                   <img 
-                    src={`https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/pin-s+8b5cf6(${addressLon},${addressLat})/${addressLon},${addressLat},14,0/400x100@2x?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw`}
+                    src={`https://staticmap.openstreetmap.de/staticmap.php?center=${addressLat},${addressLon}&zoom=14&size=400x100&markers=${addressLat},${addressLon},red-pushpin`}
                     alt="Ubicación"
                     className="w-full h-full object-cover"
                   />

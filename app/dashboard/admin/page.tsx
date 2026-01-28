@@ -92,8 +92,9 @@ export default function AdminPerformancePage() {
       const res = await fetch('/api/usuarios');
       const data = await res.json();
       if (data.usuarios) {
+        // Contar usuarios activos con rol PARTICIPANTE, GAMECHANGER o MENTOR
         const lideres = data.usuarios.filter((u: any) => 
-          u.rol === 'LIDER' && u.isActive && u.mentorMarketplaceApproved
+          ['PARTICIPANTE', 'GAMECHANGER', 'MENTOR'].includes(u.rol) && u.isActive
         ).length;
         setLideresActivos(lideres);
       }
@@ -289,22 +290,24 @@ export default function AdminPerformancePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {visionesActivas.map((vision: any) => {
               const participantesCount = vision._count?.Participantes || 0;
+              const participantesAsistieron = vision._count?.ParticipantesAsistieron || 0;
               const mentoresCount = vision._count?.Mentores || 0;
               const gameChangersCount = vision._count?.GameChangers || 0;
-              const licensesUsage = vision.maxParticipantes 
-                ? Math.round((participantesCount / vision.maxParticipantes) * 100) 
+              const attendanceProgress = participantesCount > 0 
+                ? Math.round((participantesAsistieron / participantesCount) * 100) 
                 : 0;
 
               return (
-                <div 
-                  key={vision.id} 
-                  className="bg-slate-950 border border-white/5 rounded-xl p-5 hover:border-purple-500/30 transition-all hover:shadow-lg hover:shadow-purple-500/10"
+                <Link 
+                  key={vision.id}
+                  href={`/dashboard/school-admin/vision/${vision.id}/manage`}
+                  className="bg-slate-950 border border-white/5 rounded-xl p-5 hover:border-purple-500/30 transition-all hover:shadow-lg hover:shadow-purple-500/10 cursor-pointer block"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
                       <h3 className="font-bold text-white text-sm mb-1 line-clamp-1">{vision.nombre}</h3>
-                      {vision.descripcion && (
-                        <p className="text-xs text-slate-500 line-clamp-2">{vision.descripcion}</p>
+                      {vision.Organization && (
+                        <p className="text-xs text-purple-400">{vision.Organization.name}</p>
                       )}
                     </div>
                     {vision.isActive && (
@@ -316,36 +319,32 @@ export default function AdminPerformancePage() {
 
                   <div className="space-y-2 mb-4">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500">Participantes</span>
+                      <span className="text-slate-500">Asistencia</span>
                       <span className="font-bold text-white">
-                        {participantesCount}
-                        {vision.maxParticipantes && (
-                          <span className="text-slate-500 font-normal"> / {vision.maxParticipantes}</span>
-                        )}
+                        {participantesAsistieron}
+                        <span className="text-slate-500 font-normal"> / {participantesCount} inscritos</span>
                       </span>
                     </div>
 
-                    {vision.maxParticipantes && (
-                      <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full ${
-                            licensesUsage >= 90 ? 'bg-red-500' : 
-                            licensesUsage >= 70 ? 'bg-yellow-500' : 
-                            'bg-green-500'
-                          }`}
-                          style={{ width: `${Math.min(licensesUsage, 100)}%` }}
-                        ></div>
-                      </div>
-                    )}
+                    <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full ${
+                          attendanceProgress >= 80 ? 'bg-green-500' : 
+                          attendanceProgress >= 50 ? 'bg-yellow-500' : 
+                          'bg-red-500'
+                        }`}
+                        style={{ width: `${Math.min(attendanceProgress, 100)}%` }}
+                      ></div>
+                    </div>
 
                     <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
                       <div className="text-center">
-                        <p className="text-[10px] text-slate-500 uppercase">Mentores</p>
-                        <p className="text-lg font-bold text-cyan-400">{mentoresCount}</p>
+                        <p className="text-[10px] text-slate-500 uppercase">Avanzado</p>
+                        <p className="text-lg font-bold text-green-400">{gameChangersCount}</p>
                       </div>
                       <div className="text-center">
-                        <p className="text-[10px] text-slate-500 uppercase">Game Changers</p>
-                        <p className="text-lg font-bold text-green-400">{gameChangersCount}</p>
+                        <p className="text-[10px] text-slate-500 uppercase">Liderato</p>
+                        <p className="text-lg font-bold text-cyan-400">{mentoresCount}</p>
                       </div>
                     </div>
                   </div>
@@ -371,7 +370,7 @@ export default function AdminPerformancePage() {
                       </div>
                     </div>
                   )}
-                </div>
+                </Link>
               );
             })}
           </div>

@@ -219,7 +219,20 @@ export async function GET(request: NextRequest) {
     if (!plEnrollment && !isStaff) {
       return NextResponse.json({
         hasAccess: false,
+        hasAttendance: false,
         message: "Necesitas estar inscrito en PL para acceder al Legacy Vision Builder"
+      });
+    }
+
+    // Verificar asistencia marcada para participantes (no staff)
+    const hasAttendance = isStaff || (plEnrollment?.attendanceStatus === 'ATTENDED');
+    
+    // Si es participante pero no tiene asistencia marcada, denegar acceso
+    if (!isStaff && !hasAttendance) {
+      return NextResponse.json({
+        hasAccess: false,
+        hasAttendance: false,
+        message: "Necesitas tener asistencia marcada en PL para acceder a esta sección"
       });
     }
 
@@ -344,6 +357,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       hasAccess: true,
+      hasAttendance: true,
       userId: usuario.id,
       userName: usuario.nombre,
       isStaff,

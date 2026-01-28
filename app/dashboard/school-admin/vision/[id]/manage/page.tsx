@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { CheckCircle, XCircle, X, Key, ArrowRightLeft } from 'lucide-react';
+import { CheckCircle, XCircle, X, Key, ArrowRightLeft, UserPlus } from 'lucide-react';
 
 // Roles permitidos para acceder a esta página
 const ALLOWED_ROLES = [
@@ -203,6 +203,15 @@ export default function VisionManagePage() {
   // Estados para modal de restablecer contraseña
   const [resetPasswordUser, setResetPasswordUser] = useState<{id: number; nombre: string} | null>(null);
   const [resettingPassword, setResettingPassword] = useState(false);
+
+  // Estados para modal de agregar participantes (solo ADMINISTRADOR)
+  const [showAddParticipantModal, setShowAddParticipantModal] = useState(false);
+  const [addParticipantData, setAddParticipantData] = useState({
+    nombre: '',
+    email: '',
+    telefono: '',
+  });
+  const [addingParticipant, setAddingParticipant] = useState(false);
 
   useEffect(() => {
     fetchVisionData();
@@ -881,6 +890,48 @@ export default function VisionManagePage() {
     }
   };
 
+  // Función para agregar participante (solo ADMINISTRADOR)
+  const handleAddParticipant = async () => {
+    if (!addParticipantData.nombre.trim() || !addParticipantData.email.trim()) {
+      setToast({ show: true, message: 'Nombre y email son requeridos', type: 'error' });
+      setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 3000);
+      return;
+    }
+
+    setAddingParticipant(true);
+
+    try {
+      const res = await fetch(`/api/admin/vision/${vision?.id}/add-participant`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(addParticipantData)
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setToast({ show: true, message: `Participante ${addParticipantData.nombre} agregado con ticket BÁSICO`, type: 'success' });
+        setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
+        setShowAddParticipantModal(false);
+        setAddParticipantData({ nombre: '', email: '', telefono: '' });
+        // Refrescar los datos de la visión
+        const visionRes = await fetch(`/api/school-admin/visiones/${vision?.id}`);
+        const visionData = await visionRes.json();
+        if (visionData.vision?.vision_enrollments) {
+          setEnrollments(visionData.vision.vision_enrollments);
+        }
+      } else {
+        throw new Error(data.error || 'Error al agregar participante');
+      }
+    } catch (error: any) {
+      console.error('Error adding participant:', error);
+      setToast({ show: true, message: error.message || 'Error al agregar participante', type: 'error' });
+      setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 3000);
+    } finally {
+      setAddingParticipant(false);
+    }
+  };
+
   if (loading || status === 'loading') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
@@ -1152,6 +1203,14 @@ export default function VisionManagePage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
+                      {userRole === 'ADMINISTRADOR' && (
+                        <button
+                          onClick={() => setShowAddParticipantModal(true)}
+                          className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white px-5 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                        >
+                          <span>➕</span> Agregar Participantes
+                        </button>
+                      )}
                       <button
                         onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/badges?level=BASIC`)}
                         className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white px-5 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
@@ -2837,6 +2896,111 @@ export default function VisionManagePage() {
       )}
 
       {/* Modal de Restablecer Contraseña */}
+      {/* Modal Agregar Participantes (solo ADMINISTRADOR) */}
+      {showAddParticipantModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl border border-slate-700 shadow-2xl max-w-md w-full animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-6 border-b border-slate-700">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                  <UserPlus className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-white">Agregar Participante</h3>
+                  <p className="text-slate-400 text-sm">Se generará ticket nivel BÁSICO</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  Nombre completo *
+                </label>
+                <input
+                  type="text"
+                  value={addParticipantData.nombre}
+                  onChange={(e) => setAddParticipantData(prev => ({ ...prev, nombre: e.target.value }))}
+                  placeholder="Nombre del participante"
+                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  value={addParticipantData.email}
+                  onChange={(e) => setAddParticipantData(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="email@ejemplo.com"
+                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  Teléfono (opcional)
+                </label>
+                <input
+                  type="tel"
+                  value={addParticipantData.telefono}
+                  onChange={(e) => setAddParticipantData(prev => ({ ...prev, telefono: e.target.value }))}
+                  placeholder="10 dígitos"
+                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                />
+              </div>
+
+              <div className="bg-blue-900/30 border border-blue-500/30 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-xl">🎫</span>
+                  <div>
+                    <p className="text-blue-300 font-semibold text-sm">Ticket automático</p>
+                    <p className="text-blue-300/70 text-sm">
+                      Se creará un ticket de nivel BÁSICO para la visión <span className="font-bold">{vision?.nombre}</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-slate-700 flex gap-3">
+              <button
+                onClick={() => {
+                  setShowAddParticipantModal(false);
+                  setAddParticipantData({ nombre: '', email: '', telefono: '' });
+                }}
+                disabled={addingParticipant}
+                className="flex-1 py-3 px-4 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white rounded-xl font-bold transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAddParticipant}
+                disabled={addingParticipant || !addParticipantData.nombre.trim() || !addParticipantData.email.trim()}
+                className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-400 hover:to-cyan-500 disabled:from-slate-600 disabled:to-slate-600 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+              >
+                {addingParticipant ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Agregando...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-5 h-5" />
+                    Agregar
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {resetPasswordUser && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl border border-slate-700 shadow-2xl max-w-md w-full animate-in zoom-in-95 duration-200">

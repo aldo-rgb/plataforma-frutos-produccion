@@ -116,35 +116,52 @@ export async function POST(request: NextRequest) {
       email,
       website,
       galleryImages,
-      logoUrl
+      logoUrl,
+      status, // HIDDEN = borrador, ACTIVE = publicado
+      // Nuevos campos para Idea Millonaria
+      slogan,
+      targetAudience,
+      mainSkill
     } = body;
 
-    // Validaciones
-    if (!headline || headline.length > 100) {
-      return NextResponse.json({ error: 'El titular es requerido (máx 100 caracteres)' }, { status: 400 });
-    }
-    if (!categoryId) {
-      return NextResponse.json({ error: 'La categoría es requerida' }, { status: 400 });
-    }
-    if (!description || description.length < 20) {
-      return NextResponse.json({ error: 'La descripción debe tener al menos 20 caracteres' }, { status: 400 });
-    }
-    if (!discountOffer) {
-      return NextResponse.json({ error: 'El beneficio para la comunidad es obligatorio' }, { status: 400 });
-    }
-    if (!city || !state) {
-      return NextResponse.json({ error: 'La ciudad y estado son requeridos' }, { status: 400 });
-    }
-    if (!whatsappPhone) {
-      return NextResponse.json({ error: 'El teléfono de WhatsApp es requerido' }, { status: 400 });
+    // Si el status es HIDDEN (borrador desde Idea Millonaria), permitir datos parciales
+    const isDraft = status === 'HIDDEN';
+    
+    // Validaciones - solo aplicar estrictamente si NO es borrador
+    if (!isDraft) {
+      if (!headline || headline.length > 100) {
+        return NextResponse.json({ error: 'El titular es requerido (máx 100 caracteres)' }, { status: 400 });
+      }
+      if (!categoryId) {
+        return NextResponse.json({ error: 'La categoría es requerida' }, { status: 400 });
+      }
+      if (!description || description.length < 20) {
+        return NextResponse.json({ error: 'La descripción debe tener al menos 20 caracteres' }, { status: 400 });
+      }
+      if (!discountOffer) {
+        return NextResponse.json({ error: 'El beneficio para la comunidad es obligatorio' }, { status: 400 });
+      }
+      if (!city || !state) {
+        return NextResponse.json({ error: 'La ciudad y estado son requeridos' }, { status: 400 });
+      }
+      if (!whatsappPhone) {
+        return NextResponse.json({ error: 'El teléfono de WhatsApp es requerido' }, { status: 400 });
+      }
     }
 
-    // Verificar que la categoría existe
-    const category = await prisma.businessCategory.findUnique({
-      where: { id: categoryId }
-    });
-    if (!category) {
-      return NextResponse.json({ error: 'Categoría no válida' }, { status: 400 });
+    // Si es borrador, al menos necesita headline
+    if (isDraft && !headline) {
+      return NextResponse.json({ error: 'El nombre del negocio es requerido' }, { status: 400 });
+    }
+
+    // Verificar que la categoría existe (solo si se proporciona)
+    if (categoryId) {
+      const category = await prisma.businessCategory.findUnique({
+        where: { id: categoryId }
+      });
+      if (!category) {
+        return NextResponse.json({ error: 'Categoría no válida' }, { status: 400 });
+      }
     }
 
     // Verificar si es graduado de PL
@@ -155,26 +172,43 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    // Para borradores, obtener o crear categoría "Otro" por defecto
+    let finalCategoryId = categoryId;
+    if (isDraft && !categoryId) {
+      const defaultCategory = await prisma.businessCategory.findFirst({
+        where: { OR: [{ slug: 'otro' }, { slug: 'other' }, { name: 'Otro' }] }
+      });
+      if (defaultCategory) {
+        finalCategoryId = defaultCategory.id;
+      } else {
+        // Crear categoría por defecto si no existe
+        const newCategory = await prisma.businessCategory.create({
+          data: { name: 'Otro', slug: 'otro', icon: '✨', description: 'Otros servicios' }
+        });
+        finalCategoryId = newCategory.id;
+      }
+    }
+
     const profile = await prisma.businessProfile.create({
       data: {
         userId,
         organizationId: user.organizationId,
         visionId: enrollment?.visionId,
         headline,
-        categoryId,
-        description,
-        discountOffer,
-        city,
-        state,
+        categoryId: finalCategoryId,
+        description: description || 'Perfil en construcción - completar información.',
+        discountOffer: discountOffer || 'Por definir',
+        city: city || 'Por definir',
+        state: state || 'Por definir',
         coverageZone,
-        whatsappPhone,
+        whatsappPhone: whatsappPhone || user.telefono || '',
         email: email || user.email,
         website,
         galleryImages: galleryImages || [],
         logoUrl,
         isPLGraduate: !!graduation,
         isVerified: !!graduation, // Tick azul automático si graduó de PL
-        status: 'ACTIVE', // Activo automáticamente
+        status: isDraft ? 'HIDDEN' : 'ACTIVE', // Borrador = HIDDEN
       },
       include: {
         category: true,

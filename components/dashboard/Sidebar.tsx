@@ -39,6 +39,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
   const [showUpsellModal, setShowUpsellModal] = useState(false);
   const [upsellMessage, setUpsellMessage] = useState('');
   const [isPLParticipant, setIsPLParticipant] = useState(false);
+  const [hasPLAttendance, setHasPLAttendance] = useState(false);
   const [hasActiveAdvanced, setHasActiveAdvanced] = useState(false);
   const [reportesPendientes, setReportesPendientes] = useState(0);
   const [iaRecommendation, setIaRecommendation] = useState<{
@@ -75,7 +76,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
     }
   }, [usuario.rol]);
 
-  // Verificar si es participante PL
+  // Verificar si es participante PL con asistencia
   useEffect(() => {
     const checkPLStatus = async () => {
       try {
@@ -83,6 +84,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
         if (response.ok) {
           const data = await response.json();
           setIsPLParticipant(data.hasAccess === true);
+          setHasPLAttendance(data.hasAttendance === true);
         }
       } catch (error) {
         console.error('Error checking PL status:', error);
@@ -1126,35 +1128,40 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
           {/* SECCIÓN LIDERATO */}
           <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2 mt-4">🚀 Liderato</p>
 
-          {/* Legacy Builder - Donaciones */}
-          <Link 
-            href="/dashboard/legacy-builder" 
-            onClick={handleLinkClick}
-            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
-              pathname.startsWith('/dashboard/legacy-builder')
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/20' 
-                : 'text-slate-400 hover:bg-gradient-to-r hover:from-emerald-900/30 hover:to-teal-900/30 hover:text-emerald-300'
-            }`}
-          >
-            <Gift size={18} className="text-emerald-400 group-hover:text-emerald-300" />
-            <span className="font-medium">Legacy Builder</span>
-            <span className="ml-auto text-xs bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full">Nuevo</span>
-          </Link>
+          {/* Legacy Builder y Capitanías - Solo para usuarios PL con asistencia marcada */}
+          {hasPLAttendance && (
+            <>
+              {/* Legacy Builder - Donaciones */}
+              <Link 
+                href="/dashboard/legacy-builder" 
+                onClick={handleLinkClick}
+                className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
+                  pathname.startsWith('/dashboard/legacy-builder')
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-500/20' 
+                    : 'text-slate-400 hover:bg-gradient-to-r hover:from-emerald-900/30 hover:to-teal-900/30 hover:text-emerald-300'
+                }`}
+              >
+                <Gift size={18} className="text-emerald-400 group-hover:text-emerald-300" />
+                <span className="font-medium">Legacy Builder</span>
+                <span className="ml-auto text-xs bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full">Nuevo</span>
+              </Link>
 
-          {/* Legacy Vision Builder - Capitanías */}
-          <Link 
-            href="/dashboard/legacy-vision-builder" 
-            onClick={handleLinkClick}
-            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
-              pathname.startsWith('/dashboard/legacy-vision-builder')
-                ? 'bg-gradient-to-r from-yellow-600 to-amber-600 text-white shadow-lg shadow-yellow-500/20' 
-                : 'text-slate-400 hover:bg-gradient-to-r hover:from-yellow-900/30 hover:to-amber-900/30 hover:text-yellow-300'
-            }`}
-          >
-            <Crown size={18} className="text-yellow-400 group-hover:text-yellow-300" />
-            <span className="font-medium">Capitanías</span>
-            <span className="ml-auto text-xs bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded-full">👑</span>
-          </Link>
+              {/* Legacy Vision Builder - Capitanías */}
+              <Link 
+                href="/dashboard/legacy-vision-builder" 
+                onClick={handleLinkClick}
+                className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
+                  pathname.startsWith('/dashboard/legacy-vision-builder')
+                    ? 'bg-gradient-to-r from-yellow-600 to-amber-600 text-white shadow-lg shadow-yellow-500/20' 
+                    : 'text-slate-400 hover:bg-gradient-to-r hover:from-yellow-900/30 hover:to-amber-900/30 hover:text-yellow-300'
+                }`}
+              >
+                <Crown size={18} className="text-yellow-400 group-hover:text-yellow-300" />
+                <span className="font-medium">Capitanías</span>
+                <span className="ml-auto text-xs bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded-full">👑</span>
+              </Link>
+            </>
+          )}
 
           {/* Directorio de Talentos - Mercado */}
           <Link 
@@ -1181,7 +1188,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             }`}
           >
             <Briefcase size={18} className="text-yellow-400 group-hover:text-yellow-300" />
-            <span className="font-medium">Mi Negocio</span>
+            <span className="font-medium">Mi Futuro Imposible</span>
           </Link>
 
           {/* Mi QR Personal - Solo para PARTICIPANTE, LIDER, GAMECHANGER */}

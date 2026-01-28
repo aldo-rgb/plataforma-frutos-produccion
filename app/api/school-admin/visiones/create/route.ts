@@ -64,6 +64,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Validar que no exista otra visión con el mismo nombre en la organización
+    const existingVision = await prisma.vision.findFirst({
+      where: {
+        nombre: { equals: nombre, mode: 'insensitive' },
+        organizationId: user.organizationId
+      }
+    });
+
+    if (existingVision) {
+      return NextResponse.json(
+        { success: false, error: 'Ya existe una visión con este nombre en tu organización' },
+        { status: 400 }
+      );
+    }
+
     if (!coordinadorId) {
       return NextResponse.json(
         { success: false, error: 'Debes asignar un coordinador a la visión' },

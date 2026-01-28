@@ -133,6 +133,22 @@ export default function QuantumBusinessBuilderPage() {
   const [loading, setLoading] = useState(false);
   const [loadingPhrase, setLoadingPhrase] = useState(LOADING_PHRASES[0]);
   
+  // Notificación personalizada (reemplazo de alert nativo)
+  const [notification, setNotification] = useState<{
+    show: boolean;
+    type: 'success' | 'error' | 'info';
+    title: string;
+    message: string;
+  } | null>(null);
+  
+  // Función para mostrar notificación
+  const showNotification = (type: 'success' | 'error' | 'info', title: string, message: string, duration = 4000) => {
+    setNotification({ show: true, type, title, message });
+    setTimeout(() => {
+      setNotification(null);
+    }, duration);
+  };
+  
   // Datos del ADN (Paso 1) - solo para mantener el valor entre pasos
   const [talento, setTalento] = useState('');
   const [audiencia, setAudiencia] = useState('');
@@ -147,6 +163,8 @@ export default function QuantumBusinessBuilderPage() {
   const [customName, setCustomName] = useState('');
   const [generatedLogos, setGeneratedLogos] = useState<GeneratedLogo[]>([]);
   const [selectedLogo, setSelectedLogo] = useState('');
+  const [selectedLogoIndex, setSelectedLogoIndex] = useState<number | null>(null);
+  const [uploadingSelectedLogo, setUploadingSelectedLogo] = useState(false);
   const [heroImage, setHeroImage] = useState('');
   
   // Pitch (Paso 3)
@@ -234,7 +252,6 @@ export default function QuantumBusinessBuilderPage() {
       }
       setPreviewTelefono(existingProfile.whatsappPhone || '');
       setPreviewWhatsapp(existingProfile.whatsappPhone || '');
-      setPreviewWebsite(existingProfile.website || '');
       setPreviewFotos(existingProfile.galleryImages || []);
       setPreviewLogo(existingProfile.logoUrl || '');
       // Construir dirección desde city/state/coverageZone
@@ -243,8 +260,34 @@ export default function QuantumBusinessBuilderPage() {
       setPreviewDireccion(direccion);
       // Cargar estado de visibilidad (ACTIVE = irrazonable/público)
       setEsIrrazonable(existingProfile.status === 'ACTIVE');
+      
+      // Coordenadas del centro de Guadalajara como default si no hay dirección específica
+      if (!previewLatitud && !previewLongitud) {
+        setPreviewLatitud(20.6597);
+        setPreviewLongitud(-103.3496);
+      }
     }
   }, [existingProfile, step]);
+  
+  // Cargar datos del quantum-web (URL, horarios, etc)
+  useEffect(() => {
+    if (existingWebsite && step === 'optimizador') {
+      // Cargar la URL de la página web publicada
+      if (existingWebsite.site?.slug && existingWebsite.site?.isPublished) {
+        setPreviewWebsite(`https://quantummatter.app/site/${existingWebsite.site.slug}`);
+      }
+      
+      // Cargar horarios si existen
+      if (existingWebsite.site?.schedule) {
+        setPreviewHorario(existingWebsite.site.schedule);
+      }
+      
+      // Cargar dirección del quantum-web si no hay en el perfil
+      if (existingWebsite.site?.address && !previewDireccion) {
+        setPreviewDireccion(existingWebsite.site.address);
+      }
+    }
+  }, [existingWebsite, step]);
 
   // Verificar acceso (Avanzado completado o PL)
   useEffect(() => {
@@ -572,27 +615,27 @@ export default function QuantumBusinessBuilderPage() {
     }
   };
   
-  // Seleccionar un logo del modal y subirlo a Cloudinary para que sea permanente
+  // Seleccionar un logo del modal y subirlo a Supabase para que sea permanente
   const selectLogoFromModal = async (url: string) => {
     setGeneratingLogo(true); // Mostrar loading mientras sube
     
     try {
-      // Subir la imagen de DALL-E a Cloudinary para que sea permanente
-      const response = await fetch('/api/upload/from-url', {
+      // Subir la imagen de DALL-E a Supabase Storage para que sea permanente
+      const response = await fetch('/api/quantum-business/upload-logo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          imageUrl: url,
-          folder: 'business-logos'
+          logoUrl: url,
+          businessName: previewNombre || 'mi-negocio'
         })
       });
       
       if (response.ok) {
         const data = await response.json();
-        setPreviewLogo(data.url); // URL permanente de Cloudinary
+        setPreviewLogo(data.permanentUrl); // URL permanente de Supabase
       } else {
         // Si falla el upload, usar la URL temporal (expirará)
-        console.warn('No se pudo subir a Cloudinary, usando URL temporal');
+        console.warn('No se pudo subir a Supabase, usando URL temporal');
         setPreviewLogo(url);
       }
     } catch (error) {
@@ -602,6 +645,41 @@ export default function QuantumBusinessBuilderPage() {
       setGeneratingLogo(false);
       setShowLogoModal(false);
       setLogoOptions([]);
+    }
+  };
+  
+  // Seleccionar un logo del wizard de Idea Millonaria y subirlo a Supabase
+  const handleSelectWizardLogo = async (logoUrl: string, index: number) => {
+    // Marcar como seleccionado inmediatamente (visualmente)
+    setSelectedLogoIndex(index);
+    setSelectedLogo(logoUrl);
+    setUploadingSelectedLogo(true);
+    
+    try {
+      // Subir la imagen de DALL-E a Supabase Storage para que sea permanente
+      const response = await fetch('/api/quantum-business/upload-logo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          logoUrl: logoUrl,
+          businessName: selectedName || customName || selectedIdea?.nombre || 'idea-millonaria'
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Actualizar con la URL permanente
+        setSelectedLogo(data.permanentUrl);
+        console.log('✅ Logo subido a Supabase:', data.permanentUrl);
+      } else {
+        console.warn('⚠️ No se pudo subir a Supabase, usando URL temporal');
+        // Mantener la URL temporal
+      }
+    } catch (error) {
+      console.error('Error subiendo logo:', error);
+      // Mantener la URL temporal como fallback
+    } finally {
+      setUploadingSelectedLogo(false);
     }
   };
   
@@ -776,19 +854,23 @@ export default function QuantumBusinessBuilderPage() {
           }, 3000);
         } else {
           // Guardado sin publicar en directorio
-          alert(esIrrazonable 
-            ? '🚀 ¡Perfil publicado en el Directorio de Negocios!' 
-            : '💾 Guardado. Tu perfil es privado (solo para la actividad).');
-          router.push('/dashboard/mi-negocio');
+          if (esIrrazonable) {
+            showNotification('success', '🚀 ¡Publicado!', 'Tu perfil está visible en el Directorio de Negocios');
+          } else {
+            showNotification('info', '💾 Guardado', 'Tu perfil es privado (solo para la actividad)');
+          }
+          setTimeout(() => {
+            router.push('/dashboard/mi-negocio');
+          }, 2000);
         }
       } else {
         const errorData = await res.json().catch(() => ({}));
         console.error('Error response:', errorData);
-        alert(errorData.error || 'Error al guardar. Intenta de nuevo.');
+        showNotification('error', '❌ Error', errorData.error || 'Error al guardar. Intenta de nuevo.');
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Error de conexión');
+      showNotification('error', '❌ Error', 'Error de conexión. Verifica tu internet.');
     } finally {
       setLoading(false);
     }
@@ -1342,18 +1424,24 @@ export default function QuantumBusinessBuilderPage() {
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: index * 0.15 }}
-                      onClick={() => setSelectedLogo(logo.url)}
-                      className={`aspect-square rounded-xl border-2 overflow-hidden transition-all ${
-                        selectedLogo === logo.url
+                      onClick={() => handleSelectWizardLogo(logo.url, index)}
+                      disabled={uploadingSelectedLogo}
+                      className={`aspect-square rounded-xl border-2 overflow-hidden transition-all relative ${
+                        selectedLogoIndex === index
                           ? 'border-orange-500 ring-4 ring-orange-500/30'
                           : 'border-slate-600/50 hover:border-orange-500/50'
-                      }`}
+                      } ${uploadingSelectedLogo && selectedLogoIndex !== index ? 'opacity-50 cursor-wait' : ''}`}
                     >
                       <img 
                         src={logo.url} 
                         alt={`Logo ${index + 1}`}
                         className="w-full h-full object-cover"
                       />
+                      {uploadingSelectedLogo && selectedLogoIndex === index && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <Loader2 className="w-6 h-6 text-white animate-spin" />
+                        </div>
+                      )}
                     </motion.button>
                   ))
                 ) : (
@@ -1536,7 +1624,33 @@ export default function QuantumBusinessBuilderPage() {
             try {
               const nombreFinal = customName || selectedName || selectedIdea?.nombre || '';
               
-              // Guardar en localStorage para Quantum Web
+              // 1. Guardar el perfil en talent-directory para que "Tengo un Negocio" lo cargue
+              const profileData = {
+                headline: nombreFinal,
+                description: descripcion,
+                discountOffer: ofertaTribu,
+                logoUrl: selectedLogo || undefined,
+                slogan: selectedIdea?.slogan || '',
+                // Guardar audiencia del ADN para referencia
+                targetAudience: audiencia,
+                // Guardar talento/habilidad principal
+                mainSkill: talento,
+                status: 'HIDDEN' // Guardarlo como borrador
+              };
+              
+              const saveRes = await fetch('/api/talent-directory/my-profile', {
+                method: hasExistingProfile ? 'PATCH' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(profileData)
+              });
+              
+              if (saveRes.ok) {
+                console.log('Perfil de Idea Millonaria guardado correctamente');
+                // Actualizar estado para que el sistema sepa que ya hay perfil
+                setHasExistingProfile(true);
+              }
+              
+              // 2. Guardar en localStorage para Quantum Web
               const quantumData = {
                 name: nombreFinal,
                 description: descripcion,
@@ -2044,13 +2158,9 @@ export default function QuantumBusinessBuilderPage() {
                         onClick={() => setShowMapModal(true)}
                       >
                         <img 
-                          src={`https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/pin-s+8b5cf6(${previewLongitud},${previewLatitud})/${previewLongitud},${previewLatitud},15,0/400x150@2x?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw`}
+                          src={`https://staticmap.openstreetmap.de/staticmap.php?center=${previewLatitud},${previewLongitud}&zoom=15&size=400x150&markers=${previewLatitud},${previewLongitud},red-pushpin`}
                           alt="Ubicación en mapa"
                           className="w-full h-full object-cover"
-                          onError={(e) => {
-                            // Fallback a OpenStreetMap si falla Mapbox
-                            (e.target as HTMLImageElement).src = `https://staticmap.openstreetmap.de/staticmap.php?center=${previewLatitud},${previewLongitud}&zoom=15&size=400x150&markers=${previewLatitud},${previewLongitud},red-pushpin`;
-                          }}
                         />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
                           <span className="text-white text-sm font-medium">Editar ubicación</span>
@@ -2902,6 +3012,52 @@ export default function QuantumBusinessBuilderPage() {
                 </div>
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Notificación personalizada */}
+      <AnimatePresence>
+        {notification && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: -50, x: '-50%' }}
+            className="fixed top-6 left-1/2 z-[100] max-w-md w-full px-4"
+          >
+            <div className={`
+              rounded-2xl p-4 shadow-2xl backdrop-blur-xl border
+              ${notification.type === 'success' 
+                ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-500/30' 
+                : notification.type === 'error'
+                ? 'bg-gradient-to-r from-red-500/20 to-pink-500/20 border-red-500/30'
+                : 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 border-blue-500/30'}
+            `}>
+              <div className="flex items-start gap-3">
+                <div className={`
+                  w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0
+                  ${notification.type === 'success' 
+                    ? 'bg-green-500/30' 
+                    : notification.type === 'error'
+                    ? 'bg-red-500/30'
+                    : 'bg-blue-500/30'}
+                `}>
+                  {notification.type === 'success' && <Check className="w-5 h-5 text-green-400" />}
+                  {notification.type === 'error' && <X className="w-5 h-5 text-red-400" />}
+                  {notification.type === 'info' && <Save className="w-5 h-5 text-blue-400" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-white font-semibold text-base">{notification.title}</h4>
+                  <p className="text-slate-300 text-sm mt-0.5">{notification.message}</p>
+                </div>
+                <button
+                  onClick={() => setNotification(null)}
+                  className="text-slate-400 hover:text-white transition-colors p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

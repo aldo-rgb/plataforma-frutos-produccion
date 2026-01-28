@@ -82,43 +82,48 @@ export async function GET(
     }
 
     // Verificar que la visión pertenece a la organización del usuario o a una del mismo master
+    // ADMINISTRADOR tiene acceso global a todas las visiones
     const user = await prisma.usuario.findUnique({
       where: { id: session.user.id },
       select: { 
         organizationId: true,
+        rol: true,
         Organization_Usuario_organizationIdToOrganization: {
           select: { masterOrganizationId: true }
         }
       },
     });
 
-    if (!user?.organizationId) {
+    // ADMINISTRADOR tiene acceso global
+    if (user?.rol === 'ADMINISTRADOR') {
+      // Continuar sin restricciones de organización
+    } else if (!user?.organizationId) {
       return NextResponse.json(
         { success: false, error: 'No tienes acceso a esta visión' },
         { status: 403 }
       );
-    }
+    } else {
+      // Obtener el masterOrganizationId de la visión
+      const visionOrg = await prisma.organization.findUnique({
+        where: { id: vision.organizationId },
+        select: { masterOrganizationId: true }
+      });
 
-    // Obtener el masterOrganizationId de la visión
-    const visionOrg = await prisma.organization.findUnique({
-      where: { id: vision.organizationId },
-      select: { masterOrganizationId: true }
-    });
+      const userMasterOrgId = user.Organization_Usuario_organizationIdToOrganization?.masterOrganizationId;
+      const visionMasterOrgId = visionOrg?.masterOrganizationId;
 
-    const userMasterOrgId = user.Organization_Usuario_organizationIdToOrganization?.masterOrganizationId;
-    const visionMasterOrgId = visionOrg?.masterOrganizationId;
+      // Permitir acceso si:
+      // 1. La visión pertenece a la misma organización del usuario, O
+      // 2. Ambas organizaciones pertenecen al mismo master
+      const sameOrg = vision.organizationId === user.organizationId;
+      const sameMaster = userMasterOrgId && visionMasterOrgId && userMasterOrgId === visionMasterOrgId;
 
-    // Permitir acceso si:
-    // 1. La visión pertenece a la misma organización del usuario, O
-    // 2. Ambas organizaciones pertenecen al mismo master
-    const sameOrg = vision.organizationId === user.organizationId;
-    const sameMaster = userMasterOrgId && visionMasterOrgId && userMasterOrgId === visionMasterOrgId;
-
-    if (!sameOrg && !sameMaster) {
-      return NextResponse.json(
-        { success: false, error: 'No tienes acceso a esta visión' },
-        { status: 403 }
-      );
+      if (!sameOrg && !sameMaster) {
+        return NextResponse.json(
+          { success: false, error: 'No tienes acceso a esta visión' },
+          { status: 403 }
+        );
+      }
     }
 
     // Determinar el nivel activo de la visión basado en los productos
@@ -740,6 +745,163 @@ export async function PUT(
     console.error('Error updating vision dates:', error);
     return NextResponse.json(
       { success: false, error: 'Error al actualizar las fechas' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/school-admin/visiones/[id]
+ * Elimina una visión (entrenamiento) siempre y cuando no tenga usuarios registrados
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user || !['SCHOOL_ADMIN', 'ADMINISTRADOR'].includes(session.user.rol as string)) {
+      return NextResponse.json(
+        { success: false, error: 'No autorizado. Solo School Admin puede eliminar visiones.' },
+        { status: 401 }
+      );
+    }
+
+    const { id } = await params;
+    const visionId = parseInt(id);
+
+    if (isNaN(visionId)) {
+      return NextResponse.json(
+        { success: false, error: 'ID de visión inválido' },
+        { status: 400 }
+      );
+    }
+
+    // Obtener la visión con conteos de usuarios registrados
+    const vision = await prisma.vision.findUnique({
+      where: { id: visionId },
+      include: {
+        _count: {
+          select: {
+            vision_enrollments: true,
+            VisionParticipante: true,
+            VisionGameChanger: true,
+            VisionMentor: true,
+            VisionStaff: true,
+          },
+        },
+      },
+    });
+
+    if (!vision) {
+      return NextResponse.json(
+        { success: false, error: 'Visión no encontrada' },
+        { status: 404 }
+      );
+    }
+
+    // Verificar que la visión pertenece a la organización del usuario
+    const user = await prisma.usuario.findUnique({
+      where: { id: session.user.id },
+      select: { 
+        organizationId: true,
+        Organization_Usuario_organizationIdToOrganization: {
+          select: { masterOrganizationId: true }
+        }
+      },
+    });
+
+    if (!user?.organizationId) {
+      return NextResponse.json(
+        { success: false, error: 'No tienes acceso a esta visión' },
+        { status: 403 }
+      );
+    }
+
+    // Verificar pertenencia a organización
+    const userOrg = user.Organization_Usuario_organizationIdToOrganization;
+    const masterOrgId = userOrg?.masterOrganizationId;
+    
+    // Obtener organización de la visión
+    const visionOrg = await prisma.organization.findUnique({
+      where: { id: vision.organizationId },
+      select: { id: true, masterOrganizationId: true }
+    });
+
+    const canAccess = vision.organizationId === user.organizationId ||
+      (masterOrgId && visionOrg?.masterOrganizationId === masterOrgId) ||
+      (masterOrgId && vision.organizationId === masterOrgId);
+
+    if (!canAccess) {
+      return NextResponse.json(
+        { success: false, error: 'No tienes acceso a esta visión' },
+        { status: 403 }
+      );
+    }
+
+    // Verificar que no tenga usuarios registrados
+    const totalUsuarios = 
+      vision._count.vision_enrollments + 
+      vision._count.VisionParticipante + 
+      vision._count.VisionGameChanger + 
+      vision._count.VisionMentor + 
+      vision._count.VisionStaff;
+
+    if (totalUsuarios > 0) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `No se puede eliminar la visión porque tiene ${totalUsuarios} usuario(s) registrado(s). Debes eliminar o mover los usuarios primero.`,
+          details: {
+            enrollments: vision._count.vision_enrollments,
+            participantes: vision._count.VisionParticipante,
+            gamechangers: vision._count.VisionGameChanger,
+            mentores: vision._count.VisionMentor,
+            staff: vision._count.VisionStaff
+          }
+        },
+        { status: 400 }
+      );
+    }
+
+    // Eliminar registros relacionados que no son usuarios (si existen)
+    await prisma.$transaction(async (tx) => {
+      // Eliminar productos de escuela asociados
+      await tx.schoolProduct.deleteMany({
+        where: { visionId: visionId }
+      });
+
+      // Eliminar configuración de comisiones
+      await tx.visionCommissionConfig.deleteMany({
+        where: { visionId: visionId }
+      });
+
+      // Eliminar coordinator commission config
+      await tx.coordinator_commission_config.deleteMany({
+        where: { visionId: visionId }
+      });
+
+      // Eliminar escrow
+      await tx.visionEscrow.deleteMany({
+        where: { visionId: visionId }
+      });
+
+      // Finalmente eliminar la visión
+      await tx.vision.delete({
+        where: { id: visionId }
+      });
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Visión "${vision.nombre}" eliminada exitosamente`
+    });
+
+  } catch (error) {
+    console.error('Error eliminando visión:', error);
+    return NextResponse.json(
+      { success: false, error: 'Error al eliminar la visión' },
       { status: 500 }
     );
   }

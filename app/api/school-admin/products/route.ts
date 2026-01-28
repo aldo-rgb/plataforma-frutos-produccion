@@ -306,12 +306,27 @@ export async function DELETE(request: Request) {
       );
     }
 
-    // Verificar que el producto pertenece a la organización y es EXTRA (no se pueden eliminar CORE)
+    // Verificar que el producto pertenece a la organización
     const existingProduct = await prisma.schoolProduct.findFirst({
       where: {
         id: parseInt(id),
         organizationId: user.organizationId!,
       },
+      include: {
+        Vision: {
+          include: {
+            _count: {
+              select: {
+                vision_enrollments: true,
+                VisionParticipante: true,
+                VisionGameChanger: true,
+                VisionMentor: true,
+                VisionStaff: true,
+              }
+            }
+          }
+        }
+      }
     });
 
     if (!existingProduct) {
@@ -321,14 +336,75 @@ export async function DELETE(request: Request) {
       );
     }
 
+    // Si es CORE_TRAINING, verificar que la visión no tenga usuarios registrados
     if (existingProduct.type === 'CORE_TRAINING') {
-      return NextResponse.json(
-        { success: false, error: 'No se pueden eliminar productos del core (Básico, Avanzado, PL)' },
-        { status: 400 }
-      );
+      if (!existingProduct.Vision) {
+        return NextResponse.json(
+          { success: false, error: 'Este producto no tiene una visión asociada' },
+          { status: 400 }
+        );
+      }
+
+      const vision = existingProduct.Vision;
+      const totalUsuarios = 
+        vision._count.vision_enrollments + 
+        vision._count.VisionParticipante + 
+        vision._count.VisionGameChanger + 
+        vision._count.VisionMentor + 
+        vision._count.VisionStaff;
+
+      if (totalUsuarios > 0) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: `No se puede eliminar el entrenamiento porque tiene ${totalUsuarios} usuario(s) registrado(s). Debes eliminar o mover los usuarios primero.`,
+            details: {
+              enrollments: vision._count.vision_enrollments,
+              participantes: vision._count.VisionParticipante,
+              gamechangers: vision._count.VisionGameChanger,
+              mentores: vision._count.VisionMentor,
+              staff: vision._count.VisionStaff
+            }
+          },
+          { status: 400 }
+        );
+      }
+
+      // Eliminar toda la visión con sus productos asociados
+      await prisma.$transaction(async (tx) => {
+        // Eliminar todos los productos de la visión
+        await tx.schoolProduct.deleteMany({
+          where: { visionId: vision.id }
+        });
+
+        // Eliminar configuración de comisiones
+        await tx.visionCommissionConfig.deleteMany({
+          where: { visionId: vision.id }
+        });
+
+        // Eliminar coordinator commission config
+        await tx.coordinator_commission_config.deleteMany({
+          where: { visionId: vision.id }
+        });
+
+        // Eliminar escrow
+        await tx.visionEscrow.deleteMany({
+          where: { visionId: vision.id }
+        });
+
+        // Finalmente eliminar la visión
+        await tx.vision.delete({
+          where: { id: vision.id }
+        });
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Entrenamiento "${vision.nombre}" y sus productos eliminados correctamente`,
+      });
     }
 
-    // Eliminar el producto
+    // Para productos EXTRA_WORKSHOP, eliminar solo el producto
     await prisma.schoolProduct.delete({
       where: { id: parseInt(id) },
     });
