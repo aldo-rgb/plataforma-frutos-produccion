@@ -3,12 +3,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Paintbrush, Image, Type, Eye, EyeOff, Save, Upload, ExternalLink, CheckCircle, AlertCircle } from 'lucide-react';
+import { Paintbrush, Image, Type, Eye, EyeOff, Save, Upload, ExternalLink, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function BrandingPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const backgroundInputRef = useRef<HTMLInputElement>(null);
+  const whatsappInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -31,6 +33,9 @@ export default function BrandingPage() {
   });
 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingBackground, setUploadingBackground] = useState(false);
+  const [uploadingWhatsapp, setUploadingWhatsapp] = useState(false);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -96,22 +101,53 @@ export default function BrandingPage() {
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'logoUrl' | 'loginBackgroundUrl') => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'logoUrl' | 'loginBackgroundUrl' | 'whatsappInviteImageUrl') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      if (field === 'loginBackgroundUrl') {
-        setPreviewImage(reader.result as string);
-      }
-    };
-    reader.readAsDataURL(file);
+    // Validar tipo
+    if (!file.type.startsWith('image/')) {
+      showToast('Solo se permiten imágenes', 'error');
+      return;
+    }
 
-    // Upload to your storage (implement your upload logic here)
-    // For now, just show the preview
-    showToast('Sube la imagen a tu servidor de archivos y pega la URL', 'success');
+    // Validar tamaño (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('La imagen no debe superar los 5MB', 'error');
+      return;
+    }
+
+    // Set uploading state
+    if (field === 'logoUrl') setUploadingLogo(true);
+    else if (field === 'loginBackgroundUrl') setUploadingBackground(true);
+    else if (field === 'whatsappInviteImageUrl') setUploadingWhatsapp(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'organization-branding');
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+
+      if (data.success && data.url) {
+        setBranding(prev => ({ ...prev, [field]: data.url }));
+        showToast('Imagen subida correctamente', 'success');
+      } else {
+        showToast(data.error || 'Error al subir la imagen', 'error');
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      showToast('Error al subir la imagen', 'error');
+    } finally {
+      if (field === 'logoUrl') setUploadingLogo(false);
+      else if (field === 'loginBackgroundUrl') setUploadingBackground(false);
+      else if (field === 'whatsappInviteImageUrl') setUploadingWhatsapp(false);
+    }
   };
 
   if (loading) {
@@ -193,18 +229,61 @@ export default function BrandingPage() {
               </div>
             )}
 
-            {/* Logo URL */}
-            <div>
-              <label className="text-white font-medium flex items-center gap-2">
+            {/* Logo Upload */}
+            <div className="p-4 bg-slate-700/50 rounded-lg">
+              <label className="text-white font-medium flex items-center gap-2 mb-3">
                 <Image size={18} className="text-blue-400" />
-                URL del Logo
+                Logo de la Organización
               </label>
+              
+              {/* Preview del logo actual */}
+              {branding.logoUrl && (
+                <div className="mb-3 p-4 bg-slate-800 rounded-lg flex items-center justify-center">
+                  <img 
+                    src={branding.logoUrl} 
+                    alt="Logo actual" 
+                    className="max-h-20 w-auto object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Botón de subir */}
+              <input
+                type="file"
+                ref={logoInputRef}
+                onChange={(e) => handleImageUpload(e, 'logoUrl')}
+                accept="image/*"
+                className="hidden"
+              />
+              <button
+                onClick={() => logoInputRef.current?.click()}
+                disabled={uploadingLogo}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 mb-3"
+              >
+                {uploadingLogo ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Subiendo...
+                  </>
+                ) : (
+                  <>
+                    <Upload size={18} />
+                    {branding.logoUrl ? 'Cambiar Logo' : 'Subir Logo'}
+                  </>
+                )}
+              </button>
+
+              {/* O pegar URL manualmente */}
+              <div className="text-slate-400 text-xs text-center mb-2">o pega una URL directamente:</div>
               <input
                 type="url"
                 value={branding.logoUrl}
                 onChange={(e) => setBranding({ ...branding, logoUrl: e.target.value })}
                 placeholder="https://ejemplo.com/logo.png"
-                className="w-full mt-2 px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm"
               />
             </div>
 
@@ -245,18 +324,61 @@ export default function BrandingPage() {
               />
             </div>
 
-            {/* Background Image URL */}
-            <div>
-              <label className="text-white font-medium flex items-center gap-2">
+            {/* Background Image Upload */}
+            <div className="p-4 bg-slate-700/50 rounded-lg">
+              <label className="text-white font-medium flex items-center gap-2 mb-3">
                 <Image size={18} className="text-green-400" />
-                URL de Imagen de Fondo (opcional)
+                Imagen de Fondo del Login (opcional)
               </label>
+              
+              {/* Preview del fondo actual */}
+              {branding.loginBackgroundUrl && (
+                <div className="mb-3 rounded-lg overflow-hidden border border-slate-600">
+                  <img 
+                    src={branding.loginBackgroundUrl} 
+                    alt="Fondo actual" 
+                    className="w-full h-32 object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Botón de subir */}
+              <input
+                type="file"
+                ref={backgroundInputRef}
+                onChange={(e) => handleImageUpload(e, 'loginBackgroundUrl')}
+                accept="image/*"
+                className="hidden"
+              />
+              <button
+                onClick={() => backgroundInputRef.current?.click()}
+                disabled={uploadingBackground}
+                className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 mb-3"
+              >
+                {uploadingBackground ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Subiendo...
+                  </>
+                ) : (
+                  <>
+                    <Upload size={18} />
+                    {branding.loginBackgroundUrl ? 'Cambiar Fondo' : 'Subir Imagen de Fondo'}
+                  </>
+                )}
+              </button>
+
+              {/* O pegar URL manualmente */}
+              <div className="text-slate-400 text-xs text-center mb-2">o pega una URL directamente:</div>
               <input
                 type="url"
                 value={branding.loginBackgroundUrl}
                 onChange={(e) => setBranding({ ...branding, loginBackgroundUrl: e.target.value })}
                 placeholder="https://ejemplo.com/fondo.jpg"
-                className="w-full mt-2 px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm"
               />
             </div>
 
@@ -290,41 +412,67 @@ export default function BrandingPage() {
                 Recomendamos una imagen de 1200x630 píxeles.
               </p>
               
-              {/* WhatsApp Image URL */}
-              <div>
-                <label className="text-white font-medium flex items-center gap-2">
+              {/* WhatsApp Image Upload */}
+              <div className="p-4 bg-slate-700/50 rounded-lg">
+                <label className="text-white font-medium flex items-center gap-2 mb-3">
                   <Image size={18} className="text-green-400" />
-                  URL de Imagen para WhatsApp
+                  Imagen para WhatsApp
                 </label>
+
+                {/* Preview de imagen de WhatsApp */}
+                {branding.whatsappInviteImageUrl && (
+                  <div className="mb-3 relative rounded-lg overflow-hidden border border-slate-600">
+                    <img 
+                      src={branding.whatsappInviteImageUrl} 
+                      alt="Preview WhatsApp" 
+                      className="w-full h-auto max-h-40 object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+                      <p className="text-white font-bold text-xs">Entrenamiento Básico</p>
+                      <p className="text-slate-300 text-[10px]">Vista previa</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Botón de subir */}
+                <input
+                  type="file"
+                  ref={whatsappInputRef}
+                  onChange={(e) => handleImageUpload(e, 'whatsappInviteImageUrl')}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <button
+                  onClick={() => whatsappInputRef.current?.click()}
+                  disabled={uploadingWhatsapp}
+                  className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 mb-3"
+                >
+                  {uploadingWhatsapp ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      Subiendo...
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={18} />
+                      {branding.whatsappInviteImageUrl ? 'Cambiar Imagen' : 'Subir Imagen'}
+                    </>
+                  )}
+                </button>
+
+                {/* O pegar URL manualmente */}
+                <div className="text-slate-400 text-xs text-center mb-2">o pega una URL directamente:</div>
                 <input
                   type="url"
                   value={branding.whatsappInviteImageUrl}
                   onChange={(e) => setBranding({ ...branding, whatsappInviteImageUrl: e.target.value })}
                   placeholder="https://ejemplo.com/invitacion-basico.jpg"
-                  className="w-full mt-2 px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
+                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm"
                 />
               </div>
-
-              {/* Preview de imagen de WhatsApp */}
-              {branding.whatsappInviteImageUrl && (
-                <div className="mt-4">
-                  <p className="text-slate-400 text-sm mb-2">Vista previa:</p>
-                  <div className="relative rounded-lg overflow-hidden border border-slate-600">
-                    <img 
-                      src={branding.whatsappInviteImageUrl} 
-                      alt="Preview WhatsApp" 
-                      className="w-full h-auto max-h-64 object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                      <p className="text-white font-bold text-sm">Entrenamiento Básico</p>
-                      <p className="text-slate-300 text-xs">Vista previa del link compartido</p>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Save Button */}
