@@ -21,9 +21,14 @@ export async function GET() {
     }
 
     // Solo coordinadores pueden ver esta lista
-    const coordinatorRoles = ['COORDINADOR', 'COORDINATOR_BASIC', 'ADMIN', 'SCHOOL_ADMIN'];
+    const coordinatorRoles = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'ADMIN', 'SCHOOL_ADMIN', 'ADMINISTRADOR', 'TRAINER'];
     if (!coordinatorRoles.includes(user.rol)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+    }
+
+    // Verificar que el usuario tiene organización asignada
+    if (!user.organizationId) {
+      return NextResponse.json({ error: 'No tienes una organización asignada' }, { status: 400 });
     }
 
     // Obtener todos los formularios médicos de la organización del coordinador

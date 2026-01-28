@@ -31,7 +31,7 @@ export async function GET(
     }
 
     // Solo coordinadores pueden ver el detalle
-    const coordinatorRoles = ['COORDINADOR', 'COORDINATOR_BASIC', 'ADMIN', 'SCHOOL_ADMIN'];
+    const coordinatorRoles = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'ADMIN', 'SCHOOL_ADMIN', 'ADMINISTRADOR', 'TRAINER'];
     if (!coordinatorRoles.includes(user.rol)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }

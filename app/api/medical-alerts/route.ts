@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Coordinadores y Trainers pueden ver alertas médicas
-    const allowedRoles = ['COORDINADOR', 'COORDINATOR_BASIC', 'SCHOOL_ADMIN', 'ADMINISTRADOR', 'TRAINER'];
+    const allowedRoles = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'SCHOOL_ADMIN', 'ADMINISTRADOR', 'TRAINER'];
     if (!allowedRoles.includes(user.rol)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
