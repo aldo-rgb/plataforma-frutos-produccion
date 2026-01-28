@@ -46,8 +46,10 @@ export default function CoordinadoresPage() {
   const [modalCrear, setModalCrear] = useState(false);
   const [modalAsignar, setModalAsignar] = useState(false);
   const [modalPassword, setModalPassword] = useState(false);
+  const [modalCambiarRol, setModalCambiarRol] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Coordinador | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  const [nuevoRol, setNuevoRol] = useState<string>('');
   const [visionSeleccionada, setVisionSeleccionada] = useState<Vision | null>(null);
   const [formCoordinador, setFormCoordinador] = useState({
     nombre: '',
@@ -184,6 +186,36 @@ export default function CoordinadoresPage() {
     } catch (error) {
       console.error('Error cambiando contraseña:', error);
       showNotification('error', 'Error al cambiar contraseña');
+    }
+  };
+
+  const cambiarRol = async () => {
+    if (!selectedUser || !nuevoRol) {
+      showNotification('error', 'Selecciona un rol');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/school-admin/coordinadores', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: selectedUser.id, newRole: nuevoRol })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        showNotification('success', `Rol actualizado a ${getRolLabel(nuevoRol).text} para ${selectedUser.nombre}`);
+        setModalCambiarRol(false);
+        setSelectedUser(null);
+        setNuevoRol('');
+        cargarDatos();
+      } else {
+        showNotification('error', data.error || 'Error al cambiar rol');
+      }
+    } catch (error) {
+      console.error('Error cambiando rol:', error);
+      showNotification('error', 'Error al cambiar rol');
     }
   };
 
@@ -352,8 +384,20 @@ export default function CoordinadoresPage() {
                       </div>
                     )}
 
-                    {/* Botón Cambiar Contraseña */}
-                    <div className="flex justify-end mt-2">
+                    {/* Botones de Acciones */}
+                    <div className="flex flex-wrap justify-end gap-2 mt-2">
+                      <button
+                        onClick={() => {
+                          setSelectedUser(coord);
+                          setNuevoRol(coord.rol);
+                          setModalCambiarRol(true);
+                        }}
+                        className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 rounded-lg text-blue-300 text-xs lg:text-sm font-medium transition-all hover:scale-105"
+                      >
+                        <Edit size={14} className="lg:hidden" />
+                        <Edit size={16} className="hidden lg:block" />
+                        <span>Cambiar Rol</span>
+                      </button>
                       <button
                         onClick={() => {
                           setSelectedUser(coord);
@@ -626,6 +670,92 @@ export default function CoordinadoresPage() {
             >
               Cancelar
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Cambiar Rol */}
+      {modalCambiarRol && selectedUser && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 border-2 border-blue-500/30 rounded-3xl p-6 lg:p-8 max-w-md w-full shadow-2xl shadow-blue-500/20 animate-in slide-in-from-bottom duration-300">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-3 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl shadow-lg shadow-blue-500/50">
+                <Edit size={28} className="text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl lg:text-2xl font-black text-white">Cambiar Rol</h2>
+                <p className="text-slate-400 text-sm">{selectedUser.nombre}</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4 mb-6">
+              <p className="text-xs text-slate-500 mb-2">Rol actual:</p>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-slate-800 rounded-lg">
+                  <UserCheck size={18} className="text-slate-400" />
+                </div>
+                <div>
+                  <p className="text-white font-medium">{selectedUser.nombre}</p>
+                  <p className="text-slate-400 text-xs">{selectedUser.email}</p>
+                </div>
+                <span className={`ml-auto px-2.5 py-1 bg-gradient-to-r ${getRolLabel(selectedUser.rol).color} text-white text-[10px] font-black rounded-lg`}>
+                  {getRolLabel(selectedUser.rol).emoji} {getRolLabel(selectedUser.rol).text}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-5 mb-6">
+              <div className="relative">
+                <label className="block text-sm font-bold text-slate-300 mb-2 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-blue-400 rounded-full"></span>
+                  Nuevo Rol
+                </label>
+                <select
+                  value={nuevoRol}
+                  onChange={(e) => setNuevoRol(e.target.value)}
+                  className="w-full px-4 py-3.5 bg-slate-900/80 border-2 border-slate-700 rounded-xl text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all appearance-none cursor-pointer"
+                >
+                  <option value="COORDINADOR">🎯 Liderato (Coordinador)</option>
+                  <option value="COORDINATOR_BASIC">📋 Básico</option>
+                  <option value="COORDINATOR_ADVANCED">🎪 Avanzado</option>
+                  <option value="TRAINER">🚀 Trainer</option>
+                </select>
+              </div>
+
+              {nuevoRol !== selectedUser.rol && (
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <Edit size={20} className="text-blue-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-blue-300 text-sm font-medium">Cambio detectado</p>
+                      <p className="text-blue-200/70 text-xs mt-1">
+                        De <strong>{getRolLabel(selectedUser.rol).text}</strong> a <strong>{getRolLabel(nuevoRol).text}</strong>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={cambiarRol}
+                disabled={!nuevoRol || nuevoRol === selectedUser.rol}
+                className="flex-1 px-6 py-4 bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-500 text-white rounded-xl font-bold hover:shadow-xl hover:shadow-blue-500/50 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                ✨ Cambiar Rol
+              </button>
+              <button
+                onClick={() => {
+                  setModalCambiarRol(false);
+                  setSelectedUser(null);
+                  setNuevoRol('');
+                }}
+                className="px-6 py-4 bg-slate-700/50 border-2 border-slate-600 text-slate-300 rounded-xl font-bold hover:bg-slate-700 hover:text-white transition-all"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
       )}
