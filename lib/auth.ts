@@ -80,6 +80,13 @@ export const authOptions: NextAuthOptions = {
           wizardCompleted: user.wizardCompleted || false,
           onboardingOrigin: user.onboardingOrigin || 'ORGANIC_SIGNUP',
           organizationId: user.organizacionId || undefined,
+          // Roles múltiples
+          esMentor: user.esMentor || false,
+          esEntrenador: user.esEntrenador || false,
+          esCoordinador: user.esCoordinador || false,
+          esLider: user.esLider || false,
+          esCoordinadorBasico: user.esCoordinadorBasico || false,
+          esCoordinadorAvanzado: user.esCoordinadorAvanzado || false,
         }
       }
     })
@@ -94,6 +101,13 @@ export const authOptions: NextAuthOptions = {
         token.wizardCompleted = user.wizardCompleted || false
         token.onboardingOrigin = user.onboardingOrigin || 'ORGANIC_SIGNUP'
         token.organizationId = user.organizationId
+        // Roles múltiples
+        token.esMentor = user.esMentor || false
+        token.esEntrenador = user.esEntrenador || false
+        token.esCoordinador = user.esCoordinador || false
+        token.esLider = user.esLider || false
+        token.esCoordinadorBasico = user.esCoordinadorBasico || false
+        token.esCoordinadorAvanzado = user.esCoordinadorAvanzado || false
       }
       return token
     },
@@ -106,6 +120,13 @@ export const authOptions: NextAuthOptions = {
         session.user.wizardCompleted = token.wizardCompleted as boolean
         session.user.onboardingOrigin = token.onboardingOrigin as string
         session.user.organizationId = token.organizationId as number | undefined
+        // Roles múltiples
+        session.user.esMentor = token.esMentor as boolean
+        session.user.esEntrenador = token.esEntrenador as boolean
+        session.user.esCoordinador = token.esCoordinador as boolean
+        session.user.esLider = token.esLider as boolean
+        session.user.esCoordinadorBasico = token.esCoordinadorBasico as boolean
+        session.user.esCoordinadorAvanzado = token.esCoordinadorAvanzado as boolean
       }
       return session
     }

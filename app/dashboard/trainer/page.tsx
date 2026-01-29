@@ -127,7 +127,8 @@ export default function TrainerDashboard() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
-    } else if (session?.user?.rol !== 'TRAINER') {
+    } else if (session?.user?.rol !== 'TRAINER' && !session?.user?.esEntrenador) {
+      // Permitir acceso si rol es TRAINER o si tiene el flag esEntrenador
       router.push('/dashboard');
     } else {
       fetchMisEntrenamientos();

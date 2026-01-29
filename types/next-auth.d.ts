@@ -8,6 +8,13 @@ declare module "next-auth" {
     wizardCompleted?: boolean
     onboardingOrigin?: string
     organizationId?: number
+    // Roles múltiples
+    esMentor?: boolean
+    esEntrenador?: boolean
+    esCoordinador?: boolean
+    esLider?: boolean
+    esCoordinadorBasico?: boolean
+    esCoordinadorAvanzado?: boolean
   }
 
   interface Session {
@@ -18,6 +25,13 @@ declare module "next-auth" {
       wizardCompleted?: boolean
       onboardingOrigin?: string
       organizationId?: number
+      // Roles múltiples
+      esMentor?: boolean
+      esEntrenador?: boolean
+      esCoordinador?: boolean
+      esLider?: boolean
+      esCoordinadorBasico?: boolean
+      esCoordinadorAvanzado?: boolean
     }
   }
 }
@@ -30,5 +44,12 @@ declare module "next-auth/jwt" {
     wizardCompleted?: boolean
     onboardingOrigin?: string
     organizationId?: number
+    // Roles múltiples
+    esMentor?: boolean
+    esEntrenador?: boolean
+    esCoordinador?: boolean
+    esLider?: boolean
+    esCoordinadorBasico?: boolean
+    esCoordinadorAvanzado?: boolean
   }
 }
