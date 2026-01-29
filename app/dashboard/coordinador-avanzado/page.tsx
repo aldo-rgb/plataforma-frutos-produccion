@@ -94,7 +94,8 @@ export default function CoordinadorAvanzadoDashboard() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
-    } else if (session?.user?.rol !== 'COORDINATOR_ADVANCED') {
+    } else if (session?.user?.rol !== 'COORDINATOR_ADVANCED' && !session?.user?.esCoordinadorAvanzado) {
+      // Permitir acceso si rol es COORDINATOR_ADVANCED o si tiene el flag esCoordinadorAvanzado
       router.push('/dashboard');
     } else {
       fetchDashboardData();

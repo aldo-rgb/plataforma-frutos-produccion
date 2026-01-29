@@ -69,7 +69,8 @@ export default function CoordinadorDashboard() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
-    } else if (session?.user?.rol !== 'COORDINADOR') {
+    } else if (session?.user?.rol !== 'COORDINADOR' && !session?.user?.esCoordinador) {
+      // Permitir acceso si rol es COORDINADOR o si tiene el flag esCoordinador
       router.push('/dashboard');
     } else {
       fetchDashboardData();

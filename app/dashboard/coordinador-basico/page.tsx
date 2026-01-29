@@ -94,7 +94,8 @@ export default function CoordinadorBasicoDashboard() {
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
-    } else if (session?.user?.rol !== 'COORDINATOR_BASIC') {
+    } else if (session?.user?.rol !== 'COORDINATOR_BASIC' && !session?.user?.esCoordinadorBasico) {
+      // Permitir acceso si rol es COORDINATOR_BASIC o si tiene el flag esCoordinadorBasico
       router.push('/dashboard');
     } else {
       fetchDashboardData();
