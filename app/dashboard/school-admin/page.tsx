@@ -1095,6 +1095,27 @@ export default function SchoolAdminDashboard() {
               </div>
             </Link>
 
+            <Link href="/dashboard/school-admin/roles" className="block mt-6">
+              <div className="bg-gradient-to-br from-violet-900/50 to-slate-900 border-2 border-violet-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-violet-500/20 group-hover:bg-violet-500/30 rounded-xl transition-colors">
+                    <Shield size={24} className="text-violet-300" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm uppercase">
+                      Roles Múltiples
+                    </h3>
+                    <p className="text-xs text-violet-300">
+                      Asignar roles adicionales
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Asigna roles de Coordinador, Líder o Entrenador a tus usuarios
+                </p>
+              </div>
+            </Link>
+
             <Link href="/dashboard/school-admin/productos" className="block mt-6">
               <div className="bg-gradient-to-br from-pink-900/50 to-slate-900 border-2 border-pink-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-pink-500/50 hover:shadow-lg hover:shadow-pink-500/10">
                 <div className="flex items-center gap-3 mb-4">

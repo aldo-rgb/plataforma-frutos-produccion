@@ -3,6 +3,7 @@
 import { Zap, Globe, Menu } from 'lucide-react';
 import { PhoenixButton } from '../phoenix/PhoenixButton';
 import LanguageSwitcher from '../ui/LanguageSwitcher';
+import { RoleSwitcher } from './RoleSwitcher';
 import { useState } from 'react';
 
 interface TopbarProps {
@@ -14,6 +15,10 @@ interface TopbarProps {
     suscripcion: string | null;
     puntosCuanticos: number;
     timezone?: string;
+    esMentor?: boolean;
+    esEntrenador?: boolean;
+    esCoordinador?: boolean;
+    esLider?: boolean;
     organization?: {
       id: number;
       name: string;
@@ -41,6 +46,9 @@ export function Topbar({ usuario, onMenuClick }: TopbarProps) {
       <div className="flex-1 lg:flex-initial" />
       
       <div className="flex items-center gap-3 md:gap-6">
+        {/* Role Switcher - Para usuarios con múltiples roles */}
+        <RoleSwitcher usuario={usuario} />
+        
         {/* Language Switcher - oculto en móviles */}
         <div className="hidden sm:block">
           <LanguageSwitcher />

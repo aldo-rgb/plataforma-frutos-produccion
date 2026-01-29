@@ -2176,6 +2176,10 @@ model Usuario {
   profession                                                             String?
   expectations                                                           String?
   invitedByText                                                          String?
+  esMentor                                                               Boolean                         @default(false)
+  esEntrenador                                                           Boolean                         @default(false)
+  esCoordinador                                                          Boolean                         @default(false)
+  esLider                                                                Boolean                         @default(false)
   AccessCode_AccessCode_generatedByToUsuario                             AccessCode[]                    @relation("AccessCode_generatedByToUsuario")
   AccessCode_AccessCode_usedByToUsuario                                  AccessCode[]                    @relation("AccessCode_usedByToUsuario")
   AdminTask                                                              AdminTask[]
