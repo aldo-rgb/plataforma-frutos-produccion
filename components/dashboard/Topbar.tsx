@@ -19,6 +19,8 @@ interface TopbarProps {
     esEntrenador?: boolean;
     esCoordinador?: boolean;
     esLider?: boolean;
+    esCoordinadorBasico?: boolean;
+    esCoordinadorAvanzado?: boolean;
     organization?: {
       id: number;
       name: string;
