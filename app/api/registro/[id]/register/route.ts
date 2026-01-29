@@ -18,7 +18,16 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { nombre, email, telefono, password } = body;
+    const { 
+      nombre, 
+      email, 
+      telefono, 
+      password,
+      // Nuevos campos opcionales para usuarios del sistema viejo
+      visionGraduacion,
+      angelEnrolamientoId,
+      angelEnrolamientoNombre
+    } = body;
 
     // Validaciones
     if (!nombre || !email || !telefono || !password) {
@@ -125,7 +134,11 @@ export async function POST(
         rol: 'PARTICIPANTE',
         tier: 'FREE',
         isActive: true,
-        organizationId: vision.organizationId
+        organizationId: vision.organizationId,
+        // Campos para usuarios del sistema viejo
+        visionAngel: visionGraduacion || null, // Visión donde se graduó
+        invitedBy: angelEnrolamientoId || null, // ID del ángel si se encontró
+        invitedByText: (!angelEnrolamientoId && angelEnrolamientoNombre) ? angelEnrolamientoNombre : null // Nombre pendiente si no se encontró
       }
     });
 
@@ -136,6 +149,60 @@ export async function POST(
         participanteId: newUser.id
       }
     });
+
+    // Si se asignó un ángel encontrado, incrementar su contador de invitados
+    if (angelEnrolamientoId) {
+      await prisma.usuario.update({
+        where: { id: angelEnrolamientoId },
+        data: {
+          invitedCount: { increment: 1 }
+        }
+      });
+    }
+
+    // ==========================================
+    // ENLACE AUTOMÁTICO DE INVITADOS PENDIENTES
+    // ==========================================
+    // Buscar usuarios que tenían guardado el nombre de este nuevo usuario como ángel pendiente
+    // y enlazarlos automáticamente
+    try {
+      const pendingInvitees = await prisma.usuario.findMany({
+        where: {
+          invitedByText: {
+            equals: nombre,
+            mode: 'insensitive'
+          },
+          invitedBy: null // Solo los que no tienen ángel asignado todavía
+        },
+        select: { id: true }
+      });
+
+      if (pendingInvitees.length > 0) {
+        // Enlazar a todos los invitados pendientes con este nuevo usuario
+        await prisma.usuario.updateMany({
+          where: {
+            id: { in: pendingInvitees.map(u => u.id) }
+          },
+          data: {
+            invitedBy: newUser.id,
+            invitedByText: null // Limpiar el texto pendiente
+          }
+        });
+
+        // Actualizar el contador de invitados del nuevo usuario
+        await prisma.usuario.update({
+          where: { id: newUser.id },
+          data: {
+            invitedCount: { increment: pendingInvitees.length }
+          }
+        });
+
+        console.log(`✅ Se enlazaron ${pendingInvitees.length} usuarios pendientes al nuevo ángel: ${nombre}`);
+      }
+    } catch (linkError) {
+      // No fallar el registro si hay error en el enlace automático
+      console.error('Error en enlace automático de invitados:', linkError);
+    }
 
     return NextResponse.json({
       success: true,

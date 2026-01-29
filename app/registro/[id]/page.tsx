@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Eye, EyeOff, Loader2, CheckCircle, AlertCircle, UserPlus } from 'lucide-react';
+import { Eye, EyeOff, Loader2, CheckCircle, AlertCircle, UserPlus, Search, User } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 interface Vision {
@@ -19,6 +19,12 @@ interface Vision {
   };
 }
 
+interface AngelSuggestion {
+  id: number;
+  nombre: string;
+  email: string;
+}
+
 export default function RegistroPublicoPage() {
   const router = useRouter();
   const params = useParams();
@@ -32,13 +38,21 @@ export default function RegistroPublicoPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Nuevos estados para ángel de enrolamiento
+  const [searchingAngel, setSearchingAngel] = useState(false);
+  const [angelSuggestions, setAngelSuggestions] = useState<AngelSuggestion[]>([]);
+  const [selectedAngel, setSelectedAngel] = useState<AngelSuggestion | null>(null);
+  const [showAngelSuggestions, setShowAngelSuggestions] = useState(false);
+
   const [formData, setFormData] = useState({
     nombre: '',
     email: '',
     emailConfirmacion: '',
     telefono: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    visionGraduacion: '', // Número de visión en la que se graduó
+    angelEnrolamiento: '' // Nombre del ángel de enrolamiento
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -46,6 +60,45 @@ export default function RegistroPublicoPage() {
   useEffect(() => {
     fetchVisionInfo();
   }, [visionId]);
+
+  // Buscar ángeles cuando se escribe en el campo
+  useEffect(() => {
+    const searchAngel = async () => {
+      if (formData.angelEnrolamiento.length < 3) {
+        setAngelSuggestions([]);
+        setShowAngelSuggestions(false);
+        return;
+      }
+
+      setSearchingAngel(true);
+      try {
+        const res = await fetch(`/api/registro/search-angel?q=${encodeURIComponent(formData.angelEnrolamiento)}`);
+        const data = await res.json();
+        if (data.success && data.usuarios) {
+          setAngelSuggestions(data.usuarios);
+          setShowAngelSuggestions(data.usuarios.length > 0);
+        }
+      } catch (error) {
+        console.error('Error buscando ángel:', error);
+      } finally {
+        setSearchingAngel(false);
+      }
+    };
+
+    const debounce = setTimeout(searchAngel, 300);
+    return () => clearTimeout(debounce);
+  }, [formData.angelEnrolamiento]);
+
+  const selectAngel = (angel: AngelSuggestion) => {
+    setSelectedAngel(angel);
+    setFormData({ ...formData, angelEnrolamiento: angel.nombre });
+    setShowAngelSuggestions(false);
+  };
+
+  const clearSelectedAngel = () => {
+    setSelectedAngel(null);
+    setFormData({ ...formData, angelEnrolamiento: '' });
+  };
 
   const fetchVisionInfo = async () => {
     try {
@@ -123,7 +176,11 @@ export default function RegistroPublicoPage() {
           nombre: formData.nombre,
           email: formData.email,
           telefono: formData.telefono,
-          password: formData.password
+          password: formData.password,
+          // Nuevos campos para usuarios del sistema viejo
+          visionGraduacion: formData.visionGraduacion || null,
+          angelEnrolamientoId: selectedAngel?.id || null, // ID si se encontró
+          angelEnrolamientoNombre: formData.angelEnrolamiento || null // Nombre (para enlace posterior)
         }),
       });
 
@@ -283,6 +340,88 @@ export default function RegistroPublicoPage() {
               className={`w-full px-4 py-3 bg-slate-800 border ${errors.telefono ? 'border-red-500' : 'border-slate-600'} rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20`}
             />
             {errors.telefono && <p className="text-red-400 text-xs mt-1">{errors.telefono}</p>}
+          </div>
+
+          {/* Campos opcionales para usuarios del sistema viejo */}
+          <div className="pt-4 border-t border-slate-700/50">
+            <p className="text-xs text-slate-400 mb-4">
+              📋 <strong>Opcional:</strong> Si vienes de una visión anterior, completa estos campos
+            </p>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Número de Visión donde te graduaste
+              </label>
+              <input
+                type="text"
+                value={formData.visionGraduacion}
+                onChange={(e) => setFormData({ ...formData, visionGraduacion: e.target.value })}
+                placeholder="Ej: Visión 15, V-23, etc."
+                className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
+              />
+            </div>
+
+            <div className="relative">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Nombre del Ángel de Enrolamiento
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={formData.angelEnrolamiento}
+                  onChange={(e) => {
+                    setFormData({ ...formData, angelEnrolamiento: e.target.value });
+                    if (selectedAngel) setSelectedAngel(null);
+                  }}
+                  placeholder="Escribe el nombre de quien te invitó..."
+                  className={`w-full px-4 py-3 bg-slate-800 border ${selectedAngel ? 'border-emerald-500' : 'border-slate-600'} rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 pr-12`}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {searchingAngel ? (
+                    <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
+                  ) : selectedAngel ? (
+                    <CheckCircle className="w-5 h-5 text-emerald-400" />
+                  ) : (
+                    <Search className="w-5 h-5 text-slate-400" />
+                  )}
+                </div>
+              </div>
+              
+              {/* Sugerencias de ángeles */}
+              {showAngelSuggestions && angelSuggestions.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {angelSuggestions.map((angel) => (
+                    <button
+                      key={angel.id}
+                      type="button"
+                      onClick={() => selectAngel(angel)}
+                      className="w-full px-4 py-3 text-left hover:bg-purple-600/20 transition-colors flex items-center gap-3 border-b border-slate-700 last:border-b-0"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-purple-600/30 flex items-center justify-center">
+                        <User className="w-4 h-4 text-purple-400" />
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">{angel.nombre}</p>
+                        <p className="text-slate-400 text-xs">{angel.email}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              
+              {selectedAngel && (
+                <p className="text-emerald-400 text-xs mt-2 flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" />
+                  Ángel encontrado: {selectedAngel.nombre}
+                </p>
+              )}
+              
+              {formData.angelEnrolamiento && !selectedAngel && formData.angelEnrolamiento.length >= 3 && !searchingAngel && (
+                <p className="text-amber-400 text-xs mt-2">
+                  ⚠️ No encontrado. Se guardará el nombre para enlazar cuando se registre.
+                </p>
+              )}
+            </div>
           </div>
 
           <div>
