@@ -15,16 +15,21 @@ export async function GET(request: NextRequest) {
     // Verificar que sea SCHOOL_ADMIN o SUPER_ADMIN
     const currentUser = await prisma.usuario.findUnique({
       where: { email: session.user.email },
-      select: { rol: true, schoolId: true }
+      select: { rol: true, organizationId: true }
     });
 
     if (!currentUser || !['SCHOOL_ADMIN', 'SUPER_ADMIN', 'ADMINISTRADOR'].includes(currentUser.rol)) {
       return NextResponse.json({ success: false, error: 'No tienes permisos' }, { status: 403 });
     }
 
-    // Obtener usuarios de la escuela del admin
+    // Solo SUPER_ADMIN puede ver todos los usuarios, los demás solo ven su organización
+    const whereClause = currentUser.rol === 'SUPER_ADMIN' 
+      ? {} 
+      : { organizationId: currentUser.organizationId };
+
+    // Obtener usuarios de la organización del admin
     const users = await prisma.usuario.findMany({
-      where: currentUser.schoolId ? { schoolId: currentUser.schoolId } : {},
+      where: whereClause,
       select: {
         id: true,
         nombre: true,
@@ -34,6 +39,8 @@ export async function GET(request: NextRequest) {
         esEntrenador: true,
         esCoordinador: true,
         esLider: true,
+        esCoordinadorBasico: true,
+        esCoordinadorAvanzado: true,
       },
       orderBy: { nombre: 'asc' }
     });
@@ -57,7 +64,7 @@ export async function PUT(request: NextRequest) {
     // Verificar que sea SCHOOL_ADMIN o SUPER_ADMIN
     const currentUser = await prisma.usuario.findUnique({
       where: { email: session.user.email },
-      select: { rol: true, schoolId: true }
+      select: { rol: true, organizationId: true }
     });
 
     if (!currentUser || !['SCHOOL_ADMIN', 'SUPER_ADMIN', 'ADMINISTRADOR'].includes(currentUser.rol)) {
@@ -65,20 +72,22 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { userId, esEntrenador, esCoordinador, esLider } = body;
+    const { userId, esEntrenador, esCoordinador, esLider, esCoordinadorBasico, esCoordinadorAvanzado } = body;
 
     if (!userId) {
       return NextResponse.json({ success: false, error: 'userId requerido' }, { status: 400 });
     }
 
-    // Verificar que el usuario pertenece a la escuela del admin
-    const targetUser = await prisma.usuario.findUnique({
-      where: { id: userId },
-      select: { schoolId: true }
-    });
+    // Verificar que el usuario pertenece a la organización del admin (excepto SUPER_ADMIN)
+    if (currentUser.rol !== 'SUPER_ADMIN') {
+      const targetUser = await prisma.usuario.findUnique({
+        where: { id: userId },
+        select: { organizationId: true }
+      });
 
-    if (currentUser.schoolId && targetUser?.schoolId !== currentUser.schoolId) {
-      return NextResponse.json({ success: false, error: 'Usuario no pertenece a tu escuela' }, { status: 403 });
+      if (targetUser?.organizationId !== currentUser.organizationId) {
+        return NextResponse.json({ success: false, error: 'Usuario no pertenece a tu organización' }, { status: 403 });
+      }
     }
 
     // Actualizar roles (NO se puede cambiar esMentor desde aquí)
@@ -88,6 +97,8 @@ export async function PUT(request: NextRequest) {
         esEntrenador: esEntrenador ?? false,
         esCoordinador: esCoordinador ?? false,
         esLider: esLider ?? false,
+        esCoordinadorBasico: esCoordinadorBasico ?? false,
+        esCoordinadorAvanzado: esCoordinadorAvanzado ?? false,
         updatedAt: new Date(),
       },
       select: {
@@ -96,6 +107,8 @@ export async function PUT(request: NextRequest) {
         esEntrenador: true,
         esCoordinador: true,
         esLider: true,
+        esCoordinadorBasico: true,
+        esCoordinadorAvanzado: true,
       }
     });
 

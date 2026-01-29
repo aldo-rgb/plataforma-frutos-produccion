@@ -18,6 +18,8 @@ interface User {
   esEntrenador: boolean;
   esCoordinador: boolean;
   esLider: boolean;
+  esCoordinadorBasico: boolean;
+  esCoordinadorAvanzado: boolean;
 }
 
 export default function RolesManagementPage() {
@@ -97,6 +99,8 @@ export default function RolesManagementPage() {
           esEntrenador: user.esEntrenador,
           esCoordinador: user.esCoordinador,
           esLider: user.esLider,
+          esCoordinadorBasico: user.esCoordinadorBasico,
+          esCoordinadorAvanzado: user.esCoordinadorAvanzado,
         }),
       });
 
@@ -201,6 +205,18 @@ export default function RolesManagementPage() {
               </div>
               <span className="text-sm text-slate-300">Líder</span>
             </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-600 flex items-center justify-center">
+                <Shield size={16} className="text-white" />
+              </div>
+              <span className="text-sm text-slate-300">Coord. Básico</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-rose-500 to-pink-600 flex items-center justify-center">
+                <Shield size={16} className="text-white" />
+              </div>
+              <span className="text-sm text-slate-300">Coord. Avanzado</span>
+            </div>
           </div>
         </div>
 
@@ -231,23 +247,23 @@ export default function RolesManagementPage() {
                 key={user.id}
                 className="bg-slate-900/50 border border-slate-700 rounded-2xl p-5 hover:border-purple-500/50 transition-all"
               >
-                <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                  {/* Info Usuario */}
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="flex flex-col gap-4">
+                  {/* Info Usuario - Primera línea */}
+                  <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
                       {user.nombre.charAt(0)}
                     </div>
-                    <div className="min-w-0">
-                      <h3 className="text-lg font-bold text-white truncate">{user.nombre}</h3>
-                      <p className="text-sm text-slate-400 truncate">{user.email}</p>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-bold text-white">{user.nombre}</h3>
+                      <p className="text-sm text-slate-400">{user.email}</p>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-xs font-bold border flex-shrink-0 ${getRoleBadgeColor(user.rol)}`}>
                       {user.rol}
                     </span>
                   </div>
 
-                  {/* Checkboxes de Roles */}
-                  <div className="flex flex-wrap items-center gap-3">
+                  {/* Checkboxes de Roles - Segunda línea */}
+                  <div className="flex flex-wrap items-center gap-3 pl-16">
                     {/* Mentor - Deshabilitado, solo via alta de mentores */}
                     <label className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-not-allowed ${
                       user.esMentor 
@@ -317,6 +333,42 @@ export default function RolesManagementPage() {
                       <UserCheck size={16} className={user.esLider ? 'text-green-400' : 'text-slate-400'} />
                       <span className={`text-sm ${user.esLider ? 'text-green-300' : 'text-slate-300'}`}>
                         Líder
+                      </span>
+                    </label>
+
+                    {/* Coordinador Básico */}
+                    <label className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
+                      user.esCoordinadorBasico 
+                        ? 'bg-teal-500/20 border-teal-500/50 hover:bg-teal-500/30' 
+                        : 'bg-slate-800 border-slate-700 hover:border-teal-500/30'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={user.esCoordinadorBasico}
+                        onChange={() => toggleRole(user.id, 'esCoordinadorBasico')}
+                        className="w-4 h-4 rounded accent-teal-500"
+                      />
+                      <Shield size={16} className={user.esCoordinadorBasico ? 'text-teal-400' : 'text-slate-400'} />
+                      <span className={`text-sm ${user.esCoordinadorBasico ? 'text-teal-300' : 'text-slate-300'}`}>
+                        Coord. Básico
+                      </span>
+                    </label>
+
+                    {/* Coordinador Avanzado */}
+                    <label className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
+                      user.esCoordinadorAvanzado 
+                        ? 'bg-rose-500/20 border-rose-500/50 hover:bg-rose-500/30' 
+                        : 'bg-slate-800 border-slate-700 hover:border-rose-500/30'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={user.esCoordinadorAvanzado}
+                        onChange={() => toggleRole(user.id, 'esCoordinadorAvanzado')}
+                        className="w-4 h-4 rounded accent-rose-500"
+                      />
+                      <Shield size={16} className={user.esCoordinadorAvanzado ? 'text-rose-400' : 'text-slate-400'} />
+                      <span className={`text-sm ${user.esCoordinadorAvanzado ? 'text-rose-300' : 'text-slate-300'}`}>
+                        Coord. Avanzado
                       </span>
                     </label>
 

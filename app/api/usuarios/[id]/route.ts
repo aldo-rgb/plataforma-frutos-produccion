@@ -72,7 +72,7 @@ export async function PUT(
     }
 
     // Validar rol si se proporciona
-    const rolesValidos = ['PARTICIPANTE', 'MENTOR', 'COORDINADOR', 'GAMECHANGER', 'LIDER', 'STAFF', 'ADMIN'];
+    const rolesValidos = ['PARTICIPANTE', 'MENTOR', 'COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'GAMECHANGER', 'LIDER', 'TRAINER', 'STAFF', 'ADMIN', 'ADMINISTRADOR', 'SCHOOL_ADMIN', 'SUPER_ADMIN'];
     if (rol && !rolesValidos.includes(rol)) {
       return NextResponse.json(
         { error: `Rol inválido. Roles válidos: ${rolesValidos.join(', ')}` },

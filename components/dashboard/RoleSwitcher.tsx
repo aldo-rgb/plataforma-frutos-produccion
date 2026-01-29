@@ -13,6 +13,8 @@ interface RoleSwitcherProps {
     esEntrenador?: boolean;
     esCoordinador?: boolean;
     esLider?: boolean;
+    esCoordinadorBasico?: boolean;
+    esCoordinadorAvanzado?: boolean;
   };
 }
 
@@ -54,10 +56,10 @@ export function RoleSwitcher({ usuario }: RoleSwitcherProps) {
       color: 'from-blue-500 to-cyan-600'
     },
     {
-      key: 'ENTRENADOR',
+      key: 'TRAINER',
       label: 'Entrenador',
       icon: <Briefcase size={16} />,
-      path: '/dashboard/entrenador',
+      path: '/dashboard/trainer',
       color: 'from-orange-500 to-amber-600'
     },
     {
@@ -66,6 +68,20 @@ export function RoleSwitcher({ usuario }: RoleSwitcherProps) {
       icon: <Shield size={16} />,
       path: '/dashboard/coordinador',
       color: 'from-purple-500 to-violet-600'
+    },
+    {
+      key: 'COORDINATOR_BASIC',
+      label: 'Coord. Básico',
+      icon: <Shield size={16} />,
+      path: '/dashboard/coordinador-basico',
+      color: 'from-teal-500 to-cyan-600'
+    },
+    {
+      key: 'COORDINATOR_ADVANCED',
+      label: 'Coord. Avanzado',
+      icon: <Shield size={16} />,
+      path: '/dashboard/coordinador-avanzado',
+      color: 'from-rose-500 to-pink-600'
     }
   ];
 
@@ -76,14 +92,11 @@ export function RoleSwitcher({ usuario }: RoleSwitcherProps) {
     
     // Roles adicionales por flags
     if (role.key === 'MENTOR' && usuario.esMentor) return true;
-    if (role.key === 'ENTRENADOR' && usuario.esEntrenador) return true;
+    if (role.key === 'TRAINER' && usuario.esEntrenador) return true;
     if (role.key === 'COORDINADOR' && usuario.esCoordinador) return true;
     if (role.key === 'LIDER' && usuario.esLider) return true;
-    
-    // Si es admin, tiene acceso a todo
-    if (['ADMINISTRADOR', 'SUPER_ADMIN', 'SCHOOL_ADMIN'].includes(usuario.rol)) {
-      return true;
-    }
+    if (role.key === 'COORDINATOR_BASIC' && usuario.esCoordinadorBasico) return true;
+    if (role.key === 'COORDINATOR_ADVANCED' && usuario.esCoordinadorAvanzado) return true;
     
     return false;
   });

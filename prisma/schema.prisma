@@ -2180,6 +2180,8 @@ model Usuario {
   esEntrenador                                                           Boolean                         @default(false)
   esCoordinador                                                          Boolean                         @default(false)
   esLider                                                                Boolean                         @default(false)
+  esCoordinadorBasico                                                    Boolean                         @default(false)
+  esCoordinadorAvanzado                                                  Boolean                         @default(false)
   AccessCode_AccessCode_generatedByToUsuario                             AccessCode[]                    @relation("AccessCode_generatedByToUsuario")
   AccessCode_AccessCode_usedByToUsuario                                  AccessCode[]                    @relation("AccessCode_usedByToUsuario")
   AdminTask                                                              AdminTask[]

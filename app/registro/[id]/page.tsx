@@ -363,7 +363,7 @@ export default function RegistroPublicoPage() {
 
             <div className="relative">
               <label className="block text-sm font-medium text-slate-300 mb-2">
-                Nombre del Ángel de Enrolamiento
+                Nombre de Referencia
               </label>
               <div className="relative">
                 <input
