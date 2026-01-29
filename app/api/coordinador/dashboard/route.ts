@@ -13,8 +13,13 @@ export async function GET(req: Request) {
 
     const user = session.user as any;
 
-    // Verificar que el usuario sea COORDINADOR
-    if (user.rol !== 'COORDINADOR') {
+    // Roles válidos de coordinador
+    const coordinadorRoles = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER'];
+    const tieneRolCoordinador = coordinadorRoles.includes(user.rol);
+    const tieneFlagCoordinador = user.esCoordinador || user.esCoordinadorBasico || user.esCoordinadorAvanzado || user.esEntrenador;
+    
+    // Verificar que el usuario sea COORDINADOR o tenga flag de coordinador
+    if (!tieneRolCoordinador && !tieneFlagCoordinador) {
       return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
     }
 

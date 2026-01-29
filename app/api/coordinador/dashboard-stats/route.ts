@@ -23,7 +23,11 @@ export async function GET() {
     // Roles válidos de coordinador
     const coordinadorRoles = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER'];
     
-    if (!usuario || !coordinadorRoles.includes(usuario.rol)) {
+    // Verificar si tiene rol de coordinador O algún flag de coordinador
+    const tieneRolCoordinador = coordinadorRoles.includes(usuario?.rol || '');
+    const tieneFlagCoordinador = usuario?.esCoordinador || usuario?.esCoordinadorBasico || usuario?.esCoordinadorAvanzado || usuario?.esEntrenador;
+    
+    if (!usuario || (!tieneRolCoordinador && !tieneFlagCoordinador)) {
       console.log('❌ No es coordinador');
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }

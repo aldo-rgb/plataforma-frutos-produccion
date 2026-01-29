@@ -15,7 +15,12 @@ export async function GET() {
       where: { email: session.user.email }
     });
 
-    if (!coordinador || coordinador.rol !== 'COORDINADOR') {
+    // Roles válidos de coordinador
+    const coordinadorRoles = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER'];
+    const tieneRolCoordinador = coordinadorRoles.includes(coordinador?.rol || '');
+    const tieneFlagCoordinador = coordinador?.esCoordinador || coordinador?.esCoordinadorBasico || coordinador?.esCoordinadorAvanzado || coordinador?.esEntrenador;
+    
+    if (!coordinador || (!tieneRolCoordinador && !tieneFlagCoordinador)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
