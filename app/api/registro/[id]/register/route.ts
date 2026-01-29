@@ -62,6 +62,7 @@ export async function POST(
         maxParticipantes: true,
         isActive: true,
         organizationId: true,
+        coordinadorId: true, // Para crear el enrollment
         _count: {
           select: {
             VisionParticipante: true
@@ -142,13 +143,34 @@ export async function POST(
       }
     });
 
-    // Asignar a la visión
+    // Asignar a la visión (legacy - VisionParticipante)
     await prisma.visionParticipante.create({
       data: {
         visionId: vision.id,
         participanteId: newUser.id
       }
     });
+
+    // ==========================================
+    // CREAR ENROLLMENT EN NIVEL PL (LEADERSHIP)
+    // ==========================================
+    // Los usuarios que se registran desde /registro/[id] son graduados
+    // y van directo a nivel Liderato (PL)
+    if (vision.coordinadorId) {
+      await prisma.vision_enrollments.create({
+        data: {
+          visionId: vision.id,
+          userId: newUser.id,
+          coordinatorId: vision.coordinadorId,
+          level: 'PL', // Nivel Liderato
+          enrollmentStatus: 'ENROLLED',
+          paymentStatus: 'PAID', // Ya pagaron en el sistema anterior
+          attendanceStatus: 'PENDING',
+          invitedBy: angelEnrolamientoId || null,
+          updatedAt: new Date()
+        }
+      });
+    }
 
     // Si se asignó un ángel encontrado, incrementar su contador de invitados
     if (angelEnrolamientoId) {

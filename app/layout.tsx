@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Quantum Platform - Transforma tu Vida",
-  description: "Plataforma de desarrollo personal con mentoría y seguimiento de metas",
+  description: "Plataforma de transformación cuántica con mentoría y seguimiento",
   manifest: "/manifest.json",
   themeColor: "#050B14",
   appleWebApp: {
