@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Camera, Filter, Sparkles, Award, TrendingUp, Image as ImageIcon, Info, X, Video, User, Trash2, BookOpen } from 'lucide-react';
+import { Camera, Filter, Sparkles, Award, TrendingUp, Image as ImageIcon, Info, X, Video, User, Trash2, BookOpen, Zap } from 'lucide-react';
 import Image from 'next/image';
 import TimeCapsuleVideoModal from '@/components/vault/TimeCapsuleVideoModal';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -30,17 +30,26 @@ interface Avatar {
   sourceImage: string;
 }
 
+interface CheckInPhoto {
+  id: number;
+  generatedUrl: string;
+  vibe: string; // Etiqueta: "📸 Check-in Básico", etc.
+  createdAt: string;
+}
+
 export default function TheVaultPage() {
   const [evidencias, setEvidencias] = useState<Evidencia[]>([]);
   const [avatares, setAvatares] = useState<Avatar[]>([]);
+  const [checkInPhotos, setCheckInPhotos] = useState<CheckInPhoto[]>([]);
   const [filtroArea, setFiltroArea] = useState<string>('TODAS');
   const [filtroRareza, setFiltroRareza] = useState<string>('TODAS');
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<Evidencia | null>(null);
   const [selectedAvatar, setSelectedAvatar] = useState<Avatar | null>(null);
+  const [selectedCheckIn, setSelectedCheckIn] = useState<CheckInPhoto | null>(null);
   const [showRarityGuide, setShowRarityGuide] = useState(false);
   const [showTimeCapsule, setShowTimeCapsule] = useState(false);
-  const [activeTab, setActiveTab] = useState<'evidencias' | 'avatares' | 'album'>('evidencias');
+  const [activeTab, setActiveTab] = useState<'evidencias' | 'avatares' | 'album' | 'checkin'>('evidencias');
 
   useEffect(() => {
     fetchEvidencias();
@@ -68,7 +77,12 @@ export default function TheVaultPage() {
       const data = await response.json();
       
       if (data.success && data.avatares) {
-        setAvatares(data.avatares);
+        // Separar avatares de fotos de check-in
+        const regularAvatars = data.avatares.filter((a: Avatar) => a.sourceImage !== 'check-in-photo');
+        const checkIns = data.avatares.filter((a: Avatar) => a.sourceImage === 'check-in-photo');
+        
+        setAvatares(regularAvatars);
+        setCheckInPhotos(checkIns);
       }
     } catch (error) {
       console.error('Error al cargar avatares:', error);
@@ -186,6 +200,18 @@ export default function TheVaultPage() {
             <BookOpen className="w-5 h-5" />
             <span>Álbum Cuántico</span>
             <Sparkles className="w-4 h-4 text-yellow-400" />
+          </button>
+
+          <button
+            onClick={() => setActiveTab('checkin')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
+              activeTab === 'checkin'
+                ? 'bg-gradient-to-r from-green-600 to-cyan-600 text-white'
+                : 'bg-black/30 border border-purple-500/30 text-gray-400 hover:text-white'
+            }`}
+          >
+            <Zap className="w-5 h-5" />
+            <span>Materialización ({checkInPhotos.length})</span>
           </button>
         </div>
 
@@ -430,6 +456,166 @@ export default function TheVaultPage() {
       {activeTab === 'album' && (
         <div className="max-w-7xl mx-auto px-6">
           <QuantumAlbumTab />
+        </div>
+      )}
+
+      {/* TAB DE MATERIALIZACIÓN (Fotos de Check-in) */}
+      {activeTab === 'checkin' && (
+        <>
+          {/* Stats de Check-in */}
+          <div className="max-w-7xl mx-auto px-6 py-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-gradient-to-br from-green-900/50 to-green-800/30 border border-green-500/30 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap className="w-5 h-5 text-green-400" />
+                  <span className="text-gray-400 text-sm">Total Fotos</span>
+                </div>
+                <p className="text-3xl font-bold text-green-400">{checkInPhotos.length}</p>
+              </div>
+              
+              <div className="bg-gradient-to-br from-blue-900/50 to-blue-800/30 border border-blue-500/30 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Camera className="w-5 h-5 text-blue-400" />
+                  <span className="text-gray-400 text-sm">Básico</span>
+                </div>
+                <p className="text-3xl font-bold text-blue-400">
+                  {checkInPhotos.filter(p => p.vibe.includes('Básico')).length}
+                </p>
+              </div>
+              
+              <div className="bg-gradient-to-br from-purple-900/50 to-purple-800/30 border border-purple-500/30 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-5 h-5 text-purple-400" />
+                  <span className="text-gray-400 text-sm">Avanzado</span>
+                </div>
+                <p className="text-3xl font-bold text-purple-400">
+                  {checkInPhotos.filter(p => p.vibe.includes('Avanzado')).length}
+                </p>
+              </div>
+              
+              <div className="bg-gradient-to-br from-yellow-900/50 to-yellow-800/30 border border-yellow-500/30 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Award className="w-5 h-5 text-yellow-400" />
+                  <span className="text-gray-400 text-sm">Liderato</span>
+                </div>
+                <p className="text-3xl font-bold text-yellow-400">
+                  {checkInPhotos.filter(p => p.vibe.includes('Liderato')).length}
+                </p>
+              </div>
+            </div>
+
+            {/* Descripción de la sección */}
+            <div className="bg-black/30 border border-green-500/30 rounded-lg p-4 mb-6">
+              <p className="text-gray-300 italic">
+                "La <span className="text-green-400 font-bold">Materialización</span> es el momento donde tu compromiso 
+                se vuelve tangible. Cada foto de check-in es evidencia de tu presencia física en el entrenamiento, 
+                una prueba de que elegiste estar ahí cuando pudiste no haberlo hecho."
+              </p>
+            </div>
+          </div>
+
+          {/* Grid de fotos de check-in */}
+          {checkInPhotos.length === 0 ? (
+            <div className="max-w-7xl mx-auto px-6 py-20 text-center">
+              <Zap className="w-20 h-20 text-gray-600 mx-auto mb-4" />
+              <p className="text-xl text-gray-400 mb-2">Aún no hay fotos de Materialización</p>
+              <p className="text-gray-500">Las fotos de check-in de tus entrenamientos aparecerán aquí.</p>
+            </div>
+          ) : (
+            <div className="max-w-7xl mx-auto px-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {checkInPhotos.map((photo) => {
+                  // Determinar color según tipo
+                  let borderColor = 'border-green-500/30';
+                  if (photo.vibe.includes('Avanzado')) borderColor = 'border-purple-500/30 hover:border-purple-500';
+                  else if (photo.vibe.includes('Liderato')) borderColor = 'border-yellow-500/30 hover:border-yellow-500';
+                  else if (photo.vibe.includes('Básico')) borderColor = 'border-blue-500/30 hover:border-blue-500';
+                  
+                  return (
+                    <div
+                      key={photo.id}
+                      onClick={() => setSelectedCheckIn(photo)}
+                      className={`relative aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-all hover:scale-105 bg-black/50 ${borderColor}`}
+                    >
+                      <Image
+                        src={photo.generatedUrl}
+                        alt={photo.vibe}
+                        fill
+                        className="object-cover"
+                      />
+                      
+                      {/* Overlay con info */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity">
+                        <div className="absolute bottom-0 left-0 right-0 p-3">
+                          <p className="text-xs text-gray-300 mb-1">
+                            {new Date(photo.createdAt).toLocaleDateString('es-ES', { 
+                              day: 'numeric', 
+                              month: 'short', 
+                              year: 'numeric' 
+                            })}
+                          </p>
+                          <p className="text-sm font-bold">{photo.vibe.replace('📸 ', '')}</p>
+                        </div>
+                      </div>
+                      
+                      {/* Badge en esquina */}
+                      <div className="absolute top-2 right-2 backdrop-blur-sm bg-black/50 rounded-full px-2 py-1">
+                        <span className="text-xs">📸</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* MODAL DE CHECK-IN AMPLIADO */}
+      {selectedCheckIn && (
+        <div 
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedCheckIn(null)}
+        >
+          <div className="relative max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setSelectedCheckIn(null)}
+              className="absolute -top-12 right-0 text-white text-xl hover:text-green-400"
+            >
+              ✕ Cerrar
+            </button>
+            
+            <div className="rounded-lg overflow-hidden border-4 border-green-500">
+              <div className="relative w-full" style={{ paddingBottom: '100%' }}>
+                <Image
+                  src={selectedCheckIn.generatedUrl}
+                  alt={selectedCheckIn.vibe}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              
+              <div className="bg-black/80 p-6">
+                <h3 className="text-2xl font-bold mb-4 text-green-400">{selectedCheckIn.vibe}</h3>
+                <div className="space-y-2 text-gray-300">
+                  <p>
+                    <span className="text-gray-400">Fecha:</span>{' '}
+                    {new Date(selectedCheckIn.createdAt).toLocaleDateString('es-ES', { 
+                      weekday: 'long',
+                      day: 'numeric', 
+                      month: 'long', 
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-4 italic">
+                    "Esta foto es prueba de tu presencia y compromiso con tu transformación."
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
