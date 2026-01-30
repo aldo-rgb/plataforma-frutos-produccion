@@ -238,7 +238,13 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId, de
 
   // === FUNCIÓN PARA ACTIVAR NFC CON USER GESTURE ===
   const activateNFC = useCallback(async () => {
-    if (nfcMode !== 'native' || nfcActivated) return;
+    if (nfcMode !== 'native') return;
+    
+    // Evitar activar si ya está escaneando
+    if (nfcReaderRef.current) {
+      console.log('📱 NFC ya está activo');
+      return;
+    }
     
     setChannelStatus(prev => ({ ...prev, nfc: 'activating' }));
     
@@ -291,10 +297,12 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId, de
       if (error.name === 'AbortError') {
         console.log('NFC scan was aborted');
       }
+      nfcReaderRef.current = null;
+      nfcAbortRef.current = null;
       setChannelStatus(prev => ({ ...prev, nfc: 'inactive' }));
       setNfcActivated(false);
     }
-  }, [nfcMode, nfcActivated, handleDetection]);
+  }, [nfcMode, handleDetection]);
 
   // === CANAL C: NFC READER (Nativo - Solo Android) ===
   // Ya NO inicia automáticamente - requiere user gesture via activateNFC()
@@ -302,25 +310,37 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId, de
     // Solo activar NFC nativo en Android
     if (!enabled || nfcMode !== 'native') return;
 
-    // Si ya está activado, no hacer nada
-    if (nfcActivated) return;
+    // Solo marcamos que el NFC está disponible pero inactivo al inicio
+    // NO reseteamos si ya está activado
+    if (!nfcActivated) {
+      setChannelStatus(prev => ({ ...prev, nfc: 'inactive' }));
+      console.log('📱 NFC Native disponible - esperando activación manual');
+    }
 
-    // Solo marcamos que el NFC está disponible pero inactivo
-    // El usuario debe presionar el botón para activarlo
-    setChannelStatus(prev => ({ ...prev, nfc: 'inactive' }));
-    console.log('📱 NFC Native disponible - esperando activación manual');
-
+    // Solo cleanup cuando el componente se desmonta completamente o enabled cambia a false
     return () => {
-      // Cancelar el scan si está activo
+      // Solo abortar si realmente nos estamos desmontando (enabled = false)
+      if (!enabled) {
+        if (nfcAbortRef.current) {
+          nfcAbortRef.current.abort();
+          nfcAbortRef.current = null;
+        }
+        nfcReaderRef.current = null;
+      }
+    };
+  }, [enabled, nfcMode]); // Removido nfcActivated de las dependencias
+
+  // Cleanup separado para cuando el componente se desmonta
+  useEffect(() => {
+    return () => {
       if (nfcAbortRef.current) {
         nfcAbortRef.current.abort();
         nfcAbortRef.current = null;
       }
       nfcReaderRef.current = null;
-      // Reset para la próxima vez que se monte
       setNfcActivated(false);
     };
-  }, [enabled, nfcMode, nfcActivated]);
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
