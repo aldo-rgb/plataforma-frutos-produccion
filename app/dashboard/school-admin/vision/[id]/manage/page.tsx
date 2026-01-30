@@ -638,7 +638,8 @@ export default function VisionManagePage() {
         setProcessingExcel(false);
       };
       
-      reader.readAsText(file);
+      // Leer con encoding UTF-8 para soportar acentos correctamente
+      reader.readAsText(file, 'UTF-8');
     } catch (error) {
       console.error('Error parsing Excel:', error);
       setToast({ show: true, message: 'Error al procesar el archivo', type: 'error' });
