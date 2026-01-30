@@ -264,10 +264,20 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId, de
       const abortController = new AbortController();
       nfcAbortRef.current = abortController;
 
+      // IMPORTANTE: En Android, primero hacemos scan para activar el lector NFC
+      // (igual que en BadgePreview que funciona)
+      console.log('📱 Iniciando NFC scan...');
+      await ndef.scan({ signal: abortController.signal });
+      console.log('📱 NFC scan iniciado correctamente');
+      
+      // DESPUÉS de scan(), definimos el handler de lectura
       ndef.onreading = (event: NDEFReadingEvent) => {
         console.log('📱 NFC Tag detectado!', event.serialNumber);
+        console.log('📱 Records:', event.message.records.length);
+        
         if (event.message.records.length > 0) {
           const record = event.message.records[0];
+          console.log('📱 Record type:', record.recordType);
           
           let data = '';
           if (record.recordType === 'text') {
@@ -300,20 +310,20 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId, de
               setLastDetection(null);
             }, 2000);
           }
+        } else {
+          console.log('📱 NFC Tag sin records NDEF');
         }
       };
 
       ndef.onreadingerror = (error: any) => {
-        console.error('NFC read error:', error);
+        console.error('📱 NFC read error:', error);
       };
 
-      // Esta llamada requiere user gesture en Android
-      await ndef.scan({ signal: abortController.signal });
       setNfcActivated(true);
       setChannelStatus(prev => ({ ...prev, nfc: 'scanning' }));
-      console.log('📱 NFC Native scanning started (user gesture)');
+      console.log('📱 NFC Native listo para leer');
     } catch (error: any) {
-      console.error('Error starting NFC:', error);
+      console.error('📱 Error starting NFC:', error);
       if (error.name === 'AbortError') {
         console.log('NFC scan was aborted');
       }
