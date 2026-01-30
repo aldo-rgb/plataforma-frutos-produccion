@@ -1052,10 +1052,17 @@ export default function VisionManagePage() {
   };
 
   // Función para promover usuario al siguiente nivel (solo ADMINISTRADOR)
-  const handlePromoteToNextLevel = async (userId: number, userName: string, currentLevel: 'BASIC' | 'ADVANCED') => {
+  const handlePromoteToNextLevel = async (userId: number | undefined, userName: string | undefined, currentLevel: 'BASIC' | 'ADVANCED') => {
+    // Validar que tenemos el userId
+    if (!userId) {
+      setToast({ show: true, message: 'Error: No se pudo obtener el ID del usuario', type: 'error' });
+      setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 3000);
+      return;
+    }
+    
     const nextLevel = currentLevel === 'BASIC' ? 'AVANZADO' : 'LIDERATO';
     
-    if (!confirm(`¿Crear enrollment de ${nextLevel} con ticket PAGADO para ${userName}?`)) {
+    if (!confirm(`¿Crear enrollment de ${nextLevel} con ticket PAGADO para ${userName || 'Usuario'}?`)) {
       return;
     }
     
