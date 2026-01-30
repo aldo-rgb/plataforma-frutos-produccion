@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { createClient } from '@supabase/supabase-js';
+import prisma from '@/lib/prisma';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://fteqhmntkmmppxufjrwt.supabase.co';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -11,7 +12,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 /**
  * API: Subir logo a Supabase Storage
  * Recibe URL temporal de DALL-E, descarga la imagen y la sube a Supabase
- * Retorna URL permanente
+ * Retorna URL permanente y guarda en The Vault como Artefacto
  */
 export async function POST(request: Request) {
   try {
@@ -20,6 +21,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    const userId = parseInt(session.user.id);
     const { logoUrl, businessName } = await request.json();
 
     if (!logoUrl) {
@@ -75,6 +77,27 @@ export async function POST(request: Request) {
       .getPublicUrl(fileName);
 
     console.log('✅ Logo subido exitosamente:', publicUrl);
+
+    // Guardar en The Vault como Artefacto
+    try {
+      const logoLabel = businessName 
+        ? `🎨 Logo: ${businessName}`
+        : '🎨 Logo de Negocio';
+      
+      await prisma.avatarGenerationAttempt.create({
+        data: {
+          usuarioId: userId,
+          sourceImage: 'business-logo',
+          generatedUrl: publicUrl,
+          vibe: logoLabel,
+          gender: 'neutro'
+        }
+      });
+      console.log(`🎨 Logo guardado en The Vault (Artefactos) para usuario ${userId}: ${logoLabel}`);
+    } catch (vaultError) {
+      // No fallar si no se puede guardar en vault
+      console.error('Error guardando logo en vault:', vaultError);
+    }
 
     return NextResponse.json({ 
       success: true,

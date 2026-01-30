@@ -37,16 +37,25 @@ interface CheckInPhoto {
   createdAt: string;
 }
 
+interface BusinessLogo {
+  id: number;
+  generatedUrl: string;
+  vibe: string; // Etiqueta: "🎨 Logo: NombreNegocio"
+  createdAt: string;
+}
+
 export default function TheVaultPage() {
   const [evidencias, setEvidencias] = useState<Evidencia[]>([]);
   const [avatares, setAvatares] = useState<Avatar[]>([]);
   const [checkInPhotos, setCheckInPhotos] = useState<CheckInPhoto[]>([]);
+  const [businessLogos, setBusinessLogos] = useState<BusinessLogo[]>([]);
   const [filtroArea, setFiltroArea] = useState<string>('TODAS');
   const [filtroRareza, setFiltroRareza] = useState<string>('TODAS');
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<Evidencia | null>(null);
   const [selectedAvatar, setSelectedAvatar] = useState<Avatar | null>(null);
   const [selectedCheckIn, setSelectedCheckIn] = useState<CheckInPhoto | null>(null);
+  const [selectedLogo, setSelectedLogo] = useState<BusinessLogo | null>(null);
   const [showRarityGuide, setShowRarityGuide] = useState(false);
   const [showTimeCapsule, setShowTimeCapsule] = useState(false);
   const [activeTab, setActiveTab] = useState<'evidencias' | 'avatares' | 'album' | 'checkin'>('evidencias');
@@ -77,12 +86,16 @@ export default function TheVaultPage() {
       const data = await response.json();
       
       if (data.success && data.avatares) {
-        // Separar avatares de fotos de check-in
-        const regularAvatars = data.avatares.filter((a: Avatar) => a.sourceImage !== 'check-in-photo');
+        // Separar avatares, fotos de check-in y logos de negocio
+        const regularAvatars = data.avatares.filter((a: Avatar) => 
+          a.sourceImage !== 'check-in-photo' && a.sourceImage !== 'business-logo'
+        );
         const checkIns = data.avatares.filter((a: Avatar) => a.sourceImage === 'check-in-photo');
+        const logos = data.avatares.filter((a: Avatar) => a.sourceImage === 'business-logo');
         
         setAvatares(regularAvatars);
         setCheckInPhotos(checkIns);
+        setBusinessLogos(logos);
       }
     } catch (error) {
       console.error('Error al cargar avatares:', error);
@@ -174,7 +187,7 @@ export default function TheVaultPage() {
             }`}
           >
             <ImageIcon className="w-5 h-5" />
-            <span>Artefactos ({evidencias.length})</span>
+            <span>Artefactos ({evidencias.length + businessLogos.length})</span>
           </button>
           
           <button
@@ -370,6 +383,49 @@ export default function TheVaultPage() {
                   </div>
                 ))}
               </div>
+              
+              {/* SECCIÓN DE LOGOS DE NEGOCIO */}
+              {businessLogos.length > 0 && (
+                <>
+                  <div className="mt-10 mb-4">
+                    <h3 className="text-xl font-bold text-orange-400 flex items-center gap-2">
+                      <span>🎨</span> Logos de Mi Negocio ({businessLogos.length})
+                    </h3>
+                    <p className="text-gray-400 text-sm">Logos generados para tu Idea Millonaria</p>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {businessLogos.map((logo) => (
+                      <div
+                        key={logo.id}
+                        onClick={() => setSelectedLogo(logo)}
+                        className="relative aspect-square rounded-lg overflow-hidden border-2 border-orange-500/50 cursor-pointer transition-all hover:scale-105 hover:border-orange-400 bg-gradient-to-br from-orange-900/20 to-purple-900/20"
+                      >
+                        <Image
+                          src={logo.generatedUrl}
+                          alt={logo.vibe}
+                          fill
+                          className="object-cover"
+                        />
+                        
+                        {/* Overlay con info */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity">
+                          <div className="absolute bottom-0 left-0 right-0 p-3">
+                            <p className="text-sm font-bold text-orange-300">{logo.vibe}</p>
+                            <p className="text-xs text-gray-400">
+                              {new Date(logo.createdAt).toLocaleDateString('es-MX')}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Badge de tipo */}
+                        <div className="absolute top-2 right-2 backdrop-blur-sm bg-orange-500/80 rounded-full px-2 py-1">
+                          <span className="text-xs">🎨 Logo</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </>
@@ -612,6 +668,61 @@ export default function TheVaultPage() {
                   <p className="text-sm text-gray-500 mt-4 italic">
                     "Esta foto es prueba de tu presencia y compromiso con tu transformación."
                   </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE LOGO DE NEGOCIO AMPLIADO */}
+      {selectedLogo && (
+        <div 
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedLogo(null)}
+        >
+          <div className="relative max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setSelectedLogo(null)}
+              className="absolute -top-12 right-0 text-white text-xl hover:text-orange-400"
+            >
+              ✕ Cerrar
+            </button>
+            
+            <div className="rounded-lg overflow-hidden border-4 border-orange-500">
+              <div className="relative w-full" style={{ paddingBottom: '100%' }}>
+                <Image
+                  src={selectedLogo.generatedUrl}
+                  alt={selectedLogo.vibe}
+                  fill
+                  className="object-contain bg-gradient-to-br from-gray-900 to-black"
+                />
+              </div>
+              
+              <div className="bg-black/80 p-6">
+                <h3 className="text-2xl font-bold mb-4 text-orange-400">{selectedLogo.vibe}</h3>
+                <div className="space-y-2 text-gray-300">
+                  <p>
+                    <span className="text-gray-400">Creado:</span>{' '}
+                    {new Date(selectedLogo.createdAt).toLocaleDateString('es-ES', { 
+                      day: 'numeric', 
+                      month: 'long', 
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                  <p className="text-sm text-gray-500 mt-4 italic">
+                    "Este logo representa tu Idea Millonaria materializada."
+                  </p>
+                  <a
+                    href={selectedLogo.generatedUrl}
+                    download={`logo-${Date.now()}.png`}
+                    target="_blank"
+                    className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors"
+                  >
+                    📥 Descargar Logo
+                  </a>
                 </div>
               </div>
             </div>
