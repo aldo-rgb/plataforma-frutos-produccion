@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 
 // POST /api/admin/promote-to-next-level
 // Solo ADMINISTRADOR puede usar esta API
-// Crea enrollment para el siguiente nivel con ticket pagado
+// Crea enrollment Y ticket de entrada para el siguiente nivel
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -33,14 +33,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No hay nivel siguiente disponible' }, { status: 400 });
     }
     
-    // Verificar que el usuario existe
+    // Verificar que el usuario existe con su organización
     const user = await prisma.usuario.findUnique({
       where: { id: userId },
-      select: { id: true, nombre: true }
+      select: { id: true, nombre: true, organizationId: true }
     });
     
     if (!user) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+    
+    if (!user.organizationId) {
+      return NextResponse.json({ error: 'Usuario no tiene organización asignada' }, { status: 400 });
     }
     
     // Verificar que la visión existe
@@ -66,8 +70,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No se encontró enrollment en el nivel actual' }, { status: 404 });
     }
     
-    // Verificar si ya existe enrollment para el siguiente nivel
-    const existingNextEnrollment = await prisma.vision_enrollments.findFirst({
+    // PASO 1: Actualizar el nivel ACTUAL a PAID si no lo tiene
+    if (currentEnrollment.paymentStatus !== 'PAID') {
+      await prisma.vision_enrollments.update({
+        where: { id: currentEnrollment.id },
+        data: { paymentStatus: 'PAID' }
+      });
+      console.log(`[ADMIN] Enrollment ${currentLevel} actualizado a PAID para usuario ${userId}`);
+    }
+    
+    // PASO 2: Verificar/crear enrollment para el siguiente nivel
+    let existingNextEnrollment = await prisma.vision_enrollments.findFirst({
       where: { 
         userId, 
         visionId, 
@@ -76,40 +89,81 @@ export async function POST(request: NextRequest) {
     });
     
     if (existingNextEnrollment) {
-      // Si ya existe, solo actualizar el paymentStatus a PAID
+      // Si ya existe, actualizar el paymentStatus a PAID
       await prisma.vision_enrollments.update({
         where: { id: existingNextEnrollment.id },
         data: { paymentStatus: 'PAID' }
       });
-      
-      return NextResponse.json({ 
-        success: true, 
-        message: `Enrollment de ${nextLevel} actualizado a PAID`,
-        action: 'updated'
+    } else {
+      // Crear nuevo enrollment para el siguiente nivel
+      existingNextEnrollment = await prisma.vision_enrollments.create({
+        data: {
+          userId,
+          visionId,
+          coordinatorId: currentEnrollment.coordinatorId || vision.coordinadorId,
+          level: nextLevel as any,
+          enrollmentStatus: 'ENROLLED',
+          paymentStatus: 'PAID',
+          enrolledAt: new Date(),
+          updatedAt: new Date()
+        }
       });
+      console.log(`[ADMIN] Enrollment ${nextLevel} creado para usuario ${userId}`);
     }
     
-    // Crear nuevo enrollment para el siguiente nivel
-    const newEnrollment = await prisma.vision_enrollments.create({
-      data: {
-        userId,
+    // PASO 3: Verificar/crear TICKET de entrada para el siguiente nivel
+    let existingTicket = await prisma.ticket.findFirst({
+      where: {
+        ownerId: userId,
         visionId,
-        coordinatorId: currentEnrollment.coordinatorId || vision.coordinadorId,
-        level: nextLevel as any,
-        enrollmentStatus: 'ENROLLED',
-        paymentStatus: 'PAID',
-        enrolledAt: new Date(),
-        updatedAt: new Date()
+        level: nextLevel as any
       }
     });
     
-    console.log(`[ADMIN] Usuario ${user.nombre} (ID: ${userId}) promovido a ${nextLevel} con ticket PAID en visión ${vision.nombre}`);
+    let ticketAction = 'none';
+    
+    if (existingTicket) {
+      // Actualizar ticket existente a PAID y ACTIVE
+      if (existingTicket.status !== 'ACTIVE' || existingTicket.paymentStatus !== 'PAID') {
+        await prisma.ticket.update({
+          where: { id: existingTicket.id },
+          data: { 
+            status: 'ACTIVE',
+            paymentStatus: 'PAID'
+          }
+        });
+        ticketAction = 'updated';
+      }
+    } else {
+      // Crear nuevo ticket de entrada
+      const validUntil = new Date();
+      validUntil.setMonth(validUntil.getMonth() + 3); // Válido por 3 meses
+      
+      await prisma.ticket.create({
+        data: {
+          ownerId: userId,
+          organizationId: user.organizationId,
+          visionId,
+          level: nextLevel as any,
+          type: 'STANDARD',
+          status: 'ACTIVE',
+          isTransferable: false,
+          validUntil,
+          paymentStatus: 'PAID',
+          amountPaid: 0, // Regalo/promoción del admin
+          isAnticipo: false
+        }
+      });
+      ticketAction = 'created';
+      console.log(`[ADMIN] Ticket ${nextLevel} creado para usuario ${userId}`);
+    }
+    
+    console.log(`[ADMIN] Usuario ${user.nombre} (ID: ${userId}) promovido a ${nextLevel} en visión ${vision.nombre}`);
     
     return NextResponse.json({ 
       success: true, 
-      message: `Enrollment de ${nextLevel} creado con ticket PAID`,
-      action: 'created',
-      enrollmentId: newEnrollment.id
+      message: `✅ Enrollment y Ticket de ${nextLevel} listos (PAID)`,
+      action: ticketAction === 'created' ? 'created' : 'updated'
     });
     
   } catch (error: any) {
