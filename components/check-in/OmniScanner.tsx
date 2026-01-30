@@ -52,6 +52,12 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId, de
   const nfcAbortRef = useRef<AbortController | null>(null); // Para cancelar el scan NFC
   const nfcBufferRef = useRef<string>('');
   const nfcTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const onScanRef = useRef(onScan); // Ref para evitar stale closure en NFC onreading
+
+  // Mantener la ref actualizada
+  useEffect(() => {
+    onScanRef.current = onScan;
+  }, [onScan]);
 
   // Verificar soporte NFC (nativo o USB) - Solo en cliente
   useEffect(() => {
@@ -259,6 +265,7 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId, de
       nfcAbortRef.current = abortController;
 
       ndef.onreading = (event: NDEFReadingEvent) => {
+        console.log('📱 NFC Tag detectado!', event.serialNumber);
         if (event.message.records.length > 0) {
           const record = event.message.records[0];
           
@@ -278,8 +285,20 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId, de
             data = decoder.decode(record.data);
           }
 
+          console.log('📱 NFC Data leído:', data);
           if (data) {
-            handleDetection(data, 'nfc');
+            // Usar la ref para evitar stale closure
+            setLastDetection({ channel: 'nfc', data });
+            setChannelStatus(prev => ({ ...prev, nfc: 'detected' }));
+            
+            // Llamar al callback usando la ref (siempre actualizada)
+            onScanRef.current(data, 'nfc');
+            
+            // Reset después de 2 segundos
+            setTimeout(() => {
+              setChannelStatus(prev => ({ ...prev, nfc: 'scanning' }));
+              setLastDetection(null);
+            }, 2000);
           }
         }
       };
@@ -303,7 +322,7 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId, de
       setChannelStatus(prev => ({ ...prev, nfc: 'inactive' }));
       setNfcActivated(false);
     }
-  }, [nfcMode, handleDetection]);
+  }, [nfcMode]); // Removido handleDetection - usamos onScanRef directamente
 
   // === CANAL C: NFC READER (Nativo - Solo Android) ===
   // Ya NO inicia automáticamente - requiere user gesture via activateNFC()
