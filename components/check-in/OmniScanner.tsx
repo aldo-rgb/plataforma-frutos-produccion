@@ -9,6 +9,7 @@ interface OmniScannerProps {
   enabled?: boolean;
   expectedUserId?: number;
   defaultScannerMode?: 'camera' | 'gun'; // Modo por defecto del scanner QR
+  autoActivateNFC?: boolean; // Auto-activar NFC sin botón (útil después de escribir en Pantalla 2)
 }
 
 type ScannerChannel = 'camera' | 'keyboard' | 'nfc';
@@ -34,7 +35,7 @@ interface NDEFReadingEvent {
   };
 }
 
-export default function OmniScanner({ onScan, enabled = true, expectedUserId, defaultScannerMode }: OmniScannerProps) {
+export default function OmniScanner({ onScan, enabled = true, expectedUserId, defaultScannerMode, autoActivateNFC = false }: OmniScannerProps) {
   const [channelStatus, setChannelStatus] = useState<ChannelStatus>({
     camera: 'inactive',
     keyboard: 'inactive',
@@ -306,9 +307,18 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId, de
 
   // === CANAL C: NFC READER (Nativo - Solo Android) ===
   // Ya NO inicia automáticamente - requiere user gesture via activateNFC()
+  // EXCEPTO si autoActivateNFC=true (útil después de escribir en Pantalla 2)
   useEffect(() => {
     // Solo activar NFC nativo en Android
     if (!enabled || nfcMode !== 'native') return;
+
+    // Si autoActivateNFC está activo, intentar activar automáticamente
+    // Esto funciona en Pantalla 3 porque el user gesture de Pantalla 2 (grabar) aún está activo
+    if (autoActivateNFC && !nfcActivated && !nfcReaderRef.current) {
+      console.log('📱 Auto-activando NFC (post-escritura)...');
+      activateNFC();
+      return;
+    }
 
     // Solo marcamos que el NFC está disponible pero inactivo al inicio
     // NO reseteamos si ya está activado
@@ -328,7 +338,7 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId, de
         nfcReaderRef.current = null;
       }
     };
-  }, [enabled, nfcMode]); // Removido nfcActivated de las dependencias
+  }, [enabled, nfcMode, autoActivateNFC, activateNFC]); // Agregado autoActivateNFC y activateNFC
 
   // Cleanup separado para cuando el componente se desmonta
   useEffect(() => {

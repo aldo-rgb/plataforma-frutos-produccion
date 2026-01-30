@@ -804,6 +804,7 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
                   enabled={true}
                   expectedUserId={validationResult.user.id}
                   defaultScannerMode="gun"
+                  autoActivateNFC={true}
                 />
               </div>
 
