@@ -365,16 +365,33 @@ export default function LegacyVisionBuilderPage() {
 
   if (!data?.hasAccess) {
     return (
-      <div className="min-h-screen bg-black p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
-            <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-gray-100 mb-2">
-              Acceso Restringido
-            </h2>
-            <p className="text-gray-400">
-              {data?.message || 'Necesitas ser participante de PL con asistencia marcada para acceder.'}
+      <div className="min-h-screen bg-black flex items-center justify-center p-6">
+        <div className="max-w-md w-full">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-8 border border-slate-700/50 text-center">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
+              <Crown className="w-10 h-10 text-amber-400" />
+            </div>
+            
+            <h1 className="text-2xl font-bold text-white mb-3">
+              Contenido Exclusivo
+            </h1>
+            
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <Crown className="w-5 h-5 text-amber-400" />
+              <span className="text-amber-400 font-semibold">Programa de Liderato</span>
+            </div>
+            
+            <p className="text-slate-400 mb-6">
+              {data?.message || 'Esta sección está disponible para participantes inscritos en Programa de Liderato que han completado el nivel Avanzado.'}
             </p>
+            
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold hover:shadow-lg hover:shadow-amber-500/25 transition-all flex items-center justify-center gap-2"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Volver al Dashboard
+            </button>
           </div>
         </div>
       </div>

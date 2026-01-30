@@ -687,8 +687,8 @@ export default function SuscripcionPage() {
       {/* WIDGET DE ÓRDENES PENDIENTES */}
       <PendingOrdersWidget />
 
-      {/* BANNER ESPECIAL - Usuario con visión pero sin plan de pago activo */}
-      {(!planActual || planActual === 'FREE') && schoolInfo && (
+      {/* BANNER ESPECIAL - Usuario con membresía institucional pagada por escuela */}
+      {paidBySchool && schoolInfo && (
         <div className="max-w-4xl mx-auto mb-10 bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/30 rounded-2xl p-6 shadow-xl">
           <div className="flex items-center gap-3 mb-4">
             {schoolInfo.logo && (
@@ -699,8 +699,8 @@ export default function SuscripcionPage() {
               />
             )}
             <div>
-              <h3 className="text-lg font-bold text-white">Miembro de {schoolInfo.name}</h3> Tus Objetivos han sido guardados.
-              <p className="text-slate-300 text-sm">Tu institución te da acceso a la plataforma</p> No requieres hacer un pago ahora.
+              <h3 className="text-lg font-bold text-white">Miembro de {schoolInfo.name}</h3>
+              <p className="text-slate-300 text-sm">Tu institución te da acceso a la plataforma</p>
             </div>
           </div>
           <div className="bg-slate-900/50 rounded-lg px-4 py-3 border border-slate-700">

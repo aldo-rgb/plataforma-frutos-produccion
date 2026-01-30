@@ -67,6 +67,10 @@ export default function CoordinadorDashboard() {
   const [medicalAlertsCount, setMedicalAlertsCount] = useState(0);
 
   useEffect(() => {
+    if (status === 'loading') {
+      // Esperar a que la sesión cargue antes de tomar decisiones
+      return;
+    }
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
     } else if (session?.user?.rol !== 'COORDINADOR' && !session?.user?.esCoordinador) {

@@ -270,24 +270,63 @@ export default function QuantumBusinessBuilderPage() {
   }, [existingProfile, step]);
   
   // Cargar datos del quantum-web (URL, horarios, etc)
+  // PRIORIDAD: Si hay existingWebsite, precargar TODOS los datos del sitio web
   useEffect(() => {
-    if (existingWebsite && step === 'optimizador') {
+    if (existingWebsite?.site && step === 'optimizador') {
+      const site = existingWebsite.site;
+      
       // Cargar la URL de la página web publicada
-      if (existingWebsite.site?.slug && existingWebsite.site?.isPublished) {
-        setPreviewWebsite(`https://quantummatter.app/site/${existingWebsite.site.slug}`);
+      if (site.slug && site.isPublished) {
+        setPreviewWebsite(`https://quantummatter.app/site/${site.slug}`);
       }
       
-      // Cargar horarios si existen
-      if (existingWebsite.site?.schedule) {
-        setPreviewHorario(existingWebsite.site.schedule);
+      // Precargar TODOS los datos del sitio web si no hay existingProfile
+      // o si existingProfile no tiene esos datos
+      if (!existingProfile || !existingProfile.headline) {
+        // Nombre del negocio
+        if (site.businessName) {
+          setPreviewNombre(site.businessName);
+        }
+        // Descripción
+        if (site.businessDescription) {
+          setPreviewDescripcion(site.businessDescription);
+        }
+        // Categoría
+        if (site.businessCategory) {
+          const cat = BUSINESS_CATEGORIES.find(c => c.value === site.businessCategory);
+          if (cat) {
+            setPreviewCategoria(cat.value);
+          }
+        }
+        // Logo
+        if (site.logoUrl) {
+          setPreviewLogo(site.logoUrl);
+        }
+        // Galería
+        if (site.galleryImages?.length > 0) {
+          setPreviewFotos(site.galleryImages);
+        }
       }
       
-      // Cargar dirección del quantum-web si no hay en el perfil
-      if (existingWebsite.site?.address && !previewDireccion) {
-        setPreviewDireccion(existingWebsite.site.address);
+      // Estos campos siempre se cargan del quantum-web si existen
+      // Teléfono
+      if (site.phone && !previewTelefono) {
+        setPreviewTelefono(site.phone);
+      }
+      // WhatsApp
+      if (site.whatsapp && !previewWhatsapp) {
+        setPreviewWhatsapp(site.whatsapp);
+      }
+      // Horarios
+      if (site.schedule) {
+        setPreviewHorario(site.schedule);
+      }
+      // Dirección
+      if (site.address && !previewDireccion) {
+        setPreviewDireccion(site.address);
       }
     }
-  }, [existingWebsite, step]);
+  }, [existingWebsite, existingProfile, step]);
 
   // Verificar acceso (Avanzado completado o PL)
   useEffect(() => {
@@ -313,6 +352,9 @@ export default function QuantumBusinessBuilderPage() {
     if (hasAccess === true) {
       checkExistingProfile();
       checkExistingWebsite();
+    } else if (hasAccess === false) {
+      // Si no tiene acceso, no necesitamos verificar el website
+      setCheckingWebsite(false);
     }
   }, [hasAccess]);
 

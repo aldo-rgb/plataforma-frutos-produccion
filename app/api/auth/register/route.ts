@@ -174,6 +174,50 @@ export async function POST(request: Request) {
       }
     });
 
+    // IMPORTANTE: Buscar usuarios que tienen el nombre de este nuevo usuario como invitedByText
+    // y ligarlos automáticamente
+    try {
+      const usersToLink = await prisma.usuario.findMany({
+        where: {
+          invitedByText: {
+            contains: nombre,
+            mode: 'insensitive'
+          },
+          invitedBy: null // Solo los que no están ligados aún
+        },
+        select: { id: true, nombre: true, invitedByText: true }
+      });
+
+      if (usersToLink.length > 0) {
+        console.log(`🔗 Encontrados ${usersToLink.length} usuarios pendientes de ligar con ${nombre}:`);
+        
+        for (const userToLink of usersToLink) {
+          // Verificar que el nombre coincida (búsqueda flexible)
+          const normalizedInvitedByText = userToLink.invitedByText?.toLowerCase().trim();
+          const normalizedNewUserName = nombre.toLowerCase().trim();
+          
+          if (normalizedInvitedByText?.includes(normalizedNewUserName) || 
+              normalizedNewUserName.includes(normalizedInvitedByText || '')) {
+            await prisma.usuario.update({
+              where: { id: userToLink.id },
+              data: { invitedBy: newUser.id }
+            });
+            
+            // Incrementar el contador de invitados del nuevo usuario
+            await prisma.usuario.update({
+              where: { id: newUser.id },
+              data: { invitedCount: { increment: 1 } }
+            });
+            
+            console.log(`  ✅ ${userToLink.nombre} (ID: ${userToLink.id}) ligado a ${nombre} (ID: ${newUser.id})`);
+          }
+        }
+      }
+    } catch (linkError) {
+      console.error('Error al ligar usuarios pendientes:', linkError);
+      // No fallar el registro si falla el ligado
+    }
+
     // Buscar la próxima visión BASIC disponible para inscribir al usuario
     // Si viene visionId explícito lo usamos, si no, buscamos automáticamente
     let finalVisionId = visionId;

@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
         esLider: true,
         esCoordinadorBasico: true,
         esCoordinadorAvanzado: true,
+        esGameChanger: true,
       },
       orderBy: { nombre: 'asc' }
     });
@@ -72,7 +73,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { userId, esEntrenador, esCoordinador, esLider, esCoordinadorBasico, esCoordinadorAvanzado } = body;
+    const { userId, esEntrenador, esCoordinador, esLider, esCoordinadorBasico, esCoordinadorAvanzado, esGameChanger } = body;
 
     if (!userId) {
       return NextResponse.json({ success: false, error: 'userId requerido' }, { status: 400 });
@@ -99,6 +100,7 @@ export async function PUT(request: NextRequest) {
         esLider: esLider ?? false,
         esCoordinadorBasico: esCoordinadorBasico ?? false,
         esCoordinadorAvanzado: esCoordinadorAvanzado ?? false,
+        esGameChanger: esGameChanger ?? false,
         updatedAt: new Date(),
       },
       select: {
@@ -109,6 +111,7 @@ export async function PUT(request: NextRequest) {
         esLider: true,
         esCoordinadorBasico: true,
         esCoordinadorAvanzado: true,
+        esGameChanger: true,
       }
     });
 

@@ -92,6 +92,10 @@ export default function CoordinadorAvanzadoDashboard() {
   };
 
   useEffect(() => {
+    if (status === 'loading') {
+      // Esperar a que la sesión cargue antes de tomar decisiones
+      return;
+    }
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
     } else if (session?.user?.rol !== 'COORDINATOR_ADVANCED' && !session?.user?.esCoordinadorAvanzado) {

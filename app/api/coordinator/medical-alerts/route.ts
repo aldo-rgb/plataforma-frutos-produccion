@@ -58,7 +58,21 @@ export async function GET(request: Request) {
         });
         if (visionesOrg.length > 0) {
           whereClause.visionId = { in: visionesOrg.map(v => v.id) };
+        } else {
+          // Si no hay visiones en su organización, retornar vacío
+          return NextResponse.json({
+            success: true,
+            records: [],
+            totalAlerts: 0
+          });
         }
+      } else {
+        // Sin organización asignada, retornar vacío
+        return NextResponse.json({
+          success: true,
+          records: [],
+          totalAlerts: 0
+        });
       }
     } else if (['COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER'].includes(usuario.rol)) {
       // Estos roles ven registros de visiones donde son coordinadores o de su organización

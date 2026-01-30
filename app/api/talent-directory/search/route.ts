@@ -35,12 +35,20 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const onlyVerified = searchParams.get('verified') === 'true';
     const onlyWithDiscount = searchParams.get('discount') === 'true';
+    const section = searchParams.get('section') || 'public'; // 'public' (ACTIVE) o 'expo' (HIDDEN)
 
     // Construir filtros
+    // ACTIVE = Directorio de Servicios (público, TODAS las organizaciones)
+    // HIDDEN = Expo de Futuros (solo mi organización)
     const where: Record<string, unknown> = {
-      status: 'ACTIVE',
-      organizationId: user.organizationId, // Solo de la misma organización
+      status: section === 'expo' ? 'HIDDEN' : 'ACTIVE',
     };
+
+    // Expo de Futuros: solo mi organización
+    // Directorio de Servicios: todas las organizaciones
+    if (section === 'expo') {
+      where.organizationId = user.organizationId;
+    }
 
     // Búsqueda por texto
     if (query) {
@@ -116,6 +124,12 @@ export async function GET(request: NextRequest) {
               id: true,
               nombre: true,
               imagen: true,
+              QuantumWebsite: {
+                select: {
+                  slug: true,
+                  isPublished: true
+                }
+              }
             }
           },
           category: {
@@ -147,8 +161,40 @@ export async function GET(request: NextRequest) {
       return 0;
     });
 
+    // Para la sección expo, obtener los toques del usuario actual
+    let userNudges: number[] = [];
+    if (section === 'expo') {
+      const nudges = await prisma.businessNudge.findMany({
+        where: {
+          userId,
+          profileId: { in: sortedProfiles.map(p => p.id) }
+        },
+        select: { profileId: true }
+      });
+      userNudges = nudges.map(n => n.profileId);
+    }
+
+    // Transformar para incluir websiteUrl y nudge info
+    const profilesWithWebsite = sortedProfiles.map((profile) => {
+      const website = profile.user.QuantumWebsite;
+      const websiteUrl = website?.isPublished && website?.slug 
+        ? `https://quantummatter.app/site/${website.slug}`
+        : null;
+      
+      return {
+        ...profile,
+        websiteUrl,
+        hasNudged: userNudges.includes(profile.id), // Si el usuario ya dio toque
+        user: {
+          id: profile.user.id,
+          nombre: profile.user.nombre,
+          imagen: profile.user.imagen
+        }
+      };
+    });
+
     return NextResponse.json({
-      profiles: sortedProfiles,
+      profiles: profilesWithWebsite,
       pagination: {
         page,
         limit,

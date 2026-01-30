@@ -337,6 +337,15 @@ export default async function DashboardPage() {
   type UserLevel = 'BASIC' | 'ADVANCED' | 'PL' | 'LOBO_SOLITARIO';
   let userLevel: UserLevel = 'LOBO_SOLITARIO';
   
+  // DEBUG: Log para ver qué enrollment se está obteniendo
+  console.log('🔍 DEBUG userLevel:', {
+    userId: usuario.id,
+    visionEnrollment: visionEnrollment,
+    visionEnrollmentLevel: visionEnrollment?.level,
+    currentVisionLevel: usuario.currentVisionLevel,
+    hasVisionParticipante: !!visionParticipante
+  });
+  
   if (visionEnrollment?.level) {
     userLevel = visionEnrollment.level as UserLevel;
   } else if (usuario.currentVisionLevel) {
@@ -346,6 +355,8 @@ export default async function DashboardPage() {
   } else if (packageCredits) {
     userLevel = 'LOBO_SOLITARIO';
   }
+  
+  console.log('🎯 FINAL userLevel:', userLevel);
 
   // Preparar datos de la carta para IdentityHeroSection
   const cartaDataForIdentity = {

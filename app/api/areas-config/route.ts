@@ -261,23 +261,32 @@ export async function GET(req: NextRequest) {
       }
       
       // =====================================================
-      // FILTRO POR NIVEL: Áreas de servicio SOLO para nivel PL
-      // BASIC y ADVANCED NO ven servicioTrans ni servicioComun
+      // FILTRO POR NIVEL: Áreas de servicio para usuarios PL
+      // Se muestra si: userLevel === 'PL' O si tiene asistencia en PL (attendanceStatus = 'ATTENDED')
       // =====================================================
       const isPLLevel = userLevel === 'PL';
-      console.log(`📊 Nivel actual: ${userLevel} | Es PL: ${isPLLevel}`);
       
-      if (isPLLevel) {
+      // Verificar si tiene asistencia en PL aunque no esté activo el entrenamiento
+      const plEnrollments = await prisma.vision_enrollments.findMany({
+        where: { userId, level: 'PL' },
+        select: { attendanceStatus: true }
+      });
+      const hasPLAttendance = plEnrollments.some(e => e.attendanceStatus === 'ATTENDED');
+      
+      const canAccessServiceAreas = isPLLevel || hasPLAttendance;
+      console.log(`📊 Nivel actual: ${userLevel} | Es PL: ${isPLLevel} | Tiene asistencia PL: ${hasPLAttendance} | Acceso a áreas servicio: ${canAccessServiceAreas}`);
+      
+      if (canAccessServiceAreas) {
         if (visionConfig.forceTransformationArea) {
-          console.log('  ✅ SERVICIO TRANS enabled (nivel PL)');
+          console.log('  ✅ SERVICIO TRANS enabled (nivel PL o asistencia PL)');
           areasFromVision.push({ areaKey: 'servicioTrans', enabled: true });
         }
         if (visionConfig.forceCommunityServiceArea) {
-          console.log('  ✅ SERVICIO COMUN enabled (nivel PL)');
+          console.log('  ✅ SERVICIO COMUN enabled (nivel PL o asistencia PL)');
           areasFromVision.push({ areaKey: 'servicioComun', enabled: true });
         }
       } else {
-        console.log('  ⛔ SERVICIO TRANS/COMUN ocultos (nivel BASIC/ADVANCED)');
+        console.log('  ⛔ SERVICIO TRANS/COMUN ocultos (nivel BASIC/ADVANCED sin asistencia PL)');
       }
 
       console.log(`📋 Total áreas habilitadas: ${areasFromVision.length}`);

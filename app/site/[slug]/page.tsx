@@ -59,6 +59,27 @@ export default async function SitePage({ params }: PageProps) {
             { sortOrder: 'asc' },
             { createdAt: 'desc' }
           ]
+        },
+        user: {
+          select: {
+            BusinessProfile: {
+              select: {
+                reviews: {
+                  where: { isPublic: true },
+                  take: 6,
+                  orderBy: { createdAt: 'desc' },
+                  include: {
+                    author: {
+                      select: {
+                        nombre: true,
+                        imagen: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     });
@@ -82,6 +103,17 @@ export default async function SitePage({ params }: PageProps) {
     }).catch(console.error);
 
     // Transformar datos para el componente cliente
+    // Usar reseñas reales del BusinessProfile en lugar de testimonios ficticios
+    const realReviews = website.user?.BusinessProfile?.reviews || [];
+    const realTestimonials = realReviews.length > 0 
+      ? realReviews.map(review => ({
+          name: review.author.nombre,
+          text: review.comment,
+          rating: review.rating,
+          avatar: review.author.imagen || undefined
+        }))
+      : null; // Si no hay reseñas reales, no mostrar testimonios
+
     const websiteData = {
       id: website.id,
       slug: website.slug,
@@ -118,7 +150,7 @@ export default async function SitePage({ params }: PageProps) {
       servicesTitle: website.servicesTitle,
       services: website.services as { icon: string; title: string; description: string }[] | null,
       ctaText: website.ctaText,
-      testimonials: website.testimonials as { name: string; text: string; rating: number }[] | null,
+      testimonials: realTestimonials, // Usar reseñas reales, null si no hay
       products: website.products.map(p => ({
         id: p.id,
         name: p.name,

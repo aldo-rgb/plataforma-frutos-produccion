@@ -109,8 +109,10 @@ export async function GET() {
       // Tiene asistencia en algún nivel - ese es su nivel actual
       currentLevel = highestAttendedEnrollment.level as 'BASIC' | 'ADVANCED' | 'PL';
     } else if (visionEnrollment?.level) {
-      // No tiene asistencia pero está inscrito - mostrar BASIC como nivel inicial
-      currentLevel = 'BASIC';
+      // No tiene asistencia pero está inscrito
+      // Para usuarios de nivel PL (liderato), respetar su nivel ya que son graduados
+      // Para BASIC/ADVANCED, mostrar el nivel inscrito también
+      currentLevel = visionEnrollment.level as 'BASIC' | 'ADVANCED' | 'PL';
     } else if (usuario.currentVisionLevel) {
       currentLevel = usuario.currentVisionLevel as 'BASIC' | 'ADVANCED' | 'PL';
     } else if (visionParticipante) {

@@ -125,6 +125,10 @@ export default function TrainerDashboard() {
   }, [data]);
 
   useEffect(() => {
+    if (status === 'loading') {
+      // Esperar a que la sesión cargue antes de tomar decisiones
+      return;
+    }
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
     } else if (session?.user?.rol !== 'TRAINER' && !session?.user?.esEntrenador) {

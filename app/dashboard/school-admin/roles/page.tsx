@@ -20,6 +20,7 @@ interface User {
   esLider: boolean;
   esCoordinadorBasico: boolean;
   esCoordinadorAvanzado: boolean;
+  esGameChanger: boolean;
 }
 
 export default function RolesManagementPage() {
@@ -101,6 +102,7 @@ export default function RolesManagementPage() {
           esLider: user.esLider,
           esCoordinadorBasico: user.esCoordinadorBasico,
           esCoordinadorAvanzado: user.esCoordinadorAvanzado,
+          esGameChanger: user.esGameChanger,
         }),
       });
 
@@ -216,6 +218,12 @@ export default function RolesManagementPage() {
                 <Shield size={16} className="text-white" />
               </div>
               <span className="text-sm text-slate-300">Coord. Avanzado</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-violet-500 to-purple-600 flex items-center justify-center">
+                <Users size={16} className="text-white" />
+              </div>
+              <span className="text-sm text-slate-300">Game Changer</span>
             </div>
           </div>
         </div>
@@ -369,6 +377,24 @@ export default function RolesManagementPage() {
                       <Shield size={16} className={user.esCoordinadorAvanzado ? 'text-rose-400' : 'text-slate-400'} />
                       <span className={`text-sm ${user.esCoordinadorAvanzado ? 'text-rose-300' : 'text-slate-300'}`}>
                         Coord. Avanzado
+                      </span>
+                    </label>
+
+                    {/* Game Changer */}
+                    <label className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all ${
+                      user.esGameChanger 
+                        ? 'bg-violet-500/20 border-violet-500/50 hover:bg-violet-500/30' 
+                        : 'bg-slate-800 border-slate-700 hover:border-violet-500/30'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={user.esGameChanger}
+                        onChange={() => toggleRole(user.id, 'esGameChanger')}
+                        className="w-4 h-4 rounded accent-violet-500"
+                      />
+                      <Users size={16} className={user.esGameChanger ? 'text-violet-400' : 'text-slate-400'} />
+                      <span className={`text-sm ${user.esGameChanger ? 'text-violet-300' : 'text-slate-300'}`}>
+                        Game Changer
                       </span>
                     </label>
 

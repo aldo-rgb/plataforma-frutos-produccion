@@ -21,7 +21,11 @@ import {
   Phone,
   Lock,
   Crown,
-  ArrowLeft
+  ArrowLeft,
+  Globe,
+  Flame,
+  Sparkles,
+  Hand
 } from 'lucide-react';
 
 interface Category {
@@ -42,10 +46,13 @@ interface BusinessProfile {
   whatsappPhone: string;
   avgRating: number;
   totalReviews: number;
+  nudgeCount: number; // Toques recibidos
+  hasNudged: boolean; // Si el usuario actual ya dio toque
   galleryImages: string[];
   logoUrl: string | null;
   isVerified: boolean;
   isPLGraduate: boolean;
+  websiteUrl: string | null;
   user: {
     id: number;
     nombre: string;
@@ -80,6 +87,9 @@ export default function MarketplacePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+
+  // Sección activa: 'public' (Irrazonables) o 'expo' (Razonables)
+  const [activeSection, setActiveSection] = useState<'public' | 'expo'>('public');
 
   // Filtros
   const [searchQuery, setSearchQuery] = useState('');
@@ -118,6 +128,7 @@ export default function MarketplacePage() {
       if (selectedState) params.set('state', selectedState);
       params.set('sort', sortBy);
       params.set('page', page.toString());
+      params.set('section', activeSection); // 'public' o 'expo'
       if (onlyVerified) params.set('verified', 'true');
 
       const res = await fetch(`/api/talent-directory/search?${params}`);
@@ -131,7 +142,7 @@ export default function MarketplacePage() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedCategory, selectedState, sortBy, onlyVerified, hasAccess]);
+  }, [searchQuery, selectedCategory, selectedState, sortBy, onlyVerified, hasAccess, activeSection]);
 
   const fetchCategories = async () => {
     try {
@@ -154,6 +165,13 @@ export default function MarketplacePage() {
     }
   }, [hasAccess, fetchProfiles]);
 
+  // Recargar cuando cambia la sección
+  useEffect(() => {
+    if (hasAccess === true) {
+      fetchProfiles(1);
+    }
+  }, [activeSection]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     fetchProfiles(1);
@@ -171,6 +189,43 @@ export default function MarketplacePage() {
   const openWhatsApp = (phone: string, name: string) => {
     const message = encodeURIComponent(`Hola ${name}, te contacto desde el Directorio de Talentos. Me interesa conocer más sobre tus servicios.`);
     window.open(`https://wa.me/52${phone.replace(/\D/g, '')}?text=${message}`, '_blank');
+  };
+
+  // Estado para manejar toques en progreso
+  const [nudgingProfile, setNudgingProfile] = useState<number | null>(null);
+
+  const handleNudge = async (profileId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (nudgingProfile) return;
+    
+    setNudgingProfile(profileId);
+    try {
+      const res = await fetch('/api/talent-directory/nudge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileId })
+      });
+
+      const data = await res.json();
+      
+      if (res.ok) {
+        // Actualizar el perfil localmente
+        setProfiles(prev => prev.map(p => 
+          p.id === profileId 
+            ? { ...p, nudgeCount: data.nudgeCount, hasNudged: true }
+            : p
+        ));
+      } else if (data.alreadyNudged) {
+        // Ya dio toque, actualizar estado local
+        setProfiles(prev => prev.map(p => 
+          p.id === profileId ? { ...p, hasNudged: true } : p
+        ));
+      }
+    } catch (error) {
+      console.error('Error dando toque:', error);
+    } finally {
+      setNudgingProfile(null);
+    }
   };
 
   const renderStars = (rating: number) => {
@@ -243,11 +298,39 @@ export default function MarketplacePage() {
         {/* Header */}
         <div className="mb-8 text-center">
           <h1 className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 mb-2">
-            Directorio de Talentos
+            {activeSection === 'public' ? 'Directorio de Servicios' : 'Expo de Futuros Imposibles'}
           </h1>
           <p className="text-gray-400">
-            Antes de comprar afuera, busca adentro 🏠
+            {activeSection === 'public' 
+              ? 'Emprendedores comprometidos listos para servirte 🔥' 
+              : 'Próximos negocios preparándose para la Expo ✨'}
           </p>
+        </div>
+
+        {/* Tabs de sección */}
+        <div className="flex justify-center gap-4 mb-6">
+          <button
+            onClick={() => { setActiveSection('public'); }}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
+              activeSection === 'public'
+                ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/25'
+                : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50 hover:text-white'
+            }`}
+          >
+            <Flame className="w-5 h-5" />
+            Directorio de Servicios
+          </button>
+          <button
+            onClick={() => { setActiveSection('expo'); }}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
+              activeSection === 'expo'
+                ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg shadow-purple-500/25'
+                : 'bg-gray-800/50 text-gray-400 hover:bg-gray-700/50 hover:text-white'
+            }`}
+          >
+            <Sparkles className="w-5 h-5" />
+            Expo de Futuros
+          </button>
         </div>
 
         {/* Barra de búsqueda */}
@@ -372,16 +455,6 @@ export default function MarketplacePage() {
             ⭐ Mejor Calificados
           </button>
           <button
-            onClick={() => { setOnlyVerified(!onlyVerified); fetchProfiles(1); }}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-              onlyVerified
-                ? 'bg-blue-500/20 text-blue-300 border border-blue-500/50'
-                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-            }`}
-          >
-            ✅ Verificados
-          </button>
-          <button
             onClick={() => { setSortBy('reviews'); fetchProfiles(1); }}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               sortBy === 'reviews'
@@ -396,7 +469,7 @@ export default function MarketplacePage() {
         {/* Resultados */}
         <div className="mb-4 flex items-center justify-between">
           <p className="text-gray-400">
-            {pagination.total} servicios encontrados
+            {pagination.total} {activeSection === 'public' ? 'servicios' : 'negocios'} encontrados
           </p>
           <button
             onClick={() => fetchProfiles(pagination.page)}
@@ -414,9 +487,19 @@ export default function MarketplacePage() {
           </div>
         ) : profiles.length === 0 ? (
           <div className="text-center py-20">
-            <Search className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400 text-lg">No se encontraron servicios</p>
-            <p className="text-gray-500 text-sm">Intenta con otros términos de búsqueda</p>
+            {activeSection === 'public' ? (
+              <>
+                <Flame className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                <p className="text-gray-400 text-lg">No hay servicios IRRAZONABLES disponibles</p>
+                <p className="text-gray-500 text-sm">Los negocios que eligen ser públicos aparecerán aquí</p>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                <p className="text-gray-400 text-lg">No hay negocios en preparación</p>
+                <p className="text-gray-500 text-sm">Los negocios para la Expo aparecerán aquí</p>
+              </>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -466,6 +549,16 @@ export default function MarketplacePage() {
                       </span>
                     )}
                   </div>
+
+                  {/* Contador de Toques (solo en expo) */}
+                  {activeSection === 'expo' && (
+                    <div className="absolute top-2 right-2">
+                      <span className="px-2 py-1 bg-pink-500/90 text-white text-xs font-bold rounded-full flex items-center gap-1">
+                        <Hand className="w-3 h-3" />
+                        {profile.nudgeCount || 0} toques
+                      </span>
+                    </div>
+                  )}
 
                   {/* Descuento */}
                   <div className="absolute bottom-2 left-2">
@@ -530,17 +623,56 @@ export default function MarketplacePage() {
                     {profile.description}
                   </p>
 
-                  {/* Botón WhatsApp */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openWhatsApp(profile.whatsappPhone, profile.user.nombre);
-                    }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                    Contactar por WhatsApp
-                  </button>
+                  {/* Botones de acción */}
+                  <div className="flex gap-2">
+                    {/* En sección expo: botón de dar toque */}
+                    {activeSection === 'expo' && (
+                      <button
+                        onClick={(e) => handleNudge(profile.id, e)}
+                        disabled={profile.hasNudged || nudgingProfile === profile.id}
+                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                          profile.hasNudged
+                            ? 'bg-pink-500/20 text-pink-300 border border-pink-500/50 cursor-default'
+                            : 'bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white shadow-lg shadow-pink-500/25'
+                        }`}
+                      >
+                        {nudgingProfile === profile.id ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <Hand className={`w-5 h-5 ${profile.hasNudged ? '' : 'animate-pulse'}`} />
+                        )}
+                        {profile.hasNudged ? '¡Toque dado!' : '¡Dale un toque!'}
+                      </button>
+                    )}
+                    
+                    {/* En sección pública: botones de Web y WhatsApp */}
+                    {activeSection === 'public' && (
+                      <>
+                        {profile.websiteUrl && (
+                          <a
+                            href={profile.websiteUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                          >
+                            <Globe className="w-5 h-5" />
+                            Web
+                          </a>
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openWhatsApp(profile.whatsappPhone, profile.user.nombre);
+                          }}
+                          className={`${profile.websiteUrl ? 'flex-1' : 'w-full'} flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors`}
+                        >
+                          <MessageCircle className="w-5 h-5" />
+                          {profile.websiteUrl ? 'WhatsApp' : 'Contactar por WhatsApp'}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { CheckCircle, XCircle, X, Key, ArrowRightLeft, UserPlus } from 'lucide-react';
+import { CheckCircle, XCircle, X, Key, ArrowRightLeft, UserPlus, Upload, Download, FileSpreadsheet } from 'lucide-react';
 
 // Roles permitidos para acceder a esta página
 const ALLOWED_ROLES = [
@@ -210,8 +210,31 @@ export default function VisionManagePage() {
     nombre: '',
     email: '',
     telefono: '',
+    referido: '',
   });
   const [addingParticipant, setAddingParticipant] = useState(false);
+  
+  // Estados para carga masiva desde Excel
+  const [uploadingExcel, setUploadingExcel] = useState(false);
+  const [excelResults, setExcelResults] = useState<{success: number; errors: string[]} | null>(null);
+  
+  // Estados para modal de Excel en Liderato
+  const [showExcelModal, setShowExcelModal] = useState(false);
+  const [excelFile, setExcelFile] = useState<File | null>(null);
+  const [excelParsedData, setExcelParsedData] = useState<Array<{nombre: string; email: string; telefono: string; referido: string; visionGraduacion: string}>>([]); 
+  const [excelUploadStep, setExcelUploadStep] = useState<'upload' | 'preview' | 'result'>('upload');
+  const [excelBulkResults, setExcelBulkResults] = useState<{
+    total: number;
+    registered: number;
+    duplicates: number;
+    failed: number;
+    details: {
+      success: Array<{email: string; nombre: string}>;
+      duplicates: Array<{email: string; nombre: string}>;
+      failed: Array<{email: string; nombre: string; reason: string}>;
+    };
+  } | null>(null);
+  const [processingExcel, setProcessingExcel] = useState(false);
 
   useEffect(() => {
     fetchVisionData();
@@ -547,6 +570,143 @@ export default function VisionManagePage() {
     } finally {
       setLoadingPlEnrollments(false);
     }
+  };
+
+  // =============================================
+  // FUNCIONES PARA CARGA MASIVA DE EXCEL LIDERATO
+  // =============================================
+  
+  const handleExcelFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setExcelFile(file);
+    
+    // Verificar extensión
+    const validExtensions = ['.xlsx', '.xls', '.csv'];
+    const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    if (!validExtensions.includes(extension)) {
+      setToast({ show: true, message: 'Formato de archivo no válido. Use .xlsx, .xls o .csv', type: 'error' });
+      setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 3000);
+      return;
+    }
+
+    // Parsear archivo usando FileReader
+    try {
+      setProcessingExcel(true);
+      const reader = new FileReader();
+      
+      reader.onload = async (event) => {
+        const text = event.target?.result as string;
+        
+        // Parsear CSV (simplificado - para Excel completo necesitaríamos xlsx library)
+        if (extension === '.csv') {
+          const lines = text.split('\n').filter(line => line.trim());
+          const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+          
+          const nombreIdx = headers.findIndex(h => h.includes('nombre') || h === 'name');
+          const emailIdx = headers.findIndex(h => h.includes('email') || h.includes('correo'));
+          const telefonoIdx = headers.findIndex(h => h.includes('telefono') || h.includes('phone') || h.includes('tel'));
+          const referidoIdx = headers.findIndex(h => h.includes('referido') || h.includes('angel') || h.includes('invitado'));
+          const visionIdx = headers.findIndex(h => h.includes('vision') || h.includes('graduacion'));
+          
+          if (nombreIdx === -1 || emailIdx === -1) {
+            setToast({ show: true, message: 'El archivo debe tener columnas "nombre" y "email"', type: 'error' });
+            setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 3000);
+            setProcessingExcel(false);
+            return;
+          }
+          
+          const users = lines.slice(1).map(line => {
+            const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+            return {
+              nombre: cols[nombreIdx] || '',
+              email: cols[emailIdx] || '',
+              telefono: telefonoIdx !== -1 ? (cols[telefonoIdx] || '') : '',
+              referido: referidoIdx !== -1 ? (cols[referidoIdx] || '') : '',
+              visionGraduacion: visionIdx !== -1 ? (cols[visionIdx] || '') : ''
+            };
+          }).filter(u => u.nombre && u.email);
+          
+          setExcelParsedData(users);
+          setExcelUploadStep('preview');
+        } else {
+          // Para .xlsx necesitamos cargar la librería XLSX
+          setToast({ show: true, message: 'Para archivos Excel (.xlsx), por favor use formato CSV', type: 'error' });
+          setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 3000);
+        }
+        setProcessingExcel(false);
+      };
+      
+      reader.readAsText(file);
+    } catch (error) {
+      console.error('Error parsing Excel:', error);
+      setToast({ show: true, message: 'Error al procesar el archivo', type: 'error' });
+      setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 3000);
+      setProcessingExcel(false);
+    }
+  };
+  
+  const handleBulkRegister = async () => {
+    if (excelParsedData.length === 0) {
+      setToast({ show: true, message: 'No hay usuarios para registrar', type: 'error' });
+      setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 3000);
+      return;
+    }
+    
+    try {
+      setProcessingExcel(true);
+      
+      const res = await fetch(`/api/school-admin/visiones/${visionId}/bulk-register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ users: excelParsedData })
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        setExcelBulkResults(data.results);
+        setExcelUploadStep('result');
+        
+        // Refrescar los enrollments
+        fetchPlEnrollments();
+        
+        setToast({ show: true, message: `${data.results.registered} usuarios registrados exitosamente`, type: 'success' });
+        setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
+      } else {
+        setToast({ show: true, message: data.error || 'Error al registrar usuarios', type: 'error' });
+        setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 3000);
+      }
+    } catch (error) {
+      console.error('Error en bulk register:', error);
+      setToast({ show: true, message: 'Error al procesar la solicitud', type: 'error' });
+      setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 3000);
+    } finally {
+      setProcessingExcel(false);
+    }
+  };
+  
+  const resetExcelModal = () => {
+    setExcelFile(null);
+    setExcelParsedData([]);
+    setExcelUploadStep('upload');
+    setExcelBulkResults(null);
+    setShowExcelModal(false);
+  };
+  
+  const downloadExcelTemplate = () => {
+    const headers = 'nombre,email,telefono,referido,vision_graduacion';
+    const example = 'Juan Pérez,juan@ejemplo.com,3311234567,María García,Vision 3 Monterrey';
+    const csv = `${headers}\n${example}`;
+    
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'plantilla_liderato.csv';
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const fetchStaffData = async () => {
@@ -913,7 +1073,7 @@ export default function VisionManagePage() {
         setToast({ show: true, message: `Participante ${addParticipantData.nombre} agregado con ticket BÁSICO`, type: 'success' });
         setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
         setShowAddParticipantModal(false);
-        setAddParticipantData({ nombre: '', email: '', telefono: '' });
+        setAddParticipantData({ nombre: '', email: '', telefono: '', referido: '' });
         // Refrescar los datos de la visión
         const visionRes = await fetch(`/api/school-admin/visiones/${vision?.id}`);
         const visionData = await visionRes.json();
@@ -929,6 +1089,135 @@ export default function VisionManagePage() {
       setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 3000);
     } finally {
       setAddingParticipant(false);
+    }
+  };
+
+  // Función para descargar plantilla Excel
+  const handleDownloadTemplate = () => {
+    // Crear contenido CSV con las columnas requeridas
+    const headers = ['nombre', 'email', 'telefono', 'referido'];
+    const exampleRow = ['Juan Pérez', 'juan@ejemplo.com', '8181234567', 'María García'];
+    
+    const csvContent = [
+      headers.join(','),
+      exampleRow.join(','),
+      '# Las columnas nombre y email son obligatorias',
+      '# telefono y referido son opcionales',
+      '# El referido es el nombre de quien lo invitó'
+    ].join('\n');
+    
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `plantilla_participantes_${vision?.nombre || 'vision'}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    setToast({ show: true, message: 'Plantilla descargada. Ábrela con Excel y guarda como CSV', type: 'success' });
+    setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
+  };
+
+  // Función para procesar archivo Excel/CSV
+  const handleExcelUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadingExcel(true);
+    setExcelResults(null);
+
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(line => line.trim() && !line.startsWith('#'));
+      
+      if (lines.length < 2) {
+        throw new Error('El archivo debe tener al menos una fila de datos además del encabezado');
+      }
+
+      // Detectar separador (coma o punto y coma)
+      const separator = lines[0].includes(';') ? ';' : ',';
+      const headers = lines[0].split(separator).map(h => h.trim().toLowerCase().replace(/"/g, ''));
+      
+      // Validar columnas requeridas
+      const nombreIdx = headers.findIndex(h => h === 'nombre');
+      const emailIdx = headers.findIndex(h => h === 'email');
+      const telefonoIdx = headers.findIndex(h => h === 'telefono' || h === 'teléfono');
+      const referidoIdx = headers.findIndex(h => h === 'referido' || h === 'invitado_por' || h === 'quien_lo_invito');
+
+      if (nombreIdx === -1 || emailIdx === -1) {
+        throw new Error('El archivo debe tener las columnas "nombre" y "email"');
+      }
+
+      const results = { success: 0, errors: [] as string[] };
+
+      // Procesar cada fila
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(separator).map(v => v.trim().replace(/"/g, ''));
+        
+        const nombre = values[nombreIdx]?.trim();
+        const email = values[emailIdx]?.trim();
+        const telefono = telefonoIdx !== -1 ? values[telefonoIdx]?.trim() : '';
+        const referido = referidoIdx !== -1 ? values[referidoIdx]?.trim() : '';
+
+        if (!nombre || !email) {
+          results.errors.push(`Fila ${i + 1}: Nombre o email vacío`);
+          continue;
+        }
+
+        // Validar formato de email
+        if (!email.includes('@')) {
+          results.errors.push(`Fila ${i + 1}: Email inválido (${email})`);
+          continue;
+        }
+
+        try {
+          const res = await fetch(`/api/admin/vision/${vision?.id}/add-participant`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre, email, telefono, referido })
+          });
+
+          const data = await res.json();
+
+          if (data.success) {
+            results.success++;
+          } else {
+            results.errors.push(`Fila ${i + 1} (${nombre}): ${data.error}`);
+          }
+        } catch (err: any) {
+          results.errors.push(`Fila ${i + 1} (${nombre}): Error de conexión`);
+        }
+      }
+
+      setExcelResults(results);
+      
+      if (results.success > 0) {
+        // Refrescar datos
+        fetchBasicEnrollments();
+        const visionRes = await fetch(`/api/school-admin/visiones/${vision?.id}`);
+        const visionData = await visionRes.json();
+        if (visionData.vision?.vision_enrollments) {
+          setEnrollments(visionData.vision.vision_enrollments);
+        }
+      }
+
+      setToast({ 
+        show: true, 
+        message: `${results.success} participante(s) agregado(s)${results.errors.length > 0 ? `, ${results.errors.length} error(es)` : ''}`, 
+        type: results.errors.length > 0 ? 'error' : 'success' 
+      });
+      setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 5000);
+
+    } catch (error: any) {
+      console.error('Error processing Excel:', error);
+      setToast({ show: true, message: error.message || 'Error al procesar archivo', type: 'error' });
+      setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 4000);
+    } finally {
+      setUploadingExcel(false);
+      // Limpiar input
+      event.target.value = '';
     }
   };
 
@@ -1933,6 +2222,12 @@ export default function VisionManagePage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <button
+                        onClick={() => setShowExcelModal(true)}
+                        className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                      >
+                        <FileSpreadsheet className="w-5 h-5" /> Agregar Excel
+                      </button>
+                      <button
                         onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/badges?level=PL`)}
                         className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-5 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
                       >
@@ -2898,8 +3193,8 @@ export default function VisionManagePage() {
       {/* Modal de Restablecer Contraseña */}
       {/* Modal Agregar Participantes (solo ADMINISTRADOR) */}
       {showAddParticipantModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl border border-slate-700 shadow-2xl max-w-md w-full animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl border border-slate-700 shadow-2xl max-w-lg w-full animate-in zoom-in-95 duration-200 my-4">
             {/* Header */}
             <div className="p-6 border-b border-slate-700">
               <div className="flex items-center gap-4">
@@ -2954,6 +3249,22 @@ export default function VisionManagePage() {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  ¿Quién lo invitó? (opcional)
+                </label>
+                <input
+                  type="text"
+                  value={addParticipantData.referido}
+                  onChange={(e) => setAddParticipantData(prev => ({ ...prev, referido: e.target.value }))}
+                  placeholder="Nombre de quien lo refirió"
+                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Si existe en el sistema se ligará automáticamente, si no, se guardará para ligarlo después
+                </p>
+              </div>
+
               <div className="bg-blue-900/30 border border-blue-500/30 rounded-xl p-4">
                 <div className="flex items-start gap-3">
                   <span className="text-xl">🎫</span>
@@ -2965,6 +3276,84 @@ export default function VisionManagePage() {
                   </div>
                 </div>
               </div>
+
+              {/* Separador */}
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-600"></div>
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-slate-800 px-4 text-sm text-slate-400">o carga masiva</span>
+                </div>
+              </div>
+
+              {/* Sección de carga Excel */}
+              <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-4 space-y-3">
+                <div className="flex items-center gap-2 text-emerald-300 font-semibold text-sm">
+                  <FileSpreadsheet className="w-5 h-5" />
+                  Subir desde Excel/CSV
+                </div>
+                
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleDownloadTemplate}
+                    disabled={uploadingExcel}
+                    className="flex-1 py-2.5 px-3 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    Descargar Plantilla
+                  </button>
+                  
+                  <label className="flex-1">
+                    <input
+                      type="file"
+                      accept=".csv,.xlsx,.xls"
+                      onChange={handleExcelUpload}
+                      disabled={uploadingExcel}
+                      className="hidden"
+                    />
+                    <div className={`py-2.5 px-3 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 disabled:from-slate-600 disabled:to-slate-600 text-white rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${uploadingExcel ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      {uploadingExcel ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Procesando...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4" />
+                          Subir Archivo
+                        </>
+                      )}
+                    </div>
+                  </label>
+                </div>
+
+                {/* Resultados de carga Excel */}
+                {excelResults && (
+                  <div className={`p-3 rounded-lg text-sm ${excelResults.errors.length > 0 ? 'bg-amber-900/30 border border-amber-500/30' : 'bg-green-900/30 border border-green-500/30'}`}>
+                    <p className={excelResults.errors.length > 0 ? 'text-amber-300' : 'text-green-300'}>
+                      ✅ {excelResults.success} agregado(s) exitosamente
+                    </p>
+                    {excelResults.errors.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        <p className="text-red-400 font-semibold">❌ {excelResults.errors.length} error(es):</p>
+                        <div className="max-h-20 overflow-y-auto text-xs text-red-300/80 space-y-0.5">
+                          {excelResults.errors.slice(0, 5).map((err, idx) => (
+                            <p key={idx}>• {err}</p>
+                          ))}
+                          {excelResults.errors.length > 5 && (
+                            <p className="text-slate-400">... y {excelResults.errors.length - 5} más</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <p className="text-xs text-slate-500">
+                  El archivo debe tener columnas: nombre, email (requeridos), telefono, referido (opcionales)
+                </p>
+              </div>
             </div>
 
             {/* Footer */}
@@ -2972,16 +3361,17 @@ export default function VisionManagePage() {
               <button
                 onClick={() => {
                   setShowAddParticipantModal(false);
-                  setAddParticipantData({ nombre: '', email: '', telefono: '' });
+                  setAddParticipantData({ nombre: '', email: '', telefono: '', referido: '' });
+                  setExcelResults(null);
                 }}
-                disabled={addingParticipant}
+                disabled={addingParticipant || uploadingExcel}
                 className="flex-1 py-3 px-4 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white rounded-xl font-bold transition-all"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleAddParticipant}
-                disabled={addingParticipant || !addParticipantData.nombre.trim() || !addParticipantData.email.trim()}
+                disabled={addingParticipant || uploadingExcel || !addParticipantData.nombre.trim() || !addParticipantData.email.trim()}
                 className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-400 hover:to-cyan-500 disabled:from-slate-600 disabled:to-slate-600 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2"
               >
                 {addingParticipant ? (
@@ -3073,6 +3463,221 @@ export default function VisionManagePage() {
                   </>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Carga de Excel para Liderato */}
+      {showExcelModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl border-2 border-emerald-500/30 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="bg-emerald-900/40 p-6 border-b border-emerald-500/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                    <FileSpreadsheet className="w-6 h-6 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-emerald-300">Carga Masiva de Usuarios</h3>
+                    <p className="text-emerald-400/60 text-sm">
+                      Registrar usuarios al nivel Liderato desde archivo CSV
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={resetExcelModal}
+                  className="text-slate-400 hover:text-white transition-colors text-xl"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {/* Step 1: Upload */}
+              {excelUploadStep === 'upload' && (
+                <div className="space-y-6">
+                  <div className="bg-slate-900/50 rounded-xl p-6 border border-slate-700">
+                    <h4 className="text-white font-bold mb-4 flex items-center gap-2">
+                      <Upload className="w-5 h-5 text-emerald-400" />
+                      Subir Archivo CSV
+                    </h4>
+                    <p className="text-slate-400 text-sm mb-4">
+                      El archivo debe contener las columnas: <span className="text-emerald-400 font-mono">nombre</span>, <span className="text-emerald-400 font-mono">email</span>, y opcionalmente <span className="text-emerald-400 font-mono">telefono</span>
+                    </p>
+                    
+                    <div className="flex items-center gap-4 mb-4">
+                      <button
+                        onClick={downloadExcelTemplate}
+                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-all flex items-center gap-2 text-sm"
+                      >
+                        <Download className="w-4 h-4" />
+                        Descargar Plantilla
+                      </button>
+                    </div>
+
+                    <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-emerald-500/30 rounded-xl cursor-pointer bg-slate-800/50 hover:bg-slate-800 transition-all">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <FileSpreadsheet className="w-10 h-10 text-emerald-400 mb-3" />
+                        <p className="mb-2 text-sm text-slate-400">
+                          <span className="font-semibold text-emerald-400">Click para seleccionar</span> o arrastra el archivo
+                        </p>
+                        <p className="text-xs text-slate-500">CSV (máx. 500 usuarios)</p>
+                      </div>
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept=".csv"
+                        onChange={handleExcelFileChange}
+                      />
+                    </label>
+                    
+                    {processingExcel && (
+                      <div className="mt-4 flex items-center justify-center gap-2 text-emerald-400">
+                        <div className="w-5 h-5 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin" />
+                        Procesando archivo...
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-amber-900/20 border border-amber-500/30 rounded-xl p-4">
+                    <p className="text-amber-300 text-sm flex items-start gap-2">
+                      <span className="text-lg">⚠️</span>
+                      <span>
+                        Los usuarios se registrarán con licencia <strong>FREE</strong> y contraseña automática basada en su teléfono (Frutos + últimos 4 dígitos) o contraseña aleatoria si no hay teléfono.
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2: Preview */}
+              {excelUploadStep === 'preview' && (
+                <div className="space-y-6">
+                  <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-4">
+                    <p className="text-emerald-300 font-bold">
+                      ✅ {excelParsedData.length} usuario(s) listos para registrar
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-900/50 rounded-xl border border-slate-700 overflow-hidden">
+                    <div className="max-h-64 overflow-y-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-800 sticky top-0">
+                          <tr>
+                            <th className="text-left py-3 px-4 text-slate-400 font-semibold">#</th>
+                            <th className="text-left py-3 px-4 text-slate-400 font-semibold">Nombre</th>
+                            <th className="text-left py-3 px-4 text-slate-400 font-semibold">Email</th>
+                            <th className="text-left py-3 px-4 text-slate-400 font-semibold">Teléfono</th>
+                            <th className="text-left py-3 px-4 text-slate-400 font-semibold">Referido</th>
+                            <th className="text-left py-3 px-4 text-slate-400 font-semibold">Visión Grad.</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {excelParsedData.slice(0, 50).map((user, idx) => (
+                            <tr key={idx} className="border-t border-slate-700/50">
+                              <td className="py-2 px-4 text-slate-500">{idx + 1}</td>
+                              <td className="py-2 px-4 text-white">{user.nombre}</td>
+                              <td className="py-2 px-4 text-slate-300">{user.email}</td>
+                              <td className="py-2 px-4 text-slate-400">{user.telefono || '-'}</td>
+                              <td className="py-2 px-4 text-purple-300">{user.referido || '-'}</td>
+                              <td className="py-2 px-4 text-cyan-300">{user.visionGraduacion || '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {excelParsedData.length > 50 && (
+                      <div className="p-3 bg-slate-800 text-center text-slate-400 text-sm">
+                        ... y {excelParsedData.length - 50} más
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setExcelUploadStep('upload');
+                        setExcelParsedData([]);
+                        setExcelFile(null);
+                      }}
+                      className="flex-1 py-3 px-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-all"
+                    >
+                      ← Volver
+                    </button>
+                    <button
+                      onClick={handleBulkRegister}
+                      disabled={processingExcel}
+                      className="flex-1 py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:from-slate-600 disabled:to-slate-600 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2"
+                    >
+                      {processingExcel ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Registrando...
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="w-5 h-5" />
+                          Registrar {excelParsedData.length} Usuarios
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Results */}
+              {excelUploadStep === 'result' && excelBulkResults && (
+                <div className="space-y-6">
+                  {/* Summary */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-emerald-900/30 border border-emerald-500/30 rounded-xl p-4 text-center">
+                      <div className="text-3xl font-black text-emerald-400">{excelBulkResults.registered}</div>
+                      <div className="text-emerald-300 text-sm">Registrados</div>
+                    </div>
+                    <div className="bg-amber-900/30 border border-amber-500/30 rounded-xl p-4 text-center">
+                      <div className="text-3xl font-black text-amber-400">{excelBulkResults.duplicates}</div>
+                      <div className="text-amber-300 text-sm">Duplicados</div>
+                    </div>
+                    <div className="bg-red-900/30 border border-red-500/30 rounded-xl p-4 text-center">
+                      <div className="text-3xl font-black text-red-400">{excelBulkResults.failed}</div>
+                      <div className="text-red-300 text-sm">Fallidos</div>
+                    </div>
+                  </div>
+
+                  {/* Details */}
+                  {excelBulkResults.details.failed.length > 0 && (
+                    <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-4">
+                      <h4 className="text-red-300 font-bold mb-3">❌ Errores:</h4>
+                      <div className="space-y-2 max-h-32 overflow-y-auto">
+                        {excelBulkResults.details.failed.map((item, idx) => (
+                          <div key={idx} className="text-red-200 text-sm">
+                            <span className="font-semibold">{item.email}</span>: {item.reason}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {excelBulkResults.details.duplicates.length > 0 && (
+                    <div className="bg-amber-900/20 border border-amber-500/30 rounded-xl p-4">
+                      <h4 className="text-amber-300 font-bold mb-3">⚠️ Ya existían en esta visión:</h4>
+                      <div className="text-amber-200 text-sm max-h-24 overflow-y-auto">
+                        {excelBulkResults.details.duplicates.map(d => d.email).join(', ')}
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={resetExcelModal}
+                    className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl font-bold transition-all"
+                  >
+                    ✓ Cerrar
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

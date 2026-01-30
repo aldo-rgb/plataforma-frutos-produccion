@@ -1096,6 +1096,9 @@ model Organization {
   // Reportes Anónimos de participantes de Visión
   ReporteAnonimoVision                                  ReporteAnonimoVision[]
 
+  // Quantum Talent Scout - Visitantes de Expo
+  ExpoVisitors                                          ExpoVisitor[]                   @relation("ExpoVisitors")
+
   @@index([masterOrganizationId])
   @@index([slug])
   @@index([status])
@@ -2182,6 +2185,7 @@ model Usuario {
   esLider                                                                Boolean                         @default(false)
   esCoordinadorBasico                                                    Boolean                         @default(false)
   esCoordinadorAvanzado                                                  Boolean                         @default(false)
+  esGameChanger                                                          Boolean                         @default(false)
   AccessCode_AccessCode_generatedByToUsuario                             AccessCode[]                    @relation("AccessCode_generatedByToUsuario")
   AccessCode_AccessCode_usedByToUsuario                                  AccessCode[]                    @relation("AccessCode_usedByToUsuario")
   AdminTask                                                              AdminTask[]
@@ -2377,6 +2381,7 @@ model Usuario {
   // Directorio de Talentos - Bolsa de Trabajo
   BusinessProfile                                                        BusinessProfile?
   ServiceReviewsWritten                                                  ServiceReview[]                 @relation("ReviewAuthor")
+  BusinessNudgesGiven                                                    BusinessNudge[]                 @relation("UserNudges")
   
   // Llamadas semanales PL
   PLCallsScheduled                                                       PLWeeklyCall[]                  @relation("PLCallScheduledBy")
@@ -2418,6 +2423,11 @@ model Usuario {
 
   // Quantum Web Engine - Páginas Web
   QuantumWebsite                                                         QuantumWebsite?
+
+  // Quantum Talent Scout - Expo Reviews
+  ExhibitorReviews                                                       ExpoReview[]                    @relation("ExhibitorReviews")
+  VisitorExpoReviews                                                     ExpoReview[]                    @relation("VisitorExpoReviews")
+  ExpoVisitorReferrals                                                   ExpoVisitor[]                   @relation("ExpoVisitorReferrals")
 
   @@index([communityOrganizationId])
 }
@@ -5208,6 +5218,7 @@ model BusinessProfile {
   avgRating           Float                  @default(0)          // Promedio de calificaciones
   totalReviews        Int                    @default(0)          // Total de reseñas
   oneStarCount        Int                    @default(0)          // Contador de 1 estrella (para auto-ban)
+  nudgeCount          Int                    @default(0)          // Toques recibidos (incentivo para abrir negocio)
   
   // Estados y badges
   status              BusinessProfileStatus  @default(PENDING)
@@ -5226,6 +5237,7 @@ model BusinessProfile {
   vision              Vision?                @relation(fields: [visionId], references: [id])
   category            BusinessCategory       @relation(fields: [categoryId], references: [id])
   reviews             ServiceReview[]        @relation("ProfileReviews")
+  nudges              BusinessNudge[]        @relation("ProfileNudges")
   
   @@index([organizationId])
   @@index([visionId])
@@ -5248,6 +5260,22 @@ model BusinessCategory {
   
   @@index([isActive])
   @@index([sortOrder])
+}
+
+// Toques para incentivar a usuarios a abrir su negocio
+model BusinessNudge {
+  id              Int             @id @default(autoincrement())
+  profileId       Int                                             // Perfil que recibe el toque
+  userId          Int                                             // Usuario que da el toque
+  
+  createdAt       DateTime        @default(now())
+  
+  profile         BusinessProfile @relation("ProfileNudges", fields: [profileId], references: [id], onDelete: Cascade)
+  user            Usuario         @relation("UserNudges", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([profileId, userId])                                   // Un usuario solo puede dar un toque por perfil
+  @@index([profileId])
+  @@index([userId])
 }
 
 model ServiceReview {
@@ -6091,5 +6119,103 @@ model QuantumPageView {
   
   @@index([websiteId])
   @@index([viewedAt])
+}
+
+// ============================================
+// QUANTUM TALENT SCOUT - EXPO DE FUTUROS IMPOSIBLES
+// Sistema de evaluación rápida con QR/NFC para expos
+// ============================================
+
+// Evaluación/Voto de la Expo
+model ExpoReview {
+  id                  String            @id @default(uuid())
+  
+  // A quién califican (expositor)
+  exhibitorId         Int
+  
+  // Quién califica - puede ser usuario registrado o visitante externo
+  visitorId           Int?                                        // Usuario de la plataforma (opcional)
+  expoVisitorId       String?                                     // Visitante externo registrado
+  
+  // Evaluación del pitch
+  ratingStars         Int                                         // 1-5 estrellas
+  
+  // Intención de contratación
+  hiringIntent        HiringIntent                                // YES, MAYBE, NO
+  
+  // Feedback cualitativo (opcional)
+  feedbackText        String?           @db.Text
+  
+  // Datos de contacto del visitante (REQUERIDOS para calificar)
+  visitorName         String            @db.VarChar(100)          // Nombre completo
+  visitorPhone        String            @db.VarChar(50)           // WhatsApp/teléfono
+  visitorEmail        String            @db.VarChar(150)          // Correo electrónico
+  
+  // Anti-spam: device fingerprint
+  deviceFingerprint   String?           @db.VarChar(100)
+  ipAddress           String?           @db.VarChar(45)
+  
+  // Metadatos
+  createdAt           DateTime          @default(now())
+  
+  // Relaciones
+  exhibitor           Usuario           @relation("ExhibitorReviews", fields: [exhibitorId], references: [id], onDelete: Cascade)
+  visitor             Usuario?          @relation("VisitorExpoReviews", fields: [visitorId], references: [id], onDelete: SetNull)
+  expoVisitor         ExpoVisitor?      @relation("ExpoVisitorReviews", fields: [expoVisitorId], references: [id], onDelete: SetNull)
+  
+  // Un mismo dispositivo solo puede votar 1 vez por expositor
+  @@unique([exhibitorId, deviceFingerprint])
+  @@unique([exhibitorId, visitorEmail])
+  @@index([exhibitorId])
+  @@index([visitorId])
+  @@index([expoVisitorId])
+  @@index([hiringIntent])
+  @@index([ratingStars])
+  @@index([createdAt])
+}
+
+enum HiringIntent {
+  YES       // Hot Lead - ¡Sí, definitivamente!
+  MAYBE     // Warm Lead - Tal vez / Requiero más info
+  NO        // Feedback constructivo - No por ahora
+}
+
+// Registro de visitante externo en la Expo
+model ExpoVisitor {
+  id                  String            @id @default(uuid())
+  
+  // Token único para identificar al visitante (guardado en localStorage)
+  token               String            @unique @default(uuid())
+  
+  // Datos del visitante (REQUERIDOS)
+  name                String            @db.VarChar(100)
+  phone               String            @db.VarChar(50)           // WhatsApp - REQUERIDO
+  email               String            @db.VarChar(150)          // Email - REQUERIDO
+  company             String?           @db.VarChar(100)          // Empresa/Organización (opcional)
+  
+  // ¿Quién te invitó? (Sistema de referidos)
+  referredById        Int?                                        // Usuario que lo invitó
+  referralRelation    String?           @db.VarChar(50)           // Parentesco: "Amigo", "Familiar", "Colega", etc.
+  
+  // Fingerprint del dispositivo
+  deviceFingerprint   String            @db.VarChar(100)
+  ipAddress           String?           @db.VarChar(45)
+  
+  // Organización del evento (para filtrar por expo)
+  organizationId      Int?
+  
+  // Metadatos
+  registeredAt        DateTime          @default(now())
+  
+  // Relaciones
+  organization        Organization?     @relation("ExpoVisitors", fields: [organizationId], references: [id])
+  referredBy          Usuario?          @relation("ExpoVisitorReferrals", fields: [referredById], references: [id])
+  reviews             ExpoReview[]      @relation("ExpoVisitorReviews")
+  
+  @@index([token])
+  @@index([deviceFingerprint])
+  @@index([organizationId])
+  @@index([referredById])
+  @@index([registeredAt])
 }
 

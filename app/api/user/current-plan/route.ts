@@ -58,7 +58,21 @@ export async function GET() {
     // Determinar si tiene visión activa (membresía institucional)
     const tieneVision = usuario.VisionParticipante_VisionParticipante_participanteIdToUsuario.length > 0;
     const organization = usuario.Organization_Usuario_organizationIdToOrganization;
-    const esMiembroInstitucional = tieneVision && organization;
+    
+    // Verificar si tiene enrollment con pago (BASIC o ADVANCED pagado)
+    // Los usuarios de PL (liderato) no tienen membresía pagada por la escuela
+    const paidEnrollment = await prisma.vision_enrollments.findFirst({
+      where: {
+        userId: usuario.id,
+        paymentStatus: 'PAID',
+        level: {
+          in: ['BASIC', 'ADVANCED']
+        }
+      }
+    });
+    
+    // Solo es miembro institucional si tiene visión + organización + enrollment pagado de BASIC/ADVANCED
+    const esMiembroInstitucional = tieneVision && organization && paidEnrollment;
 
     // Verificar si tiene paquete de Lobo Solitario activo
     const packageCredits = await prisma.packageSessionCredits.findFirst({

@@ -32,6 +32,7 @@ export async function GET() {
             id: true,
             nombre: true,
             imagen: true,
+            profileImage: true, // Campo principal de imagen de mentores
             email: true,
             badges: true,
             rol: true // Incluir rol para verificación adicional
@@ -62,7 +63,7 @@ export async function GET() {
         id: mentor.id,
         usuarioId: mentor.Usuario.id,
         nombre: mentor.Usuario.nombre,
-        imagen: mentor.Usuario.imagen || '/default-avatar.png',
+        imagen: mentor.Usuario.profileImage || mentor.Usuario.imagen || '/default-avatar.png',
         nivel: mentor.nivel,
         titulo: mentor.titulo,
         especialidad: mentor.especialidad,
