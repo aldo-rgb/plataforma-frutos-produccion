@@ -2222,12 +2222,14 @@ export default function VisionManagePage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => setShowExcelModal(true)}
-                        className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
-                      >
-                        <FileSpreadsheet className="w-5 h-5" /> Agregar Excel
-                      </button>
+                      {userRole === 'ADMINISTRADOR' && (
+                        <button
+                          onClick={() => setShowExcelModal(true)}
+                          className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                        >
+                          <FileSpreadsheet className="w-5 h-5" /> Agregar Excel
+                        </button>
+                      )}
                       <button
                         onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/badges?level=PL`)}
                         className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-5 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
