@@ -959,6 +959,20 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             <span>HOY</span>
           </Link>
 
+          {/* Quantum Chronos - Calendario Inteligente */}
+          <Link 
+            href="/dashboard/calendar" 
+            onClick={handleLinkClick}
+            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
+              pathname === '/dashboard/calendar' 
+                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg' 
+                : 'text-slate-400 hover:bg-gradient-to-r hover:from-indigo-900/50 hover:to-purple-900/50 hover:text-white'
+            }`}
+          >
+            <Calendar size={18} className="text-indigo-400 group-hover:text-indigo-300" />
+            <span className="font-semibold">Agenda</span>
+          </Link>
+
           {/* THE VAULT - Quantum Archive */}
           <Link 
             href="/dashboard/vault" 
