@@ -259,13 +259,50 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Verificar foto de perfil
+    // Determinar qué fin de semana de PL es actualmente
+    let currentPlWeekend = 0; // 0 = ninguno, 1 = primero, 2 = segundo, 3 = tercero
+    
+    if (product.levelType === 'PL') {
+      const now = new Date();
+      
+      // Verificar fin de semana 1
+      if (product.plWeekend1StartDate && product.plWeekend1EndDate) {
+        const w1Start = new Date(product.plWeekend1StartDate);
+        const w1End = new Date(product.plWeekend1EndDate);
+        w1End.setDate(w1End.getDate() + 1);
+        if (now >= w1Start && now <= w1End) currentPlWeekend = 1;
+      }
+      
+      // Verificar fin de semana 2
+      if (product.plWeekend2StartDate && product.plWeekend2EndDate) {
+        const w2Start = new Date(product.plWeekend2StartDate);
+        const w2End = new Date(product.plWeekend2EndDate);
+        w2End.setDate(w2End.getDate() + 1);
+        if (now >= w2Start && now <= w2End) currentPlWeekend = 2;
+      }
+      
+      // Verificar fin de semana 3
+      if (product.plWeekend3StartDate && product.plWeekend3EndDate) {
+        const w3Start = new Date(product.plWeekend3StartDate);
+        const w3End = new Date(product.plWeekend3EndDate);
+        w3End.setDate(w3End.getDate() + 1);
+        if (now >= w3Start && now <= w3End) currentPlWeekend = 3;
+      }
+    }
+
+    // Verificar foto de perfil - SIEMPRE REQUERIDA para BASIC, ADVANCED y TODOS los fines de semana de PL
+    const requiresPhoto = product.levelType === 'BASIC' || 
+                          product.levelType === 'ADVANCED' || 
+                          (product.levelType === 'PL' && currentPlWeekend > 0);
+    
     const hasProfilePhoto = !!(user.imagen || user.profileImage);
-    if (!hasProfilePhoto) {
+    const plWeekendLabel = currentPlWeekend === 1 ? '1er' : currentPlWeekend === 2 ? '2do' : currentPlWeekend === 3 ? '3er' : '';
+    
+    if (!hasProfilePhoto && requiresPhoto) {
       errors.push({
         type: 'photo',
-        message: 'No tiene foto de perfil',
-        blocking: false
+        message: `Se requiere foto de check-in para ${product.levelType === 'PL' ? `Liderato (${plWeekendLabel} fin de semana)` : product.levelType}`,
+        blocking: false // No bloqueante, pero se pide antes de completar
       });
     }
 
@@ -298,6 +335,16 @@ export async function POST(request: NextRequest) {
     const hasBlockingError = errors.some(e => e.blocking);
     const canProceed = !hasBlockingError;
 
+    // Determinar el mensaje del tipo de check-in para la foto
+    let checkInPhotoLabel = '';
+    if (product.levelType === 'BASIC') {
+      checkInPhotoLabel = 'Básico';
+    } else if (product.levelType === 'ADVANCED') {
+      checkInPhotoLabel = 'Avanzado';
+    } else if (product.levelType === 'PL' && currentPlWeekend > 0) {
+      checkInPhotoLabel = `Liderato (${plWeekendLabel} Fin de Semana)`;
+    }
+
     return NextResponse.json({
       valid: canProceed && errors.length === 0,
       user: {
@@ -320,6 +367,10 @@ export async function POST(request: NextRequest) {
         isComplete: true,
         hasAlerts: false
       } : null,
+      // Siempre requerir nueva foto para BASIC, ADVANCED y TODOS los fines de semana de PL
+      requiresNewPhoto: requiresPhoto,
+      checkInPhotoLabel: checkInPhotoLabel,
+      currentPlWeekend: currentPlWeekend, // 1, 2 o 3 para PL
       errors,
       canProceed
     });

@@ -48,6 +48,8 @@ interface ValidationResult {
     blocking: boolean;
   }[];
   canProceed: boolean;
+  requiresNewPhoto?: boolean;  // Siempre tomar nueva foto para BASIC, ADVANCED, PL(1er fin)
+  checkInPhotoLabel?: string;  // Etiqueta del tipo de check-in
 }
 
 interface ProductInfo {
@@ -360,7 +362,8 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: validationResult.user.id,
-          imageData
+          imageData,
+          productId: productInfo?.id // Enviar productId para guardar en The Vault
         })
       });
 
@@ -660,12 +663,22 @@ export default function CheckInStationPage({ params }: { params: Promise<{ produ
                 <div className="w-24 h-24 mx-auto bg-purple-500/20 rounded-full flex items-center justify-center mb-4">
                   <Camera className="text-purple-400" size={48} />
                 </div>
-                <h2 className="text-3xl font-bold mb-2">Captura de Identidad</h2>
+                <h2 className="text-3xl font-bold mb-2">
+                  {validationResult.requiresNewPhoto 
+                    ? `📸 Foto de Check-in ${validationResult.checkInPhotoLabel || ''}` 
+                    : 'Captura de Identidad'}
+                </h2>
                 <p className="text-slate-400">{validationResult.user.nombre}</p>
+                {validationResult.requiresNewPhoto && (
+                  <p className="text-amber-400 text-sm mt-2">
+                    ⚠️ Se requiere nueva foto para este entrenamiento
+                  </p>
+                )}
               </div>
 
-              {/* Si ya tiene foto, mostrar opción de mantener o tomar nueva */}
-              {validationResult.user.hasPhoto && validationResult.user.profileImage ? (
+              {/* Si requiere nueva foto, siempre mostrar webcam */}
+              {/* Si no requiere y ya tiene foto, mostrar opción de mantener */}
+              {!validationResult.requiresNewPhoto && validationResult.user.hasPhoto && validationResult.user.profileImage ? (
                 <div className="max-w-md mx-auto">
                   <div className="mb-6">
                     <p className="text-slate-300 mb-4">Foto actual del participante:</p>
