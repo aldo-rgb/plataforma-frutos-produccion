@@ -523,59 +523,6 @@ export default function SolicitarMentorPage() {
                     )}
                   </button>
 
-                  {/* PayPal */}
-                  <button
-                    onClick={() => alert('🚧 PayPal estará disponible próximamente')}
-                    className="relative bg-gradient-to-br from-blue-600 to-blue-700 text-white p-6 rounded-2xl opacity-50 cursor-not-allowed border-2 border-blue-500/20"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center">
-                          <svg className="w-8 h-8" viewBox="0 0 24 24" fill="#003087">
-                            <path d="M8.32 21.97a.546.546 0 01-.538-.458L5.003 6.37a.546.546 0 01.538-.635h5.2c3.377 0 5.2 1.674 5.2 4.573 0 3.503-2.24 5.733-5.824 5.733H8.11l-.672 4.904a.546.546 0 01-.538.458l.42-3.433z"/>
-                          </svg>
-                        </div>
-                        <div className="text-left">
-                          <div className="font-bold text-lg">PayPal</div>
-                          <div className="text-sm text-blue-100">Cuenta PayPal</div>
-                        </div>
-                      </div>
-                      <span className="text-xs bg-white/20 px-3 py-1 rounded-full font-medium">Próximamente</span>
-                    </div>
-                    <div className="text-sm text-blue-100">
-                      • Pago rápido y seguro<br/>
-                      • Sin compartir datos bancarios<br/>
-                      • Disponible globalmente
-                    </div>
-                  </button>
-
-                  {/* Mercado Pago */}
-                  <button
-                    onClick={() => alert('🚧 Mercado Pago estará disponible próximamente')}
-                    className="relative bg-gradient-to-br from-cyan-500 to-blue-600 text-white p-6 rounded-2xl opacity-50 cursor-not-allowed border-2 border-cyan-500/20"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center">
-                          <svg className="w-8 h-8" viewBox="0 0 24 24" fill="#009EE3">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M8 12l2 2 4-4" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round"/>
-                          </svg>
-                        </div>
-                        <div className="text-left">
-                          <div className="font-bold text-lg">Mercado Pago</div>
-                          <div className="text-sm text-cyan-100">Pago local</div>
-                        </div>
-                      </div>
-                      <span className="text-xs bg-white/20 px-3 py-1 rounded-full font-medium">Latinoamérica</span>
-                    </div>
-                    <div className="text-sm text-cyan-100">
-                      • Pago en tu moneda local<br/>
-                      • Transferencia o tarjeta<br/>
-                      • Cuotas sin interés
-                    </div>
-                  </button>
-
                   {/* Código de Licencia */}
                   <button
                     type="button"
@@ -1414,54 +1361,6 @@ export default function SolicitarMentorPage() {
                       <Loader2 className="w-8 h-8 animate-spin text-white" />
                     </div>
                   )}
-                </button>
-
-                {/* PayPal */}
-                <button
-                  onClick={() => alert('🚧 PayPal estará disponible próximamente')}
-                  className="relative bg-gradient-to-br from-slate-800 to-slate-700 text-white p-6 rounded-2xl opacity-50 cursor-not-allowed border-2 border-slate-700"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center p-2">
-                        <img src="/logos/paypal.png" alt="PayPal" className="w-full h-full object-contain" />
-                      </div>
-                      <div className="text-left">
-                        <div className="font-bold text-xl text-white">PayPal</div>
-                        <div className="text-sm text-slate-400">Cuenta PayPal</div>
-                      </div>
-                    </div>
-                    <span className="text-xs bg-slate-600 px-3 py-1 rounded-full font-medium">Próximamente</span>
-                  </div>
-                  <div className="text-sm text-slate-400 space-y-1">
-                    <div>• Pago rápido y seguro</div>
-                    <div>• Sin compartir datos bancarios</div>
-                    <div>• Disponible globalmente</div>
-                  </div>
-                </button>
-
-                {/* Mercado Pago */}
-                <button
-                  onClick={() => alert('🚧 Mercado Pago estará disponible próximamente')}
-                  className="relative bg-gradient-to-br from-slate-800 to-slate-700 text-white p-6 rounded-2xl opacity-50 cursor-not-allowed border-2 border-slate-700"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center p-2">
-                        <img src="/logos/mercadopago.png" alt="Mercado Pago" className="w-full h-full object-contain" />
-                      </div>
-                      <div className="text-left">
-                        <div className="font-bold text-xl text-white">Mercado Pago</div>
-                        <div className="text-sm text-slate-400">Pago local</div>
-                      </div>
-                    </div>
-                    <span className="text-xs bg-slate-600 px-3 py-1 rounded-full font-medium">Latinoamérica</span>
-                  </div>
-                  <div className="text-sm text-slate-400 space-y-1">
-                    <div>• Pago en tu moneda local</div>
-                    <div>• Transferencia o tarjeta</div>
-                    <div>• Cuotas sin interés</div>
-                  </div>
                 </button>
 
                 {/* Código de Licencia */}
