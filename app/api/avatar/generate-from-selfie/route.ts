@@ -103,21 +103,24 @@ export async function POST(request: NextRequest) {
 
     // Obtener datos del request
     const body = await request.json();
-    const { image, gender, vibe = 'cyberpunk', designation, archetype, visualTags, identityId, selectedOptionId } = body;
+    const { image, images, gender, vibe = 'cyberpunk', designation, archetype, visualTags, identityId, selectedOptionId } = body;
+
+    // Soportar múltiples imágenes o imagen única
+    const inputImages: string[] = images && images.length > 0 ? images : (image ? [image] : []);
 
     console.log('📥 Request recibido:');
     console.log('  - Gender:', gender);
     console.log('  - Vibe:', vibe);
     console.log('  - Designation:', designation);
     console.log('  - Archetype:', archetype);
-    console.log('  - Image length:', image ? image.length : 0);
+    console.log('  - Número de imágenes:', inputImages.length);
 
-    if (!image) {
-      return NextResponse.json({ error: 'Imagen requerida' }, { status: 400 });
+    if (inputImages.length === 0) {
+      return NextResponse.json({ error: 'Al menos una imagen es requerida' }, { status: 400 });
     }
 
-    if (!gender || (gender !== 'male' && gender !== 'female')) {
-      return NextResponse.json({ error: 'Género inválido. Debe ser "male" o "female"' }, { status: 400 });
+    if (!gender || (gender !== 'male' && gender !== 'female' && gender !== 'neutral')) {
+      return NextResponse.json({ error: 'Género inválido. Debe ser "male", "female" o "neutral"' }, { status: 400 });
     }
 
     // Buscar usuario
@@ -261,46 +264,16 @@ export async function POST(request: NextRequest) {
 
       const accentColor = accentColors[archetype] || 'cyan';
       
-      // Prompt optimizado para PhotoMaker - preservación facial máxima
+      // ═══════════════════════════════════════════════════════════════
+      // PROMPT MAESTRO - Estilo Digital Painting Cyberpunk
+      // Personaje futurista con gadgets cuánticos, desde la cintura
       // IMPORTANTE: Solo usar 'img' UNA VEZ en todo el prompt
-      promptToUse = `A cinematic corporate portrait of a img ${genderPrompts[gender]} executive, with a highly accurate likeness to the subject.
-
-The subject is a ${characterRole} (Quantum Jumper).
-
-Corporate role: ${designation}
-
-CRITICAL - Facial Preservation:
-The face, facial structure, skin tone, eyes, nose, mouth, jawline, hair style, hair color, facial hair (if any), and all unique facial features from the input image MUST be preserved exactly. The person's identity must remain 100% recognizable and identical to the uploaded photo.
-
-Art style: The "Matrix" meets high-end corporate photography. Cinematic color grading with cool tones (steely blues, deep greens) and dramatic contrast. Sleek, and futuristic.
-
-Lighting: Dramatic rim lighting outlining the subject, mixed with the glow of advanced interfaces. A subtle, faint visual effect around the subject suggestive of quantum displacement or phasing (a very slight chromatic aberration or digital aura).
-
-Background: A luxurious, minimalist office that feels like it's inside a digital construct. Abstract flowing data streams, subtle digital rain code patterns, or shifting geometric architecture. Deep depth of field.
-
-Clothing: Sleek, tailored, minimalist dark attire (structured jacket with a high collar, dark shirt). Expensive fabric texture. Modern executive fashion.
-
-Composition: Professional headshot to upper body, facing forward with an intense, and confident expression. Silent authority. Sharp focus on the eyes. High resolution.
-
-STRICT RULES - NO:
-❌ Changing facial features from the input image
-❌ Generic or different face than the person
-❌ Weapons of any kind
-❌ Visible cumbersome cybernetic implants
-❌ Excessive bright neon colors (keep it moody)
-❌ Aggressive postures or expressions
-
-REQUIRED - YES:
-✅ Exact facial likeness to the person in the input image
-✅ Preserve all unique facial characteristics
-✅ Sleek, dark, Matrix-inspired fashion
-✅ Subtle quantum/digital distortion effect around subject
-✅ Silent authority and confidence
-✅ MATRIX aesthetic with cool cinematic tones`;
+      // ═══════════════════════════════════════════════════════════════
+      promptToUse = `img ${genderPrompts[gender]}, digital painting illustration, semi-realistic anime style, waist-up portrait shot showing upper body and hands, bright ${accentColor} glowing eyes, friendly confident smile, stylized smooth skin with soft cel-shading, sleek white and dark grey futuristic cyber armor with glowing ${accentColor} circuit lines and hexagonal patterns, circular glowing ${accentColor} energy core on chest, futuristic single-eye quantum visor or monocle scanner with ${accentColor} holographic display, ear-mounted tech headset with spiral ${accentColor} glow pattern, one hand raised showing palm in friendly wave gesture or touching holographic interface, floating holographic data panels nearby, blurred cyberpunk city background with neon bokeh lights in ${accentColor} blue and purple, high quality digital art illustration, artstation trending, 8k, vibrant glowing colors, clean sharp lines, professional game character concept art, ${outfit}, ${accessory}`;
     
-      negativePromptToUse = 'different face, face swap, changed facial features, wrong person, altered face shape, different skin tone, different hair color, different facial hair, generic face, face morph, bad face match, poor facial preservation, face paint, face mask, cybernetic face, robotic face parts, face scars, face tattoos, deformed face, ugly, disfigured, bad anatomy, extra limbs, weapons, guns, swords, knives, aggressive pose, angry expression, sunglasses, goggles over eyes, eye coverings, trench coat, military armor, dirty, grungy, post-apocalyptic, excessive neon, cartoon, anime, illustration, watermark, text, logo, blurry face, low quality';
+      negativePromptToUse = 'photorealistic, real photo, photography, realistic skin texture, muted colors, dark gritty, weapons, guns, swords, aggressive, ugly, deformed, bad anatomy, watermark, text, blurry, low quality, cropped, headshot only, face only';
       
-      console.log('🎭 Prompt optimizado para PhotoMaker');
+      console.log('🎭 Prompt Anime/Digital 3D Style para PhotoMaker');
       console.log('🏢 Designación:', designation);
       console.log('🏢 Arquetipo:', archetype);
       console.log('👤 Rol:', characterRole);
@@ -309,6 +282,7 @@ REQUIRED - YES:
     console.log('🎨 Generando con Replicate...');
     console.log('Vibe:', vibe);
     console.log('Gender:', gender);
+    console.log('Número de imágenes de entrada:', inputImages.length);
 
     // Obtener instancia de Replicate
     const replicateClient = getReplicate();
@@ -320,22 +294,44 @@ REQUIRED - YES:
       }, { status: 503 });
     }
 
+    // Preparar imágenes de entrada
+    // PhotoMaker soporta múltiples imágenes para mejor fidelidad facial
+    // Si hay múltiples imágenes, las combinamos o usamos la primera principal
+    const primaryImage = inputImages[0];
+    
+    // Si hay más de una imagen, PhotoMaker puede usar input_image2, input_image3, input_image4
+    const inputParams: any = {
+      input_image: primaryImage,
+      prompt: promptToUse,
+      negative_prompt: negativePromptToUse,
+      num_outputs: 1,
+      guidance_scale: inputImages.length > 1 ? 4.0 : 3.5, // Ligeramente mayor con múltiples fotos
+      num_inference_steps: 60,
+      scheduler: "DPMSolverMultistep",
+      style_strength_ratio: inputImages.length > 1 ? 20 : 15, // Más estilo con múltiples fotos para consistencia
+    };
+
+    // Agregar imágenes adicionales si están disponibles
+    if (inputImages.length > 1 && inputImages[1]) {
+      inputParams.input_image2 = inputImages[1];
+      console.log('📸 Agregando imagen secundaria para mejor fidelidad');
+    }
+    if (inputImages.length > 2 && inputImages[2]) {
+      inputParams.input_image3 = inputImages[2];
+      console.log('📸 Agregando tercera imagen');
+    }
+    if (inputImages.length > 3 && inputImages[3]) {
+      inputParams.input_image4 = inputImages[3];
+      console.log('📸 Agregando cuarta imagen');
+    }
+
     // IMPORTANTE: Usamos el método de predictions para obtener URLs directamente
     // PhotoMaker retorna ReadableStream con replicate.run(), necesitamos polling
     
     // Crear predicción en Replicate con parámetros optimizados para máxima preservación facial
     const prediction = await replicateClient.predictions.create({
       version: "ddfc2b08d209f9fa8c1eca692712918bd449f695dabb4a958da31802a9570fe4",
-      input: {
-        input_image: image, // base64 string
-        prompt: promptToUse,
-        negative_prompt: negativePromptToUse,
-        num_outputs: 1,
-        guidance_scale: 3.5, // Reducido a 3.5 para máxima preservación (menos interpretación de la IA)
-        num_inference_steps: 60, // Aumentado a 60 para mejor calidad y precisión
-        scheduler: "DPMSolverMultistep",
-        style_strength_ratio: 15, // Mínimo permitido por el modelo (menor = más parecido al original)
-      }
+      input: inputParams
     });
 
     console.log('🔄 Predicción creada:', prediction.id);

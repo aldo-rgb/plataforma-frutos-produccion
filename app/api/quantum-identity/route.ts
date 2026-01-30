@@ -371,37 +371,77 @@ export async function PUT(request: NextRequest) {
 
     const characterDescription = roleDescriptions[archetype] || roleDescriptions['DIRECTOR'];
 
-    const dallePrompt = `A cinematic corporate portrait of a ${genderDescriptor} executive, with distinctive Latino features (e.g., olive complexion, defined bone structure, dark hair).
+    // ═══════════════════════════════════════════════════════════════
+    // PROMPT MAESTRO - Estilo Anime/Digital 3D Cyberpunk
+    // Como personajes de Genshin Impact, Honkai Star Rail, etc.
+    // ═══════════════════════════════════════════════════════════════
+    const dallePrompt = `A stylized anime-inspired digital 3D illustration of a ${genderDescriptor} futuristic warrior character.
 
-The subject is a ${characterDescription}.
+Character Role: ${designation}
+Character Profile: ${characterDescription}
 
-Corporate role: ${designation}
+ART STYLE (CRITICAL):
+- High-quality digital anime illustration style (like Genshin Impact, Honkai Star Rail, or modern gacha game characters)
+- Stylized proportions with large expressive eyes
+- Smooth cel-shaded skin with soft gradients
+- NOT photorealistic - this must look like a digital illustration/game character
+- Clean linework with vibrant colors
 
-Art style: The "Matrix" meets high-end corporate photography. Cinematic color grading with cool tones (steely blues, deep greens) and dramatic contrast. Sleek, sophisticated, and futuristic.
+CHARACTER DESIGN:
+- ${genderDescriptor === 'female' ? 'Beautiful anime heroine with elegant features and flowing hair' : genderDescriptor === 'male' ? 'Handsome anime hero with sharp features and dynamic hair' : 'Elegant androgynous anime character with refined features'}
+- Expressive eyes with anime-style highlights (blue or purple tints)
+- Stylized hair with dynamic flow and cyan/purple energy highlights
+- Confident friendly smile showing determination
+- Latino-inspired warm skin tone rendered in anime style
 
-Lighting: Dramatic rim lighting outlining the subject, mixed with the glow of advanced interfaces. A subtle, faint visual effect around the subject suggestive of quantum displacement or phasing (a very slight chromatic aberration or digital aura), showing they are a "Quantum Jumper".
+OUTFIT - FUTURISTIC ARMOR:
+- Sleek white and dark grey futuristic combat armor with hexagonal patterns
+- Glowing cyan and purple energy circuits and LED accents throughout the suit
+- High-tech shoulder guards with illuminated edges
+- Chest piece with central glowing energy core
+- Form-fitting advanced tech suit underneath armor plates
 
-Background: A luxurious, minimalist office that feels like it's inside a digital construct. Abstract flowing data streams, subtle digital rain code patterns, or shifting geometric architecture. Deep depth of field.
+TECH ACCESSORIES:
+- Futuristic headset or ear-mounted tech device with cyan glow
+- Holographic interface elements floating nearby
+- Energy particles and data streams around the character
 
-Clothing: Sleek, tailored, minimalist dark attire (structured jackets, high-collar shirts, modern suits with interesting textures). Expensive fabrics, no standard business casual.
+BACKGROUND:
+- Blurred futuristic cyberpunk cityscape
+- Holographic displays and data screens
+- Neon bokeh lights in cyan, blue, and purple
+- Digital particle effects
 
-Composition: Professional headshot to upper body, facing forward with an intense, intelligent, and confident expression. Silent authority. High resolution.
+LIGHTING:
+- Bright anime-style lighting with soft shadows
+- Cyan and purple rim lighting on armor edges
+- Glowing energy effects illuminating the face
+- High contrast with vibrant colors
 
-STRICT RULES - NO:
-❌ Weapons of any kind
-❌ Visible cumbersome cybernetic implants
-❌ Excessive bright neon colors (keep it moody)
-❌ Aggressive postures or expressions
-❌ Trench coats or sunglasses indoors (must see eyes)
+QUALITY:
+- 8K resolution digital art
+- Sharp clean lines
+- Professional game character art quality
+- Pixiv/ArtStation quality illustration
 
-REQUIRED - YES:
-✅ Distinctive Latino appearance
-✅ Sleek, dark, Matrix-inspired fashion
-✅ Subtle quantum/digital distortion effect around subject
-✅ Silent authority and confidence
-✅ High-end corporate executive appearance`;
+STRICT RULES - NEVER:
+❌ Photorealistic rendering
+❌ Real human skin textures
+❌ Photography style
+❌ Dull or muted colors
+❌ Weapons (guns, swords, etc.)
+❌ Aggressive or threatening expressions
+❌ Dark gritty aesthetic
 
-    console.log('🎨 Generando avatar corporativo con DALL-E...');
+ALWAYS:
+✅ Anime/digital illustration style
+✅ Stylized features (not realistic)
+✅ Vibrant glowing neon colors
+✅ Friendly confident expression
+✅ High-tech futuristic white armor with glowing accents
+✅ Clean polished digital art aesthetic`;
+
+    console.log('🎨 Generando avatar Anime/Digital 3D con DALL-E...');
     console.log('Rol del Consejo:', designation);
     console.log('Arquetipo:', archetype);
 

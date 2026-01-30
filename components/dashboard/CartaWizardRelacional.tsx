@@ -65,6 +65,9 @@ export default function CartaWizardRelacional() {
     message: '' 
   });
   
+  // NUEVO: Modal de confirmación para usuarios FREE graduados sin mentor
+  const [showNoMentorConfirmModal, setShowNoMentorConfirmModal] = useState(false);
+  
   // NUEVO: Estado para saber si el usuario pertenece a un grupo/visión
   const [perteneceAGrupo, setPerteneceAGrupo] = useState(false);
   const [areasActivas, setAreasActivas] = useState<typeof AREAS>([]);
@@ -74,6 +77,9 @@ export default function CartaWizardRelacional() {
   
   // NUEVO: Nivel del usuario (BASIC, ADVANCED, PL) - para controlar si puede enviar carta
   const [userLevel, setUserLevel] = useState<string | null>(null);
+  
+  // NUEVO: Tier del usuario (FREE, STANDARD, PREMIUM) - para controlar acceso a áreas
+  const [userTier, setUserTier] = useState<string>('FREE');
   
   // PASO 1: Declaración del Ser (NUEVO)
   const [declaracionesSer, setDeclaracionesSer] = useState<Record<string, string>>({});
@@ -420,12 +426,17 @@ export default function CartaWizardRelacional() {
       transformationTargetValue = areasConfigData.transformationGuestsTarget || null;
       const visionEndDateValue = areasConfigData.visionEndDate || null;
       const userLevelValue = areasConfigData.userLevel || null;
+      const userTierValue = areasConfigData.userTier || 'FREE';
       
       // Guardar nivel del usuario
       if (userLevelValue) {
         setUserLevel(userLevelValue);
         console.log(`📊 Nivel del usuario: ${userLevelValue}`);
       }
+      
+      // Guardar tier del usuario
+      setUserTier(userTierValue);
+      console.log(`💎 Tier del usuario: ${userTierValue}`);
       
       // Guardar objetivo de invitados si existe
       if (transformationTargetValue) {
@@ -1403,7 +1414,14 @@ export default function CartaWizardRelacional() {
         return;
       }
       
-      if (submitRes.ok) {
+      // PRIMERO: Verificar si requiere confirmación (usuario FREE graduado sin mentor)
+      if (submitRes.status === 200 && submitData.requiresConfirmation && submitData.canContinueWithoutMentor) {
+        console.log('🔄 Usuario FREE graduado sin mentor - requiere confirmación');
+        setShowNoMentorConfirmModal(true);
+        return; // No continuar con el flujo normal
+      }
+      
+      if (submitRes.ok && submitData.success) {
         // Actualizar estado local
         const newStatus = submitData.carta?.estado || 'PENDIENTE_MENTOR';
         setEstado(newStatus);
@@ -1484,6 +1502,60 @@ export default function CartaWizardRelacional() {
     }
   };
 
+  // NUEVO: Función para confirmar envío sin mentor (usuarios FREE graduados)
+  const handleConfirmWithoutMentor = async () => {
+    setShowNoMentorConfirmModal(false);
+    setSubmitting(true);
+    
+    try {
+      console.log('📤 Enviando carta SIN mentor (usuario FREE graduado)...');
+      
+      const submitRes = await fetch('/api/carta/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          cartaId, 
+          continueWithoutMentor: true 
+        })
+      });
+      
+      const submitData = await submitRes.json();
+      
+      if (submitData.success) {
+        setEstado('APROBADA');
+        setHasChanges(false);
+        
+        console.log('✅ Carta auto-aprobada exitosamente (sin mentor)');
+        
+        setErrorModal({
+          show: true,
+          title: '✅ ¡Carta Aprobada!',
+          message: submitData.message || 'Tu carta ha sido aprobada automáticamente y tus tareas han sido generadas.'
+        });
+        
+        setTimeout(() => {
+          window.location.href = '/dashboard/carta/resumen';
+        }, 2000);
+      } else {
+        console.error('❌ Error al aprobar carta sin mentor:', submitData);
+        setErrorModal({
+          show: true,
+          title: '❌ Error',
+          message: submitData.message || 'Hubo un problema al procesar tu carta.'
+        });
+      }
+    } catch (error: any) {
+      console.error('❌ Error confirming without mentor:', error);
+      setErrorModal({
+        show: true,
+        title: '❌ Error de conexión',
+        message: error.message || 'No se pudo conectar con el servidor.'
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#0f1015]">
@@ -1528,8 +1600,8 @@ export default function CartaWizardRelacional() {
             </div>
             
             <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end flex-wrap">
-              {/* Botón configurar áreas (solo si NO pertenece a grupo y está en BORRADOR) */}
-              {!perteneceAGrupo && estado === 'BORRADOR' && (
+              {/* Botón configurar áreas (si NO pertenece a grupo, O si es FREE en nivel PL/Liderato) y está en BORRADOR */}
+              {((!perteneceAGrupo) || (userTier === 'FREE' && userLevel === 'PL')) && estado === 'BORRADOR' && (
                 <button
                   onClick={() => setShowAreaConfig(true)}
                   className="px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold text-xs sm:text-sm flex items-center gap-2 transition whitespace-nowrap"
@@ -2747,6 +2819,83 @@ export default function CartaWizardRelacional() {
                   Entendido
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* MODAL DE CONFIRMACIÓN SIN MENTOR - Usuarios FREE Graduados */}
+      {showNoMentorConfirmModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-3 sm:p-4 animate-in fade-in">
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 border-2 border-amber-500/50 rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="flex flex-col items-center text-center gap-3 sm:gap-4">
+              <div className="text-4xl sm:text-5xl md:text-6xl animate-pulse">
+                🎓
+              </div>
+              <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white">
+                No tienes Mentor Asignado
+              </h3>
+              <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
+                Como usuario graduado con cuenta FREE, actualmente no tienes un mentor asignado para revisar tu carta.
+              </p>
+              
+              {/* Opción 1: Contratar paquete */}
+              <div className="w-full bg-gradient-to-r from-purple-900/40 to-pink-900/40 border border-purple-500/30 rounded-xl p-4 mt-2">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-2xl">📞</span>
+                  <h4 className="text-white font-bold text-left">Opción 1: Contratar Mentor</h4>
+                </div>
+                <p className="text-gray-300 text-sm text-left mb-3">
+                  Adquiere un paquete de llamadas y obtén acompañamiento personalizado de un mentor certificado.
+                </p>
+                <button
+                  onClick={() => {
+                    setShowNoMentorConfirmModal(false);
+                    window.location.href = '/dashboard/suscripcion';
+                  }}
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-lg hover:scale-[1.02] text-white font-bold py-2.5 px-4 rounded-xl transition-all text-sm flex items-center justify-center gap-2"
+                >
+                  <span>💎</span>
+                  Ver Paquetes de Llamadas
+                </button>
+              </div>
+              
+              {/* Opción 2: Continuar sin mentor */}
+              <div className="w-full bg-gradient-to-r from-amber-900/30 to-orange-900/30 border border-amber-500/30 rounded-xl p-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-2xl">🚀</span>
+                  <h4 className="text-white font-bold text-left">Opción 2: Continuar Solo</h4>
+                </div>
+                <p className="text-gray-300 text-sm text-left mb-3">
+                  Tu carta será aprobada automáticamente y se generarán todas tus tareas sin revisión de mentor.
+                </p>
+                <button
+                  onClick={handleConfirmWithoutMentor}
+                  disabled={submitting}
+                  className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:shadow-lg hover:scale-[1.02] text-white font-bold py-2.5 px-4 rounded-xl transition-all text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {submitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Procesando...
+                    </>
+                  ) : (
+                    <>
+                      <span>✨</span>
+                      Continuar sin Mentor
+                    </>
+                  )}
+                </button>
+              </div>
+              
+              {/* Botón cancelar */}
+              <button
+                onClick={() => setShowNoMentorConfirmModal(false)}
+                disabled={submitting}
+                className="w-full bg-gray-700 hover:bg-gray-600 text-gray-300 font-medium py-2 px-4 rounded-xl transition-all text-sm disabled:opacity-50 mt-1"
+              >
+                Cancelar
+              </button>
             </div>
           </div>
         </div>

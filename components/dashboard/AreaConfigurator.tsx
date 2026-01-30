@@ -24,6 +24,7 @@ export default function AreaConfigurator({ userId, onClose }: AreaConfiguratorPr
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [perteneceAGrupo, setPerteneceAGrupo] = useState(false);
+  const [userTier, setUserTier] = useState<string>('FREE');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -45,6 +46,7 @@ export default function AreaConfigurator({ userId, onClose }: AreaConfiguratorPr
 
       setAreas(data.areas || []);
       setPerteneceAGrupo(data.perteneceAGrupo || false);
+      setUserTier(data.userTier || 'FREE');
     } catch (err: any) {
       setError('Error al cargar la configuración');
       console.error(err);
@@ -168,6 +170,18 @@ export default function AreaConfigurator({ userId, onClose }: AreaConfiguratorPr
             </div>
           </div>
         </div>
+
+        {/* Banner de advertencia para usuarios de grupo (sin userId = es el propio usuario) */}
+        {perteneceAGrupo && !userId && (
+          <div className="bg-orange-900/30 border border-orange-500/50 rounded-xl p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="text-orange-400 flex-shrink-0" size={20} />
+              <p className="text-orange-200 text-sm">
+                Los usuarios de grupo deben solicitar cambios a su coordinador
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Error/Success Messages */}
         {error && (

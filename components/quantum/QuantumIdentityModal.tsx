@@ -6,6 +6,7 @@ import {
   Loader2, Share2, Twitter, Facebook, Linkedin, Copy, X, Camera, Upload
 } from 'lucide-react';
 import SelfieAvatarCapture from './SelfieAvatarCapture';
+import PhotoCaptureOptions from './PhotoCaptureOptions';
 
 interface Candidate {
   id: string;
@@ -46,6 +47,10 @@ export default function QuantumIdentityModal({
   const [showSelfieCapture, setShowSelfieCapture] = useState(false);
   const [useSelfieMode, setUseSelfieMode] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [vaultSaveStatus, setVaultSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+  const [showPhotoCaptureOptions, setShowPhotoCaptureOptions] = useState(false);
+  const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
+  const [captureMode, setCaptureMode] = useState<'ai-selfie' | 'ai-upload' | 'no-ai' | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Función para limpiar el cooldown cuando el avatar se guarda exitosamente
@@ -69,6 +74,9 @@ export default function QuantumIdentityModal({
       setIsGenerating(false);
       setShowSelfieCapture(false);
       setUseSelfieMode(false);
+      setShowPhotoCaptureOptions(false);
+      setCapturedPhotos([]);
+      setCaptureMode(null);
     }
   }, [isOpen]);
 
@@ -81,12 +89,101 @@ export default function QuantumIdentityModal({
   const handleAvatarFromSelfie = (avatarUrl: string) => {
     setAvatarUrl(avatarUrl);
     setShowSelfieCapture(false);
+    setShowPhotoCaptureOptions(false);
     setStage('reveal');
     // Limpiar cooldown ya que el avatar se guardó exitosamente
     clearCooldown();
   };
 
-  // Manejar subida de foto desde archivo
+  // Manejar fotos del nuevo componente PhotoCaptureOptions
+  const handlePhotosReady = async (photos: string[], mode: 'ai-selfie' | 'ai-upload' | 'no-ai') => {
+    setCapturedPhotos(photos);
+    setCaptureMode(mode);
+    setShowPhotoCaptureOptions(false);
+
+    if (mode === 'no-ai') {
+      // Modo sin IA: subir foto directamente como perfil
+      setStage('generating');
+      try {
+        // Convertir base64 a blob
+        const response = await fetch(photos[0]);
+        const blob = await response.blob();
+        const file = new File([blob], 'profile.jpg', { type: 'image/jpeg' });
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('type', 'profile-upload');
+
+        const uploadRes = await fetch('/api/upload/profile-image', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error('Error al subir imagen');
+        }
+
+        const { url: uploadedUrl } = await uploadRes.json();
+
+        // Actualizar perfil
+        await fetch('/api/user/profile', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ profileImage: uploadedUrl })
+        });
+
+        setAvatarUrl(uploadedUrl);
+        setStage('reveal');
+        clearCooldown();
+      } catch (error) {
+        console.error('Error uploading photo:', error);
+        setErrorTitle('Error al subir foto');
+        setErrorMessage('No se pudo subir la fotografía');
+        setStage('error');
+      }
+    } else {
+      // Modo con IA: generar avatar con múltiples fotos
+      setStage('generating');
+      try {
+        const res = await fetch('/api/avatar/generate-from-selfie', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            images: photos, // Enviar array de fotos
+            image: photos[0], // Mantener compatibilidad con imagen única
+            gender: gender,
+            designation: selectedCandidate?.designation,
+            archetype: selectedCandidate?.archetype,
+            visualTags: selectedCandidate?.visual_tags,
+            identityId: identityId,
+            selectedOptionId: selectedCandidate?.id
+          })
+        });
+
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({ error: 'Error desconocido' }));
+          throw new Error(error.error || 'Error generando avatar');
+        }
+
+        const data = await res.json();
+        
+        if (!data.avatarUrl) {
+          throw new Error('No se recibió URL del avatar');
+        }
+
+        setAvatarUrl(data.avatarUrl);
+        clearCooldown();
+        setStage('reveal');
+      } catch (error: any) {
+        console.error('Error generando avatar:', error);
+        setErrorTitle('Error generando avatar');
+        setErrorMessage(error.message || 'No se pudo generar el avatar con IA');
+        setStage('error');
+      }
+    }
+  };
+
+  // Manejar subida de foto desde archivo (legacy)
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -237,53 +334,8 @@ export default function QuantumIdentityModal({
   const confirmSelection = async () => {
     if (!selectedCandidate || !identityId) return;
 
-    // Si es modo selfie, abrir la cámara en lugar de generar con IA
-    if (useSelfieMode) {
-      setShowSelfieCapture(true);
-      return;
-    }
-
-    // Modo IA: generar avatar automáticamente
-    setStage('generating');
-
-    try {
-      const res = await fetch('/api/quantum-identity', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          identityId,
-          selectedOptionId: selectedCandidate.id
-        })
-      });
-
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({ error: 'Error desconocido' }));
-        throw new Error(error.error || 'Error generando avatar');
-      }
-
-      const data = await res.json();
-      
-      // Verificar que tenemos un avatar URL válido
-      if (!data.avatarUrl) {
-        throw new Error('No se recibió URL del avatar');
-      }
-      
-      setAvatarUrl(data.avatarUrl);
-      
-      // Limpiar cooldown ya que el avatar se guardó exitosamente
-      clearCooldown();
-
-      // Transición a reveal
-      setTimeout(() => {
-        setStage('reveal');
-      }, 3000);
-
-    } catch (error: any) {
-      console.error('Error generando avatar:', error);
-      setErrorTitle('Error al generar avatar');
-      setErrorMessage('No se pudo generar tu avatar. Por favor intenta de nuevo o contacta al soporte si el problema persiste.');
-      setStage('error');
-    }
+    // Siempre abrir el modal de opciones de captura de fotos
+    setShowPhotoCaptureOptions(true);
   };
 
   const getArchetypeIcon = (archetype: string) => {
@@ -452,50 +504,25 @@ export default function QuantumIdentityModal({
                 className="hidden"
               />
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                {/* Botón de Avatar con IA */}
-                <button
-                  onClick={() => {
-                    setUseSelfieMode(false);
-                    setStage('analyzing');
-                  }}
-                  className="group relative px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold rounded-xl transition-all transform hover:scale-105 shadow-lg shadow-purple-500/30"
-                >
-                  <div className="flex flex-col items-center space-y-1 sm:space-y-2">
-                    <Sparkles size={24} className="sm:w-8 sm:h-8 group-hover:rotate-12 transition-transform" />
-                    <span className="text-sm sm:text-base md:text-lg leading-tight text-center">Generar Perfil con IA</span>
-                    <span className="text-xs sm:text-sm text-purple-200 leading-tight text-center">Retrato corporativo del Consejo</span>
+              {/* Un solo botón que abre las opciones de captura */}
+              <button
+                onClick={() => {
+                  setUseSelfieMode(true);
+                  setStage('analyzing');
+                }}
+                className="w-full group relative px-4 sm:px-6 py-4 sm:py-5 bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 hover:from-purple-700 hover:via-blue-700 hover:to-cyan-700 text-white font-bold rounded-xl transition-all transform hover:scale-[1.02] shadow-lg shadow-purple-500/30"
+              >
+                <div className="flex flex-col items-center space-y-2">
+                  <div className="flex items-center gap-3">
+                    <Camera size={28} className="group-hover:rotate-12 transition-transform" />
+                    <Sparkles size={24} className="text-yellow-300 animate-pulse" />
                   </div>
-                </button>
-
-                {/* Botón de Selfie */}
-                <button
-                  onClick={() => {
-                    setUseSelfieMode(true);
-                    setStage('analyzing');
-                  }}
-                  className="group relative px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-bold rounded-xl transition-all transform hover:scale-105 shadow-lg shadow-cyan-500/30"
-                >
-                  <div className="flex flex-col items-center space-y-1 sm:space-y-2">
-                    <Camera size={24} className="sm:w-8 sm:h-8 group-hover:rotate-12 transition-transform" />
-                    <span className="text-sm sm:text-base md:text-lg leading-tight text-center">📸 Crear con Selfie</span>
-                    <span className="text-xs sm:text-sm text-cyan-200 leading-tight text-center">Avatar personalizado con IA</span>
-                  </div>
-                </button>
-
-                {/* Botón de Subir Fotografía */}
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploadingPhoto}
-                  className="group relative px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-xl transition-all transform hover:scale-105 shadow-lg shadow-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                >
-                  <div className="flex flex-col items-center space-y-1 sm:space-y-2">
-                    <Upload size={24} className="sm:w-8 sm:h-8 group-hover:rotate-12 transition-transform" />
-                    <span className="text-sm sm:text-base md:text-lg leading-tight text-center">📷 Subir Fotografía</span>
-                    <span className="text-xs sm:text-sm text-emerald-200 leading-tight text-center">Usar foto existente</span>
-                  </div>
-                </button>
-              </div>
+                  <span className="text-lg sm:text-xl font-black uppercase tracking-wide">Continuar</span>
+                  <span className="text-xs sm:text-sm text-purple-200 leading-tight text-center">
+                    Elegirás cómo crear tu avatar en el siguiente paso
+                  </span>
+                </div>
+              </button>
             </div>
           )}
 
@@ -510,7 +537,7 @@ export default function QuantumIdentityModal({
         </div>
       )}
 
-      {/* Modal de Selfie Capture */}
+      {/* Modal de Selfie Capture (Legacy - se mantiene por compatibilidad) */}
       {showSelfieCapture && gender && selectedCandidate && (
         <SelfieAvatarCapture
           isOpen={showSelfieCapture}
@@ -519,6 +546,17 @@ export default function QuantumIdentityModal({
           onAvatarGenerated={handleAvatarFromSelfie}
           selectedDesignation={selectedCandidate}
           identityId={identityId || undefined}
+        />
+      )}
+
+      {/* NUEVO: Modal de Opciones de Captura de Fotos */}
+      {showPhotoCaptureOptions && gender && selectedCandidate && (
+        <PhotoCaptureOptions
+          isOpen={showPhotoCaptureOptions}
+          onClose={() => setShowPhotoCaptureOptions(false)}
+          gender={gender}
+          onPhotosReady={handlePhotosReady}
+          selectedDesignation={selectedCandidate}
         />
       )}
       
@@ -535,7 +573,7 @@ export default function QuantumIdentityModal({
           <h2 className="text-3xl font-black text-white uppercase tracking-wider">
             ANALIZANDO PERFIL EJECUTIVO...
           </h2>
-          <p className="text-slate-400">El Consejo está evaluando tus capacidades...</p>
+          <p className="text-slate-400">El Consejo está evaluando tu alineacion...</p>
           <div className="flex items-center justify-center gap-2">
             <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
             <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
@@ -689,6 +727,107 @@ export default function QuantumIdentityModal({
               {selectedCandidate?.rationale}
             </p>
           </div>
+
+          {/* Guardar en The Vault */}
+          <button
+            onClick={async () => {
+              if (vaultSaveStatus === 'saving') return;
+              setVaultSaveStatus('saving');
+              try {
+                const res = await fetch('/api/avatars/vault', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    avatarUrl: avatarUrl,
+                    vibe: 'quantum-identity',
+                    gender: gender || 'neutral',
+                    sourceImage: 'selfie-generated',
+                    designation: selectedCandidate?.designation,
+                    archetype: selectedCandidate?.archetype
+                  })
+                });
+                if (res.ok) {
+                  setVaultSaveStatus('success');
+                  setTimeout(() => setVaultSaveStatus('idle'), 3000);
+                } else {
+                  setVaultSaveStatus('error');
+                  setTimeout(() => setVaultSaveStatus('idle'), 3000);
+                }
+              } catch (error) {
+                console.error('Error guardando en vault:', error);
+                setVaultSaveStatus('error');
+                setTimeout(() => setVaultSaveStatus('idle'), 3000);
+              }
+            }}
+            disabled={vaultSaveStatus === 'saving' || vaultSaveStatus === 'success'}
+            className={`w-full px-6 py-4 rounded-xl font-bold uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-3 ${
+              vaultSaveStatus === 'success' 
+                ? 'bg-gradient-to-r from-green-600 to-emerald-600 shadow-green-500/30 cursor-default'
+                : vaultSaveStatus === 'error'
+                ? 'bg-gradient-to-r from-red-600 to-rose-600 shadow-red-500/30'
+                : vaultSaveStatus === 'saving'
+                ? 'bg-gradient-to-r from-amber-600/50 to-orange-600/50 shadow-amber-500/20 cursor-wait'
+                : 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-amber-500/30'
+            }`}
+          >
+            {vaultSaveStatus === 'saving' ? (
+              <>
+                <Loader2 className="w-6 h-6 animate-spin" />
+                Guardando...
+              </>
+            ) : vaultSaveStatus === 'success' ? (
+              <>
+                <CheckCircle className="w-6 h-6" />
+                ¡Guardado en The Vault!
+              </>
+            ) : vaultSaveStatus === 'error' ? (
+              <>
+                <X className="w-6 h-6" />
+                Error al guardar
+              </>
+            ) : (
+              <>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                </svg>
+                Guardar Selfie en The Vault
+              </>
+            )}
+          </button>
+
+          {/* Botón Regenerar Avatar */}
+          <button
+            onClick={() => {
+              // Resetear estados y volver al inicio para regenerar
+              setStage('gender');
+              setAvatarUrl('');
+              setVaultSaveStatus('idle');
+              setCapturedPhotos([]);
+              setCaptureMode(null);
+              setShowPhotoCaptureOptions(false);
+              setShowSelfieCapture(false);
+              setUseSelfieMode(false);
+            }}
+            className="w-full px-6 py-4 rounded-xl font-bold uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-3 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 shadow-purple-500/30"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Regenerar Avatar
+          </button>
+
+          {/* Toast de confirmación elegante */}
+          {vaultSaveStatus === 'success' && (
+            <div className="animate-in slide-in-from-bottom fade-in duration-300 bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/50 rounded-xl p-4 flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <CheckCircle className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <p className="text-green-400 font-bold">Avatar guardado exitosamente</p>
+                <p className="text-green-300/70 text-sm">Disponible en The Vault → Sección Avatares</p>
+              </div>
+            </div>
+          )}
 
           {/* Share Section */}
           <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 space-y-4">

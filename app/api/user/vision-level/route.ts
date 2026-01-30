@@ -112,14 +112,18 @@ export async function GET() {
       }
 
       // Definir acceso según nivel
-      // BASIC: Ranking, Quantum, Llamadas Mentor
+      // BASIC: Ranking, Quantum, Llamadas Mentor (+ Carta para FREE)
       // ADVANCED: + Carta, Metas
       // PL: + Tareas, Evidencias, Disciplina (acceso completo)
+      
+      // Los usuarios FREE siempre pueden editar su carta (áreas en Wizard-v2)
+      const isFreeUser = usuario.tier === 'FREE';
+      
       const accessibleModules = {
         ranking: true,
         quantum: true,
         llamadasMentor: true,
-        carta: currentLevel === 'ADVANCED' || currentLevel === 'PL',
+        carta: isFreeUser || currentLevel === 'ADVANCED' || currentLevel === 'PL',
         metas: currentLevel === 'ADVANCED' || currentLevel === 'PL',
         tareas: currentLevel === 'PL',
         evidencias: currentLevel === 'PL',
@@ -130,7 +134,7 @@ export async function GET() {
       const lockedMessages = {
         tareas: '🔒 Disponible al registrarte en PL (Program Leadership)',
         evidencias: '🔒 Disponible al registrarte en PL (Program Leadership)',
-        carta: '🔒 Disponible al registrarte en AVANZADO',
+        carta: isFreeUser ? '' : '🔒 Disponible al registrarte en AVANZADO',
         metas: '🔒 Disponible al registrarte en AVANZADO',
         disciplina: '🔒 Disponible al registrarte en PL (Program Leadership)',
         ranking: '',

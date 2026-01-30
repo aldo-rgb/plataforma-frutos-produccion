@@ -60,6 +60,7 @@ export async function GET(req: NextRequest) {
     const targetUser = await prisma.usuario.findUnique({
       where: { id: userId },
       select: { 
+        tier: true, // Agregar tier del usuario
         VisionParticipante_VisionParticipante_participanteIdToUsuario: {
           include: {
             Vision: {
@@ -82,10 +83,24 @@ export async function GET(req: NextRequest) {
         }
       }
     });
+    
+    // Obtener tier del usuario
+    const userTier = targetUser?.tier || 'FREE';
 
     let visionParticipante = targetUser?.VisionParticipante_VisionParticipante_participanteIdToUsuario?.[0];
     let visionConfig = visionParticipante?.Vision;
-    let perteneceAGrupo = !!visionParticipante;
+    
+    // =====================================================
+    // IMPORTANTE: Usuarios con tier FREE (perdieron licencia)
+    // NO deben ser tratados como "pertenece a grupo"
+    // Esto permite que graduados sin licencia puedan configurar sus áreas
+    // =====================================================
+    const isTierFree = userTier === 'FREE';
+    let perteneceAGrupo = isTierFree ? false : !!visionParticipante;
+    
+    if (isTierFree && visionParticipante) {
+      console.log('⚠️ Usuario tiene tier FREE - se trata como usuario independiente aunque tenga VisionParticipante');
+    }
 
     // Si no es VisionParticipante, verificar si tiene vision_enrollments (inscrito al programa)
     // También obtener el nivel del usuario para filtrar áreas
@@ -120,7 +135,8 @@ export async function GET(req: NextRequest) {
         orderBy: { enrolledAt: 'desc' }
       });
 
-      if (enrollments.length > 0) {
+      if (enrollments.length > 0 && !isTierFree) {
+        // Solo considerar como grupo si NO es tier FREE
         const firstEnrollment = enrollments[0];
         const visionId = firstEnrollment.visionId;
         
@@ -299,7 +315,8 @@ export async function GET(req: NextRequest) {
         visionName: visionConfig.nombre,
         transformationGuestsTarget: visionConfig.transformationGuestsTarget,
         visionEndDate: visionConfig.endDate,
-        userLevel // Incluir nivel del usuario en la respuesta
+        userLevel, // Incluir nivel del usuario en la respuesta
+        userTier // Incluir tier del usuario
       });
     }
 
@@ -316,7 +333,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         areas: defaultConfigs,
         perteneceAGrupo: false,
-        isDefault: true
+        isDefault: true,
+        userTier
       });
     }
 
@@ -324,7 +342,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       areas: configs.map(c => ({ areaKey: c.areaKey, enabled: c.enabled })),
       perteneceAGrupo,
-      isDefault: false
+      isDefault: false,
+      userTier
     });
 
   } catch (error: any) {
@@ -351,10 +370,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { userId: targetUserId, areas } = body;
 
-    // Obtener usuario actual
+    // Obtener usuario actual incluyendo su tier
     const currentUser = await prisma.usuario.findUnique({
       where: { email: session.user.email },
-      select: { id: true, rol: true }
+      select: { id: true, rol: true, tier: true }
     });
 
     if (!currentUser) {
@@ -363,6 +382,12 @@ export async function POST(req: NextRequest) {
 
     // Determinar qué usuario modificar y verificar si pertenece a visión
     let userId = currentUser.id;
+    
+    // =====================================================
+    // IMPORTANTE: Usuarios con tier FREE (perdieron licencia)
+    // pueden modificar sus propias áreas aunque tengan historial de visión
+    // =====================================================
+    const isTierFree = currentUser.tier === 'FREE' || !currentUser.tier;
     
     // Verificar si el usuario actual pertenece a una visión ACTIVA
     const currentUserVision = await prisma.usuario.findUnique({
@@ -386,11 +411,19 @@ export async function POST(req: NextRequest) {
     });
     
     const visionActiva = currentUserVision?.VisionParticipante_VisionParticipante_participanteIdToUsuario?.[0];
-    const perteneceAGrupo = !!visionActiva;
+    
+    // Si el usuario tiene tier FREE, NO se considera como "pertenece a grupo"
+    // Esto permite que graduados sin licencia puedan configurar sus áreas
+    const perteneceAGrupo = isTierFree ? false : !!visionActiva;
     
     console.log('🔍 POST /api/areas-config - Usuario:', currentUser.id);
+    console.log('💳 Tier del usuario:', currentUser.tier || 'FREE');
     console.log('📋 Visión activa encontrada:', visionActiva ? visionActiva.Vision.nombre : 'Ninguna');
-    console.log('🎯 Pertenece a grupo:', perteneceAGrupo);
+    console.log('🎯 Pertenece a grupo (considerando tier):', perteneceAGrupo);
+    
+    if (isTierFree && visionActiva) {
+      console.log('⚠️ Usuario tiene tier FREE - puede modificar sus áreas aunque tenga VisionParticipante');
+    }
     
     if (targetUserId) {
       // Solo admin/coordinador pueden modificar otros usuarios
@@ -399,15 +432,15 @@ export async function POST(req: NextRequest) {
       }
       userId = parseInt(targetUserId);
     } else {
-      // Usuarios SIN grupo pueden modificar sus propias áreas
-      // Usuarios CON grupo NO pueden modificar (solo admin/coordinador)
+      // Usuarios SIN grupo o con tier FREE pueden modificar sus propias áreas
+      // Usuarios CON grupo y con licencia activa NO pueden modificar (solo admin/coordinador)
       if (perteneceAGrupo) {
-        console.log('❌ Usuario pertenece a grupo, no puede modificar sus áreas');
+        console.log('❌ Usuario pertenece a grupo activo con licencia, no puede modificar sus áreas');
         return NextResponse.json({ 
           error: 'Los usuarios de grupo deben solicitar cambios a su coordinador' 
         }, { status: 403 });
       }
-      console.log('✅ Usuario es lobo solitario, puede modificar sus áreas');
+      console.log('✅ Usuario puede modificar sus áreas (lobo solitario o tier FREE)');
     }
 
     // Obtener info del usuario target para validación
@@ -450,12 +483,14 @@ export async function POST(req: NextRequest) {
             }
           },
           update: {
-            enabled: area.enabled
+            enabled: area.enabled,
+            updatedAt: new Date()
           },
           create: {
             usuarioId: userId,
             areaKey: area.areaKey,
-            enabled: area.enabled
+            enabled: area.enabled,
+            updatedAt: new Date()
           }
         })
       )

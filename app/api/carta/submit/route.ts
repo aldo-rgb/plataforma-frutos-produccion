@@ -2,12 +2,16 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { notifyCartaSubmitted } from '@/lib/notifications';
+import { notifyCartaSubmitted, notifyCartaApproved } from '@/lib/notifications';
 import { validateCartaForSubmission } from '@/lib/validaciones-carta';
+import { generateTasksForLetter } from '@/lib/taskGenerator';
 
 /**
  * POST /api/carta/submit
  * Envía la carta para revisión (mentor o admin)
+ * ⚠️ VALIDACIÓN DURA: Valida completitud antes de permitir envío
+ * ⚠️ VALIDACIÓN VISION: Usuarios de Vision DEBEN tener mentor asignado
+ * ✅ USUARIOS GRADUADOS FREE: Pueden continuar sin mentor (auto-aprobación)
  * ⚠️ VALIDACIÓN DURA: Valida completitud antes de permitir envío
  * ⚠️ VALIDACIÓN VISION: Usuarios de Vision DEBEN tener mentor asignado
  */
@@ -77,9 +81,17 @@ export async function POST(req: Request) {
 
     const perteneceAVision = !!visionParticipante;
     const mentorId = usuario?.assignedMentorId || usuario?.mentorId;
+    const userTier = usuario?.tier || 'FREE';
 
-    // Si pertenece a una Vision y NO tiene mentor asignado → BLOQUEAR
-    if (perteneceAVision && !mentorId) {
+    // =====================================================
+    // CASO ESPECIAL: Usuario graduado con TIER FREE sin mentor
+    // Pueden continuar sin mentor si lo desean (auto-aprobación)
+    // =====================================================
+    const isGraduatedFreeUser = userTier === 'FREE' && perteneceAVision;
+    
+    // Si pertenece a una Vision, NO tiene mentor y NO es usuario FREE graduado → BLOQUEAR
+    // Si es FREE graduado sin mentor, permitir continuar (se manejará con confirmación en frontend)
+    if (perteneceAVision && !mentorId && !isGraduatedFreeUser) {
       console.log('❌ Usuario de Vision sin mentor - Bloqueando envío');
       console.log('   Vision:', visionParticipante?.Vision?.nombre || 'N/A');
       console.log('   UserId:', userId);
@@ -91,6 +103,26 @@ export async function POST(req: Request) {
         isVisionUser: true,
         visionName: visionParticipante?.Vision?.nombre
       }, { status: 403 });
+    }
+    
+    // Usuario graduado FREE sin mentor - Preguntar si quiere continuar
+    if (isGraduatedFreeUser && !mentorId) {
+      // Verificar si el usuario confirmó que quiere continuar sin mentor
+      const { continueWithoutMentor } = data;
+      
+      if (!continueWithoutMentor) {
+        console.log('⚠️ Usuario graduado FREE sin mentor - Requiere confirmación');
+        return NextResponse.json({ 
+          error: 'Confirmación requerida',
+          message: 'Como usuario graduado sin licencia activa, puedes continuar sin mentor. Tu carta será auto-aprobada y se generarán tus tareas automáticamente.',
+          requiresConfirmation: true,
+          canContinueWithoutMentor: true,
+          isGraduatedFree: true,
+          visionName: visionParticipante?.Vision?.nombre
+        }, { status: 200 }); // 200 porque no es un error, es una confirmación pendiente
+      }
+      
+      console.log('✅ Usuario graduado FREE confirmó continuar sin mentor - Auto-aprobando carta');
     }
     // ==================================================================
 
@@ -110,8 +142,13 @@ export async function POST(req: Request) {
         console.log('🎫 Usuario tiene licencia de organización asignada - Permitiendo envío');
         // La licencia se activará después de validar y enviar la carta al mentor
       } 
-      // ❌ Si es FREE sin licencia -> Redirigir a PRICING
-      else if (userTier === 'FREE') {
+      // ✅ Usuario graduado FREE que confirmó continuar sin mentor -> Auto-aprobar
+      else if (isGraduatedFreeUser && data.continueWithoutMentor) {
+        console.log('✅ Usuario graduado FREE con confirmación - Permitiendo auto-aprobación');
+        // Se manejará más adelante con auto-aprobación
+      }
+      // ❌ Si es FREE sin licencia y NO es graduado FREE confirmado -> Redirigir a PRICING
+      else if (userTier === 'FREE' && !isGraduatedFreeUser) {
         console.log('❌ Usuario FREE sin licencia - Requiere comprar plan');
         return NextResponse.json({ 
           error: 'Plan requerido',
@@ -162,6 +199,75 @@ export async function POST(req: Request) {
     // ==========================================================
 
     // mentorId ya fue calculado arriba en la validación de Vision
+
+    // =====================================================
+    // CASO ESPECIAL: Usuario graduado FREE sin mentor - AUTO-APROBAR
+    // =====================================================
+    if (isGraduatedFreeUser && data.continueWithoutMentor && !mentorId) {
+      console.log('🎯 Auto-aprobando carta para usuario graduado FREE sin mentor');
+      
+      // Actualizar carta a APROBADA directamente
+      const updatedCarta = await prisma.cartaFrutos.update({
+        where: { id: carta.id },
+        data: {
+          estado: 'APROBADA',
+          autorizadoMentor: true,
+          autorizadoCoord: true,
+          approvedAt: new Date(),
+          fechaActualizacion: new Date()
+        }
+      });
+      
+      // Marcar wizard como completado
+      await prisma.usuario.update({
+        where: { id: userId },
+        data: { wizardCompleted: true }
+      });
+      
+      console.log('✅ Carta auto-aprobada para usuario graduado FREE:', carta.id);
+      
+      // 🚀 GENERAR TAREAS automáticamente
+      console.log(`🚀 Generando tareas automáticas para carta graduado FREE #${carta.id}`);
+      try {
+        const result = await generateTasksForLetter(carta.id);
+        
+        if (result.success) {
+          console.log(`✅ ${result.tasksCreated} tareas creadas exitosamente`);
+          
+          // Enviar notificación al usuario
+          await notifyCartaApproved(userId, result.tasksCreated);
+          
+          return NextResponse.json({
+            success: true,
+            carta: updatedCarta,
+            autoApproved: true,
+            tasksCreated: result.tasksCreated,
+            message: `🎉 ¡Tu carta ha sido aprobada! Se generaron ${result.tasksCreated} tareas. ¡Comienza tu transformación!`
+          });
+        } else {
+          console.error('❌ Error al generar tareas:', result.errors);
+          return NextResponse.json({
+            success: true,
+            carta: updatedCarta,
+            autoApproved: true,
+            tasksCreated: 0,
+            message: 'Tu carta ha sido aprobada pero hubo un problema al generar las tareas. Contacta a soporte.',
+            warning: result.errors
+          });
+        }
+      } catch (taskError: any) {
+        console.error('❌ Excepción al generar tareas:', taskError);
+        return NextResponse.json({
+          success: true,
+          carta: updatedCarta,
+          autoApproved: true,
+          tasksCreated: 0,
+          message: 'Tu carta ha sido aprobada pero hubo un problema al generar las tareas.',
+          error: taskError.message
+        });
+      }
+    }
+    // =====================================================
 
     // Determinar el estado según si tiene mentor (usando valores del enum EstadoCarta)
     const newStatus = 'EN_REVISION' as const;

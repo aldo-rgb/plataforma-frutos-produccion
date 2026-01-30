@@ -11,13 +11,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
     }
 
-    // Obtener información del usuario
+    // Obtener información del usuario incluyendo el tier
     const usuario = await prisma.usuario.findUnique({
       where: { id: session.user.id },
       select: {
         id: true,
         rol: true,
-        organizationId: true
+        organizationId: true,
+        tier: true
       }
     });
 
@@ -41,8 +42,10 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Si está en una visión activa, no puede reiniciar
-    if (visionParticipacion && visionParticipacion.Vision.isActive) {
+    // Si está en una visión activa Y NO es tier FREE, no puede reiniciar
+    // Usuarios FREE pueden reiniciar siempre, incluso en visión activa
+    const isFreeTier = usuario.tier === 'FREE';
+    if (visionParticipacion && visionParticipacion.Vision.isActive && !isFreeTier) {
       return NextResponse.json({
         success: false,
         error: 'No puedes reiniciar tus declaraciones mientras estés en una visión activa',
@@ -129,7 +132,8 @@ export async function GET(request: NextRequest) {
       where: { id: session.user.id },
       select: {
         id: true,
-        rol: true
+        rol: true,
+        tier: true
       }
     });
 
@@ -137,7 +141,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // Verificar si está en visión activa
+    // Usuarios FREE siempre pueden reiniciar, incluso en visión activa
+    const isFreeTier = usuario.tier === 'FREE';
+    
+    if (isFreeTier) {
+      return NextResponse.json({
+        success: true,
+        canReset: true,
+        reason: 'Puedes reiniciar tus declaraciones',
+        activeVision: null
+      });
+    }
+
+    // Para usuarios con tier pagado, verificar si está en visión activa
     const visionParticipacion = await prisma.visionParticipante.findFirst({
       where: {
         participanteId: session.user.id
