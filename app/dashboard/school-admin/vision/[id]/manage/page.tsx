@@ -1051,6 +1051,52 @@ export default function VisionManagePage() {
     }
   };
 
+  // Función para promover usuario al siguiente nivel (solo ADMINISTRADOR)
+  const handlePromoteToNextLevel = async (userId: number, userName: string, currentLevel: 'BASIC' | 'ADVANCED') => {
+    const nextLevel = currentLevel === 'BASIC' ? 'AVANZADO' : 'LIDERATO';
+    
+    if (!confirm(`¿Crear enrollment de ${nextLevel} con ticket PAGADO para ${userName}?`)) {
+      return;
+    }
+    
+    try {
+      const res = await fetch('/api/admin/promote-to-next-level', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userId, 
+          visionId: parseInt(visionId),
+          currentLevel 
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setToast({ 
+          show: true, 
+          message: `✅ ${userName} ahora tiene ticket PAGADO para ${nextLevel}`, 
+          type: 'success' 
+        });
+        
+        // Refrescar los enrollments del nivel destino
+        if (currentLevel === 'BASIC') {
+          fetchAdvancedEnrollments();
+        } else {
+          fetchPlEnrollments();
+        }
+        
+        setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
+      } else {
+        throw new Error(data.error || 'Error al promover');
+      }
+    } catch (error: any) {
+      console.error('Error promoting user:', error);
+      setToast({ show: true, message: error.message || 'Error al promover usuario', type: 'error' });
+      setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 3000);
+    }
+  };
+
   // Función para agregar participante (solo ADMINISTRADOR)
   const handleAddParticipant = async () => {
     if (!addParticipantData.nombre.trim() || !addParticipantData.email.trim()) {
@@ -1601,6 +1647,9 @@ export default function VisionManagePage() {
                             <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Game Changer</th>
                             <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Fecha de Registro</th>
                             <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Asistencia</th>
+                            {userRole === 'ADMINISTRADOR' && (
+                              <th className="text-left py-3 px-4 text-green-300 font-bold text-sm">Acciones</th>
+                            )}
                           </tr>
                         </thead>
                         <tbody>
@@ -1691,6 +1740,17 @@ export default function VisionManagePage() {
                                   <option value="BACKLOG" className="bg-slate-800 text-amber-300">⏳ Backlog</option>
                                 </select>
                               </td>
+                              {userRole === 'ADMINISTRADOR' && (
+                                <td className="py-4 px-4">
+                                  <button
+                                    onClick={() => handlePromoteToNextLevel(enrollment.userId, enrollment.Usuario?.nombre, 'BASIC')}
+                                    className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1"
+                                    title="Crear ticket pagado para Avanzado"
+                                  >
+                                    🔥 → Avanzado
+                                  </button>
+                                </td>
+                              )}
                             </tr>
                           ))}
                         </tbody>
@@ -1955,7 +2015,9 @@ export default function VisionManagePage() {
                             <th className="text-left py-3 px-4 text-orange-300 font-bold text-sm">Game Changer</th>
                             <th className="text-left py-3 px-4 text-orange-300 font-bold text-sm">Fecha de Registro</th>
                             <th className="text-left py-3 px-4 text-orange-300 font-bold text-sm">Asistencia</th>
-                            <th className="text-left py-3 px-4 text-orange-300 font-bold text-sm">Acciones</th>
+                            {userRole === 'ADMINISTRADOR' && (
+                              <th className="text-left py-3 px-4 text-orange-300 font-bold text-sm">Acciones</th>
+                            )}
                           </tr>
                         </thead>
                         <tbody>
@@ -2046,6 +2108,17 @@ export default function VisionManagePage() {
                                   <option value="BACKLOG" className="bg-slate-800 text-amber-300">⏳ Backlog</option>
                                 </select>
                               </td>
+                              {userRole === 'ADMINISTRADOR' && (
+                                <td className="py-4 px-4">
+                                  <button
+                                    onClick={() => handlePromoteToNextLevel(enrollment.userId, enrollment.Usuario?.nombre, 'ADVANCED')}
+                                    className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1"
+                                    title="Crear ticket pagado para Liderato"
+                                  >
+                                    👑 → Liderato
+                                  </button>
+                                </td>
+                              )}
                             </tr>
                           ))}
                         </tbody>

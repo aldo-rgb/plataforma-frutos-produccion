@@ -505,9 +505,9 @@ export default function QRScanner({ onScan, defaultMode, enabled = true }: QRSca
               }`} size={40} />
             </div>
             
-            <h3 className="text-white font-bold text-lg mb-2">Modo Pistola USB</h3>
+            <h3 className="text-white font-bold text-lg mb-2">Modo Scan / NFC</h3>
             <p className="text-slate-400 text-center text-sm mb-6">
-              Apunta con la pistola de códigos al QR del participante.
+              Acercar el Gafette o Apunta con el scanner al QR del participante.
               El código se enviará automáticamente.
             </p>
             
