@@ -1531,7 +1531,7 @@ export default function QuantumBusinessBuilderPage() {
   // ============================================
   // PASO 3: PITCH Y OFERTA
   // ============================================
-  const PitchOferta = () => (
+  const PitchOferta = useCallback(() => (
     <motion.div
       initial={{ opacity: 0, x: 50 }}
       animate={{ opacity: 1, x: 0 }}
@@ -1578,8 +1578,8 @@ export default function QuantumBusinessBuilderPage() {
               </div>
               
               <textarea
-                value={descripcion}
-                onChange={(e) => setDescripcion(e.target.value)}
+                defaultValue={descripcion}
+                onBlur={(e) => setDescripcion(e.target.value)}
                 placeholder="Describe tu servicio o producto..."
                 className="w-full p-4 rounded-xl bg-slate-800/50 border border-slate-600/50 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all resize-none h-40"
               />
@@ -1594,8 +1594,8 @@ export default function QuantumBusinessBuilderPage() {
               
               <input
                 type="text"
-                value={ofertaTribu}
-                onChange={(e) => setOfertaTribu(e.target.value)}
+                defaultValue={ofertaTribu}
+                onBlur={(e) => setOfertaTribu(e.target.value)}
                 placeholder="Ej: 15% de descuento, consulta gratis..."
                 className="w-full p-4 rounded-xl bg-slate-800/50 border border-slate-600/50 text-white placeholder:text-slate-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all"
               />
@@ -1737,7 +1737,7 @@ export default function QuantumBusinessBuilderPage() {
         </p>
       </div>
     </motion.div>
-  );
+  ), [descripcion, ofertaTribu, selectedLogo, customName, selectedName, selectedIdea, loading, hasExistingProfile, previewCategoria, router, improveDescription]);
 
   // ============================================
   // MOMENTO DE LA VERDAD (CIERRE ÉPICO)
@@ -2606,7 +2606,7 @@ export default function QuantumBusinessBuilderPage() {
         {step === 'adn-talento' && <ADNTalento key="adn" />}
         {step === 'ideas-negocio' && <IdeasNegocio key="ideas" />}
         {step === 'identidad-visual' && <IdentidadVisual key="visual" />}
-        {step === 'pitch-oferta' && <PitchOferta key="pitch" />}
+        {step === 'pitch-oferta' && PitchOferta()}
         {step === 'momento-verdad' && <MomentoDeLaVerdad key="verdad" />}
         {step === 'optimizador' && optimizadorContent}
       </AnimatePresence>
