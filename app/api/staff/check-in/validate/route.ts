@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
     if (!participantId) {
       return NextResponse.json({ 
         valid: false,
-        errors: [{ type: 'general', message: 'No se encontró ningún participante con ese identificador', blocking: true }],
+        errors: [{ type: 'general', message: 'No se encontró ningún ticket pagado para este participante', blocking: true }],
         canProceed: false
       });
     }

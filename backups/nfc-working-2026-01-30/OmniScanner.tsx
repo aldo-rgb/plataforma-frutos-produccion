@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Camera, Keyboard, Nfc, CheckCircle, Usb, Smartphone, Power } from 'lucide-react';
+import { Camera, Keyboard, Nfc, CheckCircle, Usb, Smartphone } from 'lucide-react';
 import QRScanner from './QRScanner';
 
 interface OmniScannerProps {
@@ -16,7 +16,7 @@ type ScannerChannel = 'camera' | 'keyboard' | 'nfc';
 interface ChannelStatus {
   camera: 'inactive' | 'active' | 'detected';
   keyboard: 'inactive' | 'listening' | 'detected';
-  nfc: 'unsupported' | 'inactive' | 'scanning' | 'detected' | 'usb_ready' | 'activating';
+  nfc: 'unsupported' | 'inactive' | 'scanning' | 'detected' | 'usb_ready';
 }
 
 // Tipos de soporte NFC
@@ -45,10 +45,8 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId, de
   const [nfcSupported, setNfcSupported] = useState(false);
   const [nfcMode, setNfcMode] = useState<NFCMode>('none');
   const [isMobileDevice, setIsMobileDevice] = useState(false);
-  const [nfcActivated, setNfcActivated] = useState(false); // Track si el usuario activó NFC manualmente
   const keyboardTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const nfcReaderRef = useRef<any>(null);
-  const nfcAbortRef = useRef<AbortController | null>(null); // Para cancelar el scan NFC
   const nfcBufferRef = useRef<string>('');
   const nfcTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -236,91 +234,62 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId, de
     };
   }, [enabled, keyboardBuffer, handleDetection, nfcMode]);
 
-  // === FUNCIÓN PARA ACTIVAR NFC CON USER GESTURE ===
-  const activateNFC = useCallback(async () => {
-    if (nfcMode !== 'native' || nfcActivated) return;
-    
-    setChannelStatus(prev => ({ ...prev, nfc: 'activating' }));
-    
-    try {
-      // @ts-ignore - Web NFC API
-      const ndef = new (window as any).NDEFReader();
-      nfcReaderRef.current = ndef;
-
-      // Crear AbortController para poder cancelar
-      const abortController = new AbortController();
-      nfcAbortRef.current = abortController;
-
-      ndef.onreading = (event: NDEFReadingEvent) => {
-        if (event.message.records.length > 0) {
-          const record = event.message.records[0];
-          
-          let data = '';
-          if (record.recordType === 'text') {
-            const decoder = new TextDecoder(record.encoding || 'utf-8');
-            data = decoder.decode(record.data);
-          } else if (record.recordType === 'url') {
-            const decoder = new TextDecoder();
-            data = decoder.decode(record.data);
-            const match = data.match(/\/verify\/(.+)$/);
-            if (match) {
-              data = match[1];
-            }
-          } else {
-            const decoder = new TextDecoder();
-            data = decoder.decode(record.data);
-          }
-
-          if (data) {
-            handleDetection(data, 'nfc');
-          }
-        }
-      };
-
-      ndef.onreadingerror = (error: any) => {
-        console.error('NFC read error:', error);
-      };
-
-      // Esta llamada requiere user gesture en Android
-      await ndef.scan({ signal: abortController.signal });
-      setNfcActivated(true);
-      setChannelStatus(prev => ({ ...prev, nfc: 'scanning' }));
-      console.log('📱 NFC Native scanning started (user gesture)');
-    } catch (error: any) {
-      console.error('Error starting NFC:', error);
-      if (error.name === 'AbortError') {
-        console.log('NFC scan was aborted');
-      }
-      setChannelStatus(prev => ({ ...prev, nfc: 'inactive' }));
-      setNfcActivated(false);
-    }
-  }, [nfcMode, nfcActivated, handleDetection]);
-
   // === CANAL C: NFC READER (Nativo - Solo Android) ===
-  // Ya NO inicia automáticamente - requiere user gesture via activateNFC()
   useEffect(() => {
     // Solo activar NFC nativo en Android
     if (!enabled || nfcMode !== 'native') return;
 
-    // Si ya está activado, no hacer nada
-    if (nfcActivated) return;
+    const startNFCReader = async () => {
+      try {
+        // @ts-ignore - Web NFC API
+        const ndef = new (window as any).NDEFReader();
+        nfcReaderRef.current = ndef;
 
-    // Solo marcamos que el NFC está disponible pero inactivo
-    // El usuario debe presionar el botón para activarlo
-    setChannelStatus(prev => ({ ...prev, nfc: 'inactive' }));
-    console.log('📱 NFC Native disponible - esperando activación manual');
+        ndef.onreading = (event: NDEFReadingEvent) => {
+          if (event.message.records.length > 0) {
+            const record = event.message.records[0];
+            
+            let data = '';
+            if (record.recordType === 'text') {
+              const decoder = new TextDecoder(record.encoding || 'utf-8');
+              data = decoder.decode(record.data);
+            } else if (record.recordType === 'url') {
+              const decoder = new TextDecoder();
+              data = decoder.decode(record.data);
+              const match = data.match(/\/verify\/(.+)$/);
+              if (match) {
+                data = match[1];
+              }
+            } else {
+              const decoder = new TextDecoder();
+              data = decoder.decode(record.data);
+            }
+
+            if (data) {
+              handleDetection(data, 'nfc');
+            }
+          }
+        };
+
+        ndef.onreadingerror = (error: any) => {
+          console.error('NFC read error:', error);
+        };
+
+        await ndef.scan();
+        setChannelStatus(prev => ({ ...prev, nfc: 'scanning' }));
+        console.log('📱 NFC Native scanning started');
+      } catch (error) {
+        console.error('Error starting NFC:', error);
+        setChannelStatus(prev => ({ ...prev, nfc: 'inactive' }));
+      }
+    };
+
+    startNFCReader();
 
     return () => {
-      // Cancelar el scan si está activo
-      if (nfcAbortRef.current) {
-        nfcAbortRef.current.abort();
-        nfcAbortRef.current = null;
-      }
       nfcReaderRef.current = null;
-      // Reset para la próxima vez que se monte
-      setNfcActivated(false);
     };
-  }, [enabled, nfcMode, nfcActivated]);
+  }, [enabled, nfcMode, handleDetection]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -333,8 +302,6 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId, de
         return 'text-cyan-400 bg-cyan-500/20 border-cyan-500/50 animate-pulse';
       case 'unsupported':
         return 'text-slate-500 bg-slate-800 border-slate-700';
-      case 'activating':
-        return 'text-yellow-400 bg-yellow-500/20 border-yellow-500/50 animate-pulse';
       default:
         return 'text-slate-400 bg-slate-800 border-slate-700';
     }
@@ -409,24 +376,7 @@ export default function OmniScanner({ onScan, enabled = true, expectedUserId, de
                 USB LISTO
               </span>
             )}
-            {channelStatus.nfc === 'activating' && (
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
-                ACTIVANDO...
-              </span>
-            )}
-            {/* Botón para activar NFC cuando está inactivo y es modo nativo */}
-            {channelStatus.nfc === 'inactive' && nfcMode === 'native' && !nfcActivated && (
-              <button
-                onClick={activateNFC}
-                className="flex items-center gap-1 px-2 py-1 bg-cyan-600 hover:bg-cyan-500 rounded-lg transition-colors text-white font-bold"
-              >
-                <Power size={14} />
-                ACTIVAR NFC
-              </button>
-            )}
-            {channelStatus.nfc !== 'scanning' && channelStatus.nfc !== 'usb_ready' && channelStatus.nfc !== 'activating' && channelStatus.nfc !== 'inactive' && `[ ${getStatusText('nfc')} ]`}
-            {channelStatus.nfc === 'inactive' && nfcMode !== 'native' && `[ ${getStatusText('nfc')} ]`}
+            {channelStatus.nfc !== 'scanning' && channelStatus.nfc !== 'usb_ready' && `[ ${getStatusText('nfc')} ]`}
           </div>
         </div>
       </div>
