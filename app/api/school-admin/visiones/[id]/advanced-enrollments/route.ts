@@ -79,6 +79,7 @@ export async function GET(
       return {
         id: enrollment.id,
         oderId: enrollment.userId,
+        userId: enrollment.userId,
         visionId: enrollment.visionId,
         enrolledAt: enrollment.enrolledAt,
         enrollmentStatus: enrollment.enrollmentStatus,

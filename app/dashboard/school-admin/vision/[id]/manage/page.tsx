@@ -1743,7 +1743,7 @@ export default function VisionManagePage() {
                               {userRole === 'ADMINISTRADOR' && (
                                 <td className="py-4 px-4">
                                   <button
-                                    onClick={() => handlePromoteToNextLevel(enrollment.userId, enrollment.Usuario?.nombre, 'BASIC')}
+                                    onClick={() => handlePromoteToNextLevel(enrollment.userId || enrollment.Usuario?.id, enrollment.Usuario?.nombre, 'BASIC')}
                                     className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1"
                                     title="Crear ticket pagado para Avanzado"
                                   >
@@ -2111,7 +2111,7 @@ export default function VisionManagePage() {
                               {userRole === 'ADMINISTRADOR' && (
                                 <td className="py-4 px-4">
                                   <button
-                                    onClick={() => handlePromoteToNextLevel(enrollment.userId, enrollment.Usuario?.nombre, 'ADVANCED')}
+                                    onClick={() => handlePromoteToNextLevel(enrollment.userId || enrollment.Usuario?.id, enrollment.Usuario?.nombre, 'ADVANCED')}
                                     className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1"
                                     title="Crear ticket pagado para Liderato"
                                   >
