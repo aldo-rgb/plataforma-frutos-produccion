@@ -72,7 +72,7 @@ export async function GET(
           },
         },
       },
-    });
+    }) as (typeof vision & { enabledLevels?: string[] }) | null;
 
     if (!vision) {
       return NextResponse.json(
@@ -134,6 +134,12 @@ export async function GET(
       orderBy: { levelType: 'desc' } // PL > ADVANCED > BASIC
     });
 
+    // Obtener enabledLevels de la visión para usar como fallback
+    const visionWithLevels = await prisma.vision.findUnique({
+      where: { id: visionId },
+      select: { enabledLevels: true }
+    });
+
     let activeLevel: 'BASIC' | 'ADVANCED' | 'PL' = 'BASIC';
     
     // Buscar primero uno en progreso
@@ -150,6 +156,15 @@ export async function GET(
         const completed = visionProducts.filter(p => p.trainingStatus === 'COMPLETED');
         if (completed.length > 0) {
           activeLevel = completed[0].levelType as 'BASIC' | 'ADVANCED' | 'PL'; // Ya está ordenado desc
+        } else if (visionWithLevels?.enabledLevels && visionWithLevels.enabledLevels.length > 0) {
+          // Fallback: usar el nivel más alto habilitado en la visión
+          const levelPriority = ['PL', 'ADVANCED', 'BASIC'];
+          for (const level of levelPriority) {
+            if (visionWithLevels.enabledLevels.includes(level)) {
+              activeLevel = level as 'BASIC' | 'ADVANCED' | 'PL';
+              break;
+            }
+          }
         }
       }
     }
