@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Camera, User, Briefcase, FileText, Link as LinkIcon, Save, Loader2, CheckCircle2, XCircle, MapPin, DollarSign } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
@@ -16,6 +16,38 @@ export default function MentorProfileEditorPage() {
   const [showAvatarSelfie, setShowAvatarSelfie] = useState(false);
   const [initialData, setInitialData] = useState<any>(null);
   
+  // Estado del formulario - DEBE estar antes de las funciones que lo usan
+  const [formData, setFormData] = useState({
+    // Campos de Usuario
+    nombre: '',
+    jobTitle: '',
+    profileImage: '',
+    experienceYears: 0,
+    skillsInput: '',
+    vision: '',
+    sede: '',
+    
+    // Campos de PerfilMentor
+    nivel: 'JUNIOR' as 'JUNIOR' | 'SENIOR' | 'MASTER',
+    titulo: '',
+    especialidad: '',
+    especialidadesSecundariasInput: '',
+    biografia: '',
+    biografiaCorta: '',
+    biografiaCompleta: '',
+    logrosInput: '',
+    experienciaAnios: 0,
+    precioBase: 1000,
+    precioDisciplina: 90,
+    disponible: true,
+    comisionMentor: 70,
+    comisionPlataforma: 30,
+    enlaceVideoLlamada: '',
+    tipoVideoLlamada: 'zoom' as 'zoom' | 'meet' | 'teams',
+    maxDisciplineClients: 10,
+    acceptingNewClients: true
+  });
+
   // Validación de campos obligatorios
   const isFormValid = () => {
     return (
@@ -53,6 +85,46 @@ export default function MentorProfileEditorPage() {
       formData.enlaceVideoLlamada.trim() !== ''
     );
   };
+
+  // Obtener lista de campos faltantes con useMemo para evitar recálculos innecesarios
+  const camposFaltantes = useMemo(() => {
+    const campos: { key: string; label: string }[] = [];
+    
+    // Sección 1: Identidad Visual
+    if (!formData.profileImage?.trim()) campos.push({ key: 'profileImage', label: 'Foto de Perfil' });
+    if (!formData.nombre?.trim()) campos.push({ key: 'nombre', label: 'Nombre' });
+    
+    // Sección 2: Títulos Profesionales
+    if (!formData.jobTitle?.trim()) campos.push({ key: 'jobTitle', label: 'Cargo/Profesión' });
+    if (!formData.titulo?.trim()) campos.push({ key: 'titulo', label: 'Título de Mentor' });
+    
+    // Sección 3: Biografía
+    if (!formData.biografiaCorta?.trim()) campos.push({ key: 'biografiaCorta', label: 'Tagline' });
+    if (!formData.biografia?.trim()) campos.push({ key: 'biografia', label: 'Biografía Media' });
+    if (!formData.biografiaCompleta?.trim()) campos.push({ key: 'biografiaCompleta', label: 'Biografía Completa' });
+    if (!formData.vision?.trim()) campos.push({ key: 'vision', label: 'Visión' });
+    
+    // Sección 4: Ubicación
+    if (!formData.sede?.trim()) campos.push({ key: 'sede', label: 'Sede' });
+    
+    // Sección 5: Expertise
+    if (!formData.especialidad?.trim()) campos.push({ key: 'especialidad', label: 'Especialidad Principal' });
+    if (!formData.especialidadesSecundariasInput?.trim()) campos.push({ key: 'especialidadesSecundarias', label: 'Especialidades Secundarias' });
+    if (!formData.skillsInput?.trim()) campos.push({ key: 'skills', label: 'Habilidades' });
+    if (!formData.logrosInput?.trim()) campos.push({ key: 'logros', label: 'Logros' });
+    
+    // Sección 6: Experiencia
+    if (!formData.experienciaAnios || formData.experienciaAnios <= 0) campos.push({ key: 'experienciaAnios', label: 'Años de Experiencia' });
+    
+    // Sección 7: Nivel y Pricing
+    if (!formData.precioBase || formData.precioBase <= 0) campos.push({ key: 'precioBase', label: 'Precio Mentoría' });
+    if (!formData.precioDisciplina || formData.precioDisciplina <= 0) campos.push({ key: 'precioDisciplina', label: 'Precio Disciplina' });
+    
+    // Sección 8: Enlaces
+    if (!formData.enlaceVideoLlamada?.trim()) campos.push({ key: 'enlaceVideoLlamada', label: 'Enlace Videollamada' });
+    
+    return campos;
+  }, [formData]);
 
   // Detectar si hay cambios
   const hasChanges = () => {
@@ -101,38 +173,6 @@ export default function MentorProfileEditorPage() {
         return { comisionMentor: 70, comisionPlataforma: 30 };
     }
   };
-
-  // Estado del formulario
-  const [formData, setFormData] = useState({
-    // Campos de Usuario
-    nombre: '',
-    jobTitle: '',
-    profileImage: '',
-    experienceYears: 0,
-    skillsInput: '', // Campo temporal para escribir skills separadas por coma
-    vision: '',
-    sede: '',
-    
-    // Campos de PerfilMentor
-    nivel: 'JUNIOR' as 'JUNIOR' | 'SENIOR' | 'MASTER',
-    titulo: '',
-    especialidad: '',
-    especialidadesSecundariasInput: '', // Campo temporal
-    biografia: '',
-    biografiaCorta: '',
-    biografiaCompleta: '',
-    logrosInput: '', // Campo temporal
-    experienciaAnios: 0,
-    precioBase: 1000,
-    precioDisciplina: 90,
-    disponible: true,
-    comisionMentor: 70,
-    comisionPlataforma: 30,
-    enlaceVideoLlamada: '',
-    tipoVideoLlamada: 'zoom' as 'zoom' | 'meet' | 'teams',
-    maxDisciplineClients: 10,
-    acceptingNewClients: true
-  });
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -908,11 +948,28 @@ export default function MentorProfileEditorPage() {
           </div>
         </section>
         
+        {/* Notificación de campos faltantes */}
+        {camposFaltantes.length > 0 && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-4">
+            <p className="text-amber-400 font-bold mb-2 flex items-center gap-2">
+              <span className="text-xl">⚠️</span>
+              Te faltan {camposFaltantes.length} campo(s) por completar:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {camposFaltantes.map(campo => (
+                <span key={campo.key} className="px-2 py-1 bg-amber-500/20 text-amber-300 rounded-md text-sm">
+                  {campo.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        
         {/* BOTÓN DE ACCIÓN AL FINAL */}
         <div className="flex justify-center pt-4">
           <button
             onClick={handleSave}
-            disabled={initialLoading || loading || !isFormValid() || !hasChanges()}
+            disabled={initialLoading || loading}
             className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 px-6 lg:py-3 lg:px-8 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm lg:text-base w-full sm:w-auto shadow-lg"
           >
             {loading ? (

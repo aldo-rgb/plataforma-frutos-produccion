@@ -3,6 +3,7 @@ import { tw } from '@/lib/theme/quantum';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useState, useEffect } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface Organization {
   id: number;
@@ -265,16 +266,6 @@ export function RegistrationForm({
         </div>
 
         <form onSubmit={onSubmit} className="space-y-8">
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-red-400 text-sm"
-            >
-              {error}
-            </motion.div>
-          )}
-
           {/* Sección: Datos Personales */}
           <FormSection title={t('personalInfo.title')}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -676,6 +667,20 @@ export function RegistrationForm({
             />
           </FormSection>
 
+          {/* Notificación de Error */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-red-400 text-sm flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <span>{error}</span>
+            </motion.div>
+          )}
+
           {/* Submit */}
           <motion.button
             type="submit"
@@ -789,23 +794,37 @@ function InputField({
   className,
   min,
 }: InputFieldProps) {
+  const [showPassword, setShowPassword] = useState(false);
+  const isPassword = type === 'password';
+  
   return (
     <div>
       <label className="block text-sm font-medium text-slate-300 mb-2">
         {label} {required && <span className="text-[#00F0FF]">*</span>}
       </label>
-      <input
-        type={type}
-        value={value}
-        onChange={onChange}
-        onPaste={onPaste}
-        placeholder={placeholder}
-        required={required}
-        disabled={disabled}
-        readOnly={readOnly}
-        min={min}
-        className={`w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00F0FF]/50 focus:border-[#00F0FF]/50 transition-all ${className || ''}`}
-      />
+      <div className="relative">
+        <input
+          type={isPassword && showPassword ? 'text' : type}
+          value={value}
+          onChange={onChange}
+          onPaste={onPaste}
+          placeholder={placeholder}
+          required={required}
+          disabled={disabled}
+          readOnly={readOnly}
+          min={min}
+          className={`w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00F0FF]/50 focus:border-[#00F0FF]/50 transition-all ${isPassword ? 'pr-12' : ''} ${className || ''}`}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#00F0FF] transition-colors"
+          >
+            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
