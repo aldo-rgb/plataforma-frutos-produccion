@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   User, 
@@ -112,32 +112,6 @@ export default function ConfiguracionCompletaPage() {
   const [userEmail, setUserEmail] = useState('');
   const [visionesHistorial, setVisionesHistorial] = useState<Array<{nombre: string, rol: string, fecha: string}>>([]);
   
-  // Función para detectar campos faltantes importantes
-  const getCamposFaltantes = () => {
-    const camposRequeridos = [
-      { key: 'nombre', label: 'Nombre' },
-      { key: 'apellido', label: 'Apellido' },
-      { key: 'fechaNacimiento', label: 'Fecha de Nacimiento' },
-      { key: 'whatsapp', label: 'WhatsApp' },
-      { key: 'calle', label: 'Calle' },
-      { key: 'numero', label: 'Número' },
-      { key: 'colonia', label: 'Colonia' },
-      { key: 'codigoPostal', label: 'Código Postal' },
-      { key: 'estadoMunicipio', label: 'Estado/Municipio' },
-      { key: 'ocupacion', label: 'Ocupación' },
-      { key: 'tallaCamiseta', label: 'Talla de Camiseta' },
-      { key: 'peso', label: 'Peso' },
-      { key: 'estatura', label: 'Estatura' },
-    ];
-    
-    return camposRequeridos.filter(campo => {
-      const valor = config[campo.key as keyof ConfiguracionData];
-      return !valor || valor === '';
-    });
-  };
-
-  const camposFaltantes = getCamposFaltantes();
-  
   const [config, setConfig] = useState<ConfiguracionData>({
     nombre: '',
     apellido: '',
@@ -178,6 +152,30 @@ export default function ConfiguracionCompletaPage() {
     coachTercerFin: '',
     condecoraciones: []
   });
+
+  // Función para detectar campos faltantes importantes - usando useMemo para evitar recálculos innecesarios
+  const camposFaltantes = useMemo(() => {
+    const camposRequeridos = [
+      { key: 'nombre', label: 'Nombre' },
+      { key: 'apellido', label: 'Apellido' },
+      { key: 'fechaNacimiento', label: 'Fecha de Nacimiento' },
+      { key: 'whatsapp', label: 'WhatsApp' },
+      { key: 'calle', label: 'Calle' },
+      { key: 'numero', label: 'Número' },
+      { key: 'colonia', label: 'Colonia' },
+      { key: 'codigoPostal', label: 'Código Postal' },
+      { key: 'estadoMunicipio', label: 'Estado/Municipio' },
+      { key: 'ocupacion', label: 'Ocupación' },
+      { key: 'tallaCamiseta', label: 'Talla de Camiseta' },
+      { key: 'peso', label: 'Peso' },
+      { key: 'estatura', label: 'Estatura' },
+    ];
+    
+    return camposRequeridos.filter(campo => {
+      const valor = config[campo.key as keyof ConfiguracionData];
+      return !valor || valor === '';
+    });
+  }, [config]);
 
   useEffect(() => {
     fetchConfiguracion();

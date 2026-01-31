@@ -64,7 +64,7 @@ export async function POST(
     membershipExpiryDate.setFullYear(membershipExpiryDate.getFullYear() + 1);
 
     // Usar especialidad personalizada si seleccionó "Otros"
-    const especialidadFinal = application.especialidad === 'Otros' 
+    const especialidadFinal = application.especialidad === 'Otros'
       ? (application as any).especialidadOtra || application.especialidad
       : application.especialidad;
 
@@ -107,13 +107,31 @@ export async function POST(
         }
       });
 
-      // 2. Actualizar usuario - cambiar rol a MENTOR
-      await tx.usuario.update({
-        where: { id: application.usuarioId },
-        data: {
-          rol: 'MENTOR'
-        }
-      });
+      // 2. Actualizar usuario - Solo cambiar rol a MENTOR si no tiene rol protegido
+      // Si es SCHOOL_ADMIN, ADMINISTRADOR, etc., solo activar esMentor para que tenga acceso a ambas vistas
+      const usuarioActual = application.Usuario_MentorApplication_usuarioIdToUsuario;
+      const rolesProtegidos = ['SCHOOL_ADMIN', 'ADMINISTRADOR', 'ADMIN', 'DIRECTOR'];
+      
+      if (rolesProtegidos.includes(usuarioActual.rol)) {
+        // Mantener rol actual, solo activar flag esMentor
+        await tx.usuario.update({
+          where: { id: application.usuarioId },
+          data: {
+            esMentor: true
+          }
+        });
+        console.log(`✅ Usuario ${usuarioActual.nombre} mantiene rol ${usuarioActual.rol}, activado esMentor`);
+      } else {
+        // Cambiar rol a MENTOR y activar flag
+        await tx.usuario.update({
+          where: { id: application.usuarioId },
+          data: {
+            rol: 'MENTOR',
+            esMentor: true
+          }
+        });
+        console.log(`✅ Usuario ${usuarioActual.nombre} cambió a rol MENTOR`);
+      }
 
       // 3. Actualizar aplicación
       await tx.mentorApplication.update({

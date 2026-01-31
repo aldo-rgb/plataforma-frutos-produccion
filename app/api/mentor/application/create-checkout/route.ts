@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
               description: 'Acceso completo a la plataforma de mentoría por 12 meses',
               images: ['https://frutos.com/mentor-badge.png'],
             },
-            unit_amount: 30000, // $300 USD
+            unit_amount: 99900, // $999 USD
           },
           quantity: 1,
         },

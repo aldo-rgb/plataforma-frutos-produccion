@@ -148,11 +148,13 @@ export default function CatalogoExpoPage({ params }: { params: Promise<{ visionI
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          nombre: registerName.trim(),
+          name: registerName.trim(),
           email: registerEmail.trim() || undefined,
-          telefono: registerPhone.trim() || undefined,
-          referidoPorId: selectedReferrer?.id || undefined,
-          visionId: visionId
+          phone: registerPhone.trim() || undefined,
+          referrerId: selectedReferrer?.id || undefined,
+          referrerName: selectedReferrer?.nombre || undefined,
+          relationship: 'visitor',
+          firstExhibitorId: selectedReferrer?.id || exhibitors[0]?.userId || undefined
         })
       });
 

@@ -316,10 +316,10 @@ export default function AsignacionMentoresPage() {
 
   // 🎯 TICKET 1: Cálculo de Presupuesto
   const calculateBudget = (): BudgetCalculation => {
-    // Paquete de mentoría: 18 llamadas por estudiante
-    const totalCallsPerStudent = 18;
     const weeksPerStudent = cicloInfo?.semanas || 16;
     const callsPerWeek = 2;
+    // Usar llamadas reales del ciclo en lugar de valor hardcodeado
+    const totalCallsPerStudent = cicloInfo?.llamadasDisciplina || (weeksPerStudent * callsPerWeek);
     
     // Calculate total across all mentors with assigned students
     let grandTotal = 0;

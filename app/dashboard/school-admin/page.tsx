@@ -87,6 +87,8 @@ export default function SchoolAdminDashboard() {
   const [qrDataURL, setQrDataURL] = useState<string | null>(null);
   const [generatingQR, setGeneratingQR] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+  const [showCancelModal, setShowCancelModal] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -299,6 +301,42 @@ export default function SchoolAdminDashboard() {
       type: 'success',
       message: 'QR descargado exitosamente'
     });
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    setCancellingOrderId(orderId);
+    try {
+      const res = await fetch('/api/school-admin/licenses/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      });
+
+      const result = await res.json();
+
+      if (res.ok) {
+        setNotification({
+          type: 'success',
+          message: '✅ Orden cancelada exitosamente',
+        });
+        // Recargar datos del dashboard
+        fetchDashboardData();
+      } else {
+        setNotification({
+          type: 'error',
+          message: `❌ ${result.error || 'Error al cancelar la orden'}`,
+        });
+      }
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      setNotification({
+        type: 'error',
+        message: '❌ Error al cancelar la orden',
+      });
+    } finally {
+      setCancellingOrderId(null);
+      setShowCancelModal(null);
+    }
   };
 
   if (loading) {
@@ -585,13 +623,22 @@ export default function SchoolAdminDashboard() {
                 {data.pendingOrders.filter((o: any) => o.status === 'PENDING').map((order: any) => (
                   <div
                     key={order.id}
-                    className="bg-slate-900/50 backdrop-blur border border-purple-500/20 rounded-xl p-3"
+                    className="bg-slate-900/50 backdrop-blur border border-purple-500/20 rounded-xl p-3 relative"
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs text-slate-400">Orden #{order.id.slice(0, 8)}</span>
-                      <span className="px-2 py-0.5 bg-yellow-500/10 text-yellow-400 rounded text-xs font-bold">
-                        PENDIENTE
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 bg-yellow-500/10 text-yellow-400 rounded text-xs font-bold">
+                          PENDIENTE
+                        </span>
+                        <button
+                          onClick={() => setShowCancelModal(order.id)}
+                          className="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-all"
+                          title="Cancelar orden"
+                        >
+                          <XCircle size={16} />
+                        </button>
+                      </div>
                     </div>
                     <div className="space-y-1.5">
                       <div className="flex justify-between">
@@ -615,6 +662,44 @@ export default function SchoolAdminDashboard() {
                         </span>
                       </div>
                     </div>
+
+                    {/* Modal de confirmación de cancelación */}
+                    {showCancelModal === order.id && (
+                      <div className="absolute inset-0 bg-slate-900/95 backdrop-blur rounded-xl flex flex-col items-center justify-center p-4 z-10">
+                        <XCircle className="text-red-400 mb-2" size={32} />
+                        <p className="text-white text-sm text-center mb-3 font-medium">
+                          ¿Cancelar esta orden?
+                        </p>
+                        <p className="text-slate-400 text-xs text-center mb-4">
+                          {order.quantity} licencias - ${order.amount.toLocaleString()} MXN
+                        </p>
+                        <div className="flex gap-2 w-full">
+                          <button
+                            onClick={() => setShowCancelModal(null)}
+                            className="flex-1 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded-lg transition-all"
+                          >
+                            No, mantener
+                          </button>
+                          <button
+                            onClick={() => handleCancelOrder(order.id)}
+                            disabled={cancellingOrderId === order.id}
+                            className="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1 disabled:opacity-50"
+                          >
+                            {cancellingOrderId === order.id ? (
+                              <>
+                                <div className="animate-spin rounded-full h-3 w-3 border-t border-white"></div>
+                                Cancelando...
+                              </>
+                            ) : (
+                              <>
+                                <XCircle size={14} />
+                                Sí, cancelar
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

@@ -144,6 +144,31 @@ export default function LegacyVisionBuilderPage() {
     show: boolean;
     notification: PendingNotification | null;
   }>({ show: false, notification: null });
+
+  // Modal para crear campaña de Legacy Builder (COMMUNITY_SERVICE)
+  const [campaignModal, setCampaignModal] = useState<{
+    show: boolean;
+    loading: boolean;
+    existingCampaign: any | null;
+    formData: {
+      title: string;
+      description: string;
+      story: string;
+      goalAmount: string;
+      videoUrl: string;
+    };
+  }>({
+    show: false,
+    loading: false,
+    existingCampaign: null,
+    formData: {
+      title: '',
+      description: '',
+      story: '',
+      goalAmount: '50000',
+      videoUrl: ''
+    }
+  });
   
   const promisesContainerRef = useRef<HTMLDivElement>(null);
 
@@ -348,6 +373,106 @@ export default function LegacyVisionBuilderPage() {
     } finally {
       setNominating(false);
     }
+  };
+
+  // Funciones para el modal de crear campaña (COMMUNITY_SERVICE)
+  const handleOpenCampaignModal = async () => {
+    setCampaignModal(prev => ({ ...prev, show: true, loading: true }));
+    
+    try {
+      const res = await fetch(`/api/legacy-builder/campaigns/create?visionId=${data?.visionId}`);
+      const result = await res.json();
+      
+      if (res.ok) {
+        if (result.hasCampaign) {
+          setCampaignModal(prev => ({
+            ...prev,
+            loading: false,
+            existingCampaign: result.campaign
+          }));
+        } else {
+          // Pre-llenar título con nombre de visión
+          setCampaignModal(prev => ({
+            ...prev,
+            loading: false,
+            existingCampaign: null,
+            formData: {
+              ...prev.formData,
+              title: `Proyecto Comunitario ${data?.visionName || ''}`
+            }
+          }));
+        }
+      } else {
+        showToast(result.error || 'Error al cargar datos', 'error');
+        setCampaignModal(prev => ({ ...prev, show: false, loading: false }));
+      }
+    } catch (error) {
+      showToast('Error de conexión', 'error');
+      setCampaignModal(prev => ({ ...prev, show: false, loading: false }));
+    }
+  };
+
+  const handleCreateCampaign = async () => {
+    const { title, description, story, goalAmount, videoUrl } = campaignModal.formData;
+    
+    if (!title.trim()) {
+      showToast('El título es requerido', 'error');
+      return;
+    }
+    
+    if (!goalAmount || parseFloat(goalAmount) <= 0) {
+      showToast('La meta debe ser mayor a 0', 'error');
+      return;
+    }
+
+    setCampaignModal(prev => ({ ...prev, loading: true }));
+    
+    try {
+      const res = await fetch('/api/legacy-builder/campaigns/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim(),
+          story: story.trim(),
+          goalAmount: parseFloat(goalAmount),
+          visionId: data?.visionId,
+          videoUrl: videoUrl.trim() || null
+        })
+      });
+
+      const result = await res.json();
+
+      if (res.ok) {
+        showToast('🎉 ' + result.message, 'success');
+        setCampaignModal(prev => ({
+          ...prev,
+          loading: false,
+          existingCampaign: result.campaign
+        }));
+      } else {
+        showToast(result.error || 'Error al crear campaña', 'error');
+        setCampaignModal(prev => ({ ...prev, loading: false }));
+      }
+    } catch (error) {
+      showToast('Error de conexión', 'error');
+      setCampaignModal(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const closeCampaignModal = () => {
+    setCampaignModal({
+      show: false,
+      loading: false,
+      existingCampaign: null,
+      formData: {
+        title: '',
+        description: '',
+        story: '',
+        goalAmount: '50000',
+        videoUrl: ''
+      }
+    });
   };
 
   const filteredMembers = (data?.tribeMembers || []).filter(m =>
@@ -573,6 +698,244 @@ export default function LegacyVisionBuilderPage() {
                   Rechazar
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para Crear/Ver Campaña de Legacy Builder */}
+      {campaignModal.show && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-gray-900 rounded-2xl border border-pink-600/30 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header del Modal */}
+            <div className="bg-gradient-to-r from-pink-600 to-rose-600 p-6 rounded-t-2xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-white/20 rounded-xl">
+                    <Heart className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">
+                      {campaignModal.existingCampaign ? 'Tu Campaña de Servicio' : 'Crear Campaña Comunitaria'}
+                    </h2>
+                    <p className="text-pink-200 text-sm">Legacy Builder - Crowdfunding</p>
+                  </div>
+                </div>
+                <button
+                  onClick={closeCampaignModal}
+                  className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Contenido */}
+            <div className="p-6">
+              {campaignModal.loading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="w-10 h-10 animate-spin text-pink-500 mb-4" />
+                  <p className="text-gray-400">Cargando...</p>
+                </div>
+              ) : campaignModal.existingCampaign ? (
+                /* Vista de Campaña Existente */
+                <div className="space-y-6">
+                  <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                    <h3 className="text-xl font-bold text-white mb-2">
+                      {campaignModal.existingCampaign.title}
+                    </h3>
+                    <div className="flex items-center gap-2 text-sm text-gray-400 mb-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        campaignModal.existingCampaign.status === 'ACTIVE' 
+                          ? 'bg-green-900/50 text-green-400 border border-green-600/30'
+                          : campaignModal.existingCampaign.status === 'DRAFT'
+                          ? 'bg-yellow-900/50 text-yellow-400 border border-yellow-600/30'
+                          : 'bg-gray-800 text-gray-400 border border-gray-600'
+                      }`}>
+                        {campaignModal.existingCampaign.status === 'ACTIVE' ? '🟢 Activa' : 
+                         campaignModal.existingCampaign.status === 'DRAFT' ? '📝 Borrador' : 
+                         campaignModal.existingCampaign.status}
+                      </span>
+                    </div>
+
+                    {/* Progreso financiero */}
+                    <div className="bg-gray-900 rounded-lg p-4 mb-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-gray-400 text-sm">Recaudado</span>
+                        <span className="text-white font-bold">
+                          ${Number(campaignModal.existingCampaign.raisedAmount || 0).toLocaleString()} MXN
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
+                        <div 
+                          className="bg-gradient-to-r from-pink-500 to-rose-500 h-full rounded-full transition-all"
+                          style={{ 
+                            width: `${Math.min(100, (Number(campaignModal.existingCampaign.raisedAmount || 0) / Number(campaignModal.existingCampaign.goalAmount)) * 100)}%` 
+                          }}
+                        />
+                      </div>
+                      <div className="flex justify-between items-center mt-2">
+                        <span className="text-gray-500 text-xs">
+                          {Math.round((Number(campaignModal.existingCampaign.raisedAmount || 0) / Number(campaignModal.existingCampaign.goalAmount)) * 100)}% completado
+                        </span>
+                        <span className="text-gray-400 text-sm">
+                          Meta: ${Number(campaignModal.existingCampaign.goalAmount).toLocaleString()} MXN
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Estadísticas */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-gray-900 rounded-lg p-3 text-center">
+                        <p className="text-2xl font-bold text-pink-400">
+                          {campaignModal.existingCampaign._count?.donations || 0}
+                        </p>
+                        <p className="text-xs text-gray-500">Donaciones</p>
+                      </div>
+                      <div className="bg-gray-900 rounded-lg p-3 text-center">
+                        <p className="text-2xl font-bold text-blue-400">
+                          {campaignModal.existingCampaign._count?.members || 0}
+                        </p>
+                        <p className="text-xs text-gray-500">Miembros</p>
+                      </div>
+                      <div className="bg-gray-900 rounded-lg p-3 text-center">
+                        <p className="text-2xl font-bold text-purple-400">
+                          {campaignModal.existingCampaign._count?.expenses || 0}
+                        </p>
+                        <p className="text-xs text-gray-500">Gastos</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-pink-900/20 border border-pink-600/30 rounded-xl p-4 text-center">
+                    <p className="text-pink-200 text-sm">
+                      🚀 Para gestionar tu campaña completa, visita el panel de Legacy Builder
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                /* Formulario para Crear Nueva Campaña */
+                <div className="space-y-6">
+                  <div className="bg-pink-900/20 border border-pink-600/30 rounded-xl p-4">
+                    <p className="text-pink-200 text-sm flex items-center gap-2">
+                      <Heart className="w-4 h-4" />
+                      Como Capitán de Comunitaria Grupal, puedes crear una campaña de crowdfunding para tu visión.
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Título */}
+                    <div>
+                      <label className="block text-white text-sm font-medium mb-2">
+                        Título de la Campaña *
+                      </label>
+                      <input
+                        type="text"
+                        value={campaignModal.formData.title}
+                        onChange={(e) => setCampaignModal(prev => ({
+                          ...prev,
+                          formData: { ...prev.formData, title: e.target.value }
+                        }))}
+                        placeholder="Ej: Apoyo a Casa Hogar San José"
+                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500"
+                      />
+                    </div>
+
+                    {/* Descripción */}
+                    <div>
+                      <label className="block text-white text-sm font-medium mb-2">
+                        Descripción Breve
+                      </label>
+                      <textarea
+                        value={campaignModal.formData.description}
+                        onChange={(e) => setCampaignModal(prev => ({
+                          ...prev,
+                          formData: { ...prev.formData, description: e.target.value }
+                        }))}
+                        placeholder="¿Cuál es el propósito de esta campaña?"
+                        rows={3}
+                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 resize-none"
+                      />
+                    </div>
+
+                    {/* Historia */}
+                    <div>
+                      <label className="block text-white text-sm font-medium mb-2">
+                        Historia / Manifiesto
+                      </label>
+                      <textarea
+                        value={campaignModal.formData.story}
+                        onChange={(e) => setCampaignModal(prev => ({
+                          ...prev,
+                          formData: { ...prev.formData, story: e.target.value }
+                        }))}
+                        placeholder="Cuenta la historia detrás de este proyecto..."
+                        rows={4}
+                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 resize-none"
+                      />
+                    </div>
+
+                    {/* Meta Financiera */}
+                    <div>
+                      <label className="block text-white text-sm font-medium mb-2">
+                        Meta a Recaudar (MXN) *
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                        <input
+                          type="number"
+                          value={campaignModal.formData.goalAmount}
+                          onChange={(e) => setCampaignModal(prev => ({
+                            ...prev,
+                            formData: { ...prev.formData, goalAmount: e.target.value }
+                          }))}
+                          placeholder="50000"
+                          min="1000"
+                          className="w-full px-4 py-3 pl-8 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500"
+                        />
+                      </div>
+                      <p className="text-gray-500 text-xs mt-1">Mínimo $1,000 MXN</p>
+                    </div>
+
+                    {/* Video URL */}
+                    <div>
+                      <label className="block text-white text-sm font-medium mb-2">
+                        Video de Presentación (opcional)
+                      </label>
+                      <input
+                        type="url"
+                        value={campaignModal.formData.videoUrl}
+                        onChange={(e) => setCampaignModal(prev => ({
+                          ...prev,
+                          formData: { ...prev.formData, videoUrl: e.target.value }
+                        }))}
+                        placeholder="https://youtube.com/watch?v=..."
+                        className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Botón de Crear */}
+                  <button
+                    onClick={handleCreateCampaign}
+                    disabled={campaignModal.loading}
+                    className="w-full py-4 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700 text-white font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {campaignModal.loading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <>
+                        <Heart className="w-5 h-5" />
+                        Crear Campaña
+                      </>
+                    )}
+                  </button>
+
+                  <p className="text-gray-500 text-xs text-center">
+                    La campaña se creará como borrador. Podrás editarla y publicarla después.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1088,12 +1451,15 @@ export default function LegacyVisionBuilderPage() {
                           <button
                             className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
                             onClick={() => {
-                              // TODO: Navegar al widget específico
-                              showToast('Widget en desarrollo', 'info');
+                              if (cap.roleType === 'COMMUNITY_SERVICE') {
+                                handleOpenCampaignModal();
+                              } else {
+                                showToast('Widget en desarrollo', 'info');
+                              }
                             }}
                           >
                             <Sparkles className="w-5 h-5" />
-                            Abrir Widget
+                            {cap.roleType === 'COMMUNITY_SERVICE' ? 'Crear/Ver Campaña' : 'Abrir Widget'}
                           </button>
                         </div>
                       );
