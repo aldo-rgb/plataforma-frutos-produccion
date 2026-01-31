@@ -164,12 +164,12 @@ export async function POST(
 
     // Realizar la transacción: asignar licencia y actualizar créditos
     const result = await prisma.$transaction(async (tx) => {
-      // Actualizar participante con licencia y tier PREMIUM
+      // Actualizar participante con licencia y tier STANDARD
       const updatedParticipante = await tx.usuario.update({
         where: { id: participanteId },
         data: {
           licenseCode,
-          tier: 'PREMIUM',
+          tier: 'STANDARD',
         },
       });
 
@@ -202,8 +202,8 @@ export async function POST(
           licenseCode,
           assignedBy: session.user.id,
           assignedAt: new Date(),
-          isActive: false, // Pendiente de activación por el participante
-          activatedAt: null,
+          isActive: true, // Activada inmediatamente al ser asignada por director
+          activatedAt: new Date(),
           expiresAt: vision.endDate, // Expira cuando termina la visión
           notes: 'Licencia asignada manualmente por director'
         },
