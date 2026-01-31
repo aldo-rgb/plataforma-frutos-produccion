@@ -201,7 +201,7 @@ export default function TribeNotificationsWidget() {
               
               <div className="mt-4 flex items-center gap-3">
                 <Link
-                  href="/dashboard/legacy-forge"
+                  href={`/dashboard/legacy-forge?visionId=${poll.visionId}`}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-bold rounded-lg transition-all text-sm"
                 >
                   <Vote size={16} />
