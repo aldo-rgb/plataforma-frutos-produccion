@@ -1,125 +1,741 @@
 "use client";
 
-import { ShieldCheck, Bot, PenLine, Heart, Trophy, Sparkles, Play } from 'lucide-react';
+import { useState } from 'react';
+import { 
+  ShieldCheck, Bot, PenLine, Heart, Trophy, Sparkles, Play, 
+  GraduationCap, Calendar, DollarSign, Clock, Settings, User,
+  ChevronDown, ChevronRight, CheckCircle, Phone, Users, Star,
+  FileText, Video, CreditCard, Percent, Target, Award
+} from 'lucide-react';
 import Link from 'next/link';
 
+type GuideSection = 'inicio' | 'mentor' | 'alumno' | 'disciplina';
+
 export default function GuiaInicioPage() {
+  const [activeSection, setActiveSection] = useState<GuideSection>('inicio');
+  const [expandedStep, setExpandedStep] = useState<number | null>(null);
+
+  const toggleStep = (step: number) => {
+    setExpandedStep(expandedStep === step ? null : step);
+  };
+
   return (
-  <div className="p-4 md:p-8 max-w-5xl mx-auto min-h-screen">
-    {/* HEADER TÍTULO */}
-    <div className="mb-8">
-    <h1 className="text-2xl md:text-3xl font-bold text-cyan-400 flex items-center gap-3">
-      <ShieldCheck size={36} />
-      GUÍA DE INICIO RÁPIDO
-    </h1>
-    <p className="text-slate-400 mt-2 text-sm md:text-base">
-      Sigue estos pasos para configurar tu transformación correctamente.
-    </p>
-    </div>
-
-    {/* --- NUEVO: VIDEO DE BIENVENIDA --- */}
-    <div className="relative w-full aspect-video md:aspect-[21/9] bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden mb-12 shadow-2xl group cursor-pointer">
-    {/* Fondo (Simulado) */}
-    <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-blue-950/20 to-slate-950"></div>
-        
-    {/* Botón Play */}
-    <div className="absolute inset-0 flex flex-col items-center justify-center z-10 transition-transform duration-300 group-hover:scale-105">
-      <div className="w-20 h-20 bg-white/10 backdrop-blur-md border border-white/20 rounded-full flex items-center justify-center mb-4 shadow-lg shadow-blue-500/20 group-hover:bg-blue-600 group-hover:border-blue-500 transition-colors">
-        <Play size={32} className="text-white fill-white ml-2" />
-      </div>
-      <h3 className="text-white font-bold text-lg tracking-wider uppercase">Ver Mensaje de Bienvenida</h3>
-      <p className="text-slate-400 text-xs mt-1">Duración: 2 min</p>
-    </div>
-    </div>
-
-    {/* --- TARJETA PROTOCOLO S.M.A.R.T. --- */}
-    <div className="bg-slate-900/60 border border-cyan-500/30 rounded-2xl p-6 md:p-8 mb-12 shadow-lg shadow-cyan-900/10">
-    <h2 className="text-xl font-bold text-cyan-400 mb-2">Protocolo S.M.A.R.T.</h2>
-    <p className="text-slate-400 text-sm mb-6">
-      Tu compromiso debe ser irrompible. Cada meta debe cumplir con este estándar:
-    </p>
-        
-    <ul className="space-y-2 text-sm text-slate-300">
-      <li className="flex items-start gap-2">
-        <span className="text-pink-500 font-bold">•</span> 
-        <span><strong className="text-white">S</strong>pecific (Específico): ¿Qué voy a hacer exactamente?</span>
-      </li>
-      <li className="flex items-start gap-2">
-        <span className="text-pink-500 font-bold">•</span> 
-        <span><strong className="text-white">M</strong>edible: ¿Cuánto o cuántas veces? (¡Con números!)</span>
-      </li>
-      <li className="flex items-start gap-2">
-        <span className="text-pink-500 font-bold">•</span> 
-        <span><strong className="text-white">A</strong>lcanzable: ¿Es realista para mí?</span>
-      </li>
-      <li className="flex items-start gap-2">
-        <span className="text-pink-500 font-bold">•</span> 
-        <span><strong className="text-white">R</strong>elevante: ¿Por qué es importante para mi visión?</span>
-      </li>
-      <li className="flex items-start gap-2">
-        <span className="text-pink-500 font-bold">•</span> 
-        <span><strong className="text-white">T</strong>iempo: ¿Para cuándo lo haré? (Fecha Límite)</span>
-      </li>
-    </ul>
-    </div>
-
-    {/* --- LOS 3 PASOS --- */}
-    <div className="space-y-12 relative">
-    <div className="absolute left-8 top-16 bottom-16 w-0.5 bg-slate-800 -z-10 hidden md:block"></div>
-
-    {/* PASO 1 */}
-    <div className="flex flex-col md:flex-row gap-6">
-      <div className="w-16 h-16 rounded-full border-2 border-purple-500/30 bg-slate-900 flex items-center justify-center shrink-0 shadow-lg shadow-purple-900/20">
-        <Bot size={32} className="text-purple-400" />
-      </div>
-      <div className="flex-1">
-        <h3 className="text-2xl font-bold text-white mb-2">1. Crea tu Carta de F.R.U.T.O.S.</h3>
-        <p className="text-slate-400 text-sm mb-6 max-w-2xl leading-relaxed">
-          Define tus 8 metas cuantificables. Tienes dos caminos: usa la Inteligencia Artificial para inspirarte o llénala manualmente.
+    <div className="p-4 md:p-8 max-w-6xl mx-auto min-h-screen">
+      {/* HEADER TÍTULO */}
+      <div className="mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-cyan-400 flex items-center gap-3">
+          <ShieldCheck size={36} />
+          CENTRO DE AYUDA - GUÍAS AVANZADAS
+        </h1>
+        <p className="text-slate-400 mt-2 text-sm md:text-base">
+          Explora todas las guías disponibles para aprovechar al máximo la plataforma Quantum Matter.
         </p>
-        <div className="flex flex-wrap gap-4">
-          <Link href="/dashboard/mentor-ia" className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2 transition-colors text-sm">
-            <Sparkles size={18} /> USAR MENTOR IA
-          </Link>
-          <Link href="/dashboard/carta" className="bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 hover:border-cyan-500/50 font-bold py-3 px-6 rounded-lg flex items-center gap-2 transition-all text-sm">
-            <PenLine size={18} /> LLENADO MANUAL
-          </Link>
+      </div>
+
+      {/* MENÚ DE NAVEGACIÓN DE GUÍAS */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+        <button
+          onClick={() => setActiveSection('inicio')}
+          className={`p-4 rounded-xl border transition-all ${
+            activeSection === 'inicio'
+              ? 'bg-cyan-600/20 border-cyan-500 text-cyan-400'
+              : 'bg-slate-900 border-slate-700 text-slate-400 hover:border-slate-600'
+          }`}
+        >
+          <ShieldCheck className="w-6 h-6 mx-auto mb-2" />
+          <span className="text-sm font-medium">Inicio Rápido</span>
+        </button>
+        
+        <button
+          onClick={() => setActiveSection('mentor')}
+          className={`p-4 rounded-xl border transition-all ${
+            activeSection === 'mentor'
+              ? 'bg-purple-600/20 border-purple-500 text-purple-400'
+              : 'bg-slate-900 border-slate-700 text-slate-400 hover:border-slate-600'
+          }`}
+        >
+          <GraduationCap className="w-6 h-6 mx-auto mb-2" />
+          <span className="text-sm font-medium">Ser Mentor</span>
+        </button>
+        
+        <button
+          onClick={() => setActiveSection('alumno')}
+          className={`p-4 rounded-xl border transition-all ${
+            activeSection === 'alumno'
+              ? 'bg-emerald-600/20 border-emerald-500 text-emerald-400'
+              : 'bg-slate-900 border-slate-700 text-slate-400 hover:border-slate-600'
+          }`}
+        >
+          <Users className="w-6 h-6 mx-auto mb-2" />
+          <span className="text-sm font-medium">Ser Alumno</span>
+        </button>
+        
+        <button
+          onClick={() => setActiveSection('disciplina')}
+          className={`p-4 rounded-xl border transition-all ${
+            activeSection === 'disciplina'
+              ? 'bg-amber-600/20 border-amber-500 text-amber-400'
+              : 'bg-slate-900 border-slate-700 text-slate-400 hover:border-slate-600'
+          }`}
+        >
+          <Clock className="w-6 h-6 mx-auto mb-2" />
+          <span className="text-sm font-medium">Club 5 AM</span>
+        </button>
+      </div>
+
+      {/* ============================================= */}
+      {/* SECCIÓN: INICIO RÁPIDO (Original) */}
+      {/* ============================================= */}
+      {activeSection === 'inicio' && (
+        <div className="animate-in fade-in duration-300">
+          {/* VIDEO DE BIENVENIDA */}
+          <div className="relative w-full aspect-video md:aspect-[21/9] bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden mb-12 shadow-2xl group cursor-pointer">
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-blue-950/20 to-slate-950"></div>
+            <div className="absolute inset-0 flex flex-col items-center justify-center z-10 transition-transform duration-300 group-hover:scale-105">
+              <div className="w-20 h-20 bg-white/10 backdrop-blur-md border border-white/20 rounded-full flex items-center justify-center mb-4 shadow-lg shadow-blue-500/20 group-hover:bg-blue-600 group-hover:border-blue-500 transition-colors">
+                <Play size={32} className="text-white fill-white ml-2" />
+              </div>
+              <h3 className="text-white font-bold text-lg tracking-wider uppercase">Ver Mensaje de Bienvenida</h3>
+              <p className="text-slate-400 text-xs mt-1">Duración: 2 min</p>
+            </div>
+          </div>
+
+          {/* PROTOCOLO S.M.A.R.T. */}
+          <div className="bg-slate-900/60 border border-cyan-500/30 rounded-2xl p-6 md:p-8 mb-12 shadow-lg shadow-cyan-900/10">
+            <h2 className="text-xl font-bold text-cyan-400 mb-2">Protocolo S.M.A.R.T.</h2>
+            <p className="text-slate-400 text-sm mb-6">
+              Tu compromiso debe ser irrompible. Cada meta debe cumplir con este estándar:
+            </p>
+            <ul className="space-y-2 text-sm text-slate-300">
+              <li className="flex items-start gap-2">
+                <span className="text-pink-500 font-bold">•</span> 
+                <span><strong className="text-white">S</strong>pecific (Específico): ¿Qué voy a hacer exactamente?</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-pink-500 font-bold">•</span> 
+                <span><strong className="text-white">M</strong>edible: ¿Cuánto o cuántas veces? (¡Con números!)</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-pink-500 font-bold">•</span> 
+                <span><strong className="text-white">A</strong>lcanzable: ¿Es realista para mí?</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-pink-500 font-bold">•</span> 
+                <span><strong className="text-white">R</strong>elevante: ¿Por qué es importante para mi visión?</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-pink-500 font-bold">•</span> 
+                <span><strong className="text-white">T</strong>iempo: ¿Para cuándo lo haré? (Fecha Límite)</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* LOS 3 PASOS */}
+          <div className="space-y-12 relative">
+            <div className="absolute left-8 top-16 bottom-16 w-0.5 bg-slate-800 -z-10 hidden md:block"></div>
+
+            {/* PASO 1 */}
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="w-16 h-16 rounded-full border-2 border-purple-500/30 bg-slate-900 flex items-center justify-center shrink-0 shadow-lg shadow-purple-900/20">
+                <Bot size={32} className="text-purple-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-2xl font-bold text-white mb-2">1. Crea tu Carta de F.R.U.T.O.S.</h3>
+                <p className="text-slate-400 text-sm mb-6 max-w-2xl leading-relaxed">
+                  Define tus 8 metas cuantificables. Tienes dos caminos: usa la Inteligencia Artificial para inspirarte o llénala manualmente.
+                </p>
+                <div className="flex flex-wrap gap-4">
+                  <Link href="/dashboard/mentor-ia" className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-6 rounded-lg flex items-center gap-2 transition-colors text-sm">
+                    <Sparkles size={18} /> USAR MENTOR IA
+                  </Link>
+                  <Link href="/dashboard/carta" className="bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 hover:border-cyan-500/50 font-bold py-3 px-6 rounded-lg flex items-center gap-2 transition-all text-sm">
+                    <PenLine size={18} /> LLENADO MANUAL
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* PASO 2 */}
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="w-16 h-16 rounded-full border-2 border-emerald-500/30 bg-slate-900 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-900/20">
+                <Heart size={32} className="text-emerald-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-2xl font-bold text-white mb-2">2. Espera la Validación del Mentor</h3>
+                <p className="text-slate-400 text-sm max-w-2xl leading-relaxed">
+                  Una vez que guardes tu Carta, un Mentor y un Coordinador deben revisarla y Autorizarla. 
+                  Tu cuenta se activará para subir evidencias <strong className="text-emerald-400">solo después de este paso.</strong>
+                </p>
+              </div>
+            </div>
+
+            {/* PASO 3 */}
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="w-16 h-16 rounded-full border-2 border-amber-500/30 bg-slate-900 flex items-center justify-center shrink-0 shadow-lg shadow-amber-900/20">
+                <Trophy size={32} className="text-amber-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-2xl font-bold text-white mb-2">3. ¡Ejecuta y Sube Evidencias!</h3>
+                <p className="text-slate-400 text-sm max-w-2xl leading-relaxed">
+                  Cada día podrás subir hasta 8 evidencias (una por cada área). Tu progreso se irá registrando 
+                  y al final del ciclo verás tu evolución completa.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      )}
 
-    {/* PASO 2 */}
-    <div className="flex flex-col md:flex-row gap-6">
-      <div className="w-16 h-16 rounded-full border-2 border-emerald-500/30 bg-slate-900 flex items-center justify-center shrink-0 shadow-lg shadow-emerald-900/20">
-        <Heart size={32} className="text-emerald-400" />
-      </div>
-      <div className="flex-1">
-        <h3 className="text-2xl font-bold text-white mb-2">2. Espera la Validación del Mentor</h3>
-        <p className="text-slate-400 text-sm max-w-2xl leading-relaxed">
-          Una vez que guardes tu Carta, un Mentor y un Coordinador deben revisarla y Autorizarla. 
-          Tu cuenta se activará para subir evidencias <strong className="text-emerald-400">solo después de este paso.</strong>
-        </p>
-      </div>
-    </div>
+      {/* ============================================= */}
+      {/* SECCIÓN: GUÍA COMPLETA PARA SER MENTOR */}
+      {/* ============================================= */}
+      {activeSection === 'mentor' && (
+        <div className="animate-in fade-in duration-300 space-y-6">
+          {/* Header de la sección */}
+          <div className="bg-gradient-to-r from-purple-900/40 to-indigo-900/40 border border-purple-500/30 rounded-2xl p-6 md:p-8 mb-8">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-16 h-16 bg-purple-500/20 rounded-2xl flex items-center justify-center">
+                <GraduationCap className="w-8 h-8 text-purple-400" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white">Guía Completa: Cómo Ser Mentor</h2>
+                <p className="text-purple-300">Todo lo que necesitas saber para convertirte en Mentor de Quantum Matter</p>
+              </div>
+            </div>
+            <p className="text-slate-300 text-sm leading-relaxed">
+              Como mentor certificado tendrás acceso a herramientas exclusivas para gestionar tus mentorados, 
+              agendar llamadas, recibir ingresos por tus servicios y mucho más.
+            </p>
+          </div>
 
-    {/* PASO 3 */}
-    <div className="flex flex-col md:flex-row gap-6">
-      <div className="w-16 h-16 rounded-full border-2 border-yellow-500/30 bg-slate-900 flex items-center justify-center shrink-0 shadow-lg shadow-yellow-900/20">
-        <Trophy size={32} className="text-yellow-400" />
-      </div>
-      <div className="flex-1">
-        <h3 className="text-2xl font-bold text-white mb-2">3. Ejecuta y Sube Evidencia</h3>
-        <p className="text-slate-400 text-sm mb-4 max-w-2xl leading-relaxed">
-          Completa tus tareas diarias, sube la <strong className="text-white">**evidencia fotográfica**</strong> en la sección "Carta", y revisa tu posición en el <strong className="text-white">**Ranking Global**</strong>.
-        </p>
-        <Link href="/dashboard/ranking" className="inline-flex items-center gap-2 text-yellow-500 font-bold text-sm hover:text-yellow-400 transition-colors uppercase tracking-wider">
-          Ver Ranking <Trophy size={16} />
-        </Link>
-      </div>
-    </div>
+          {/* PASO 1: Solicitar ser Mentor */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <button
+              onClick={() => toggleStep(1)}
+              className="w-full p-6 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                  1
+                </div>
+                <div className="text-left">
+                  <h3 className="text-lg font-bold text-white">Solicitar Ser Mentor</h3>
+                  <p className="text-sm text-slate-400">Dónde encontrar el formulario y cómo llenarlo</p>
+                </div>
+              </div>
+              {expandedStep === 1 ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronRight className="w-5 h-5 text-slate-400" />}
+            </button>
+            
+            {expandedStep === 1 && (
+              <div className="px-6 pb-6 border-t border-slate-800 pt-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <h4 className="font-bold text-cyan-400 mb-3 flex items-center gap-2">
+                    <Settings className="w-4 h-4" /> ¿Dónde encontrar la opción?
+                  </h4>
+                  <div className="flex items-center gap-2 text-slate-300 text-sm bg-slate-900 p-3 rounded-lg font-mono">
+                    <span className="text-purple-400">Configuración</span>
+                    <ChevronRight className="w-4 h-4 text-slate-500" />
+                    <span className="text-emerald-400">Solicitar Ser Mentor</span>
+                  </div>
+                  <p className="text-slate-400 text-sm mt-3">
+                    En el menú lateral, ve a <strong className="text-white">Configuración</strong> y haz clic en <strong className="text-white">"Solicitar Ser Mentor"</strong>.
+                  </p>
+                </div>
 
-    </div>
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <h4 className="font-bold text-cyan-400 mb-3 flex items-center gap-2">
+                    <FileText className="w-4 h-4" /> El Wizard de 3 Pasos
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-purple-600/30 rounded-full flex items-center justify-center text-purple-400 text-xs font-bold shrink-0">1</div>
+                      <div>
+                        <p className="text-white font-medium">Información Básica</p>
+                        <p className="text-slate-400 text-sm">Título profesional, especialidad, años de experiencia y biografía (mín. 200 caracteres)</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-purple-600/30 rounded-full flex items-center justify-center text-purple-400 text-xs font-bold shrink-0">2</div>
+                      <div>
+                        <p className="text-white font-medium">Experiencia y Portafolio</p>
+                        <p className="text-slate-400 text-sm">Logros, certificaciones, habilidades, documentos de soporte (PDF/imágenes) y video de presentación opcional</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-purple-600/30 rounded-full flex items-center justify-center text-purple-400 text-xs font-bold shrink-0">3</div>
+                      <div>
+                        <p className="text-white font-medium">Revisión y Pago</p>
+                        <p className="text-slate-400 text-sm">Verifica tu información y procede al pago de membresía</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-  </div>
+                <Link 
+                  href="/dashboard/solicitar-mentor"
+                  className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                >
+                  <GraduationCap className="w-5 h-5" />
+                  Ir a Solicitar Ser Mentor
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* PASO 2: Pago de Membresía */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <button
+              onClick={() => toggleStep(2)}
+              className="w-full p-6 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">
+                  2
+                </div>
+                <div className="text-left">
+                  <h3 className="text-lg font-bold text-white">Pago de Membresía Anual</h3>
+                  <p className="text-sm text-slate-400">Costo, beneficios y opciones de pago</p>
+                </div>
+              </div>
+              {expandedStep === 2 ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronRight className="w-5 h-5 text-slate-400" />}
+            </button>
+            
+            {expandedStep === 2 && (
+              <div className="px-6 pb-6 border-t border-slate-800 pt-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 border border-green-500/30 rounded-lg p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-bold text-green-400 flex items-center gap-2">
+                      <DollarSign className="w-5 h-5" /> Membresía de Mentor
+                    </h4>
+                    <span className="text-3xl font-bold text-white">$999 <span className="text-sm text-slate-400 font-normal">MXN/año</span></span>
+                  </div>
+                  <p className="text-slate-300 text-sm mb-4">
+                    Para obtener <strong className="text-white">todos los beneficios de agenda y clientes</strong>, deberás realizar un pago anual de membresía.
+                  </p>
+                  <ul className="space-y-2 text-sm text-slate-300">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-400" />
+                      Revisión completa de tu perfil con soporte de Quantum AI
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-400" />
+                      Acceso completo a la plataforma de mentoría
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-400" />
+                      Capacitación inicial incluida
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-400" />
+                      Soporte técnico continuo
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <h4 className="font-bold text-cyan-400 mb-3 flex items-center gap-2">
+                    <CreditCard className="w-4 h-4" /> Opciones de Pago
+                  </h4>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="bg-slate-900 p-4 rounded-lg border border-slate-700">
+                      <p className="font-bold text-white mb-1">Stripe</p>
+                      <p className="text-slate-400 text-sm">Tarjeta de crédito/débito (Visa, Mastercard, Amex). Procesamiento instantáneo.</p>
+                    </div>
+                    <div className="bg-slate-900 p-4 rounded-lg border border-slate-700">
+                      <p className="font-bold text-white mb-1">Código de Licencia</p>
+                      <p className="text-slate-400 text-sm">Código promocional o licencia corporativa para acceso inmediato.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Clock className="w-5 h-5 text-blue-400 mt-0.5" />
+                    <div className="text-sm text-blue-200">
+                      <p className="font-semibold mb-1">Proceso de Aprobación</p>
+                      <p>Una vez realizado el pago, tu solicitud será revisada en <strong>24-48 horas</strong>. Recibirás notificación por correo.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* PASO 3: Configurar Perfil de Mentor */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <button
+              onClick={() => toggleStep(3)}
+              className="w-full p-6 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold">
+                  3
+                </div>
+                <div className="text-left">
+                  <h3 className="text-lg font-bold text-white">Configurar tu Perfil de Mentor</h3>
+                  <p className="text-sm text-slate-400">Completa tu perfil público y define tus precios</p>
+                </div>
+              </div>
+              {expandedStep === 3 ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronRight className="w-5 h-5 text-slate-400" />}
+            </button>
+            
+            {expandedStep === 3 && (
+              <div className="px-6 pb-6 border-t border-slate-800 pt-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <h4 className="font-bold text-cyan-400 mb-3 flex items-center gap-2">
+                    <User className="w-4 h-4" /> ¿Dónde configurar?
+                  </h4>
+                  <div className="flex items-center gap-2 text-slate-300 text-sm bg-slate-900 p-3 rounded-lg font-mono">
+                    <span className="text-purple-400">Panel Mentor</span>
+                    <ChevronRight className="w-4 h-4 text-slate-500" />
+                    <span className="text-emerald-400">Mi Perfil</span>
+                  </div>
+                </div>
+
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <h4 className="font-bold text-cyan-400 mb-3">Campos Obligatorios del Perfil</h4>
+                  <div className="grid md:grid-cols-2 gap-3 text-sm">
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <CheckCircle className="w-4 h-4 text-emerald-400" />
+                      Foto de perfil profesional
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <CheckCircle className="w-4 h-4 text-emerald-400" />
+                      Nombre completo
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <CheckCircle className="w-4 h-4 text-emerald-400" />
+                      Título profesional (Job Title)
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <CheckCircle className="w-4 h-4 text-emerald-400" />
+                      Especialidad principal
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <CheckCircle className="w-4 h-4 text-emerald-400" />
+                      Biografía corta y completa
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <CheckCircle className="w-4 h-4 text-emerald-400" />
+                      Tu visión como mentor
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <CheckCircle className="w-4 h-4 text-emerald-400" />
+                      Sede/Ubicación
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <CheckCircle className="w-4 h-4 text-emerald-400" />
+                      Habilidades y logros
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <CheckCircle className="w-4 h-4 text-emerald-400" />
+                      Años de experiencia
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <CheckCircle className="w-4 h-4 text-emerald-400" />
+                      Enlace de videollamada (Zoom/Meet)
+                    </div>
+                  </div>
+                </div>
+
+                <Link 
+                  href="/dashboard/mentor/perfil"
+                  className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                >
+                  <User className="w-5 h-5" />
+                  Ir a Mi Perfil de Mentor
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* PASO 4: Configurar Horarios */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <button
+              onClick={() => toggleStep(4)}
+              className="w-full p-6 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-cyan-600 rounded-full flex items-center justify-center text-white font-bold">
+                  4
+                </div>
+                <div className="text-left">
+                  <h3 className="text-lg font-bold text-white">Configurar tus Horarios</h3>
+                  <p className="text-sm text-slate-400">Horarios de mentoría y llamadas de disciplina</p>
+                </div>
+              </div>
+              {expandedStep === 4 ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronRight className="w-5 h-5 text-slate-400" />}
+            </button>
+            
+            {expandedStep === 4 && (
+              <div className="px-6 pb-6 border-t border-slate-800 pt-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <h4 className="font-bold text-cyan-400 mb-3 flex items-center gap-2">
+                    <Calendar className="w-4 h-4" /> ¿Dónde configurar?
+                  </h4>
+                  <div className="flex items-center gap-2 text-slate-300 text-sm bg-slate-900 p-3 rounded-lg font-mono">
+                    <span className="text-purple-400">Panel Mentor</span>
+                    <ChevronRight className="w-4 h-4 text-slate-500" />
+                    <span className="text-emerald-400">Mi Perfil</span>
+                    <ChevronRight className="w-4 h-4 text-slate-500" />
+                    <span className="text-cyan-400">Sección de Horarios</span>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="bg-gradient-to-br from-amber-900/30 to-orange-900/30 border border-amber-500/30 rounded-lg p-4">
+                    <h4 className="font-bold text-amber-400 mb-2 flex items-center gap-2">
+                      <Clock className="w-4 h-4" /> Horario de Disciplina
+                    </h4>
+                    <p className="text-slate-300 text-sm mb-3">
+                      Para las llamadas del Club de las 5 AM
+                    </p>
+                    <div className="bg-slate-900 p-3 rounded-lg text-sm">
+                      <p className="text-amber-300 font-mono">Rango permitido: 05:00 - 08:00 hrs</p>
+                      <p className="text-slate-400 mt-2">Configura qué días y a qué hora estarás disponible para llamadas de disciplina matutinas.</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 border border-purple-500/30 rounded-lg p-4">
+                    <h4 className="font-bold text-purple-400 mb-2 flex items-center gap-2">
+                      <Phone className="w-4 h-4" /> Horario de Mentoría
+                    </h4>
+                    <p className="text-slate-300 text-sm mb-3">
+                      Para sesiones de mentoría individual
+                    </p>
+                    <div className="bg-slate-900 p-3 rounded-lg text-sm">
+                      <p className="text-purple-300 font-mono">Horario flexible según tu agenda</p>
+                      <p className="text-slate-400 mt-2">Define los días y horarios en que estarás disponible para sesiones de mentoría personalizadas.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Target className="w-5 h-5 text-blue-400 mt-0.5" />
+                    <div className="text-sm text-blue-200">
+                      <p className="font-semibold mb-1">Importante</p>
+                      <p>Debes configurar al menos un horario de disciplina para que los alumnos puedan seleccionarte como mentor.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* PASO 5: Sistema de Comisiones */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <button
+              onClick={() => toggleStep(5)}
+              className="w-full p-6 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold">
+                  5
+                </div>
+                <div className="text-left">
+                  <h3 className="text-lg font-bold text-white">Sistema de Comisiones</h3>
+                  <p className="text-sm text-slate-400">Cómo se calculan tus ganancias por mentoría</p>
+                </div>
+              </div>
+              {expandedStep === 5 ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronRight className="w-5 h-5 text-slate-400" />}
+            </button>
+            
+            {expandedStep === 5 && (
+              <div className="px-6 pb-6 border-t border-slate-800 pt-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                <div className="bg-gradient-to-r from-emerald-900/30 to-green-900/30 border border-emerald-500/30 rounded-lg p-6">
+                  <h4 className="font-bold text-emerald-400 mb-4 flex items-center gap-2">
+                    <Percent className="w-5 h-5" /> Comisión por Nivel de Mentor
+                  </h4>
+                  <p className="text-slate-300 text-sm mb-4">
+                    Las mentorías se cobran a un <strong className="text-white">porcentaje que depende de tu nivel</strong> como mentor:
+                  </p>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div className="bg-slate-900 p-4 rounded-lg border border-slate-700 text-center">
+                      <div className="text-2xl mb-2">🥉</div>
+                      <p className="font-bold text-white">Junior</p>
+                      <p className="text-emerald-400 text-xl font-bold">70%</p>
+                      <p className="text-slate-400 text-xs">Tú ganas</p>
+                      <p className="text-slate-500 text-xs mt-1">30% plataforma</p>
+                    </div>
+                    <div className="bg-slate-900 p-4 rounded-lg border border-indigo-500/30 text-center">
+                      <div className="text-2xl mb-2">🥈</div>
+                      <p className="font-bold text-white">Senior</p>
+                      <p className="text-emerald-400 text-xl font-bold">85%</p>
+                      <p className="text-slate-400 text-xs">Tú ganas</p>
+                      <p className="text-slate-500 text-xs mt-1">15% plataforma</p>
+                    </div>
+                    <div className="bg-slate-900 p-4 rounded-lg border border-amber-500/30 text-center">
+                      <div className="text-2xl mb-2">🥇</div>
+                      <p className="font-bold text-white">Master</p>
+                      <p className="text-emerald-400 text-xl font-bold">90%</p>
+                      <p className="text-slate-400 text-xs">Tú ganas</p>
+                      <p className="text-slate-500 text-xs mt-1">10% plataforma</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <h4 className="font-bold text-cyan-400 mb-3 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4" /> ¿Cómo funciona?
+                  </h4>
+                  <div className="space-y-3 text-sm text-slate-300">
+                    <p><strong className="text-white">1. El alumno paga:</strong> El monto total que definiste en tu precio por sesión.</p>
+                    <p><strong className="text-white">2. El pago se retiene:</strong> El dinero queda en custodia hasta que la sesión se complete.</p>
+                    <p><strong className="text-white">3. Se libera tu ganancia:</strong> Una vez completada la mentoría, recibes tu porcentaje automáticamente.</p>
+                  </div>
+                </div>
+
+                <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Star className="w-5 h-5 text-amber-400 mt-0.5" />
+                    <div className="text-sm text-amber-200">
+                      <p className="font-semibold mb-1">Sistema Level Up</p>
+                      <p>Tu nivel de mentor puede aumentar conforme completes más sesiones y recibas mejores calificaciones, mejorando tu porcentaje de comisión.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* PASO 6: Paquetes de Llamadas */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <button
+              onClick={() => toggleStep(6)}
+              className="w-full p-6 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-pink-600 rounded-full flex items-center justify-center text-white font-bold">
+                  6
+                </div>
+                <div className="text-left">
+                  <h3 className="text-lg font-bold text-white">Paquetes de Llamadas</h3>
+                  <p className="text-sm text-slate-400">Cómo se pagan las llamadas de mentoría</p>
+                </div>
+              </div>
+              {expandedStep === 6 ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronRight className="w-5 h-5 text-slate-400" />}
+            </button>
+            
+            {expandedStep === 6 && (
+              <div className="px-6 pb-6 border-t border-slate-800 pt-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                <div className="bg-gradient-to-r from-pink-900/30 to-rose-900/30 border border-pink-500/30 rounded-lg p-6">
+                  <h4 className="font-bold text-pink-400 mb-4 flex items-center gap-2">
+                    <Phone className="w-5 h-5" /> ¿Cómo funcionan los paquetes?
+                  </h4>
+                  <p className="text-slate-300 text-sm mb-4">
+                    Los alumnos compran <strong className="text-white">paquetes de llamadas</strong> que les dan derecho a un número determinado de sesiones de mentoría:
+                  </p>
+                  <div className="bg-slate-900 p-4 rounded-lg mb-4">
+                    <div className="grid md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-white font-medium">Plan Bimestral</p>
+                        <p className="text-slate-400">18 llamadas de mentoría</p>
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">Plan Anual</p>
+                        <p className="text-slate-400">108 llamadas de mentoría</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <h4 className="font-bold text-cyan-400 mb-3">Pago por Llamada</h4>
+                  <p className="text-slate-300 text-sm">
+                    Los <strong className="text-white">paquetes de llamadas se pagan por llamada</strong>. Cada vez que un alumno usa una de sus llamadas contigo, se registra la transacción y se calcula tu comisión según tu nivel de mentor.
+                  </p>
+                </div>
+
+                <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Award className="w-5 h-5 text-blue-400 mt-0.5" />
+                    <div className="text-sm text-blue-200">
+                      <p className="font-semibold mb-1">Beneficio</p>
+                      <p>Mientras más alumnos te seleccionen y más llamadas completes, mayores serán tus ingresos mensuales.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Resumen Final */}
+          <div className="bg-gradient-to-r from-purple-900/40 to-indigo-900/40 border border-purple-500/30 rounded-2xl p-6 mt-8">
+            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <CheckCircle className="w-6 h-6 text-green-400" /> Checklist del Mentor
+            </h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2 text-sm text-slate-300">
+                <p className="flex items-center gap-2">
+                  <span className="text-purple-400">□</span> Solicitar ser mentor en Configuración
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-purple-400">□</span> Completar el wizard de 3 pasos
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-purple-400">□</span> Pagar membresía anual ($999 MXN)
+                </p>
+              </div>
+              <div className="space-y-2 text-sm text-slate-300">
+                <p className="flex items-center gap-2">
+                  <span className="text-purple-400">□</span> Configurar perfil completo de mentor
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-purple-400">□</span> Definir horarios de disciplina (5-8 AM)
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-purple-400">□</span> Definir horarios de mentoría
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================= */}
+      {/* SECCIÓN: GUÍA PARA ALUMNOS */}
+      {/* ============================================= */}
+      {activeSection === 'alumno' && (
+        <div className="animate-in fade-in duration-300">
+          <div className="bg-gradient-to-r from-emerald-900/40 to-green-900/40 border border-emerald-500/30 rounded-2xl p-6 md:p-8">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center">
+                <Users className="w-8 h-8 text-emerald-400" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white">Guía para Alumnos</h2>
+                <p className="text-emerald-300">Cómo aprovechar al máximo tu programa de transformación</p>
+              </div>
+            </div>
+            <p className="text-slate-400 text-sm">
+              Próximamente más contenido...
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================= */}
+      {/* SECCIÓN: CLUB DE LAS 5 AM */}
+      {/* ============================================= */}
+      {activeSection === 'disciplina' && (
+        <div className="animate-in fade-in duration-300">
+          <div className="bg-gradient-to-r from-amber-900/40 to-orange-900/40 border border-amber-500/30 rounded-2xl p-6 md:p-8">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-16 h-16 bg-amber-500/20 rounded-2xl flex items-center justify-center">
+                <Clock className="w-8 h-8 text-amber-400" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white">Club de las 5 AM</h2>
+                <p className="text-amber-300">El poder de la disciplina matutina</p>
+              </div>
+            </div>
+            <p className="text-slate-400 text-sm">
+              Próximamente más contenido...
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

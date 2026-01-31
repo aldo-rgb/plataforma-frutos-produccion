@@ -37,11 +37,10 @@ export async function GET() {
       );
     }
 
-    // Obtener solo los productos creados por este director (schoolAdmin)
+    // Obtener todos los productos de la organización (cualquier SCHOOL_ADMIN puede verlos)
     const products = await prisma.schoolProduct.findMany({
       where: {
         organizationId: user.organizationId,
-        createdBy: session.user.id, // Filtrar por el ID del director que los creó
       },
       include: {
         Organization: {
