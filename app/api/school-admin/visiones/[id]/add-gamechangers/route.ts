@@ -188,18 +188,53 @@ export async function POST(
 
           // Lógica de licencias diferente según el nivel
           let shouldCreateLicense = false;
+          let finalExpiryDate = licenseExpiryDate;
           
+          // Verificar licencia existente del usuario en esta visión
+          const existingLicense = await prisma.licenseAssignment.findFirst({
+            where: { userId, visionId, isActive: true },
+            orderBy: { expiresAt: 'desc' } // Obtener la de mayor vigencia
+          });
+
           if (level === 'PL') {
-            // Para PL (Liderato) SIEMPRE crear nueva licencia con fecha de expiración del PL
+            // Para PL (Liderato): Crear nueva licencia, pero respetando la mayor vigencia
+            if (existingLicense?.expiresAt && licenseExpiryDate) {
+              const existingExpiry = new Date(existingLicense.expiresAt);
+              const newExpiry = new Date(licenseExpiryDate);
+              
+              if (existingExpiry > newExpiry) {
+                // La licencia existente tiene mayor vigencia, usar esa fecha
+                finalExpiryDate = existingLicense.expiresAt;
+                console.log(`📅 Usuario ${user.nombre} tiene licencia con mayor vigencia (${existingExpiry.toISOString()}), se respeta`);
+              }
+            }
             shouldCreateLicense = true;
             console.log(`🎓 Game Changer ${user.nombre} asignado a PL - Creando nueva licencia de Liderato`);
           } else {
-            // Para BASIC/ADVANCED, solo crear si no tiene licencia activa
-            const existingLicense = await prisma.licenseAssignment.findFirst({
-              where: { userId, visionId, isActive: true }
-            });
+            // Para BASIC/ADVANCED: solo crear si no tiene licencia activa O si la nueva tiene mayor vigencia
             if (!existingLicense) {
               shouldCreateLicense = true;
+            } else if (existingLicense.expiresAt && licenseExpiryDate) {
+              const existingExpiry = new Date(existingLicense.expiresAt);
+              const newExpiry = new Date(licenseExpiryDate);
+              
+              if (newExpiry > existingExpiry) {
+                // La nueva licencia tiene mayor vigencia, actualizar la existente
+                await prisma.licenseAssignment.update({
+                  where: { id: existingLicense.id },
+                  data: { 
+                    expiresAt: licenseExpiryDate,
+                    notes: `${existingLicense.notes || ''} | Extendida a ${level} el ${new Date().toISOString()}`
+                  }
+                });
+                console.log(`📅 Licencia de ${user.nombre} extendida de ${existingExpiry.toISOString()} a ${newExpiry.toISOString()}`);
+                // No crear nueva, ya se actualizó
+                shouldCreateLicense = false;
+              } else {
+                // La existente tiene mayor vigencia, no hacer nada
+                console.log(`📅 Usuario ${user.nombre} ya tiene licencia con mayor vigencia (${existingExpiry.toISOString()}), se conserva`);
+                shouldCreateLicense = false;
+              }
             }
           }
 
@@ -218,7 +253,7 @@ export async function POST(
                 licenseCode: licenseCode,
                 isActive: true,
                 activatedAt: new Date(),
-                expiresAt: licenseExpiryDate,
+                expiresAt: finalExpiryDate, // Usar la fecha final (puede ser la mayor de las dos)
                 notes: `Licencia STANDARD automática - Game Changer ${level} - Activada`
               }
             });
@@ -235,7 +270,7 @@ export async function POST(
             });
 
             licensesCreated.push(licenseCode);
-            console.log(`✅ Licencia ${level} creada para Game Changer ${user.nombre} (${user.email}): ${licenseCode} - Expira: ${licenseExpiryDate}`);
+            console.log(`✅ Licencia ${level} creada para Game Changer ${user.nombre} (${user.email}): ${licenseCode} - Expira: ${finalExpiryDate}`);
           }
 
           addedGameChangers.push(user);
