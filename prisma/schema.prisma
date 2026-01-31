@@ -2432,6 +2432,7 @@ model Usuario {
 
   // Democracia Cuántica - Legacy Forge
   CommunityProjectsCreated                                               TribeCommunityProject[]         @relation("UserCommunityProjects")
+  LogisticsItemsAssigned                                                 ProjectLogisticsItem[]          @relation("UserLogisticsAssignments")
   PollsCreated                                                           TribePoll[]                     @relation("UserCreatedPolls")
   PollsClosed                                                            TribePoll[]                     @relation("UserClosedPolls")
   PollVotes                                                              TribePollVote[]                 @relation("UserPollVotes")
@@ -6249,22 +6250,23 @@ model TribeCommunityProject {
   description         String                  @db.Text // ¿Qué vamos a hacer exactamente?
   category            CommunityProjectCategory // Niños, Ancianos, Animales, Ecológico, etc.
   
-  // Ubicación
-  locationName        String                  // "Casa Hogar Los Pequeños"
+  // Ubicación (opcional - puede definirse más tarde)
+  locationPending     Boolean                 @default(false) // true si aún no se sabe dónde
+  locationName        String?                 // "Casa Hogar Los Pequeños"
   locationAddress     String?
   locationLat         Float?
   locationLng         Float?
   googleMapsUrl       String?
   
-  // Contacto del lugar
-  contactName         String                  // Nombre del responsable (Directora, etc.)
-  contactPhone        String                  // Teléfono validado
+  // Contacto del lugar (opcional si locationPending es true)
+  contactName         String?                 // Nombre del responsable (Directora, etc.)
+  contactPhone        String?                 // Teléfono validado
   contactEmail        String?
   contactRole         String?                 // "Directora", "Coordinador", etc.
   
   // Presupuesto y logística
   estimatedBudget     Decimal?                @db.Decimal(12, 2)
-  logistics           String?                 @db.Text // "Necesitamos 3 camionetas y 20 brochas"
+  logistics           String?                 @db.Text // Notas generales de logística
   
   // Origen del proyecto
   origin              ProjectOrigin           @default(NEW) // CONTINUITY o NEW
@@ -6293,11 +6295,61 @@ model TribeCommunityProject {
   parentProject       TribeCommunityProject?  @relation("ProjectContinuity", fields: [parentProjectId], references: [id])
   childProjects       TribeCommunityProject[] @relation("ProjectContinuity")
   pollOptions         TribePollOption[]       @relation("ProjectPollOptions")
+  logisticsItems      ProjectLogisticsItem[]  @relation("ProjectLogisticsItems")
   
   @@index([visionId])
   @@index([status])
   @@index([createdById])
   @@index([category])
+}
+
+// Ítem de logística para proyectos comunitarios
+model ProjectLogisticsItem {
+  id                  Int                     @id @default(autoincrement())
+  projectId           Int
+  
+  // Información del ítem
+  name                String                  // "Brochas de 4 pulgadas"
+  quantity            Int                     @default(1) // Cantidad necesaria
+  category            LogisticsItemCategory   @default(OTHER) // FOOD, TRANSPORT, TOOLS, MATERIALS, etc.
+  estimatedCost       Decimal?                @db.Decimal(10, 2)
+  notes               String?                 // Notas adicionales
+  
+  // Asignación
+  assignedToId        Int?                    // Usuario que se hace cargo
+  assignedAt          DateTime?
+  status              LogisticsItemStatus     @default(PENDING) // PENDING, ASSIGNED, ACQUIRED, DELIVERED
+  
+  // Metadatos
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  
+  // Relaciones
+  project             TribeCommunityProject   @relation("ProjectLogisticsItems", fields: [projectId], references: [id], onDelete: Cascade)
+  assignedTo          Usuario?                @relation("UserLogisticsAssignments", fields: [assignedToId], references: [id])
+  
+  @@index([projectId])
+  @@index([assignedToId])
+  @@index([status])
+}
+
+enum LogisticsItemCategory {
+  FOOD              // Comida/Bebidas
+  TRANSPORT         // Transporte
+  TOOLS             // Herramientas
+  MATERIALS         // Materiales
+  CLOTHING          // Ropa/Uniformes
+  CLEANING          // Limpieza
+  MEDICAL           // Médico/Primeros auxilios
+  ENTERTAINMENT     // Entretenimiento
+  OTHER             // Otro
+}
+
+enum LogisticsItemStatus {
+  PENDING           // Pendiente de asignar
+  ASSIGNED          // Alguien se hizo cargo
+  ACQUIRED          // Ya se consiguió
+  DELIVERED         // Ya está en el lugar
 }
 
 // Encuesta/Votación de la Tribu

@@ -130,6 +130,10 @@ export function RoleSwitcher({ usuario }: RoleSwitcherProps) {
   const handleRoleChange = (role: RoleOption) => {
     setActiveRole(role.key);
     localStorage.setItem('activeRole', role.key);
+    
+    // Disparar evento personalizado para que el Sidebar actualice
+    window.dispatchEvent(new CustomEvent('roleChange', { detail: { role: role.key } }));
+    
     setIsOpen(false);
     router.push(role.path);
   };

@@ -6,6 +6,7 @@ import { Zap, Trophy, Target, ArrowRight } from "lucide-react";
 import ProgramStatusWidget from "@/components/dashboard/ProgramStatusWidget";
 import AlertaReagendamiento from "@/components/dashboard/AlertaReagendamiento";
 import NotificationBanner from "@/components/dashboard/NotificationBanner";
+import TribeNotificationsWidget from "@/components/dashboard/TribeNotificationsWidget";
 import CartaWizardWidget from "@/components/dashboard/CartaWizardWidget";
 import ZonaEjecucionDiaria from "@/components/dashboard/ZonaEjecucionDiaria";
 import GlobalProgressHero from "@/components/dashboard/GlobalProgressHero";
@@ -542,6 +543,9 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       {/* NOTIFICACIONES IMPORTANTES (Cambio de Mentor, etc.) */}
       <NotificationBanner />
+
+      {/* NOTIFICACIONES DE TRIBU: Capitanías y Votaciones Pendientes */}
+      <TribeNotificationsWidget />
 
       {/* ALERTA DE BITÁCORA DE INICIO - Para usuarios ADVANCED sin completar */}
       <BitacoraAlertWidget />

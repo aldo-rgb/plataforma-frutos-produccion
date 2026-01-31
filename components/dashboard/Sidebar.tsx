@@ -22,6 +22,10 @@ interface SidebarProps {
     puntosCuanticos: number;
     tier?: 'FREE' | 'STANDARD' | 'PREMIUM';
     permissions?: string[]; // Array de IDs de permisos permitidos
+    esMentor?: boolean; // Indica si el usuario puede ser mentor
+    esEntrenador?: boolean;
+    esCoordinador?: boolean;
+    esLider?: boolean;
     organization?: {
       id: number;
       name: string;
@@ -42,6 +46,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
   const [hasPLAttendance, setHasPLAttendance] = useState(false);
   const [hasActiveAdvanced, setHasActiveAdvanced] = useState(false);
   const [reportesPendientes, setReportesPendientes] = useState(0);
+  const [activeRole, setActiveRole] = useState<string>(usuario.rol); // Rol activo del RoleSwitcher
   const [iaRecommendation, setIaRecommendation] = useState<{
     message: string;
     emoji: string;
@@ -56,6 +61,35 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
       onClose();
     }
   };
+
+  // Leer activeRole de localStorage y escuchar cambios
+  useEffect(() => {
+    // Leer valor inicial
+    const savedRole = localStorage.getItem('activeRole');
+    if (savedRole) {
+      setActiveRole(savedRole);
+    }
+
+    // Escuchar cambios en localStorage (cuando el RoleSwitcher cambia el rol desde otra pestaña)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'activeRole' && e.newValue) {
+        setActiveRole(e.newValue);
+      }
+    };
+
+    // Escuchar evento personalizado (cuando el RoleSwitcher cambia el rol en la misma pestaña)
+    const handleRoleChange = (e: CustomEvent<{ role: string }>) => {
+      setActiveRole(e.detail.role);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('roleChange', handleRoleChange as EventListener);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('roleChange', handleRoleChange as EventListener);
+    };
+  }, []);
 
   // Verificar si trainer tiene avanzado vigente
   useEffect(() => {
@@ -326,8 +360,8 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
           </div>
         )}
 
-        {/* Panel de Mentor */}
-        {usuario.rol === 'MENTOR' && (
+        {/* Panel de Mentor - Mostrar si rol es MENTOR o si activeRole es MENTOR y tiene esMentor */}
+        {(usuario.rol === 'MENTOR' || (activeRole === 'MENTOR' && usuario.esMentor)) && (
           <div className="pt-6 mt-6 border-t border-slate-800">
             <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">Panel de Mentor</p>
             

@@ -79,6 +79,46 @@ export async function GET() {
       });
     }
 
+    // Obtener capitanías asignadas del usuario
+    const captainAssignments = await prisma.tribeCaptainAssignment.findMany({
+      where: {
+        userId: userId,
+        status: 'ACCEPTED',
+        captaincy: {
+          visionId: activeVision.id,
+          isActive: true
+        }
+      },
+      include: {
+        captaincy: {
+          select: {
+            roleType: true
+          }
+        }
+      }
+    });
+
+    // Mapear nombres de capitanías
+    const captaincyNames: Record<string, string> = {
+      TRIBE_CAPTAIN: 'Capitán de Tribu',
+      TRIBE_CO_CAPTAIN: 'Co-Capitán de Tribu',
+      TREASURER: 'Tesorero',
+      SHIRTS_LOGO: 'Playeras y Logo',
+      CONTRIBUTION_BASIC: 'Contribución Básicos',
+      CONTRIBUTION_ADVANCED: 'Contribución Avanzados',
+      COMMUNITY_SERVICE: 'Comunitaria Grupal',
+      BOOKS_MOVIES: 'Libros y Películas',
+      FOOD: 'Comidas',
+      CLEANLINESS: 'Vestimenta y Limpieza',
+      CONTEXT_GUARDIAN: 'Guardián del Contexto',
+      GRADUATION_CAPTAIN: 'Capitán de Graduación'
+    };
+
+    const userCaptaincies = captainAssignments.map(a => ({
+      role: a.captaincy.roleType,
+      name: captaincyNames[a.captaincy.roleType] || a.captaincy.roleType
+    }));
+
     // Obtener todos los usuarios de la misma visión, ordenados por puntos
     const usersInVision = await prisma.usuario.findMany({
       where: {
@@ -123,7 +163,8 @@ export async function GET() {
         position: userPosition,
         total: totalUsers
       } : null,
-      currentUserId: userId
+      currentUserId: userId,
+      captaincies: userCaptaincies
     });
 
   } catch (error) {

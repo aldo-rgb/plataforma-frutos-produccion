@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Trophy } from 'lucide-react';
+import { Trophy, Shield } from 'lucide-react';
 import Link from 'next/link';
 
 // Función para generar un color aleatorio basado en el ID del usuario
@@ -26,6 +26,7 @@ export default function RankingWidget() {
     currentUserId: number | null;
     isLoboSolitario?: boolean;
     userData?: { nombre: string; puntos: number; xp: number; avatar?: string | null };
+    captaincies?: Array<{ role: string; name: string }>;
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -254,9 +255,32 @@ export default function RankingWidget() {
                   de {rankingData.userRank.total}
                 </span>
               </div>
+              
+              {/* Capitanías asignadas */}
+              {rankingData.captaincies && rankingData.captaincies.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-indigo-500/30">
+                  <div className="flex items-center justify-center gap-1 mb-2">
+                    <Shield className="w-3 h-3 text-amber-400" />
+                    <p className="text-xs text-amber-400 font-semibold uppercase tracking-wider">
+                      {rankingData.captaincies.length === 1 ? 'Tu Capitanía' : 'Tus Capitanías'}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-1.5">
+                    {rankingData.captaincies.map((cap, idx) => (
+                      <span 
+                        key={idx}
+                        className="px-2 py-1 bg-amber-500/20 border border-amber-500/30 rounded-full text-[10px] font-medium text-amber-300"
+                      >
+                        {cap.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               <Link
                 href="/dashboard/ranking"
-                className="mt-2 w-full flex items-center justify-center gap-1 px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-xs font-bold rounded-lg transition-all shadow-lg"
+                className="mt-3 w-full flex items-center justify-center gap-1 px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-xs font-bold rounded-lg transition-all shadow-lg"
               >
                 <Trophy className="w-3 h-3" />
                 Subir de Nivel
@@ -272,6 +296,28 @@ export default function RankingWidget() {
           <div className="bg-gradient-to-r from-yellow-900/30 to-amber-900/30 border border-yellow-500/50 rounded-xl p-3 text-center">
             <p className="text-yellow-400 font-bold text-xs mb-1">🎉 ¡Estás en el Top 3!</p>
             <p className="text-[10px] text-yellow-200/80">Sigue así para mantenerte en la cima</p>
+            
+            {/* Capitanías asignadas para Top 3 */}
+            {rankingData.captaincies && rankingData.captaincies.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-yellow-500/30">
+                <div className="flex items-center justify-center gap-1 mb-2">
+                  <Shield className="w-3 h-3 text-amber-400" />
+                  <p className="text-xs text-amber-300 font-semibold uppercase tracking-wider">
+                    {rankingData.captaincies.length === 1 ? 'Tu Capitanía' : 'Tus Capitanías'}
+                  </p>
+                </div>
+                <div className="flex flex-wrap justify-center gap-1.5">
+                  {rankingData.captaincies.map((cap, idx) => (
+                    <span 
+                      key={idx}
+                      className="px-2 py-1 bg-amber-500/20 border border-amber-500/30 rounded-full text-[10px] font-medium text-amber-300"
+                    >
+                      {cap.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -203,36 +203,59 @@ export async function POST(request: NextRequest) {
     switch (action) {
       case 'generate_ideas': {
         // Generar ideas de proyectos con IA
-        const { cause, zone, additionalContext } = data;
+        const { cause, zone, additionalContext, count = 3, budgetMin, budgetMax, impactLevel } = data;
 
         if (!cause) {
           return NextResponse.json({ error: 'Causa requerida' }, { status: 400 });
         }
 
+        // Determinar rango de presupuesto
+        const minBudget = budgetMin || 10000;
+        const maxBudget = budgetMax || 30000;
+        const impactDesc = impactLevel === 'big' 
+          ? 'proyecto de ALTO IMPACTO que requiere más recursos pero transforma significativamente la comunidad'
+          : 'proyecto alcanzable y realizable que marca un primer paso importante';
+
         const prompt = `Eres un experto en proyectos de servicio comunitario en México. 
-Genera 5 ideas de proyectos de impacto social para un grupo de jóvenes emprendedores.
+Genera exactamente ${count} ideas de proyectos de impacto social para un grupo de jóvenes emprendedores.
 
 Causa/Interés: ${cause}
 ${zone ? `Zona/Ciudad: ${zone}` : ''}
 ${additionalContext ? `Contexto adicional: ${additionalContext}` : ''}
 
+IMPORTANTE - NIVEL DE IMPACTO: ${impactLevel === 'big' ? '🚀 GRANDE' : '🌱 INICIAL'}
+Presupuesto requerido: Entre $${minBudget.toLocaleString()} y $${maxBudget.toLocaleString()} MXN
+Tipo de proyecto: ${impactDesc}
+
 Para cada proyecto incluye:
 1. Nombre del proyecto (corto y memorable)
-2. Descripción breve (2-3 oraciones)
+2. Descripción breve (2-3 oraciones explicando el impacto)
 3. Tipo de actividad (pintar, construir, limpiar, donar, enseñar, etc.)
 4. Beneficiarios estimados
-5. Presupuesto aproximado en MXN
-6. Duración estimada
+5. Presupuesto aproximado en MXN (DEBE estar entre $${minBudget.toLocaleString()} y $${maxBudget.toLocaleString()} MXN)
+6. IMPORTANTE: Desglose detallado del presupuesto (en qué se gastaría exactamente, que sume el total)
+7. Duración estimada
 
-Responde SOLO con un JSON array con este formato:
+${impactLevel === 'big' 
+  ? 'Las ideas deben ser ambiciosas, transformadoras, pueden requerir 2-3 días de ejecución y equipos más grandes de 30-50 voluntarios.'
+  : 'Las ideas deben ser realistas, alcanzables en 1 día, y con presupuestos que un grupo de 10-20 personas pueda recaudar fácilmente.'}
+
+Responde SOLO con un JSON array con este formato exacto:
 [
   {
     "name": "Nombre del Proyecto",
-    "description": "Descripción breve",
-    "activityType": "Tipo de actividad",
-    "beneficiaries": "100 niños",
-    "estimatedBudget": 15000,
-    "duration": "1 día"
+    "description": "Descripción breve del impacto que tendrá",
+    "activityType": "Tipo de actividad principal",
+    "beneficiaries": "Ej: 50 niños",
+    "estimatedBudget": ${Math.round((minBudget + maxBudget) / 2)},
+    "budgetBreakdown": [
+      { "item": "Material principal", "cost": XXXX },
+      { "item": "Herramientas/equipo", "cost": XXXX },
+      { "item": "Comida para voluntarios", "cost": XXXX },
+      { "item": "Transporte", "cost": XXXX },
+      { "item": "Otros materiales", "cost": XXXX }
+    ],
+    "duration": "${impactLevel === 'big' ? '2-3 días' : '1 día'}"
   }
 ]`;
 
@@ -240,7 +263,7 @@ Responde SOLO con un JSON array con este formato:
           model: 'gpt-4o-mini',
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.8,
-          max_tokens: 2000,
+          max_tokens: 3000,
         });
 
         const responseText = completion.choices[0]?.message?.content || '[]';
@@ -270,6 +293,7 @@ Responde SOLO con un JSON array con este formato:
           name,
           description,
           category,
+          locationPending,
           locationName,
           locationAddress,
           locationLat,
@@ -281,6 +305,7 @@ Responde SOLO con un JSON array con este formato:
           contactRole,
           estimatedBudget,
           logistics,
+          logisticsItems, // Nueva: lista de ítems de logística
           origin,
           parentProjectId,
           aiGenerated,
@@ -289,10 +314,19 @@ Responde SOLO con un JSON array con este formato:
           proposedDate
         } = data;
 
-        // Validaciones
-        if (!name || !description || !locationName || !contactName || !contactPhone) {
+        // Validaciones básicas
+        if (!name || !description) {
           return NextResponse.json(
-            { error: 'Campos requeridos: name, description, locationName, contactName, contactPhone' },
+            { error: 'Campos requeridos: name, description' },
+            { status: 400 }
+          );
+        }
+
+        // Si no está pendiente la ubicación, se requieren los datos
+        // locationPending indica que el lugar se definirá después
+        if (!locationPending && locationName && (!contactName || !contactPhone)) {
+          return NextResponse.json(
+            { error: 'Si hay ubicación, se requieren datos de contacto' },
             { status: 400 }
           );
         }
@@ -303,17 +337,17 @@ Responde SOLO con un JSON array con este formato:
             name,
             description,
             category: category || 'OTHER',
-            locationName,
-            locationAddress,
+            locationName: locationName || 'Por definir',
+            locationAddress: locationAddress || null,
             locationLat: locationLat ? parseFloat(locationLat) : null,
             locationLng: locationLng ? parseFloat(locationLng) : null,
-            googleMapsUrl,
-            contactName,
-            contactPhone,
-            contactEmail,
-            contactRole,
+            googleMapsUrl: googleMapsUrl || null,
+            contactName: contactName || 'Por definir',
+            contactPhone: contactPhone || 'Por definir',
+            contactEmail: contactEmail || null,
+            contactRole: contactRole || null,
             estimatedBudget: estimatedBudget ? parseFloat(estimatedBudget) : null,
-            logistics,
+            logistics: logistics || null,
             origin: origin || 'NEW',
             parentProjectId: parentProjectId ? parseInt(parentProjectId) : null,
             aiGenerated: aiGenerated || false,
@@ -333,7 +367,7 @@ Responde SOLO con un JSON array con este formato:
       }
 
       case 'update_project': {
-        const { projectId, ...updateData } = data;
+        const { projectId, logisticsItems, locationPending, ...updateData } = data;
 
         if (!projectId) {
           return NextResponse.json({ error: 'projectId requerido' }, { status: 400 });
@@ -568,6 +602,163 @@ Responde SOLO con un JSON array con este formato:
           isTie: issTie
         });
       }
+
+      // ============ LOGÍSTICA ============
+      // TODO: Descomentar después de correr `npx prisma generate` con el nuevo schema
+      /*
+      case 'add_logistics_item': {
+        const { projectId, name, quantity, category: itemCategory, estimatedCost, notes } = data;
+
+        if (!projectId || !name) {
+          return NextResponse.json({ error: 'projectId y name son requeridos' }, { status: 400 });
+        }
+
+        const item = await prisma.projectLogisticsItem.create({
+          data: {
+            projectId: parseInt(projectId),
+            name,
+            quantity: quantity || 1,
+            category: itemCategory || 'OTHER',
+            estimatedCost: estimatedCost ? parseFloat(estimatedCost) : null,
+            notes: notes || null,
+            status: 'PENDING'
+          }
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: 'Ítem de logística agregado',
+          item
+        });
+      }
+
+      case 'assign_logistics_item': {
+        const { itemId, unassign } = data;
+
+        if (!itemId) {
+          return NextResponse.json({ error: 'itemId requerido' }, { status: 400 });
+        }
+
+        // Verificar que el ítem existe
+        const item = await prisma.projectLogisticsItem.findUnique({
+          where: { id: parseInt(itemId) },
+          include: { project: true }
+        });
+
+        if (!item) {
+          return NextResponse.json({ error: 'Ítem no encontrado' }, { status: 404 });
+        }
+
+        // Verificar que el proyecto pertenece a la visión
+        if (item.project.visionId !== parseInt(visionId)) {
+          return NextResponse.json({ error: 'No tienes acceso a este proyecto' }, { status: 403 });
+        }
+
+        if (unassign) {
+          // Solo puede desasignarse si es el mismo usuario o si es capitán
+          if (item.assignedToId !== userId && !isCaptain) {
+            return NextResponse.json({ error: 'No puedes desasignar este ítem' }, { status: 403 });
+          }
+
+          await prisma.projectLogisticsItem.update({
+            where: { id: parseInt(itemId) },
+            data: {
+              assignedToId: null,
+              assignedAt: null,
+              status: 'PENDING'
+            }
+          });
+
+          return NextResponse.json({
+            success: true,
+            message: 'Te has desasignado del ítem'
+          });
+        } else {
+          // Asignarse al ítem
+          if (item.assignedToId && item.assignedToId !== userId) {
+            return NextResponse.json({ error: 'Este ítem ya está asignado a otra persona' }, { status: 400 });
+          }
+
+          await prisma.projectLogisticsItem.update({
+            where: { id: parseInt(itemId) },
+            data: {
+              assignedToId: userId,
+              assignedAt: new Date(),
+              status: 'ASSIGNED'
+            }
+          });
+
+          return NextResponse.json({
+            success: true,
+            message: '¡Te has asignado a este ítem!'
+          });
+        }
+      }
+
+      case 'update_logistics_status': {
+        const { itemId, status: newStatus } = data;
+
+        if (!itemId || !newStatus) {
+          return NextResponse.json({ error: 'itemId y status requeridos' }, { status: 400 });
+        }
+
+        const validStatuses = ['PENDING', 'ASSIGNED', 'ACQUIRED', 'DELIVERED'];
+        if (!validStatuses.includes(newStatus)) {
+          return NextResponse.json({ error: 'Status inválido' }, { status: 400 });
+        }
+
+        const item = await prisma.projectLogisticsItem.findUnique({
+          where: { id: parseInt(itemId) },
+          include: { project: true }
+        });
+
+        if (!item) {
+          return NextResponse.json({ error: 'Ítem no encontrado' }, { status: 404 });
+        }
+
+        // Solo el asignado o un capitán pueden actualizar el status
+        if (item.assignedToId !== userId && !isCaptain) {
+          return NextResponse.json({ error: 'No puedes actualizar este ítem' }, { status: 403 });
+        }
+
+        await prisma.projectLogisticsItem.update({
+          where: { id: parseInt(itemId) },
+          data: { status: newStatus }
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: 'Status actualizado'
+        });
+      }
+
+      case 'get_project_logistics': {
+        const { projectId } = data;
+
+        if (!projectId) {
+          return NextResponse.json({ error: 'projectId requerido' }, { status: 400 });
+        }
+
+        const items = await prisma.projectLogisticsItem.findMany({
+          where: { projectId: parseInt(projectId) },
+          include: {
+            assignedTo: {
+              select: { id: true, nombre: true, profileImage: true }
+            }
+          },
+          orderBy: [
+            { status: 'asc' },
+            { category: 'asc' },
+            { name: 'asc' }
+          ]
+        });
+
+        return NextResponse.json({
+          success: true,
+          items
+        });
+      }
+      */
 
       default:
         return NextResponse.json({ error: 'Acción no válida' }, { status: 400 });

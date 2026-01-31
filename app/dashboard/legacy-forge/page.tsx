@@ -44,8 +44,42 @@ import {
   UtensilsCrossed,
   HelpCircle,
   Reply,
+  Package,
+  ShoppingCart,
+  Car,
+  Wrench,
+  Shirt,
+  Sparkle,
+  Heart as HeartIcon,
+  Gamepad2,
+  MoreHorizontal,
 } from 'lucide-react';
 import Link from 'next/link';
+
+// Categorías de logística
+const logisticsCategoryLabels: Record<string, string> = {
+  FOOD: 'Comida/Bebidas',
+  TRANSPORT: 'Transporte',
+  TOOLS: 'Herramientas',
+  MATERIALS: 'Materiales',
+  CLOTHING: 'Ropa/Uniformes',
+  CLEANING: 'Limpieza',
+  MEDICAL: 'Médico',
+  ENTERTAINMENT: 'Entretenimiento',
+  OTHER: 'Otro',
+};
+
+const logisticsCategoryIcons: Record<string, any> = {
+  FOOD: UtensilsCrossed,
+  TRANSPORT: Car,
+  TOOLS: Wrench,
+  MATERIALS: Package,
+  CLOTHING: Shirt,
+  CLEANING: Sparkle,
+  MEDICAL: Stethoscope,
+  ENTERTAINMENT: Gamepad2,
+  OTHER: MoreHorizontal,
+};
 
 // Tipos
 interface CommunityProject {
@@ -128,7 +162,9 @@ interface AIIdea {
   activityType: string;
   beneficiaries: string;
   estimatedBudget: number;
+  budgetBreakdown: Array<{ item: string; cost: number }>; // Desglose del presupuesto
   duration: string;
+  cause: string; // A qué causa pertenece
 }
 
 const categoryIcons: Record<string, any> = {
@@ -174,11 +210,17 @@ export default function LegacyForgePage() {
   const [tribeMembers, setTribeMembers] = useState(0);
   const [isCaptain, setIsCaptain] = useState(false);
 
-  // AI Ideas
+  // AI Ideas - Génesis con 2 causas
   const [generatingIdeas, setGeneratingIdeas] = useState(false);
-  const [aiIdeas, setAiIdeas] = useState<AIIdea[]>([]);
-  const [ideaCause, setIdeaCause] = useState('');
+  const [aiIdeasCause1, setAiIdeasCause1] = useState<AIIdea[]>([]);
+  const [aiIdeasCause2, setAiIdeasCause2] = useState<AIIdea[]>([]);
+  const [ideaCause1, setIdeaCause1] = useState('');
+  const [ideaCause2, setIdeaCause2] = useState('');
   const [ideaZone, setIdeaZone] = useState('');
+  const [impactLevel, setImpactLevel] = useState<'small' | 'big' | ''>('');
+  const [selectedIdeaCause1, setSelectedIdeaCause1] = useState<AIIdea | null>(null);
+  const [selectedIdeaCause2, setSelectedIdeaCause2] = useState<AIIdea | null>(null);
+  const [genesisStep, setGenesisStep] = useState<'select-causes' | 'view-ideas' | 'confirm-selection'>('select-causes');
 
   // Formulario de proyecto
   const [showProjectForm, setShowProjectForm] = useState(false);
@@ -187,6 +229,7 @@ export default function LegacyForgePage() {
     name: '',
     description: '',
     category: 'OTHER',
+    locationPending: false,
     locationName: '',
     locationAddress: '',
     googleMapsUrl: '',
@@ -198,6 +241,21 @@ export default function LegacyForgePage() {
     logistics: '',
     proposedDate: '',
     coverImage: '',
+  });
+  const [logisticsItems, setLogisticsItems] = useState<Array<{
+    id?: number;
+    name: string;
+    quantity: number;
+    category: string;
+    estimatedCost: string;
+    notes: string;
+  }>>([]);
+  const [newLogisticsItem, setNewLogisticsItem] = useState({
+    name: '',
+    quantity: 1,
+    category: 'OTHER',
+    estimatedCost: '',
+    notes: ''
   });
   const [savingProject, setSavingProject] = useState(false);
 
@@ -265,31 +323,74 @@ export default function LegacyForgePage() {
   };
 
   const generateAIIdeas = async () => {
-    if (!ideaCause.trim()) {
-      showToast('Por favor indica la causa que les mueve', 'error');
+    if (!ideaCause1.trim() || !ideaCause2.trim()) {
+      showToast('Por favor selecciona las 2 causas que les mueven', 'error');
+      return;
+    }
+    if (ideaCause1 === ideaCause2) {
+      showToast('Las dos causas deben ser diferentes', 'error');
+      return;
+    }
+    if (!impactLevel) {
+      showToast('Por favor selecciona el nivel de impacto', 'error');
       return;
     }
 
+    // Determinar rango de presupuesto según nivel de impacto
+    const budgetRange = impactLevel === 'small' 
+      ? { min: 10000, max: 20000, label: '$10,000 - $20,000 MXN' }
+      : { min: 50000, max: 100000, label: '$50,000 - $100,000 MXN' };
+
     setGeneratingIdeas(true);
+    setAiIdeasCause1([]);
+    setAiIdeasCause2([]);
+    
     try {
-      const res = await fetch('/api/legacy-forge', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'generate_ideas',
-          visionId: parseInt(visionId!),
-          cause: ideaCause,
-          zone: ideaZone,
+      // Generar ideas para ambas causas en paralelo
+      const [res1, res2] = await Promise.all([
+        fetch('/api/legacy-forge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'generate_ideas',
+            visionId: parseInt(visionId!),
+            cause: ideaCause1,
+            zone: ideaZone,
+            count: 3,
+            budgetMin: budgetRange.min,
+            budgetMax: budgetRange.max,
+            impactLevel: impactLevel,
+          }),
         }),
-      });
+        fetch('/api/legacy-forge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'generate_ideas',
+            visionId: parseInt(visionId!),
+            cause: ideaCause2,
+            zone: ideaZone,
+            count: 3,
+            budgetMin: budgetRange.min,
+            budgetMax: budgetRange.max,
+            impactLevel: impactLevel,
+          }),
+        })
+      ]);
 
-      const data = await res.json();
+      const [data1, data2] = await Promise.all([res1.json(), res2.json()]);
 
-      if (data.success) {
-        setAiIdeas(data.ideas || []);
-        showToast('¡Ideas generadas!', 'success');
+      if (data1.success && data2.success) {
+        // Agregar la causa a cada idea para identificarlas
+        const ideas1 = (data1.ideas || []).map((idea: AIIdea) => ({ ...idea, cause: ideaCause1 }));
+        const ideas2 = (data2.ideas || []).map((idea: AIIdea) => ({ ...idea, cause: ideaCause2 }));
+        
+        setAiIdeasCause1(ideas1);
+        setAiIdeasCause2(ideas2);
+        setGenesisStep('view-ideas');
+        showToast('¡Ideas generadas para ambas causas!', 'success');
       } else {
-        showToast(data.error || 'Error al generar ideas', 'error');
+        showToast(data1.error || data2.error || 'Error al generar ideas', 'error');
       }
     } catch (error) {
       showToast('Error de conexión', 'error');
@@ -298,15 +399,101 @@ export default function LegacyForgePage() {
     }
   };
 
-  const selectAIIdea = (idea: AIIdea) => {
-    setProjectForm({
-      ...projectForm,
-      name: idea.name,
-      description: `${idea.description}\n\nActividad: ${idea.activityType}\nBeneficiarios: ${idea.beneficiaries}\nDuración estimada: ${idea.duration}`,
-      estimatedBudget: String(idea.estimatedBudget),
-    });
-    setShowProjectForm(true);
-    setSelectedPath('genesis');
+  const handleConfirmIdeasForVoting = async () => {
+    if (!selectedIdeaCause1 || !selectedIdeaCause2) {
+      showToast('Debes seleccionar una idea de cada causa', 'error');
+      return;
+    }
+
+    setSavingProject(true);
+    try {
+      // Crear los 2 proyectos como propuestas
+      const projects = [];
+      
+      for (const idea of [selectedIdeaCause1, selectedIdeaCause2]) {
+        const budgetDescription = idea.budgetBreakdown 
+          ? idea.budgetBreakdown.map(b => `• ${b.item}: $${b.cost.toLocaleString()}`).join('\n')
+          : '';
+        
+        const res = await fetch('/api/legacy-forge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'create_project',
+            visionId: parseInt(visionId!),
+            name: idea.name,
+            description: `${idea.description}\n\n📋 Actividad: ${idea.activityType}\n👥 Beneficiarios: ${idea.beneficiaries}\n⏱️ Duración: ${idea.duration}\n\n💰 Desglose de Presupuesto:\n${budgetDescription}`,
+            category: getCategoryFromCause(idea.cause),
+            estimatedBudget: String(idea.estimatedBudget),
+            locationPending: true, // El lugar se define después de votar
+            origin: 'NEW',
+            aiGenerated: true,
+            aiPrompt: idea.cause,
+          }),
+        });
+        
+        const data = await res.json();
+        if (data.success) {
+          projects.push(data.project);
+        }
+      }
+
+      if (projects.length === 2) {
+        // Crear la votación automáticamente
+        const pollRes = await fetch('/api/legacy-forge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'create_poll',
+            visionId: parseInt(visionId!),
+            title: '¿Cuál será nuestro proyecto de impacto social?',
+            projectIds: projects.map(p => p.id),
+          }),
+        });
+
+        const pollData = await pollRes.json();
+        
+        if (pollData.success) {
+          showToast('¡Proyectos creados y votación lista!', 'success');
+          // Resetear el estado de génesis
+          setSelectedIdeaCause1(null);
+          setSelectedIdeaCause2(null);
+          setAiIdeasCause1([]);
+          setAiIdeasCause2([]);
+          setGenesisStep('select-causes');
+          setSelectedPath(null);
+          setImpactLevel('');
+          setIdeaCause1('');
+          setIdeaCause2('');
+          setIdeaZone('');
+          await loadData();
+          setCurrentPhase('vote');
+        } else {
+          showToast(pollData.error || 'Error al crear votación', 'error');
+        }
+      } else {
+        showToast('Error al crear los proyectos', 'error');
+      }
+    } catch (error) {
+      showToast('Error de conexión', 'error');
+    } finally {
+      setSavingProject(false);
+    }
+  };
+
+  // Función auxiliar para mapear causa a categoría
+  const getCategoryFromCause = (cause: string): string => {
+    const mapping: Record<string, string> = {
+      'Niños en situación vulnerable': 'CHILDREN',
+      'Adultos mayores': 'ELDERLY',
+      'Animales rescatados': 'ANIMALS',
+      'Medio ambiente y ecología': 'ECOLOGICAL',
+      'Educación comunitaria': 'EDUCATION',
+      'Salud comunitaria': 'HEALTH',
+      'Vivienda digna': 'HOUSING',
+      'Alimentación y comedores': 'FOOD',
+    };
+    return mapping[cause] || 'OTHER';
   };
 
   const selectLegacyForContinuity = (legacy: OrganizationLegacy) => {
@@ -327,9 +514,12 @@ export default function LegacyForgePage() {
       showToast('Nombre y descripción son requeridos', 'error');
       return;
     }
-    if (!projectForm.locationName.trim() || !projectForm.contactName.trim() || !projectForm.contactPhone.trim()) {
-      showToast('Ubicación y datos de contacto son requeridos', 'error');
-      return;
+    // Solo validar ubicación y contacto si no está marcado como pendiente
+    if (!projectForm.locationPending) {
+      if (!projectForm.locationName.trim() || !projectForm.contactName.trim() || !projectForm.contactPhone.trim()) {
+        showToast('Si el lugar no está pendiente, ubicación y datos de contacto son requeridos', 'error');
+        return;
+      }
     }
 
     setSavingProject(true);
@@ -342,6 +532,7 @@ export default function LegacyForgePage() {
           visionId: parseInt(visionId!),
           projectId: editingProject?.id,
           ...projectForm,
+          logisticsItems: logisticsItems,
           origin: selectedPath === 'continuity' ? 'CONTINUITY' : 'NEW',
         }),
       });
@@ -364,11 +555,31 @@ export default function LegacyForgePage() {
     }
   };
 
+  const addLogisticsItem = () => {
+    if (!newLogisticsItem.name.trim()) {
+      showToast('El nombre del ítem es requerido', 'error');
+      return;
+    }
+    setLogisticsItems([...logisticsItems, { ...newLogisticsItem }]);
+    setNewLogisticsItem({
+      name: '',
+      quantity: 1,
+      category: 'OTHER',
+      estimatedCost: '',
+      notes: ''
+    });
+  };
+
+  const removeLogisticsItem = (index: number) => {
+    setLogisticsItems(logisticsItems.filter((_, i) => i !== index));
+  };
+
   const resetProjectForm = () => {
     setProjectForm({
       name: '',
       description: '',
       category: 'OTHER',
+      locationPending: false,
       locationName: '',
       locationAddress: '',
       googleMapsUrl: '',
@@ -380,6 +591,14 @@ export default function LegacyForgePage() {
       logistics: '',
       proposedDate: '',
       coverImage: '',
+    });
+    setLogisticsItems([]);
+    setNewLogisticsItem({
+      name: '',
+      quantity: 1,
+      category: 'OTHER',
+      estimatedCost: '',
+      notes: ''
     });
   };
 
@@ -744,27 +963,46 @@ export default function LegacyForgePage() {
                     </div>
                   </div>
                   <p className="text-gray-400 text-sm mb-4">
-                    Funda algo nuevo con ayuda de la IA para encontrar ideas viables.
+                    Selecciona 2 causas, la IA generará ideas y tu tribu votará.
                   </p>
 
-                  {selectedPath === 'genesis' && (
+                  {selectedPath === 'genesis' && genesisStep === 'select-causes' && (
                     <div className="space-y-4">
                       <div>
-                        <label className="text-sm text-gray-400 mb-1 block">¿Qué causa les mueve?</label>
+                        <label className="text-sm text-gray-400 mb-1 block">Primera causa que les mueve *</label>
                         <select
-                          value={ideaCause}
-                          onChange={(e) => setIdeaCause(e.target.value)}
+                          value={ideaCause1}
+                          onChange={(e) => setIdeaCause1(e.target.value)}
                           className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm"
                         >
-                          <option value="">Selecciona una causa</option>
-                          <option value="Niños en situación vulnerable">Niños</option>
-                          <option value="Adultos mayores">Adultos Mayores</option>
-                          <option value="Animales rescatados">Animales</option>
-                          <option value="Medio ambiente y ecología">Ecológico</option>
-                          <option value="Educación comunitaria">Educación</option>
-                          <option value="Salud comunitaria">Salud</option>
-                          <option value="Vivienda digna">Vivienda</option>
-                          <option value="Alimentación y comedores">Alimentación</option>
+                          <option value="">Selecciona la primera causa</option>
+                          <option value="Niños en situación vulnerable">🧒 Niños</option>
+                          <option value="Adultos mayores">👴 Adultos Mayores</option>
+                          <option value="Animales rescatados">🐾 Animales</option>
+                          <option value="Medio ambiente y ecología">🌳 Ecológico</option>
+                          <option value="Educación comunitaria">📚 Educación</option>
+                          <option value="Salud comunitaria">🏥 Salud</option>
+                          <option value="Vivienda digna">🏠 Vivienda</option>
+                          <option value="Alimentación y comedores">🍽️ Alimentación</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-sm text-gray-400 mb-1 block">Segunda causa que les mueve *</label>
+                        <select
+                          value={ideaCause2}
+                          onChange={(e) => setIdeaCause2(e.target.value)}
+                          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm"
+                        >
+                          <option value="">Selecciona la segunda causa</option>
+                          <option value="Niños en situación vulnerable" disabled={ideaCause1 === 'Niños en situación vulnerable'}>🧒 Niños</option>
+                          <option value="Adultos mayores" disabled={ideaCause1 === 'Adultos mayores'}>👴 Adultos Mayores</option>
+                          <option value="Animales rescatados" disabled={ideaCause1 === 'Animales rescatados'}>🐾 Animales</option>
+                          <option value="Medio ambiente y ecología" disabled={ideaCause1 === 'Medio ambiente y ecología'}>🌳 Ecológico</option>
+                          <option value="Educación comunitaria" disabled={ideaCause1 === 'Educación comunitaria'}>📚 Educación</option>
+                          <option value="Salud comunitaria" disabled={ideaCause1 === 'Salud comunitaria'}>🏥 Salud</option>
+                          <option value="Vivienda digna" disabled={ideaCause1 === 'Vivienda digna'}>🏠 Vivienda</option>
+                          <option value="Alimentación y comedores" disabled={ideaCause1 === 'Alimentación y comedores'}>🍽️ Alimentación</option>
                         </select>
                       </div>
 
@@ -779,17 +1017,76 @@ export default function LegacyForgePage() {
                         />
                       </div>
 
+                      {/* Nivel de Impacto */}
+                      <div>
+                        <label className="text-sm text-gray-400 mb-2 block">¿Qué nivel de impacto quieren tener? *</label>
+                        <div className="grid grid-cols-1 gap-3">
+                          {/* Opción Pequeño */}
+                          <div
+                            onClick={() => setImpactLevel('small')}
+                            className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                              impactLevel === 'small'
+                                ? 'bg-emerald-900/30 border-emerald-500'
+                                : 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                                impactLevel === 'small' ? 'bg-emerald-500 border-emerald-500' : 'border-gray-500'
+                              }`}>
+                                {impactLevel === 'small' && <Check className="w-3 h-3 text-white" />}
+                              </div>
+                              <div>
+                                <p className="text-white font-medium">🌱 Impacto Inicial</p>
+                                <p className="text-emerald-400 font-bold text-lg">$10,000 - $20,000 MXN</p>
+                                <p className="text-gray-400 text-xs mt-1">
+                                  Perfecto para empezar. Proyectos alcanzables de 1 día.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Opción Grande */}
+                          <div
+                            onClick={() => setImpactLevel('big')}
+                            className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                              impactLevel === 'big'
+                                ? 'bg-purple-900/30 border-purple-500'
+                                : 'bg-gray-800/50 border-gray-700 hover:border-gray-600'
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                                impactLevel === 'big' ? 'bg-purple-500 border-purple-500' : 'border-gray-500'
+                              }`}>
+                                {impactLevel === 'big' && <Check className="w-3 h-3 text-white" />}
+                              </div>
+                              <div>
+                                <p className="text-white font-medium">🚀 Impacto Transformador</p>
+                                <p className="text-purple-400 font-bold text-lg">$50,000 - $100,000 MXN</p>
+                                <p className="text-gray-400 text-xs mt-1">
+                                  ¡Vamos en grande! Confía en que como equipo lo lograrán.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
                       <button
                         onClick={generateAIIdeas}
-                        disabled={generatingIdeas || !ideaCause}
+                        disabled={generatingIdeas || !ideaCause1 || !ideaCause2 || !impactLevel}
                         className="w-full py-3 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                       >
                         {generatingIdeas ? (
-                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            Generando ideas...
+                          </>
                         ) : (
                           <>
                             <Lightbulb className="w-5 h-5" />
-                            Generar Ideas con IA
+                            Generar 3 Ideas por Causa
                           </>
                         )}
                       </button>
@@ -799,42 +1096,172 @@ export default function LegacyForgePage() {
               </div>
             </div>
 
-            {/* Ideas generadas por IA */}
-            {aiIdeas.length > 0 && (
-              <div className="bg-gray-900 rounded-2xl border border-cyan-600/30 p-6">
-                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-cyan-400" />
-                  Ideas Generadas por IA
-                </h3>
-                <div className="grid gap-4">
-                  {aiIdeas.map((idea, index) => (
-                    <div
-                      key={index}
-                      className="bg-gray-800/50 rounded-xl p-4 hover:bg-gray-800 transition-colors cursor-pointer"
-                      onClick={() => selectAIIdea(idea)}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <h4 className="font-bold text-white">{idea.name}</h4>
-                          <p className="text-gray-400 text-sm mt-1">{idea.description}</p>
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            <span className="px-2 py-1 bg-cyan-600/20 text-cyan-400 text-xs rounded-full">
-                              {idea.activityType}
-                            </span>
-                            <span className="px-2 py-1 bg-emerald-600/20 text-emerald-400 text-xs rounded-full">
-                              ~${idea.estimatedBudget.toLocaleString()} MXN
-                            </span>
-                            <span className="px-2 py-1 bg-purple-600/20 text-purple-400 text-xs rounded-full">
-                              {idea.beneficiaries}
-                            </span>
+            {/* Ideas generadas por IA - Nuevo flujo con 2 causas */}
+            {selectedPath === 'genesis' && genesisStep === 'view-ideas' && (aiIdeasCause1.length > 0 || aiIdeasCause2.length > 0) && (
+              <div className="space-y-6">
+                {/* Instrucciones */}
+                <div className="bg-cyan-900/20 border border-cyan-600/30 rounded-xl p-4 text-center">
+                  <p className="text-cyan-300 font-medium">
+                    ✨ Selecciona <span className="font-bold">1 idea de cada causa</span> para enviar a votación
+                  </p>
+                </div>
+
+                {/* Ideas de la Causa 1 */}
+                <div className="bg-gray-900 rounded-2xl border border-emerald-600/30 p-6">
+                  <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <Heart className="w-5 h-5 text-emerald-400" />
+                    Causa 1: {ideaCause1}
+                  </h3>
+                  <div className="grid gap-4">
+                    {aiIdeasCause1.map((idea, index) => {
+                      const isSelected = selectedIdeaCause1?.name === idea.name;
+                      return (
+                        <div
+                          key={index}
+                          className={`rounded-xl p-4 transition-all cursor-pointer border-2 ${
+                            isSelected 
+                              ? 'bg-emerald-900/30 border-emerald-500' 
+                              : 'bg-gray-800/50 border-transparent hover:bg-gray-800 hover:border-gray-700'
+                          }`}
+                          onClick={() => setSelectedIdeaCause1(idea)}
+                        >
+                          <div className="flex items-start gap-4">
+                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-1 ${
+                              isSelected ? 'bg-emerald-500 border-emerald-500' : 'border-gray-600'
+                            }`}>
+                              {isSelected && <Check className="w-4 h-4 text-white" />}
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="font-bold text-white">{idea.name}</h4>
+                              <p className="text-gray-400 text-sm mt-1">{idea.description}</p>
+                              
+                              <div className="flex flex-wrap gap-2 mt-3">
+                                <span className="px-2 py-1 bg-cyan-600/20 text-cyan-400 text-xs rounded-full">
+                                  {idea.activityType}
+                                </span>
+                                <span className="px-2 py-1 bg-emerald-600/20 text-emerald-400 text-xs rounded-full">
+                                  💰 ${idea.estimatedBudget.toLocaleString()} MXN
+                                </span>
+                                <span className="px-2 py-1 bg-purple-600/20 text-purple-400 text-xs rounded-full">
+                                  👥 {idea.beneficiaries}
+                                </span>
+                              </div>
+
+                              {/* Desglose del presupuesto */}
+                              {idea.budgetBreakdown && idea.budgetBreakdown.length > 0 && (
+                                <div className="mt-3 pt-3 border-t border-gray-700">
+                                  <p className="text-xs text-gray-500 mb-2 font-medium">💵 Desglose del presupuesto:</p>
+                                  <div className="grid grid-cols-2 gap-1">
+                                    {idea.budgetBreakdown.map((item, idx) => (
+                                      <div key={idx} className="text-xs text-gray-400 flex justify-between">
+                                        <span>{item.item}</span>
+                                        <span className="text-emerald-400">${item.cost.toLocaleString()}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                        <button className="p-2 bg-cyan-600/20 hover:bg-cyan-600 rounded-lg transition-colors">
-                          <Plus className="w-5 h-5 text-cyan-400 hover:text-white" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Ideas de la Causa 2 */}
+                <div className="bg-gray-900 rounded-2xl border border-purple-600/30 p-6">
+                  <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <Heart className="w-5 h-5 text-purple-400" />
+                    Causa 2: {ideaCause2}
+                  </h3>
+                  <div className="grid gap-4">
+                    {aiIdeasCause2.map((idea, index) => {
+                      const isSelected = selectedIdeaCause2?.name === idea.name;
+                      return (
+                        <div
+                          key={index}
+                          className={`rounded-xl p-4 transition-all cursor-pointer border-2 ${
+                            isSelected 
+                              ? 'bg-purple-900/30 border-purple-500' 
+                              : 'bg-gray-800/50 border-transparent hover:bg-gray-800 hover:border-gray-700'
+                          }`}
+                          onClick={() => setSelectedIdeaCause2(idea)}
+                        >
+                          <div className="flex items-start gap-4">
+                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-1 ${
+                              isSelected ? 'bg-purple-500 border-purple-500' : 'border-gray-600'
+                            }`}>
+                              {isSelected && <Check className="w-4 h-4 text-white" />}
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="font-bold text-white">{idea.name}</h4>
+                              <p className="text-gray-400 text-sm mt-1">{idea.description}</p>
+                              
+                              <div className="flex flex-wrap gap-2 mt-3">
+                                <span className="px-2 py-1 bg-cyan-600/20 text-cyan-400 text-xs rounded-full">
+                                  {idea.activityType}
+                                </span>
+                                <span className="px-2 py-1 bg-emerald-600/20 text-emerald-400 text-xs rounded-full">
+                                  💰 ${idea.estimatedBudget.toLocaleString()} MXN
+                                </span>
+                                <span className="px-2 py-1 bg-purple-600/20 text-purple-400 text-xs rounded-full">
+                                  👥 {idea.beneficiaries}
+                                </span>
+                              </div>
+
+                              {/* Desglose del presupuesto */}
+                              {idea.budgetBreakdown && idea.budgetBreakdown.length > 0 && (
+                                <div className="mt-3 pt-3 border-t border-gray-700">
+                                  <p className="text-xs text-gray-500 mb-2 font-medium">💵 Desglose del presupuesto:</p>
+                                  <div className="grid grid-cols-2 gap-1">
+                                    {idea.budgetBreakdown.map((item, idx) => (
+                                      <div key={idx} className="text-xs text-gray-400 flex justify-between">
+                                        <span>{item.item}</span>
+                                        <span className="text-purple-400">${item.cost.toLocaleString()}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Botón para confirmar selección y crear votación */}
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => {
+                      setGenesisStep('select-causes');
+                      setAiIdeasCause1([]);
+                      setAiIdeasCause2([]);
+                      setSelectedIdeaCause1(null);
+                      setSelectedIdeaCause2(null);
+                      setImpactLevel('');
+                    }}
+                    className="flex-1 py-4 bg-gray-800 hover:bg-gray-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                    Cambiar causas
+                  </button>
+                  <button
+                    onClick={handleConfirmIdeasForVoting}
+                    disabled={!selectedIdeaCause1 || !selectedIdeaCause2 || savingProject}
+                    className="flex-[2] py-4 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white font-bold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {savingProject ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <>
+                        <Vote className="w-5 h-5" />
+                        Crear Votación con estas 2 Ideas
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
             )}
@@ -964,11 +1391,12 @@ export default function LegacyForgePage() {
                                     name: project.name,
                                     description: project.description,
                                     category: project.category,
-                                    locationName: project.locationName,
+                                    locationPending: !project.locationName,
+                                    locationName: project.locationName || '',
                                     locationAddress: project.locationAddress || '',
                                     googleMapsUrl: project.googleMapsUrl || '',
-                                    contactName: project.contactName,
-                                    contactPhone: project.contactPhone,
+                                    contactName: project.contactName || '',
+                                    contactPhone: project.contactPhone || '',
                                     contactEmail: project.contactEmail || '',
                                     contactRole: project.contactRole || '',
                                     estimatedBudget: project.estimatedBudget ? String(project.estimatedBudget) : '',
