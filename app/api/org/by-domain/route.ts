@@ -32,7 +32,13 @@ export async function GET(request: NextRequest) {
         brandColor: true,
         loginBackgroundUrl: true,
         loginWelcomeMessage: true,
-        showPoweredBy: true
+        showPoweredBy: true,
+        MasterOrganization: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
       }
     });
 
@@ -40,9 +46,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ found: false }, { status: 200 });
     }
 
+    // Usar el nombre de la MasterOrganization si existe, sino el de la organización
+    const displayName = organization.MasterOrganization?.name || organization.name;
+
     return NextResponse.json({
       found: true,
-      organization
+      organization: {
+        ...organization,
+        displayName, // Nombre de la master organization para mostrar
+        masterOrganizationName: organization.MasterOrganization?.name || null
+      }
     });
 
   } catch (error) {

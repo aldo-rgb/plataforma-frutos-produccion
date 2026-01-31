@@ -15,6 +15,8 @@ interface OrgBranding {
   loginBackgroundUrl: string | null;
   loginWelcomeMessage: string | null;
   showPoweredBy: boolean;
+  displayName?: string; // Nombre de la master organization
+  masterOrganizationName?: string | null;
 }
 
 function LoginForm() {
@@ -142,7 +144,7 @@ function LoginForm() {
               WebkitTextFillColor: 'transparent'
             } : undefined}
           >
-            {orgBranding?.name || 'Quantum Matter'}
+            {orgBranding?.displayName || orgBranding?.name || 'Quantum Matter'}
           </h1>
           <p className="text-slate-400">
             {orgBranding?.loginWelcomeMessage || 'Inicia tu transformación cuántica'}
