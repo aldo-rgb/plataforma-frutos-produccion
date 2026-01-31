@@ -238,9 +238,35 @@ export async function GET(request: NextRequest) {
       hasVoted: votedPollIds.has(poll.id)
     }));
 
+    // Verificar si el usuario es capitán o staff para determinar permisos
+    const captainAssignment = await prisma.tribeCaptainAssignment.findFirst({
+      where: {
+        userId: userId,
+        status: 'ACCEPTED',
+        captaincy: {
+          visionId: parseInt(visionId!)
+        }
+      },
+      include: {
+        captaincy: true
+      }
+    });
+
+    const isStaffMember = await prisma.visionStaff.findFirst({
+      where: {
+        userId: userId,
+        visionId: parseInt(visionId!)
+      }
+    });
+
     return NextResponse.json({
       polls: pollsWithStatus,
-      categories: Object.keys(CATEGORY_BY_ROLE)
+      categories: Object.keys(CATEGORY_BY_ROLE),
+      userPermissions: {
+        canCreate: !!captainAssignment || !!isStaffMember,
+        canManage: !!captainAssignment || !!isStaffMember,
+        isCaptain: !!captainAssignment
+      }
     });
 
   } catch (error) {
