@@ -2422,7 +2422,7 @@ model Usuario {
   ParticipantMetamorfosis                                                MetamorfosisAssignment[]        @relation("ParticipantMetamorfosis")
   TrainerMetamorfosisAssignments                                         MetamorfosisAssignment[]        @relation("TrainerMetamorfosisAssignments")
 
-  // Quantum Web Engine - Páginas Web
+  // Quantum AI Web Engine - Páginas Web
   QuantumWebsite                                                         QuantumWebsite?
 
   // Quantum Talent Scout - Expo Reviews
@@ -6000,7 +6000,7 @@ enum MetamorfosisStatus {
 }
 
 // ============================================
-// QUANTUM WEB ENGINE - Sistema de Páginas Web
+// QUANTUM AI WEB ENGINE - Sistema de Páginas Web
 // ============================================
 
 model QuantumWebsite {

@@ -730,7 +730,7 @@ export default function PublicWebsite({ website }: { website: WebsiteData }) {
             className="underline hover:opacity-100 transition"
             style={{ color: colors.accent }}
           >
-            Quantum Web Engine
+            Quantum AI Web Engine
           </a>
         </p>
       </footer>

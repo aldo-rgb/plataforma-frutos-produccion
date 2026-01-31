@@ -112,7 +112,7 @@ interface BusinessInfo {
   logo?: string;
 }
 
-// Templates del QUANTUM WEB ENGINE
+// Templates del QUANTUM AI WEB ENGINE
 const QUANTUM_TEMPLATES: QuantumTemplate[] = [
   {
     id: 'minimalista',
@@ -689,7 +689,7 @@ export default function QuantumWebEngine() {
           transition={{ delay: 0.2 }}
           className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 mb-4"
         >
-          QUANTUM WEB ENGINE
+          QUANTUM AI WEB ENGINE
         </motion.h1>
         
         <motion.p
@@ -2980,7 +2980,7 @@ function WebsitePreview({
         </p>
         <p className="mt-2 text-sm" style={{ color: colors.secondary + '80' }}>
           Hecho con 💜 usando{' '}
-          <span style={{ color: colors.accent }}>Quantum Web Engine</span>
+          <span style={{ color: colors.accent }}>Quantum AI Web Engine</span>
         </p>
       </footer>
     </div>

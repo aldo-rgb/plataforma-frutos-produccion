@@ -946,7 +946,7 @@ function CalificarContent() {
       <div className="fixed bottom-0 left-0 right-0 bg-slate-950/90 backdrop-blur-lg border-t border-purple-500/30 px-4 py-3">
         <div className="max-w-md mx-auto text-center">
           <p className="text-slate-600 text-xs">
-            Powered by <span className="text-purple-400">Quantum Talent Scout</span>
+            Powered by <span className="text-purple-400">Quantum AI</span>
           </p>
         </div>
       </div>

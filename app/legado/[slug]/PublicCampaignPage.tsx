@@ -515,7 +515,7 @@ export default function PublicCampaignPage({ campaign, referralCode }: Props) {
             Campaña organizada por <strong className="text-slate-400">{campaign.project.organization.name}</strong>
           </p>
           <p className="text-slate-600 text-xs mt-2">
-            Powered by Legacy Builder
+            Powered by Quantum AI
           </p>
         </div>
       </footer>

@@ -41,7 +41,12 @@ import {
   QrCode,
   Share2,
   Copy,
-  ExternalLink
+  ExternalLink,
+  MessageSquare,
+  ThumbsUp,
+  TrendingUp,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
@@ -433,6 +438,250 @@ Espero verte ahí!`;
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ============================================
+// COMPONENTE: Calificaciones de la Expo
+// ============================================
+interface ExpoReview {
+  id: string;
+  ratingStars: number;
+  hiringIntent: 'YES' | 'MAYBE' | 'NO';
+  feedbackText: string | null;
+  visitorName: string;
+  visitorPhone: string;
+  visitorEmail: string;
+  createdAt: string;
+}
+
+interface ExpoStats {
+  totalReviews: number;
+  avgRating: number;
+  hiringIntentCounts: {
+    YES: number;
+    MAYBE: number;
+    NO: number;
+  };
+  hotLeadsCount: number;
+  warmLeadsCount: number;
+}
+
+function ExpoReviewsSection({ userId }: { userId?: number }) {
+  const [reviews, setReviews] = useState<ExpoReview[]>([]);
+  const [stats, setStats] = useState<ExpoStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
+  const [showLeads, setShowLeads] = useState(false);
+
+  useEffect(() => {
+    if (userId) {
+      fetchReviews();
+    }
+  }, [userId]);
+
+  const fetchReviews = async () => {
+    try {
+      const res = await fetch('/api/expo/my-reviews');
+      const data = await res.json();
+      
+      if (data.success) {
+        setReviews(data.reviews);
+        setStats(data.stats);
+      }
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!userId) return null;
+
+  if (loading) {
+    return (
+      <div className="bg-gradient-to-r from-blue-900/30 to-indigo-900/30 rounded-2xl p-6 border border-blue-500/30">
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!stats || stats.totalReviews === 0) {
+    return (
+      <div className="bg-gradient-to-r from-blue-900/30 to-indigo-900/30 rounded-2xl p-6 border border-blue-500/30">
+        <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+          <Star className="w-5 h-5 text-yellow-400" />
+          Calificaciones de la Expo
+        </h3>
+        <p className="text-slate-400 text-sm">
+          Aún no tienes calificaciones. ¡Comparte tu QR en la Expo para recibir votos!
+        </p>
+      </div>
+    );
+  }
+
+  const hiringIntentLabels = {
+    YES: { label: '¡Sí, contrataría!', color: 'text-emerald-400', bg: 'bg-emerald-500/20', icon: '🔥' },
+    MAYBE: { label: 'Tal vez', color: 'text-yellow-400', bg: 'bg-yellow-500/20', icon: '🤔' },
+    NO: { label: 'No por ahora', color: 'text-slate-400', bg: 'bg-slate-500/20', icon: '❄️' }
+  };
+
+  return (
+    <div className="bg-gradient-to-r from-blue-900/30 to-indigo-900/30 rounded-2xl p-6 border border-blue-500/30">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+          <Star className="w-5 h-5 text-yellow-400" />
+          Calificaciones de la Expo
+        </h3>
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
+        >
+          {expanded ? 'Ver menos' : 'Ver detalles'}
+          {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+      </div>
+
+      {/* Estadísticas principales */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div className="bg-slate-800/50 rounded-xl p-3 text-center">
+          <div className="text-2xl font-bold text-white">{stats.totalReviews}</div>
+          <div className="text-xs text-slate-400">Votos totales</div>
+        </div>
+        <div className="bg-slate-800/50 rounded-xl p-3 text-center">
+          <div className="text-2xl font-bold text-yellow-400 flex items-center justify-center gap-1">
+            {stats.avgRating} <Star className="w-4 h-4 fill-yellow-400" />
+          </div>
+          <div className="text-xs text-slate-400">Promedio</div>
+        </div>
+        <div className="bg-emerald-500/20 rounded-xl p-3 text-center">
+          <div className="text-2xl font-bold text-emerald-400">{stats.hotLeadsCount} 🔥</div>
+          <div className="text-xs text-emerald-300">Hot Leads</div>
+        </div>
+        <div className="bg-yellow-500/20 rounded-xl p-3 text-center">
+          <div className="text-2xl font-bold text-yellow-400">{stats.warmLeadsCount} 🤔</div>
+          <div className="text-xs text-yellow-300">Warm Leads</div>
+        </div>
+      </div>
+
+      {/* Intención de contratación */}
+      <div className="mb-4">
+        <div className="text-sm text-slate-400 mb-2">Intención de contratación</div>
+        <div className="flex gap-2">
+          {Object.entries(stats.hiringIntentCounts).map(([key, count]) => {
+            const intent = hiringIntentLabels[key as keyof typeof hiringIntentLabels];
+            const percentage = stats.totalReviews > 0 ? Math.round((count / stats.totalReviews) * 100) : 0;
+            return (
+              <div key={key} className={`flex-1 ${intent.bg} rounded-lg p-2 text-center`}>
+                <div className="text-lg font-bold ${intent.color}">{intent.icon} {count}</div>
+                <div className="text-xs text-slate-400">{percentage}%</div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Detalles expandidos */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            {/* Toggle para ver leads */}
+            {(stats.hotLeadsCount > 0 || stats.warmLeadsCount > 0) && (
+              <button
+                onClick={() => setShowLeads(!showLeads)}
+                className="w-full mb-3 py-2 px-4 rounded-lg bg-gradient-to-r from-emerald-600 to-green-600 text-white font-medium text-sm hover:shadow-lg transition-all flex items-center justify-center gap-2"
+              >
+                <ThumbsUp className="w-4 h-4" />
+                {showLeads ? 'Ocultar contactos interesados' : `Ver ${stats.hotLeadsCount + stats.warmLeadsCount} contactos interesados`}
+              </button>
+            )}
+
+            {/* Lista de leads */}
+            {showLeads && (
+              <div className="space-y-2 mb-4">
+                <div className="text-sm text-slate-400 mb-2">Personas interesadas en tu servicio:</div>
+                {reviews
+                  .filter(r => r.hiringIntent === 'YES' || r.hiringIntent === 'MAYBE')
+                  .map((review) => (
+                    <div key={review.id} className="bg-slate-800/50 rounded-lg p-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="font-medium text-white flex items-center gap-2">
+                            {review.visitorName}
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              review.hiringIntent === 'YES' 
+                                ? 'bg-emerald-500/20 text-emerald-400' 
+                                : 'bg-yellow-500/20 text-yellow-400'
+                            }`}>
+                              {review.hiringIntent === 'YES' ? '🔥 Hot Lead' : '🤔 Interesado'}
+                            </span>
+                          </div>
+                          <div className="text-sm text-slate-400 flex items-center gap-3 mt-1">
+                            <a href={`tel:${review.visitorPhone}`} className="hover:text-blue-400 flex items-center gap-1">
+                              <Phone className="w-3 h-3" /> {review.visitorPhone}
+                            </a>
+                            <a href={`mailto:${review.visitorEmail}`} className="hover:text-blue-400">
+                              {review.visitorEmail}
+                            </a>
+                          </div>
+                          {review.feedbackText && (
+                            <div className="mt-2 text-sm text-slate-300 bg-slate-700/50 rounded p-2">
+                              <MessageSquare className="w-3 h-3 inline mr-1" />
+                              "{review.feedbackText}"
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-0.5 text-yellow-400">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className={`w-3 h-3 ${i < review.ratingStars ? 'fill-yellow-400' : 'fill-slate-600'}`} />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+
+            {/* Últimas calificaciones */}
+            <div className="text-sm text-slate-400 mb-2">Últimas calificaciones:</div>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {reviews.slice(0, 5).map((review) => (
+                <div key={review.id} className="bg-slate-800/30 rounded-lg p-3 flex items-center justify-between">
+                  <div>
+                    <div className="text-sm text-white">{review.visitorName}</div>
+                    <div className="text-xs text-slate-500">
+                      {new Date(review.createdAt).toLocaleDateString('es-MX', { 
+                        day: 'numeric', 
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${hiringIntentLabels[review.hiringIntent].bg} ${hiringIntentLabels[review.hiringIntent].color}`}>
+                      {hiringIntentLabels[review.hiringIntent].icon}
+                    </span>
+                    <div className="flex items-center gap-0.5">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className={`w-3 h-3 ${i < review.ratingStars ? 'fill-yellow-400 text-yellow-400' : 'text-slate-600'}`} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -1426,13 +1675,14 @@ export default function QuantumBusinessBuilderPage() {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.35 }}
-          className="w-full max-w-4xl mb-8 relative z-10"
+          className="w-full max-w-4xl mb-8 relative z-10 space-y-4"
         >
           <ExpoShareSection 
             userId={existingProfile.userId} 
             userName={existingProfile.headline}
             visionId={existingProfile.vision?.id}
           />
+          <ExpoReviewsSection userId={existingProfile.userId} />
         </motion.div>
       )}
 
@@ -2673,6 +2923,9 @@ export default function QuantumBusinessBuilderPage() {
               userName={previewNombre || existingProfile?.headline}
               visionId={existingProfile?.vision?.id}
             />
+
+            {/* Calificaciones de la Expo */}
+            <ExpoReviewsSection userId={existingProfile?.userId} />
           </div>
 
           {/* Columna derecha: Preview en vivo */}

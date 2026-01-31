@@ -255,7 +255,7 @@ function LoginForm() {
           {orgBranding?.showPoweredBy !== false && (
             <span>Powered by <a href="https://quantummatter.app" className="hover:text-slate-400">Quantum Matter</a> · </span>
           )}
-          &copy; 2024 QUANTUM www.camposcuanticos.com. Todos los derechos reservados.
+          &copy; 2026 QUANTUM AI www.appsync.mx. Todos los derechos reservados.
         </p>
       </div>
       )}

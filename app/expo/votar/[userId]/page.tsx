@@ -504,7 +504,7 @@ export default function ExpoVotePage() {
         {/* Footer */}
         <div className="mt-6 text-center">
           <p className="text-slate-600 text-xs">
-            Powered by <span className="text-purple-400">Quantum Talent Scout</span>
+            Powered by <span className="text-purple-400">Quantum AI</span>
           </p>
         </div>
       </div>
