@@ -36,7 +36,16 @@ export async function POST(
     }
 
     // Verificar visión y organización
-    const vision = await prisma.vision.findUnique({ where: { id: visionId } });
+    const vision = await prisma.vision.findUnique({ 
+      where: { id: visionId },
+      select: {
+        id: true,
+        organizationId: true,
+        endDate: true,
+        advancedEndDate: true,
+        plWeekend3EndDate: true
+      }
+    });
     if (!vision) return NextResponse.json({ success: false, error: 'Visión no encontrada' }, { status: 404 });
 
     const director = await prisma.usuario.findUnique({ 
@@ -68,12 +77,88 @@ export async function POST(
     // Si se envían IDs directamente, asignar esos usuarios
     if (gameChangerIds && Array.isArray(gameChangerIds)) {
       const addedGameChangers = [];
+      const licensesCreated: string[] = [];
+      
+      // Obtener el producto del nivel para las fechas de expiración
+      const levelProduct = await prisma.schoolProduct.findFirst({
+        where: {
+          visionId: visionId,
+          levelType: level,
+          type: 'CORE_TRAINING',
+          isActive: true
+        },
+        select: {
+          endDate: true,
+          plWeekend3EndDate: true
+        }
+      });
+
+      // Determinar fecha de expiración según el nivel
+      let licenseExpiryDate: Date | null = null;
+      if (level === 'PL') {
+        // Para PL, usar plWeekend3EndDate del producto o de la visión
+        licenseExpiryDate = levelProduct?.plWeekend3EndDate || vision.plWeekend3EndDate || vision.endDate;
+      } else if (level === 'ADVANCED') {
+        licenseExpiryDate = levelProduct?.endDate || vision.advancedEndDate || vision.endDate;
+      } else {
+        // BASIC
+        licenseExpiryDate = levelProduct?.endDate || vision.endDate;
+      }
+
+      // Contar cuántos usuarios necesitan licencia nueva para este nivel
+      let usersNeedingLicense = 0;
+      for (const userId of gameChangerIds) {
+        // Verificar si ya está asignado en este nivel (no necesitaría nueva licencia)
+        const existingAssignment = await prisma.visionGameChanger.findFirst({
+          where: { gameChangerId: userId, visionId, level }
+        });
+        
+        if (!existingAssignment) {
+          // Verificar si ya tiene licencia activa para ESTE nivel específico
+          // Para PL siempre se crea nueva licencia
+          if (level === 'PL') {
+            usersNeedingLicense++;
+          } else {
+            const existingLicense = await prisma.licenseAssignment.findFirst({
+              where: { userId, visionId, isActive: true }
+            });
+            if (!existingLicense) {
+              usersNeedingLicense++;
+            }
+          }
+        }
+      }
+
+      // Verificar créditos disponibles si hay usuarios que necesitan licencia
+      if (usersNeedingLicense > 0) {
+        const schoolCredit = await prisma.schoolCredit.findFirst({
+          where: {
+            organizationId: director.organizationId,
+            isActive: true
+          }
+        });
+
+        if (!schoolCredit) {
+          return NextResponse.json({ 
+            success: false, 
+            error: 'No hay créditos de licencias configurados para esta organización' 
+          }, { status: 400 });
+        }
+
+        const availableCredits = (schoolCredit.totalPurchased || 0) - (schoolCredit.totalAllocated || 0);
+        if (availableCredits < usersNeedingLicense) {
+          return NextResponse.json({ 
+            success: false, 
+            error: `Créditos insuficientes. Disponibles: ${availableCredits}, Necesarios: ${usersNeedingLicense}` 
+          }, { status: 400 });
+        }
+      }
       
       for (const userId of gameChangerIds) {
         // Verificar que el usuario existe y pertenece a una organización relacionada
         const user = await prisma.usuario.findUnique({
           where: { id: userId },
-          select: { id: true, email: true, organizationId: true, rol: true }
+          select: { id: true, email: true, organizationId: true, rol: true, nombre: true }
         });
 
         if (!user || !user.organizationId || !relatedOrgIds.includes(user.organizationId)) {
@@ -90,6 +175,7 @@ export async function POST(
         });
 
         if (!existingAssignment) {
+          // Crear la asignación de Game Changer
           await prisma.visionGameChanger.create({
             data: {
               gameChangerId: userId,
@@ -99,14 +185,68 @@ export async function POST(
               createdAt: new Date()
             }
           });
+
+          // Lógica de licencias diferente según el nivel
+          let shouldCreateLicense = false;
+          
+          if (level === 'PL') {
+            // Para PL (Liderato) SIEMPRE crear nueva licencia con fecha de expiración del PL
+            shouldCreateLicense = true;
+            console.log(`🎓 Game Changer ${user.nombre} asignado a PL - Creando nueva licencia de Liderato`);
+          } else {
+            // Para BASIC/ADVANCED, solo crear si no tiene licencia activa
+            const existingLicense = await prisma.licenseAssignment.findFirst({
+              where: { userId, visionId, isActive: true }
+            });
+            if (!existingLicense) {
+              shouldCreateLicense = true;
+            }
+          }
+
+          if (shouldCreateLicense) {
+            // Generar código de licencia único
+            const levelPrefix = level === 'PL' ? 'PL' : (level === 'ADVANCED' ? 'ADV' : 'BAS');
+            const licenseCode = `QNT-${levelPrefix}-${Date.now().toString(36).toUpperCase()}-${userId.toString().slice(-4).toUpperCase()}`;
+            
+            await prisma.licenseAssignment.create({
+              data: {
+                userId: user.id,
+                organizationId: director.organizationId!,
+                visionId: visionId,
+                assignedBy: session.user.id,
+                assignedAt: new Date(),
+                licenseCode: licenseCode,
+                isActive: true,
+                activatedAt: new Date(),
+                expiresAt: licenseExpiryDate,
+                notes: `Licencia STANDARD automática - Game Changer ${level} - Activada`
+              }
+            });
+
+            // Descontar de SchoolCredit
+            await prisma.schoolCredit.updateMany({
+              where: {
+                organizationId: director.organizationId,
+                isActive: true
+              },
+              data: {
+                totalAllocated: { increment: 1 }
+              }
+            });
+
+            licensesCreated.push(licenseCode);
+            console.log(`✅ Licencia ${level} creada para Game Changer ${user.nombre} (${user.email}): ${licenseCode} - Expira: ${licenseExpiryDate}`);
+          }
+
           addedGameChangers.push(user);
         }
       }
 
       return NextResponse.json({ 
         success: true, 
-        message: `${addedGameChangers.length} Game Changer(s) asignado(s)`,
-        gameChangers: addedGameChangers
+        message: `${addedGameChangers.length} Game Changer(s) asignado(s). ${licensesCreated.length} licencia(s) creada(s).`,
+        gameChangers: addedGameChangers,
+        licensesCreated: licensesCreated.length
       });
     }
 
