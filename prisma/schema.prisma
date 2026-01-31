@@ -1027,6 +1027,7 @@ model Organization {
   loginWelcomeMessage                                   String?                         @default("Bienvenido al Portal de Entrenamiento")
   showPoweredBy                                         Boolean                         @default(true)
   customLoginEnabled                                    Boolean                         @default(false)
+  customDomain                                          String?                         @unique // Dominio personalizado (ej: impactocuantico.net)
   // Configuración de anticipos para Básico
   anticiposEnabled                                      Boolean                         @default(false)
   anticipoAmount                                        Decimal?                        @db.Decimal(10, 2)

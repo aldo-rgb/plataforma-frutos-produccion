@@ -6,6 +6,17 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, Loader2, ArrowRight, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 
+interface OrgBranding {
+  id: number;
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+  brandColor: string | null;
+  loginBackgroundUrl: string | null;
+  loginWelcomeMessage: string | null;
+  showPoweredBy: boolean;
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -16,6 +27,37 @@ function LoginForm() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  
+  // Estado para organización con dominio personalizado
+  const [orgBranding, setOrgBranding] = useState<OrgBranding | null>(null);
+  const [checkingDomain, setCheckingDomain] = useState(true);
+
+  // EFECTO: Detectar dominio personalizado
+  useEffect(() => {
+    const checkCustomDomain = async () => {
+      try {
+        const hostname = window.location.hostname;
+        // Solo verificar si NO es el dominio principal
+        if (!hostname.includes('vercel.app') && 
+            !hostname.includes('localhost') && 
+            !hostname.includes('quantummatter.app')) {
+          
+          const res = await fetch(`/api/org/by-domain?domain=${hostname}`);
+          const data = await res.json();
+          
+          if (data.found && data.organization) {
+            setOrgBranding(data.organization);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking custom domain:', error);
+      } finally {
+        setCheckingDomain(false);
+      }
+    };
+    
+    checkCustomDomain();
+  }, []);
 
   // EFECTO: Detectar si venimos de un registro exitoso
   useEffect(() => {
@@ -55,23 +97,56 @@ function LoginForm() {
     <div className="min-h-screen w-full bg-slate-950 flex items-center justify-center p-4">
       {/* Fondo Decorativo */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl" />
+        {orgBranding?.loginBackgroundUrl ? (
+          <img 
+            src={orgBranding.loginBackgroundUrl} 
+            alt="Background" 
+            className="w-full h-full object-cover opacity-20"
+          />
+        ) : (
+          <>
+            <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl" />
+          </>
+        )}
       </div>
 
+      {checkingDomain ? (
+        <div className="text-slate-400 flex items-center gap-2">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          Cargando...
+        </div>
+      ) : (
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <img 
-              src="/quantum-logo.svg" 
-              alt="Quantum Matter Logo" 
-              className="w-32 h-32 object-contain"
-            />
+            {orgBranding?.logoUrl ? (
+              <img 
+                src={orgBranding.logoUrl} 
+                alt={orgBranding.name} 
+                className="w-32 h-32 object-contain"
+              />
+            ) : (
+              <img 
+                src="/quantum-logo.svg" 
+                alt="Quantum Matter Logo" 
+                className="w-32 h-32 object-contain"
+              />
+            )}
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
-            Quantum Matter
+          <h1 
+            className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2"
+            style={orgBranding?.brandColor ? { 
+              background: `linear-gradient(to right, ${orgBranding.brandColor}, ${orgBranding.brandColor}dd)`,
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            } : undefined}
+          >
+            {orgBranding?.name || 'Quantum Matter'}
           </h1>
-          <p className="text-slate-400">Inicia tu transformación cuántica</p>
+          <p className="text-slate-400">
+            {orgBranding?.loginWelcomeMessage || 'Inicia tu transformación cuántica'}
+          </p>
         </div>
 
         <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-8 shadow-2xl">
@@ -175,9 +250,13 @@ function LoginForm() {
         </div>
         
         <p className="text-center text-xs text-slate-600 mt-8">
+          {orgBranding?.showPoweredBy !== false && (
+            <span>Powered by <a href="https://quantummatter.app" className="hover:text-slate-400">Quantum Matter</a> · </span>
+          )}
           &copy; 2024 QUANTUM www.camposcuanticos.com. Todos los derechos reservados.
         </p>
       </div>
+      )}
     </div>
   );
 }
