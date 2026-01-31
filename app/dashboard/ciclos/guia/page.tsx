@@ -697,20 +697,473 @@ export default function GuiaInicioPage() {
       {/* SECCIÓN: GUÍA PARA ALUMNOS */}
       {/* ============================================= */}
       {activeSection === 'alumno' && (
-        <div className="animate-in fade-in duration-300">
-          <div className="bg-gradient-to-r from-emerald-900/40 to-green-900/40 border border-emerald-500/30 rounded-2xl p-6 md:p-8">
+        <div className="animate-in fade-in duration-300 space-y-6">
+          {/* Header de la sección */}
+          <div className="bg-gradient-to-r from-emerald-900/40 to-green-900/40 border border-emerald-500/30 rounded-2xl p-6 md:p-8 mb-8">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center">
                 <Users className="w-8 h-8 text-emerald-400" />
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-white">Guía para Alumnos</h2>
-                <p className="text-emerald-300">Cómo aprovechar al máximo tu programa de transformación</p>
+                <p className="text-emerald-300">Cómo crear tu Carta F.R.U.T.O.S. y tu Avatar Cuántico</p>
               </div>
             </div>
-            <p className="text-slate-400 text-sm">
-              Próximamente más contenido...
+            <p className="text-slate-300 text-sm leading-relaxed">
+              Tu transformación comienza con la creación de tu Carta de F.R.U.T.O.S. Aquí aprenderás 
+              paso a paso cómo completar el wizard y crear tu Avatar Cuántico que te representará.
             </p>
+          </div>
+
+          {/* PASO 1: Acceder a la Carta */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <button
+              onClick={() => toggleStep(1)}
+              className="w-full p-6 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold">
+                  1
+                </div>
+                <div className="text-left">
+                  <h3 className="text-lg font-bold text-white">Acceder a la Carta F.R.U.T.O.S.</h3>
+                  <p className="text-sm text-slate-400">Dónde encontrar el wizard de la carta</p>
+                </div>
+              </div>
+              {expandedStep === 1 ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronRight className="w-5 h-5 text-slate-400" />}
+            </button>
+            
+            {expandedStep === 1 && (
+              <div className="px-6 pb-6 border-t border-slate-800 pt-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <h4 className="font-bold text-cyan-400 mb-3 flex items-center gap-2">
+                    <Settings className="w-4 h-4" /> ¿Dónde encontrar la Carta?
+                  </h4>
+                  <div className="flex items-center gap-2 text-slate-300 text-sm bg-slate-900 p-3 rounded-lg font-mono">
+                    <span className="text-emerald-400">Dashboard</span>
+                    <ChevronRight className="w-4 h-4 text-slate-500" />
+                    <span className="text-cyan-400">Mi Carta</span>
+                  </div>
+                  <p className="text-slate-400 text-sm mt-3">
+                    En el menú lateral, haz clic en <strong className="text-white">"Mi Carta"</strong> para acceder al wizard de creación.
+                  </p>
+                </div>
+
+                <div className="bg-gradient-to-r from-purple-900/30 to-indigo-900/30 border border-purple-500/30 rounded-lg p-4">
+                  <h4 className="font-bold text-purple-400 mb-3 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" /> Dos Formas de Crear tu Carta
+                  </h4>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="bg-slate-900 p-4 rounded-lg border border-slate-700">
+                      <p className="font-bold text-white mb-1 flex items-center gap-2">
+                        <Bot className="w-4 h-4 text-purple-400" /> Con Mentor IA
+                      </p>
+                      <p className="text-slate-400 text-sm">Usa inteligencia artificial para que te guíe y sugiera objetivos personalizados.</p>
+                    </div>
+                    <div className="bg-slate-900 p-4 rounded-lg border border-slate-700">
+                      <p className="font-bold text-white mb-1 flex items-center gap-2">
+                        <PenLine className="w-4 h-4 text-cyan-400" /> Llenado Manual
+                      </p>
+                      <p className="text-slate-400 text-sm">Completa el wizard tú mismo escribiendo tus propios objetivos.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <Link 
+                  href="/dashboard/carta"
+                  className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                >
+                  <FileText className="w-5 h-5" />
+                  Ir a Mi Carta
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* PASO 2: El Wizard - Paso 1 SER */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <button
+              onClick={() => toggleStep(2)}
+              className="w-full p-6 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                  2
+                </div>
+                <div className="text-left">
+                  <h3 className="text-lg font-bold text-white">Paso 1: Declaración del SER 🧘</h3>
+                  <p className="text-sm text-slate-400">Define quién quieres ser en cada área de tu vida</p>
+                </div>
+              </div>
+              {expandedStep === 2 ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronRight className="w-5 h-5 text-slate-400" />}
+            </button>
+            
+            {expandedStep === 2 && (
+              <div className="px-6 pb-6 border-t border-slate-800 pt-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <h4 className="font-bold text-cyan-400 mb-3">¿Qué es la Declaración del Ser?</h4>
+                  <p className="text-slate-300 text-sm mb-4">
+                    En este paso defines <strong className="text-white">"YO SOY..."</strong> para cada una de las 8 áreas de tu vida. 
+                    Es una declaración de identidad que te programa para el éxito.
+                  </p>
+                </div>
+
+                <div className="bg-gradient-to-r from-amber-900/30 to-orange-900/30 border border-amber-500/30 rounded-lg p-4">
+                  <h4 className="font-bold text-amber-400 mb-3">Las 8 Áreas de F.R.U.T.O.S.</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    <div className="bg-slate-900 p-3 rounded-lg text-center">
+                      <span className="text-2xl">💰</span>
+                      <p className="text-white font-medium mt-1">Finanzas</p>
+                    </div>
+                    <div className="bg-slate-900 p-3 rounded-lg text-center">
+                      <span className="text-2xl">❤️</span>
+                      <p className="text-white font-medium mt-1">Relaciones</p>
+                    </div>
+                    <div className="bg-slate-900 p-3 rounded-lg text-center">
+                      <span className="text-2xl">🎨</span>
+                      <p className="text-white font-medium mt-1">Talentos</p>
+                    </div>
+                    <div className="bg-slate-900 p-3 rounded-lg text-center">
+                      <span className="text-2xl">💪</span>
+                      <p className="text-white font-medium mt-1">Salud</p>
+                    </div>
+                    <div className="bg-slate-900 p-3 rounded-lg text-center">
+                      <span className="text-2xl">🧘</span>
+                      <p className="text-white font-medium mt-1">Paz Mental</p>
+                    </div>
+                    <div className="bg-slate-900 p-3 rounded-lg text-center">
+                      <span className="text-2xl">🎮</span>
+                      <p className="text-white font-medium mt-1">Ocio</p>
+                    </div>
+                    <div className="bg-slate-900 p-3 rounded-lg text-center">
+                      <span className="text-2xl">🌟</span>
+                      <p className="text-white font-medium mt-1">Servicio Trans.</p>
+                    </div>
+                    <div className="bg-slate-900 p-3 rounded-lg text-center">
+                      <span className="text-2xl">🤝</span>
+                      <p className="text-white font-medium mt-1">Servicio Com.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="w-5 h-5 text-blue-400 mt-0.5" />
+                    <div className="text-sm text-blue-200">
+                      <p className="font-semibold mb-1">Ejemplo de Declaración</p>
+                      <p className="italic">"Yo soy abundancia en crecimiento constante que atrae oportunidades financieras."</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* PASO 3: Objetivos - Visualización */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <button
+              onClick={() => toggleStep(3)}
+              className="w-full p-6 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-cyan-600 rounded-full flex items-center justify-center text-white font-bold">
+                  3
+                </div>
+                <div className="text-left">
+                  <h3 className="text-lg font-bold text-white">Paso 2: Objetivos y Visualización ✨</h3>
+                  <p className="text-sm text-slate-400">Escribe metas específicas para cada área</p>
+                </div>
+              </div>
+              {expandedStep === 3 ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronRight className="w-5 h-5 text-slate-400" />}
+            </button>
+            
+            {expandedStep === 3 && (
+              <div className="px-6 pb-6 border-t border-slate-800 pt-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <h4 className="font-bold text-cyan-400 mb-3">¿Qué son los Objetivos?</h4>
+                  <p className="text-slate-300 text-sm">
+                    Aquí escribes <strong className="text-white">metas específicas y medibles</strong> para cada área. 
+                    Puedes agregar múltiples objetivos por área.
+                  </p>
+                </div>
+
+                <div className="bg-gradient-to-r from-purple-900/30 to-indigo-900/30 border border-purple-500/30 rounded-lg p-4">
+                  <h4 className="font-bold text-purple-400 mb-3 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" /> Sugerencias con IA
+                  </h4>
+                  <p className="text-slate-300 text-sm">
+                    Puedes usar el botón <strong className="text-purple-400">"Quantum Coach"</strong> para recibir 
+                    sugerencias de objetivos personalizados generados por inteligencia artificial.
+                  </p>
+                </div>
+
+                <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Target className="w-5 h-5 text-blue-400 mt-0.5" />
+                    <div className="text-sm text-blue-200">
+                      <p className="font-semibold mb-1">Ejemplo de Objetivo</p>
+                      <p className="italic">"Ahorrar $10,000 pesos mensuales durante los próximos 6 meses."</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* PASO 4: Acciones HACER */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <button
+              onClick={() => toggleStep(4)}
+              className="w-full p-6 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-amber-600 rounded-full flex items-center justify-center text-white font-bold">
+                  4
+                </div>
+                <div className="text-left">
+                  <h3 className="text-lg font-bold text-white">Paso 3: Acciones - HACER 🎯</h3>
+                  <p className="text-sm text-slate-400">Define las acciones concretas para lograr cada objetivo</p>
+                </div>
+              </div>
+              {expandedStep === 4 ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronRight className="w-5 h-5 text-slate-400" />}
+            </button>
+            
+            {expandedStep === 4 && (
+              <div className="px-6 pb-6 border-t border-slate-800 pt-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <h4 className="font-bold text-cyan-400 mb-3">¿Qué son las Acciones?</h4>
+                  <p className="text-slate-300 text-sm">
+                    Para cada objetivo que definiste, ahora escribes las <strong className="text-white">acciones específicas</strong> que 
+                    realizarás para lograrlo. Estas son las tareas que ejecutarás diariamente.
+                  </p>
+                </div>
+
+                <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-blue-400 mt-0.5" />
+                    <div className="text-sm text-blue-200">
+                      <p className="font-semibold mb-1">Ejemplo de Acción</p>
+                      <p className="italic">"Revisar mis gastos diarios en una app de finanzas por 10 minutos cada noche."</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* PASO 5: Frecuencia */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <button
+              onClick={() => toggleStep(5)}
+              className="w-full p-6 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-pink-600 rounded-full flex items-center justify-center text-white font-bold">
+                  5
+                </div>
+                <div className="text-left">
+                  <h3 className="text-lg font-bold text-white">Paso 4: Configurar Frecuencia 🔥</h3>
+                  <p className="text-sm text-slate-400">Define cuántas veces y cuándo harás cada acción</p>
+                </div>
+              </div>
+              {expandedStep === 5 ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronRight className="w-5 h-5 text-slate-400" />}
+            </button>
+            
+            {expandedStep === 5 && (
+              <div className="px-6 pb-6 border-t border-slate-800 pt-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <h4 className="font-bold text-cyan-400 mb-3">Configuración de Frecuencia</h4>
+                  <p className="text-slate-300 text-sm mb-4">
+                    Para cada acción, configuras:
+                  </p>
+                  <div className="space-y-2 text-sm text-slate-300">
+                    <p className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-emerald-400" />
+                      <strong className="text-white">Cantidad:</strong> Cuántas veces harás la acción (ej: 3 veces)
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-emerald-400" />
+                      <strong className="text-white">Frecuencia:</strong> Diaria, semanal, mensual
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-emerald-400" />
+                      <strong className="text-white">Días específicos:</strong> Qué días de la semana (si aplica)
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Clock className="w-5 h-5 text-amber-400 mt-0.5" />
+                    <div className="text-sm text-amber-200">
+                      <p className="font-semibold mb-1">Tip Importante</p>
+                      <p>Sé realista con las frecuencias. Es mejor empezar con menos y aumentar gradualmente que comprometerte a mucho y no cumplir.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* PASO 6: Avatar Cuántico */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <button
+              onClick={() => toggleStep(6)}
+              className="w-full p-6 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold">
+                  6
+                </div>
+                <div className="text-left">
+                  <h3 className="text-lg font-bold text-white">Paso 5: Avatar Cuántico ⚡</h3>
+                  <p className="text-sm text-slate-400">Crea tu identidad visual con IA</p>
+                </div>
+              </div>
+              {expandedStep === 6 ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronRight className="w-5 h-5 text-slate-400" />}
+            </button>
+            
+            {expandedStep === 6 && (
+              <div className="px-6 pb-6 border-t border-slate-800 pt-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                <div className="bg-gradient-to-r from-indigo-900/30 to-purple-900/30 border border-indigo-500/30 rounded-lg p-6">
+                  <h4 className="font-bold text-indigo-400 mb-4 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5" /> ¿Qué es el Avatar Cuántico?
+                  </h4>
+                  <p className="text-slate-300 text-sm mb-4">
+                    El Avatar Cuántico es tu <strong className="text-white">identidad visual personalizada</strong> generada 
+                    por inteligencia artificial. Representa tu nueva identidad basada en tus declaraciones del SER.
+                  </p>
+                </div>
+
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <h4 className="font-bold text-cyan-400 mb-3">Proceso de Creación</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-indigo-600/30 rounded-full flex items-center justify-center text-indigo-400 text-xs font-bold shrink-0">1</div>
+                      <div>
+                        <p className="text-white font-medium">Selecciona tu género</p>
+                        <p className="text-slate-400 text-sm">Masculino, Femenino o Neutro para la generación del avatar</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-indigo-600/30 rounded-full flex items-center justify-center text-indigo-400 text-xs font-bold shrink-0">2</div>
+                      <div>
+                        <p className="text-white font-medium">La IA analiza tu carta</p>
+                        <p className="text-slate-400 text-sm">El sistema genera opciones de identidad basadas en tus declaraciones</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-indigo-600/30 rounded-full flex items-center justify-center text-indigo-400 text-xs font-bold shrink-0">3</div>
+                      <div>
+                        <p className="text-white font-medium">Elige tu arquetipo</p>
+                        <p className="text-slate-400 text-sm">Selecciona entre las opciones generadas (Director, Arquitecto, Estratega, etc.)</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-indigo-600/30 rounded-full flex items-center justify-center text-indigo-400 text-xs font-bold shrink-0">4</div>
+                      <div>
+                        <p className="text-white font-medium">Opción de selfie</p>
+                        <p className="text-slate-400 text-sm">Puedes tomar una selfie para que el avatar se parezca más a ti</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Star className="w-5 h-5 text-purple-400 mt-0.5" />
+                    <div className="text-sm text-purple-200">
+                      <p className="font-semibold mb-1">Tu Avatar es Único</p>
+                      <p>Cada avatar es generado específicamente para ti usando IA avanzada. Representa tu identidad cuántica y te acompañará en tu transformación.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* PASO 7: Enviar a Revisión */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
+            <button
+              onClick={() => toggleStep(7)}
+              className="w-full p-6 flex items-center justify-between hover:bg-slate-800/50 transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">
+                  7
+                </div>
+                <div className="text-left">
+                  <h3 className="text-lg font-bold text-white">Enviar a Revisión</h3>
+                  <p className="text-sm text-slate-400">Tu mentor revisará y aprobará tu carta</p>
+                </div>
+              </div>
+              {expandedStep === 7 ? <ChevronDown className="w-5 h-5 text-slate-400" /> : <ChevronRight className="w-5 h-5 text-slate-400" />}
+            </button>
+            
+            {expandedStep === 7 && (
+              <div className="px-6 pb-6 border-t border-slate-800 pt-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <h4 className="font-bold text-cyan-400 mb-3">Proceso de Aprobación</h4>
+                  <div className="space-y-3 text-sm text-slate-300">
+                    <p><strong className="text-white">1. Envías tu carta:</strong> Al completar todos los pasos, envías la carta a revisión.</p>
+                    <p><strong className="text-white">2. Tu mentor revisa:</strong> Un mentor certificado revisará tus objetivos y acciones.</p>
+                    <p><strong className="text-white">3. Aprobación o ajustes:</strong> Te notificarán si se aprueba o si necesitas hacer cambios.</p>
+                    <p><strong className="text-white">4. ¡Comienza tu transformación!</strong> Una vez aprobada, podrás subir evidencias diarias.</p>
+                  </div>
+                </div>
+
+                <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-green-400 mt-0.5" />
+                    <div className="text-sm text-green-200">
+                      <p className="font-semibold mb-1">Estados de la Carta</p>
+                      <ul className="space-y-1 mt-2">
+                        <li><span className="text-yellow-400">BORRADOR:</span> En proceso de creación</li>
+                        <li><span className="text-blue-400">EN REVISIÓN:</span> Enviada, esperando aprobación</li>
+                        <li><span className="text-green-400">APROBADA:</span> Lista para ejecutar</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Resumen Final Alumno */}
+          <div className="bg-gradient-to-r from-emerald-900/40 to-green-900/40 border border-emerald-500/30 rounded-2xl p-6 mt-8">
+            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <CheckCircle className="w-6 h-6 text-green-400" /> Checklist del Alumno
+            </h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2 text-sm text-slate-300">
+                <p className="flex items-center gap-2">
+                  <span className="text-emerald-400">□</span> Acceder a Mi Carta en el Dashboard
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-emerald-400">□</span> Completar declaraciones del SER
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-emerald-400">□</span> Definir objetivos por área
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-emerald-400">□</span> Escribir acciones concretas
+                </p>
+              </div>
+              <div className="space-y-2 text-sm text-slate-300">
+                <p className="flex items-center gap-2">
+                  <span className="text-emerald-400">□</span> Configurar frecuencias
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-emerald-400">□</span> Crear tu Avatar Cuántico
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-emerald-400">□</span> Enviar carta a revisión
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-emerald-400">□</span> Esperar aprobación del mentor
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
