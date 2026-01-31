@@ -36,6 +36,12 @@ interface Category {
   _count: { profiles: number };
 }
 
+interface Vision {
+  id: number;
+  nombre: string;
+  isActive: boolean;
+}
+
 interface BusinessProfile {
   id: number;
   headline: string;
@@ -99,6 +105,11 @@ export default function MarketplacePage() {
   const [onlyVerified, setOnlyVerified] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Filtro de visión para Expo
+  const [visions, setVisions] = useState<Vision[]>([]);
+  const [selectedVision, setSelectedVision] = useState<number | null>(null);
+  const [userActiveVisionId, setUserActiveVisionId] = useState<number | null>(null);
+
   // Verificar acceso (Avanzado completado o PL)
   useEffect(() => {
     const checkLideratoAccess = async () => {
@@ -130,6 +141,10 @@ export default function MarketplacePage() {
       params.set('page', page.toString());
       params.set('section', activeSection); // 'public' o 'expo'
       if (onlyVerified) params.set('verified', 'true');
+      // Filtro de visión solo para Expo
+      if (activeSection === 'expo' && selectedVision) {
+        params.set('visionId', selectedVision.toString());
+      }
 
       const res = await fetch(`/api/talent-directory/search?${params}`);
       if (res.ok) {
@@ -142,7 +157,7 @@ export default function MarketplacePage() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, selectedCategory, selectedState, sortBy, onlyVerified, hasAccess, activeSection]);
+  }, [searchQuery, selectedCategory, selectedState, sortBy, onlyVerified, hasAccess, activeSection, selectedVision]);
 
   const fetchCategories = async () => {
     try {
@@ -156,21 +171,52 @@ export default function MarketplacePage() {
     }
   };
 
+  // Obtener visiones disponibles y la visión activa del usuario
+  const fetchVisions = async () => {
+    try {
+      // Obtener todas las visiones
+      const visionsRes = await fetch('/api/visions/list');
+      if (visionsRes.ok) {
+        const data = await visionsRes.json();
+        setVisions(data.visions || []);
+      }
+
+      // Obtener la visión activa del usuario (solo para mostrar cuál es "tu visión")
+      const userVisionRes = await fetch('/api/user/vision-level');
+      if (userVisionRes.ok) {
+        const data = await userVisionRes.json();
+        if (data.visionId) {
+          setUserActiveVisionId(data.visionId);
+          // NO seleccionar automáticamente - dejar en null para mostrar "Todas las visiones"
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching visions:', error);
+    }
+  };
+
   useEffect(() => {
     if (hasAccess === true) {
       fetchCategories();
-      fetchProfiles();
+      fetchVisions();
+      // Solo fetch profiles en sección 'public' aquí
+      // Para 'expo', esperamos a que selectedVision esté listo
+      if (activeSection === 'public') {
+        fetchProfiles();
+      }
     } else if (hasAccess === false) {
       setLoading(false);
     }
-  }, [hasAccess, fetchProfiles]);
+  }, [hasAccess]);
 
-  // Recargar cuando cambia la sección
+  // Recargar cuando cambia la sección o la visión seleccionada
   useEffect(() => {
     if (hasAccess === true) {
+      // Para expo, selectedVision puede ser null (todas las visiones) - eso es válido
+      // Solo esperar si estamos en expo y aún no se ha cargado la info inicial
       fetchProfiles(1);
     }
-  }, [activeSection]);
+  }, [activeSection, selectedVision]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -332,6 +378,38 @@ export default function MarketplacePage() {
             Expo de Futuros
           </button>
         </div>
+
+        {/* Filtro de Visión para Expo */}
+        {activeSection === 'expo' && visions.length > 0 && (
+          <div className="flex justify-center mb-6">
+            <div className="inline-flex items-center gap-3 px-4 py-2 bg-gray-800/50 rounded-xl border border-purple-500/30">
+              <span className="text-purple-400 text-sm font-medium">Visión:</span>
+              <select
+                value={selectedVision || ''}
+                onChange={(e) => {
+                  const value = e.target.value ? parseInt(e.target.value) : null;
+                  setSelectedVision(value);
+                }}
+                className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="">Todas las visiones</option>
+                {visions.map((vision) => (
+                  <option key={vision.id} value={vision.id}>
+                    {vision.nombre} {vision.id === userActiveVisionId ? '(Tu visión)' : ''} {vision.isActive ? '🟢' : ''}
+                  </option>
+                ))}
+              </select>
+              {selectedVision && selectedVision !== userActiveVisionId && userActiveVisionId && (
+                <button
+                  onClick={() => setSelectedVision(userActiveVisionId)}
+                  className="text-xs text-purple-400 hover:text-purple-300 underline"
+                >
+                  Ver mi visión
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Barra de búsqueda */}
         <form onSubmit={handleSearch} className="mb-6">

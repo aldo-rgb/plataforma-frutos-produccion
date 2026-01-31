@@ -235,7 +235,7 @@ export default function TheVaultPage() {
               <ImageIcon className="w-5 h-5 text-purple-400" />
               <span className="text-gray-400 text-sm">Total Artefactos</span>
             </div>
-            <p className="text-3xl font-bold">{evidencias.length}</p>
+            <p className="text-3xl font-bold">{evidencias.length + businessLogos.length}</p>
           </div>
           
           <div className="bg-gradient-to-br from-yellow-900/50 to-yellow-800/30 border border-yellow-500/30 rounded-lg p-4">
@@ -344,7 +344,7 @@ export default function TheVaultPage() {
             <div className="max-w-7xl mx-auto px-6 py-20 text-center">
               <LoadingSpinner message="Cargando tu Bóveda..." size="lg" />
             </div>
-          ) : evidenciasFiltradas.length === 0 ? (
+          ) : evidenciasFiltradas.length === 0 && businessLogos.length === 0 ? (
             <div className="max-w-7xl mx-auto px-6 py-20 text-center">
               <ImageIcon className="w-20 h-20 text-gray-600 mx-auto mb-4" />
               <p className="text-xl text-gray-400 mb-2">Tu Bóveda está vacía</p>
@@ -352,37 +352,40 @@ export default function TheVaultPage() {
             </div>
           ) : (
             <div className="max-w-7xl mx-auto px-6">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {evidenciasFiltradas.map((evidencia) => (
-                  <div
-                    key={evidencia.id}
-                    onClick={() => setSelectedImage(evidencia)}
-                    className={`relative aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-all hover:scale-105 ${rarityColors[evidencia.rarity]}`}
-                  >
-                    <Image
-                      src={evidencia.fotoUrl}
-                      alt={evidencia.descripcion}
-                      fill
-                      className="object-cover"
-                    />
-                    
-                    {/* Overlay con info */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity">
-                      <div className="absolute bottom-0 left-0 right-0 p-3">
-                        <p className="text-xs text-gray-300 mb-1">{evidencia.area}</p>
-                        <p className="text-sm font-bold">{rarityLabels[evidencia.rarity]}</p>
+              {/* GRID DE EVIDENCIAS */}
+              {evidenciasFiltradas.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {evidenciasFiltradas.map((evidencia) => (
+                    <div
+                      key={evidencia.id}
+                      onClick={() => setSelectedImage(evidencia)}
+                      className={`relative aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-all hover:scale-105 ${rarityColors[evidencia.rarity]}`}
+                    >
+                      <Image
+                        src={evidencia.fotoUrl}
+                        alt={evidencia.descripcion}
+                        fill
+                        className="object-cover"
+                      />
+                      
+                      {/* Overlay con info */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity">
+                        <div className="absolute bottom-0 left-0 right-0 p-3">
+                          <p className="text-xs text-gray-300 mb-1">{evidencia.area}</p>
+                          <p className="text-sm font-bold">{rarityLabels[evidencia.rarity]}</p>
+                        </div>
                       </div>
+                      
+                      {/* Badge de rareza en esquina */}
+                      {evidencia.rarity !== 'COMMON' && (
+                        <div className="absolute top-2 right-2 backdrop-blur-sm bg-black/50 rounded-full px-2 py-1">
+                          <span className="text-xs">{rarityLabels[evidencia.rarity].split(' ')[0]}</span>
+                        </div>
+                      )}
                     </div>
-                    
-                    {/* Badge de rareza en esquina */}
-                    {evidencia.rarity !== 'COMMON' && (
-                      <div className="absolute top-2 right-2 backdrop-blur-sm bg-black/50 rounded-full px-2 py-1">
-                        <span className="text-xs">{rarityLabels[evidencia.rarity].split(' ')[0]}</span>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
               
               {/* SECCIÓN DE LOGOS DE NEGOCIO */}
               {businessLogos.length > 0 && (

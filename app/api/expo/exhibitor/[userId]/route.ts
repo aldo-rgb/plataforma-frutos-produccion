@@ -4,10 +4,11 @@ import { prisma } from '@/lib/prisma';
 // GET - Obtener datos del expositor para la página de votación
 export async function GET(
   req: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const userId = parseInt(params.userId);
+    const { userId: userIdStr } = await params;
+    const userId = parseInt(userIdStr);
     
     if (isNaN(userId)) {
       return NextResponse.json({ 
@@ -26,7 +27,14 @@ export async function GET(
             headline: true,
             description: true,
             logoUrl: true,
-            status: true
+            status: true,
+            visionId: true,
+            vision: {
+              select: {
+                id: true,
+                nombre: true
+              }
+            }
           }
         }
       }
@@ -45,7 +53,9 @@ export async function GET(
         apellido: '',
         imagen: exhibitor.BusinessProfile?.logoUrl || exhibitor.imagen,
         headline: exhibitor.BusinessProfile?.headline || null
-      }
+      },
+      visionId: exhibitor.BusinessProfile?.visionId || null,
+      visionName: exhibitor.BusinessProfile?.vision?.nombre || null
     });
 
   } catch (error) {

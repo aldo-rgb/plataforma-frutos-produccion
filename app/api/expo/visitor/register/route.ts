@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
       email, 
       phone, 
       referrerName,
+      referrerId,
       relationship,
       firstExhibitorId 
     } = body;
@@ -37,20 +38,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar referidor si se proporcionó nombre
-    let referredById: number | null = null;
-    if (referrerName && referrerName.trim()) {
-      const searchTerms: string[] = referrerName.trim().toLowerCase().split(' ');
-      
-      // Buscar usuario que coincida
+    // Usar referrerId directamente si se proporcionó, si no buscar por nombre
+    let referredById: number | null = referrerId ? parseInt(referrerId) : null;
+    
+    if (!referredById && referrerName && referrerName.trim()) {
+      // Buscar usuario que coincida con el nombre
       const referrer = await prisma.usuario.findFirst({
         where: {
-          AND: searchTerms.map((term: string) => ({
-            OR: [
-              { nombre: { contains: term, mode: 'insensitive' as const } },
-              { apellido: { contains: term, mode: 'insensitive' as const } }
-            ]
-          }))
+          nombre: { contains: referrerName.trim(), mode: 'insensitive' }
         },
         select: { id: true }
       });
@@ -95,8 +90,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error registrando visitante:', error);
+    // Agregar más detalle del error
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     return NextResponse.json(
-      { error: 'Error al registrar visitante' },
+      { error: 'Error al registrar visitante', details: errorMessage },
       { status: 500 }
     );
   }

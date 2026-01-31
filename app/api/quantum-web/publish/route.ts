@@ -35,6 +35,7 @@ interface BusinessInfo {
   name: string;
   description: string;
   category: string;
+  logo?: string;
   phone: string;
   whatsapp: string;
   email: string;
@@ -74,9 +75,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 });
     }
 
-    // Obtener el usuario
+    // Obtener el usuario CON su organización y visión activa
     const user = await prisma.usuario.findUnique({
-      where: { email: session.user.email }
+      where: { email: session.user.email },
+      select: {
+        id: true,
+        organizationId: true,
+        VisionParticipante_VisionParticipante_participanteIdToUsuario: {
+          where: { Vision: { isActive: true } },
+          select: { visionId: true },
+          take: 1
+        }
+      }
     });
 
     if (!user) {
@@ -117,6 +127,7 @@ export async function POST(req: Request) {
         businessName: businessInfo.name,
         businessDescription: businessInfo.description,
         businessCategory: businessInfo.category,
+        logoUrl: businessInfo.logo || null,
         phone: businessInfo.phone,
         whatsapp: businessInfo.whatsapp,
         email: businessInfo.email || session.user.email,
@@ -144,6 +155,7 @@ export async function POST(req: Request) {
         businessName: businessInfo.name,
         businessDescription: businessInfo.description,
         businessCategory: businessInfo.category,
+        logoUrl: businessInfo.logo || undefined,
         phone: businessInfo.phone,
         whatsapp: businessInfo.whatsapp,
         email: businessInfo.email || session.user.email,
@@ -190,6 +202,87 @@ export async function POST(req: Request) {
           featured: product.featured
         }))
       });
+    }
+
+    // ===== CREAR/ACTUALIZAR BusinessProfile para la Expo de Futuros =====
+    if (user.organizationId) {
+      try {
+        // Buscar o crear la categoría del negocio
+        let category = await prisma.businessCategory.findFirst({
+          where: { 
+            OR: [
+              { name: { equals: businessInfo.category, mode: 'insensitive' } },
+              { slug: { equals: businessInfo.category.toLowerCase().replace(/\s+/g, '-'), mode: 'insensitive' } }
+            ]
+          }
+        });
+
+        // Si no existe la categoría, usar "Otro" o crear una genérica
+        if (!category) {
+          category = await prisma.businessCategory.findFirst({
+            where: { slug: 'otro' }
+          });
+          
+          if (!category) {
+            // Crear categoría "Otro" si no existe
+            category = await prisma.businessCategory.create({
+              data: {
+                name: 'Otro',
+                slug: 'otro',
+                icon: '✨',
+                description: 'Otros servicios y negocios',
+                isActive: true
+              }
+            });
+          }
+        }
+
+        // Obtener la visión activa del usuario
+        const userVisionId = user.VisionParticipante_VisionParticipante_participanteIdToUsuario?.[0]?.visionId || null;
+
+        // Extraer ciudad y estado de la dirección (simple split)
+        const addressParts = businessInfo.address?.split(',').map(s => s.trim()) || [];
+        const city = addressParts[0] || 'Por definir';
+        const state = addressParts[1] || addressParts[0] || 'Por definir';
+
+        // Crear o actualizar BusinessProfile
+        await prisma.businessProfile.upsert({
+          where: { userId: user.id },
+          create: {
+            userId: user.id,
+            organizationId: user.organizationId,
+            visionId: userVisionId,
+            headline: businessInfo.name.substring(0, 100),
+            categoryId: category.id,
+            description: businessInfo.description || content.aboutText || 'Mi negocio',
+            discountOffer: '10% de descuento para miembros de la comunidad',
+            city,
+            state,
+            whatsappPhone: businessInfo.whatsapp || businessInfo.phone || '',
+            email: businessInfo.email || session.user.email,
+            website: `quantummatter.app/site/${slug}`,
+            logoUrl: businessInfo.logo || null,
+            galleryImages: [],
+            status: 'HIDDEN' // Empieza oculto hasta que "de el salto"
+          },
+          update: {
+            headline: businessInfo.name.substring(0, 100),
+            categoryId: category.id,
+            description: businessInfo.description || content.aboutText || 'Mi negocio',
+            city,
+            state,
+            whatsappPhone: businessInfo.whatsapp || businessInfo.phone || '',
+            email: businessInfo.email || session.user.email,
+            website: `quantummatter.app/site/${slug}`,
+            logoUrl: businessInfo.logo || undefined,
+            visionId: userVisionId || undefined,
+            updatedAt: new Date()
+          }
+        });
+      } catch (profileError) {
+        console.error('Error creando BusinessProfile (no crítico):', profileError);
+        // No fallar si hay error en BusinessProfile, el sitio ya se creó
+      }
     }
 
     // Construir URL

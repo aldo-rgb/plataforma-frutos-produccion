@@ -49,7 +49,8 @@ import {
   TrendingUp,
   Award,
   FileText,
-  AlertCircle
+  AlertCircle,
+  Briefcase
 } from 'lucide-react';
 
 // Tipos
@@ -1741,7 +1742,15 @@ export default function QuantumWebEngine() {
           </div>
           
           <button
-            onClick={() => router.push('/dashboard/mi-negocio')}
+            onClick={() => router.push('/dashboard/mi-negocio?view=optimizador')}
+            className="w-full py-4 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold text-lg flex items-center justify-center gap-3 hover:shadow-lg hover:shadow-orange-500/25 transition-all"
+          >
+            <Briefcase className="w-5 h-5" />
+            Ir a Mi Negocio
+          </button>
+          
+          <button
+            onClick={() => router.push('/dashboard')}
             className="w-full py-3 rounded-xl text-slate-400 hover:text-white transition"
           >
             Volver al Dashboard

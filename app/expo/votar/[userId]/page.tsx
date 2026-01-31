@@ -13,7 +13,8 @@ import {
   Mail,
   Phone,
   Users,
-  Sparkles
+  Sparkles,
+  Search
 } from 'lucide-react';
 
 interface ExhibitorData {
@@ -22,6 +23,11 @@ interface ExhibitorData {
   apellido: string;
   imagen: string | null;
   headline: string | null;
+}
+
+interface ReferrerSuggestion {
+  id: number;
+  nombre: string;
 }
 
 // Opciones de parentesco
@@ -55,6 +61,11 @@ export default function ExpoVotePage() {
   const [referrerName, setReferrerName] = useState('');
   const [relationship, setRelationship] = useState('');
   const [searchingReferrer, setSearchingReferrer] = useState(false);
+  
+  // Sugerencias de referidores
+  const [referrerSuggestions, setReferrerSuggestions] = useState<ReferrerSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedReferrer, setSelectedReferrer] = useState<ReferrerSuggestion | null>(null);
 
   // Cargar datos del expositor y verificar registro
   useEffect(() => {
@@ -90,21 +101,34 @@ export default function ExpoVotePage() {
     if (exhibitorId) init();
   }, [exhibitorId, router]);
 
-  // Buscar referidor por nombre
+  // Buscar referidor por nombre (solo de la misma visión)
   const searchReferrer = async (name: string) => {
-    if (name.length < 3) {
+    if (name.length < 2) {
+      setReferrerSuggestions([]);
+      setShowSuggestions(false);
+      setSelectedReferrer(null);
       setReferrerName('');
       return;
     }
     
     setSearchingReferrer(true);
     try {
-      const res = await fetch(`/api/expo/search-referrer?q=${encodeURIComponent(name)}`);
+      // Incluir exhibitorId para filtrar por visión
+      const res = await fetch(`/api/expo/search-referrer?q=${encodeURIComponent(name)}&exhibitorId=${exhibitorId}`);
       if (res.ok) {
         const data = await res.json();
-        if (data.found) {
-          setReferrerName(data.nombre);
+        if (data.found && data.users && data.users.length > 0) {
+          setReferrerSuggestions(data.users);
+          setShowSuggestions(true);
+          
+          // Si solo hay un resultado, seleccionarlo automáticamente
+          if (data.users.length === 1) {
+            selectReferrer(data.users[0]);
+          }
         } else {
+          setReferrerSuggestions([]);
+          setShowSuggestions(false);
+          setSelectedReferrer(null);
           setReferrerName('');
         }
       }
@@ -113,6 +137,14 @@ export default function ExpoVotePage() {
     } finally {
       setSearchingReferrer(false);
     }
+  };
+
+  // Seleccionar un referidor de la lista
+  const selectReferrer = (referrer: ReferrerSuggestion) => {
+    setSelectedReferrer(referrer);
+    setReferrerCode(referrer.nombre);
+    setReferrerName(referrer.nombre);
+    setShowSuggestions(false);
   };
 
   // Registrar visitante
@@ -141,6 +173,7 @@ export default function ExpoVotePage() {
           email: visitorEmail.trim(),
           phone: visitorPhone.trim(),
           referrerName: referrerCode.trim() || null,
+          referrerId: selectedReferrer?.id || null,
           relationship: relationship,
           firstExhibitorId: exhibitorId
         })
@@ -317,7 +350,7 @@ export default function ExpoVotePage() {
           </h3>
           
           {/* Código/Nombre de referidor */}
-          <div>
+          <div className="relative">
             <label className="block text-sm text-slate-400 mb-2">
               Nombre del participante que te invitó
             </label>
@@ -327,23 +360,83 @@ export default function ExpoVotePage() {
                 value={referrerCode}
                 onChange={(e) => {
                   setReferrerCode(e.target.value);
+                  setSelectedReferrer(null);
                   searchReferrer(e.target.value);
+                }}
+                onFocus={() => {
+                  if (referrerSuggestions.length > 0) {
+                    setShowSuggestions(true);
+                  }
                 }}
                 placeholder="Buscar por nombre..."
                 className="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none pr-10"
               />
-              {searchingReferrer && (
+              {searchingReferrer ? (
                 <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 animate-spin" />
+              ) : (
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
               )}
             </div>
-            {referrerName && (
+            
+            {/* Dropdown de sugerencias */}
+            {showSuggestions && referrerSuggestions.length > 0 && !selectedReferrer && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="absolute z-50 w-full mt-2 bg-slate-800 rounded-xl border border-slate-600 shadow-xl max-h-48 overflow-y-auto"
+              >
+                <div className="p-2 border-b border-slate-700 text-xs text-slate-400">
+                  {referrerSuggestions.length} participante(s) encontrado(s)
+                </div>
+                {referrerSuggestions.map((referrer) => (
+                  <button
+                    key={referrer.id}
+                    type="button"
+                    onClick={() => selectReferrer(referrer)}
+                    className="w-full p-3 text-left hover:bg-slate-700 transition-colors flex items-center gap-3 border-b border-slate-700/50 last:border-0"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                      <User className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <span className="text-white font-medium">{referrer.nombre}</span>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+            
+            {/* Referidor seleccionado */}
+            {selectedReferrer && (
+              <motion.div 
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-2 p-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-2 text-emerald-400 text-sm">
+                  <Check className="w-4 h-4" />
+                  <span className="font-medium">{selectedReferrer.nombre}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedReferrer(null);
+                    setReferrerCode('');
+                    setReferrerName('');
+                  }}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </motion.div>
+            )}
+            
+            {/* Mensaje cuando no encuentra */}
+            {referrerCode.length >= 2 && !searchingReferrer && referrerSuggestions.length === 0 && !selectedReferrer && (
               <motion.p 
                 initial={{ opacity: 0, y: -5 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mt-2 text-emerald-400 text-sm flex items-center gap-2"
+                className="mt-2 text-amber-400 text-sm"
               >
-                <Check className="w-4 h-4" />
-                {referrerName}
+                No se encontró ningún participante con ese nombre en esta visión
               </motion.p>
             )}
           </div>

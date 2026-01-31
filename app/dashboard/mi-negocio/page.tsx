@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, memo, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Rocket,
@@ -37,8 +37,13 @@ import {
   Plus,
   Tag,
   Clock,
-  Lock
+  Lock,
+  QrCode,
+  Share2,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
+import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
 
 // ============================================
@@ -111,10 +116,333 @@ const LOADING_PHRASES = [
 ];
 
 // ============================================
+// COMPONENTE: Compartir en la Expo
+// ============================================
+function ExpoShareSection({ userId, userName, visionId }: { userId?: number; userName?: string; visionId?: number }) {
+  const [expoQR, setExpoQR] = useState<string | null>(null);
+  const [expoLink, setExpoLink] = useState<string>('');
+  const [copied, setCopied] = useState(false);
+  const [generatingQR, setGeneratingQR] = useState(false);
+
+  useEffect(() => {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    
+    if (visionId) {
+      // Link al catálogo de la visión
+      const catalogLink = `${baseUrl}/expo/catalogo/${visionId}`;
+      setExpoLink(catalogLink);
+      generateQR(catalogLink);
+    } else if (userId) {
+      // Fallback al link directo de votar
+      const link = `${baseUrl}/expo/votar/${userId}`;
+      setExpoLink(link);
+      generateQR(link);
+    }
+  }, [userId, visionId]);
+
+  const generateQR = async (url: string) => {
+    setGeneratingQR(true);
+    try {
+      const qrDataUrl = await QRCode.toDataURL(url, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#ffffff'
+        }
+      });
+      setExpoQR(qrDataUrl);
+    } catch (error) {
+      console.error('Error generando QR:', error);
+    } finally {
+      setGeneratingQR(false);
+    }
+  };
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(expoLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('Error copiando:', error);
+    }
+  };
+
+  const shareLink = async () => {
+    // Crear mensaje de invitación para WhatsApp - tono personal
+    const mensaje = `Hola! Sé que tal vez ya tienes planes, pero no quiero dejar pasar la oportunidad de invitarte a mi presentación en la Expo de Futuros Imposibles.
+
+Vamos a tener la presentación de varios compañeros emprendedores y nuestros negocios innovadores.
+
+Puedes pre-registrarte y calificar a tus favoritos desde este link:
+
+${expoLink}
+
+Espero verte ahí!`;
+
+    // Abrir WhatsApp con el mensaje
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  // Función para imprimir QR en hoja tamaño carta
+  const printQR = async () => {
+    // Generar QR más grande para impresión
+    const printQRDataUrl = await QRCode.toDataURL(expoLink, {
+      width: 400,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#ffffff'
+      }
+    });
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const businessName = userName || 'Mi Negocio';
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>QR - ${businessName}</title>
+        <style>
+          @page {
+            size: letter;
+            margin: 0;
+          }
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            width: 8.5in;
+            height: 11in;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            padding: 0.5in;
+          }
+          .container {
+            text-align: center;
+            width: 100%;
+            max-width: 6in;
+          }
+          .header {
+            margin-bottom: 0.3in;
+          }
+          .expo-title {
+            font-size: 24pt;
+            font-weight: 800;
+            color: #f97316;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 0.1in;
+          }
+          .subtitle {
+            font-size: 14pt;
+            color: #64748b;
+            font-weight: 500;
+          }
+          .business-name {
+            font-size: 36pt;
+            font-weight: 800;
+            color: #1e293b;
+            margin: 0.4in 0;
+            line-height: 1.2;
+          }
+          .qr-container {
+            background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+            border: 4px solid #f97316;
+            border-radius: 24px;
+            padding: 0.4in;
+            display: inline-block;
+            margin: 0.3in 0;
+            box-shadow: 0 8px 30px rgba(249, 115, 22, 0.2);
+          }
+          .qr-image {
+            width: 3.5in;
+            height: 3.5in;
+          }
+          .scan-text {
+            font-size: 20pt;
+            font-weight: 700;
+            color: #ea580c;
+            margin-top: 0.3in;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+          }
+          .scan-icon {
+            font-size: 24pt;
+          }
+          .instructions {
+            font-size: 13pt;
+            color: #64748b;
+            margin-top: 0.2in;
+            line-height: 1.5;
+          }
+          .footer {
+            margin-top: 0.4in;
+            padding-top: 0.2in;
+            border-top: 2px dashed #e2e8f0;
+          }
+          .url-text {
+            font-size: 10pt;
+            color: #94a3b8;
+            font-family: monospace;
+            word-break: break-all;
+          }
+          .decorative-stars {
+            font-size: 18pt;
+            color: #fbbf24;
+            margin: 0.15in 0;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="expo-title">🚀 Expo de Futuros Imposibles</div>
+            <div class="subtitle">¡Califica este negocio!</div>
+          </div>
+          
+          <div class="decorative-stars">⭐ ⭐ ⭐ ⭐ ⭐</div>
+          
+          <div class="business-name">${businessName}</div>
+          
+          <div class="qr-container">
+            <img src="${printQRDataUrl}" alt="QR Code" class="qr-image" />
+          </div>
+          
+          <div class="scan-text">
+            <span class="scan-icon">📱</span>
+            Escanea y vota
+          </div>
+          
+          <div class="instructions">
+            Abre la cámara de tu celular<br/>
+            y escanea el código QR para calificar
+          </div>
+          
+          <div class="footer">
+            <div class="url-text">${expoLink}</div>
+          </div>
+        </div>
+        
+        <script>
+          window.onload = function() {
+            window.print();
+          }
+        </script>
+      </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+  };
+
+  if (!userId && !visionId) return null;
+
+  return (
+    <div className="bg-gradient-to-r from-orange-900/30 to-amber-900/30 rounded-2xl p-6 border border-orange-500/30">
+      <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+        <QrCode className="w-5 h-5 text-orange-400" />
+        Compartir en la Expo
+      </h3>
+      <p className="text-slate-400 text-sm mb-4">
+        Comparte este link o QR para que los invitados vean el catálogo y califiquen tu negocio
+      </p>
+
+      <div className="flex flex-col md:flex-row gap-4">
+        {/* QR Code */}
+        <div className="flex-shrink-0">
+          {generatingQR ? (
+            <div className="w-32 h-32 bg-slate-800 rounded-xl flex items-center justify-center">
+              <Loader2 className="w-6 h-6 text-orange-400 animate-spin" />
+            </div>
+          ) : expoQR ? (
+            <div className="bg-white p-2 rounded-xl">
+              <img src={expoQR} alt="QR Expo" className="w-28 h-28" />
+            </div>
+          ) : null}
+        </div>
+
+        {/* Link y botones */}
+        <div className="flex-1 space-y-3">
+          {/* Link */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={expoLink}
+              readOnly
+              className="flex-1 p-2 rounded-lg bg-slate-800/50 border border-slate-600/50 text-white text-sm truncate"
+            />
+            <button
+              onClick={copyLink}
+              className={`px-3 py-2 rounded-lg transition-colors flex items-center gap-1 ${
+                copied 
+                  ? 'bg-emerald-600 text-white' 
+                  : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+              }`}
+            >
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            </button>
+          </div>
+
+          {/* Botones */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={shareLink}
+              className="flex-1 py-2 px-4 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white font-medium text-sm hover:shadow-lg hover:shadow-green-500/25 transition-all flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+              Invitar a Expo
+            </button>
+            <button
+              onClick={printQR}
+              className="py-2 px-4 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm flex items-center gap-2 transition-colors font-medium"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+              Imprimir
+            </button>
+            <a
+              href={expoLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="py-2 px-4 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm flex items-center gap-2 transition-colors"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Probar
+            </a>
+          </div>
+
+          <p className="text-xs text-slate-500">
+            💡 Los invitados verán el catálogo de expositores y podrán pre-registrarse
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
 // COMPONENTE PRINCIPAL
 // ============================================
 export default function QuantumBusinessBuilderPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   
   // Refs para los textareas (evitar re-renders)
   const talentoRef = useRef<HTMLTextAreaElement>(null);
@@ -357,6 +685,14 @@ export default function QuantumBusinessBuilderPage() {
       setCheckingWebsite(false);
     }
   }, [hasAccess]);
+
+  // Si viene con ?view=optimizador, ir directo al optimizador cuando tenga perfil
+  useEffect(() => {
+    const view = searchParams.get('view');
+    if (view === 'optimizador' && hasExistingProfile && hasAccess === true) {
+      setStep('optimizador');
+    }
+  }, [searchParams, hasExistingProfile, hasAccess]);
 
   const checkExistingProfile = async () => {
     try {
@@ -1081,6 +1417,22 @@ export default function QuantumBusinessBuilderPage() {
               </div>
             </div>
           </div>
+        </motion.div>
+      )}
+
+      {/* Botón Compartir en la Expo - Visible si tiene perfil de negocio */}
+      {hasExistingProfile && existingProfile && (
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.35 }}
+          className="w-full max-w-4xl mb-8 relative z-10"
+        >
+          <ExpoShareSection 
+            userId={existingProfile.userId} 
+            userName={existingProfile.headline}
+            visionId={existingProfile.vision?.id}
+          />
         </motion.div>
       )}
 
@@ -2314,6 +2666,13 @@ export default function QuantumBusinessBuilderPage() {
                 </p>
               </div>
             </div>
+
+            {/* Compartir en la Expo */}
+            <ExpoShareSection 
+              userId={existingProfile?.userId} 
+              userName={previewNombre || existingProfile?.headline}
+              visionId={existingProfile?.vision?.id}
+            />
           </div>
 
           {/* Columna derecha: Preview en vivo */}

@@ -36,27 +36,58 @@ export async function GET(request: NextRequest) {
     const onlyVerified = searchParams.get('verified') === 'true';
     const onlyWithDiscount = searchParams.get('discount') === 'true';
     const section = searchParams.get('section') || 'public'; // 'public' (ACTIVE) o 'expo' (HIDDEN)
+    const visionId = searchParams.get('visionId'); // Filtro por visión para Expo
 
     // Construir filtros
     // ACTIVE = Directorio de Servicios (público, TODAS las organizaciones)
-    // HIDDEN = Expo de Futuros (solo mi organización)
-    const where: Record<string, unknown> = {
-      status: section === 'expo' ? 'HIDDEN' : 'ACTIVE',
-    };
+    // HIDDEN o ACTIVE = Expo de Futuros (todos los negocios de la organización)
+    const where: Record<string, unknown> = {};
 
-    // Expo de Futuros: solo mi organización
-    // Directorio de Servicios: todas las organizaciones
+    // Expo de Futuros: mostrar TODOS los negocios de la organización (HIDDEN y ACTIVE)
+    // Directorio de Servicios: solo ACTIVE
     if (section === 'expo') {
+      // En Expo mostramos todos los negocios (sin importar status)
+      where.status = { in: ['HIDDEN', 'ACTIVE'] };
+      // Siempre filtrar por organización del usuario
       where.organizationId = user.organizationId;
+      
+      // Si hay filtro de visión, aplicarlo adicionalmente
+      if (visionId) {
+        where.OR = [
+          { visionId: parseInt(visionId) },
+          { 
+            user: {
+              VisionParticipante_VisionParticipante_participanteIdToUsuario: {
+                some: { visionId: parseInt(visionId) }
+              }
+            }
+          }
+        ];
+      }
+      // Si no hay visionId, muestra TODOS los de la organización
+    } else {
+      // Directorio de Servicios: solo perfiles publicados
+      where.status = 'ACTIVE';
     }
 
-    // Búsqueda por texto
+    // Búsqueda por texto (debe combinarse con filtros existentes)
     if (query) {
-      where.OR = [
-        { headline: { contains: query, mode: 'insensitive' } },
-        { description: { contains: query, mode: 'insensitive' } },
-        { user: { nombre: { contains: query, mode: 'insensitive' } } },
-      ];
+      // Si ya hay OR por visión, necesitamos estructurar diferente
+      const textFilter = {
+        OR: [
+          { headline: { contains: query, mode: 'insensitive' } },
+          { description: { contains: query, mode: 'insensitive' } },
+          { user: { nombre: { contains: query, mode: 'insensitive' } } },
+        ]
+      };
+      
+      if (where.OR) {
+        // Ya hay filtros OR, combinarlos con AND
+        where.AND = [{ OR: where.OR }, textFilter];
+        delete where.OR;
+      } else {
+        where.OR = textFilter.OR;
+      }
     }
 
     // Filtro por categoría

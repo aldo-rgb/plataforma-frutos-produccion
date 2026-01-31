@@ -20,7 +20,11 @@ import {
   Search,
   ChevronRight,
   Award,
-  MessageSquare
+  MessageSquare,
+  Grid3X3,
+  ArrowLeft,
+  Filter,
+  ExternalLink
 } from 'lucide-react';
 
 interface ExhibitorData {
@@ -29,6 +33,32 @@ interface ExhibitorData {
   apellido: string;
   imagen: string | null;
   headline: string | null;
+}
+
+interface CatalogExhibitor {
+  id: number;
+  userId: number;
+  headline: string;
+  description: string;
+  categoryId: number;
+  categoryName: string;
+  categoryIcon: string;
+  userName: string;
+  userImage: string | null;
+  logoUrl: string | null;
+  discountOffer: string;
+  avgRating: number;
+  totalReviews: number;
+  website: string | null;
+  city: string | null;
+  whatsappPhone: string | null;
+}
+
+interface Category {
+  id: number;
+  name: string;
+  icon: string;
+  count: number;
 }
 
 interface RatedExhibitor {
@@ -55,12 +85,20 @@ function CalificarContent() {
   // Lista de expositores calificados
   const [ratedExhibitors, setRatedExhibitors] = useState<RatedExhibitor[]>([]);
   
-  // Modo actual: 'hub' o 'rating'
-  const [mode, setMode] = useState<'hub' | 'rating'>('hub');
+  // Modo actual: 'hub', 'rating' o 'catalog'
+  const [mode, setMode] = useState<'hub' | 'rating' | 'catalog'>('hub');
   
   // Datos del expositor actual
   const [currentExhibitor, setCurrentExhibitor] = useState<ExhibitorData | null>(null);
   const [loadingExhibitor, setLoadingExhibitor] = useState(false);
+  
+  // Catálogo de expositores
+  const [catalogExhibitors, setCatalogExhibitors] = useState<CatalogExhibitor[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [loadingCatalog, setLoadingCatalog] = useState(false);
+  const [currentVisionId, setCurrentVisionId] = useState<number | null>(null);
+  const [currentVisionName, setCurrentVisionName] = useState<string>('');
   
   // Formulario de calificación
   const [rating, setRating] = useState(0);
@@ -103,8 +141,17 @@ function CalificarContent() {
         setVisitorName(data.name || name || 'Visitante');
         setRatedExhibitors(data.ratings || []);
         
-        // Si hay un expositor preseleccionado, cargarlo
+        // Si hay un expositor preseleccionado, obtener su visionId y cargarlo
         if (preselectedExhibitor) {
+          // Primero obtener la info del expositor incluyendo visionId
+          const exhibitorRes = await fetch(`/api/expo/exhibitor/${preselectedExhibitor}`);
+          if (exhibitorRes.ok) {
+            const exhibitorData = await exhibitorRes.json();
+            if (exhibitorData.visionId) {
+              setCurrentVisionId(exhibitorData.visionId);
+              setCurrentVisionName(exhibitorData.visionName || '');
+            }
+          }
           loadExhibitor(preselectedExhibitor);
         }
       } catch (err) {
@@ -136,6 +183,13 @@ function CalificarContent() {
       
       const data = await res.json();
       setCurrentExhibitor(data.exhibitor);
+      
+      // Guardar la visión del expositor para filtrar el catálogo
+      if (data.visionId && !currentVisionId) {
+        setCurrentVisionId(data.visionId);
+        setCurrentVisionName(data.visionName || '');
+      }
+      
       setMode('rating');
       
       // Reset formulario
@@ -170,6 +224,35 @@ function CalificarContent() {
       setSearching(false);
     }
   };
+
+  // Cargar catálogo de expositores (filtrado por visión)
+  const loadCatalog = async () => {
+    setLoadingCatalog(true);
+    try {
+      // Construir URL con filtro de visión si existe
+      const params = new URLSearchParams();
+      if (currentVisionId) {
+        params.set('visionId', currentVisionId.toString());
+      }
+      
+      const url = `/api/expo/catalog${params.toString() ? `?${params}` : ''}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        setCatalogExhibitors(data.exhibitors || []);
+        setCategories(data.categories || []);
+      }
+    } catch (err) {
+      console.error('Error cargando catálogo:', err);
+    } finally {
+      setLoadingCatalog(false);
+    }
+  };
+
+  // Filtrar exhibidores por categoría
+  const filteredCatalogExhibitors = selectedCategory
+    ? catalogExhibitors.filter(e => e.categoryId === selectedCategory)
+    : catalogExhibitors;
 
   // Enviar calificación
   const submitRating = async () => {
@@ -325,6 +408,24 @@ function CalificarContent() {
                 </motion.button>
               </div>
 
+              {/* Botón Ver Catálogo */}
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  setMode('catalog');
+                  loadCatalog();
+                }}
+                className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 p-4 rounded-2xl border border-emerald-500/30 flex items-center justify-center gap-3"
+              >
+                <Grid3X3 className="w-6 h-6 text-white" />
+                <div className="text-left">
+                  <p className="text-white font-medium">Ver Catálogo de Expositores</p>
+                  <p className="text-emerald-200 text-xs">Explora todos los negocios por categoría</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-white ml-auto" />
+              </motion.button>
+
               {/* Búsqueda manual */}
               <div className="space-y-3">
                 <div className="relative">
@@ -432,7 +533,202 @@ function CalificarContent() {
                 </div>
               )}
             </motion.div>
+          ) : mode === 'catalog' ? (
+            /* ===== CATÁLOGO DE EXPOSITORES ===== */
+            <motion.div
+              key="catalog"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              {/* Header del catálogo */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setMode('hub');
+                    setSelectedCategory(null);
+                  }}
+                  className="p-2 rounded-xl bg-slate-800 text-purple-400 hover:bg-slate-700"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div>
+                  <h1 className="text-xl font-bold text-white">Catálogo de Expositores</h1>
+                  <p className="text-purple-300 text-sm">
+                    {catalogExhibitors.length} negocios disponibles
+                    {currentVisionName && (
+                      <span className="ml-1">• {currentVisionName}</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {loadingCatalog ? (
+                <div className="text-center py-12">
+                  <Loader2 className="w-8 h-8 text-purple-400 animate-spin mx-auto mb-4" />
+                  <p className="text-slate-400">Cargando catálogo...</p>
+                </div>
+              ) : (
+                <>
+                  {/* Filtros por categoría */}
+                  {categories.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-purple-300 text-sm">
+                        <Filter className="w-4 h-4" />
+                        <span>Filtrar por área:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => setSelectedCategory(null)}
+                          className={`px-3 py-2 rounded-full text-sm font-medium transition-all ${
+                            selectedCategory === null
+                              ? 'bg-purple-600 text-white'
+                              : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                          }`}
+                        >
+                          Todas ({catalogExhibitors.length})
+                        </button>
+                        {categories.map((cat) => (
+                          <button
+                            key={cat.id}
+                            onClick={() => setSelectedCategory(cat.id)}
+                            className={`px-3 py-2 rounded-full text-sm font-medium transition-all ${
+                              selectedCategory === cat.id
+                                ? 'bg-purple-600 text-white'
+                                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                            }`}
+                          >
+                            {cat.icon} {cat.name} ({cat.count})
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Lista de expositores */}
+                  <div className="space-y-3">
+                    {filteredCatalogExhibitors.length === 0 ? (
+                      <div className="text-center py-8 text-slate-400">
+                        No hay expositores en esta categoría
+                      </div>
+                    ) : (
+                      filteredCatalogExhibitors.map((exhibitor) => {
+                        const alreadyRated = ratedExhibitors.some(r => r.exhibitorId === exhibitor.userId);
+                        return (
+                          <motion.div
+                            key={exhibitor.id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-slate-800/50 rounded-2xl border border-slate-700/50 overflow-hidden"
+                          >
+                            {/* Header con imagen y nombre */}
+                            <div className="p-4 flex items-start gap-4">
+                              <img
+                                src={exhibitor.logoUrl || exhibitor.userImage || '/default-avatar.png'}
+                                alt={exhibitor.headline}
+                                className="w-16 h-16 rounded-xl object-cover border-2 border-purple-500/30"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <h3 className="text-white font-bold truncate">{exhibitor.headline}</h3>
+                                <p className="text-purple-300 text-sm">{exhibitor.userName}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-xs">
+                                    {exhibitor.categoryIcon} {exhibitor.categoryName}
+                                  </span>
+                                  {exhibitor.avgRating > 0 && (
+                                    <div className="flex items-center gap-1 text-yellow-400 text-xs">
+                                      <Star className="w-3 h-3 fill-yellow-400" />
+                                      <span>{exhibitor.avgRating.toFixed(1)}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              {alreadyRated && (
+                                <div className="p-2 rounded-full bg-emerald-500/20">
+                                  <Check className="w-5 h-5 text-emerald-400" />
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Descripción */}
+                            <div className="px-4 pb-3">
+                              <p className="text-slate-400 text-sm line-clamp-2">{exhibitor.description}</p>
+                            </div>
+                            
+                            {/* Info adicional */}
+                            {(exhibitor.city || exhibitor.whatsappPhone) && (
+                              <div className="px-4 pb-3 flex items-center gap-4 text-xs text-slate-500">
+                                {exhibitor.city && (
+                                  <span className="flex items-center gap-1">
+                                    📍 {exhibitor.city}
+                                  </span>
+                                )}
+                                {exhibitor.whatsappPhone && (
+                                  <span className="flex items-center gap-1">
+                                    📱 {exhibitor.whatsappPhone}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* Descuento */}
+                            {exhibitor.discountOffer && (
+                              <div className="px-4 pb-3">
+                                <span className="text-xs text-emerald-400">
+                                  🎁 {exhibitor.discountOffer}
+                                </span>
+                              </div>
+                            )}
+                            
+                            {/* Botones de acción */}
+                            <div className="px-4 pb-4 flex items-center gap-2">
+                              {/* Botón Ver Página */}
+                              {exhibitor.website && (
+                                <a
+                                  href={exhibitor.website.startsWith('http') ? exhibitor.website : `https://${exhibitor.website}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex-1 px-4 py-2 rounded-xl text-sm font-medium bg-slate-700 text-white hover:bg-slate-600 transition-all text-center flex items-center justify-center gap-2"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                  Ver Página
+                                </a>
+                              )}
+                              
+                              {/* Botón Calificar */}
+                              <button
+                                onClick={() => !alreadyRated && loadExhibitor(exhibitor.userId.toString())}
+                                disabled={alreadyRated}
+                                className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                                  alreadyRated
+                                    ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                                    : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:shadow-lg hover:shadow-purple-500/25'
+                                }`}
+                              >
+                                {alreadyRated ? (
+                                  <>
+                                    <Check className="w-4 h-4" />
+                                    Ya calificado
+                                  </>
+                                ) : (
+                                  <>
+                                    <Star className="w-4 h-4" />
+                                    Calificar
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </motion.div>
+                        );
+                      })
+                    )}
+                  </div>
+                </>
+              )}
+            </motion.div>
           ) : (
+            /* ===== MODO RATING ===== */
             <motion.div
               key="rating"
               initial={{ opacity: 0, x: 20 }}
