@@ -90,10 +90,16 @@ export default function VerPerfilMentorPage() {
       setMensajeError('');
       setMensajeExito('');
 
+      const nuevoEstado = !mentor.usuario.isActive;
+      
       const res = await fetch(`/api/admin/mentores/${mentorId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isActive: !mentor.usuario.isActive }),
+        body: JSON.stringify({ 
+          isActive: nuevoEstado,
+          // Cuando se activa, también poner disponible = true
+          ...(nuevoEstado ? { disponible: true } : {})
+        }),
       });
 
       const data = await res.json();

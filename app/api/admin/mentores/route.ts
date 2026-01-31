@@ -20,7 +20,8 @@ export async function GET(req: NextRequest) {
             profileImage: true,
             jobTitle: true,
             isActive: true,
-            rol: true // Incluir rol para filtrar
+            rol: true, // Incluir rol para filtrar
+            esMentor: true // Indicador de mentor activado
           },
         },
         ServicioMentoria: {
@@ -72,17 +73,20 @@ export async function GET(req: NextRequest) {
     const mentoresPendientesDirectos: any[] = [];
 
     mentoresFiltrados.forEach((mentor: any) => {
-      // Un mentor está pendiente solo si:
-      // - Su usuario NO tiene rol MENTOR (aún no ha sido aprobado completamente)
+      // Un mentor está ACTIVO si:
+      // - Su usuario tiene esMentor = true (la forma correcta de saber si está activado)
       // O si:
-      // - disponible es false Y totalSesiones es 0 Y NO tiene rol MENTOR
+      // - Tiene rol MENTOR en el array de roles
+      const esMentorActivado = mentor.Usuario.esMentor === true;
       const usuarioTieneMentorRol = mentor.Usuario.rol?.includes('MENTOR');
-      const esPendiente = !usuarioTieneMentorRol || (!mentor.disponible && mentor.totalSesiones === 0 && !usuarioTieneMentorRol);
       
-      if (esPendiente) {
-        mentoresPendientesDirectos.push(mentor);
-      } else {
+      // Está activo si tiene esMentor = true O si tiene rol MENTOR
+      const estaActivo = esMentorActivado || usuarioTieneMentorRol;
+      
+      if (estaActivo) {
         mentoresActivos.push(mentor);
+      } else {
+        mentoresPendientesDirectos.push(mentor);
       }
     });
 

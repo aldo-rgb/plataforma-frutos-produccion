@@ -1452,15 +1452,23 @@ export default function LegacyVisionBuilderPage() {
                             className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
                             onClick={() => {
                               if (cap.roleType === 'COMMUNITY_SERVICE') {
-                                // Redirigir a la página dedicada de crear campaña
-                                router.push(`/dashboard/legacy-builder/crear-campana?visionId=${data.visionId}`);
+                                // Redirigir a Legacy Forge - Democracia Cuántica
+                                router.push(`/dashboard/legacy-forge?visionId=${data.visionId}`);
+                              } else if (cap.roleType === 'SHIRTS_LOGO') {
+                                // Redirigir a Identity Lab - Logos y Playeras
+                                router.push(`/dashboard/identity-lab?visionId=${data.visionId}`);
+                              } else if (['FOOD', 'GRADUATION_CAPTAIN', 'BOOKS_MOVIES', 'CLEANLINESS', 'CONTEXT_GUARDIAN', 'CONTRIBUTION_BASIC', 'CONTRIBUTION_ADVANCED', 'TREASURER'].includes(cap.roleType)) {
+                                // Redirigir a widget genérico de capitanías con votaciones
+                                router.push(`/dashboard/captaincy-widget?visionId=${data.visionId}&roleType=${cap.roleType}`);
                               } else {
                                 showToast('Widget en desarrollo', 'info');
                               }
                             }}
                           >
                             <Sparkles className="w-5 h-5" />
-                            {cap.roleType === 'COMMUNITY_SERVICE' ? 'Gestionar Campaña' : 'Abrir Widget'}
+                            {cap.roleType === 'COMMUNITY_SERVICE' ? 'Legacy Forge' : 
+                             cap.roleType === 'SHIRTS_LOGO' ? 'Identity Lab' : 
+                             ['FOOD', 'GRADUATION_CAPTAIN', 'BOOKS_MOVIES', 'CLEANLINESS', 'CONTEXT_GUARDIAN', 'CONTRIBUTION_BASIC', 'CONTRIBUTION_ADVANCED', 'TREASURER'].includes(cap.roleType) ? 'Abrir Widget' : 'Próximamente'}
                           </button>
                         </div>
                       );

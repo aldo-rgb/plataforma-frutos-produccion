@@ -2430,6 +2430,16 @@ model Usuario {
   VisitorExpoReviews                                                     ExpoReview[]                    @relation("VisitorExpoReviews")
   ExpoVisitorReferrals                                                   ExpoVisitor[]                   @relation("ExpoVisitorReferrals")
 
+  // Democracia Cuántica - Legacy Forge
+  CommunityProjectsCreated                                               TribeCommunityProject[]         @relation("UserCommunityProjects")
+  PollsCreated                                                           TribePoll[]                     @relation("UserCreatedPolls")
+  PollsClosed                                                            TribePoll[]                     @relation("UserClosedPolls")
+  PollVotes                                                              TribePollVote[]                 @relation("UserPollVotes")
+  PollChatMessages                                                       TribePollChat[]                 @relation("UserPollChats")
+  PollChatReactions                                                      TribePollChatReaction[]         @relation("UserChatReactions")
+  PollChatReports                                                        TribePollChatReport[]           @relation("UserChatReports")
+  ReviewedChatReports                                                    TribePollChatReport[]           @relation("ReviewedReports")
+
   @@index([communityOrganizationId])
 }
 
@@ -2532,6 +2542,10 @@ model Vision {
 
   // Sistema de Metamorfosis / El Escenario
   MetamorfosisAssignments       MetamorfosisAssignment[]        @relation("VisionMetamorfosisAssignments")
+
+  // Democracia Cuántica - Legacy Forge
+  CommunityProjects             TribeCommunityProject[]         @relation("VisionCommunityProjects")
+  TribePolls                    TribePoll[]                     @relation("VisionPolls")
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -6219,4 +6233,317 @@ model ExpoVisitor {
   @@index([referredById])
   @@index([registeredAt])
 }
+
+// ============================================
+// DEMOCRACIA CUÁNTICA - LEGACY FORGE
+// Sistema de votaciones tribales y proyectos comunitarios
+// ============================================
+
+// Proyecto Comunitario propuesto para votación
+model TribeCommunityProject {
+  id                  Int                     @id @default(autoincrement())
+  visionId            Int
+  
+  // Información básica
+  name                String                  // "Techo Digno"
+  description         String                  @db.Text // ¿Qué vamos a hacer exactamente?
+  category            CommunityProjectCategory // Niños, Ancianos, Animales, Ecológico, etc.
+  
+  // Ubicación
+  locationName        String                  // "Casa Hogar Los Pequeños"
+  locationAddress     String?
+  locationLat         Float?
+  locationLng         Float?
+  googleMapsUrl       String?
+  
+  // Contacto del lugar
+  contactName         String                  // Nombre del responsable (Directora, etc.)
+  contactPhone        String                  // Teléfono validado
+  contactEmail        String?
+  contactRole         String?                 // "Directora", "Coordinador", etc.
+  
+  // Presupuesto y logística
+  estimatedBudget     Decimal?                @db.Decimal(12, 2)
+  logistics           String?                 @db.Text // "Necesitamos 3 camionetas y 20 brochas"
+  
+  // Origen del proyecto
+  origin              ProjectOrigin           @default(NEW) // CONTINUITY o NEW
+  parentProjectId     Int?                    // Si es continuación de otro proyecto
+  aiGenerated         Boolean                 @default(false) // Si fue sugerido por IA
+  aiPrompt            String?                 @db.Text // Prompt usado para generar la sugerencia
+  
+  // Imágenes
+  coverImage          String?
+  galleryImages       String[]
+  
+  // Estado
+  status              CommunityProjectStatus  @default(DRAFT)
+  
+  // Capitán que lo creó
+  createdById         Int
+  
+  // Fechas
+  proposedDate        DateTime?               // Fecha propuesta para la actividad
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  
+  // Relaciones
+  vision              Vision                  @relation("VisionCommunityProjects", fields: [visionId], references: [id], onDelete: Cascade)
+  createdBy           Usuario                 @relation("UserCommunityProjects", fields: [createdById], references: [id])
+  parentProject       TribeCommunityProject?  @relation("ProjectContinuity", fields: [parentProjectId], references: [id])
+  childProjects       TribeCommunityProject[] @relation("ProjectContinuity")
+  pollOptions         TribePollOption[]       @relation("ProjectPollOptions")
+  
+  @@index([visionId])
+  @@index([status])
+  @@index([createdById])
+  @@index([category])
+}
+
+// Encuesta/Votación de la Tribu
+model TribePoll {
+  id                  Int                     @id @default(autoincrement())
+  visionId            Int
+  
+  // Información de la encuesta
+  title               String                  // "Elige el proyecto comunitario"
+  description         String?                 @db.Text
+  category            TribePollCategory       // LOGO, PLAYERA, COMUNITARIA, GENERAL
+  
+  // Configuración
+  minOptions          Int                     @default(2) // Mínimo de opciones
+  maxOptions          Int                     @default(5) // Máximo de opciones
+  allowMultipleVotes  Boolean                 @default(false) // ¿Puede votar por más de uno?
+  showResultsBeforeEnd Boolean                @default(false) // ¿Mostrar resultados antes de cerrar?
+  quorumPercentage    Int                     @default(80) // % mínimo de participación
+  tieBreakerWeight    Int                     @default(2) // Peso del voto del líder en desempate
+  
+  // Estado
+  status              TribePollStatus         @default(DRAFT)
+  
+  // Fechas
+  startDate           DateTime?
+  endDate             DateTime?
+  closedAt            DateTime?
+  closedById          Int?
+  
+  // Capitán que creó la encuesta
+  createdById         Int
+  
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  
+  // Relaciones
+  vision              Vision                  @relation("VisionPolls", fields: [visionId], references: [id], onDelete: Cascade)
+  createdBy           Usuario                 @relation("UserCreatedPolls", fields: [createdById], references: [id])
+  closedBy            Usuario?                @relation("UserClosedPolls", fields: [closedById], references: [id])
+  options             TribePollOption[]
+  votes               TribePollVote[]
+  chatMessages        TribePollChat[]
+  
+  @@index([visionId])
+  @@index([status])
+  @@index([category])
+  @@index([createdById])
+}
+
+// Opciones de la encuesta
+model TribePollOption {
+  id                  Int                     @id @default(autoincrement())
+  pollId              Int
+  
+  // Información de la opción
+  title               String
+  description         String?                 @db.Text
+  imageUrl            String?
+  
+  // Si es un proyecto comunitario
+  projectId           Int?
+  
+  // Orden de visualización
+  displayOrder        Int                     @default(0)
+  
+  // Metadatos
+  metadata            Json?                   // Datos adicionales según el tipo
+  
+  createdAt           DateTime                @default(now())
+  
+  // Relaciones
+  poll                TribePoll               @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  project             TribeCommunityProject?  @relation("ProjectPollOptions", fields: [projectId], references: [id])
+  votes               TribePollVote[]
+  
+  @@index([pollId])
+  @@index([projectId])
+}
+
+// Votos individuales
+model TribePollVote {
+  id                  Int                     @id @default(autoincrement())
+  pollId              Int
+  optionId            Int
+  userId              Int
+  
+  // Peso del voto (normalmente 1, pero puede ser 2 para líderes en desempate)
+  weight              Int                     @default(1)
+  
+  // Timestamp
+  votedAt             DateTime                @default(now())
+  
+  // Relaciones
+  poll                TribePoll               @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option              TribePollOption         @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user                Usuario                 @relation("UserPollVotes", fields: [userId], references: [id])
+  
+  // Un usuario solo puede votar una vez por encuesta
+  @@unique([pollId, userId])
+  @@index([pollId])
+  @@index([optionId])
+  @@index([userId])
+}
+
+// Chat de debate temporal por encuesta
+model TribePollChat {
+  id                  Int                     @id @default(autoincrement())
+  pollId              Int
+  userId              Int
+  
+  // Mensaje
+  content             String                  @db.Text
+  
+  // Tipo de mensaje
+  messageType         ChatMessageType         @default(TEXT)
+  
+  // Si es respuesta a otro mensaje
+  replyToId           Int?
+  
+  // Metadatos
+  isEdited            Boolean                 @default(false)
+  isDeleted           Boolean                 @default(false)
+  isPinned            Boolean                 @default(false)
+  isHidden            Boolean                 @default(false)
+  
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  
+  // Relaciones
+  poll                TribePoll               @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user                Usuario                 @relation("UserPollChats", fields: [userId], references: [id])
+  replyTo             TribePollChat?          @relation("ChatReplies", fields: [replyToId], references: [id])
+  replies             TribePollChat[]         @relation("ChatReplies")
+  reactions           TribePollChatReaction[]
+  reports             TribePollChatReport[]
+  
+  @@index([pollId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([isPinned])
+}
+
+// Reacciones a mensajes de chat
+model TribePollChatReaction {
+  id          Int             @id @default(autoincrement())
+  chatId      Int
+  userId      Int
+  emoji       String          @db.VarChar(10)
+  
+  createdAt   DateTime        @default(now())
+  
+  // Relaciones
+  chat        TribePollChat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user        Usuario         @relation("UserChatReactions", fields: [userId], references: [id])
+  
+  @@unique([chatId, userId, emoji])
+  @@index([chatId])
+  @@index([userId])
+}
+
+// Reportes de mensajes
+model TribePollChatReport {
+  id          Int             @id @default(autoincrement())
+  chatId      Int
+  reporterId  Int
+  reason      String          @db.Text
+  
+  status      ReportStatus    @default(PENDING)
+  reviewedBy  Int?
+  reviewedAt  DateTime?
+  
+  createdAt   DateTime        @default(now())
+  
+  // Relaciones
+  chat        TribePollChat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  reporter    Usuario         @relation("UserChatReports", fields: [reporterId], references: [id])
+  reviewer    Usuario?        @relation("ReviewedReports", fields: [reviewedBy], references: [id])
+  
+  @@unique([chatId, reporterId])
+  @@index([chatId])
+  @@index([reporterId])
+  @@index([status])
+}
+
+// Enum para estado de reportes
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
+  ACTION_TAKEN
+}
+
+// Enums para Legacy Forge
+enum CommunityProjectCategory {
+  CHILDREN        // Niños
+  ELDERLY         // Ancianos
+  ANIMALS         // Animales
+  ECOLOGICAL      // Ecológico/Medio Ambiente
+  EDUCATION       // Educación
+  HEALTH          // Salud
+  HOUSING         // Vivienda
+  FOOD            // Alimentación
+  OTHER           // Otro
+}
+
+enum ProjectOrigin {
+  CONTINUITY      // Continuación de proyecto existente
+  NEW             // Proyecto nuevo
+  AI_SUGGESTED    // Sugerido por IA
+}
+
+enum CommunityProjectStatus {
+  DRAFT           // Borrador
+  PROPOSED        // Propuesto para votación
+  VOTING          // En votación
+  APPROVED        // Aprobado (ganó la votación)
+  IN_PROGRESS     // En ejecución
+  COMPLETED       // Completado
+  CANCELLED       // Cancelado
+}
+
+enum TribePollCategory {
+  LOGO            // Votación de logo
+  SHIRT           // Votación de playera
+  COMMUNITY       // Votación de proyecto comunitario
+  FOOD            // Votación de comidas/menú
+  TRANSPORT       // Votación de transporte
+  GRADUATION      // Votación de graduación
+  BUDGET          // Votación de presupuesto
+  SCHEDULE        // Votación de horarios
+  VENUE           // Votación de lugares/sedes
+  GENERAL         // Votación general
+}
+
+enum TribePollStatus {
+  DRAFT           // Borrador
+  ACTIVE          // Activa (recibiendo votos)
+  CLOSED          // Cerrada (terminó)
+  CANCELLED       // Cancelada
+}
+
+enum ChatMessageType {
+  TEXT            // Mensaje de texto
+  IMAGE           // Imagen
+  REACTION        // Reacción/Emoji
+  SYSTEM          // Mensaje del sistema
+}
+
 

@@ -204,9 +204,13 @@ export async function PUT(
     if (actualizarUsuario && nuevoEstadoUsuario !== undefined) {
       await prisma.usuario.update({
         where: { id: mentorActualizado!.usuarioId },
-        data: { isActive: nuevoEstadoUsuario }
+        data: { 
+          isActive: nuevoEstadoUsuario,
+          // Cuando se activa un mentor, también marcarlo como esMentor = true
+          ...(nuevoEstadoUsuario ? { esMentor: true } : {})
+        }
       });
-      console.log(`✅ [ADMIN] Usuario ${mentorActualizado!.usuarioId} ${nuevoEstadoUsuario ? 'activado' : 'desactivado'} por ${session.user.nombre}`);
+      console.log(`✅ [ADMIN] Usuario ${mentorActualizado!.usuarioId} ${nuevoEstadoUsuario ? 'activado como mentor' : 'desactivado'} por ${session.user.nombre}`);
     }
 
     console.log(
