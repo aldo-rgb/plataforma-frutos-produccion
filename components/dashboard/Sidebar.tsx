@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { 
   LayoutDashboard, Trophy, Target, BarChart3, User, LogOut, 
   UserPlus, DollarSign, Package, Shield, Drama, Theater,
-  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode, Store, Star, Crown, Image
+  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode, Store, Star, Crown, Image, Vote
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { MENU_ITEMS } from '@/config/menuPermissions';
@@ -1188,6 +1188,20 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
           >
             <Gift size={18} className="text-emerald-400 group-hover:text-emerald-300" />
             <span className="font-medium">Legacy Builder</span>
+          </Link>
+
+          {/* Ver Votaciones */}
+          <Link 
+            href="/dashboard/votaciones" 
+            onClick={handleLinkClick}
+            className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors group ${
+              pathname.startsWith('/dashboard/votaciones')
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/20' 
+                : 'text-slate-400 hover:bg-gradient-to-r hover:from-purple-900/30 hover:to-indigo-900/30 hover:text-purple-300'
+            }`}
+          >
+            <Vote size={18} className="text-purple-400 group-hover:text-purple-300" />
+            <span className="font-medium">Ver Votaciones</span>
           </Link>
 
           {/* Legacy Vision Builder - Capitanías */}
