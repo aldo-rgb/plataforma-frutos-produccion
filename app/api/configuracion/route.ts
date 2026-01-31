@@ -43,7 +43,10 @@ export async function GET(req: NextRequest) {
     // Si no existe, crear uno vacío
     if (!perfilCompleto) {
       perfilCompleto = await prisma.perfilCompleto.create({
-        data: { usuarioId: usuario.id }
+        data: { 
+          usuarioId: usuario.id,
+          updatedAt: new Date()
+        }
       });
     }
 
@@ -279,10 +282,14 @@ export async function POST(req: NextRequest) {
     // Upsert del perfil completo
     const perfilCompleto = await prisma.perfilCompleto.upsert({
       where: { usuarioId: usuario.id },
-      update: perfilData,
+      update: {
+        ...perfilData,
+        updatedAt: new Date()
+      },
       create: {
         usuarioId: usuario.id,
-        ...perfilData
+        ...perfilData,
+        updatedAt: new Date()
       }
     });
 

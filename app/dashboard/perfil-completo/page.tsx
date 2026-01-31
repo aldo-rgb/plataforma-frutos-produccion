@@ -111,6 +111,33 @@ export default function ConfiguracionCompletaPage() {
   const [lastAvatarChange, setLastAvatarChange] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState('');
   const [visionesHistorial, setVisionesHistorial] = useState<Array<{nombre: string, rol: string, fecha: string}>>([]);
+  
+  // Función para detectar campos faltantes importantes
+  const getCamposFaltantes = () => {
+    const camposRequeridos = [
+      { key: 'nombre', label: 'Nombre' },
+      { key: 'apellido', label: 'Apellido' },
+      { key: 'fechaNacimiento', label: 'Fecha de Nacimiento' },
+      { key: 'whatsapp', label: 'WhatsApp' },
+      { key: 'calle', label: 'Calle' },
+      { key: 'numero', label: 'Número' },
+      { key: 'colonia', label: 'Colonia' },
+      { key: 'codigoPostal', label: 'Código Postal' },
+      { key: 'estadoMunicipio', label: 'Estado/Municipio' },
+      { key: 'ocupacion', label: 'Ocupación' },
+      { key: 'tallaCamiseta', label: 'Talla de Camiseta' },
+      { key: 'peso', label: 'Peso' },
+      { key: 'estatura', label: 'Estatura' },
+    ];
+    
+    return camposRequeridos.filter(campo => {
+      const valor = config[campo.key as keyof ConfiguracionData];
+      return !valor || valor === '';
+    });
+  };
+
+  const camposFaltantes = getCamposFaltantes();
+  
   const [config, setConfig] = useState<ConfiguracionData>({
     nombre: '',
     apellido: '',
@@ -932,6 +959,23 @@ export default function ConfiguracionCompletaPage() {
           </div>
 
         </div>
+
+        {/* Notificación de campos faltantes */}
+        {camposFaltantes.length > 0 && (
+          <div className="mt-6 bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
+            <p className="text-amber-400 font-bold mb-2 flex items-center gap-2">
+              <span className="text-xl">⚠️</span>
+              Te faltan {camposFaltantes.length} campo(s) por completar:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {camposFaltantes.map(campo => (
+                <span key={campo.key} className="px-2 py-1 bg-amber-500/20 text-amber-300 rounded-md text-sm">
+                  {campo.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Save Button (Bottom) */}
         <div className="mt-6 md:mt-8 flex justify-center md:justify-end">
