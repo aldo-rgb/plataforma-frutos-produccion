@@ -1452,14 +1452,15 @@ export default function LegacyVisionBuilderPage() {
                             className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
                             onClick={() => {
                               if (cap.roleType === 'COMMUNITY_SERVICE') {
-                                handleOpenCampaignModal();
+                                // Redirigir a la página dedicada de crear campaña
+                                router.push(`/dashboard/legacy-builder/crear-campana?visionId=${data.visionId}`);
                               } else {
                                 showToast('Widget en desarrollo', 'info');
                               }
                             }}
                           >
                             <Sparkles className="w-5 h-5" />
-                            {cap.roleType === 'COMMUNITY_SERVICE' ? 'Crear/Ver Campaña' : 'Abrir Widget'}
+                            {cap.roleType === 'COMMUNITY_SERVICE' ? 'Gestionar Campaña' : 'Abrir Widget'}
                           </button>
                         </div>
                       );
