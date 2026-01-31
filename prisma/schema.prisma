@@ -2441,6 +2441,12 @@ model Usuario {
   PollChatReports                                                        TribePollChatReport[]           @relation("UserChatReports")
   ReviewedChatReports                                                    TribePollChatReport[]           @relation("ReviewedReports")
 
+  // Tesorería de Tribu
+  BankAccountsConfigured                                                 TribeBankAccount[]              @relation("TreasurerBankConfig")
+  TribePaymentsMade                                                      TribeIncome[]                   @relation("UserTribePayments")
+  TribeIncomesVerified                                                   TribeIncome[]                   @relation("TreasurerVerified")
+  ShirtOrders                                                            TribeShirtOrder[]               @relation("UserShirtOrders")
+
   @@index([communityOrganizationId])
 }
 
@@ -2547,6 +2553,11 @@ model Vision {
   // Democracia Cuántica - Legacy Forge
   CommunityProjects             TribeCommunityProject[]         @relation("VisionCommunityProjects")
   TribePolls                    TribePoll[]                     @relation("VisionPolls")
+
+  // Tesorería de Tribu
+  BankAccount                   TribeBankAccount?               @relation("VisionBankAccount")
+  TribeIncomes                  TribeIncome[]                   @relation("VisionIncomes")
+  ShirtOrders                   TribeShirtOrder[]               @relation("VisionShirtOrders")
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -6296,6 +6307,7 @@ model TribeCommunityProject {
   childProjects       TribeCommunityProject[] @relation("ProjectContinuity")
   pollOptions         TribePollOption[]       @relation("ProjectPollOptions")
   logisticsItems      ProjectLogisticsItem[]  @relation("ProjectLogisticsItems")
+  incomes             TribeIncome[]           @relation("ProjectIncomes")
   
   @@index([visionId])
   @@index([status])
@@ -6598,4 +6610,144 @@ enum ChatMessageType {
   SYSTEM          // Mensaje del sistema
 }
 
+// =====================================
+// TESORERÍA DE TRIBU
+// =====================================
 
+// Cuenta bancaria de la tribu
+model TribeBankAccount {
+  id                Int                     @id @default(autoincrement())
+  visionId          Int                     @unique
+  
+  // Datos bancarios
+  bankName          String                  // Nombre del banco
+  accountHolder     String                  // Titular de la cuenta
+  accountNumber     String                  // Número de cuenta (últimos 4 dígitos para mostrar)
+  clabe             String?                 // CLABE interbancaria (18 dígitos)
+  accountType       String                  @default("DEBIT") // DEBIT, CREDIT, SAVINGS
+  
+  // Información adicional
+  alias             String?                 // Alias de la cuenta para transferencias
+  referenceNote     String?                 // Nota/concepto sugerido para depósitos
+  
+  // Configuración
+  isActive          Boolean                 @default(true)
+  configuredById    Int                     // Tesorero que configuró
+  
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  
+  // Relaciones
+  vision            Vision                  @relation("VisionBankAccount", fields: [visionId], references: [id], onDelete: Cascade)
+  configuredBy      Usuario                 @relation("TreasurerBankConfig", fields: [configuredById], references: [id])
+  incomes           TribeIncome[]
+  
+  @@index([visionId])
+  @@index([configuredById])
+}
+
+// Ingresos de la tribu (camisetas, legacy forge, etc.)
+model TribeIncome {
+  id                Int                     @id @default(autoincrement())
+  visionId          Int
+  bankAccountId     Int?
+  
+  // Información del ingreso
+  category          TribeIncomeCategory     // SHIRT, LEGACY_FORGE, CONTRIBUTION, OTHER
+  concept           String                  // Descripción del ingreso
+  amount            Float                   // Monto en MXN
+  
+  // Datos del pagador
+  payerUserId       Int?                    // Usuario que pagó (si aplica)
+  payerName         String?                 // Nombre del pagador (si es externo)
+  payerEmail        String?                 // Email del pagador
+  
+  // Comprobante
+  proofImage        String?                 // URL de imagen del comprobante
+  proofNotes        String?                 @db.Text // Notas adicionales
+  
+  // Estado
+  status            TribeIncomeStatus       @default(PENDING)
+  verifiedById      Int?                    // Tesorero que verificó
+  verifiedAt        DateTime?
+  rejectionReason   String?                 // Razón si fue rechazado
+  
+  // Referencia a compras específicas
+  shirtOrderId      Int?                    // Si es pago de playera
+  projectId         Int?                    // Si es para proyecto comunitario
+  
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  
+  // Relaciones
+  vision            Vision                  @relation("VisionIncomes", fields: [visionId], references: [id], onDelete: Cascade)
+  bankAccount       TribeBankAccount?       @relation(fields: [bankAccountId], references: [id])
+  payer             Usuario?                @relation("UserTribePayments", fields: [payerUserId], references: [id])
+  verifiedBy        Usuario?                @relation("TreasurerVerified", fields: [verifiedById], references: [id])
+  shirtOrder        TribeShirtOrder?        @relation(fields: [shirtOrderId], references: [id])
+  project           TribeCommunityProject?  @relation("ProjectIncomes", fields: [projectId], references: [id])
+  
+  @@index([visionId])
+  @@index([category])
+  @@index([status])
+  @@index([payerUserId])
+  @@index([bankAccountId])
+}
+
+// Pedidos de playeras de la tribu
+model TribeShirtOrder {
+  id                Int                     @id @default(autoincrement())
+  visionId          Int
+  userId            Int                     // Usuario que ordenó
+  
+  // Detalles del pedido
+  size              String                  // S, M, L, XL, XXL
+  quantity          Int                     @default(1)
+  unitPrice         Float                   // Precio por playera
+  totalAmount       Float                   // Total a pagar
+  
+  // Estado
+  status            ShirtOrderStatus        @default(PENDING_PAYMENT)
+  
+  // Fechas importantes
+  paidAt            DateTime?
+  producedAt        DateTime?
+  deliveredAt       DateTime?
+  
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  
+  // Relaciones
+  vision            Vision                  @relation("VisionShirtOrders", fields: [visionId], references: [id], onDelete: Cascade)
+  user              Usuario                 @relation("UserShirtOrders", fields: [userId], references: [id])
+  incomes           TribeIncome[]
+  
+  @@index([visionId])
+  @@index([userId])
+  @@index([status])
+}
+
+// Enums para tesorería
+enum TribeIncomeCategory {
+  SHIRT             // Pago de playera
+  LEGACY_FORGE      // Donación para proyecto comunitario
+  CONTRIBUTION      // Contribución general
+  EVENT             // Evento especial
+  OTHER             // Otro
+}
+
+enum TribeIncomeStatus {
+  PENDING           // Pendiente de verificación
+  VERIFIED          // Verificado por tesorero
+  REJECTED          // Rechazado
+  REFUNDED          // Reembolsado
+}
+
+enum ShirtOrderStatus {
+  PENDING_PAYMENT   // Pendiente de pago
+  PAID              // Pagado
+  IN_PRODUCTION     // En producción
+  READY             // Listo para entrega
+  DELIVERED         // Entregado
+  CANCELLED         // Cancelado
+}

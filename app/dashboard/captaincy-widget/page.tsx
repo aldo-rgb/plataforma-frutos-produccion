@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import TribePollWidget from '@/app/components/TribePollWidget';
+import TreasuryWidget from '@/components/captaincy/TreasuryWidget';
 import {
   ArrowLeft,
   Loader2,
@@ -275,25 +276,34 @@ export default function CaptaincyWidgetPage() {
           {userData.isCaptain && (
             <div className="mt-4 p-3 bg-green-500/20 rounded-lg border border-green-500/30">
               <p className="text-green-300 text-sm">
-                ✅ Tienes rol de capitán activo - Puedes crear y gestionar votaciones
+                ✅ Tienes rol de capitán activo - {roleType === 'TREASURER' ? 'Puedes gestionar la tesorería' : 'Puedes crear y gestionar votaciones'}
               </p>
             </div>
           )}
         </div>
 
-        {/* Widget de votaciones */}
-        <TribePollWidget
-          userId={userData.userId}
-          visionId={parseInt(visionId)}
-          category={config.pollCategory}
-          captainType={roleType}
-          onPollCreated={(poll) => {
-            console.log('Encuesta creada:', poll);
-          }}
-          onVoteCast={(pollId, optionId) => {
-            console.log('Voto emitido:', pollId, optionId);
-          }}
-        />
+        {/* Widget específico del Tesorero */}
+        {roleType === 'TREASURER' ? (
+          <TreasuryWidget
+            visionId={parseInt(visionId)}
+            visionName={userData.visionName}
+            isTreasurer={userData.isCaptain}
+          />
+        ) : (
+          /* Widget de votaciones para otras capitanías */
+          <TribePollWidget
+            userId={userData.userId}
+            visionId={parseInt(visionId)}
+            category={config.pollCategory}
+            captainType={roleType}
+            onPollCreated={(poll) => {
+              console.log('Encuesta creada:', poll);
+            }}
+            onVoteCast={(pollId, optionId) => {
+              console.log('Voto emitido:', pollId, optionId);
+            }}
+          />
+        )}
       </div>
     </div>
   );
