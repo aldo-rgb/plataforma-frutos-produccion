@@ -257,8 +257,7 @@ export default function TribePollWidget({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'create_poll',
-          userId,
+          action: 'create',
           visionId,
           title: newPollTitle,
           description: newPollDescription,
@@ -292,8 +291,7 @@ export default function TribePollWidget({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'cast_vote',
-          userId,
+          action: 'vote',
           pollId: selectedPoll.id,
           optionId
         })
@@ -318,8 +316,7 @@ export default function TribePollWidget({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'start_voting',
-          userId,
+          action: 'publish',
           pollId
         })
       });
@@ -345,8 +342,7 @@ export default function TribePollWidget({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'close_poll',
-          userId,
+          action: 'close',
           pollId
         })
       });
