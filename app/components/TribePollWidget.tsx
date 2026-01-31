@@ -114,10 +114,10 @@ const categoryEmojis: Record<TribePollCategory, string> = {
 };
 
 const statusColors: Record<PollStatus, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-800',
-  ACTIVE: 'bg-green-100 text-green-800',
-  CLOSED: 'bg-gray-100 text-gray-800',
-  CANCELLED: 'bg-red-100 text-red-800'
+  PENDING: 'bg-yellow-500/20 text-yellow-300',
+  ACTIVE: 'bg-green-500/20 text-green-300',
+  CLOSED: 'bg-gray-500/20 text-gray-300',
+  CANCELLED: 'bg-red-500/20 text-red-300'
 };
 
 const statusLabels: Record<PollStatus, string> = {
@@ -420,18 +420,18 @@ export default function TribePollWidget({
 
   if (loading) {
     return (
-      <div className={`bg-white rounded-xl shadow-lg p-6 ${className}`}>
+      <div className={`bg-gray-900 rounded-xl shadow-lg p-6 border border-gray-700 ${className}`}>
         <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-          <div className="h-32 bg-gray-200 rounded"></div>
+          <div className="h-6 bg-gray-700 rounded w-1/3"></div>
+          <div className="h-4 bg-gray-700 rounded w-2/3"></div>
+          <div className="h-32 bg-gray-700 rounded"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`bg-white rounded-xl shadow-lg overflow-hidden ${className}`}>
+    <div className={`bg-gray-900 rounded-xl shadow-lg overflow-hidden border border-gray-700 ${className}`}>
       {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4">
         <div className="flex items-center justify-between">
@@ -485,15 +485,15 @@ export default function TribePollWidget({
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="mb-6 p-4 bg-gray-50 rounded-lg"
+              className="mb-6 p-4 bg-gray-800/80 rounded-lg border border-gray-700"
             >
-              <h3 className="font-semibold text-gray-800 mb-4">
+              <h3 className="font-semibold text-white mb-4">
                 📋 Crear Nueva Encuesta
               </h3>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
                     Título
                   </label>
                   <input
@@ -501,25 +501,25 @@ export default function TribePollWidget({
                     value={newPollTitle}
                     onChange={(e) => setNewPollTitle(e.target.value)}
                     placeholder="¿Qué quieres preguntar?"
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    className="w-full px-4 py-2 bg-gray-900 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-white placeholder-gray-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
                     Descripción (opcional)
                   </label>
                   <textarea
                     value={newPollDescription}
                     onChange={(e) => setNewPollDescription(e.target.value)}
                     placeholder="Agrega más contexto..."
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                    className="w-full px-4 py-2 bg-gray-900 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-white placeholder-gray-500"
                     rows={2}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     Opciones
                   </label>
                   {newOptions.map((option, idx) => (
@@ -533,12 +533,12 @@ export default function TribePollWidget({
                           setNewOptions(updated);
                         }}
                         placeholder={`Opción ${idx + 1}`}
-                        className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                        className="flex-1 px-4 py-2 bg-gray-900 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 text-white placeholder-gray-500"
                       />
                       {newOptions.length > 2 && (
                         <button
                           onClick={() => setNewOptions(newOptions.filter((_, i) => i !== idx))}
-                          className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg"
+                          className="px-3 py-2 text-red-400 hover:bg-red-900/30 rounded-lg"
                         >
                           🗑️
                         </button>
@@ -547,7 +547,7 @@ export default function TribePollWidget({
                   ))}
                   <button
                     onClick={() => setNewOptions([...newOptions, ''])}
-                    className="text-purple-600 hover:text-purple-800 text-sm"
+                    className="text-purple-400 hover:text-purple-300 text-sm"
                   >
                     + Agregar opción
                   </button>
@@ -563,7 +563,7 @@ export default function TribePollWidget({
                   </button>
                   <button
                     onClick={() => setShowCreateForm(false)}
-                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="px-4 py-2 text-gray-300 hover:bg-gray-700 rounded-lg transition-colors"
                   >
                     Cancelar
                   </button>
@@ -577,13 +577,13 @@ export default function TribePollWidget({
         {!selectedPoll ? (
           <div className="space-y-3">
             {polls.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
+              <div className="text-center py-12 text-gray-400">
                 <span className="text-4xl mb-2 block">📊</span>
                 <p>No hay encuestas activas</p>
                 {userPermissions.canCreate && (
                   <button
                     onClick={() => setShowCreateForm(true)}
-                    className="mt-4 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+                    className="mt-4 px-4 py-2 bg-purple-600/30 text-purple-300 rounded-lg hover:bg-purple-600/50 transition-colors border border-purple-500/30"
                   >
                     Crear primera encuesta
                   </button>
@@ -595,7 +595,7 @@ export default function TribePollWidget({
                   key={poll.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="p-4 border rounded-lg hover:border-purple-300 cursor-pointer transition-all"
+                  className="p-4 border border-gray-700 bg-gray-800/50 rounded-lg hover:border-purple-500/50 cursor-pointer transition-all"
                   onClick={() => {
                     setSelectedPoll(poll);
                     fetchPollDetails(poll.id);
@@ -603,9 +603,9 @@ export default function TribePollWidget({
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-800">{poll.title}</h3>
+                      <h3 className="font-semibold text-white">{poll.title}</h3>
                       {poll.description && (
-                        <p className="text-gray-500 text-sm mt-1 line-clamp-2">
+                        <p className="text-gray-400 text-sm mt-1 line-clamp-2">
                           {poll.description}
                         </p>
                       )}
@@ -615,7 +615,7 @@ export default function TribePollWidget({
                     </span>
                   </div>
                   
-                  <div className="mt-3 flex items-center gap-4 text-sm text-gray-500">
+                  <div className="mt-3 flex items-center gap-4 text-sm text-gray-400">
                     <span>📊 {poll.totalVotes} votos</span>
                     <span>👥 {poll.currentQuorum}% quórum</span>
                     <span>📝 {poll.options?.length || 0} opciones</span>
@@ -623,7 +623,7 @@ export default function TribePollWidget({
 
                   {/* Barra de progreso de quórum */}
                   <div className="mt-3">
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
                       <div
                         className={`h-full transition-all ${
                           poll.quorumMet ? 'bg-green-500' : 'bg-purple-500'
@@ -645,7 +645,7 @@ export default function TribePollWidget({
                 setSelectedPoll(null);
                 setShowChat(false);
               }}
-              className="mb-4 flex items-center gap-2 text-purple-600 hover:text-purple-800"
+              className="mb-4 flex items-center gap-2 text-purple-400 hover:text-purple-300"
             >
               ← Volver a encuestas
             </button>
@@ -653,39 +653,39 @@ export default function TribePollWidget({
             {/* Detalles de la encuesta */}
             <div className="mb-6">
               <div className="flex justify-between items-start mb-2">
-                <h3 className="text-xl font-bold text-gray-800">{selectedPoll.title}</h3>
+                <h3 className="text-xl font-bold text-white">{selectedPoll.title}</h3>
                 <span className={`px-3 py-1 text-sm rounded-full ${statusColors[selectedPoll.status]}`}>
                   {statusLabels[selectedPoll.status]}
                 </span>
               </div>
               
               {selectedPoll.description && (
-                <p className="text-gray-600 mb-4">{selectedPoll.description}</p>
+                <p className="text-gray-400 mb-4">{selectedPoll.description}</p>
               )}
 
               {/* Stats */}
               <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="bg-gray-50 p-3 rounded-lg text-center">
-                  <div className="text-2xl font-bold text-purple-600">
+                <div className="bg-gray-800 p-3 rounded-lg text-center border border-gray-700">
+                  <div className="text-2xl font-bold text-purple-400">
                     {selectedPoll.totalVotes}
                   </div>
-                  <div className="text-xs text-gray-500">Votos</div>
+                  <div className="text-xs text-gray-400">Votos</div>
                 </div>
-                <div className="bg-gray-50 p-3 rounded-lg text-center">
+                <div className="bg-gray-800 p-3 rounded-lg text-center border border-gray-700">
                   <div className={`text-2xl font-bold ${
-                    selectedPoll.quorumMet ? 'text-green-600' : 'text-orange-600'
+                    selectedPoll.quorumMet ? 'text-green-400' : 'text-orange-400'
                   }`}>
                     {selectedPoll.currentQuorum}%
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-400">
                     Quórum ({selectedPoll.quorumPercentage}% req.)
                   </div>
                 </div>
-                <div className="bg-gray-50 p-3 rounded-lg text-center">
-                  <div className="text-2xl font-bold text-gray-700">
+                <div className="bg-gray-800 p-3 rounded-lg text-center border border-gray-700">
+                  <div className="text-2xl font-bold text-gray-300">
                     {selectedPoll.totalEligible}
                   </div>
-                  <div className="text-xs text-gray-500">Elegibles</div>
+                  <div className="text-xs text-gray-400">Elegibles</div>
                 </div>
               </div>
 
@@ -696,10 +696,10 @@ export default function TribePollWidget({
                     key={option.id}
                     className={`relative p-4 border-2 rounded-xl transition-all ${
                       option.isWinner
-                        ? 'border-green-500 bg-green-50'
+                        ? 'border-green-500 bg-green-500/10'
                         : selectedPoll.userVote?.optionId === option.id
-                        ? 'border-purple-500 bg-purple-50'
-                        : 'border-gray-200 hover:border-purple-300'
+                        ? 'border-purple-500 bg-purple-500/10'
+                        : 'border-gray-700 hover:border-purple-500/50 bg-gray-800/50'
                     }`}
                   >
                     <div className="flex justify-between items-center">
@@ -707,27 +707,27 @@ export default function TribePollWidget({
                         <div className="flex items-center gap-2">
                           {option.isWinner && <span>🏆</span>}
                           {selectedPoll.userVote?.optionId === option.id && (
-                            <span className="text-purple-600">✓</span>
+                            <span className="text-purple-400">✓</span>
                           )}
-                          <span className="font-medium">{option.optionText}</span>
+                          <span className="font-medium text-white">{option.optionText}</span>
                         </div>
                         {option.description && (
-                          <p className="text-sm text-gray-500 mt-1">{option.description}</p>
+                          <p className="text-sm text-gray-400 mt-1">{option.description}</p>
                         )}
                       </div>
                       
                       <div className="text-right">
-                        <div className="font-bold text-lg">
+                        <div className="font-bold text-lg text-white">
                           {option.percentage.toFixed(0)}%
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-gray-400">
                           {option.voteCount} votos
                         </div>
                       </div>
                     </div>
 
                     {/* Barra de progreso */}
-                    <div className="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="mt-3 h-2 bg-gray-700 rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${option.percentage}%` }}
@@ -756,7 +756,7 @@ export default function TribePollWidget({
 
               {/* Ya votaste */}
               {selectedPoll.userVote && (
-                <div className="mt-4 p-3 bg-purple-50 rounded-lg text-center text-purple-700">
+                <div className="mt-4 p-3 bg-purple-500/20 rounded-lg text-center text-purple-300 border border-purple-500/30">
                   ✅ Ya emitiste tu voto
                 </div>
               )}
@@ -789,11 +789,11 @@ export default function TribePollWidget({
             {/* Toggle Chat */}
             <button
               onClick={() => setShowChat(!showChat)}
-              className="w-full py-3 bg-gray-100 hover:bg-gray-200 rounded-lg flex items-center justify-center gap-2 transition-colors"
+              className="w-full py-3 bg-gray-800 hover:bg-gray-700 rounded-lg flex items-center justify-center gap-2 transition-colors border border-gray-700 text-gray-300"
             >
               <span>💬</span>
               {showChat ? 'Ocultar Chat de Debate' : 'Ver Chat de Debate'}
-              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+              <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full">
                 {chatMessages.length}
               </span>
             </button>
@@ -805,12 +805,12 @@ export default function TribePollWidget({
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="mt-4 border rounded-lg overflow-hidden"
+                  className="mt-4 border border-gray-700 rounded-lg overflow-hidden"
                 >
                   {/* Mensajes */}
-                  <div className="h-64 overflow-y-auto p-4 space-y-3 bg-gray-50">
+                  <div className="h-64 overflow-y-auto p-4 space-y-3 bg-gray-800">
                     {chatMessages.length === 0 ? (
-                      <div className="text-center text-gray-500 py-8">
+                      <div className="text-center text-gray-400 py-8">
                         <span className="text-3xl">💭</span>
                         <p className="mt-2">Inicia el debate</p>
                       </div>
@@ -820,16 +820,16 @@ export default function TribePollWidget({
                           key={msg.id}
                           className={`p-3 rounded-lg ${
                             msg.user.id === userId
-                              ? 'bg-purple-100 ml-8'
-                              : 'bg-white mr-8'
+                              ? 'bg-purple-500/20 ml-8'
+                              : 'bg-gray-700 mr-8'
                           } ${msg.isPinned ? 'border-2 border-yellow-400' : ''}`}
                         >
                           {msg.isPinned && (
-                            <div className="text-xs text-yellow-600 mb-1">📌 Mensaje fijado</div>
+                            <div className="text-xs text-yellow-400 mb-1">📌 Mensaje fijado</div>
                           )}
                           
                           {msg.replyTo && (
-                            <div className="text-xs text-gray-500 mb-2 pl-2 border-l-2 border-gray-300">
+                            <div className="text-xs text-gray-400 mb-2 pl-2 border-l-2 border-gray-500">
                               Respondiendo a {msg.replyTo.user.nombre}
                             </div>
                           )}
@@ -840,17 +840,17 @@ export default function TribePollWidget({
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
-                                <span className="font-medium text-sm">
+                                <span className="font-medium text-sm text-white">
                                   {msg.user.nombre}
                                 </span>
-                                <span className="text-xs text-gray-400">
+                                <span className="text-xs text-gray-500">
                                   {new Date(msg.createdAt).toLocaleTimeString()}
                                 </span>
                                 {msg.isEdited && (
-                                  <span className="text-xs text-gray-400">(editado)</span>
+                                  <span className="text-xs text-gray-500">(editado)</span>
                                 )}
                               </div>
-                              <p className="text-gray-700 text-sm mt-1">{msg.content}</p>
+                              <p className="text-gray-300 text-sm mt-1">{msg.content}</p>
                               
                               {/* Reacciones */}
                               <div className="flex flex-wrap gap-1 mt-2">
@@ -860,8 +860,8 @@ export default function TribePollWidget({
                                     onClick={() => addReaction(msg.id, r.emoji)}
                                     className={`text-xs px-2 py-0.5 rounded-full ${
                                       r.hasReacted
-                                        ? 'bg-purple-100 text-purple-700'
-                                        : 'bg-gray-100 hover:bg-gray-200'
+                                        ? 'bg-purple-500/30 text-purple-300'
+                                        : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
                                     }`}
                                   >
                                     {r.emoji} {r.count}
@@ -869,7 +869,7 @@ export default function TribePollWidget({
                                 ))}
                                 <button
                                   onClick={() => setReplyingTo(msg)}
-                                  className="text-xs text-gray-400 hover:text-gray-600 px-2"
+                                  className="text-xs text-gray-400 hover:text-gray-300 px-2"
                                 >
                                   ↩️ Responder
                                 </button>
@@ -882,13 +882,13 @@ export default function TribePollWidget({
                   </div>
 
                   {/* Input de mensaje */}
-                  <div className="p-3 border-t bg-white">
+                  <div className="p-3 border-t border-gray-700 bg-gray-900">
                     {replyingTo && (
-                      <div className="mb-2 p-2 bg-gray-100 rounded flex justify-between items-center text-sm">
+                      <div className="mb-2 p-2 bg-gray-800 rounded flex justify-between items-center text-sm text-gray-300">
                         <span>Respondiendo a {replyingTo.user.nombre}</span>
                         <button
                           onClick={() => setReplyingTo(null)}
-                          className="text-gray-500 hover:text-gray-700"
+                          className="text-gray-400 hover:text-gray-200"
                         >
                           ✕
                         </button>
@@ -901,7 +901,7 @@ export default function TribePollWidget({
                         onChange={(e) => setChatMessage(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendChatMessage()}
                         placeholder="Escribe tu opinión..."
-                        className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500"
+                        className="flex-1 px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 text-white placeholder-gray-500"
                       />
                       <button
                         onClick={sendChatMessage}
