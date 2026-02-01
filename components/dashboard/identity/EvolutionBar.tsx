@@ -62,6 +62,18 @@ export default function EvolutionBar({ currentLevel, nextMilestone, onUpgradeCli
 
   // Si es PL, mostrar progreso de semanas hacia graduación
   if (currentLevel === 'PL' && nextMilestone) {
+    // Calcular fechas de los Fines de Semana basándose en la fecha de graduación
+    const graduationDate = nextMilestone.deadline ? new Date(nextMilestone.deadline) : null;
+    
+    // Los FS son fines de semana antes de la graduación
+    // FS1 es aproximadamente 3 semanas antes, FS2 es 2 semanas antes, FS3 es 1 semana antes
+    const formatFS = (weeksBeforeGraduation: number) => {
+      if (!graduationDate) return '';
+      const fsDate = new Date(graduationDate);
+      fsDate.setDate(fsDate.getDate() - (weeksBeforeGraduation * 7));
+      return fsDate.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
+    };
+
     return (
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -73,11 +85,6 @@ export default function EvolutionBar({ currentLevel, nextMilestone, onUpgradeCli
             <Crown className="w-5 h-5 text-yellow-400" />
             <span className="text-sm font-medium text-yellow-400">{config.description}</span>
           </div>
-          <span className="text-xs text-slate-400">
-            {nextMilestone.deadline && (
-              <>Graduación: {new Date(nextMilestone.deadline).toLocaleDateString('es-MX', { month: 'short', day: 'numeric' })}</>
-            )}
-          </span>
         </div>
 
         {/* Barra segmentada en 4 bloques (fines de semana) */}
@@ -115,9 +122,9 @@ export default function EvolutionBar({ currentLevel, nextMilestone, onUpgradeCli
 
         <div className="flex justify-between text-xs text-slate-500">
           <span>Avanzado</span>
-          <span className="text-center">FS 1</span>
-          <span className="text-center">FS 2</span>
-          <span>FS 3</span>
+          <span className="text-center">{formatFS(3) || 'FS 1'}</span>
+          <span className="text-center">{formatFS(2) || 'FS 2'}</span>
+          <span>Creando</span>
         </div>
       </motion.div>
     );
