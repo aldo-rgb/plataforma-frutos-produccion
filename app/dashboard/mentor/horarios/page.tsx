@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import DisciplineScheduleManager from '@/components/mentor/DisciplineScheduleManager';
+import { prisma } from '@/lib/prisma';
 
 export default async function HorariosPage() {
   const session = await getServerSession(authOptions);
@@ -11,8 +12,20 @@ export default async function HorariosPage() {
     redirect('/login');
   }
   
-  // Validar que sea MENTOR, LIDER, COORDINADOR o ADMINISTRADOR
-  if (!['MENTOR', 'LIDER', 'COORDINADOR', 'ADMINISTRADOR'].includes(session.user.rol)) {
+  // Validar que sea MENTOR, LIDER, COORDINADOR, ADMINISTRADOR o SCHOOL_ADMIN con esMentor
+  const allowedRoles = ['MENTOR', 'LIDER', 'COORDINADOR', 'ADMINISTRADOR'];
+  let hasAccess = allowedRoles.includes(session.user.rol);
+  
+  // Si es SCHOOL_ADMIN, verificar si también es mentor
+  if (!hasAccess && session.user.rol === 'SCHOOL_ADMIN') {
+    const user = await prisma.usuario.findUnique({
+      where: { id: parseInt(session.user.id) },
+      select: { esMentor: true }
+    });
+    hasAccess = user?.esMentor === true;
+  }
+  
+  if (!hasAccess) {
     redirect('/dashboard');
   }
 
