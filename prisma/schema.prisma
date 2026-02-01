@@ -2328,6 +2328,9 @@ model Usuario {
   PollsClosed                                                            TribePoll[]                     @relation("UserClosedPolls")
   PollsCreated                                                           TribePoll[]                     @relation("UserCreatedPolls")
   PollChatMessages                                                       TribePollChat[]                 @relation("UserPollChats")
+  TribePollChatReaction                                                  TribePollChatReaction[]
+  TribePollChatReport_TribePollChatReport_reporterIdToUsuario            TribePollChatReport[]           @relation("TribePollChatReport_reporterIdToUsuario")
+  TribePollChatReport_TribePollChatReport_reviewedByToUsuario            TribePollChatReport[]           @relation("TribePollChatReport_reviewedByToUsuario")
   PollVotes                                                              TribePollVote[]                 @relation("UserPollVotes")
   ShirtOrders                                                            TribeShirtOrder[]               @relation("UserShirtOrders")
   AssignedTribeTasks                                                     TribeTask[]                     @relation("AssignedTribeTasks")
@@ -4678,87 +4681,90 @@ model ExpoVisitor {
 model TribeCommunityProject {
   id              Int                      @id @default(autoincrement())
   visionId        Int
-  name            String                   @db.VarChar(500)
+  name            String
   description     String
   category        CommunityProjectCategory
-  locationPending Boolean?                 @default(false)
-  locationName    String?                  @db.VarChar(500)
+  locationName    String?
   locationAddress String?
   locationLat     Float?
   locationLng     Float?
   googleMapsUrl   String?
-  contactName     String?                  @db.VarChar(255)
-  contactPhone    String?                  @db.VarChar(50)
-  contactEmail    String?                  @db.VarChar(255)
-  contactRole     String?                  @db.VarChar(100)
+  contactName     String?
+  contactPhone    String?
+  contactEmail    String?
+  contactRole     String?
   estimatedBudget Decimal?                 @db.Decimal(12, 2)
   logistics       String?
-  origin          ProjectOrigin?           @default(NEW)
+  origin          ProjectOrigin            @default(NEW)
   parentProjectId Int?
-  aiGenerated     Boolean?                 @default(false)
+  aiGenerated     Boolean                  @default(false)
   aiPrompt        String?
   coverImage      String?
-  galleryImages   String[]                 @default([])
-  status          CommunityProjectStatus?  @default(DRAFT)
+  galleryImages   String[]
+  status          CommunityProjectStatus   @default(DRAFT)
   createdById     Int
   proposedDate    DateTime?
-  createdAt       DateTime?                @default(now())
-  updatedAt       DateTime?                @default(now()) @updatedAt
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  locationPending Boolean                  @default(false)
   logisticsItems  ProjectLogisticsItem[]   @relation("ProjectLogisticsItems")
-  createdBy       Usuario                  @relation("UserCommunityProjects", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  parentProject   TribeCommunityProject?   @relation("ProjectContinuity", fields: [parentProjectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdBy       Usuario                  @relation("UserCommunityProjects", fields: [createdById], references: [id])
+  parentProject   TribeCommunityProject?   @relation("ProjectContinuity", fields: [parentProjectId], references: [id])
   childProjects   TribeCommunityProject[]  @relation("ProjectContinuity")
-  vision          Vision                   @relation("VisionCommunityProjects", fields: [visionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  vision          Vision                   @relation("VisionCommunityProjects", fields: [visionId], references: [id], onDelete: Cascade)
+  TribeIncome     TribeIncome[]
   pollOptions     TribePollOption[]        @relation("ProjectPollOptions")
 
   @@index([visionId])
   @@index([status])
   @@index([category])
+  @@index([createdById])
 }
 
 model ProjectLogisticsItem {
-  id            Int                    @id @default(autoincrement())
+  id            Int                   @id @default(autoincrement())
   projectId     Int
-  name          String                 @db.VarChar(500)
-  quantity      Int?                   @default(1)
-  category      LogisticsItemCategory? @default(OTHER)
-  estimatedCost Decimal?               @db.Decimal(10, 2)
+  name          String
+  quantity      Int                   @default(1)
+  category      LogisticsItemCategory @default(OTHER)
+  estimatedCost Decimal?              @db.Decimal(10, 2)
   notes         String?
   assignedToId  Int?
   assignedAt    DateTime?
-  status        LogisticsItemStatus?   @default(PENDING)
-  createdAt     DateTime?              @default(now())
-  updatedAt     DateTime?              @default(now()) @updatedAt
-  assignedTo    Usuario?               @relation("UserLogisticsAssignments", fields: [assignedToId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  project       TribeCommunityProject  @relation("ProjectLogisticsItems", fields: [projectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  status        LogisticsItemStatus   @default(PENDING)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  assignedTo    Usuario?              @relation("UserLogisticsAssignments", fields: [assignedToId], references: [id])
+  project       TribeCommunityProject @relation("ProjectLogisticsItems", fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
   @@index([status])
+  @@index([assignedToId])
 }
 
 model TribePoll {
   id                   Int               @id @default(autoincrement())
   visionId             Int
-  title                String            @db.VarChar(500)
+  title                String
   description          String?
   category             TribePollCategory
-  minOptions           Int?              @default(2)
-  maxOptions           Int?              @default(5)
-  allowMultipleVotes   Boolean?          @default(false)
-  showResultsBeforeEnd Boolean?          @default(false)
-  quorumPercentage     Int?              @default(80)
-  tieBreakerWeight     Int?              @default(2)
-  status               TribePollStatus?  @default(DRAFT)
+  minOptions           Int               @default(2)
+  maxOptions           Int               @default(5)
+  allowMultipleVotes   Boolean           @default(false)
+  showResultsBeforeEnd Boolean           @default(false)
+  quorumPercentage     Int               @default(80)
+  tieBreakerWeight     Int               @default(2)
+  status               TribePollStatus   @default(DRAFT)
   startDate            DateTime?
   endDate              DateTime?
   closedAt             DateTime?
   closedById           Int?
   createdById          Int
-  createdAt            DateTime?         @default(now())
-  updatedAt            DateTime?         @default(now()) @updatedAt
-  closedBy             Usuario?          @relation("UserClosedPolls", fields: [closedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  createdBy            Usuario           @relation("UserCreatedPolls", fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  vision               Vision            @relation("VisionPolls", fields: [visionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  closedBy             Usuario?          @relation("UserClosedPolls", fields: [closedById], references: [id])
+  createdBy            Usuario           @relation("UserCreatedPolls", fields: [createdById], references: [id])
+  vision               Vision            @relation("VisionPolls", fields: [visionId], references: [id], onDelete: Cascade)
   chatMessages         TribePollChat[]
   options              TribePollOption[]
   votes                TribePollVote[]
@@ -4766,23 +4772,25 @@ model TribePoll {
   @@index([visionId])
   @@index([status])
   @@index([category])
+  @@index([createdById])
 }
 
 model TribePollOption {
   id           Int                    @id @default(autoincrement())
   pollId       Int
-  title        String                 @db.VarChar(500)
+  title        String
   description  String?
   imageUrl     String?
   projectId    Int?
-  displayOrder Int?                   @default(0)
+  displayOrder Int                    @default(0)
   metadata     Json?
-  createdAt    DateTime?              @default(now())
-  poll         TribePoll              @relation(fields: [pollId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  project      TribeCommunityProject? @relation("ProjectPollOptions", fields: [projectId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  createdAt    DateTime               @default(now())
+  poll         TribePoll              @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  project      TribeCommunityProject? @relation("ProjectPollOptions", fields: [projectId], references: [id])
   votes        TribePollVote[]
 
   @@index([pollId])
+  @@index([projectId])
 }
 
 model TribePollVote {
@@ -4790,55 +4798,61 @@ model TribePollVote {
   pollId    Int
   optionId  Int
   userId    Int
-  weight    Int?            @default(1)
+  weight    Int             @default(1)
+  votedAt   DateTime        @default(now())
   shirtSize ShirtSize?
-  votedAt   DateTime?       @default(now())
-  option    TribePollOption @relation(fields: [optionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  poll      TribePoll       @relation(fields: [pollId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  user      Usuario         @relation("UserPollVotes", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  option    TribePollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  poll      TribePoll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user      Usuario         @relation("UserPollVotes", fields: [userId], references: [id])
 
   @@unique([pollId, userId])
   @@index([pollId])
   @@index([optionId])
+  @@index([userId])
 }
 
 model TribePollChat {
-  id          Int              @id @default(autoincrement())
-  pollId      Int
-  userId      Int
-  content     String
-  messageType ChatMessageType? @default(TEXT)
-  replyToId   Int?
-  isEdited    Boolean?         @default(false)
-  isDeleted   Boolean?         @default(false)
-  isPinned    Boolean?         @default(false)
-  isHidden    Boolean?         @default(false)
-  createdAt   DateTime?        @default(now())
-  updatedAt   DateTime?        @default(now()) @updatedAt
-  poll        TribePoll        @relation(fields: [pollId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  user        Usuario          @relation("UserPollChats", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id                    Int                     @id @default(autoincrement())
+  pollId                Int
+  userId                Int
+  messageType           ChatMessageType         @default(TEXT)
+  replyToId             Int?
+  isEdited              Boolean                 @default(false)
+  isDeleted             Boolean                 @default(false)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  content               String
+  isHidden              Boolean                 @default(false)
+  isPinned              Boolean                 @default(false)
+  poll                  TribePoll               @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  TribePollChat         TribePollChat?          @relation("TribePollChatToTribePollChat", fields: [replyToId], references: [id])
+  other_TribePollChat   TribePollChat[]         @relation("TribePollChatToTribePollChat")
+  user                  Usuario                 @relation("UserPollChats", fields: [userId], references: [id])
+  TribePollChatReaction TribePollChatReaction[]
+  TribePollChatReport   TribePollChatReport[]
 
   @@index([pollId])
+  @@index([createdAt])
+  @@index([isPinned])
+  @@index([userId])
 }
 
 model TribeBankAccount {
   id             Int           @id @default(autoincrement())
   visionId       Int           @unique
-  bankName       String        @db.VarChar(255)
-  accountHolder  String        @db.VarChar(255)
-  accountNumber  String        @db.VarChar(255)
-  clabe          String?       @db.VarChar(18)
-  accountType    String?       @default("DEBIT") @db.VarChar(50)
-  alias          String?       @db.VarChar(255)
+  bankName       String
+  accountHolder  String
+  accountNumber  String
+  clabe          String?
+  accountType    String        @default("DEBIT")
+  alias          String?
   referenceNote  String?
-  shirtPrice     Decimal?      @db.Decimal(10, 2)
-  shirtTypes     Json?
-  isActive       Boolean?      @default(true)
+  isActive       Boolean       @default(true)
   configuredById Int
-  createdAt      DateTime?     @default(now())
-  updatedAt      DateTime?     @default(now()) @updatedAt
-  configuredBy   Usuario       @relation("TreasurerBankConfig", fields: [configuredById], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  vision         Vision        @relation("VisionBankAccount", fields: [visionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  configuredBy   Usuario       @relation("TreasurerBankConfig", fields: [configuredById], references: [id])
+  vision         Vision        @relation("VisionBankAccount", fields: [visionId], references: [id], onDelete: Cascade)
   incomes        TribeIncome[]
 
   @@index([visionId])
@@ -4846,56 +4860,93 @@ model TribeBankAccount {
 }
 
 model TribeIncome {
-  id              Int                 @id @default(autoincrement())
-  visionId        Int
-  bankAccountId   Int?
-  category        TribeIncomeCategory
-  concept         String              @db.VarChar(500)
-  amount          Float
-  payerUserId     Int?
-  payerName       String?             @db.VarChar(255)
-  payerEmail      String?             @db.VarChar(255)
-  proofImage      String?
-  proofNotes      String?
-  status          TribeIncomeStatus?  @default(PENDING)
-  verifiedById    Int?
-  verifiedAt      DateTime?
-  rejectionReason String?
-  shirtOrderId    Int?
-  projectId       Int?
-  createdAt       DateTime?           @default(now())
-  updatedAt       DateTime?           @default(now()) @updatedAt
-  bankAccount     TribeBankAccount?   @relation(fields: [bankAccountId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  payer           Usuario?            @relation("UserTribePayments", fields: [payerUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  shirtOrder      TribeShirtOrder?    @relation(fields: [shirtOrderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  verifiedBy      Usuario?            @relation("TreasurerVerified", fields: [verifiedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  vision          Vision              @relation("VisionIncomes", fields: [visionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                    Int                    @id @default(autoincrement())
+  visionId              Int
+  bankAccountId         Int?
+  category              TribeIncomeCategory
+  concept               String
+  amount                Float
+  payerUserId           Int?
+  payerName             String?
+  payerEmail            String?
+  proofImage            String?
+  proofNotes            String?
+  status                TribeIncomeStatus      @default(PENDING)
+  verifiedById          Int?
+  verifiedAt            DateTime?
+  rejectionReason       String?
+  shirtOrderId          Int?
+  projectId             Int?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  bankAccount           TribeBankAccount?      @relation(fields: [bankAccountId], references: [id])
+  payer                 Usuario?               @relation("UserTribePayments", fields: [payerUserId], references: [id])
+  TribeCommunityProject TribeCommunityProject? @relation(fields: [projectId], references: [id])
+  shirtOrder            TribeShirtOrder?       @relation(fields: [shirtOrderId], references: [id])
+  verifiedBy            Usuario?               @relation("TreasurerVerified", fields: [verifiedById], references: [id])
+  vision                Vision                 @relation("VisionIncomes", fields: [visionId], references: [id], onDelete: Cascade)
 
   @@index([visionId])
   @@index([category])
   @@index([status])
+  @@index([bankAccountId])
+  @@index([payerUserId])
 }
 
 model TribeShirtOrder {
-  id          Int               @id @default(autoincrement())
+  id          Int              @id @default(autoincrement())
   visionId    Int
   userId      Int
-  size        String            @db.VarChar(50)
-  quantity    Int?              @default(1)
+  size        String
+  quantity    Int              @default(1)
   unitPrice   Float
   totalAmount Float
-  status      ShirtOrderStatus? @default(PENDING_PAYMENT)
+  status      ShirtOrderStatus @default(PENDING_PAYMENT)
   paidAt      DateTime?
   producedAt  DateTime?
   deliveredAt DateTime?
-  createdAt   DateTime?         @default(now())
-  updatedAt   DateTime?         @default(now()) @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   incomes     TribeIncome[]
-  user        Usuario           @relation("UserShirtOrders", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  vision      Vision            @relation("VisionShirtOrders", fields: [visionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user        Usuario          @relation("UserShirtOrders", fields: [userId], references: [id])
+  vision      Vision           @relation("VisionShirtOrders", fields: [visionId], references: [id], onDelete: Cascade)
 
   @@index([visionId])
   @@index([userId])
+  @@index([status])
+}
+
+model TribePollChatReaction {
+  id            Int           @id @default(autoincrement())
+  chatId        Int
+  userId        Int
+  emoji         String        @db.VarChar(10)
+  createdAt     DateTime      @default(now())
+  TribePollChat TribePollChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  Usuario       Usuario       @relation(fields: [userId], references: [id])
+
+  @@unique([chatId, userId, emoji])
+  @@index([chatId])
+  @@index([userId])
+}
+
+model TribePollChatReport {
+  id                                              Int           @id @default(autoincrement())
+  chatId                                          Int
+  reporterId                                      Int
+  reason                                          String
+  status                                          ReportStatus  @default(PENDING)
+  reviewedBy                                      Int?
+  reviewedAt                                      DateTime?
+  createdAt                                       DateTime      @default(now())
+  TribePollChat                                   TribePollChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  Usuario_TribePollChatReport_reporterIdToUsuario Usuario       @relation("TribePollChatReport_reporterIdToUsuario", fields: [reporterId], references: [id])
+  Usuario_TribePollChatReport_reviewedByToUsuario Usuario?      @relation("TribePollChatReport_reviewedByToUsuario", fields: [reviewedBy], references: [id])
+
+  @@unique([chatId, reporterId])
+  @@index([chatId])
+  @@index([reporterId])
+  @@index([status])
 }
 
 enum PLCallType {
@@ -5843,20 +5894,23 @@ enum CommunityProjectCategory {
   ELDERLY
   ANIMALS
   ECOLOGICAL
-  HEALTH
   EDUCATION
-  INFRASTRUCTURE
+  HEALTH
+  HOUSING
+  FOOD
   OTHER
 }
 
 enum ProjectOrigin {
   CONTINUITY
   NEW
+  AI_SUGGESTED
 }
 
 enum CommunityProjectStatus {
   DRAFT
-  PENDING_APPROVAL
+  PROPOSED
+  VOTING
   APPROVED
   IN_PROGRESS
   COMPLETED
@@ -5867,19 +5921,17 @@ enum TribePollCategory {
   LOGO
   SHIRT
   COMMUNITY
-  FOOD
-  GRADUATION
-  MUSIC
-  RECOGNITION
-  BAPTISM
-  FAREWELL
-  TRANSPORT
   GENERAL
+  FOOD
+  TRANSPORT
+  GRADUATION
+  BUDGET
+  SCHEDULE
+  VENUE
 }
 
 enum TribePollStatus {
   DRAFT
-  PENDING
   ACTIVE
   CLOSED
   CANCELLED
@@ -5888,7 +5940,7 @@ enum TribePollStatus {
 enum ChatMessageType {
   TEXT
   IMAGE
-  POLL
+  REACTION
   SYSTEM
 }
 
@@ -5896,6 +5948,7 @@ enum TribeIncomeCategory {
   SHIRT
   LEGACY_FORGE
   CONTRIBUTION
+  EVENT
   OTHER
 }
 
@@ -5903,13 +5956,21 @@ enum TribeIncomeStatus {
   PENDING
   VERIFIED
   REJECTED
+  REFUNDED
 }
 
 enum ShirtOrderStatus {
   PENDING_PAYMENT
   PAID
-  PRODUCING
+  IN_PRODUCTION
   READY
   DELIVERED
   CANCELLED
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
+  ACTION_TAKEN
 }
