@@ -350,23 +350,31 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        // Normalizar opciones (aceptar strings o objetos)
+        const normalizedOptions = options.map((opt: string | { title: string; description?: string; imageUrl?: string }, index: number) => {
+          if (typeof opt === 'string') {
+            return { title: opt, description: undefined, imageUrl: undefined, displayOrder: index };
+          }
+          return { ...opt, displayOrder: index };
+        });
+
         const poll = await prisma.tribePoll.create({
           data: {
             visionId: parseInt(visionId),
             title,
             description,
             category,
-            status: 'DRAFT',
+            status: 'ACTIVE',
             quorumPercentage: quorumPercentage || 80,
-            showResultsBeforeEnd: showResultsBeforeEnd || false,
+            showResultsBeforeEnd: showResultsBeforeEnd ?? true,
             endDate: endDate ? new Date(endDate) : null,
             createdById: userId,
             options: {
-              create: options.map((opt: { title: string; description?: string; imageUrl?: string }, index: number) => ({
+              create: normalizedOptions.map((opt: { title: string; description?: string; imageUrl?: string; displayOrder: number }) => ({
                 title: opt.title,
                 description: opt.description,
                 imageUrl: opt.imageUrl,
-                displayOrder: index
+                displayOrder: opt.displayOrder
               }))
             }
           },
