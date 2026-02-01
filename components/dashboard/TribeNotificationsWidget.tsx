@@ -485,7 +485,7 @@ export default function TribeNotificationsWidget() {
               
               <div className="mt-4 flex items-center gap-3">
                 <Link
-                  href={`/capitania?tab=treasury&vision=${payment.visionId}`}
+                  href={`/dashboard/captaincy-widget?tab=treasury&vision=${payment.visionId}`}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-lg transition-all text-sm"
                 >
                   <DollarSign size={16} />
