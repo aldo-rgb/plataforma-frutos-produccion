@@ -3,6 +3,49 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+// Roles que pueden configurar disponibilidad
+const ROLES_PERMITIDOS = ['MENTOR', 'LIDER', 'COORDINADOR', 'GAMECHANGER', 'TRAINER', 'SCHOOL_ADMIN', 'ADMINISTRADOR'];
+
+/**
+ * Obtiene o crea un PerfilMentor para el usuario
+ * Necesario para que coordinadores y otros roles puedan usar disponibilidad
+ */
+async function obtenerOCrearPerfilMentor(usuarioId: number): Promise<{ id: number } | null> {
+  // Primero verificar si ya existe
+  let perfilMentor = await prisma.perfilMentor.findUnique({
+    where: { usuarioId },
+    select: { id: true }
+  });
+
+  if (perfilMentor) {
+    return perfilMentor;
+  }
+
+  // Verificar que el usuario tenga un rol permitido
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: usuarioId },
+    select: { rol: true, nombre: true }
+  });
+
+  if (!usuario || !ROLES_PERMITIDOS.includes(usuario.rol)) {
+    return null;
+  }
+
+  // Crear perfil mínimo para el usuario
+  console.log(`📝 Creando PerfilMentor automático para ${usuario.nombre} (${usuario.rol})`);
+  perfilMentor = await prisma.perfilMentor.create({
+    data: {
+      usuarioId,
+      especialidad: 'General',
+      nivel: 'JUNIOR',
+      disponible: true
+    },
+    select: { id: true }
+  });
+
+  return perfilMentor;
+}
+
 /**
  * GET /api/mentor/disponibilidad/semanal
  * Obtiene la configuración de disponibilidad semanal del mentor
@@ -15,14 +58,11 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const perfilMentor = await prisma.perfilMentor.findUnique({
-      where: { usuarioId: session.user.id },
-      select: { id: true }
-    });
+    const perfilMentor = await obtenerOCrearPerfilMentor(session.user.id);
 
     if (!perfilMentor) {
       return NextResponse.json({ 
-        error: 'No tienes un perfil de mentor activo' 
+        error: 'No tienes permiso para configurar disponibilidad' 
       }, { status: 403 });
     }
 
@@ -87,14 +127,11 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    const perfilMentor = await prisma.perfilMentor.findUnique({
-      where: { usuarioId: session.user.id },
-      select: { id: true }
-    });
+    const perfilMentor = await obtenerOCrearPerfilMentor(session.user.id);
 
     if (!perfilMentor) {
       return NextResponse.json({ 
-        error: 'No tienes un perfil de mentor activo' 
+        error: 'No tienes permiso para configurar disponibilidad' 
       }, { status: 403 });
     }
 
@@ -163,15 +200,12 @@ async function actualizarDiaCompleto(session: any, body: { dia: number; bloques:
     const { dia, bloques } = body;
     console.log(`🔄 Actualizando día ${dia} con ${bloques.length} bloques`);
     
-    const perfilMentor = await prisma.perfilMentor.findUnique({
-      where: { usuarioId: session.user.id },
-      select: { id: true }
-    });
+    const perfilMentor = await obtenerOCrearPerfilMentor(session.user.id);
 
     if (!perfilMentor) {
-      console.error('❌ Perfil de mentor no encontrado');
+      console.error('❌ No se pudo obtener o crear perfil de mentor');
       return NextResponse.json({ 
-        error: 'No tienes un perfil de mentor activo' 
+        error: 'No tienes permiso para configurar disponibilidad' 
       }, { status: 403 });
     }
 
@@ -241,14 +275,11 @@ export async function DELETE(request: Request) {
       }, { status: 400 });
     }
 
-    const perfilMentor = await prisma.perfilMentor.findUnique({
-      where: { usuarioId: session.user.id },
-      select: { id: true }
-    });
+    const perfilMentor = await obtenerOCrearPerfilMentor(session.user.id);
 
     if (!perfilMentor) {
       return NextResponse.json({ 
-        error: 'No tienes un perfil de mentor activo' 
+        error: 'No tienes permiso para configurar disponibilidad' 
       }, { status: 403 });
     }
 

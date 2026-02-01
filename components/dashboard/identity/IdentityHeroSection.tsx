@@ -53,6 +53,8 @@ interface DashboardStatsResponse {
       enrolledCount: number;
       graduatedCount?: number;
     } | null;
+    tribeLogoUrl?: string | null;
+    tribeName?: string | null;
     isLoboSolitario: boolean;
     hasVision: boolean;
     isDropped?: boolean; // Indica si el usuario fue marcado como DROP
@@ -172,6 +174,8 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
             <TribeManagementWidget 
               stats={tribeStats}
               onInviteClick={() => setShowQRModal(true)}
+              tribeLogoUrl={data?.tribeLogoUrl}
+              tribeName={data?.tribeName || data?.visionInfo?.nombre}
             />
             <PromiseWidget 
               hasCompletedCarta={cartaData?.hasCompletedCarta}

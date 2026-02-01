@@ -276,15 +276,30 @@ export async function GET() {
 
     // Obtener stats de tribu si está en PL
     let tribeStats = null;
-    if (currentLevel === 'PL') {
+    let tribeLogoUrl = null;
+    let tribeName = null;
+    
+    if (currentLevel === 'PL' && vision) {
       const invitedCount = await prisma.usuario.count({
         where: { invitedBy: usuario.id }
+      });
+
+      // Obtener logo de tribu y nombre de la visión con el logo
+      const visionWithLogo = await prisma.vision.findUnique({
+        where: { id: vision.id },
+        select: { 
+          tribeLogoUrl: true,
+          nombre: true
+        }
       });
 
       tribeStats = {
         invitedCount,
         enrolledCount: invitedCount, // Simplificado, se puede mejorar
       };
+      
+      tribeLogoUrl = visionWithLogo?.tribeLogoUrl || null;
+      tribeName = visionWithLogo?.nombre || null;
     }
 
     // Badge asset basado en nivel
@@ -317,6 +332,8 @@ export async function GET() {
         } : null,
         buddyInfo,
         tribeStats,
+        tribeLogoUrl,
+        tribeName,
         isLoboSolitario: currentLevel === 'LOBO_SOLITARIO',
         hasVision: !!vision,
         isDropped, // Indica si el usuario fue marcado como DROP

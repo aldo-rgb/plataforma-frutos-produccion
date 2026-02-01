@@ -2559,6 +2559,10 @@ model Vision {
   TribeIncomes                  TribeIncome[]                   @relation("VisionIncomes")
   ShirtOrders                   TribeShirtOrder[]               @relation("VisionShirtOrders")
 
+  // Identidad de Tribu - Logo y Playera ganadores
+  tribeLogoUrl                  String?
+  tribeShirtDesignUrl           String?
+
   @@index([coordinadorId])
   @@index([isActive])
   @@index([organizationId])
@@ -6450,6 +6454,9 @@ model TribePollVote {
   
   // Peso del voto (normalmente 1, pero puede ser 2 para líderes en desempate)
   weight              Int                     @default(1)
+  
+  // Talla de playera (solo para votaciones de SHIRT)
+  shirtSize           ShirtSize?
   
   // Timestamp
   votedAt             DateTime                @default(now())

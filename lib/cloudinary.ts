@@ -43,6 +43,10 @@ export const UPLOAD_PRESETS = {
     folder: 'profiles',
     resource_type: 'image' as const,
   },
+  IDENTITY_LAB: {
+    folder: 'identity-lab',
+    resource_type: 'image' as const,
+  },
 };
 
 /**

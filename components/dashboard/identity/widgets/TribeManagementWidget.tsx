@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Users, UserPlus, Award, TrendingUp } from 'lucide-react';
+import Image from 'next/image';
 
 interface TribeStats {
   invitedCount: number;
@@ -12,9 +13,16 @@ interface TribeStats {
 interface TribeManagementWidgetProps {
   stats?: TribeStats | null;
   onInviteClick?: () => void;
+  tribeLogoUrl?: string | null;
+  tribeName?: string;
 }
 
-export default function TribeManagementWidget({ stats, onInviteClick }: TribeManagementWidgetProps) {
+export default function TribeManagementWidget({ 
+  stats, 
+  onInviteClick, 
+  tribeLogoUrl,
+  tribeName 
+}: TribeManagementWidgetProps) {
   const enrolledCount = stats?.enrolledCount || 0;
   const graduatedCount = stats?.graduatedCount || 0;
 
@@ -27,11 +35,21 @@ export default function TribeManagementWidget({ stats, onInviteClick }: TribeMan
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-yellow-500/10 rounded-xl border border-yellow-500/30">
-            <Users className="w-5 h-5 text-yellow-400" />
+          {/* Logo de tribu o ícono por defecto */}
+          <div className="relative w-12 h-12 rounded-xl overflow-hidden border border-yellow-500/30 bg-yellow-500/10 flex items-center justify-center">
+            {tribeLogoUrl ? (
+              <Image
+                src={tribeLogoUrl}
+                alt={tribeName || 'Logo de tribu'}
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <Users className="w-5 h-5 text-yellow-400" />
+            )}
           </div>
           <div>
-            <h3 className="font-semibold text-white">Mi Tribu</h3>
+            <h3 className="font-semibold text-white">{tribeName || 'Mi Tribu'}</h3>
             <p className="text-xs text-slate-400">Tu legado transformacional</p>
           </div>
         </div>

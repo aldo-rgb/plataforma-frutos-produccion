@@ -330,7 +330,7 @@ export default function LegacyVisionBuilderPage() {
 
   const handleRemoveCaptain = async (assignmentId: number) => {
     try {
-      const res = await fetch(`/api/legacy-vision-builder?assignmentId=${assignmentId}`, {
+      const res = await fetch(`/api/legacy-vision-builder?assignmentId=${assignmentId}&visionId=${data?.visionId}`, {
         method: 'DELETE',
       });
 
@@ -1109,11 +1109,15 @@ export default function LegacyVisionBuilderPage() {
             {/* Determinar si hay Capitán de Tribu */}
             {(() => {
               const tribeCaptainRole = data.captaincies.find(c => c.roleType === 'TRIBE_CAPTAIN');
+              const tribeCoCaptainRole = data.captaincies.find(c => c.roleType === 'TRIBE_CO_CAPTAIN');
               const hasTribeCaptain = tribeCaptainRole?.assignments.some(a => a.status === 'ACCEPTED');
               const currentUserIsCaptain = tribeCaptainRole?.assignments.some(
                 a => a.userId === data.userId && a.status === 'ACCEPTED'
               );
-              const canAssign = data.isStaff || currentUserIsCaptain;
+              const currentUserIsCoCaptain = tribeCoCaptainRole?.assignments.some(
+                a => a.userId === data.userId && a.status === 'ACCEPTED'
+              );
+              const canAssign = data.isStaff || currentUserIsCaptain || currentUserIsCoCaptain;
 
               return (
                 <>
@@ -1367,7 +1371,11 @@ export default function LegacyVisionBuilderPage() {
                                   {assignment.status === 'ACCEPTED' && (
                                     <CheckCircle className="w-4 h-4 text-green-500" />
                                   )}
-                                  {data.isStaff && (
+                                  {/* Botón remover - visible para Staff, Capitán o Co-Capitán de Tribu */}
+                                  {(data.isStaff || 
+                                    data.captaincies.find(c => c.roleType === 'TRIBE_CAPTAIN')?.assignments.some(a => a.userId === data.userId && a.status === 'ACCEPTED') ||
+                                    data.captaincies.find(c => c.roleType === 'TRIBE_CO_CAPTAIN')?.assignments.some(a => a.userId === data.userId && a.status === 'ACCEPTED')
+                                  ) && (
                                     <button
                                       onClick={() => handleRemoveCaptain(assignment.id)}
                                       className="p-1 hover:bg-red-600/20 rounded transition-colors"

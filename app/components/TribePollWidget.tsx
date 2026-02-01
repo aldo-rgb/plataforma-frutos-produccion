@@ -714,10 +714,10 @@ export default function TribePollWidget({
                       
                       <div className="text-right">
                         <div className="font-bold text-lg text-white">
-                          {option.percentage.toFixed(0)}%
+                          {(option.percentage ?? 0).toFixed(0)}%
                         </div>
                         <div className="text-xs text-gray-400">
-                          {option.voteCount} votos
+                          {option.voteCount ?? 0} votos
                         </div>
                       </div>
                     </div>
@@ -726,7 +726,7 @@ export default function TribePollWidget({
                     <div className="mt-3 h-2 bg-gray-700 rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
-                        animate={{ width: `${option.percentage}%` }}
+                        animate={{ width: `${option.percentage ?? 0}%` }}
                         transition={{ duration: 0.5 }}
                         className={`h-full ${
                           option.isWinner ? 'bg-green-500' : 'bg-purple-500'

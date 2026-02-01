@@ -1,9 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Crown, Vote, X, ArrowRight, Shield, Clock, Sparkles, Check, Loader2, MessageSquare, Users } from 'lucide-react';
+import { Crown, Vote, X, ArrowRight, Shield, Clock, Sparkles, Check, Loader2, MessageSquare, Users, Shirt } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+
+// Tallas disponibles
+const SHIRT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'] as const;
+type ShirtSize = typeof SHIRT_SIZES[number];
 
 interface CaptaincyNotification {
   id: number;
@@ -92,6 +96,9 @@ export default function TribeNotificationsWidget() {
   const [selectedOptionId, setSelectedOptionId] = useState<number | null>(null);
   const [submittingVote, setSubmittingVote] = useState(false);
   const [voteSuccess, setVoteSuccess] = useState(false);
+  
+  // Estado para la talla de playera (solo para votaciones LOGO)
+  const [selectedShirtSize, setSelectedShirtSize] = useState<ShirtSize | null>(null);
 
   useEffect(() => {
     fetchNotifications();
@@ -167,11 +174,18 @@ export default function TribeNotificationsWidget() {
     setPollDetails(null);
     setPollStats(null);
     setSelectedOptionId(null);
+    setSelectedShirtSize(null);
     setVoteSuccess(false);
   };
 
   const submitVote = async () => {
     if (!selectedOptionId || !selectedPoll) return;
+    
+    // Para votaciones de LOGO, la talla es requerida
+    if (selectedPoll.category === 'LOGO' && !selectedShirtSize) {
+      alert('Por favor selecciona tu talla de playera');
+      return;
+    }
     
     setSubmittingVote(true);
     try {
@@ -181,7 +195,8 @@ export default function TribeNotificationsWidget() {
         body: JSON.stringify({
           action: 'vote',
           pollId: selectedPoll.id,
-          optionId: selectedOptionId
+          optionId: selectedOptionId,
+          ...(selectedPoll.category === 'LOGO' && selectedShirtSize ? { shirtSize: selectedShirtSize } : {})
         })
       });
       
@@ -402,49 +417,125 @@ export default function TribeNotificationsWidget() {
                   {/* Opciones */}
                   <div className="space-y-3">
                     <p className="text-sm text-gray-400 mb-3">Selecciona tu opción:</p>
-                    {pollDetails.options.map((option) => (
-                      <button
-                        key={option.id}
-                        onClick={() => setSelectedOptionId(option.id)}
-                        className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
-                          selectedOptionId === option.id
-                            ? 'border-purple-500 bg-purple-500/20'
-                            : 'border-gray-700 hover:border-purple-500/50 hover:bg-gray-800'
-                        }`}
-                      >
-                        <div className="flex items-center gap-4">
-                          {option.imageUrl && (
-                            <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-800">
-                              <Image
-                                src={option.imageUrl}
-                                alt={option.title}
-                                width={64}
-                                height={64}
-                                className="w-full h-full object-cover"
-                              />
+                    
+                    {/* Grid para logos grandes cuando es categoría LOGO */}
+                    {selectedPoll.category === 'LOGO' ? (
+                      <div className="grid grid-cols-2 gap-4">
+                        {pollDetails.options.map((option) => (
+                          <button
+                            key={option.id}
+                            onClick={() => setSelectedOptionId(option.id)}
+                            className={`relative p-3 rounded-xl border-2 transition-all ${
+                              selectedOptionId === option.id
+                                ? 'border-purple-500 bg-purple-500/20 ring-2 ring-purple-500/50'
+                                : 'border-gray-700 hover:border-purple-500/50 hover:bg-gray-800'
+                            }`}
+                          >
+                            {/* Indicador de selección */}
+                            <div className={`absolute top-2 right-2 w-6 h-6 rounded-full border-2 flex items-center justify-center z-10 ${
+                              selectedOptionId === option.id
+                                ? 'border-purple-500 bg-purple-500'
+                                : 'border-gray-600 bg-gray-800'
+                            }`}>
+                              {selectedOptionId === option.id && (
+                                <Check size={14} className="text-white" />
+                              )}
                             </div>
-                          )}
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                selectedOptionId === option.id
-                                  ? 'border-purple-500 bg-purple-500'
-                                  : 'border-gray-600'
-                              }`}>
-                                {selectedOptionId === option.id && (
-                                  <Check size={12} className="text-white" />
-                                )}
+                            
+                            {/* Logo grande */}
+                            {option.imageUrl && (
+                              <div className="w-full aspect-square rounded-lg overflow-hidden bg-gray-800 mb-3">
+                                <Image
+                                  src={option.imageUrl}
+                                  alt={option.title}
+                                  width={200}
+                                  height={200}
+                                  className="w-full h-full object-contain"
+                                />
                               </div>
-                              <span className="font-semibold text-white">{option.title}</span>
-                            </div>
-                            {option.description && (
-                              <p className="text-sm text-gray-400 mt-1 ml-7">{option.description}</p>
                             )}
+                            <p className="font-semibold text-white text-center text-sm">{option.title}</p>
+                            {option.description && (
+                              <p className="text-xs text-gray-400 text-center mt-1">{option.description}</p>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      /* Layout normal para otras categorías */
+                      pollDetails.options.map((option) => (
+                        <button
+                          key={option.id}
+                          onClick={() => setSelectedOptionId(option.id)}
+                          className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                            selectedOptionId === option.id
+                              ? 'border-purple-500 bg-purple-500/20'
+                              : 'border-gray-700 hover:border-purple-500/50 hover:bg-gray-800'
+                          }`}
+                        >
+                          <div className="flex items-center gap-4">
+                            {option.imageUrl && (
+                              <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-800">
+                                <Image
+                                  src={option.imageUrl}
+                                  alt={option.title}
+                                  width={64}
+                                  height={64}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            )}
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                  selectedOptionId === option.id
+                                    ? 'border-purple-500 bg-purple-500'
+                                    : 'border-gray-600'
+                                }`}>
+                                  {selectedOptionId === option.id && (
+                                    <Check size={12} className="text-white" />
+                                  )}
+                                </div>
+                                <span className="font-semibold text-white">{option.title}</span>
+                              </div>
+                              {option.description && (
+                                <p className="text-sm text-gray-400 mt-1 ml-7">{option.description}</p>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </button>
-                    ))}
+                        </button>
+                      ))
+                    )}
                   </div>
+
+                  {/* Selector de talla para votaciones de LOGO */}
+                  {selectedPoll.category === 'LOGO' && (
+                    <div className="mt-6 p-4 bg-indigo-500/10 rounded-xl border border-indigo-500/30">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Shirt size={18} className="text-indigo-400" />
+                        <span className="font-semibold text-indigo-300">Tu talla de playera</span>
+                        <span className="text-red-400 text-xs">*Requerido</span>
+                      </div>
+                      <p className="text-xs text-gray-400 mb-3">
+                        Selecciona la talla que usarás para la playera de tu tribu
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {SHIRT_SIZES.map((size) => (
+                          <button
+                            key={size}
+                            onClick={() => setSelectedShirtSize(size)}
+                            className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                              selectedShirtSize === size
+                                ? 'bg-indigo-500 text-white'
+                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                            }`}
+                          >
+                            {size}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Fecha límite */}
                   {selectedPoll.endDate && (
@@ -471,11 +562,22 @@ export default function TribeNotificationsWidget() {
             {/* Footer con botón de votar */}
             {!loadingDetails && !voteSuccess && pollDetails && (
               <div className="sticky bottom-0 bg-gray-900 p-6 border-t border-purple-500/30">
+                {/* Indicador de talla seleccionada para LOGO */}
+                {selectedPoll.category === 'LOGO' && selectedShirtSize && (
+                  <div className="flex items-center justify-center gap-2 mb-3 text-sm text-indigo-300">
+                    <Shirt size={16} />
+                    <span>Talla seleccionada: <strong>{selectedShirtSize}</strong></span>
+                  </div>
+                )}
                 <button
                   onClick={submitVote}
-                  disabled={!selectedOptionId || submittingVote}
+                  disabled={
+                    !selectedOptionId || 
+                    submittingVote || 
+                    (selectedPoll.category === 'LOGO' && !selectedShirtSize)
+                  }
                   className={`w-full py-3 px-6 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2 ${
-                    selectedOptionId && !submittingVote
+                    selectedOptionId && !submittingVote && (selectedPoll.category !== 'LOGO' || selectedShirtSize)
                       ? 'bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white'
                       : 'bg-gray-700 text-gray-400 cursor-not-allowed'
                   }`}

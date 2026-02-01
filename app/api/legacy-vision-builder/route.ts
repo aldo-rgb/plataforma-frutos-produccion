@@ -565,17 +565,15 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // ACCIÓN: Nominar capitán (Staff o Capitán de Tribu puede hacer esto)
+    // ACCIÓN: Nominar capitán (Staff, Capitán de Tribu o Co-Capitán de Tribu puede hacer esto)
     if (action === 'nominate_captain') {
       const isStaff = ['ADMINISTRADOR', 'SUPER_ADMIN', 'GAMECHANGER', 'COORDINATOR', 'COORDINATOR_ADVANCED'].includes(usuario.rol);
       
-      // Verificar si es el Capitán de Tribu
-      const tribeCaptaincy = await prisma.tribeCaptaincy.findUnique({
+      // Verificar si es el Capitán de Tribu o Co-Capitán de Tribu
+      const tribeCaptaincies = await prisma.tribeCaptaincy.findMany({
         where: {
-          visionId_roleType: {
-            visionId: parseInt(visionId),
-            roleType: 'TRIBE_CAPTAIN'
-          }
+          visionId: parseInt(visionId),
+          roleType: { in: ['TRIBE_CAPTAIN', 'TRIBE_CO_CAPTAIN'] }
         },
         include: {
           assignments: {
@@ -587,11 +585,11 @@ export async function POST(request: NextRequest) {
         }
       });
       
-      const isTribeCaptain = tribeCaptaincy && tribeCaptaincy.assignments.length > 0;
+      const isTribeCaptainOrCo = tribeCaptaincies.some(c => c.assignments.length > 0);
       
-      if (!isStaff && !isTribeCaptain) {
+      if (!isStaff && !isTribeCaptainOrCo) {
         return NextResponse.json({ 
-          error: "Solo el Capitán de Tribu o Staff pueden asignar capitanías" 
+          error: "Solo el Capitán de Tribu, Co-Capitán o Staff pueden asignar capitanías" 
         }, { status: 403 });
       }
 
@@ -787,18 +785,39 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
     }
 
-    // Solo Staff/Admin puede remover
-    const isStaff = ['ADMINISTRADOR', 'SUPER_ADMIN', 'GAMECHANGER', 'COORDINATOR', 'COORDINATOR_ADVANCED'].includes(usuario.rol);
-    
-    if (!isStaff) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-    }
-
     const { searchParams } = new URL(request.url);
     const assignmentId = searchParams.get("assignmentId");
+    const visionId = searchParams.get("visionId");
 
     if (!assignmentId) {
       return NextResponse.json({ error: "assignmentId es requerido" }, { status: 400 });
+    }
+
+    // Staff/Admin puede remover
+    const isStaff = ['ADMINISTRADOR', 'SUPER_ADMIN', 'GAMECHANGER', 'COORDINATOR', 'COORDINATOR_ADVANCED'].includes(usuario.rol);
+    
+    // Verificar si es Capitán de Tribu o Co-Capitán de Tribu
+    let isTribeCaptainOrCo = false;
+    if (visionId) {
+      const tribeCaptaincies = await prisma.tribeCaptaincy.findMany({
+        where: {
+          visionId: parseInt(visionId),
+          roleType: { in: ['TRIBE_CAPTAIN', 'TRIBE_CO_CAPTAIN'] }
+        },
+        include: {
+          assignments: {
+            where: { 
+              userId: usuario.id,
+              status: 'ACCEPTED'
+            }
+          }
+        }
+      });
+      isTribeCaptainOrCo = tribeCaptaincies.some(c => c.assignments.length > 0);
+    }
+    
+    if (!isStaff && !isTribeCaptainOrCo) {
+      return NextResponse.json({ error: "Solo el Capitán de Tribu, Co-Capitán o Staff pueden remover capitanías" }, { status: 403 });
     }
 
     // Actualizar el estado a REMOVED

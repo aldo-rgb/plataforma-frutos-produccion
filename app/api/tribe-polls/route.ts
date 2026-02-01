@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { ShirtSize } from '@prisma/client';
 
-// Tipos
+// Tipos - usando null para coincidir con Prisma
 interface PollOption {
   id: number;
   title: string;
-  description?: string;
-  imageUrl?: string;
+  description: string | null;
+  imageUrl: string | null;
   _count?: { votes: number };
   votes?: { weight: number }[];
 }
@@ -339,8 +340,9 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        // Verificar que la categoría es válida para el rol del capitán
-        if (captainAssignment && !isStaff) {
+        // Para Identity Lab (LOGO), cualquier capitán o staff puede crear
+        // La verificación de categoría solo aplica a otras categorías específicas
+        if (captainAssignment && !isStaff && category !== 'LOGO') {
           const allowedCategories = CATEGORY_BY_ROLE[captainAssignment.captaincy.roleType] || ['GENERAL'];
           if (!allowedCategories.includes(category)) {
             return NextResponse.json(
@@ -442,7 +444,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'pollId requerido' }, { status: 400 });
         }
 
-        const { optionId } = data;
+        const { optionId, shirtSize } = data;
         if (!optionId) {
           return NextResponse.json({ error: 'optionId requerido' }, { status: 400 });
         }
@@ -460,6 +462,17 @@ export async function POST(request: NextRequest) {
 
         if (poll.status !== 'ACTIVE') {
           return NextResponse.json({ error: 'La votación no está activa' }, { status: 400 });
+        }
+
+        // La talla solo es requerida para votaciones de LOGO (Identity Lab)
+        if (poll.category === 'LOGO' && !shirtSize) {
+          return NextResponse.json({ error: 'Debes seleccionar tu talla de playera' }, { status: 400 });
+        }
+
+        // Validar que la talla sea válida si se proporciona
+        const validSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+        if (shirtSize && !validSizes.includes(shirtSize)) {
+          return NextResponse.json({ error: 'Talla no válida' }, { status: 400 });
         }
 
         // Verificar que la opción pertenece a la votación
@@ -521,7 +534,8 @@ export async function POST(request: NextRequest) {
             pollId: parseInt(pollId),
             optionId: parseInt(optionId),
             userId: userId,
-            weight: voteWeight
+            weight: voteWeight,
+            shirtSize: shirtSize ? shirtSize as ShirtSize : null
           }
         });
 
@@ -590,6 +604,7 @@ export async function POST(request: NextRequest) {
         interface ResultItem {
           optionId: number;
           title: string;
+          imageUrl?: string | null;
           totalVotes: number;
           weightedVotes: number;
         }
@@ -599,6 +614,7 @@ export async function POST(request: NextRequest) {
           return {
             optionId: opt.id,
             title: opt.title || '',
+            imageUrl: opt.imageUrl,
             totalVotes: opt.votes?.length || 0,
             weightedVotes
           };
@@ -625,6 +641,21 @@ export async function POST(request: NextRequest) {
           }
         });
 
+        // Si es votación de LOGO o SHIRT, guardar el diseño ganador en la visión
+        if (poll.category === 'LOGO' && finalWinner.imageUrl) {
+          await prisma.vision.update({
+            where: { id: poll.visionId },
+            data: { tribeLogoUrl: finalWinner.imageUrl }
+          });
+          console.log(`[Tribe Poll] Logo ganador guardado para visión ${poll.visionId}: ${finalWinner.imageUrl}`);
+        } else if (poll.category === 'SHIRT' && finalWinner.imageUrl) {
+          await prisma.vision.update({
+            where: { id: poll.visionId },
+            data: { tribeShirtDesignUrl: finalWinner.imageUrl }
+          });
+          console.log(`[Tribe Poll] Diseño de playera ganador guardado para visión ${poll.visionId}: ${finalWinner.imageUrl}`);
+        }
+
         // Contar participación final
         const tribeMembers = await prisma.tribeOath.count({
           where: { visionId: poll.visionId }
@@ -643,6 +674,8 @@ export async function POST(request: NextRequest) {
           results,
           winner: finalWinner,
           isTie,
+          logoSaved: poll.category === 'LOGO' && !!finalWinner.imageUrl,
+          shirtSaved: poll.category === 'SHIRT' && !!finalWinner.imageUrl,
           stats: {
             tribeMembers,
             totalVotes,

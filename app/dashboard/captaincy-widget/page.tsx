@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import TribePollWidget from '@/app/components/TribePollWidget';
 import TreasuryWidget from '@/components/captaincy/TreasuryWidget';
+import ContextGuardianWidget from '@/components/captaincy/ContextGuardianWidget';
 import {
   ArrowLeft,
   Loader2,
@@ -288,6 +289,13 @@ export default function CaptaincyWidgetPage() {
             visionId={parseInt(visionId)}
             visionName={userData.visionName}
             isTreasurer={userData.isCaptain}
+          />
+        ) : roleType === 'CONTEXT_GUARDIAN' ? (
+          /* Widget del Guardián del Contexto */
+          <ContextGuardianWidget
+            visionId={parseInt(visionId)}
+            visionName={userData.visionName}
+            isGuardian={userData.isCaptain}
           />
         ) : (
           /* Widget de votaciones para otras capitanías */
