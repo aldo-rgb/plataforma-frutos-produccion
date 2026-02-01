@@ -168,11 +168,91 @@ export async function GET(request: NextRequest) {
       createdAt: poll.createdAt.toISOString()
     }));
 
+    // 3. Verificar pagos pendientes de playeras
+    // Buscar visiones donde el usuario votó en encuesta LOGO con talla pero NO ha pagado
+    const pendingShirtPayments: Array<{
+      id: number;
+      type: 'PENDING_SHIRT_PAYMENT';
+      title: string;
+      message: string;
+      visionId: number;
+      visionName: string;
+      size: string;
+      amount: number;
+      createdAt: string;
+    }> = [];
+
+    // Para cada visión donde participa, verificar si tiene talla y no ha pagado
+    for (const visId of visionIds) {
+      // Buscar voto con talla en encuesta LOGO
+      const voteWithSize = await prisma.tribePollVote.findFirst({
+        where: {
+          userId,
+          shirtSize: { not: null },
+          poll: {
+            visionId: visId,
+            category: 'LOGO'
+          }
+        },
+        include: {
+          poll: {
+            include: {
+              vision: {
+                select: { id: true, nombre: true }
+              }
+            }
+          }
+        }
+      });
+
+      if (voteWithSize && voteWithSize.shirtSize) {
+        // Verificar si ya pagó (tiene orden de playera)
+        const existingOrder = await prisma.tribeShirtOrder.findFirst({
+          where: {
+            visionId: visId,
+            userId,
+            status: { not: 'CANCELLED' }
+          }
+        });
+
+        if (!existingOrder) {
+          // Obtener precio de la cotización desde bankAccount.referenceNote
+          const bankAccount = await prisma.tribeBankAccount.findUnique({
+            where: { visionId: visId }
+          });
+
+          let shirtPrice = 0;
+          if (bankAccount?.referenceNote) {
+            try {
+              const config = JSON.parse(bankAccount.referenceNote);
+              shirtPrice = config.shirtPrice || 0;
+            } catch (e) {}
+          }
+
+          // Solo agregar si hay cotización configurada (shirtPrice > 0)
+          if (shirtPrice > 0) {
+            pendingShirtPayments.push({
+              id: voteWithSize.id,
+              type: 'PENDING_SHIRT_PAYMENT',
+              title: '👕 Pago de playera pendiente',
+              message: `Tu playera talla ${voteWithSize.shirtSize} está pendiente de pago`,
+              visionId: visId,
+              visionName: voteWithSize.poll.vision.nombre,
+              size: voteWithSize.shirtSize,
+              amount: shirtPrice,
+              createdAt: voteWithSize.votedAt.toISOString()
+            });
+          }
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       captaincyNotifications: formattedCaptaincyNotifications,
       pendingPolls: formattedPendingPolls,
-      totalCount: formattedCaptaincyNotifications.length + formattedPendingPolls.length
+      pendingShirtPayments,
+      totalCount: formattedCaptaincyNotifications.length + formattedPendingPolls.length + pendingShirtPayments.length
     });
 
   } catch (error) {

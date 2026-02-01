@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
         shirtOrder: {
           select: { id: true, size: true, quantity: true }
         },
-        project: {
+        TribeCommunityProject: {
           select: { id: true, name: true }
         }
       },
@@ -164,11 +164,18 @@ export async function GET(request: NextRequest) {
 
     const allMemberSizes = Array.from(memberSizesMap.values());
 
-    // El precio de playera está en bankAccount.shirtPrice
-    const shirtPrice = bankAccount?.shirtPrice ? Number(bankAccount.shirtPrice) : 0;
-    
-    // Tipos de camisetas con precios
-    const shirtTypes = (bankAccount?.shirtTypes as any[]) || [];
+    // Los tipos de camisetas y precio se guardan en referenceNote como JSON
+    let shirtTypes: any[] = [];
+    let shirtPrice = 0;
+    if (bankAccount?.referenceNote) {
+      try {
+        const shirtConfig = JSON.parse(bankAccount.referenceNote);
+        if (shirtConfig.shirtTypes) shirtTypes = shirtConfig.shirtTypes;
+        if (shirtConfig.shirtPrice) shirtPrice = shirtConfig.shirtPrice;
+      } catch (e) {
+        // Si no es JSON válido, es una nota normal
+      }
+    }
 
     // Calcular estadísticas
     const totalVerified = incomes
@@ -436,12 +443,12 @@ export async function POST(request: NextRequest) {
         // Calcular precio total
         const totalPrice = shirtTypes.reduce((sum: number, s: any) => sum + (s.price || 0), 0);
 
-        // Guardar tipos de camisetas y precio total
+        // Guardar tipos de camisetas y precio total en referenceNote como JSON
+        const shirtConfig = JSON.stringify({ shirtTypes, shirtPrice: totalPrice });
         await prisma.tribeBankAccount.update({
           where: { visionId: parseInt(visionId) },
           data: { 
-            shirtTypes: shirtTypes,
-            shirtPrice: totalPrice
+            referenceNote: shirtConfig
           }
         });
 
@@ -471,9 +478,18 @@ export async function POST(request: NextRequest) {
           }, { status: 400 });
         }
 
+        // Leer configuración actual de referenceNote
+        let currentConfig: any = {};
+        if (existingBank.referenceNote) {
+          try {
+            currentConfig = JSON.parse(existingBank.referenceNote);
+          } catch (e) {}
+        }
+        currentConfig.shirtPrice = price;
+
         await prisma.tribeBankAccount.update({
           where: { visionId: parseInt(visionId) },
-          data: { shirtPrice: price }
+          data: { referenceNote: JSON.stringify(currentConfig) }
         });
 
         return NextResponse.json({
@@ -490,12 +506,18 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 });
         }
 
-        // Obtener precio desde cuenta bancaria
+        // Obtener precio desde cuenta bancaria (guardado en referenceNote)
         const bankAccount = await prisma.tribeBankAccount.findUnique({
           where: { visionId: parseInt(visionId) }
         });
 
-        const shirtPrice = bankAccount?.shirtPrice ? Number(bankAccount.shirtPrice) : 0;
+        let shirtPrice = 0;
+        if (bankAccount?.referenceNote) {
+          try {
+            const config = JSON.parse(bankAccount.referenceNote);
+            shirtPrice = config.shirtPrice || 0;
+          } catch (e) {}
+        }
 
         if (paid) {
           // Marcar como pagado: crear orden de playera e ingreso

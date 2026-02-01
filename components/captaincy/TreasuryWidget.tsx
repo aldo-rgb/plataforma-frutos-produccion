@@ -394,7 +394,29 @@ export default function TreasuryWidget({ visionId, visionName, isTreasurer }: Pr
       const data = await res.json();
       if (data.success) {
         showToast(currentlyPaid ? 'Pago desmarcado' : 'Pago registrado', 'success');
-        loadData();
+        // Actualizar estado local en lugar de recargar todo
+        if (!currentlyPaid) {
+          // Agregar a shirtOrders localmente
+          const member = allMemberSizes.find(m => m.userId === memberId);
+          if (member) {
+            const newOrder: ShirtOrder = {
+              id: Date.now(), // ID temporal
+              size,
+              quantity: 1,
+              unitPrice: shirtTypes.reduce((sum, s) => sum + s.price, 0),
+              totalAmount: shirtTypes.reduce((sum, s) => sum + s.price, 0),
+              status: 'PAID',
+              paidAt: new Date().toISOString(),
+              deliveredAt: null,
+              createdAt: new Date().toISOString(),
+              user: member.user
+            };
+            setShirtOrders(prev => [...prev, newOrder]);
+          }
+        } else {
+          // Remover de shirtOrders localmente
+          setShirtOrders(prev => prev.filter(o => o.user.id !== memberId));
+        }
       } else {
         showToast(data.error || 'Error', 'error');
       }
@@ -674,7 +696,8 @@ export default function TreasuryWidget({ visionId, visionName, isTreasurer }: Pr
                   </div>
                 )}
 
-                {bankAccount.referenceNote && (
+                {/* Solo mostrar referenceNote si NO es JSON de configuración de playeras */}
+                {bankAccount.referenceNote && !bankAccount.referenceNote.startsWith('{"shirtTypes"') && (
                   <div className="p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
                     <p className="text-yellow-400 text-xs font-medium mb-1">💡 Concepto sugerido para depósitos:</p>
                     <p className="text-white font-medium">{bankAccount.referenceNote}</p>

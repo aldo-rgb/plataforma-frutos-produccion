@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Crown, Vote, X, ArrowRight, Shield, Clock, Sparkles, Check, Loader2, MessageSquare, Users, Shirt } from 'lucide-react';
+import { Crown, Vote, X, ArrowRight, Shield, Clock, Sparkles, Check, Loader2, MessageSquare, Users, Shirt, DollarSign } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -32,6 +32,18 @@ interface PendingPoll {
   optionsCount: number;
   votesCount: number;
   endDate: string | null;
+  createdAt: string;
+}
+
+interface PendingShirtPayment {
+  id: number;
+  type: 'PENDING_SHIRT_PAYMENT';
+  title: string;
+  message: string;
+  visionId: number;
+  visionName: string;
+  size: string;
+  amount: number;
   createdAt: string;
 }
 
@@ -86,6 +98,7 @@ const pollCategoryNames: Record<string, string> = {
 export default function TribeNotificationsWidget() {
   const [captaincyNotifications, setCaptaincyNotifications] = useState<CaptaincyNotification[]>([]);
   const [pendingPolls, setPendingPolls] = useState<PendingPoll[]>([]);
+  const [pendingShirtPayments, setPendingShirtPayments] = useState<PendingShirtPayment[]>([]);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   
@@ -123,6 +136,7 @@ export default function TribeNotificationsWidget() {
       if (data.success) {
         setCaptaincyNotifications(data.captaincyNotifications || []);
         setPendingPolls(data.pendingPolls || []);
+        setPendingShirtPayments(data.pendingShirtPayments || []);
       }
     } catch (error) {
       console.error('Error al obtener notificaciones de tribu:', error);
@@ -311,7 +325,15 @@ export default function TribeNotificationsWidget() {
     poll => !dismissedIds.has(`poll-${poll.id}`)
   );
 
-  if (isLoading || (visibleCaptaincyNotifications.length === 0 && visiblePendingPolls.length === 0)) {
+  const visiblePendingShirtPayments = pendingShirtPayments.filter(
+    payment => !dismissedIds.has(`shirt-${payment.id}`)
+  );
+
+  const dismissShirtPayment = (id: number) => {
+    setDismissedIds(prev => new Set([...prev, `shirt-${id}`]));
+  };
+
+  if (isLoading || (visibleCaptaincyNotifications.length === 0 && visiblePendingPolls.length === 0 && visiblePendingShirtPayments.length === 0)) {
     return null;
   }
 
@@ -425,6 +447,62 @@ export default function TribeNotificationsWidget() {
               aria-label="Cerrar notificación"
             >
               <X size={20} className="text-purple-400/60" />
+            </button>
+          </div>
+        </div>
+      ))}
+
+      {/* Pagos de Playera Pendientes */}
+      {visiblePendingShirtPayments.map((payment) => (
+        <div
+          key={`shirt-${payment.id}`}
+          className="border-2 rounded-xl p-5 animate-in fade-in slide-in-from-top-4 duration-500 bg-gradient-to-r from-emerald-900/40 to-teal-900/40 border-emerald-500/50"
+        >
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center animate-pulse bg-emerald-500/20">
+                <Shirt className="text-emerald-400" size={24} />
+              </div>
+            </div>
+            
+            <div className="flex-1">
+              <h3 className="text-lg font-bold mb-1 flex items-center gap-2 text-emerald-300">
+                <DollarSign size={18} />
+                Pago de Playera Pendiente
+              </h3>
+              <p className="text-emerald-100/80 text-sm mb-1">
+                Tu talla <span className="font-bold">{payment.size}</span> está registrada. Realiza el pago de ${payment.amount.toLocaleString()} MXN para confirmar tu pedido.
+              </p>
+              <div className="flex items-center gap-3 text-xs text-emerald-200/60">
+                <span className="flex items-center gap-1">
+                  <Shield size={12} />
+                  {payment.visionName}
+                </span>
+                <span className="px-2 py-0.5 bg-emerald-500/20 rounded-full">
+                  Cotización activa
+                </span>
+              </div>
+              
+              <div className="mt-4 flex items-center gap-3">
+                <Link
+                  href={`/capitania?tab=treasury&vision=${payment.visionId}`}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-lg transition-all text-sm"
+                >
+                  <DollarSign size={16} />
+                  Ver Detalles de Pago
+                </Link>
+                <span className="text-xs text-emerald-300/60">
+                  Talla: {payment.size}
+                </span>
+              </div>
+            </div>
+            
+            <button
+              onClick={() => dismissShirtPayment(payment.id)}
+              className="flex-shrink-0 p-1 hover:bg-emerald-500/20 rounded-full transition-colors"
+              aria-label="Cerrar notificación"
+            >
+              <X size={20} className="text-emerald-400/60" />
             </button>
           </div>
         </div>
