@@ -624,13 +624,21 @@ function ExpoReviewsSection({ userId }: { userId?: number }) {
                               {review.hiringIntent === 'YES' ? '🔥 Hot Lead' : '🤔 Interesado'}
                             </span>
                           </div>
-                          <div className="text-sm text-slate-400 flex items-center gap-3 mt-1">
-                            <a href={`tel:${review.visitorPhone}`} className="hover:text-blue-400 flex items-center gap-1">
-                              <Phone className="w-3 h-3" /> {review.visitorPhone}
-                            </a>
-                            <a href={`mailto:${review.visitorEmail}`} className="hover:text-blue-400">
-                              {review.visitorEmail}
-                            </a>
+                          <div className="text-sm text-slate-400 flex flex-wrap items-center gap-3 mt-1">
+                            {review.visitorPhone && review.visitorPhone !== 'N/A' ? (
+                              <a href={`tel:${review.visitorPhone}`} className="hover:text-green-400 flex items-center gap-1 bg-green-500/10 px-2 py-0.5 rounded">
+                                <Phone className="w-3 h-3" /> {review.visitorPhone}
+                              </a>
+                            ) : (
+                              <span className="text-slate-500 flex items-center gap-1 text-xs">
+                                <Phone className="w-3 h-3" /> Sin teléfono registrado
+                              </span>
+                            )}
+                            {review.visitorEmail && review.visitorEmail !== 'anonimo@expo.com' ? (
+                              <a href={`mailto:${review.visitorEmail}`} className="hover:text-blue-400 flex items-center gap-1">
+                                📧 {review.visitorEmail}
+                              </a>
+                            ) : null}
                           </div>
                           {review.feedbackText && (
                             <div className="mt-2 text-sm text-slate-300 bg-slate-700/50 rounded p-2">
@@ -654,26 +662,43 @@ function ExpoReviewsSection({ userId }: { userId?: number }) {
             <div className="text-sm text-slate-400 mb-2">Últimas calificaciones:</div>
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {reviews.slice(0, 5).map((review) => (
-                <div key={review.id} className="bg-slate-800/30 rounded-lg p-3 flex items-center justify-between">
-                  <div>
-                    <div className="text-sm text-white">{review.visitorName}</div>
-                    <div className="text-xs text-slate-500">
-                      {new Date(review.createdAt).toLocaleDateString('es-MX', { 
-                        day: 'numeric', 
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                <div key={review.id} className="bg-slate-800/30 rounded-lg p-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="text-sm text-white flex items-center gap-2">
+                        {review.visitorName}
+                        {(review.hiringIntent === 'YES' || review.hiringIntent === 'MAYBE') && (
+                          <span className={`text-xs px-1.5 py-0.5 rounded ${
+                            review.hiringIntent === 'YES' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/20 text-yellow-400'
+                          }`}>
+                            {review.hiringIntent === 'YES' ? '🔥' : '🤔'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {new Date(review.createdAt).toLocaleDateString('es-MX', { 
+                          day: 'numeric', 
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+                      {/* Mostrar teléfono si está disponible */}
+                      {review.visitorPhone && review.visitorPhone !== 'N/A' && (
+                        <a href={`tel:${review.visitorPhone}`} className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1 mt-1">
+                          <Phone className="w-3 h-3" /> {review.visitorPhone}
+                        </a>
+                      )}
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${hiringIntentLabels[review.hiringIntent].bg} ${hiringIntentLabels[review.hiringIntent].color}`}>
-                      {hiringIntentLabels[review.hiringIntent].icon}
-                    </span>
-                    <div className="flex items-center gap-0.5">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className={`w-3 h-3 ${i < review.ratingStars ? 'fill-yellow-400 text-yellow-400' : 'text-slate-600'}`} />
-                      ))}
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${hiringIntentLabels[review.hiringIntent].bg} ${hiringIntentLabels[review.hiringIntent].color}`}>
+                        {hiringIntentLabels[review.hiringIntent].icon}
+                      </span>
+                      <div className="flex items-center gap-0.5">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className={`w-3 h-3 ${i < review.ratingStars ? 'fill-yellow-400 text-yellow-400' : 'text-slate-600'}`} />
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
