@@ -39,6 +39,8 @@ export async function GET(request: NextRequest) {
     const isStaff = ['ADMINISTRADOR', 'SUPER_ADMIN', 'GAMECHANGER', 'COORDINATOR', 'COORDINATOR_ADVANCED'].includes(usuario.rol);
     
     let isContextGuardian = false;
+    let isTribeCaptainOrCoCaptain = false;
+    
     if (visionId) {
       const guardianCaptaincy = await prisma.tribeCaptaincy.findUnique({
         where: {
@@ -57,9 +59,22 @@ export async function GET(request: NextRequest) {
         }
       });
       isContextGuardian = !!(guardianCaptaincy && guardianCaptaincy.assignments.length > 0);
+
+      // Verificar si es Capitán de Tribu o Co-Capitán
+      const tribeCaptainCheck = await prisma.tribeCaptainAssignment.findFirst({
+        where: {
+          userId: usuario.id,
+          status: 'ACCEPTED',
+          captaincy: {
+            visionId: parseInt(visionId),
+            roleType: { in: ['TRIBE_CAPTAIN', 'TRIBE_CO_CAPTAIN'] }
+          }
+        }
+      });
+      isTribeCaptainOrCoCaptain = !!tribeCaptainCheck;
     }
 
-    if (!isStaff && !isContextGuardian) {
+    if (!isStaff && !isContextGuardian && !isTribeCaptainOrCoCaptain) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
@@ -74,8 +89,8 @@ export async function GET(request: NextRequest) {
       where.status = status;
     }
 
-    // Si es guardián, solo ve los que él reportó
-    if (!isStaff && isContextGuardian) {
+    // Si es guardián (y no es staff ni capitán de tribu), solo ve los que él reportó
+    if (!isStaff && !isTribeCaptainOrCoCaptain && isContextGuardian) {
       where.reportedById = usuario.id;
     }
 
@@ -214,7 +229,20 @@ export async function POST(request: NextRequest) {
     
     const isContextGuardian = guardianCaptaincy && guardianCaptaincy.assignments.length > 0;
 
-    if (!isStaff && !isContextGuardian) {
+    // Verificar si es Capitán de Tribu o Co-Capitán
+    const tribeCaptainCheck = await prisma.tribeCaptainAssignment.findFirst({
+      where: {
+        userId: usuario.id,
+        status: 'ACCEPTED',
+        captaincy: {
+          visionId: parseInt(visionId),
+          roleType: { in: ['TRIBE_CAPTAIN', 'TRIBE_CO_CAPTAIN'] }
+        }
+      }
+    });
+    const isTribeCaptainOrCoCaptain = !!tribeCaptainCheck;
+
+    if (!isStaff && !isContextGuardian && !isTribeCaptainOrCoCaptain) {
       return NextResponse.json({ 
         error: "Solo el Guardián del Contexto puede crear reportes" 
       }, { status: 403 });
@@ -307,7 +335,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PATCH: Actualizar estado del reporte (solo coordinador/staff)
+// PATCH: Actualizar estado del reporte (solo coordinador/staff/capitán de tribu)
 export async function PATCH(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -324,15 +352,37 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
     }
 
-    // Solo staff/coordinador puede actualizar
-    const isStaff = ['ADMINISTRADOR', 'SUPER_ADMIN', 'GAMECHANGER', 'COORDINATOR', 'COORDINATOR_ADVANCED'].includes(usuario.rol);
-    
-    if (!isStaff) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    const body = await request.json();
+    const { reportId, status, resolution, visionId } = body;
+
+    if (!reportId || !status) {
+      return NextResponse.json({ 
+        error: "reportId y status son requeridos" 
+      }, { status: 400 });
     }
 
-    const body = await request.json();
-    const { reportId, status, resolution } = body;
+    // Solo staff/coordinador o Capitán de Tribu puede actualizar
+    const isStaff = ['ADMINISTRADOR', 'SUPER_ADMIN', 'GAMECHANGER', 'COORDINATOR', 'COORDINATOR_ADVANCED'].includes(usuario.rol);
+    
+    // Verificar si es Capitán de Tribu o Co-Capitán
+    let isTribeCaptainOrCoCaptain = false;
+    if (visionId) {
+      const tribeCaptainCheck = await prisma.tribeCaptainAssignment.findFirst({
+        where: {
+          userId: usuario.id,
+          status: 'ACCEPTED',
+          captaincy: {
+            visionId: parseInt(visionId),
+            roleType: { in: ['TRIBE_CAPTAIN', 'TRIBE_CO_CAPTAIN'] }
+          }
+        }
+      });
+      isTribeCaptainOrCoCaptain = !!tribeCaptainCheck;
+    }
+    
+    if (!isStaff && !isTribeCaptainOrCoCaptain) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    }
 
     if (!reportId || !status) {
       return NextResponse.json({ 

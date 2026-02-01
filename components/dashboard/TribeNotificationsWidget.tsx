@@ -54,6 +54,8 @@ interface PollDetails {
   options: PollOption[];
   hasVoted: boolean;
   userVoteOptionId: number | null;
+  createdById?: number;
+  canManage?: boolean;
 }
 
 interface PollStats {
@@ -99,6 +101,13 @@ export default function TribeNotificationsWidget() {
   
   // Estado para la talla de playera (solo para votaciones LOGO)
   const [selectedShirtSize, setSelectedShirtSize] = useState<ShirtSize | null>(null);
+  
+  // Estado para errores de votación
+  const [voteError, setVoteError] = useState<{ message: string; needsOath?: boolean } | null>(null);
+  
+  // Estado para cerrar votación
+  const [closingPoll, setClosingPoll] = useState(false);
+  const [closeSuccess, setCloseSuccess] = useState(false);
 
   useEffect(() => {
     fetchNotifications();
@@ -176,14 +185,18 @@ export default function TribeNotificationsWidget() {
     setSelectedOptionId(null);
     setSelectedShirtSize(null);
     setVoteSuccess(false);
+    setVoteError(null);
   };
 
   const submitVote = async () => {
     if (!selectedOptionId || !selectedPoll) return;
     
+    // Limpiar errores previos
+    setVoteError(null);
+    
     // Para votaciones de LOGO, la talla es requerida
     if (selectedPoll.category === 'LOGO' && !selectedShirtSize) {
-      alert('Por favor selecciona tu talla de playera');
+      setVoteError({ message: 'Por favor selecciona tu talla de playera' });
       return;
     }
     
@@ -211,13 +224,81 @@ export default function TribeNotificationsWidget() {
           closeVoteModal();
         }, 2000);
       } else {
-        alert(data.error || 'Error al enviar voto');
+        // Mapear errores de la API a mensajes amigables
+        const errorMessages: Record<string, { title: string; description: string; needsOath?: boolean }> = {
+          'Debes ser miembro de la tribu para votar': {
+            title: '🔒 Acceso Restringido',
+            description: 'Para votar necesitas haber realizado el Juramento de Tribu. Este juramento se hace durante el fin de semana de Liderato.',
+            needsOath: true
+          },
+          'Ya has votado en esta votación': {
+            title: '✓ Ya votaste',
+            description: 'Tu voto ya fue registrado anteriormente. Solo puedes votar una vez por encuesta.'
+          }
+        };
+        
+        const mappedError = errorMessages[data.error];
+        if (mappedError) {
+          setVoteError({ 
+            message: `${mappedError.title}\n\n${mappedError.description}`,
+            needsOath: mappedError.needsOath
+          });
+        } else {
+          setVoteError({ message: data.error || 'Error al enviar voto' });
+        }
       }
     } catch (error) {
       console.error('Error al votar:', error);
-      alert('Error al enviar tu voto');
+      setVoteError({ message: 'Error de conexión. Por favor intenta de nuevo.' });
     } finally {
       setSubmittingVote(false);
+    }
+  };
+
+  // Función para cerrar votación
+  const closePoll = async () => {
+    if (!selectedPoll || !pollStats) return;
+    
+    // Verificar que tenga al menos 80% de participación
+    if (pollStats.participationPercentage < 80) {
+      setVoteError({ 
+        message: `⚠️ No se puede cerrar\n\nSe requiere al menos 80% de participación para cerrar la votación. Actualmente: ${pollStats.participationPercentage}%`
+      });
+      return;
+    }
+
+    try {
+      setClosingPoll(true);
+      setVoteError(null);
+
+      const response = await fetch('/api/tribe-polls', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'close',
+          pollId: selectedPoll.id
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setCloseSuccess(true);
+        // Remover de la lista de pendientes
+        setPendingPolls(prev => prev.filter(p => p.id !== selectedPoll.id));
+        // Cerrar modal después de 2 segundos
+        setTimeout(() => {
+          closeVoteModal();
+          setCloseSuccess(false);
+        }, 2000);
+      } else {
+        setVoteError({ message: data.error || 'Error al cerrar votación' });
+      }
+    } catch (error) {
+      console.error('Error al cerrar votación:', error);
+      setVoteError({ message: 'Error de conexión. Por favor intenta de nuevo.' });
+    } finally {
+      setClosingPoll(false);
     }
   };
 
@@ -424,7 +505,16 @@ export default function TribeNotificationsWidget() {
                         {pollDetails.options.map((option) => (
                           <button
                             key={option.id}
-                            onClick={() => setSelectedOptionId(option.id)}
+                            onClick={() => {
+                              setSelectedOptionId(option.id);
+                              // Auto-scroll a la sección de talla
+                              setTimeout(() => {
+                                document.getElementById('shirt-size-section')?.scrollIntoView({ 
+                                  behavior: 'smooth', 
+                                  block: 'center' 
+                                });
+                              }, 100);
+                            }}
                             className={`relative p-3 rounded-xl border-2 transition-all ${
                               selectedOptionId === option.id
                                 ? 'border-purple-500 bg-purple-500/20 ring-2 ring-purple-500/50'
@@ -462,55 +552,94 @@ export default function TribeNotificationsWidget() {
                         ))}
                       </div>
                     ) : (
-                      /* Layout normal para otras categorías */
-                      pollDetails.options.map((option) => (
-                        <button
-                          key={option.id}
-                          onClick={() => setSelectedOptionId(option.id)}
-                          className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
-                            selectedOptionId === option.id
-                              ? 'border-purple-500 bg-purple-500/20'
-                              : 'border-gray-700 hover:border-purple-500/50 hover:bg-gray-800'
-                          }`}
-                        >
-                          <div className="flex items-center gap-4">
-                            {option.imageUrl && (
-                              <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-800">
-                                <Image
-                                  src={option.imageUrl}
-                                  alt={option.title}
-                                  width={64}
-                                  height={64}
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                            )}
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                  selectedOptionId === option.id
-                                    ? 'border-purple-500 bg-purple-500'
-                                    : 'border-gray-600'
-                                }`}>
-                                  {selectedOptionId === option.id && (
-                                    <Check size={12} className="text-white" />
+                      /* Layout para otras categorías - con imágenes grandes si las hay */
+                      (() => {
+                        const hasImages = pollDetails.options.some(opt => opt.imageUrl);
+                        
+                        if (hasImages) {
+                          // Layout de grid con imágenes grandes (igual que LOGO)
+                          return (
+                            <div className="grid grid-cols-2 gap-4">
+                              {pollDetails.options.map((option) => (
+                                <button
+                                  key={option.id}
+                                  onClick={() => setSelectedOptionId(option.id)}
+                                  className={`relative p-3 rounded-xl border-2 transition-all ${
+                                    selectedOptionId === option.id
+                                      ? 'border-purple-500 bg-purple-500/20 ring-2 ring-purple-500/50'
+                                      : 'border-gray-700 hover:border-purple-500/50 hover:bg-gray-800'
+                                  }`}
+                                >
+                                  {/* Indicador de selección */}
+                                  <div className={`absolute top-2 right-2 w-6 h-6 rounded-full border-2 flex items-center justify-center z-10 ${
+                                    selectedOptionId === option.id
+                                      ? 'border-purple-500 bg-purple-500'
+                                      : 'border-gray-600 bg-gray-800'
+                                  }`}>
+                                    {selectedOptionId === option.id && (
+                                      <Check size={14} className="text-white" />
+                                    )}
+                                  </div>
+                                  
+                                  {/* Imagen grande */}
+                                  {option.imageUrl && (
+                                    <div className="w-full aspect-square rounded-lg overflow-hidden bg-gray-800 mb-3">
+                                      <Image
+                                        src={option.imageUrl}
+                                        alt={option.title}
+                                        width={200}
+                                        height={200}
+                                        className="w-full h-full object-contain"
+                                      />
+                                    </div>
                                   )}
-                                </div>
-                                <span className="font-semibold text-white">{option.title}</span>
-                              </div>
-                              {option.description && (
-                                <p className="text-sm text-gray-400 mt-1 ml-7">{option.description}</p>
-                              )}
+                                  <p className="font-semibold text-white text-center text-sm">{option.title}</p>
+                                  {option.description && (
+                                    <p className="text-xs text-gray-400 text-center mt-1 line-clamp-3">{option.description}</p>
+                                  )}
+                                </button>
+                              ))}
                             </div>
-                          </div>
-                        </button>
-                      ))
+                          );
+                        }
+                        
+                        // Layout normal sin imágenes
+                        return pollDetails.options.map((option) => (
+                          <button
+                            key={option.id}
+                            onClick={() => setSelectedOptionId(option.id)}
+                            className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                              selectedOptionId === option.id
+                                ? 'border-purple-500 bg-purple-500/20'
+                                : 'border-gray-700 hover:border-purple-500/50 hover:bg-gray-800'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                selectedOptionId === option.id
+                                  ? 'border-purple-500 bg-purple-500'
+                                  : 'border-gray-600'
+                              }`}>
+                                {selectedOptionId === option.id && (
+                                  <Check size={12} className="text-white" />
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <span className="font-semibold text-white">{option.title}</span>
+                                {option.description && (
+                                  <p className="text-sm text-gray-400 mt-1">{option.description}</p>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        ));
+                      })()
                     )}
                   </div>
 
                   {/* Selector de talla para votaciones de LOGO */}
                   {selectedPoll.category === 'LOGO' && (
-                    <div className="mt-6 p-4 bg-indigo-500/10 rounded-xl border border-indigo-500/30">
+                    <div id="shirt-size-section" className="mt-6 p-4 bg-indigo-500/10 rounded-xl border border-indigo-500/30">
                       <div className="flex items-center gap-2 mb-3">
                         <Shirt size={18} className="text-indigo-400" />
                         <span className="font-semibold text-indigo-300">Tu talla de playera</span>
@@ -562,6 +691,39 @@ export default function TribeNotificationsWidget() {
             {/* Footer con botón de votar */}
             {!loadingDetails && !voteSuccess && pollDetails && (
               <div className="sticky bottom-0 bg-gray-900 p-6 border-t border-purple-500/30">
+                {/* Mensaje de error */}
+                {voteError && (
+                  <div className="mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
+                        <span className="text-xl">⚠️</span>
+                      </div>
+                      <div className="flex-1">
+                        {voteError.message.split('\n\n').map((part, idx) => (
+                          <p key={idx} className={idx === 0 ? 'font-semibold text-red-300' : 'text-sm text-red-200/80 mt-2'}>
+                            {part}
+                          </p>
+                        ))}
+                        {/* Botón para ir a firmar el juramento */}
+                        {voteError.needsOath && (
+                          <a 
+                            href="/dashboard/legacy-vision-builder"
+                            className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-colors"
+                          >
+                            ✍️ Ir a firmar el Juramento
+                          </a>
+                        )}
+                      </div>
+                      <button 
+                        onClick={() => setVoteError(null)}
+                        className="text-red-400 hover:text-red-300"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Indicador de talla seleccionada para LOGO */}
                 {selectedPoll.category === 'LOGO' && selectedShirtSize && (
                   <div className="flex items-center justify-center gap-2 mb-3 text-sm text-indigo-300">
@@ -597,6 +759,85 @@ export default function TribeNotificationsWidget() {
                 <p className="text-center text-xs text-gray-500 mt-3">
                   Tu voto es anónimo y no podrás cambiarlo después
                 </p>
+
+                {/* Botón de cerrar votación para el creador */}
+                {pollDetails?.canManage && (
+                  <div className="mt-4 pt-4 border-t border-purple-500/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-gray-400">Participación actual:</span>
+                      <span className={`text-sm font-bold ${
+                        pollStats && pollStats.participationPercentage >= 80 
+                          ? 'text-green-400' 
+                          : 'text-yellow-400'
+                      }`}>
+                        {pollStats?.participationPercentage.toFixed(0) || 0}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-700 rounded-full h-2 mb-3">
+                      <div 
+                        className={`h-2 rounded-full transition-all ${
+                          pollStats && pollStats.participationPercentage >= 80 
+                            ? 'bg-green-500' 
+                            : 'bg-yellow-500'
+                        }`}
+                        style={{ width: `${Math.min(pollStats?.participationPercentage || 0, 100)}%` }}
+                      />
+                    </div>
+                    <button
+                      onClick={closePoll}
+                      disabled={closingPoll || !pollStats || pollStats.participationPercentage < 80}
+                      className={`w-full py-2.5 px-4 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
+                        pollStats && pollStats.participationPercentage >= 80 && !closingPoll
+                          ? 'bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white'
+                          : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      {closingPoll ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" />
+                          Cerrando votación...
+                        </>
+                      ) : pollStats && pollStats.participationPercentage >= 80 ? (
+                        <>
+                          🔒 Cerrar Votación
+                        </>
+                      ) : (
+                        <>
+                          🔒 Requiere 80% de participación
+                        </>
+                      )}
+                    </button>
+                    {pollStats && pollStats.participationPercentage < 80 && (
+                      <p className="text-center text-xs text-gray-500 mt-2">
+                        Faltan {Math.ceil(pollStats.tribeMembers * 0.8 - pollStats.uniqueVoters)} votos para poder cerrar
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Mensaje de éxito al cerrar votación */}
+            {closeSuccess && (
+              <div className="sticky bottom-0 bg-gray-900 p-6 border-t border-green-500/30">
+                <div className="flex flex-col items-center gap-3 text-center">
+                  <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center">
+                    <Check size={32} className="text-green-400" />
+                  </div>
+                  <h4 className="text-xl font-bold text-green-400">¡Votación Cerrada!</h4>
+                  <p className="text-gray-400 text-sm">
+                    La votación ha sido cerrada exitosamente. Los resultados finales ahora están disponibles.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setShowVoteModal(false);
+                      setCloseSuccess(false);
+                    }}
+                    className="mt-2 px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
+                  >
+                    Aceptar
+                  </button>
+                </div>
               </div>
             )}
           </div>

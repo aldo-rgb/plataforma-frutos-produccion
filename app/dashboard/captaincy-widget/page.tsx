@@ -182,15 +182,20 @@ export default function CaptaincyWidgetPage() {
           return;
         }
 
-        // Verificar si es capitán de este rol
+        // Verificar si es capitán de este rol específico
         const assignment = data.userAssignments?.find(
           (a: any) => a.roleType === roleType && a.status === 'ACCEPTED'
+        );
+
+        // Verificar si es Capitán de Tribu o Co-Capitán (tienen acceso a todos los widgets)
+        const isTribeCaptainOrCoCaptain = data.userAssignments?.some(
+          (a: any) => (a.roleType === 'TRIBE_CAPTAIN' || a.roleType === 'TRIBE_CO_CAPTAIN') && a.status === 'ACCEPTED'
         );
 
         setUserData({
           userId: data.userId,
           userName: data.userName,
-          isCaptain: !!assignment,
+          isCaptain: !!assignment || !!isTribeCaptainOrCoCaptain,
           visionName: data.visionName
         });
       } catch (err) {

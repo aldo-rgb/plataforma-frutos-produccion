@@ -45,7 +45,19 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    if (!captainAssignment && !isStaff) {
+    // Verificar si es Capitán de Tribu o Co-Capitán (tienen acceso a todos los widgets)
+    const isTribeCaptainOrCoCaptain = await prisma.tribeCaptainAssignment.findFirst({
+      where: {
+        userId: userId,
+        status: 'ACCEPTED',
+        captaincy: {
+          visionId: parseInt(visionId),
+          roleType: { in: ['TRIBE_CAPTAIN', 'TRIBE_CO_CAPTAIN'] }
+        }
+      }
+    });
+
+    if (!captainAssignment && !isStaff && !isTribeCaptainOrCoCaptain) {
       return NextResponse.json(
         { error: 'Solo el Capitán de Comunitaria puede acceder' }, 
         { status: 403 }
@@ -144,7 +156,7 @@ export async function GET(request: NextRequest) {
       organizationLegacies,
       activePolls,
       tribeMembers,
-      isCaptain: !!captainAssignment,
+      isCaptain: !!captainAssignment || !!isTribeCaptainOrCoCaptain,
       isStaff: !!isStaff
     });
 
@@ -193,7 +205,21 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    if (!captainAssignment && !isStaff) {
+    // Verificar si es Capitán de Tribu o Co-Capitán
+    const isTribeCaptainOrCoCaptain = await prisma.tribeCaptainAssignment.findFirst({
+      where: {
+        userId: userId,
+        status: 'ACCEPTED',
+        captaincy: {
+          visionId: parseInt(visionId),
+          roleType: { in: ['TRIBE_CAPTAIN', 'TRIBE_CO_CAPTAIN'] }
+        }
+      }
+    });
+
+    const isCaptain = !!captainAssignment || !!isTribeCaptainOrCoCaptain;
+
+    if (!captainAssignment && !isStaff && !isTribeCaptainOrCoCaptain) {
       return NextResponse.json(
         { error: 'Solo el Capitán de Comunitaria puede realizar esta acción' }, 
         { status: 403 }

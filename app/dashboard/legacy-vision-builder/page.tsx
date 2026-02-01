@@ -1429,17 +1429,30 @@ export default function LegacyVisionBuilderPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {data.userAssignments
-                    .filter(a => a.status === 'ACCEPTED')
-                    .map((assignment) => {
-                      const cap = data.captaincies.find(c => c.roleType === assignment.roleType);
+                  {(() => {
+                    // Verificar si el usuario es Capitán o Co-Capitán de Tribu
+                    const isTribeCaptainOrCoCaptain = data.userAssignments.some(
+                      a => a.status === 'ACCEPTED' && 
+                      (a.roleType === 'TRIBE_CAPTAIN' || a.roleType === 'TRIBE_CO_CAPTAIN')
+                    );
+                    
+                    // Si es Capitán/Co-Capitán, mostrar TODAS las capitanías
+                    // Si no, mostrar solo las asignadas
+                    const captainciesToShow = isTribeCaptainOrCoCaptain 
+                      ? data.captaincies.filter(c => c.roleType !== 'TRIBE_CAPTAIN' && c.roleType !== 'TRIBE_CO_CAPTAIN')
+                      : data.userAssignments
+                          .filter(a => a.status === 'ACCEPTED')
+                          .map(a => data.captaincies.find(c => c.roleType === a.roleType))
+                          .filter(Boolean);
+                    
+                    return captainciesToShow.map((cap) => {
                       if (!cap) return null;
                       
                       const RoleIcon = roleIcons[cap.roleType] || Star;
                       
                       return (
                         <div
-                          key={assignment.roleType}
+                          key={cap.roleType}
                           className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 rounded-xl p-6 border border-purple-600/30"
                         >
                           <div className="flex items-center gap-4 mb-4">
@@ -1480,7 +1493,8 @@ export default function LegacyVisionBuilderPage() {
                           </button>
                         </div>
                       );
-                    })}
+                    });
+                  })()}
                 </div>
               )}
             </div>

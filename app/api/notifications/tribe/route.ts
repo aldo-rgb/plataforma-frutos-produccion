@@ -42,8 +42,8 @@ export async function GET(request: NextRequest) {
     });
 
     // 2. Obtener las visiones donde el usuario participa
-    // Usar múltiples fuentes: TribeMemberSize, TicketPurchase activos, VisionStaff, TribeCaptainAssignment
-    const [memberSizes, ticketPurchases, staffAssignments, captainAssignments] = await Promise.all([
+    // Usar múltiples fuentes: TribeMemberSize, TicketPurchase activos, VisionStaff, TribeCaptainAssignment, vision_enrollments (PL)
+    const [memberSizes, ticketPurchases, staffAssignments, captainAssignments, visionEnrollments] = await Promise.all([
       // Visiones donde tiene talla registrada
       prisma.tribeMemberSize.findMany({
         where: { userId },
@@ -73,6 +73,11 @@ export async function GET(request: NextRequest) {
             select: { visionId: true }
           }
         }
+      }),
+      // Visiones donde es participante de PL (vision_enrollments)
+      prisma.vision_enrollments.findMany({
+        where: { userId },
+        select: { visionId: true }
       })
     ]);
 
@@ -82,6 +87,7 @@ export async function GET(request: NextRequest) {
     ticketPurchases.forEach(t => visionIdsSet.add(t.visionId));
     staffAssignments.forEach(s => visionIdsSet.add(s.visionId));
     captainAssignments.forEach(c => visionIdsSet.add(c.captaincy.visionId));
+    visionEnrollments.forEach(e => visionIdsSet.add(e.visionId));
 
     const visionIds = Array.from(visionIdsSet);
 

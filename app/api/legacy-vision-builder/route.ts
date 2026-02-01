@@ -274,6 +274,17 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // Obtener datos de la visión incluyendo el logo
+    const visionInfo = await prisma.vision.findUnique({
+      where: { id: targetVisionId },
+      select: {
+        id: true,
+        nombre: true,
+        tribeLogoUrl: true,
+        tribeShirtDesignUrl: true,
+      }
+    });
+
     // Obtener las capitanías de esta visión
     const captaincies = await prisma.tribeCaptaincy.findMany({
       where: { visionId: targetVisionId },
@@ -362,7 +373,19 @@ export async function GET(request: NextRequest) {
       userName: usuario.nombre,
       isStaff,
       visionId: targetVisionId,
-      visionName: plEnrollment?.Vision.nombre || 'Visión PL',
+      visionName: plEnrollment?.Vision.nombre || visionInfo?.nombre || 'Visión PL',
+      
+      // Logo oficial de la tribu
+      tribeLogoUrl: visionInfo?.tribeLogoUrl || null,
+      tribeShirtDesignUrl: visionInfo?.tribeShirtDesignUrl || null,
+      
+      // Visión completa para Identity Lab
+      vision: visionInfo ? {
+        id: visionInfo.id,
+        nombre: visionInfo.nombre,
+        tribeLogoUrl: visionInfo.tribeLogoUrl,
+        tribeShirtDesignUrl: visionInfo.tribeShirtDesignUrl,
+      } : null,
       
       // Fase 1: Juramento
       oathSigned: !!oath,
@@ -755,6 +778,50 @@ export async function POST(request: NextRequest) {
           roleType: assignment.captaincy.roleType,
           status: updatedAssignment.status,
         }
+      });
+    }
+
+    // ACCIÓN: Actualizar logo oficial de la tribu
+    if (action === 'updateTribeLogo') {
+      const { logoUrl } = body;
+
+      if (!visionId || !logoUrl) {
+        return NextResponse.json({ 
+          error: "visionId y logoUrl son requeridos" 
+        }, { status: 400 });
+      }
+
+      // Verificar que el usuario es capitán de identidad o staff
+      const isIdentityCaptain = await prisma.tribeCaptainAssignment.findFirst({
+        where: {
+          userId: usuario.id,
+          status: 'ACCEPTED',
+          captaincy: {
+            visionId: parseInt(visionId),
+            roleType: 'SHIRTS_LOGO'
+          }
+        }
+      });
+
+      const isStaffMember = ['ADMINISTRADOR', 'SUPER_ADMIN', 'GAMECHANGER', 'COORDINATOR', 'COORDINATOR_ADVANCED'].includes(usuario.rol);
+
+      if (!isIdentityCaptain && !isStaffMember) {
+        return NextResponse.json({ 
+          error: "Solo el Capitán de Identidad o Staff pueden actualizar el logo" 
+        }, { status: 403 });
+      }
+
+      // Actualizar el logo de la visión
+      const updatedVision = await prisma.vision.update({
+        where: { id: parseInt(visionId) },
+        data: { tribeLogoUrl: logoUrl },
+        select: { id: true, nombre: true, tribeLogoUrl: true }
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: '¡Logo oficial de la tribu actualizado!',
+        vision: updatedVision
       });
     }
 

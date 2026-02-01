@@ -15,7 +15,7 @@ export async function GET() {
     const userId = typeof session.user.id === 'string' ? parseInt(session.user.id) : session.user.id;
 
     // Obtener las visiones donde el usuario participa
-    const [memberSizes, ticketPurchases, staffAssignments, captainAssignments] = await Promise.all([
+    const [memberSizes, ticketPurchases, staffAssignments, captainAssignments, visionEnrollments] = await Promise.all([
       prisma.tribeMemberSize.findMany({
         where: { userId },
         select: { visionId: true }
@@ -41,6 +41,11 @@ export async function GET() {
             select: { visionId: true }
           }
         }
+      }),
+      // También incluir participantes de PL (vision_enrollments)
+      prisma.vision_enrollments.findMany({
+        where: { userId },
+        select: { visionId: true }
       })
     ]);
 
@@ -50,6 +55,7 @@ export async function GET() {
     ticketPurchases.forEach(t => visionIdsSet.add(t.visionId));
     staffAssignments.forEach(s => visionIdsSet.add(s.visionId));
     captainAssignments.forEach(c => visionIdsSet.add(c.captaincy.visionId));
+    visionEnrollments.forEach(e => visionIdsSet.add(e.visionId));
 
     const visionIds = Array.from(visionIdsSet);
 

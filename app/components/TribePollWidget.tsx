@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 
 // ==========================================
 // TIPOS
@@ -151,7 +152,11 @@ export default function TribePollWidget({
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newPollTitle, setNewPollTitle] = useState('');
   const [newPollDescription, setNewPollDescription] = useState('');
-  const [newOptions, setNewOptions] = useState<string[]>(['', '']);
+  const [newOptions, setNewOptions] = useState<{ text: string; imageUrl: string; uploading: boolean }[]>([
+    { text: '', imageUrl: '', uploading: false },
+    { text: '', imageUrl: '', uploading: false }
+  ]);
+  const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   
   // Estados para chat
   const [showChat, setShowChat] = useState(false);
@@ -245,8 +250,43 @@ export default function TribePollWidget({
   // ACCIONES
   // ==========================================
 
+  // Función para subir imagen de opción
+  const uploadOptionImage = async (index: number, file: File) => {
+    try {
+      // Marcar como uploading
+      const updatedOptions = [...newOptions];
+      updatedOptions[index].uploading = true;
+      setNewOptions(updatedOptions);
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'poll-options');
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al subir imagen');
+
+      // Actualizar la URL de la imagen
+      const finalOptions = [...newOptions];
+      finalOptions[index].imageUrl = data.url;
+      finalOptions[index].uploading = false;
+      setNewOptions(finalOptions);
+    } catch (err) {
+      console.error('Error subiendo imagen:', err);
+      const finalOptions = [...newOptions];
+      finalOptions[index].uploading = false;
+      setNewOptions(finalOptions);
+      setError(err instanceof Error ? err.message : 'Error al subir imagen');
+    }
+  };
+
   const createPoll = async () => {
-    if (!newPollTitle.trim() || newOptions.filter(o => o.trim()).length < 2) {
+    const validOptions = newOptions.filter(o => o.text.trim());
+    if (!newPollTitle.trim() || validOptions.length < 2) {
       setError('Se necesitan título y al menos 2 opciones');
       return;
     }
@@ -262,7 +302,10 @@ export default function TribePollWidget({
           title: newPollTitle,
           description: newPollDescription,
           category,
-          options: newOptions.filter(o => o.trim())
+          options: validOptions.map(o => ({
+            title: o.text.trim(),
+            imageUrl: o.imageUrl || null
+          }))
         })
       });
 
@@ -272,7 +315,10 @@ export default function TribePollWidget({
       setShowCreateForm(false);
       setNewPollTitle('');
       setNewPollDescription('');
-      setNewOptions(['', '']);
+      setNewOptions([
+        { text: '', imageUrl: '', uploading: false },
+        { text: '', imageUrl: '', uploading: false }
+      ]);
       await fetchPolls();
       onPollCreated?.(data.poll);
     } catch (err) {
@@ -519,30 +565,84 @@ export default function TribePollWidget({
                     Opciones
                   </label>
                   {newOptions.map((option, idx) => (
-                    <div key={idx} className="flex gap-2 mb-2">
-                      <input
-                        type="text"
-                        value={option}
-                        onChange={(e) => {
-                          const updated = [...newOptions];
-                          updated[idx] = e.target.value;
-                          setNewOptions(updated);
-                        }}
-                        placeholder={`Opción ${idx + 1}`}
-                        className="flex-1 px-4 py-2 bg-gray-900 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 text-white placeholder-gray-500"
-                      />
-                      {newOptions.length > 2 && (
-                        <button
-                          onClick={() => setNewOptions(newOptions.filter((_, i) => i !== idx))}
-                          className="px-3 py-2 text-red-400 hover:bg-red-900/30 rounded-lg"
-                        >
-                          🗑️
-                        </button>
-                      )}
+                    <div key={idx} className="mb-4 p-3 bg-gray-900/50 rounded-lg border border-gray-700">
+                      <div className="flex gap-2 mb-2">
+                        <input
+                          type="text"
+                          value={option.text}
+                          onChange={(e) => {
+                            const updated = [...newOptions];
+                            updated[idx].text = e.target.value;
+                            setNewOptions(updated);
+                          }}
+                          placeholder={`Opción ${idx + 1}`}
+                          className="flex-1 px-4 py-2 bg-gray-900 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 text-white placeholder-gray-500"
+                        />
+                        {newOptions.length > 2 && (
+                          <button
+                            onClick={() => setNewOptions(newOptions.filter((_, i) => i !== idx))}
+                            className="px-3 py-2 text-red-400 hover:bg-red-900/30 rounded-lg"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
+                      {/* Sección de imagen */}
+                      <div className="flex items-center gap-3">
+                        {option.imageUrl ? (
+                          <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-gray-800">
+                            <Image
+                              src={option.imageUrl}
+                              alt={`Opción ${idx + 1}`}
+                              fill
+                              className="object-cover"
+                            />
+                            <button
+                              onClick={() => {
+                                const updated = [...newOptions];
+                                updated[idx].imageUrl = '';
+                                setNewOptions(updated);
+                              }}
+                              className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center hover:bg-red-600"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => fileInputRefs.current[idx]?.click()}
+                            disabled={option.uploading}
+                            className="flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm text-gray-300 transition-colors disabled:opacity-50"
+                          >
+                            {option.uploading ? (
+                              <>
+                                <span className="animate-spin">⏳</span>
+                                Subiendo...
+                              </>
+                            ) : (
+                              <>
+                                📷 Agregar imagen
+                              </>
+                            )}
+                          </button>
+                        )}
+                        <input
+                          type="file"
+                          ref={(el) => { fileInputRefs.current[idx] = el; }}
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) uploadOptionImage(idx, file);
+                            e.target.value = '';
+                          }}
+                        />
+                        <span className="text-xs text-gray-500">(opcional)</span>
+                      </div>
                     </div>
                   ))}
                   <button
-                    onClick={() => setNewOptions([...newOptions, ''])}
+                    onClick={() => setNewOptions([...newOptions, { text: '', imageUrl: '', uploading: false }])}
                     className="text-purple-400 hover:text-purple-300 text-sm"
                   >
                     + Agregar opción

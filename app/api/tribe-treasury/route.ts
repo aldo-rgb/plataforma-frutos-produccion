@@ -40,12 +40,24 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // Verificar si es Capitán de Tribu o Co-Capitán (tienen acceso a todos los widgets)
+    const isTribeCaptainOrCoCaptain = await prisma.tribeCaptainAssignment.findFirst({
+      where: {
+        userId: userId,
+        status: 'ACCEPTED',
+        captaincy: {
+          visionId: parseInt(visionId),
+          roleType: { in: ['TRIBE_CAPTAIN', 'TRIBE_CO_CAPTAIN'] }
+        }
+      }
+    });
+
     const vision = await prisma.vision.findUnique({
       where: { id: parseInt(visionId) },
       select: { coordinadorId: true, nombre: true }
     });
 
-    const isTreasurer = !!treasurerAssignment;
+    const isTreasurer = !!treasurerAssignment || !!isTribeCaptainOrCoCaptain;
     const hasAccess = isTreasurer || !!isStaff || vision?.coordinadorId === userId;
 
     if (!hasAccess) {
@@ -103,6 +115,61 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' }
     });
 
+    // Obtener tallas desde los votos de encuestas de LOGO
+    const logoPolls = await prisma.tribePoll.findMany({
+      where: { 
+        visionId: parseInt(visionId),
+        category: 'LOGO'
+      },
+      include: {
+        votes: {
+          where: { shirtSize: { not: null } },
+          include: {
+            user: {
+              select: { id: true, nombre: true, email: true, profileImage: true }
+            }
+          }
+        }
+      }
+    });
+
+    // Combinar tallas de todos los votos de logo (usar el más reciente por usuario)
+    const memberSizesMap = new Map<number, { 
+      id: number; 
+      oderId: number;
+      userId: number; 
+      size: string; 
+      createdAt: Date; 
+      user: { id: number; nombre: string; email: string; profileImage: string | null } 
+    }>();
+
+    logoPolls.forEach(poll => {
+      poll.votes.forEach((vote: any) => {
+        if (vote.shirtSize && vote.user) {
+          // Si ya existe, solo actualizar si este voto es más reciente
+          const existing = memberSizesMap.get(vote.userId);
+          if (!existing || new Date(vote.votedAt) > new Date(existing.createdAt)) {
+            memberSizesMap.set(vote.userId, {
+              id: vote.id,
+              oderId: vote.id,
+              userId: vote.userId,
+              size: vote.shirtSize,
+              createdAt: vote.votedAt,
+              user: vote.user
+            });
+          }
+        }
+      });
+    });
+
+    const allMemberSizes = Array.from(memberSizesMap.values());
+
+    // El precio de playera está en bankAccount.shirtPrice
+    const shirtPrice = bankAccount?.shirtPrice ? Number(bankAccount.shirtPrice) : 0;
+    
+    // Tipos de camisetas con precios
+    const shirtTypes = (bankAccount?.shirtTypes as any[]) || [];
+
     // Calcular estadísticas
     const totalVerified = incomes
       .filter(i => i.status === 'VERIFIED')
@@ -134,6 +201,16 @@ export async function GET(request: NextRequest) {
       bankAccount,
       incomes,
       shirtOrders,
+      allMemberSizes: allMemberSizes.map(m => ({
+        id: m.id,
+        oderId: m.oderId,
+        userId: m.userId,
+        size: m.size,
+        createdAt: m.createdAt,
+        user: m.user
+      })),
+      shirtPrice,
+      shirtTypes,
       stats: {
         totalVerified,
         totalPending,
@@ -179,7 +256,19 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    if (!treasurerAssignment) {
+    // Verificar si es Capitán de Tribu o Co-Capitán (tienen acceso a todos los widgets)
+    const isTribeCaptainOrCoCaptain = await prisma.tribeCaptainAssignment.findFirst({
+      where: {
+        userId: userId,
+        status: 'ACCEPTED',
+        captaincy: {
+          visionId: parseInt(visionId),
+          roleType: { in: ['TRIBE_CAPTAIN', 'TRIBE_CO_CAPTAIN'] }
+        }
+      }
+    });
+
+    if (!treasurerAssignment && !isTribeCaptainOrCoCaptain) {
       return NextResponse.json(
         { error: 'Solo el Tesorero puede realizar esta acción' }, 
         { status: 403 }
@@ -324,6 +413,173 @@ export async function POST(request: NextRequest) {
           income,
           message: 'Ingreso registrado correctamente'
         });
+      }
+
+      case 'configure_shirt_types': {
+        const { shirtTypes } = data;
+
+        if (!shirtTypes || !Array.isArray(shirtTypes)) {
+          return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 });
+        }
+
+        // Verificar que la cuenta bancaria exista
+        const existingBank = await prisma.tribeBankAccount.findUnique({
+          where: { visionId: parseInt(visionId) }
+        });
+
+        if (!existingBank) {
+          return NextResponse.json({ 
+            error: 'Primero debes configurar la cuenta bancaria' 
+          }, { status: 400 });
+        }
+
+        // Calcular precio total
+        const totalPrice = shirtTypes.reduce((sum: number, s: any) => sum + (s.price || 0), 0);
+
+        // Guardar tipos de camisetas y precio total
+        await prisma.tribeBankAccount.update({
+          where: { visionId: parseInt(visionId) },
+          data: { 
+            shirtTypes: shirtTypes,
+            shirtPrice: totalPrice
+          }
+        });
+
+        return NextResponse.json({
+          success: true,
+          shirtTypes,
+          shirtPrice: totalPrice,
+          message: 'Cotización de camisetas configurada'
+        });
+      }
+
+      case 'configure_shirt_price': {
+        const { price } = data;
+
+        if (price === undefined || price < 0) {
+          return NextResponse.json({ error: 'Precio inválido' }, { status: 400 });
+        }
+
+        // Actualizar precio en la cuenta bancaria (debe existir primero)
+        const existingBank = await prisma.tribeBankAccount.findUnique({
+          where: { visionId: parseInt(visionId) }
+        });
+
+        if (!existingBank) {
+          return NextResponse.json({ 
+            error: 'Primero debes configurar la cuenta bancaria' 
+          }, { status: 400 });
+        }
+
+        await prisma.tribeBankAccount.update({
+          where: { visionId: parseInt(visionId) },
+          data: { shirtPrice: price }
+        });
+
+        return NextResponse.json({
+          success: true,
+          shirtPrice: price,
+          message: 'Precio de playera configurado'
+        });
+      }
+
+      case 'toggle_shirt_payment': {
+        const { memberId, size, paid } = data;
+
+        if (!memberId || !size) {
+          return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 });
+        }
+
+        // Obtener precio desde cuenta bancaria
+        const bankAccount = await prisma.tribeBankAccount.findUnique({
+          where: { visionId: parseInt(visionId) }
+        });
+
+        const shirtPrice = bankAccount?.shirtPrice ? Number(bankAccount.shirtPrice) : 0;
+
+        if (paid) {
+          // Marcar como pagado: crear orden de playera e ingreso
+
+          // Verificar si ya existe una orden para este usuario
+          const existingOrder = await prisma.tribeShirtOrder.findFirst({
+            where: {
+              visionId: parseInt(visionId),
+              userId: memberId
+            }
+          });
+
+          if (existingOrder) {
+            return NextResponse.json({ error: 'Ya existe un pedido para este usuario' }, { status: 400 });
+          }
+
+          // Obtener nombre del usuario
+          const user = await prisma.usuario.findUnique({
+            where: { id: memberId },
+            select: { nombre: true, email: true }
+          });
+
+          // Crear orden de playera
+          const shirtOrder = await prisma.tribeShirtOrder.create({
+            data: {
+              visionId: parseInt(visionId),
+              userId: memberId,
+              size,
+              quantity: 1,
+              unitPrice: shirtPrice,
+              totalAmount: shirtPrice,
+              status: 'PAID',
+              paidAt: new Date()
+            }
+          });
+
+          // Crear ingreso verificado
+          await prisma.tribeIncome.create({
+            data: {
+              visionId: parseInt(visionId),
+              bankAccountId: bankAccount?.id,
+              category: 'SHIRT',
+              concept: `Pago de playera - Talla ${size}`,
+              amount: shirtPrice,
+              payerUserId: memberId,
+              payerName: user?.nombre,
+              payerEmail: user?.email,
+              shirtOrderId: shirtOrder.id,
+              status: 'VERIFIED',
+              verifiedById: userId,
+              verifiedAt: new Date()
+            }
+          });
+
+          return NextResponse.json({
+            success: true,
+            message: 'Pago registrado correctamente'
+          });
+        } else {
+          // Desmarcar como pagado: eliminar orden e ingreso
+          const existingOrder = await prisma.tribeShirtOrder.findFirst({
+            where: {
+              visionId: parseInt(visionId),
+              userId: memberId
+            }
+          });
+
+          if (existingOrder) {
+            // Eliminar ingreso asociado
+            await prisma.tribeIncome.deleteMany({
+              where: { shirtOrderId: existingOrder.id }
+            });
+
+            // Eliminar orden
+            await prisma.tribeShirtOrder.delete({
+              where: { id: existingOrder.id }
+            });
+          }
+
+          return NextResponse.json({
+            success: true,
+            message: 'Pago desmarcado'
+          });
+        }
       }
 
       default:

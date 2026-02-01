@@ -31,11 +31,16 @@ interface Poll {
 const CATEGORY_BY_ROLE: Record<string, string[]> = {
   'COMMUNITY_SERVICE': ['COMMUNITY', 'GENERAL'],
   'SHIRT_DESIGN': ['LOGO', 'SHIRT', 'GENERAL'],
+  'SHIRTS_LOGO': ['LOGO', 'SHIRT', 'GENERAL'],
   'FOOD': ['FOOD', 'GENERAL'],
   'TRANSPORT': ['TRANSPORT', 'GENERAL'],
   'GRADUATION': ['GRADUATION', 'VENUE', 'GENERAL'],
+  'GRADUATION_CAPTAIN': ['GRADUATION', 'VENUE', 'GENERAL'],
   'BUDGET': ['BUDGET', 'GENERAL'],
+  'TREASURER': ['BUDGET', 'GENERAL'],
   'SCHEDULE': ['SCHEDULE', 'GENERAL'],
+  'TRIBE_CAPTAIN': ['LOGO', 'SHIRT', 'COMMUNITY', 'FOOD', 'GRADUATION', 'MUSIC', 'RECOGNITION', 'BAPTISM', 'FAREWELL', 'TRANSPORT', 'GENERAL'],
+  'CONTEXT_GUARDIAN': ['GENERAL'],
 };
 
 // GET - Obtener votaciones de una visión
@@ -210,7 +215,10 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             title: true,
-            imageUrl: true
+            imageUrl: true,
+            _count: {
+              select: { votes: true }
+            }
           }
         },
         createdBy: {
@@ -227,17 +235,35 @@ export async function GET(request: NextRequest) {
     const userVotes = await prisma.tribePollVote.findMany({
       where: {
         userId: userId,
-        pollId: { in: polls.map((p: Poll) => p.id) }
+        pollId: { in: polls.map((p) => p.id) }
       },
       select: { pollId: true, optionId: true }
     });
 
     const votedPollIds = new Set(userVotes.map(v => v.pollId));
 
-    const pollsWithStatus = polls.map((poll: Poll) => ({
-      ...poll,
-      hasVoted: votedPollIds.has(poll.id)
-    }));
+    // Contar miembros de la tribu para calcular participación
+    const tribeMembers = await prisma.tribeOath.count({
+      where: { visionId: parseInt(visionId!) }
+    });
+
+    const pollsWithStatus = polls.map((poll) => {
+      const totalVotes = poll._count?.votes || 0;
+      const participationPercentage = tribeMembers > 0 
+        ? Math.round((totalVotes / tribeMembers) * 100) 
+        : 0;
+      
+      return {
+        ...poll,
+        hasVoted: votedPollIds.has(poll.id),
+        stats: {
+          tribeMembers,
+          totalVotes,
+          participationPercentage,
+          quorumReached: participationPercentage >= (poll.quorumPercentage || 80)
+        }
+      };
+    });
 
     // Verificar si el usuario es capitán o staff para determinar permisos
     const captainAssignment = await prisma.tribeCaptainAssignment.findFirst({
@@ -260,13 +286,26 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // Verificar si es Capitán de Tribu o Co-Capitán (tienen acceso completo)
+    const isTribeCaptainOrCoCaptain = await prisma.tribeCaptainAssignment.findFirst({
+      where: {
+        userId: userId,
+        status: 'ACCEPTED',
+        captaincy: {
+          visionId: parseInt(visionId!),
+          roleType: { in: ['TRIBE_CAPTAIN', 'TRIBE_CO_CAPTAIN'] }
+        }
+      }
+    });
+
     return NextResponse.json({
       polls: pollsWithStatus,
       categories: Object.keys(CATEGORY_BY_ROLE),
       userPermissions: {
-        canCreate: !!captainAssignment || !!isStaffMember,
-        canManage: !!captainAssignment || !!isStaffMember,
-        isCaptain: !!captainAssignment
+        canCreate: !!captainAssignment || !!isStaffMember || !!isTribeCaptainOrCoCaptain,
+        canManage: !!captainAssignment || !!isStaffMember || !!isTribeCaptainOrCoCaptain,
+        isCaptain: !!captainAssignment || !!isTribeCaptainOrCoCaptain,
+        isTribeCaptain: !!isTribeCaptainOrCoCaptain
       }
     });
 

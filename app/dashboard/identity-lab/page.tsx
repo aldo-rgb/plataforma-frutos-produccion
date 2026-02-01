@@ -21,7 +21,7 @@ function IdentityLabContent() {
   
   const [loading, setLoading] = useState(true);
   const [loadingPolls, setLoadingPolls] = useState(false);
-  const [visionData, setVisionData] = useState<{ nombre: string } | null>(null);
+  const [visionData, setVisionData] = useState<{ nombre: string; tribeLogoUrl?: string | null } | null>(null);
   const [polls, setPolls] = useState<Poll[]>([]);
   const [userPermissions, setUserPermissions] = useState({ canCreate: false, canManage: false, isCaptain: false });
   const [showCreatePoll, setShowCreatePoll] = useState(false);
@@ -55,6 +55,16 @@ function IdentityLabContent() {
     }>;
   } | null>(null);
   
+  // Estado para subir logo final directamente
+  const [showUploadFinalLogo, setShowUploadFinalLogo] = useState(false);
+  const [finalLogoFile, setFinalLogoFile] = useState<File | null>(null);
+  const [finalLogoPreview, setFinalLogoPreview] = useState<string | null>(null);
+  const [uploadingFinalLogo, setUploadingFinalLogo] = useState(false);
+  const [finalLogoUrl, setFinalLogoUrl] = useState<string | null>(null);
+  
+  // Estado para cerrar votación
+  const [closingPollId, setClosingPollId] = useState<number | null>(null);
+  
   const SHIRT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
   
   // Form para nueva votación
@@ -82,6 +92,12 @@ function IdentityLabContent() {
     _count: { votes: number };
     hasVoted: boolean;
     createdAt: string;
+    stats?: {
+      tribeMembers: number;
+      totalVotes: number;
+      participationPercentage: number;
+      quorumReached: boolean;
+    };
   }
 
   const fetchData = useCallback(async () => {
@@ -131,6 +147,38 @@ function IdentityLabContent() {
       console.error('Error refreshing polls:', err);
     } finally {
       setLoadingPolls(false);
+    }
+  };
+
+  // Función para cerrar una votación
+  const closePoll = async (pollId: number, participationPercentage: number) => {
+    if (participationPercentage < 80) {
+      setError('Se requiere al menos 80% de participación para cerrar la votación');
+      return;
+    }
+    
+    try {
+      setClosingPollId(pollId);
+      setError(null);
+      
+      const res = await fetch('/api/tribe-polls', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'close',
+          pollId
+        })
+      });
+      
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      
+      // Refrescar la lista de votaciones
+      await refreshPolls();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cerrar la votación');
+    } finally {
+      setClosingPollId(null);
     }
   };
 
@@ -299,6 +347,74 @@ function IdentityLabContent() {
       console.error('Error loading sizes:', err);
     } finally {
       setLoadingSizes(false);
+    }
+  };
+
+  // Función para manejar selección de archivo de logo final
+  const handleFinalLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFinalLogoFile(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setFinalLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Función para subir el logo final
+  const uploadFinalLogo = async () => {
+    if (!finalLogoFile || !visionId) return;
+
+    try {
+      setUploadingFinalLogo(true);
+      setError(null);
+
+      const formData = new FormData();
+      formData.append('file', finalLogoFile);
+      formData.append('visionId', visionId);
+      formData.append('type', 'final-logo');
+
+      const res = await fetch('/api/identity-lab/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      setFinalLogoUrl(data.url);
+      
+      // Guardar el logo como el logo oficial de la tribu
+      const saveRes = await fetch('/api/legacy-vision-builder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          visionId: parseInt(visionId),
+          action: 'updateTribeLogo',
+          logoUrl: data.url
+        })
+      });
+
+      const saveData = await saveRes.json();
+      
+      if (saveRes.ok) {
+        // Actualizar el estado local con el nuevo logo
+        setVisionData(prev => prev ? { ...prev, tribeLogoUrl: data.url } : null);
+        
+        // Mostrar éxito y cerrar modal
+        setShowUploadFinalLogo(false);
+        setFinalLogoFile(null);
+        setFinalLogoPreview(null);
+        setFinalLogoUrl(null);
+      } else {
+        throw new Error(saveData.error || 'Error al guardar el logo');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al subir logo');
+    } finally {
+      setUploadingFinalLogo(false);
     }
   };
 
@@ -598,6 +714,61 @@ function IdentityLabContent() {
                         Ya emitiste tu voto
                       </div>
                     )}
+                    
+                    {/* Sección de cerrar votación para el capitán */}
+                    {userPermissions.canManage && poll.status === 'ACTIVE' && poll.stats && (
+                      <div className="mt-4 pt-4 border-t border-gray-700">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs text-gray-400">Participación de la tribu:</span>
+                          <span className={`text-sm font-bold ${
+                            poll.stats.participationPercentage >= 80 
+                              ? 'text-green-400' 
+                              : 'text-yellow-400'
+                          }`}>
+                            {poll.stats.participationPercentage}% ({poll.stats.totalVotes}/{poll.stats.tribeMembers})
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-700 rounded-full h-2 mb-3">
+                          <div 
+                            className={`h-2 rounded-full transition-all ${
+                              poll.stats.participationPercentage >= 80 
+                                ? 'bg-green-500' 
+                                : 'bg-yellow-500'
+                            }`}
+                            style={{ width: `${Math.min(poll.stats.participationPercentage, 100)}%` }}
+                          />
+                        </div>
+                        <button
+                          onClick={() => closePoll(poll.id, poll.stats?.participationPercentage || 0)}
+                          disabled={closingPollId === poll.id || poll.stats.participationPercentage < 80}
+                          className={`w-full py-2.5 px-4 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
+                            poll.stats.participationPercentage >= 80 && closingPollId !== poll.id
+                              ? 'bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white'
+                              : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                          }`}
+                        >
+                          {closingPollId === poll.id ? (
+                            <>
+                              <Loader2 size={16} className="animate-spin" />
+                              Cerrando votación...
+                            </>
+                          ) : poll.stats.participationPercentage >= 80 ? (
+                            <>
+                              🔒 Cerrar Votación
+                            </>
+                          ) : (
+                            <>
+                              🔒 Requiere 80% de participación
+                            </>
+                          )}
+                        </button>
+                        {poll.stats.participationPercentage < 80 && (
+                          <p className="text-center text-xs text-gray-500 mt-2">
+                            Faltan {Math.ceil(poll.stats.tribeMembers * 0.8 - poll.stats.totalVotes)} votos para poder cerrar
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))
@@ -672,7 +843,39 @@ function IdentityLabContent() {
                   Ver Listado de Tallas
                 </button>
               )}
+              
+              {/* Botón subir logo final */}
+              {userPermissions.isCaptain && (
+                <button
+                  onClick={() => setShowUploadFinalLogo(true)}
+                  className="w-full mt-3 py-2 px-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
+                >
+                  <Upload size={18} />
+                  Subir Logo Final
+                </button>
+              )}
             </div>
+
+            {/* Logo Oficial de la Tribu */}
+            {visionData?.tribeLogoUrl && (
+              <div className="bg-gray-900 rounded-xl border border-gray-800 p-5">
+                <h3 className="font-bold text-white mb-3 flex items-center gap-2">
+                  <Trophy size={20} className="text-yellow-400" />
+                  Logo Oficial de la Tribu
+                </h3>
+                <div className="relative aspect-square rounded-xl overflow-hidden border-2 border-yellow-500/50 bg-gray-800">
+                  <Image
+                    src={visionData.tribeLogoUrl}
+                    alt="Logo oficial de la tribu"
+                    fill
+                    className="object-contain p-2"
+                  />
+                </div>
+                <p className="text-center text-xs text-gray-500 mt-3">
+                  Este es el logo oficial seleccionado para la tribu
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1199,6 +1402,103 @@ function IdentityLabContent() {
                     Error al cargar las tallas
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal subir logo final */}
+        {showUploadFinalLogo && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-900 rounded-2xl max-w-lg w-full border border-gray-700">
+              <div className="p-6 border-b border-gray-800">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <Upload size={24} className="text-emerald-400" />
+                    Subir Logo Final
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setShowUploadFinalLogo(false);
+                      setFinalLogoFile(null);
+                      setFinalLogoPreview(null);
+                    }}
+                    className="p-2 hover:bg-gray-800 rounded-full"
+                  >
+                    <X size={20} className="text-gray-400" />
+                  </button>
+                </div>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                <p className="text-gray-400 text-sm">
+                  Si ya tienen el logo definido y no necesitan votar, sube la imagen final aquí. 
+                  Este será el logo oficial de la tribu.
+                </p>
+
+                {/* Área de subida */}
+                <div className="relative">
+                  {finalLogoPreview ? (
+                    <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-800 border-2 border-emerald-500">
+                      <Image
+                        src={finalLogoPreview}
+                        alt="Logo preview"
+                        fill
+                        className="object-contain p-4"
+                      />
+                      <button
+                        onClick={() => {
+                          setFinalLogoFile(null);
+                          setFinalLogoPreview(null);
+                        }}
+                        className="absolute top-2 right-2 p-2 bg-red-500 hover:bg-red-600 rounded-full"
+                      >
+                        <X size={16} className="text-white" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center aspect-square rounded-xl border-2 border-dashed border-gray-600 hover:border-emerald-500 cursor-pointer transition-colors bg-gray-800/50">
+                      <Upload size={48} className="text-gray-500 mb-3" />
+                      <span className="text-gray-400 text-sm">Click para seleccionar imagen</span>
+                      <span className="text-gray-500 text-xs mt-1">PNG, JPG o SVG</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFinalLogoSelect}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
+
+                {error && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {/* Botón guardar */}
+                <button
+                  onClick={uploadFinalLogo}
+                  disabled={!finalLogoFile || uploadingFinalLogo}
+                  className={`w-full py-3 px-6 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2 ${
+                    finalLogoFile && !uploadingFinalLogo
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white'
+                      : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  {uploadingFinalLogo ? (
+                    <>
+                      <Loader2 size={20} className="animate-spin" />
+                      Subiendo...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle size={20} />
+                      Guardar como Logo Oficial
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>
