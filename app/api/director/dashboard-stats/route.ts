@@ -18,7 +18,7 @@ export async function GET() {
       }
     });
 
-    if (!usuario || (usuario.rol !== 'ADMINISTRADOR' && usuario.rol !== 'DIRECTOR')) {
+    if (!usuario || !['ADMINISTRADOR', 'DIRECTOR', 'SCHOOL_ADMIN'].includes(usuario.rol)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 

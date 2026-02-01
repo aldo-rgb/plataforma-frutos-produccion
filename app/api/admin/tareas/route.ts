@@ -125,14 +125,14 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // Lista de roles permitidos: Solo Admin, Coordinador y Director
-    const rolesPermitidos = ['ADMINISTRADOR', 'ADMIN', 'COORDINADOR', 'DIRECTOR'];
+    // Lista de roles permitidos: Solo Admin, Coordinador, Director y School Admin
+    const rolesPermitidos = ['ADMINISTRADOR', 'ADMIN', 'COORDINADOR', 'DIRECTOR', 'SCHOOL_ADMIN'];
     
     if (!rolesPermitidos.includes(user.rol)) {
       console.log('❌ Acceso denegado para rol:', user.rol);
       return NextResponse.json({ 
         error: 'Acceso denegado',
-        mensaje: `Tu rol actual es ${user.rol}. Solo Administradores, Coordinadores y Directores pueden acceder.`
+        mensaje: `Tu rol actual es ${user.rol}. Solo Administradores, Coordinadores, Directores y School Admins pueden acceder.`
       }, { status: 403 });
     }
 
@@ -221,13 +221,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    const rolesPermitidos = ['ADMINISTRADOR', 'ADMIN', 'COORDINADOR', 'DIRECTOR'];
+    const rolesPermitidos = ['ADMINISTRADOR', 'ADMIN', 'COORDINADOR', 'DIRECTOR', 'SCHOOL_ADMIN'];
     
     if (!rolesPermitidos.includes(usuario.rol)) {
       console.log('❌ Acceso denegado para rol:', usuario.rol);
       return NextResponse.json({ 
         error: 'Acceso denegado',
-        mensaje: `Tu rol actual es ${usuario.rol}. Solo Administradores, Coordinadores y Directores pueden crear tareas.`
+        mensaje: `Tu rol actual es ${usuario.rol}. Solo Administradores, Coordinadores, Directores y School Admins pueden crear tareas.`
       }, { status: 403 });
     }
 

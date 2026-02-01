@@ -75,7 +75,7 @@ export async function PATCH(
       where: { id: session.user.id }
     });
 
-    if (!usuario || !['ADMINISTRADOR', 'ADMIN', 'COORDINADOR', 'DIRECTOR'].includes(usuario.rol)) {
+    if (!usuario || !['ADMINISTRADOR', 'ADMIN', 'COORDINADOR', 'DIRECTOR', 'SCHOOL_ADMIN'].includes(usuario.rol)) {
       return NextResponse.json(
         { error: 'No tienes permisos para realizar esta acción' },
         { status: 403 }
@@ -229,7 +229,7 @@ export async function DELETE(
       where: { id: session.user.id }
     });
 
-    if (!usuario || !['ADMINISTRADOR', 'ADMIN', 'COORDINADOR', 'DIRECTOR'].includes(usuario.rol)) {
+    if (!usuario || !['ADMINISTRADOR', 'ADMIN', 'COORDINADOR', 'DIRECTOR', 'SCHOOL_ADMIN'].includes(usuario.rol)) {
       return NextResponse.json(
         { error: 'No tienes permisos para realizar esta acción' },
         { status: 403 }

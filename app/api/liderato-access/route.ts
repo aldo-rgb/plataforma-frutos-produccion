@@ -38,8 +38,8 @@ export async function GET() {
       });
     }
 
-    // Staff siempre tiene acceso (ADMINISTRADOR, DIRECTOR, COORDINADOR, TRAINER, GAMECHANGER, LIDER, MENTOR)
-    const staffRoles = ['ADMINISTRADOR', 'DIRECTOR', 'COORDINADOR', 'TRAINER', 'GAMECHANGER', 'LIDER', 'MENTOR'];
+    // Staff siempre tiene acceso (ADMINISTRADOR, DIRECTOR, COORDINADOR, TRAINER, GAMECHANGER, LIDER, MENTOR, SCHOOL_ADMIN)
+    const staffRoles = ['ADMINISTRADOR', 'DIRECTOR', 'COORDINADOR', 'TRAINER', 'GAMECHANGER', 'LIDER', 'MENTOR', 'SCHOOL_ADMIN'];
     if (staffRoles.includes(usuario.rol)) {
       return NextResponse.json({
         hasAccess: true,

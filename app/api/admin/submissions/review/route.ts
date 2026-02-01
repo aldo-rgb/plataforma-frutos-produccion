@@ -29,12 +29,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // Verificar que sea ADMIN, COORDINADOR o DIRECTOR
-    const rolesPermitidos = ['ADMIN', 'ADMINISTRADOR', 'COORDINADOR', 'DIRECTOR'];
+    // Verificar que sea ADMIN, COORDINADOR, DIRECTOR o SCHOOL_ADMIN
+    const rolesPermitidos = ['ADMIN', 'ADMINISTRADOR', 'COORDINADOR', 'DIRECTOR', 'SCHOOL_ADMIN'];
     if (!rolesPermitidos.includes(usuario.rol)) {
       return NextResponse.json({ 
         error: 'Acceso denegado',
-        mensaje: 'Solo Admin, Coordinador y Director pueden revisar estas evidencias'
+        mensaje: 'Solo Admin, Coordinador, Director y School Admin pueden revisar estas evidencias'
       }, { status: 403 });
     }
 

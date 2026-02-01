@@ -787,8 +787,8 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
               </Link>
             )}
 
-            {/* Gestor de Misiones y Eventos - Solo Admin, Coordinador y Director */}
-            {(usuario.rol === 'ADMIN' || usuario.rol === 'ADMINISTRADOR' || usuario.rol === 'COORDINADOR' || usuario.rol === 'DIRECTOR') && (
+            {/* Gestor de Misiones y Eventos - Admin, Coordinador, Director y School Admin */}
+            {(usuario.rol === 'ADMIN' || usuario.rol === 'ADMINISTRADOR' || usuario.rol === 'COORDINADOR' || usuario.rol === 'DIRECTOR' || usuario.rol === 'SCHOOL_ADMIN') && (
               <Link 
                 href="/dashboard/admin/tareas" 
                 className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
