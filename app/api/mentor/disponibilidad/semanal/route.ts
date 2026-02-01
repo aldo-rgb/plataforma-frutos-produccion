@@ -175,7 +175,8 @@ export async function POST(request: Request) {
         perfilMentorId: perfilMentor.id,
         diaSemana,
         horaInicio,
-        horaFin
+        horaFin,
+        updatedAt: new Date()
       }
     });
 
@@ -227,7 +228,8 @@ async function actualizarDiaCompleto(session: any, body: { dia: number; bloques:
           diaSemana: dia,
           horaInicio: bloque.horaInicio,
           horaFin: bloque.horaFin,
-          activo: true
+          activo: true,
+          updatedAt: new Date()
         }))
       });
     }
