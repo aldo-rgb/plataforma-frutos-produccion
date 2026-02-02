@@ -831,20 +831,6 @@ function CheckoutContent() {
               {/* Payment Methods - Now supports multiple */}
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <button
-                  onClick={() => setPaymentMethod('GIFT_CODE')}
-                  className={`p-4 rounded-xl border-2 transition-all ${
-                    paymentMethod === 'GIFT_CODE'
-                      ? 'border-green-500 bg-green-500/10'
-                      : 'border-slate-700 hover:border-slate-600 bg-slate-900/50'
-                  }`}
-                >
-                  <Banknote className={`mx-auto mb-2 ${paymentMethod === 'GIFT_CODE' ? 'text-green-400' : 'text-slate-400'}`} size={24} />
-                  <span className={`text-sm font-medium ${paymentMethod === 'GIFT_CODE' ? 'text-green-400' : 'text-slate-300'}`}>
-                    Pago en Efectivo
-                  </span>
-                </button>
-
-                <button
                   onClick={() => setPaymentMethod('STRIPE')}
                   disabled={getRemainingBalance() === 0}
                   className={`p-4 rounded-xl border-2 transition-all relative ${
@@ -863,6 +849,20 @@ function CheckoutContent() {
                   <CreditCard className={`mx-auto mb-2 ${paymentMethod === 'STRIPE' ? 'text-cyan-400' : 'text-slate-400'}`} size={24} />
                   <span className={`text-sm font-medium ${paymentMethod === 'STRIPE' ? 'text-cyan-400' : 'text-slate-300'}`}>
                     Tarjeta
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setPaymentMethod('GIFT_CODE')}
+                  className={`p-4 rounded-xl border-2 transition-all ${
+                    paymentMethod === 'GIFT_CODE'
+                      ? 'border-green-500 bg-green-500/10'
+                      : 'border-slate-700 hover:border-slate-600 bg-slate-900/50'
+                  }`}
+                >
+                  <Banknote className={`mx-auto mb-2 ${paymentMethod === 'GIFT_CODE' ? 'text-green-400' : 'text-slate-400'}`} size={24} />
+                  <span className={`text-sm font-medium ${paymentMethod === 'GIFT_CODE' ? 'text-green-400' : 'text-slate-300'}`}>
+                    Pago en Efectivo
                   </span>
                 </button>
 
