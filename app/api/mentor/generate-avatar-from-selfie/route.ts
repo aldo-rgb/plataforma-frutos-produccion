@@ -130,10 +130,10 @@ export async function POST(request: NextRequest) {
     console.log('✅ Usuario encontrado:', usuario.id, usuario.nombre, usuario.rol);
     console.log('📸 Número de imágenes recibidas:', inputImages.length);
 
-    // Prompt específico para mentores/maestros con perfil avanzado
-    const mentorPrompt = `A photo of a img person, professional master teacher appearance, highly evolved human, advanced mentor presence, wise and accomplished look, professional business attire with subtle futuristic elements, confident and inspiring expression, guru-like aura, sophisticated and refined aesthetic, premium lighting with soft glow, high-end professional background with elegant tech elements, cinematic quality, 8k ultra detailed, photorealistic render, sharp focus, professional portrait photography, from shoulders up, masterful composition, premium quality`;
+    // Prompt específico para mentores/maestros - DEBE SALIR CON TRAJE FORMAL
+    const mentorPrompt = `A photo of a img person, wearing an elegant dark navy blue formal suit with white dress shirt and subtle tie, professional master teacher appearance, highly evolved human mentor, wise accomplished executive look, premium tailored business suit jacket, confident inspiring leader expression, sophisticated refined aesthetic, premium studio lighting with soft professional glow, high-end corporate office background with elegant wooden bookshelves and warm lighting, cinematic quality, 8k ultra detailed, photorealistic professional headshot, sharp focus, executive portrait photography, from chest up showing suit collar and shoulders, masterful composition, premium quality, formal business executive style`;
 
-    const negativePrompt = 'ugly, deformed, disfigured, bad anatomy, bad proportions, extra limbs, cloned face, malformed limbs, missing arms, missing legs, fused fingers, too many fingers, long neck, watermark, signature, text, logo, casual clothing, unprofessional, messy, low quality, blurry';
+    const negativePrompt = 'ugly, deformed, disfigured, bad anatomy, bad proportions, extra limbs, cloned face, malformed limbs, missing arms, missing legs, fused fingers, too many fingers, long neck, watermark, signature, text, logo, casual clothing, t-shirt, hoodie, unprofessional attire, messy, low quality, blurry, no suit, informal wear';
 
     console.log('🎨 Generando avatar de maestro con Replicate...');
 
