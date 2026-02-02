@@ -965,17 +965,7 @@ function UpcomingTrainingsSection({ trainings }: { trainings: Training[] }) {
                   ))}
                 </div>
 
-                {/* Spots */}
-                {training.spotsAvailable !== null && (
-                  <div className="mt-4 pt-4 border-t border-slate-100">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-500">Lugares disponibles</span>
-                      <span className={`font-bold ${training.spotsAvailable <= 5 ? 'text-red-500' : 'text-emerald-500'}`}>
-                        {training.spotsAvailable}
-                      </span>
-                    </div>
-                  </div>
-                )}
+
               </div>
             </div>
           ))}
@@ -1073,7 +1063,7 @@ function FooterSection({
 
             <div className="flex flex-col sm:flex-row gap-4">
               <a
-                href={`/registro?org=${organization.slug}`}
+                href={`/auth/signup?org=${organization.id}`}
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-cyan-500 text-cyan-400 font-semibold rounded-xl hover:bg-cyan-500/10 transition-colors"
               >
                 <ExternalLink className="w-5 h-5" />
