@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const dataParam = searchParams.get('data');
+    const externalReference = searchParams.get('external_reference');
     const paymentId = searchParams.get('payment_id');
     const status = searchParams.get('status');
     const collectionStatus = searchParams.get('collection_status');
@@ -19,8 +20,10 @@ export async function GET(request: NextRequest) {
     console.log('📨 Payment success callback (registration) received');
     console.log('   Payment ID:', paymentId);
     console.log('   Status:', status);
+    console.log('   External Reference:', externalReference ? 'present' : 'missing');
+    console.log('   Data param:', dataParam ? 'present' : 'missing');
 
-    // Parse order data
+    // Parse order data from data param or external_reference (MercadoPago)
     let orderData: any = null;
     
     if (dataParam) {
@@ -28,6 +31,16 @@ export async function GET(request: NextRequest) {
         orderData = JSON.parse(decodeURIComponent(dataParam));
       } catch (e) {
         console.error('Error parsing data param:', e);
+      }
+    }
+    
+    // If no data param, try external_reference (MercadoPago sends this)
+    if (!orderData && externalReference) {
+      try {
+        orderData = JSON.parse(decodeURIComponent(externalReference));
+        console.log('✅ Parsed order data from external_reference');
+      } catch (e) {
+        console.error('Error parsing external_reference:', e);
       }
     }
 

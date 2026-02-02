@@ -651,6 +651,19 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             </Link>
 
             <Link 
+              href="/dashboard/school-admin/pasarela"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/school-admin/pasarela'
+                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-indigo-900/20'
+              }`}
+            >
+              <CreditCard size={18} className="text-indigo-400" />
+              <span>Pasarela de Pago</span>
+            </Link>
+
+            <Link 
               href="/dashboard/school-admin/reportes-anonimos"
               onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${

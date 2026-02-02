@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     // Obtener datos de la organización incluyendo el dominio
     const organization = await prisma.organization.findUnique({
       where: { id: organizationId },
-      select: { id: true, name: true, customDomain: true, subdomain: true },
+      select: { id: true, name: true, customDomain: true, slug: true },
     });
 
     if (!organization) {
@@ -79,8 +79,6 @@ export async function POST(request: NextRequest) {
     let baseUrl = process.env.NEXTAUTH_URL || 'https://impactocuantico.net';
     if (organization.customDomain) {
       baseUrl = `https://${organization.customDomain}`;
-    } else if (organization.subdomain) {
-      baseUrl = `https://${organization.subdomain}.quantumplatform.app`;
     }
     console.log('🌐 Base URL para callbacks:', baseUrl);
 
