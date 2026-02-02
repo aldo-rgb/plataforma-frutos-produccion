@@ -463,6 +463,36 @@ export default function CoordinadorAvanzadoDashboard() {
           </div>
         </div>
 
+        {/* Widget Prospectos de Staff */}
+        <Link href="/dashboard/prospectos-staff" className="block mt-6">
+          <div className="bg-gradient-to-br from-cyan-900/30 via-emerald-900/20 to-slate-900/80 border-2 border-cyan-500/30 rounded-2xl p-6 hover:border-cyan-500/50 transition-all group hover:shadow-lg hover:shadow-cyan-500/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 rounded-xl group-hover:scale-110 transition-transform">
+                  <span className="text-3xl">🌟</span>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-cyan-400 uppercase tracking-wider mb-1">
+                    PROSPECTOS DE STAFF
+                  </p>
+                  <p className="text-lg font-bold text-white">
+                    Ver participantes interesados en ser Staff
+                  </p>
+                  <p className="text-sm text-slate-400 mt-1">
+                    Personas que activaron &quot;Quiero ser Staff&quot; en su perfil
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-cyan-400 font-semibold group-hover:gap-3 transition-all">
+                <span>Ver lista</span>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </Link>
+
         {/* Widget de Alertas Médicas */}
         <div className="mt-8">
           <MedicalAlertsWidget />

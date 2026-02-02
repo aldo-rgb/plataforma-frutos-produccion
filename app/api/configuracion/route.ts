@@ -24,7 +24,8 @@ export async function GET(req: NextRequest) {
         rol: true,
         organizationId: true,
         gameChangerId: true,
-        profileImage: true
+        profileImage: true,
+        birthdate: true
       }
     }) as any;
 
@@ -58,6 +59,38 @@ export async function GET(req: NextRequest) {
         select: { nombre: true }
       });
       gameChangerNombre = gameChanger?.nombre || '';
+    }
+
+    // Obtener ángel de enrolamiento desde vision_enrollments
+    let angelEnrolamientoNombre = '';
+    let tribeLogoUrl = '';
+    try {
+      // Buscar el enrollment más reciente del usuario
+      const enrollment = await (prisma as any).vision_enrollments.findFirst({
+        where: { userId: usuario.id },
+        orderBy: { enrolledAt: 'desc' },
+        include: {
+          Usuario_vision_enrollments_invitedByToUsuario: {
+            select: { nombre: true }
+          },
+          Vision: {
+            select: { tribeLogoUrl: true }
+          }
+        }
+      });
+
+      if (enrollment) {
+        // Nombre del ángel de enrolamiento
+        if (enrollment.Usuario_vision_enrollments_invitedByToUsuario?.nombre) {
+          angelEnrolamientoNombre = enrollment.Usuario_vision_enrollments_invitedByToUsuario.nombre;
+        }
+        // Logo de la tribu desde la visión
+        if (enrollment.Vision?.tribeLogoUrl) {
+          tribeLogoUrl = enrollment.Vision.tribeLogoUrl;
+        }
+      }
+    } catch (angelError) {
+      console.log('⚠️ Error obteniendo ángel/logo (no crítico):', angelError);
     }
 
     // Obtener historial completo de visiones
@@ -175,6 +208,49 @@ export async function GET(req: NextRequest) {
       where: { id: usuario.id }
     }) as any;
 
+    // Obtener nombre del negocio si existe (para ocupación)
+    let businessName = '';
+    try {
+      const businessProfile = await prisma.businessProfile.findFirst({
+        where: { userId: usuario.id },
+        select: { headline: true }
+      });
+      if (businessProfile?.headline) {
+        businessName = businessProfile.headline;
+      }
+    } catch (e) {
+      // Ignorar errores si no hay BusinessProfile
+    }
+
+    // Obtener talla de camiseta del voto de encuesta (si existe)
+    let tallaVotacion = '';
+    try {
+      const pollVote = await prisma.tribePollVote.findFirst({
+        where: { 
+          userId: usuario.id,
+          shirtSize: { not: null }
+        },
+        orderBy: { votedAt: 'desc' },
+        select: { shirtSize: true }
+      });
+      if (pollVote?.shirtSize) {
+        tallaVotacion = pollVote.shirtSize;
+      }
+    } catch (e) {
+      console.log('⚠️ Error obteniendo talla de votación (no crítico):', e);
+    }
+
+    // Construir configuración con valores fallback
+    const whatsappFinal = perfilCompleto.whatsapp || usuario.telefono || '';
+    const fechaNacimientoFinal = perfilCompleto.fechaNacimiento || usuario.birthdate || null;
+    const ocupacionFinal = perfilCompleto.ocupacion || businessName || '';
+    // Usar ángel de enrolamiento desde enrollment, fallback a perfilCompleto
+    const angelEnrolamientoFinal = angelEnrolamientoNombre || perfilCompleto.angelEnrolamiento || '';
+    // Usar logo de tribu desde Vision.tribeLogoUrl, fallback a perfilCompleto
+    const logoTribuFinal = tribeLogoUrl || perfilCompleto.logoTribu || '';
+    // Usar talla de votación si no tiene talla en perfil
+    const tallaCamisetaFinal = perfilCompleto.tallaCamiseta || tallaVotacion || 'M';
+
     return NextResponse.json({
       success: true,
       configuracion: {
@@ -182,6 +258,12 @@ export async function GET(req: NextRequest) {
         nombre: usuario.nombre,
         email: usuario.email,
         telefono: usuario.telefono,
+        whatsapp: whatsappFinal,
+        fechaNacimiento: fechaNacimientoFinal,
+        ocupacion: ocupacionFinal,
+        angelEnrolamiento: angelEnrolamientoFinal,
+        logoTribu: logoTribuFinal,
+        tallaCamiseta: tallaCamisetaFinal,
         gameChangerNombre
       },
       visionesHistorial: visionesHistorial,

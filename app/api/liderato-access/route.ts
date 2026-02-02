@@ -1,7 +1,7 @@
 // API Route: Verificar acceso a sección Liderato
 // El acceso se otorga cuando el usuario:
 // 1. Está inscrito en PL (Programa de Liderato)
-// 2. Y ha completado el nivel ADVANCED
+// 2. O ha completado el nivel ADVANCED
 
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -128,19 +128,31 @@ export async function GET() {
       }
     }
 
-    // Debe cumplir AMBAS condiciones
+    // Debe cumplir al menos UNA de estas condiciones:
+    // - Estar inscrito en PL (ya implica que completó avanzado)
+    // - O tener avanzado completado
     const isEnrolledInPL = !!plEnrollment;
 
-    if (isEnrolledInPL && hasCompletedAdvanced) {
+    // Si está en PL, tiene acceso automático
+    if (isEnrolledInPL) {
       return NextResponse.json({
         hasAccess: true,
-        reason: 'pl_and_advanced_completed',
-        advancedCompletionReason,
-        message: "Acceso completo: inscrito en PL y Avanzado completado",
+        reason: 'enrolled_in_pl',
+        message: "Acceso completo: inscrito en Programa de Liderato",
         plEnrollment: {
           enrolledAt: plEnrollment.enrolledAt,
           vision: plEnrollment.Vision?.nombre
-        },
+        }
+      });
+    }
+
+    // Si tiene Avanzado completado (aunque no esté en PL), también tiene acceso
+    if (hasCompletedAdvanced) {
+      return NextResponse.json({
+        hasAccess: true,
+        reason: 'advanced_completed',
+        advancedCompletionReason,
+        message: "Acceso completo: Avanzado completado",
         advancedInfo: advancedEnrollment ? {
           completedAt: advancedEnrollment.completedAt,
           graduatedAt: advancedEnrollment.graduatedAt,
@@ -153,15 +165,12 @@ export async function GET() {
 
     // No tiene acceso - indicar qué le falta
     const missingRequirements = [];
-    if (!isEnrolledInPL) {
-      missingRequirements.push("inscripción en Programa de Liderato");
-    }
-    if (!hasCompletedAdvanced) {
+    if (!isEnrolledInPL && !hasCompletedAdvanced) {
       if (advancedEnrollment?.Vision?.advancedEndDate) {
         const endDate = new Date(advancedEnrollment.Vision.advancedEndDate);
-        missingRequirements.push(`completar el nivel Avanzado (termina el ${endDate.toLocaleDateString('es-MX')})`);
+        missingRequirements.push(`completar el nivel Avanzado (termina el ${endDate.toLocaleDateString('es-MX')}) o inscribirte en Programa de Liderato`);
       } else {
-        missingRequirements.push("completar el nivel Avanzado");
+        missingRequirements.push("completar el nivel Avanzado o inscribirte en Programa de Liderato");
       }
     }
 

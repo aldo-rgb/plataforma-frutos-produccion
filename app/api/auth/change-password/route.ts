@@ -112,13 +112,8 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Contraseña actualizada para usuario: ${updatedUser.email}`);
 
-    // Determinar redirección según rol
-    let redirectTo = '/dashboard';
-    
-    // Solo PARTICIPANTES necesitan wizard
-    if (updatedUser.rol === 'PARTICIPANTE' && !updatedUser.wizardCompleted) {
-      redirectTo = '/dashboard/carta/wizard-v2';
-    }
+    // Después de cambiar contraseña, siempre ir a completar perfil
+    let redirectTo = '/dashboard/perfil-completo?onboarding=true';
 
     // Preparar respuesta con redirect
     const response = NextResponse.json({ 

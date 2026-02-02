@@ -3213,8 +3213,8 @@ export default function QuantumBusinessBuilderPage() {
             
             <p className="text-slate-400 mb-6">
               Esta sección está disponible para participantes 
-              <span className="text-amber-300 font-medium">inscritos en Programa de Liderato</span> que han 
-              <span className="text-emerald-300 font-medium">completado el nivel Avanzado</span>.
+              <span className="text-amber-300 font-medium"> inscritos en Programa de Liderato</span> o que han 
+              <span className="text-emerald-300 font-medium"> completado el nivel Avanzado</span>.
             </p>
             
             <div className="space-y-3">

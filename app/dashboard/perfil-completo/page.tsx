@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   User, 
   Save, 
@@ -21,7 +21,8 @@ import {
   Loader2,
   CheckCircle2,
   ArrowLeft,
-  Sparkles
+  Sparkles,
+  PartyPopper
 } from 'lucide-react';
 import Image from 'next/image';
 import { CondecoracionesGrid } from '@/components/condecoraciones/CondecoracionesBadge';
@@ -30,7 +31,6 @@ import QuantumIdentityModal from '@/components/quantum/QuantumIdentityModal';
 interface ConfiguracionData {
   // Datos personales
   nombre: string;
-  apellido: string;
   fechaNacimiento: string;
   email: string;
   whatsapp: string;
@@ -101,9 +101,12 @@ const TALLAS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
 export default function ConfiguracionCompletaPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isOnboarding = searchParams.get('onboarding') === 'true';
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showOnboardingBanner, setShowOnboardingBanner] = useState(isOnboarding);
   const [error, setError] = useState<string | null>(null);
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [profileImage, setProfileImage] = useState<string>('');
@@ -114,7 +117,6 @@ export default function ConfiguracionCompletaPage() {
   
   const [config, setConfig] = useState<ConfiguracionData>({
     nombre: '',
-    apellido: '',
     fechaNacimiento: '',
     email: '',
     whatsapp: '',
@@ -152,30 +154,6 @@ export default function ConfiguracionCompletaPage() {
     coachTercerFin: '',
     condecoraciones: []
   });
-
-  // Función para detectar campos faltantes importantes - usando useMemo para evitar recálculos innecesarios
-  const camposFaltantes = useMemo(() => {
-    const camposRequeridos = [
-      { key: 'nombre', label: 'Nombre' },
-      { key: 'apellido', label: 'Apellido' },
-      { key: 'fechaNacimiento', label: 'Fecha de Nacimiento' },
-      { key: 'whatsapp', label: 'WhatsApp' },
-      { key: 'calle', label: 'Calle' },
-      { key: 'numero', label: 'Número' },
-      { key: 'colonia', label: 'Colonia' },
-      { key: 'codigoPostal', label: 'Código Postal' },
-      { key: 'estadoMunicipio', label: 'Estado/Municipio' },
-      { key: 'ocupacion', label: 'Ocupación' },
-      { key: 'tallaCamiseta', label: 'Talla de Camiseta' },
-      { key: 'peso', label: 'Peso' },
-      { key: 'estatura', label: 'Estatura' },
-    ];
-    
-    return camposRequeridos.filter(campo => {
-      const valor = config[campo.key as keyof ConfiguracionData];
-      return !valor || valor === '';
-    });
-  }, [config]);
 
   useEffect(() => {
     fetchConfiguracion();
@@ -245,7 +223,14 @@ export default function ConfiguracionCompletaPage() {
       
       if (res.ok && data.success) {
         setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 3000);
+        // Si es onboarding, redirigir al dashboard después de guardar
+        if (isOnboarding) {
+          setTimeout(() => {
+            router.push('/dashboard');
+          }, 1500);
+        } else {
+          setTimeout(() => setShowSuccess(false), 3000);
+        }
       } else {
         setError(data.error || 'Error al guardar configuración');
       }
@@ -337,6 +322,34 @@ export default function ConfiguracionCompletaPage() {
             </button>
           </div>
         </div>
+
+        {/* Onboarding Welcome Banner */}
+        {showOnboardingBanner && (
+          <div className="mb-6 bg-gradient-to-r from-purple-600/20 via-cyan-600/20 to-purple-600/20 border border-purple-500/40 rounded-2xl p-6 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-gradient-to-br from-purple-500 to-cyan-500 rounded-xl flex-shrink-0">
+                <PartyPopper size={28} className="text-white" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-white mb-2">
+                  ¡Bienvenido a Impacto Cuántico! 🎉
+                </h2>
+                <p className="text-slate-300 mb-3">
+                  Tu contraseña ha sido actualizada correctamente. Ahora completa tu perfil para personalizar tu experiencia y que tu equipo pueda conocerte mejor.
+                </p>
+                <p className="text-cyan-400 text-sm font-medium">
+                  ✨ Llena los campos obligatorios marcados y guarda tus cambios para continuar.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowOnboardingBanner(false)}
+                className="text-slate-400 hover:text-white transition-colors p-1"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Success Message */}
         {showSuccess && (
@@ -439,21 +452,12 @@ export default function ConfiguracionCompletaPage() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Nombre</label>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Nombre Completo</label>
                 <input
                   type="text"
                   value={config.nombre}
                   onChange={(e) => setConfig({...config, nombre: e.target.value})}
-                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Apellido</label>
-                <input
-                  type="text"
-                  value={config.apellido}
-                  onChange={(e) => setConfig({...config, apellido: e.target.value})}
+                  placeholder="Nombre y apellidos"
                   className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
                 />
               </div>
@@ -585,25 +589,23 @@ export default function ConfiguracionCompletaPage() {
                 <input
                   type="text"
                   value={config.angelEnrolamiento}
-                  onChange={(e) => setConfig({...config, angelEnrolamiento: e.target.value})}
-                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-purple-500 focus:outline-none"
+                  readOnly
+                  disabled
+                  className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-slate-300 cursor-not-allowed"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
-                  <Upload size={16} />
-                  Logo de Tribu (JPG)
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Logo de Tribu
                 </label>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/jpg"
-                  onChange={(e) => e.target.files?.[0] && handleImageUpload('logoTribu', e.target.files[0])}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:border-purple-500 focus:outline-none file:mr-4 file:py-3 file:px-4 file:rounded-lg file:border-0 file:bg-purple-500 file:text-black file:font-medium hover:file:bg-purple-600"
-                />
-                {config.logoTribu && (
-                  <div className="mt-2">
+                {config.logoTribu ? (
+                  <div className="bg-slate-900/50 border border-slate-700 rounded-lg p-4">
                     <Image src={config.logoTribu} alt="Logo Tribu" width={100} height={100} className="rounded-lg" />
+                  </div>
+                ) : (
+                  <div className="bg-slate-900/50 border border-slate-700 rounded-lg p-4 text-center text-slate-400">
+                    El logo será asignado automáticamente desde la votación de tu tribu
                   </div>
                 )}
               </div>
@@ -612,11 +614,20 @@ export default function ConfiguracionCompletaPage() {
 
           {/* Domicilio */}
           <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 rounded-2xl p-4 md:p-6">
-            <h2 className="text-lg md:text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <h2 className="text-lg md:text-xl font-bold text-white mb-2 flex items-center gap-2">
               <MapPin size={20} className="text-green-400" />
               Domicilio
             </h2>
-            <p className="text-xs md:text-sm text-slate-400 mb-4">Para recibir correspondencia o paquetería</p>
+            <p className="text-xs md:text-sm text-slate-400 mb-3">Para recibir correspondencia o paquetería</p>
+            
+            {/* Mensaje destacado de regalo */}
+            <div className="mb-4 p-3 bg-gradient-to-r from-pink-500/20 to-purple-500/20 border border-pink-500/30 rounded-xl flex items-center gap-3">
+              <span className="text-2xl">🎁</span>
+              <p className="text-sm text-pink-200">
+                <span className="font-semibold">¡Quizá te enviemos un regalo!</span>
+                <span className="text-pink-300/80 ml-1">Asegúrate de que tu dirección esté correcta.</span>
+              </p>
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-2">
@@ -680,7 +691,10 @@ export default function ConfiguracionCompletaPage() {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Talla de Camiseta</label>
+                <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+                  Talla de Camiseta
+                  <span className="text-xs text-orange-400/80 font-normal">(de tu votación)</span>
+                </label>
                 <select
                   value={config.tallaCamiseta}
                   onChange={(e) => setConfig({...config, tallaCamiseta: e.target.value})}
@@ -777,170 +791,131 @@ export default function ConfiguracionCompletaPage() {
             </div>
           </div>
 
-          {/* Staff y Coaches */}
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 rounded-2xl p-4 md:p-6">
-            <h2 className="text-lg md:text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <Award size={20} className="text-yellow-400" />
-              Coaches y Staff
-            </h2>
+          {/* Quiero ser Staff - Sección destacada */}
+          <div className={`relative overflow-hidden rounded-2xl p-6 md:p-8 transition-all duration-300 ${
+            config.quiereSerStaff 
+              ? 'bg-gradient-to-br from-emerald-900/40 via-emerald-800/30 to-slate-900/50 border-2 border-emerald-500/50 shadow-lg shadow-emerald-500/20' 
+              : 'bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 hover:border-cyan-500/50'
+          }`}>
+            {/* Decoración de fondo */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-cyan-500/10 to-transparent rounded-full blur-2xl" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-emerald-500/10 to-transparent rounded-full blur-2xl" />
             
-            <div className="mb-4">
-              <label className="flex items-center gap-2 text-slate-300">
-                <input
-                  type="checkbox"
-                  checked={config.quiereSerStaff}
-                  onChange={(e) => setConfig({...config, quiereSerStaff: e.target.checked})}
-                  className="w-5 h-5 rounded border-slate-700 bg-slate-900 text-cyan-500 focus:ring-cyan-500"
-                />
-                <span className="font-medium">¿Quiero ser Staff?</span>
-              </label>
+            <div className="relative z-10">
+              <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+                <div className="flex-shrink-0">
+                  <div className={`w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+                    config.quiereSerStaff 
+                      ? 'bg-emerald-500 shadow-lg shadow-emerald-500/30' 
+                      : 'bg-slate-700/50'
+                  }`}>
+                    <span className="text-3xl md:text-4xl">🌟</span>
+                  </div>
+                </div>
+                
+                <div className="flex-1">
+                  <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
+                    ¿Quieres ser parte del Staff?
+                  </h2>
+                  <p className="text-sm md:text-base text-slate-400 leading-relaxed">
+                    Al activar esta opción, aparecerás en la <span className="text-cyan-400 font-medium">lista de prospectos</span> para ser seleccionado como Staff en futuras visiones. Los coordinadores podrán verte y elegirte para formar parte del equipo.
+                  </p>
+                </div>
+                
+                <div className="flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setConfig({...config, quiereSerStaff: !config.quiereSerStaff})}
+                    className={`relative w-20 h-10 rounded-full transition-all duration-300 ${
+                      config.quiereSerStaff 
+                        ? 'bg-emerald-500' 
+                        : 'bg-slate-700'
+                    }`}
+                  >
+                    <span className={`absolute top-1 w-8 h-8 bg-white rounded-full shadow-md transition-all duration-300 ${
+                      config.quiereSerStaff ? 'left-11' : 'left-1'
+                    }`} />
+                  </button>
+                </div>
+              </div>
+              
+              {config.quiereSerStaff && (
+                <div className="mt-4 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center gap-3">
+                  <span className="text-xl">✅</span>
+                  <p className="text-sm text-emerald-300">
+                    <span className="font-semibold">¡Estás en la lista!</span>
+                    <span className="text-emerald-400/80 ml-1">Los coordinadores pueden verte como prospecto de Staff.</span>
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Staff y Coaches (Solo lectura - Asignados desde Vision Builder) */}
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 rounded-2xl p-4 md:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg md:text-xl font-bold text-white flex items-center gap-2">
+                <Award size={20} className="text-yellow-400" />
+                Mi Historial de Coaches y Staff
+              </h2>
+              <span className="text-xs text-slate-500 bg-slate-800 px-2 py-1 rounded">Asignado automáticamente</span>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Coach de Básico</label>
-                <input
-                  type="text"
-                  value={config.coachBasico}
-                  onChange={(e) => setConfig({...config, coachBasico: e.target.value})}
-                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
-                />
+                <label className="block text-sm font-medium text-slate-400 mb-2">Coach de Básico</label>
+                <div className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-lg text-slate-300">
+                  {config.coachBasico || <span className="text-slate-500 italic">Sin asignar</span>}
+                </div>
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Staff de Básico</label>
-                <input
-                  type="text"
-                  value={config.staffBasico}
-                  onChange={(e) => setConfig({...config, staffBasico: e.target.value})}
-                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
-                />
+                <label className="block text-sm font-medium text-slate-400 mb-2">Staff de Básico</label>
+                <div className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-lg text-slate-300">
+                  {config.staffBasico || <span className="text-slate-500 italic">Sin asignar</span>}
+                </div>
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Coach de Avanzado</label>
-                <input
-                  type="text"
-                  value={config.coachAvanzado}
-                  onChange={(e) => setConfig({...config, coachAvanzado: e.target.value})}
-                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
-                />
+                <label className="block text-sm font-medium text-slate-400 mb-2">Coach de Avanzado</label>
+                <div className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-lg text-slate-300">
+                  {config.coachAvanzado || <span className="text-slate-500 italic">Sin asignar</span>}
+                </div>
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Staff de Avanzado</label>
-                <input
-                  type="text"
-                  value={config.staffAvanzado}
-                  onChange={(e) => setConfig({...config, staffAvanzado: e.target.value})}
-                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
-                />
+                <label className="block text-sm font-medium text-slate-400 mb-2">Staff de Avanzado</label>
+                <div className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-lg text-slate-300">
+                  {config.staffAvanzado || <span className="text-slate-500 italic">Sin asignar</span>}
+                </div>
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Game Changer (Asignado)</label>
-                <input
-                  type="text"
-                  value={config.gameChangerNombre}
-                  disabled
-                  className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-400 cursor-not-allowed"
-                  placeholder="Asignado automáticamente"
-                />
+                <label className="block text-sm font-medium text-slate-400 mb-2">Game Changer</label>
+                <div className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-lg text-slate-300">
+                  {config.gameChangerNombre || <span className="text-slate-500 italic">Sin asignar</span>}
+                </div>
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Coach de 1er Fin</label>
-                <input
-                  type="text"
-                  value={config.coachPrimerFin}
-                  onChange={(e) => setConfig({...config, coachPrimerFin: e.target.value})}
-                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
-                />
+                <label className="block text-sm font-medium text-slate-400 mb-2">Coach de 1er Fin</label>
+                <div className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-lg text-slate-300">
+                  {config.coachPrimerFin || <span className="text-slate-500 italic">Sin asignar</span>}
+                </div>
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Coach de 2do Fin</label>
-                <input
-                  type="text"
-                  value={config.coachSegundoFin}
-                  onChange={(e) => setConfig({...config, coachSegundoFin: e.target.value})}
-                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
-                />
+                <label className="block text-sm font-medium text-slate-400 mb-2">Coach de 2do Fin</label>
+                <div className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-lg text-slate-300">
+                  {config.coachSegundoFin || <span className="text-slate-500 italic">Sin asignar</span>}
+                </div>
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Coach de 3er Fin</label>
-                <input
-                  type="text"
-                  value={config.coachTercerFin}
-                  onChange={(e) => setConfig({...config, coachTercerFin: e.target.value})}
-                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Fotos y Documentos */}
-          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 rounded-2xl p-4 md:p-6">
-            <h2 className="text-lg md:text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <Camera size={20} className="text-pink-400" />
-              Fotos y Documentos
-            </h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Foto de Primer Día (JPG)</label>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/jpg"
-                  onChange={(e) => e.target.files?.[0] && handleImageUpload('fotoPrimerDia', e.target.files[0])}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:border-pink-500 focus:outline-none file:mr-4 file:py-3 file:px-4 file:rounded-lg file:border-0 file:bg-pink-500 file:text-black file:font-medium hover:file:bg-pink-600"
-                />
-                {config.fotoPrimerDia && (
-                  <div className="mt-2">
-                    <Image src={config.fotoPrimerDia} alt="Primer Día" width={200} height={200} className="rounded-lg object-cover" />
-                  </div>
-                )}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Foto de Último Día de PL (JPG)</label>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/jpg"
-                  onChange={(e) => e.target.files?.[0] && handleImageUpload('fotoUltimoDiaPL', e.target.files[0])}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:border-pink-500 focus:outline-none file:mr-4 file:py-3 file:px-4 file:rounded-lg file:border-0 file:bg-pink-500 file:text-black file:font-medium hover:file:bg-pink-600"
-                />
-                {config.fotoUltimoDiaPL && (
-                  <div className="mt-2">
-                    <Image src={config.fotoUltimoDiaPL} alt="Último Día PL" width={200} height={200} className="rounded-lg object-cover" />
-                  </div>
-                )}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Foto de Contrato (JPG)</label>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/jpg"
-                  onChange={(e) => e.target.files?.[0] && handleImageUpload('fotoContrato', e.target.files[0])}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:border-pink-500 focus:outline-none file:mr-4 file:py-3 file:px-4 file:rounded-lg file:border-0 file:bg-pink-500 file:text-black file:font-medium hover:file:bg-pink-600"
-                />
-                {config.fotoContrato && (
-                  <div className="mt-2">
-                    <Image src={config.fotoContrato} alt="Contrato" width={200} height={200} className="rounded-lg object-cover" />
-                  </div>
-                )}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Contrato Avanzado (PDF/Imagen)</label>
-                <input
-                  type="file"
-                  accept="image/*,application/pdf"
-                  onChange={(e) => e.target.files?.[0] && handleImageUpload('contratoAvanzado', e.target.files[0])}
-                  className="w-full px-4 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm focus:border-pink-500 focus:outline-none file:mr-4 file:py-3 file:px-4 file:rounded-lg file:border-0 file:bg-pink-500 file:text-black file:font-medium hover:file:bg-pink-600"
-                />
+                <label className="block text-sm font-medium text-slate-400 mb-2">Coach de 3er Fin</label>
+                <div className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-lg text-slate-300">
+                  {config.coachTercerFin || <span className="text-slate-500 italic">Sin asignar</span>}
+                </div>
               </div>
             </div>
           </div>
@@ -957,23 +932,6 @@ export default function ConfiguracionCompletaPage() {
           </div>
 
         </div>
-
-        {/* Notificación de campos faltantes */}
-        {camposFaltantes.length > 0 && (
-          <div className="mt-6 bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
-            <p className="text-amber-400 font-bold mb-2 flex items-center gap-2">
-              <span className="text-xl">⚠️</span>
-              Te faltan {camposFaltantes.length} campo(s) por completar:
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {camposFaltantes.map(campo => (
-                <span key={campo.key} className="px-2 py-1 bg-amber-500/20 text-amber-300 rounded-md text-sm">
-                  {campo.label}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Save Button (Bottom) */}
         <div className="mt-6 md:mt-8 flex justify-center md:justify-end">

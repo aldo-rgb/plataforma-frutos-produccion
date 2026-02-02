@@ -11,6 +11,15 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
+    console.log('🔵 [create-payment] Request recibido:', JSON.stringify({
+      organizationId: body.organizationId,
+      visionId: body.visionId,
+      amount: body.amount,
+      ticketSelection: body.ticketSelection,
+      userEmail: body.userData?.email,
+      appliedCodesCount: body.appliedCodes?.length || 0,
+    }, null, 2));
+    
     const { 
       organizationId,
       visionId,
@@ -21,25 +30,35 @@ export async function POST(request: NextRequest) {
     } = body;
 
     if (!organizationId || !amount || !userData?.email) {
+      console.log('❌ [create-payment] Datos incompletos:', { organizationId, amount, email: userData?.email });
       return NextResponse.json(
-        { error: 'Datos incompletos' },
+        { error: 'Datos incompletos', details: `organizationId: ${organizationId}, amount: ${amount}, email: ${userData?.email}` },
         { status: 400 }
       );
     }
 
     // Obtener configuración de pasarela de pago de la organización
+    console.log('🔍 [create-payment] Buscando gateway para orgId:', organizationId);
     const gatewayConfig = await prisma.paymentGatewayConfig.findUnique({
       where: { organizationId: organizationId },
     });
 
+    console.log('🔍 [create-payment] Gateway encontrado:', gatewayConfig ? {
+      provider: gatewayConfig.provider,
+      isActive: gatewayConfig.isActive,
+      hasSecretKey: !!gatewayConfig.secretKey,
+    } : 'NO ENCONTRADO');
+
     if (!gatewayConfig || !gatewayConfig.isActive) {
+      console.log('❌ [create-payment] Gateway no configurado o inactivo');
       return NextResponse.json(
-        { error: 'La organización no tiene configurada una pasarela de pago. Contacta al administrador.' },
+        { error: 'La organización no tiene configurada una pasarela de pago. Contacta al administrador.', details: `orgId: ${organizationId}` },
         { status: 400 }
       );
     }
 
     if (!gatewayConfig.secretKey) {
+      console.log('❌ [create-payment] Gateway sin credenciales');
       return NextResponse.json(
         { error: 'La pasarela de pago no tiene credenciales configuradas' },
         { status: 400 }
@@ -153,10 +172,13 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('❌ Error al crear pago de registro:', error);
+    console.error('   Stack:', error.stack);
+    console.error('   Message:', error.message);
     return NextResponse.json(
       {
         error: 'Error al crear el pago',
-        details: error.message,
+        details: error.message || 'Error desconocido',
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       },
       { status: 500 }
     );

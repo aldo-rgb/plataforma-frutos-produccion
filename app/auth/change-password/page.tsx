@@ -34,15 +34,10 @@ function ChangePasswordContent() {
       router.push('/login');
     }
 
-    // Si ya completó el cambio, redirigir según rol y estado
+    // Si ya completó el cambio, redirigir a completar perfil o dashboard
     if (session?.user && !session.user.requirePasswordChange) {
-      // Solo participantes sin wizard van al wizard
-      if (session.user.rol === 'PARTICIPANTE' && !session.user.wizardCompleted) {
-        router.push('/dashboard/carta/wizard-v2');
-      } else {
-        // Todos los demás (directores, mentores, participantes con wizard) van al dashboard
-        router.push('/dashboard');
-      }
+      // Todos los usuarios van a completar su perfil después de cambiar contraseña
+      router.push('/dashboard/perfil-completo?onboarding=true');
     }
   }, [session, status, isMagicLink, router]);
 
