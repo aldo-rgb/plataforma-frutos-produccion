@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
 
     // Obtener datos del request
     const body = await request.json();
-    const { image, images } = body;
+    const { image, images, gender } = body;
 
     // Soportar múltiples imágenes o imagen única (compatibilidad hacia atrás)
     const inputImages: string[] = images && images.length > 0 ? images : (image ? [image] : []);
@@ -127,12 +127,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Al menos una imagen es requerida' }, { status: 400 });
     }
 
+    // Determinar clase word según género (man/woman)
+    const genderWord = gender === 'woman' ? 'woman' : 'man';
+
     console.log('✅ Usuario encontrado:', usuario.id, usuario.nombre, usuario.rol);
     console.log('📸 Número de imágenes recibidas:', inputImages.length);
+    console.log('👤 Género seleccionado:', genderWord);
 
     // Prompt para AVATAR FUTURISTA DE MAESTRO - estilo personaje de videojuego/película
-    // IMPORTANTE: "img" es el trigger word de PhotoMaker y DEBE seguir a una clase (man/woman/person)
-    const mentorPrompt = `Futuristic sci-fi portrait of a person img, upper body shot from waist up, wearing sleek futuristic armor suit with glowing neon blue accents, high-tech mentor character, holographic interface elements, cyberpunk master teacher aesthetic, dramatic cinematic lighting, dark background with subtle tech glow, sharp detailed face, confident wise expression, movie poster quality, 8k, unreal engine 5 render, highly detailed`;
+    // IMPORTANTE: "img" es el trigger word de PhotoMaker y DEBE seguir a una clase (man/woman)
+    const mentorPrompt = `Futuristic sci-fi portrait of a ${genderWord} img, upper body shot from waist up, wearing sleek futuristic armor suit with glowing neon blue accents, high-tech mentor character, holographic interface elements, cyberpunk master teacher aesthetic, dramatic cinematic lighting, dark background with subtle tech glow, sharp detailed face, confident wise expression, movie poster quality, 8k, unreal engine 5 render, highly detailed`;
 
     const negativePrompt = 'ugly, deformed, disfigured, bad anatomy, extra limbs, watermark, text, logo, low quality, blurry, full body, legs, feet, amateur, cartoon, anime';
 

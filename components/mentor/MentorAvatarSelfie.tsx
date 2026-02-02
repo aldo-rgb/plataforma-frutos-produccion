@@ -16,7 +16,9 @@ const SELFIE_INSTRUCTIONS = [
   { step: 4, text: '(Opcional) Expresión diferente', icon: '😎' },
 ];
 
-type CaptureMode = 'selection' | 'ai-selfie' | 'ai-upload';
+type CaptureMode = 'selection' | 'gender-selection' | 'ai-selfie' | 'ai-upload';
+type Gender = 'man' | 'woman' | null;
+type NextMode = 'ai-selfie' | 'ai-upload' | null;
 
 export default function MentorAvatarSelfie({
   isOpen,
@@ -24,6 +26,8 @@ export default function MentorAvatarSelfie({
   onAvatarGenerated
 }: MentorAvatarSelfieProps) {
   const [mode, setMode] = useState<CaptureMode>('selection');
+  const [gender, setGender] = useState<Gender>(null);
+  const [pendingMode, setPendingMode] = useState<NextMode>(null);
   const [capturedPhotos, setCapturedPhotos] = useState<string[]>([]);
   const [currentSelfieStep, setCurrentSelfieStep] = useState(0);
   const [generatedAvatar, setGeneratedAvatar] = useState<string | null>(null);
@@ -43,6 +47,8 @@ export default function MentorAvatarSelfie({
       stopCamera();
       setCapturedPhotos([]);
       setMode('selection');
+      setGender(null);
+      setPendingMode(null);
       setCurrentSelfieStep(0);
       setError('');
       setGeneratedAvatar(null);
@@ -204,7 +210,8 @@ export default function MentorAvatarSelfie({
         },
         body: JSON.stringify({
           images: capturedPhotos, // Array de fotos
-          image: capturedPhotos[0] // Mantener compatibilidad
+          image: capturedPhotos[0], // Mantener compatibilidad
+          gender: gender // 'man' o 'woman'
         })
       });
 
@@ -259,9 +266,23 @@ export default function MentorAvatarSelfie({
     setCapturedPhotos([]);
     setCurrentSelfieStep(0);
     setMode('selection');
+    setGender(null);
+    setPendingMode(null);
     setGeneratedAvatar(null);
     setError('');
     setSavedToVault(false);
+  };
+
+  const handleModeSelection = (selectedMode: 'ai-selfie' | 'ai-upload') => {
+    setPendingMode(selectedMode);
+    setMode('gender-selection');
+  };
+
+  const handleGenderSelection = (selectedGender: 'man' | 'woman') => {
+    setGender(selectedGender);
+    if (pendingMode) {
+      setMode(pendingMode);
+    }
   };
 
   if (!isOpen) return null;
@@ -297,7 +318,7 @@ export default function MentorAvatarSelfie({
               
               {/* Opción 1: Selfie con IA */}
               <button
-                onClick={() => setMode('ai-selfie')}
+                onClick={() => handleModeSelection('ai-selfie')}
                 className="group relative p-6 bg-gradient-to-br from-cyan-900/40 to-blue-900/40 hover:from-cyan-800/50 hover:to-blue-800/50 border-2 border-cyan-500/30 hover:border-cyan-400 rounded-2xl transition-all text-left"
               >
                 <div className="flex items-start gap-4">
@@ -322,7 +343,7 @@ export default function MentorAvatarSelfie({
 
               {/* Opción 2: Subir fotos */}
               <button
-                onClick={() => setMode('ai-upload')}
+                onClick={() => handleModeSelection('ai-upload')}
                 className="group relative p-6 bg-gradient-to-br from-purple-900/40 to-pink-900/40 hover:from-purple-800/50 hover:to-pink-800/50 border-2 border-purple-500/30 hover:border-purple-400 rounded-2xl transition-all text-left"
               >
                 <div className="flex items-start gap-4">
@@ -340,6 +361,76 @@ export default function MentorAvatarSelfie({
                       <Sparkles size={14} />
                       <span>Usa fotos que ya tengas guardadas</span>
                     </div>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* MODO: SELECCIÓN DE GÉNERO */}
+        {mode === 'gender-selection' && !generatedAvatar && !isGenerating && (
+          <div className="bg-slate-900/90 backdrop-blur-xl rounded-3xl border-2 border-purple-500/30 p-6 sm:p-8 space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <button
+                onClick={resetToSelection}
+                className="text-slate-400 hover:text-white transition-colors flex items-center gap-2"
+              >
+                ← Volver
+              </button>
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center">
+                  <User className="text-white" size={20} />
+                </div>
+                <h2 className="text-xl font-bold text-white">¿Cómo te identificas?</h2>
+              </div>
+              <button
+                onClick={onClose}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Descripción */}
+            <div className="text-center">
+              <p className="text-slate-400">
+                Para generar un avatar que se parezca más a ti, necesitamos saber cómo identificarte
+              </p>
+            </div>
+
+            {/* Opciones de Género */}
+            <div className="grid grid-cols-2 gap-6 max-w-lg mx-auto">
+              
+              {/* Opción: Hombre */}
+              <button
+                onClick={() => handleGenderSelection('man')}
+                className="group relative p-8 bg-gradient-to-br from-blue-900/40 to-cyan-900/40 hover:from-blue-800/60 hover:to-cyan-800/60 border-2 border-blue-500/30 hover:border-blue-400 rounded-2xl transition-all"
+              >
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <span className="text-5xl">👨</span>
+                  </div>
+                  <div className="text-center">
+                    <h3 className="text-xl font-bold text-white mb-1">Hombre</h3>
+                    <p className="text-slate-400 text-sm">Avatar masculino</p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Opción: Mujer */}
+              <button
+                onClick={() => handleGenderSelection('woman')}
+                className="group relative p-8 bg-gradient-to-br from-pink-900/40 to-purple-900/40 hover:from-pink-800/60 hover:to-purple-800/60 border-2 border-pink-500/30 hover:border-pink-400 rounded-2xl transition-all"
+              >
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-24 h-24 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <span className="text-5xl">👩</span>
+                  </div>
+                  <div className="text-center">
+                    <h3 className="text-xl font-bold text-white mb-1">Mujer</h3>
+                    <p className="text-slate-400 text-sm">Avatar femenino</p>
                   </div>
                 </div>
               </button>
