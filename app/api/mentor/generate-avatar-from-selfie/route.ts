@@ -130,12 +130,11 @@ export async function POST(request: NextRequest) {
     console.log('✅ Usuario encontrado:', usuario.id, usuario.nombre, usuario.rol);
     console.log('📸 Número de imágenes recibidas:', inputImages.length);
 
-    // Prompt específico para mentores/maestros - DEBE SALIR CON TRAJE FORMAL
+    // Prompt para AVATAR FUTURISTA DE MAESTRO - estilo personaje de videojuego/película
     // IMPORTANTE: "img" es el trigger word de PhotoMaker y DEBE seguir a una clase (man/woman/person)
-    // Formato correcto: "man img" o "woman img" - NO solo "img"
-    const mentorPrompt = `A professional headshot photo of a person img, wearing elegant dark navy blue formal business suit with crisp white dress shirt, premium executive appearance, confident friendly smile, warm professional lighting, clean corporate background, high quality professional portrait, sharp focus, 8k, photorealistic`;
+    const mentorPrompt = `Futuristic sci-fi portrait of a person img, upper body shot from waist up, wearing sleek futuristic armor suit with glowing neon blue accents, high-tech mentor character, holographic interface elements, cyberpunk master teacher aesthetic, dramatic cinematic lighting, dark background with subtle tech glow, sharp detailed face, confident wise expression, movie poster quality, 8k, unreal engine 5 render, highly detailed`;
 
-    const negativePrompt = 'cartoon, anime, illustration, painting, drawing, art, sketch, ugly, deformed, disfigured, bad anatomy, extra limbs, watermark, text, logo, casual clothing, t-shirt, hoodie, low quality, blurry';
+    const negativePrompt = 'ugly, deformed, disfigured, bad anatomy, extra limbs, watermark, text, logo, low quality, blurry, full body, legs, feet, amateur, cartoon, anime';
 
     console.log('🎨 Generando avatar de maestro con Replicate...');
     console.log('📝 Prompt:', mentorPrompt);
@@ -154,14 +153,14 @@ export async function POST(request: NextRequest) {
     // PhotoMaker soporta múltiples imágenes para mejor fidelidad facial
     const primaryImage = inputImages[0];
     
-    // Configurar parámetros OPTIMIZADOS PARA MÁXIMO PARECIDO FACIAL
-    // style_strength_ratio BAJO = más parecido facial, menos estilización
+    // Configurar parámetros - style_strength_ratio MÁS ALTO para estilo futurista
+    // style_strength_ratio: 15-50 (más alto = más estilizado, menos parecido exacto pero más artístico)
     const inputParams: any = {
       input_image: primaryImage,
       prompt: mentorPrompt,
       negative_prompt: negativePrompt,
       num_outputs: 1,
-      style_strength_ratio: 15, // Bajo = más parecido facial (rango 15-50, menor = más parecido)
+      style_strength_ratio: 30, // Balance entre parecido y estilización futurista
     };
 
     // Agregar imágenes adicionales si están disponibles (mejora MUCHO la fidelidad facial)
