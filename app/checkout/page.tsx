@@ -107,6 +107,7 @@ function CheckoutContent() {
   // Processing states
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
 
   // Track checkout for abandoned cart detection
   const trackCheckoutStart = async (data: RegistrationData, price: number) => {
@@ -410,8 +411,15 @@ function CheckoutContent() {
 
         console.log('[CHECKOUT] Redirigiendo a:', paymentData.paymentUrl);
         
-        // Redirect to payment gateway
-        window.location.href = paymentData.paymentUrl;
+        // Guardar URL por si la redirección automática falla
+        setPaymentUrl(paymentData.paymentUrl);
+        
+        // Intentar redirección automática
+        // Algunos navegadores móviles bloquean redirecciones automáticas
+        setTimeout(() => {
+          window.location.href = paymentData.paymentUrl;
+        }, 100);
+        
         return;
       }
 
@@ -1101,6 +1109,21 @@ function CheckoutContent() {
                   <p className="text-slate-300">Tu información está protegida con encriptación de nivel bancario.</p>
                 </div>
               </div>
+
+              {/* Mostrar enlace manual si la redirección automática falla */}
+              {paymentUrl && (
+                <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
+                  <p className="text-yellow-400 font-bold mb-2">🔗 Si no fuiste redirigido automáticamente:</p>
+                  <a 
+                    href={paymentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full py-3 bg-yellow-500 hover:bg-yellow-600 text-black font-bold rounded-lg text-center transition-all"
+                  >
+                    Click aquí para ir a pagar →
+                  </a>
+                </div>
+              )}
 
               <button
                 onClick={handlePayment}
