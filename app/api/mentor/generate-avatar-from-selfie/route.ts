@@ -131,8 +131,9 @@ export async function POST(request: NextRequest) {
     console.log('📸 Número de imágenes recibidas:', inputImages.length);
 
     // Prompt específico para mentores/maestros - DEBE SALIR CON TRAJE FORMAL
-    // IMPORTANTE: "img" es el token que PhotoMaker usa para preservar la identidad facial
-    const mentorPrompt = `A professional headshot photo of img, wearing elegant dark navy blue formal business suit with crisp white dress shirt, subtle silk tie, premium executive appearance, confident friendly smile, warm professional lighting, clean corporate background, high quality professional portrait, sharp focus, 8k, photorealistic`;
+    // IMPORTANTE: "img" es el trigger word de PhotoMaker y DEBE seguir a una clase (man/woman/person)
+    // Formato correcto: "man img" o "woman img" - NO solo "img"
+    const mentorPrompt = `A professional headshot photo of a person img, wearing elegant dark navy blue formal business suit with crisp white dress shirt, premium executive appearance, confident friendly smile, warm professional lighting, clean corporate background, high quality professional portrait, sharp focus, 8k, photorealistic`;
 
     const negativePrompt = 'cartoon, anime, illustration, painting, drawing, art, sketch, ugly, deformed, disfigured, bad anatomy, extra limbs, watermark, text, logo, casual clothing, t-shirt, hoodie, low quality, blurry';
 
@@ -160,10 +161,7 @@ export async function POST(request: NextRequest) {
       prompt: mentorPrompt,
       negative_prompt: negativePrompt,
       num_outputs: 1,
-      guidance_scale: 3.0, // Bajo para mejor preservación facial
-      num_inference_steps: 50, // Suficientes pasos para calidad
-      scheduler: "DPMSolverMultistep",
-      style_strength_ratio: 10, // BAJO = máximo parecido facial (rango 5-35, menor = más parecido)
+      style_strength_ratio: 15, // Bajo = más parecido facial (rango 15-50, menor = más parecido)
     };
 
     // Agregar imágenes adicionales si están disponibles (mejora MUCHO la fidelidad facial)
@@ -182,9 +180,7 @@ export async function POST(request: NextRequest) {
 
     console.log('⚙️ Parámetros PhotoMaker:', {
       num_images: inputImages.length,
-      guidance_scale: inputParams.guidance_scale,
-      style_strength_ratio: inputParams.style_strength_ratio,
-      num_inference_steps: inputParams.num_inference_steps
+      style_strength_ratio: inputParams.style_strength_ratio
     });
 
     // Crear predicción en Replicate
