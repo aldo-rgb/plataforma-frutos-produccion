@@ -41,7 +41,7 @@ export async function GET() {
     const tareasHoy = await prisma.taskInstance.count({
       where: {
         usuarioId: userId,
-        scheduledDate: {
+        dueDate: {
           gte: hoy,
           lt: mañana
         },
@@ -53,7 +53,7 @@ export async function GET() {
     const tareasRetrasadas = await prisma.taskInstance.count({
       where: {
         usuarioId: userId,
-        scheduledDate: {
+        dueDate: {
           lt: hoy
         },
         status: 'PENDING'

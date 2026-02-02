@@ -96,9 +96,6 @@ export async function GET(request: NextRequest) {
         },
         shirtOrder: {
           select: { id: true, size: true, quantity: true }
-        },
-        TribeCommunityProject: {
-          select: { id: true, name: true }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -167,15 +164,56 @@ export async function GET(request: NextRequest) {
     // Los tipos de camisetas y precio se guardan en referenceNote como JSON
     let shirtTypes: any[] = [];
     let shirtPrice = 0;
+    let projectItems: any[] = [];
+    let projectPrice = 0;
     if (bankAccount?.referenceNote) {
       try {
-        const shirtConfig = JSON.parse(bankAccount.referenceNote);
-        if (shirtConfig.shirtTypes) shirtTypes = shirtConfig.shirtTypes;
-        if (shirtConfig.shirtPrice) shirtPrice = shirtConfig.shirtPrice;
+        const config = JSON.parse(bankAccount.referenceNote);
+        if (config.shirtTypes) shirtTypes = config.shirtTypes;
+        if (config.shirtPrice) shirtPrice = config.shirtPrice;
+        if (config.projectItems) projectItems = config.projectItems;
+        if (config.projectPrice) projectPrice = config.projectPrice;
       } catch (e) {
         // Si no es JSON válido, es una nota normal
       }
     }
+
+    // Obtener todos los miembros de la visión para proyectos
+    const visionMembers = await prisma.visionParticipante.findMany({
+      where: { visionId: parseInt(visionId) },
+      include: {
+        Usuario_VisionParticipante_participanteIdToUsuario: {
+          select: { id: true, nombre: true, email: true, profileImage: true }
+        }
+      }
+    });
+
+    const allVisionMembers = visionMembers.map(vp => ({
+      id: vp.Usuario_VisionParticipante_participanteIdToUsuario.id,
+      nombre: vp.Usuario_VisionParticipante_participanteIdToUsuario.nombre,
+      email: vp.Usuario_VisionParticipante_participanteIdToUsuario.email,
+      profileImage: vp.Usuario_VisionParticipante_participanteIdToUsuario.profileImage
+    }));
+
+    // Obtener pagos de proyecto (ingresos con categoría LEGACY_FORGE)
+    const projectPaymentsRaw = await prisma.tribeIncome.findMany({
+      where: {
+        visionId: parseInt(visionId),
+        category: 'LEGACY_FORGE',
+        status: 'VERIFIED'
+      },
+      include: {
+        payer: {
+          select: { id: true, nombre: true, email: true, profileImage: true }
+        }
+      }
+    });
+
+    const projectPayments = projectPaymentsRaw.map(p => ({
+      id: p.id,
+      userId: p.payerUserId,
+      user: p.payer
+    }));
 
     // Calcular estadísticas
     const totalVerified = incomes
@@ -198,7 +236,9 @@ export async function GET(request: NextRequest) {
       pendingPayment: shirtOrders.filter(o => o.status === 'PENDING_PAYMENT').length,
       paid: shirtOrders.filter(o => o.status === 'PAID').length,
       delivered: shirtOrders.filter(o => o.status === 'DELIVERED').length,
-      totalAmount: shirtOrders.reduce((sum, o) => sum + o.totalAmount, 0)
+      totalAmount: shirtOrders.reduce((sum, o) => sum + o.totalAmount, 0),
+      totalPaid: shirtOrders.filter(o => o.status === 'PAID' || o.status === 'DELIVERED').reduce((sum, o) => sum + o.totalAmount, 0),
+      totalPending: shirtOrders.filter(o => o.status === 'PENDING_PAYMENT').reduce((sum, o) => sum + o.totalAmount, 0)
     };
 
     return NextResponse.json({
@@ -218,6 +258,10 @@ export async function GET(request: NextRequest) {
       })),
       shirtPrice,
       shirtTypes,
+      projectItems,
+      projectPrice,
+      projectPayments,
+      allVisionMembers,
       stats: {
         totalVerified,
         totalPending,
@@ -354,38 +398,43 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        return NextResponse.json({
-          success: true,
-          income,
-          message: approved ? 'Ingreso verificado' : 'Ingreso rechazado'
-        });
+        return NextResponse.json({ success: true, income });
       }
 
-      case 'update_shirt_order_status': {
-        const { orderId, newStatus } = data;
+      case 'upload_proof': {
+        const { incomeId, proofImage } = data;
 
-        if (!orderId || !newStatus) {
+        if (!incomeId || !proofImage) {
           return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 });
         }
 
-        const updateData: any = { status: newStatus };
-        
-        if (newStatus === 'IN_PRODUCTION') updateData.producedAt = new Date();
-        if (newStatus === 'DELIVERED') updateData.deliveredAt = new Date();
-
-        const order = await prisma.tribeShirtOrder.update({
-          where: { id: orderId },
-          data: updateData
+        // Verificar que el ingreso pertenece al usuario actual
+        const existingIncome = await prisma.tribeIncome.findUnique({
+          where: { id: incomeId }
         });
 
-        return NextResponse.json({
-          success: true,
-          order,
-          message: 'Estado del pedido actualizado'
+        if (!existingIncome) {
+          return NextResponse.json({ error: 'Ingreso no encontrado' }, { status: 404 });
+        }
+
+        if (existingIncome.payerUserId !== userId) {
+          return NextResponse.json({ error: 'No tienes permiso para subir comprobante a este ingreso' }, { status: 403 });
+        }
+
+        if (existingIncome.status !== 'PENDING') {
+          return NextResponse.json({ error: 'El ingreso ya fue procesado' }, { status: 400 });
+        }
+
+        // Actualizar con la imagen del comprobante
+        const updatedIncome = await prisma.tribeIncome.update({
+          where: { id: incomeId },
+          data: { proofImage }
         });
+
+        return NextResponse.json({ success: true, income: updatedIncome });
       }
 
-      case 'register_manual_income': {
+      case 'create_income': {
         const { category, concept, amount, payerName, payerEmail, proofImage, proofNotes, projectId } = data;
 
         if (!category || !concept || !amount) {
@@ -600,6 +649,132 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({
             success: true,
             message: 'Pago desmarcado'
+          });
+        }
+      }
+
+      case 'configure_project_items': {
+        const { projectItems } = data;
+
+        if (!projectItems || !Array.isArray(projectItems)) {
+          return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 });
+        }
+
+        // Verificar que la cuenta bancaria exista
+        const existingBank = await prisma.tribeBankAccount.findUnique({
+          where: { visionId: parseInt(visionId) }
+        });
+
+        if (!existingBank) {
+          return NextResponse.json({ 
+            error: 'Primero debes configurar la cuenta bancaria' 
+          }, { status: 400 });
+        }
+
+        // Calcular precio total del proyecto
+        const totalProjectPrice = projectItems.reduce((sum: number, p: any) => sum + (p.price || 0), 0);
+
+        // Leer configuración actual para preservar datos de camisetas
+        let currentConfig: any = {};
+        if (existingBank.referenceNote) {
+          try {
+            currentConfig = JSON.parse(existingBank.referenceNote);
+          } catch (e) {}
+        }
+
+        // Agregar items de proyecto manteniendo camisetas
+        currentConfig.projectItems = projectItems;
+        currentConfig.projectPrice = totalProjectPrice;
+
+        await prisma.tribeBankAccount.update({
+          where: { visionId: parseInt(visionId) },
+          data: { 
+            referenceNote: JSON.stringify(currentConfig)
+          }
+        });
+
+        return NextResponse.json({
+          success: true,
+          projectItems,
+          projectPrice: totalProjectPrice,
+          message: 'Cotización de proyecto configurada'
+        });
+      }
+
+      case 'toggle_project_payment': {
+        const { memberId, paid } = data;
+
+        if (!memberId) {
+          return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 });
+        }
+
+        // Obtener precio desde cuenta bancaria (guardado en referenceNote)
+        const bankAccount = await prisma.tribeBankAccount.findUnique({
+          where: { visionId: parseInt(visionId) }
+        });
+
+        let projectPrice = 0;
+        if (bankAccount?.referenceNote) {
+          try {
+            const config = JSON.parse(bankAccount.referenceNote);
+            projectPrice = config.projectPrice || 0;
+          } catch (e) {}
+        }
+
+        if (paid) {
+          // Verificar si ya existe un pago de proyecto para este usuario
+          const existingPayment = await prisma.tribeIncome.findFirst({
+            where: {
+              visionId: parseInt(visionId),
+              category: 'LEGACY_FORGE',
+              payerUserId: memberId
+            }
+          });
+
+          if (existingPayment) {
+            return NextResponse.json({ error: 'Ya existe un pago de proyecto para este usuario' }, { status: 400 });
+          }
+
+          // Obtener nombre del usuario
+          const user = await prisma.usuario.findUnique({
+            where: { id: memberId },
+            select: { nombre: true, email: true }
+          });
+
+          // Crear ingreso verificado para proyecto
+          await prisma.tribeIncome.create({
+            data: {
+              visionId: parseInt(visionId),
+              bankAccountId: bankAccount?.id,
+              category: 'LEGACY_FORGE',
+              concept: `Pago de proyecto comunitario`,
+              amount: projectPrice,
+              payerUserId: memberId,
+              payerName: user?.nombre,
+              payerEmail: user?.email,
+              status: 'VERIFIED',
+              verifiedById: userId,
+              verifiedAt: new Date()
+            }
+          });
+
+          return NextResponse.json({
+            success: true,
+            message: 'Pago de proyecto registrado correctamente'
+          });
+        } else {
+          // Desmarcar como pagado: eliminar ingreso de proyecto
+          await prisma.tribeIncome.deleteMany({
+            where: {
+              visionId: parseInt(visionId),
+              category: 'LEGACY_FORGE',
+              payerUserId: memberId
+            }
+          });
+
+          return NextResponse.json({
+            success: true,
+            message: 'Pago de proyecto desmarcado'
           });
         }
       }

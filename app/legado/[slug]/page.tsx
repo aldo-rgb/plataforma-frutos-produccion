@@ -84,14 +84,15 @@ export default async function CampaignPublicPage({ params, searchParams }: PageP
         }
       },
       expenses: {
-        where: { isPublished: true },
-        orderBy: { publishedAt: 'desc' },
+        orderBy: { amount: 'desc' },
         select: {
           id: true,
           concept: true,
           amount: true,
           publicImageUrl: true,
-          publishedAt: true
+          publishedAt: true,
+          status: true,
+          isPublished: true
         }
       },
       _count: {
@@ -107,6 +108,15 @@ export default async function CampaignPublicPage({ params, searchParams }: PageP
     notFound();
   }
 
+  // Separar gastos planeados y comprobados
+  const plannedExpenses = campaign.expenses
+    .filter((e: any) => e.status === 'PLANNED')
+    .map((e: any) => ({ concept: e.concept, amount: Number(e.amount) }));
+  
+  const publishedExpenses = campaign.expenses
+    .filter((e: any) => e.isPublished)
+    .map((e: any) => ({ ...e, amount: Number(e.amount) }));
+
   // Preparar datos para el cliente
   const campaignData = {
     ...campaign,
@@ -119,10 +129,8 @@ export default async function CampaignPublicPage({ params, searchParams }: PageP
       donorName: d.isAnonymous ? 'Donador Anónimo' : d.donorName,
       message: d.showMessage ? d.message : null
     })),
-    expenses: campaign.expenses.map(e => ({
-      ...e,
-      amount: Number(e.amount)
-    })),
+    expenses: publishedExpenses,
+    plannedExpenses,
     project: {
       ...campaign.project,
       goalAmount: Number(campaign.project.goalAmount),

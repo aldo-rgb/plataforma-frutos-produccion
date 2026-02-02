@@ -10,12 +10,19 @@ interface PromiseData {
   salud?: string;
 }
 
+interface ProgressData {
+  finanzas?: number;
+  relaciones?: number;
+  salud?: number;
+}
+
 interface PromiseWidgetProps {
   promises?: PromiseData | null;
+  progress?: ProgressData | null;
   hasCompletedCarta?: boolean;
 }
 
-export default function PromiseWidget({ promises, hasCompletedCarta }: PromiseWidgetProps) {
+export default function PromiseWidget({ promises, progress, hasCompletedCarta }: PromiseWidgetProps) {
   if (!hasCompletedCarta) {
     return (
       <motion.div
@@ -53,9 +60,9 @@ export default function PromiseWidget({ promises, hasCompletedCarta }: PromiseWi
   }
 
   const promiseItems = [
-    { label: 'Finanzas', value: promises?.finanzas, icon: '💰', color: 'text-green-400' },
-    { label: 'Relaciones', value: promises?.relaciones, icon: '❤️', color: 'text-pink-400' },
-    { label: 'Salud', value: promises?.salud, icon: '💪', color: 'text-blue-400' },
+    { label: 'Finanzas', value: promises?.finanzas, icon: '💰', color: 'text-green-400', bgColor: 'bg-green-500', progressKey: 'finanzas' as const },
+    { label: 'Relaciones', value: promises?.relaciones, icon: '❤️', color: 'text-pink-400', bgColor: 'bg-pink-500', progressKey: 'relaciones' as const },
+    { label: 'Salud', value: promises?.salud, icon: '💪', color: 'text-blue-400', bgColor: 'bg-blue-500', progressKey: 'salud' as const },
   ].filter(item => item.value);
 
   return (
@@ -87,25 +94,41 @@ export default function PromiseWidget({ promises, hasCompletedCarta }: PromiseWi
       {/* Promises List */}
       <div className="space-y-3">
         {promiseItems.length > 0 ? (
-          promiseItems.map((item, idx) => (
-            <motion.div
-              key={item.label}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: idx * 0.1 }}
-              className="bg-slate-800/50 rounded-xl p-3 border border-slate-700"
-            >
-              <div className="flex items-start gap-3">
-                <span className="text-lg">{item.icon}</span>
-                <div className="flex-1">
-                  <h4 className={`text-xs font-medium ${item.color} mb-1`}>{item.label}</h4>
-                  <p className="text-sm text-slate-300 line-clamp-2">
-                    "{item.value}"
-                  </p>
+          promiseItems.map((item, idx) => {
+            const progressValue = progress?.[item.progressKey] || 0;
+            
+            return (
+              <motion.div
+                key={item.label}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                className="bg-slate-800/50 rounded-xl p-3 border border-slate-700"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-lg">{item.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className={`text-xs font-medium ${item.color}`}>{item.label}</h4>
+                      <span className={`text-xs font-bold ${item.color}`}>{progressValue}%</span>
+                    </div>
+                    <p className="text-sm text-slate-300 line-clamp-2 mb-2">
+                      "{item.value}"
+                    </p>
+                    {/* Barra de progreso */}
+                    <div className="h-2 bg-slate-700/50 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progressValue}%` }}
+                        transition={{ duration: 0.8, delay: idx * 0.15, ease: "easeOut" }}
+                        className={`h-full ${item.bgColor} rounded-full`}
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))
+              </motion.div>
+            );
+          })
         ) : (
           <div className="text-center py-4">
             <Star className="w-8 h-8 text-slate-600 mx-auto mb-2" />

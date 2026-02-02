@@ -72,6 +72,11 @@ interface IdentityHeroSectionProps {
       relaciones?: string;
       salud?: string;
     };
+    progress?: {
+      finanzas?: number;
+      relaciones?: number;
+      salud?: number;
+    };
   };
 }
 
@@ -163,6 +168,7 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
             <PromiseWidget 
               hasCompletedCarta={cartaData?.hasCompletedCarta}
               promises={cartaData?.promises}
+              progress={cartaData?.progress}
             />
             <GCCallWidget />
           </>
@@ -180,6 +186,7 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
             <PromiseWidget 
               hasCompletedCarta={cartaData?.hasCompletedCarta}
               promises={cartaData?.promises}
+              progress={cartaData?.progress}
             />
             <BuddySystemWidget />
           </>
@@ -191,6 +198,7 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
             <PromiseWidget 
               hasCompletedCarta={cartaData?.hasCompletedCarta}
               promises={cartaData?.promises}
+              progress={cartaData?.progress}
             />
             <JoinVisionWidget onJoinClick={handleUpgradeClick} />
           </>

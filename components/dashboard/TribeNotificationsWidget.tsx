@@ -44,6 +44,8 @@ interface PendingShirtPayment {
   visionName: string;
   size: string;
   amount: number;
+  treasurerName: string | null;
+  treasurerPhone: string | null;
   createdAt: string;
 }
 
@@ -473,6 +475,21 @@ export default function TribeNotificationsWidget() {
               <p className="text-emerald-100/80 text-sm mb-1">
                 Tu talla <span className="font-bold">{payment.size}</span> está registrada. Realiza el pago de ${payment.amount.toLocaleString()} MXN para confirmar tu pedido.
               </p>
+              {payment.treasurerName && (
+                <p className="text-emerald-100/90 text-sm mb-2">
+                  📞 Contacta al tesorero: <span className="font-semibold">{payment.treasurerName}</span>
+                  {payment.treasurerPhone && (
+                    <a 
+                      href={`https://wa.me/52${payment.treasurerPhone.replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-2 text-emerald-400 hover:text-emerald-300 underline"
+                    >
+                      {payment.treasurerPhone}
+                    </a>
+                  )}
+                </p>
+              )}
               <div className="flex items-center gap-3 text-xs text-emerald-200/60">
                 <span className="flex items-center gap-1">
                   <Shield size={12} />
@@ -485,7 +502,7 @@ export default function TribeNotificationsWidget() {
               
               <div className="mt-4 flex items-center gap-3">
                 <Link
-                  href={`/dashboard/captaincy-widget?tab=treasury&vision=${payment.visionId}`}
+                  href={`/dashboard/captaincy-widget?visionId=${payment.visionId}&roleType=TREASURER`}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-lg transition-all text-sm"
                 >
                   <DollarSign size={16} />

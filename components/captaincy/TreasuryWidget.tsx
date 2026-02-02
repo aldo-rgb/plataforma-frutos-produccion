@@ -25,8 +25,11 @@ import {
   ChevronDown,
   ChevronUp,
   ImageIcon,
-  User
+  User,
+  Rocket,
+  Upload
 } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 
 interface BankAccount {
   id: number;
@@ -125,8 +128,13 @@ const shirtStatusLabels: Record<string, { label: string; color: string }> = {
 
 export default function TreasuryWidget({ visionId, visionName, isTreasurer }: Props) {
   const router = useRouter();
+  const { data: session } = useSession();
+  const currentUserId = session?.user?.id ? parseInt(String(session.user.id)) : null;
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'bank' | 'incomes' | 'shirts'>('bank');
+  
+  // Estado para subir comprobante
+  const [uploadingProof, setUploadingProof] = useState<number | null>(null);
   
   // Data states
   const [bankAccount, setBankAccount] = useState<BankAccount | null>(null);
@@ -142,8 +150,23 @@ export default function TreasuryWidget({ visionId, visionName, isTreasurer }: Pr
   const [togglingPayment, setTogglingPayment] = useState<number | null>(null);
   const [allMemberSizes, setAllMemberSizes] = useState<MemberSize[]>([]);
   
-  // Computed total
+  // Project payment system states
+  interface ProjectItem {
+    id: string;
+    name: string;
+    price: number;
+  }
+  const [projectItems, setProjectItems] = useState<ProjectItem[]>([]);
+  const [newProjectItemName, setNewProjectItemName] = useState('');
+  const [newProjectItemPrice, setNewProjectItemPrice] = useState('');
+  const [editingProjectConfig, setEditingProjectConfig] = useState(false);
+  const [projectPayments, setProjectPayments] = useState<any[]>([]);
+  const [allVisionMembers, setAllVisionMembers] = useState<any[]>([]);
+  const [togglingProjectPayment, setTogglingProjectPayment] = useState<number | null>(null);
+  
+  // Computed totals
   const totalShirtCost = shirtTypes.reduce((sum, s) => sum + s.price, 0);
+  const totalProjectCost = projectItems.reduce((sum, p) => sum + p.price, 0);
   
   // UI states
   const [showAccountNumber, setShowAccountNumber] = useState(false);
@@ -199,6 +222,11 @@ export default function TreasuryWidget({ visionId, visionName, isTreasurer }: Pr
       // Load shirt types and member sizes
       setShirtTypes(data.shirtTypes || []);
       setAllMemberSizes(data.allMemberSizes || []);
+      
+      // Load project items and payments
+      setProjectItems(data.projectItems || []);
+      setProjectPayments(data.projectPayments || []);
+      setAllVisionMembers(data.allVisionMembers || []);
 
       if (data.bankAccount) {
         setBankForm({
@@ -280,31 +308,45 @@ export default function TreasuryWidget({ visionId, visionName, isTreasurer }: Pr
     }
   };
 
-  const updateShirtOrderStatus = async (orderId: number, newStatus: string) => {
-    setSaving(true);
+  // Función para subir comprobante de pago (participantes)
+  const uploadProof = async (incomeId: number, file: File) => {
+    setUploadingProof(incomeId);
     try {
-      const res = await fetch('/api/tribe-treasury', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'update_shirt_order_status',
-          visionId,
-          orderId,
-          newStatus
-        })
-      });
+      // Convertir a base64
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      
+      reader.onload = async () => {
+        const base64 = reader.result as string;
+        
+        const res = await fetch('/api/tribe-treasury', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'upload_proof',
+            visionId,
+            incomeId,
+            proofImage: base64
+          })
+        });
 
-      const data = await res.json();
-      if (data.success) {
-        showToast('Estado actualizado', 'success');
-        loadData();
-      } else {
-        showToast(data.error || 'Error', 'error');
-      }
+        const data = await res.json();
+        if (data.success) {
+          showToast('Comprobante subido correctamente', 'success');
+          loadData();
+        } else {
+          showToast(data.error || 'Error al subir comprobante', 'error');
+        }
+        setUploadingProof(null);
+      };
+
+      reader.onerror = () => {
+        showToast('Error al procesar imagen', 'error');
+        setUploadingProof(null);
+      };
     } catch (error) {
       showToast('Error de conexión', 'error');
-    } finally {
-      setSaving(false);
+      setUploadingProof(null);
     }
   };
 
@@ -316,27 +358,20 @@ export default function TreasuryWidget({ visionId, visionName, isTreasurer }: Pr
   // Agregar tipo de camiseta
   const addShirtType = () => {
     if (!newShirtName.trim()) {
-      showToast('Ingresa el nombre de la camiseta', 'error');
+      showToast('Ingresa el nombre del artículo', 'error');
       return;
     }
-    const price = parseFloat(newShirtPrice);
-    if (isNaN(price) || price <= 0) {
+    const price = parseFloat(newShirtPrice) || 0;
+    if (price <= 0) {
       showToast('Ingresa un precio válido', 'error');
       return;
     }
-
-    const newType: ShirtType = {
-      id: Date.now().toString(),
-      name: newShirtName.trim(),
-      price: price
-    };
-
+    const newType = { id: Date.now().toString(), name: newShirtName.trim(), price };
     setShirtTypes([...shirtTypes, newType]);
     setNewShirtName('');
     setNewShirtPrice('');
   };
 
-  // Eliminar tipo de camiseta
   const removeShirtType = (id: string) => {
     setShirtTypes(shirtTypes.filter(s => s.id !== id));
   };
@@ -432,6 +467,116 @@ export default function TreasuryWidget({ visionId, visionName, isTreasurer }: Pr
     return shirtOrders.some(order => order.user.id === userId && order.status !== 'CANCELLED');
   };
 
+  // === FUNCIONES PARA COTIZACIÓN DE PROYECTO ===
+  
+  // Agregar item de proyecto
+  const addProjectItem = () => {
+    if (!newProjectItemName.trim()) {
+      showToast('Ingresa el nombre del concepto', 'error');
+      return;
+    }
+    const price = parseFloat(newProjectItemPrice);
+    if (isNaN(price) || price <= 0) {
+      showToast('Ingresa un precio válido', 'error');
+      return;
+    }
+
+    const newItem: ProjectItem = {
+      id: Date.now().toString(),
+      name: newProjectItemName.trim(),
+      price: price
+    };
+
+    setProjectItems([...projectItems, newItem]);
+    setNewProjectItemName('');
+    setNewProjectItemPrice('');
+  };
+
+  // Eliminar item de proyecto
+  const removeProjectItem = (id: string) => {
+    setProjectItems(projectItems.filter(p => p.id !== id));
+  };
+
+  // Guardar configuración de proyecto
+  const saveProjectConfig = async () => {
+    if (projectItems.length === 0) {
+      showToast('Agrega al menos un concepto', 'error');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch('/api/tribe-treasury', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'configure_project_items',
+          visionId,
+          projectItems
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showToast('Cotización de proyecto guardada', 'success');
+        setEditingProjectConfig(false);
+        loadData();
+      } else {
+        showToast(data.error || 'Error', 'error');
+      }
+    } catch (error) {
+      showToast('Error de conexión', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Toggle pago de proyecto
+  const toggleProjectPayment = async (memberId: number, currentlyPaid: boolean) => {
+    setTogglingProjectPayment(memberId);
+    try {
+      const res = await fetch('/api/tribe-treasury', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'toggle_project_payment',
+          visionId,
+          memberId,
+          paid: !currentlyPaid
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showToast(currentlyPaid ? 'Pago desmarcado' : 'Pago registrado', 'success');
+        // Actualizar estado local
+        if (!currentlyPaid) {
+          const member = allVisionMembers.find(m => m.id === memberId);
+          if (member) {
+            setProjectPayments(prev => [...prev, { 
+              id: Date.now(), 
+              userId: memberId,
+              user: member 
+            }]);
+          }
+        } else {
+          setProjectPayments(prev => prev.filter(p => p.userId !== memberId));
+        }
+      } else {
+        showToast(data.error || 'Error', 'error');
+      }
+    } catch (error) {
+      showToast('Error de conexión', 'error');
+    } finally {
+      setTogglingProjectPayment(null);
+    }
+  };
+
+  // Verificar si un miembro ya pagó el proyecto
+  const isMemberProjectPaid = (userId: number) => {
+    return projectPayments.some(p => p.userId === userId);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -495,7 +640,7 @@ export default function TreasuryWidget({ visionId, visionName, isTreasurer }: Pr
       </div>
 
       {/* Stats Summary */}
-      {stats && (
+      {stats && activeTab !== 'shirts' && (
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-gradient-to-br from-green-900/40 to-emerald-900/40 rounded-xl p-4 border border-green-500/20">
             <p className="text-green-400 text-xs font-medium mb-1">Total Verificado</p>
@@ -504,6 +649,24 @@ export default function TreasuryWidget({ visionId, visionName, isTreasurer }: Pr
           <div className="bg-gradient-to-br from-yellow-900/40 to-orange-900/40 rounded-xl p-4 border border-yellow-500/20">
             <p className="text-yellow-400 text-xs font-medium mb-1">Pendiente</p>
             <p className="text-2xl font-bold text-white">${stats.totalPending?.toLocaleString() || 0}</p>
+          </div>
+          <div className="bg-gradient-to-br from-purple-900/40 to-pink-900/40 rounded-xl p-4 border border-purple-500/20">
+            <p className="text-purple-400 text-xs font-medium mb-1">Playeras</p>
+            <p className="text-2xl font-bold text-white">{stats.shirtStats?.totalOrders || 0}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Shirt Stats Summary - Only for shirts tab */}
+      {stats && activeTab === 'shirts' && (
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-gradient-to-br from-green-900/40 to-emerald-900/40 rounded-xl p-4 border border-green-500/20">
+            <p className="text-green-400 text-xs font-medium mb-1">Total Recaudado</p>
+            <p className="text-2xl font-bold text-white">${stats.shirtStats?.totalPaid?.toLocaleString() || 0}</p>
+          </div>
+          <div className="bg-gradient-to-br from-yellow-900/40 to-orange-900/40 rounded-xl p-4 border border-yellow-500/20">
+            <p className="text-yellow-400 text-xs font-medium mb-1">Pendiente</p>
+            <p className="text-2xl font-bold text-white">${stats.shirtStats?.totalPending?.toLocaleString() || 0}</p>
           </div>
           <div className="bg-gradient-to-br from-purple-900/40 to-pink-900/40 rounded-xl p-4 border border-purple-500/20">
             <p className="text-purple-400 text-xs font-medium mb-1">Playeras</p>
@@ -712,6 +875,193 @@ export default function TreasuryWidget({ visionId, visionName, isTreasurer }: Pr
       {/* Incomes Tab */}
       {activeTab === 'incomes' && (
         <div className="space-y-4">
+          {/* Configuración de cotización de proyecto */}
+          {isTreasurer && bankAccount && (
+            <div className="bg-gradient-to-r from-blue-900/30 to-cyan-900/30 rounded-xl p-4 border border-blue-500/20">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h4 className="text-white font-medium flex items-center gap-2">
+                    <Wallet size={18} className="text-blue-400" />
+                    Cotización de Proyecto Comunitario
+                  </h4>
+                  <p className="text-white/50 text-sm">Agrega los conceptos y montos del proyecto</p>
+                </div>
+                
+                {!editingProjectConfig && projectItems.length > 0 && (
+                  <button
+                    onClick={() => setEditingProjectConfig(true)}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg"
+                  >
+                    Editar
+                  </button>
+                )}
+              </div>
+
+              {/* Lista de conceptos agregados */}
+              {projectItems.length > 0 && !editingProjectConfig && (
+                <div className="space-y-2 mb-4">
+                  {projectItems.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between bg-white/5 rounded-lg px-4 py-2">
+                      <span className="text-white">{item.name}</span>
+                      <span className="text-cyan-400 font-bold">${item.price.toLocaleString()}</span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between bg-cyan-500/20 rounded-lg px-4 py-3 border border-cyan-500/30">
+                    <span className="text-cyan-300 font-medium">Total por persona</span>
+                    <span className="text-cyan-400 font-bold text-xl">${totalProjectCost.toLocaleString()}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Formulario para agregar conceptos */}
+              {(editingProjectConfig || projectItems.length === 0) && (
+                <div className="space-y-3">
+                  {/* Lista editable */}
+                  {projectItems.length > 0 && (
+                    <div className="space-y-2 mb-3">
+                      {projectItems.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2">
+                          <div className="flex items-center gap-3">
+                            <span className="text-white">{item.name}</span>
+                            <span className="text-cyan-400 font-medium">${item.price.toLocaleString()}</span>
+                          </div>
+                          <button
+                            onClick={() => removeProjectItem(item.id)}
+                            className="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Input para nuevo concepto */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={newProjectItemName}
+                      onChange={(e) => setNewProjectItemName(e.target.value)}
+                      placeholder="Ej: Transporte, Material, etc."
+                      className="flex-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500"
+                    />
+                    <div className="flex items-center gap-1">
+                      <span className="text-white">$</span>
+                      <input
+                        type="number"
+                        value={newProjectItemPrice}
+                        onChange={(e) => setNewProjectItemPrice(e.target.value)}
+                        placeholder="Precio"
+                        className="w-24 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-right"
+                        min="0"
+                      />
+                    </div>
+                    <button
+                      onClick={addProjectItem}
+                      className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                    >
+                      <Plus size={18} />
+                    </button>
+                  </div>
+
+                  {/* Total y botones */}
+                  {projectItems.length > 0 && (
+                    <>
+                      <div className="flex items-center justify-between bg-cyan-500/20 rounded-lg px-4 py-3 border border-cyan-500/30">
+                        <span className="text-cyan-300 font-medium">Total por persona</span>
+                        <span className="text-cyan-400 font-bold text-xl">${totalProjectCost.toLocaleString()}</span>
+                      </div>
+                      
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          onClick={saveProjectConfig}
+                          disabled={saving}
+                          className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium flex items-center justify-center gap-2"
+                        >
+                          {saving ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
+                          Guardar Cotización
+                        </button>
+                        {editingProjectConfig && (
+                          <button
+                            onClick={() => {
+                              setEditingProjectConfig(false);
+                              loadData();
+                            }}
+                            className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg"
+                          >
+                            Cancelar
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Lista de pagos de proyecto */}
+              {projectItems.length > 0 && totalProjectCost > 0 && !editingProjectConfig && (
+                <div className="mt-6 border-t border-blue-500/20 pt-4">
+                  <h5 className="text-white font-medium mb-3 flex items-center gap-2">
+                    <User size={16} className="text-blue-400" />
+                    Pagos de Participantes ({projectPayments.length}/{allVisionMembers.length})
+                  </h5>
+                  
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {allVisionMembers.map((member) => {
+                      const isPaid = isMemberProjectPaid(member.id);
+                      const isToggling = togglingProjectPayment === member.id;
+
+                      return (
+                        <div
+                          key={member.id}
+                          className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
+                            isPaid ? 'bg-green-500/10 border border-green-500/20' : 'bg-white/5'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            {member.profileImage ? (
+                              <img src={member.profileImage} className="w-8 h-8 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center">
+                                <User size={14} className="text-white/50" />
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-white text-sm font-medium">{member.nombre}</p>
+                              <p className="text-white/50 text-xs">{member.email}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-3">
+                            <span className="text-white font-medium">${totalProjectCost.toLocaleString()}</span>
+                            
+                            {isTreasurer && (
+                              <button
+                                onClick={() => toggleProjectPayment(member.id, isPaid)}
+                                disabled={isToggling}
+                                className={`relative w-12 h-6 rounded-full transition-colors ${
+                                  isPaid ? 'bg-green-500' : 'bg-gray-600'
+                                }`}
+                              >
+                                {isToggling ? (
+                                  <Loader2 size={14} className="absolute top-1 left-1 animate-spin text-white" />
+                                ) : (
+                                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                                    isPaid ? 'translate-x-7' : 'translate-x-1'
+                                  }`} />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Filters */}
           <div className="flex gap-3">
             <select
@@ -832,27 +1182,83 @@ export default function TreasuryWidget({ visionId, visionName, isTreasurer }: Pr
                           </p>
                         )}
 
+                        {/* Botón para subir comprobante - Solo para el dueño de la cuota */}
+                        {income.status === 'PENDING' && 
+                         income.category === 'LEGACY_FORGE' && 
+                         income.payerUserId === currentUserId && 
+                         !income.proofImage && (
+                          <div className="mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/30">
+                            <p className="text-blue-300 text-sm mb-2">📤 Sube tu comprobante de pago</p>
+                            <label className="flex items-center justify-center gap-2 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg cursor-pointer transition-colors">
+                              {uploadingProof === income.id ? (
+                                <>
+                                  <Loader2 className="w-5 h-5 animate-spin" />
+                                  Subiendo...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload size={18} />
+                                  Seleccionar Imagen
+                                </>
+                              )}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                disabled={uploadingProof === income.id}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) uploadProof(income.id, file);
+                                }}
+                              />
+                            </label>
+                          </div>
+                        )}
+
                         {income.status === 'PENDING' && isTreasurer && (
                           <div className="flex gap-3 pt-3">
-                            <button
-                              onClick={() => verifyIncome(income.id, true)}
-                              disabled={saving}
-                              className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                            >
-                              <Check size={18} />
-                              Verificar
-                            </button>
-                            <button
-                              onClick={() => {
-                                const reason = prompt('Razón del rechazo:');
-                                if (reason) verifyIncome(income.id, false, reason);
-                              }}
-                              disabled={saving}
-                              className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                            >
-                              <X size={18} />
-                              Rechazar
-                            </button>
+                            {income.category === 'LEGACY_FORGE' ? (
+                              <>
+                                <button
+                                  onClick={() => verifyIncome(income.id, true)}
+                                  disabled={saving}
+                                  className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                                >
+                                  <Check size={18} />
+                                  Pagado
+                                </button>
+                                <button
+                                  onClick={() => verifyIncome(income.id, false, 'Aún no ha pagado')}
+                                  disabled={saving}
+                                  className="flex-1 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                                >
+                                  <Clock size={18} />
+                                  Aún no paga
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => verifyIncome(income.id, true)}
+                                  disabled={saving}
+                                  className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                                >
+                                  <Check size={18} />
+                                  Verificar
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    const reason = prompt('Razón del rechazo:');
+                                    if (reason) verifyIncome(income.id, false, reason);
+                                  }}
+                                  disabled={saving}
+                                  className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                                >
+                                  <X size={18} />
+                                  Rechazar
+                                </button>
+                              </>
+                            )}
                           </div>
                         )}
 
@@ -871,32 +1277,27 @@ export default function TreasuryWidget({ visionId, visionName, isTreasurer }: Pr
         </div>
       )}
 
-      {/* Shirts Tab */}
+      {/* Sección de Playeras */}
       {activeTab === 'shirts' && (
-        <div className="space-y-4">
-          {/* Configuración de cotización de camisetas */}
+        <div className="space-y-6">
+          {/* Configuración de Playeras */}
           {isTreasurer && bankAccount && (
-            <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 rounded-xl p-4 border border-purple-500/20">
+            <div className="bg-white/5 rounded-xl p-4 border border-white/10">
               <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h4 className="text-white font-medium flex items-center gap-2">
-                    <Shirt size={18} className="text-purple-400" />
-                    Cotización de Camisetas
-                  </h4>
-                  <p className="text-white/50 text-sm">Agrega los tipos de camisetas y sus precios</p>
-                </div>
-                
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Shirt className="w-5 h-5" />
+                  Configuración de Playeras
+                </h3>
                 {!editingShirtConfig && shirtTypes.length > 0 && (
                   <button
                     onClick={() => setEditingShirtConfig(true)}
-                    className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg"
+                    className="text-sm text-emerald-400 hover:underline"
                   >
                     Editar
                   </button>
                 )}
               </div>
 
-              {/* Lista de camisetas agregadas */}
               {shirtTypes.length > 0 && !editingShirtConfig && (
                 <div className="space-y-2 mb-4">
                   {shirtTypes.map((shirt) => (
@@ -912,89 +1313,80 @@ export default function TreasuryWidget({ visionId, visionName, isTreasurer }: Pr
                 </div>
               )}
 
-              {/* Formulario para agregar camisetas */}
               {(editingShirtConfig || shirtTypes.length === 0) && (
-                <div className="space-y-3">
-                  {/* Lista editable */}
+                <>
                   {shirtTypes.length > 0 && (
-                    <div className="space-y-2 mb-3">
+                    <div className="space-y-2 mb-4">
                       {shirtTypes.map((shirt) => (
-                        <div key={shirt.id} className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2">
+                        <div key={shirt.id} className="flex items-center justify-between bg-white/5 rounded-lg px-4 py-2">
+                          <span className="text-white">{shirt.name}</span>
                           <div className="flex items-center gap-3">
-                            <span className="text-white">{shirt.name}</span>
-                            <span className="text-emerald-400 font-medium">${shirt.price.toLocaleString()}</span>
+                            <span className="text-emerald-400 font-bold">${shirt.price.toLocaleString()}</span>
+                            <button
+                              onClick={() => removeShirtType(shirt.id)}
+                              className="text-red-400 hover:text-red-300"
+                            >
+                              <X size={16} />
+                            </button>
                           </div>
-                          <button
-                            onClick={() => removeShirtType(shirt.id)}
-                            className="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded"
-                          >
-                            <X size={16} />
-                          </button>
                         </div>
                       ))}
                     </div>
                   )}
 
-                  {/* Input para nueva camiseta */}
-                  <div className="flex items-center gap-2">
+                  {shirtTypes.length > 0 && (
+                    <div className="flex items-center justify-between bg-emerald-500/20 rounded-lg px-4 py-3 border border-emerald-500/30 mb-4">
+                      <span className="text-emerald-300 font-medium">Total por persona</span>
+                      <span className="text-emerald-400 font-bold text-xl">${totalShirtCost.toLocaleString()}</span>
+                    </div>
+                  )}
+
+                  {/* Formulario para agregar artículo */}
+                  <div className="flex gap-2 mb-4">
                     <input
                       type="text"
+                      placeholder="Nombre del artículo"
                       value={newShirtName}
                       onChange={(e) => setNewShirtName(e.target.value)}
-                      placeholder="Ej: Camiseta negra"
-                      className="flex-1 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-500"
+                      className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
                     />
-                    <div className="flex items-center gap-1">
-                      <span className="text-white">$</span>
-                      <input
-                        type="number"
-                        value={newShirtPrice}
-                        onChange={(e) => setNewShirtPrice(e.target.value)}
-                        placeholder="Precio"
-                        className="w-24 px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white text-right"
-                        min="0"
-                      />
-                    </div>
+                    <input
+                      type="number"
+                      placeholder="Precio"
+                      value={newShirtPrice}
+                      onChange={(e) => setNewShirtPrice(e.target.value)}
+                      className="w-28 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                    />
                     <button
                       onClick={addShirtType}
-                      className="p-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg"
                     >
-                      <Plus size={18} />
+                      <Plus size={20} />
                     </button>
                   </div>
 
-                  {/* Total y botones */}
-                  {shirtTypes.length > 0 && (
-                    <>
-                      <div className="flex items-center justify-between bg-emerald-500/20 rounded-lg px-4 py-3 border border-emerald-500/30">
-                        <span className="text-emerald-300 font-medium">Total por persona</span>
-                        <span className="text-emerald-400 font-bold text-xl">${totalShirtCost.toLocaleString()}</span>
-                      </div>
-                      
-                      <div className="flex gap-2 pt-2">
-                        <button
-                          onClick={saveShirtConfig}
-                          disabled={saving}
-                          className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium flex items-center justify-center gap-2"
-                        >
-                          {saving ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
-                          Guardar Cotización
-                        </button>
-                        {editingShirtConfig && (
-                          <button
-                            onClick={() => {
-                              setEditingShirtConfig(false);
-                              loadData(); // Recargar datos originales
-                            }}
-                            className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg"
-                          >
-                            Cancelar
-                          </button>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={saveShirtConfig}
+                      disabled={saving || shirtTypes.length === 0}
+                      className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check size={18} />}
+                      Guardar Configuración
+                    </button>
+                    {editingShirtConfig && (
+                      <button
+                        onClick={() => {
+                          setEditingShirtConfig(false);
+                          loadData();
+                        }}
+                        className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg"
+                      >
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -1131,13 +1523,13 @@ export default function TreasuryWidget({ visionId, visionName, isTreasurer }: Pr
                   <div>
                     <p className="text-white/50 text-xs">Pagados</p>
                     <p className="text-xl font-bold text-green-400">
-                      {allMemberSizes.filter(m => isMemberPaid(m.userId)).length}
+                      {shirtOrders.filter(o => o.status === 'PAID').length}
                     </p>
                   </div>
                   <div>
                     <p className="text-white/50 text-xs">Total Recaudado</p>
                     <p className="text-xl font-bold text-emerald-400">
-                      ${(allMemberSizes.filter(m => isMemberPaid(m.userId)).length * totalShirtCost).toLocaleString()}
+                      ${shirtOrders.filter(o => o.status === 'PAID').reduce((sum, o) => sum + o.totalAmount, 0).toLocaleString()}
                     </p>
                   </div>
                 </div>

@@ -179,6 +179,8 @@ export async function GET(request: NextRequest) {
       visionName: string;
       size: string;
       amount: number;
+      treasurerName: string | null;
+      treasurerPhone: string | null;
       createdAt: string;
     }> = [];
 
@@ -231,6 +233,25 @@ export async function GET(request: NextRequest) {
 
           // Solo agregar si hay cotización configurada (shirtPrice > 0)
           if (shirtPrice > 0) {
+            // Buscar al tesorero de esta visión
+            const treasurerAssignment = await prisma.tribeCaptainAssignment.findFirst({
+              where: {
+                captaincy: {
+                  visionId: visId,
+                  roleType: 'TREASURER'
+                },
+                status: 'ACCEPTED'
+              },
+              include: {
+                user: {
+                  select: {
+                    nombre: true,
+                    telefono: true
+                  }
+                }
+              }
+            });
+
             pendingShirtPayments.push({
               id: voteWithSize.id,
               type: 'PENDING_SHIRT_PAYMENT',
@@ -240,6 +261,8 @@ export async function GET(request: NextRequest) {
               visionName: voteWithSize.poll.vision.nombre,
               size: voteWithSize.shirtSize,
               amount: shirtPrice,
+              treasurerName: treasurerAssignment?.user?.nombre || null,
+              treasurerPhone: treasurerAssignment?.user?.telefono || null,
               createdAt: voteWithSize.votedAt.toISOString()
             });
           }

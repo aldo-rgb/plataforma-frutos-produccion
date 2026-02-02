@@ -35,6 +35,7 @@ import {
   Clock,
   Target,
   Award,
+  Trophy,
   TreePine,
   Baby,
   Cat,
@@ -53,8 +54,10 @@ import {
   Heart as HeartIcon,
   Gamepad2,
   MoreHorizontal,
+  Rocket,
 } from 'lucide-react';
 import Link from 'next/link';
+import LegacyLaunchpadModal from '@/components/legacy/LegacyLaunchpadModal';
 
 // Categorías de logística
 const logisticsCategoryLabels: Record<string, string> = {
@@ -272,6 +275,24 @@ export default function LegacyForgePage() {
   const [sendingMessage, setSendingMessage] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const chatRef = useRef<HTMLDivElement>(null);
+
+  // Modales de confirmación personalizados
+  const [confirmVoteModal, setConfirmVoteModal] = useState<{
+    show: boolean;
+    option: PollOption | null;
+    poll: Poll | null;
+  }>({ show: false, option: null, poll: null });
+  
+  const [confirmClosePollModal, setConfirmClosePollModal] = useState<{
+    show: boolean;
+    poll: Poll | null;
+  }>({ show: false, poll: null });
+
+  // Legacy Launchpad Modal
+  const [launchpadModal, setLaunchpadModal] = useState<{
+    isOpen: boolean;
+    project: CommunityProject | null;
+  }>({ isOpen: false, project: null });
 
   // Toast
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' }>({
@@ -665,6 +686,31 @@ export default function LegacyForgePage() {
   };
 
   const handleVote = async (pollId: number, optionId: number) => {
+    // Buscar el poll y la opción para mostrar en el modal
+    const poll = activePolls.find(p => p.id === pollId) || selectedPoll;
+    const option = poll?.options.find(o => o.id === optionId);
+    if (poll && option) {
+      setConfirmVoteModal({ show: true, option, poll });
+    }
+  };
+
+  const handleClosePoll = async (pollId: number) => {
+    // Buscar el poll para mostrar en el modal
+    const poll = activePolls.find(p => p.id === pollId);
+    if (poll) {
+      setConfirmClosePollModal({ show: true, poll });
+      return;
+    }
+  };
+
+  // Funciones de confirmación de modales
+  const confirmVote = async () => {
+    if (!confirmVoteModal.option || !confirmVoteModal.poll) return;
+    
+    const optionId = confirmVoteModal.option.id;
+    const pollId = confirmVoteModal.poll.id;
+    setConfirmVoteModal({ show: false, option: null, poll: null });
+    
     setVoting(true);
     try {
       const res = await fetch('/api/legacy-forge/vote', {
@@ -678,7 +724,6 @@ export default function LegacyForgePage() {
       if (data.success) {
         showToast('✓ ' + data.message, 'success');
         await loadData();
-        // Actualizar poll seleccionado
         if (selectedPoll) {
           const updatedPoll = activePolls.find(p => p.id === pollId);
           if (updatedPoll) setSelectedPoll({ ...updatedPoll, hasVoted: true, userVoteOptionId: optionId });
@@ -693,8 +738,11 @@ export default function LegacyForgePage() {
     }
   };
 
-  const handleClosePoll = async (pollId: number) => {
-    if (!confirm('¿Estás seguro de cerrar la votación? Se determinará el proyecto ganador.')) return;
+  const confirmClosePoll = async () => {
+    if (!confirmClosePollModal.poll) return;
+    
+    const pollId = confirmClosePollModal.poll.id;
+    setConfirmClosePollModal({ show: false, poll: null });
 
     try {
       const res = await fetch('/api/legacy-forge', {
@@ -855,8 +903,8 @@ export default function LegacyForgePage() {
           <div className="flex gap-1">
             {[
               { id: 'origin', label: 'El Origen', icon: Lightbulb },
-              { id: 'structure', label: 'Estructuración', icon: Building },
               { id: 'vote', label: 'La Elección', icon: Vote },
+              { id: 'structure', label: 'Estructuración', icon: Building },
             ].map((phase) => {
               const Icon = phase.icon;
               const isActive = currentPhase === phase.id;
@@ -1407,8 +1455,17 @@ export default function LegacyForgePage() {
                                   setShowProjectForm(true);
                                 }}
                                 className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+                                title="Editar proyecto"
                               >
                                 <Edit className="w-4 h-4 text-gray-400" />
+                              </button>
+                              {/* Botón Lanzar Proyecto */}
+                              <button
+                                onClick={() => setLaunchpadModal({ isOpen: true, project })}
+                                className="p-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+                                title="Lanzar al público"
+                              >
+                                <Rocket className="w-4 h-4 text-white" />
                               </button>
                             </div>
                           </div>
@@ -1578,9 +1635,7 @@ export default function LegacyForgePage() {
                               key={option.id}
                               onClick={() => {
                                 if (selectedPoll.status === 'ACTIVE' && !selectedPoll.hasVoted) {
-                                  if (confirm(`¿Estás seguro que esta es tu elección? ${option.title}`)) {
-                                    handleVote(selectedPoll.id, option.id);
-                                  }
+                                  setConfirmVoteModal({ show: true, option, poll: selectedPoll });
                                 }
                               }}
                               disabled={selectedPoll.status !== 'ACTIVE' || selectedPoll.hasVoted || voting}
@@ -1615,87 +1670,6 @@ export default function LegacyForgePage() {
                         </p>
                       )}
                     </div>
-
-                    {/* Chat de debate */}
-                    {selectedPoll.status === 'ACTIVE' && (
-                      <div className="p-4">
-                        <h4 className="font-bold text-white mb-3 flex items-center gap-2">
-                          <MessageSquare className="w-5 h-5 text-emerald-400" />
-                          Chat de Debate
-                        </h4>
-                        
-                        {/* Mensajes */}
-                        <div
-                          ref={chatRef}
-                          className="h-64 overflow-y-auto space-y-3 mb-4 p-3 bg-gray-800/50 rounded-xl"
-                        >
-                          {chatMessages.length === 0 ? (
-                            <p className="text-gray-500 text-center text-sm py-8">
-                              Sé el primero en comentar
-                            </p>
-                          ) : (
-                            chatMessages.map((msg) => (
-                              <div key={msg.id} className="flex items-start gap-2">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                                  {msg.user.nombre.charAt(0)}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-white text-sm font-medium">{msg.user.nombre}</span>
-                                    <span className="text-gray-500 text-xs">
-                                      {new Date(msg.createdAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
-                                    </span>
-                                  </div>
-                                  {msg.replyTo && (
-                                    <div className="bg-gray-700/50 rounded px-2 py-1 mb-1 text-xs text-gray-400 truncate">
-                                      ↳ {msg.replyTo.user.nombre}: {msg.replyTo.message}
-                                    </div>
-                                  )}
-                                  <p className="text-gray-300 text-sm break-words">{msg.message}</p>
-                                </div>
-                                <button
-                                  onClick={() => setReplyingTo(msg)}
-                                  className="p-1 hover:bg-gray-700 rounded transition-colors"
-                                >
-                                  <Reply className="w-4 h-4 text-gray-500" />
-                                </button>
-                              </div>
-                            ))
-                          )}
-                        </div>
-
-                        {/* Input de mensaje */}
-                        {replyingTo && (
-                          <div className="flex items-center gap-2 px-3 py-2 bg-gray-700/50 rounded-t-xl text-sm">
-                            <span className="text-gray-400">Respondiendo a {replyingTo.user.nombre}</span>
-                            <button onClick={() => setReplyingTo(null)} className="ml-auto">
-                              <X className="w-4 h-4 text-gray-500" />
-                            </button>
-                          </div>
-                        )}
-                        <div className={`flex gap-2 ${replyingTo ? '' : ''}`}>
-                          <input
-                            type="text"
-                            value={chatMessage}
-                            onChange={(e) => setChatMessage(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && sendChatMessage()}
-                            placeholder="Escribe tu opinión..."
-                            className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-white text-sm"
-                          />
-                          <button
-                            onClick={sendChatMessage}
-                            disabled={sendingMessage || !chatMessage.trim()}
-                            className="p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors disabled:opacity-50"
-                          >
-                            {sendingMessage ? (
-                              <Loader2 className="w-5 h-5 animate-spin" />
-                            ) : (
-                              <Send className="w-5 h-5" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
@@ -1920,6 +1894,160 @@ export default function LegacyForgePage() {
         </div>
       )}
 
+      {/* Modal de Confirmación de Voto */}
+      {confirmVoteModal.show && confirmVoteModal.option && confirmVoteModal.poll && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl border border-amber-500/30 max-w-md w-full shadow-2xl shadow-amber-500/10 animate-scale-in">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-600/20 to-yellow-600/20 p-6 rounded-t-2xl border-b border-amber-500/20">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-yellow-500 rounded-xl flex items-center justify-center">
+                  <Vote className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Confirmar Voto</h3>
+                  <p className="text-amber-200/70 text-sm">Esta acción no se puede deshacer</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Content */}
+            <div className="p-6">
+              <p className="text-gray-300 text-center mb-4">
+                ¿Estás seguro que deseas votar por:
+              </p>
+              
+              {/* Opción seleccionada */}
+              <div className="bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border border-amber-500/30 rounded-xl p-4 mb-6">
+                {confirmVoteModal.option.imageUrl && (
+                  <div className="w-full h-32 rounded-lg overflow-hidden mb-3">
+                    <img 
+                      src={confirmVoteModal.option.imageUrl} 
+                      alt={confirmVoteModal.option.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                <p className="text-amber-300 font-bold text-lg text-center">
+                  &ldquo;{confirmVoteModal.option.title}&rdquo;
+                </p>
+                {confirmVoteModal.option.project && (
+                  <p className="text-gray-400 text-sm text-center mt-1">
+                    Proyecto de la Fragua
+                  </p>
+                )}
+              </div>
+              
+              <p className="text-gray-400 text-sm text-center mb-6">
+                En la votación: <span className="text-white">{confirmVoteModal.poll.title}</span>
+              </p>
+              
+              {/* Botones */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmVoteModal({ show: false, option: null, poll: null })}
+                  className="flex-1 py-3 px-4 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmVote}
+                  disabled={voting}
+                  className="flex-1 py-3 px-4 bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  {voting ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Check className="w-5 h-5" />
+                      Confirmar Voto
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación de Cerrar Votación */}
+      {confirmClosePollModal.show && confirmClosePollModal.poll && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl border border-rose-500/30 max-w-md w-full shadow-2xl shadow-rose-500/10 animate-scale-in">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-rose-600/20 to-red-600/20 p-6 rounded-t-2xl border-b border-rose-500/20">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-rose-500 to-red-500 rounded-xl flex items-center justify-center">
+                  <Trophy className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Cerrar Votación</h3>
+                  <p className="text-rose-200/70 text-sm">Se determinará el ganador</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Content */}
+            <div className="p-6">
+              <p className="text-gray-300 text-center mb-4">
+                ¿Estás seguro de cerrar la votación?
+              </p>
+              
+              {/* Info de la votación */}
+              <div className="bg-gradient-to-r from-rose-500/10 to-red-500/10 border border-rose-500/30 rounded-xl p-4 mb-6">
+                <p className="text-rose-300 font-bold text-lg text-center">
+                  &ldquo;{confirmClosePollModal.poll.title}&rdquo;
+                </p>
+                <div className="flex items-center justify-center gap-4 mt-3 text-sm">
+                  <span className="text-gray-400">
+                    {confirmClosePollModal.poll.options?.length || 0} opciones
+                  </span>
+                  <span className="text-gray-600">•</span>
+                  <span className="text-gray-400">
+                    {confirmClosePollModal.poll._count?.votes || 0} votos
+                  </span>
+                </div>
+              </div>
+              
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-6">
+                <p className="text-amber-300 text-sm text-center">
+                  ⚠️ Al cerrar, se calculará el proyecto ganador y no se podrán emitir más votos.
+                </p>
+              </div>
+              
+              {/* Botones */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmClosePollModal({ show: false, poll: null })}
+                  className="flex-1 py-3 px-4 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-xl transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmClosePoll}
+                  className="flex-1 py-3 px-4 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                >
+                  <Trophy className="w-5 h-5" />
+                  Cerrar y Definir Ganador
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Legacy Launchpad Modal */}
+      {launchpadModal.project && (
+        <LegacyLaunchpadModal
+          isOpen={launchpadModal.isOpen}
+          onClose={() => setLaunchpadModal({ isOpen: false, project: null })}
+          project={launchpadModal.project}
+          visionId={parseInt(visionId!)}
+          visionName={vision?.nombre || ''}
+          tribeLogoUrl={vision?.tribeLogoUrl}
+        />
+      )}
+
       <style jsx global>{`
         @keyframes slide-in {
           from {
@@ -1933,6 +2061,19 @@ export default function LegacyForgePage() {
         }
         .animate-slide-in {
           animation: slide-in 0.3s ease-out;
+        }
+        @keyframes scale-in {
+          from {
+            transform: scale(0.9);
+            opacity: 0;
+          }
+          to {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+        .animate-scale-in {
+          animation: scale-in 0.2s ease-out;
         }
       `}</style>
     </div>

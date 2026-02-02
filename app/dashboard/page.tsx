@@ -367,6 +367,11 @@ export default async function DashboardPage() {
       relaciones: (carta as any).relacionesDeclaracion || undefined,
       salud: (carta as any).saludDeclaracion || undefined,
     } : undefined,
+    progress: carta ? {
+      finanzas: (carta as any).finanzasAvance || 0,
+      relaciones: (carta as any).relacionesAvance || 0,
+      salud: (carta as any).saludAvance || 0,
+    } : undefined,
   };
 
   // Definir qué áreas están activas en la visión
