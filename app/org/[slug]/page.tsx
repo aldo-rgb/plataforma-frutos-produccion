@@ -339,7 +339,6 @@ function HeroPathSection() {
       description: 'Despierta tu potencial dormido. Rompe las cadenas mentales que te mantienen en tu zona de confort.',
       includes: [
         'Descubre metas y sueños ocultos con Quantum AI',
-        'Crea tu página web de negocio en el 1er fin de semana',
         'Acceso al Directorio de Talentos para networking',
         'Reprogramación de creencias limitantes',
         'Definición de visión personal asistida por IA'
@@ -357,7 +356,7 @@ function HeroPathSection() {
         'IA que profundiza en tus metas y te guía',
         'Perfil destacado en Directorio de Talentos',
         'Sistema de metas en 8 áreas de vida',
-        'Mentor asignado con llamadas semanales',
+        'Staff asignado con llamadas semanales',
         'Inteligencia emocional y liderazgo'
       ]
     },
@@ -370,11 +369,13 @@ function HeroPathSection() {
       borderColor: 'border-violet-500/30',
       description: 'La cumbre del entrenamiento. Certifícate como líder y construye tu legado que trasciende.',
       includes: [
-        'Certificación como facilitador',
+        'Certificado de participación',
         'Proyecto de impacto comunitario (Legado)',
         'Networking exclusivo con líderes certificados',
         'Mentoría ejecutiva 1:1 personalizada',
-        'Acceso VIP al Directorio de Talentos'
+        'Acceso al Directorio de Talentos'
+        'Crea tu página web de negocio en el 1er fin de semana'
+        'Mentor asignado con llamadas semanales',
       ]
     }
   ];
@@ -496,7 +497,7 @@ function HeroPathSection() {
                   <div className="w-3 h-3 rounded-full bg-red-500" />
                   <div className="w-3 h-3 rounded-full bg-yellow-500" />
                   <div className="w-3 h-3 rounded-full bg-green-500" />
-                  <span className="ml-2 text-slate-500 text-xs">tunegocio.frutosdigitales.com</span>
+                  <span className="ml-2 text-slate-500 text-xs">tunegocio.quantummatter.com</span>
                 </div>
                 
                 <div className="space-y-4">
