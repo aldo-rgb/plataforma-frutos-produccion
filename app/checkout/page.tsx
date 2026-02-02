@@ -360,7 +360,48 @@ function CheckoutContent() {
         return;
       }
 
-      // First, register the user
+      // If paying with card, redirect to payment gateway FIRST (user will be created after payment)
+      if (remainingBalance > 0 && paymentMethod === 'STRIPE') {
+        const codesToRedeem = appliedPayments.filter(p => p.type === 'GIFT_CODE' || p.type === 'CASH_PAYMENT');
+        
+        const paymentRes = await fetch('/api/checkout/create-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            organizationId: registrationData.organizationId,
+            visionId: registrationData.visionId,
+            amount: remainingBalance,
+            ticketSelection: ticketSelection,
+            userData: {
+              nombre: registrationData.nombre,
+              email: registrationData.email,
+              apodo: registrationData.apodo,
+              telefono: registrationData.telefono,
+              password: registrationData.password,
+              horarioLlamada: registrationData.horarioLlamada,
+              profession: registrationData.profession,
+              birthdate: registrationData.birthdate,
+              children: registrationData.children,
+              goals: registrationData.goals,
+              expectations: registrationData.expectations,
+              referralCode: registrationData.referralCode,
+            },
+            appliedCodes: codesToRedeem.map(p => p.code),
+          }),
+        });
+
+        const paymentData = await paymentRes.json();
+
+        if (!paymentData.success || !paymentData.paymentUrl) {
+          throw new Error(paymentData.error || paymentData.details || 'Error al crear el pago');
+        }
+
+        // Redirect to payment gateway
+        window.location.href = paymentData.paymentUrl;
+        return;
+      }
+
+      // If no card payment (only gift codes), register the user first
       const registerRes = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -405,39 +446,6 @@ function CheckoutContent() {
             // Continue with other codes even if one fails
           }
         }
-      }
-
-      // If there's remaining balance, process card payment with organization's gateway
-      if (remainingBalance > 0 && paymentMethod === 'STRIPE') {
-        // Call the payment API to redirect to the organization's payment gateway
-        const paymentRes = await fetch('/api/checkout/create-payment', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            organizationId: registrationData.organizationId,
-            visionId: registrationData.visionId,
-            amount: remainingBalance,
-            ticketSelection: ticketSelection,
-            userData: {
-              nombre: registrationData.nombre,
-              email: registrationData.email,
-              apodo: registrationData.apodo,
-              telefono: registrationData.telefono,
-              password: registrationData.password,
-            },
-            appliedCodes: codesToRedeem.map(p => p.code),
-          }),
-        });
-
-        const paymentData = await paymentRes.json();
-
-        if (!paymentData.success || !paymentData.paymentUrl) {
-          throw new Error(paymentData.error || 'Error al crear el pago');
-        }
-
-        // Redirect to payment gateway
-        window.location.href = paymentData.paymentUrl;
-        return;
       }
 
       // Clear session storage
