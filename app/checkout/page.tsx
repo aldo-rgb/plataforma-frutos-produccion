@@ -93,7 +93,7 @@ function CheckoutContent() {
   // UI states
   const [step, setStep] = useState<'ticket' | 'payment' | 'confirm'>('ticket');
   const [ticketSelection, setTicketSelection] = useState<TicketSelection>('BASIC_ONLY');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('GIFT_CODE');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('STRIPE');
   
   // Multiple payments support
   const [appliedPayments, setAppliedPayments] = useState<AppliedPayment[]>([]);
@@ -300,7 +300,7 @@ function CheckoutContent() {
       const totalPrice = ticketSelection === 'FULL_VISION' ? prices.FULL_VISION : prices.BASIC;
       const remaining = totalPrice - currentPaid;
       codeValue = Math.min(validatedCode.value || 0, Math.max(0, remaining));
-      description = `💵 Pago en Efectivo - $${(validatedCode.value || 0).toLocaleString('es-MX')} MXN`;
+      description = `🎟️ Pago con Código - $${(validatedCode.value || 0).toLocaleString('es-MX')} MXN`;
     }
 
     // Determinar el tipo de pago
@@ -862,7 +862,7 @@ function CheckoutContent() {
                 >
                   <Banknote className={`mx-auto mb-2 ${paymentMethod === 'GIFT_CODE' ? 'text-green-400' : 'text-slate-400'}`} size={24} />
                   <span className={`text-sm font-medium ${paymentMethod === 'GIFT_CODE' ? 'text-green-400' : 'text-slate-300'}`}>
-                    Pago en Efectivo
+                    Pago con Código
                   </span>
                 </button>
 
@@ -939,7 +939,7 @@ function CheckoutContent() {
                         <p className="text-slate-300">
                           <span className="text-slate-500">Incluye:</span>{' '}
                           {validatedCode.type === 'CASH_PAYMENT' || validatedCode.isCashPayment 
-                            ? 'Pago en Efectivo'
+                            ? 'Pago con Código'
                             : validatedCode.ticketsIncluded?.map((t: string) => 
                                 t === 'BASIC' ? 'Básico' : t === 'ADVANCED' ? 'Avanzado' : 'Tu Vida'
                               ).join(', ') || validatedCode.description}
