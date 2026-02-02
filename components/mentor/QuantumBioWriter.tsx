@@ -96,8 +96,11 @@ export default function QuantumBioWriter({ isOpen, onClose, onComplete }: Props)
       const data = await res.json();
       
       if (data.isComplete) {
-        // Entrevista completada
+        // Entrevista completada - guardar contexto actualizado para regenerar bio
         setResult(data.result);
+        if (data.context) {
+          setContext(data.context);
+        }
       } else {
         // Siguiente pregunta
         setCurrentQuestion(data.nextQuestion);

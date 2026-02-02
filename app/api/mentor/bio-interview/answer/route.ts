@@ -70,6 +70,7 @@ export async function POST(request: Request) {
         success: true,
         isComplete: true,
         result: result.result,
+        context: interviewContext, // ← Incluir el contexto actualizado para regenerar bio
       });
     }
     
