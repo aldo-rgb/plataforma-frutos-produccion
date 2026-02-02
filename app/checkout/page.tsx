@@ -938,12 +938,9 @@ function CheckoutContent() {
                   <p className="text-slate-300 mb-4">
                     Pagarás <span className="text-cyan-400 font-bold">${getRemainingBalance().toLocaleString()} MXN</span> con tarjeta de crédito/débito.
                   </p>
-                  <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                    <p className="text-yellow-400 text-sm flex items-center gap-2">
-                      <AlertTriangle size={16} />
-                      El pago con tarjeta estará disponible muy pronto. Por ahora puedes agregar más códigos de referencia.
-                    </p>
-                  </div>
+                  <p className="text-slate-400 text-sm">
+                    Serás redirigido a la pasarela de pago segura para completar tu transacción.
+                  </p>
                 </div>
               )}
 
