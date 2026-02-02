@@ -163,52 +163,77 @@ async function createMercadoPagoPreference(
   productDescription: string,
   amount: number
 ): Promise<string> {
+  // Use production URL or fallback
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}` 
+    : 'http://localhost:3000';
+  
+  console.log('🔵 MercadoPago - Creando preferencia');
+  console.log('   Base URL:', baseUrl);
+  console.log('   Amount:', amount);
+  console.log('   User:', userData.email);
+
+  const preferenceBody = {
+    items: [
+      {
+        title: productTitle,
+        description: productDescription,
+        quantity: 1,
+        currency_id: 'MXN',
+        unit_price: amount,
+      },
+    ],
+    payer: {
+      name: userData.nombre || '',
+      email: userData.email || '',
+    },
+    back_urls: {
+      success: `${baseUrl}/api/checkout/payment-success?provider=mercadopago`,
+      failure: `${baseUrl}/checkout?payment=failed`,
+      pending: `${baseUrl}/checkout?payment=pending`,
+    },
+    auto_return: 'approved',
+    external_reference: JSON.stringify({
+      type: 'REGISTRATION',
+      ...orderData,
+    }),
+  };
+
+  console.log('   Preference body:', JSON.stringify(preferenceBody, null, 2));
+
   const preferenceRes = await fetch('https://api.mercadopago.com/checkout/preferences', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      items: [
-        {
-          title: productTitle,
-          description: productDescription,
-          quantity: 1,
-          currency_id: 'MXN',
-          unit_price: amount,
-        },
-      ],
-      payer: {
-        name: userData.nombre || '',
-        email: userData.email || '',
-      },
-      back_urls: {
-        success: `${process.env.NEXTAUTH_URL}/api/checkout/payment-success?data=${encodeURIComponent(JSON.stringify(orderData))}`,
-        failure: `${process.env.NEXTAUTH_URL}/checkout?payment=failed`,
-        pending: `${process.env.NEXTAUTH_URL}/checkout?payment=pending`,
-      },
-      auto_return: 'approved',
-      external_reference: JSON.stringify({
-        type: 'REGISTRATION',
-        organizationId: orderData.organizationId,
-        ticketSelection: orderData.ticketSelection,
-      }),
-      metadata: orderData,
-    }),
+    body: JSON.stringify(preferenceBody),
   });
 
+  const responseText = await preferenceRes.text();
+  console.log('   MercadoPago response status:', preferenceRes.status);
+  console.log('   MercadoPago response:', responseText);
+
   if (!preferenceRes.ok) {
-    const errorData = await preferenceRes.json();
-    console.error('Error de Mercado Pago:', errorData);
-    throw new Error('Error al crear preferencia en Mercado Pago');
+    let errorData;
+    try {
+      errorData = JSON.parse(responseText);
+    } catch {
+      errorData = { message: responseText };
+    }
+    console.error('❌ Error de Mercado Pago:', errorData);
+    throw new Error(`Error de Mercado Pago: ${errorData.message || responseText}`);
   }
 
-  const preferenceData = await preferenceRes.json();
+  const preferenceData = JSON.parse(responseText);
 
   if (!preferenceData.init_point) {
+    console.error('❌ MercadoPago no devolvió init_point:', preferenceData);
     throw new Error('Mercado Pago no devolvió URL de pago');
   }
+
+  console.log('✅ MercadoPago preferencia creada:', preferenceData.id);
+  console.log('   init_point:', preferenceData.init_point);
 
   return preferenceData.init_point;
 }
