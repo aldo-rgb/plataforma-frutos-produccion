@@ -131,11 +131,13 @@ export async function POST(request: NextRequest) {
     console.log('📸 Número de imágenes recibidas:', inputImages.length);
 
     // Prompt específico para mentores/maestros - DEBE SALIR CON TRAJE FORMAL
-    const mentorPrompt = `A photo of a img person, wearing an elegant dark navy blue formal suit with white dress shirt and subtle tie, professional master teacher appearance, highly evolved human mentor, wise accomplished executive look, premium tailored business suit jacket, confident inspiring leader expression, sophisticated refined aesthetic, premium studio lighting with soft professional glow, high-end corporate office background with elegant wooden bookshelves and warm lighting, cinematic quality, 8k ultra detailed, photorealistic professional headshot, sharp focus, executive portrait photography, from chest up showing suit collar and shoulders, masterful composition, premium quality, formal business executive style`;
+    // IMPORTANTE: "img" es el token que PhotoMaker usa para preservar la identidad facial
+    const mentorPrompt = `A professional headshot photo of img, wearing elegant dark navy blue formal business suit with crisp white dress shirt, subtle silk tie, premium executive appearance, confident friendly smile, warm professional lighting, clean corporate background, high quality professional portrait, sharp focus, 8k, photorealistic`;
 
-    const negativePrompt = 'ugly, deformed, disfigured, bad anatomy, bad proportions, extra limbs, cloned face, malformed limbs, missing arms, missing legs, fused fingers, too many fingers, long neck, watermark, signature, text, logo, casual clothing, t-shirt, hoodie, unprofessional attire, messy, low quality, blurry, no suit, informal wear';
+    const negativePrompt = 'cartoon, anime, illustration, painting, drawing, art, sketch, ugly, deformed, disfigured, bad anatomy, extra limbs, watermark, text, logo, casual clothing, t-shirt, hoodie, low quality, blurry';
 
     console.log('🎨 Generando avatar de maestro con Replicate...');
+    console.log('📝 Prompt:', mentorPrompt);
 
     // Obtener instancia de Replicate
     const replicateClient = getReplicate();
@@ -151,19 +153,20 @@ export async function POST(request: NextRequest) {
     // PhotoMaker soporta múltiples imágenes para mejor fidelidad facial
     const primaryImage = inputImages[0];
     
-    // Configurar parámetros base
+    // Configurar parámetros OPTIMIZADOS PARA MÁXIMO PARECIDO FACIAL
+    // style_strength_ratio BAJO = más parecido facial, menos estilización
     const inputParams: any = {
       input_image: primaryImage,
       prompt: mentorPrompt,
       negative_prompt: negativePrompt,
       num_outputs: 1,
-      guidance_scale: inputImages.length > 1 ? 5.0 : 7.5, // Ajustado para múltiples fotos
-      num_inference_steps: inputImages.length > 1 ? 50 : 30, // Más pasos con múltiples fotos
+      guidance_scale: 3.0, // Bajo para mejor preservación facial
+      num_inference_steps: 50, // Suficientes pasos para calidad
       scheduler: "DPMSolverMultistep",
-      style_strength_ratio: inputImages.length > 1 ? 20 : 15, // Mejor consistencia con múltiples fotos
+      style_strength_ratio: 10, // BAJO = máximo parecido facial (rango 5-35, menor = más parecido)
     };
 
-    // Agregar imágenes adicionales si están disponibles (mejora la fidelidad facial)
+    // Agregar imágenes adicionales si están disponibles (mejora MUCHO la fidelidad facial)
     if (inputImages.length > 1 && inputImages[1]) {
       inputParams.input_image2 = inputImages[1];
       console.log('📸 Agregando imagen secundaria para mejor fidelidad');
@@ -176,6 +179,13 @@ export async function POST(request: NextRequest) {
       inputParams.input_image4 = inputImages[3];
       console.log('📸 Agregando cuarta imagen');
     }
+
+    console.log('⚙️ Parámetros PhotoMaker:', {
+      num_images: inputImages.length,
+      guidance_scale: inputParams.guidance_scale,
+      style_strength_ratio: inputParams.style_strength_ratio,
+      num_inference_steps: inputParams.num_inference_steps
+    });
 
     // Crear predicción en Replicate
     const prediction = await replicateClient.predictions.create({
