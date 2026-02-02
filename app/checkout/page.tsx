@@ -364,6 +364,13 @@ function CheckoutContent() {
       if (remainingBalance > 0 && paymentMethod === 'STRIPE') {
         const codesToRedeem = appliedPayments.filter(p => p.type === 'GIFT_CODE' || p.type === 'CASH_PAYMENT');
         
+        console.log('[CHECKOUT] Creando pago con pasarela...');
+        console.log('[CHECKOUT] Datos:', { 
+          orgId: registrationData.organizationId, 
+          visionId: registrationData.visionId,
+          amount: remainingBalance 
+        });
+        
         const paymentRes = await fetch('/api/checkout/create-payment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -390,12 +397,19 @@ function CheckoutContent() {
           }),
         });
 
+        console.log('[CHECKOUT] Respuesta status:', paymentRes.status);
+        
         const paymentData = await paymentRes.json();
+        console.log('[CHECKOUT] Respuesta:', paymentData);
 
-        if (!paymentData.success || !paymentData.paymentUrl) {
-          throw new Error(paymentData.error || paymentData.details || 'Error al crear el pago');
+        if (!paymentRes.ok || !paymentData.success || !paymentData.paymentUrl) {
+          const errorMsg = paymentData.error || paymentData.details || 'Error al crear el pago';
+          console.error('[CHECKOUT] Error:', errorMsg);
+          throw new Error(errorMsg);
         }
 
+        console.log('[CHECKOUT] Redirigiendo a:', paymentData.paymentUrl);
+        
         // Redirect to payment gateway
         window.location.href = paymentData.paymentUrl;
         return;
