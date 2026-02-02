@@ -380,8 +380,8 @@ function HeroPathSection() {
         'Proyecto de impacto comunitario (Legado)',
         'Networking exclusivo con líderes certificados',
         'Mentoría ejecutiva 1:1 personalizada',
-        'Acceso al Directorio de Talentos'
-        'Crea tu página web de negocio en el 1er fin de semana'
+        'Acceso al Directorio de Talentos',
+        'Crea tu página web de negocio en el 1er fin de semana',
         'Mentor asignado con llamadas semanales',
       ]
     }
