@@ -16,12 +16,18 @@ export async function GET(request: NextRequest) {
     const paymentId = searchParams.get('payment_id');
     const status = searchParams.get('status');
     const collectionStatus = searchParams.get('collection_status');
+    const preferenceId = searchParams.get('preference_id');
+    const provider = searchParams.get('provider');
 
     console.log('📨 Payment success callback (registration) received');
+    console.log('   Provider:', provider);
     console.log('   Payment ID:', paymentId);
+    console.log('   Preference ID:', preferenceId);
     console.log('   Status:', status);
+    console.log('   Collection Status:', collectionStatus);
     console.log('   External Reference:', externalReference ? 'present' : 'missing');
     console.log('   Data param:', dataParam ? 'present' : 'missing');
+    console.log('   Full URL:', request.url);
 
     // Parse order data from data param or external_reference (MercadoPago)
     let orderData: any = null;
@@ -29,6 +35,7 @@ export async function GET(request: NextRequest) {
     if (dataParam) {
       try {
         orderData = JSON.parse(decodeURIComponent(dataParam));
+        console.log('✅ Parsed order data from data param');
       } catch (e) {
         console.error('Error parsing data param:', e);
       }
@@ -44,8 +51,21 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Si no tenemos los datos y tenemos payment_id, intentar obtenerlos de MercadoPago
+    if (!orderData && paymentId && provider === 'mercadopago') {
+      console.log('🔍 Intentando obtener datos del pago de MercadoPago...');
+      orderData = await getOrderDataFromMercadoPago(paymentId);
+    }
+
+    // Si aún no tenemos datos y tenemos preference_id, intentar obtenerlos de la preferencia
+    if (!orderData && preferenceId && provider === 'mercadopago') {
+      console.log('🔍 Intentando obtener datos de la preferencia de MercadoPago...');
+      orderData = await getOrderDataFromPreference(preferenceId);
+    }
+
     if (!orderData || !orderData.userData || !orderData.organizationId) {
-      console.error('Missing order data');
+      console.error('❌ Missing order data after all attempts');
+      console.error('   orderData:', orderData);
       return NextResponse.redirect(
         new URL('/checkout?payment=error&reason=datos-incompletos', request.url)
       );
@@ -60,11 +80,12 @@ export async function GET(request: NextRequest) {
       appliedCodes,
     } = orderData;
 
-    // Verify payment status
-    if (status !== 'approved' && collectionStatus !== 'approved') {
-      console.log('Payment not approved:', status, collectionStatus);
+    // Verify payment status - MercadoPago puede enviar status o collection_status
+    const paymentStatus = status || collectionStatus;
+    if (paymentStatus !== 'approved') {
+      console.log('Payment not approved:', paymentStatus);
       return NextResponse.redirect(
-        new URL(`/checkout?payment=failed&status=${status || collectionStatus}`, request.url)
+        new URL(`/checkout?payment=failed&status=${paymentStatus}`, request.url)
       );
     }
 
@@ -272,5 +293,101 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(
       new URL(`/checkout?payment=error&reason=${encodeURIComponent(error.message)}`, request.url)
     );
+  }
+}
+
+/**
+ * Obtener datos del pedido consultando el pago en MercadoPago
+ */
+async function getOrderDataFromMercadoPago(paymentId: string): Promise<any | null> {
+  try {
+    // Buscar credenciales de MercadoPago en todas las organizaciones activas
+    const gateways = await prisma.paymentGatewayConfig.findMany({
+      where: {
+        provider: 'MERCADOPAGO',
+        isActive: true,
+      },
+    });
+
+    for (const gateway of gateways) {
+      if (!gateway.secretKey) continue;
+
+      try {
+        const paymentRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+          headers: {
+            Authorization: `Bearer ${gateway.secretKey}`,
+          },
+        });
+
+        if (paymentRes.ok) {
+          const payment = await paymentRes.json();
+          console.log('✅ Pago encontrado en MercadoPago:', payment.id);
+          console.log('   External Reference:', payment.external_reference);
+
+          if (payment.external_reference) {
+            try {
+              return JSON.parse(payment.external_reference);
+            } catch (e) {
+              console.error('Error parsing external_reference from payment:', e);
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching payment from MercadoPago:', e);
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error in getOrderDataFromMercadoPago:', error);
+    return null;
+  }
+}
+
+/**
+ * Obtener datos del pedido consultando la preferencia en MercadoPago
+ */
+async function getOrderDataFromPreference(preferenceId: string): Promise<any | null> {
+  try {
+    // Buscar credenciales de MercadoPago en todas las organizaciones activas
+    const gateways = await prisma.paymentGatewayConfig.findMany({
+      where: {
+        provider: 'MERCADOPAGO',
+        isActive: true,
+      },
+    });
+
+    for (const gateway of gateways) {
+      if (!gateway.secretKey) continue;
+
+      try {
+        const prefRes = await fetch(`https://api.mercadopago.com/checkout/preferences/${preferenceId}`, {
+          headers: {
+            Authorization: `Bearer ${gateway.secretKey}`,
+          },
+        });
+
+        if (prefRes.ok) {
+          const preference = await prefRes.json();
+          console.log('✅ Preferencia encontrada en MercadoPago:', preference.id);
+          console.log('   External Reference:', preference.external_reference);
+
+          if (preference.external_reference) {
+            try {
+              return JSON.parse(preference.external_reference);
+            } catch (e) {
+              console.error('Error parsing external_reference from preference:', e);
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching preference from MercadoPago:', e);
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error in getOrderDataFromPreference:', error);
+    return null;
   }
 }
