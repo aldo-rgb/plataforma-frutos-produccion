@@ -33,6 +33,12 @@ interface TrainingLevel {
   endDate: string | null;
 }
 
+interface TrainingOrganization {
+  id: number;
+  name: string;
+  slug: string;
+}
+
 interface Training {
   id: number;
   nombre: string;
@@ -40,6 +46,7 @@ interface Training {
   levels: TrainingLevel[];
   spotsAvailable: number | null;
   participantsCount: number;
+  organization?: TrainingOrganization;
 }
 
 interface Testimonial {
@@ -943,6 +950,14 @@ function UpcomingTrainingsSection({ trainings }: { trainings: Training[] }) {
               className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl transition-shadow"
             >
               <div className="p-6">
+                {/* Sede Badge */}
+                {training.organization && (
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-50 border border-cyan-200 rounded-full text-xs font-medium text-cyan-700 mb-3">
+                    <MapPin className="w-3 h-3" />
+                    {training.organization.name}
+                  </div>
+                )}
+                
                 <h3 className="text-xl font-bold text-slate-900 mb-2">{training.nombre}</h3>
                 {training.descripcion && (
                   <p className="text-slate-600 text-sm mb-4">{training.descripcion}</p>
@@ -1174,7 +1189,7 @@ function FooterSection({
               <div className="mt-6 pt-6 border-t border-slate-700 text-center">
                 <p className="text-slate-500 text-xs">
                   Powered by{' '}
-                  <span className="text-cyan-400">Frutos Digitales</span>
+                  <span className="text-cyan-400">APPSync</span>
                 </p>
               </div>
             )}

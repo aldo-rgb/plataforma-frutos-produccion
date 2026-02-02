@@ -33,7 +33,8 @@ export async function GET(
         showPoweredBy: true,
         customLoginEnabled: true,
         address: true,
-        contactEmail: true
+        contactEmail: true,
+        masterOrganizationId: true
       }
     });
 
@@ -44,11 +45,25 @@ export async function GET(
       );
     }
 
-    // Obtener próximos entrenamientos vigentes (Visiones con fechas futuras)
+    // Obtener todas las organizaciones de la misma Master Organization
+    let siblingOrganizationIds: number[] = [organization.id];
+    
+    if (organization.masterOrganizationId) {
+      const siblingOrgs = await prisma.organization.findMany({
+        where: {
+          masterOrganizationId: organization.masterOrganizationId,
+          status: 'ACTIVE'
+        },
+        select: { id: true }
+      });
+      siblingOrganizationIds = siblingOrgs.map(o => o.id);
+    }
+
+    // Obtener próximos entrenamientos vigentes de TODAS las organizaciones hermanas
     const now = new Date();
     const upcomingTrainings = await prisma.vision.findMany({
       where: {
-        organizationId: organization.id,
+        organizationId: { in: siblingOrganizationIds },
         isActive: true,
         startDate: {
           gte: now
@@ -66,6 +81,13 @@ export async function GET(
         plWeekend1EndDate: true,
         enabledLevels: true,
         maxParticipantes: true,
+        Organization: {
+          select: {
+            id: true,
+            name: true,
+            slug: true
+          }
+        },
         Ticket: {
           where: {
             status: 'ACTIVE',
@@ -79,10 +101,10 @@ export async function GET(
       orderBy: {
         startDate: 'asc'
       },
-      take: 3 // Solo los próximos 3 entrenamientos
+      take: 6 // Aumentado a 6 para mostrar más entrenamientos de diferentes sedes
     });
 
-    // Formatear entrenamientos con información de niveles
+    // Formatear entrenamientos con información de niveles y sede
     const formattedTrainings = upcomingTrainings.map(training => {
       const levels = [];
       
@@ -123,7 +145,13 @@ export async function GET(
         spotsAvailable: training.maxParticipantes 
           ? training.maxParticipantes - ticketCount
           : null,
-        participantsCount: ticketCount
+        participantsCount: ticketCount,
+        // Información de la sede
+        organization: {
+          id: training.Organization.id,
+          name: training.Organization.name,
+          slug: training.Organization.slug
+        }
       };
     });
 
