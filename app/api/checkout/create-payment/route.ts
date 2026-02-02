@@ -46,15 +46,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Obtener datos de la organización
+    // Obtener datos de la organización incluyendo el dominio
     const organization = await prisma.organization.findUnique({
       where: { id: organizationId },
-      select: { id: true, name: true },
+      select: { id: true, name: true, customDomain: true, subdomain: true },
     });
 
     if (!organization) {
       return NextResponse.json({ error: 'Organización no encontrada' }, { status: 404 });
     }
+
+    // Determinar la URL base para callbacks
+    let baseUrl = process.env.NEXTAUTH_URL || 'https://impactocuantico.net';
+    if (organization.customDomain) {
+      baseUrl = `https://${organization.customDomain}`;
+    } else if (organization.subdomain) {
+      baseUrl = `https://${organization.subdomain}.quantumplatform.app`;
+    }
+    console.log('🌐 Base URL para callbacks:', baseUrl);
 
     // Generar título del producto
     let productTitle = '';
@@ -91,7 +100,8 @@ export async function POST(request: NextRequest) {
           userData,
           productTitle,
           productDescription,
-          amount
+          amount,
+          baseUrl
         );
         break;
       
@@ -102,7 +112,8 @@ export async function POST(request: NextRequest) {
           userData,
           productTitle,
           productDescription,
-          amount
+          amount,
+          baseUrl
         );
         break;
       
@@ -161,13 +172,9 @@ async function createMercadoPagoPreference(
   userData: any,
   productTitle: string,
   productDescription: string,
-  amount: number
+  amount: number,
+  baseUrl: string
 ): Promise<string> {
-  // Use production URL or fallback
-  const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}` 
-    : 'http://localhost:3000';
-  
   console.log('🔵 MercadoPago - Creando preferencia');
   console.log('   Base URL:', baseUrl);
   console.log('   Amount:', amount);
@@ -247,7 +254,8 @@ async function createStripeCheckout(
   userData: any,
   productTitle: string,
   productDescription: string,
-  amount: number
+  amount: number,
+  baseUrl: string
 ): Promise<string> {
   const Stripe = require('stripe');
   const stripe = new Stripe(secretKey, { apiVersion: '2023-10-16' });
@@ -269,8 +277,8 @@ async function createStripeCheckout(
     ],
     mode: 'payment',
     customer_email: userData.email,
-    success_url: `${process.env.NEXTAUTH_URL}/api/checkout/payment-success?data=${encodeURIComponent(JSON.stringify(orderData))}&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.NEXTAUTH_URL}/checkout?payment=cancelled`,
+    success_url: `${baseUrl}/api/checkout/payment-success?provider=stripe&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${baseUrl}/checkout?payment=cancelled`,
     metadata: {
       type: 'REGISTRATION',
       organizationId: orderData.organizationId.toString(),
