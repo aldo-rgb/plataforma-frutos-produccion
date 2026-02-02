@@ -121,6 +121,26 @@ function CheckoutContent() {
           firstName: data.nombre?.split(' ')[0],
           lastName: data.nombre?.split(' ').slice(1).join(' '),
           originalPrice: price,
+          // Enviar todos los datos de registro para crear usuario si abandona
+          registrationData: {
+            nombre: data.nombre,
+            apodo: data.apodo,
+            telefono: data.telefono,
+            horarioLlamada: data.horarioLlamada,
+            email: data.email,
+            organizationId: data.organizationId,
+            organizationName: data.organizationName,
+            visionId: data.visionId,
+            visionName: data.visionName,
+            referralCode: data.referralCode,
+            profession: data.profession,
+            birthdate: data.birthdate,
+            children: data.children,
+            goals: data.goals,
+            expectations: data.expectations,
+          },
+          // Enviar password para hashear en el servidor
+          password: data.password,
         }),
       });
       const result = await res.json();
@@ -921,7 +941,7 @@ function CheckoutContent() {
                   <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                     <p className="text-yellow-400 text-sm flex items-center gap-2">
                       <AlertTriangle size={16} />
-                      El pago con tarjeta estará disponible muy pronto. Por ahora puedes agregar más códigos de regalo.
+                      El pago con tarjeta estará disponible muy pronto. Por ahora puedes agregar más códigos de referencia.
                     </p>
                   </div>
                 </div>

@@ -2,13 +2,24 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
 
 // POST - Registrar inicio de checkout (para detectar abandonos)
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     const body = await request.json();
-    const { visionId, email, phone, firstName, lastName, originalPrice } = body;
+    const { 
+      visionId, 
+      email, 
+      phone, 
+      firstName, 
+      lastName, 
+      originalPrice,
+      // Nuevos campos para guardar datos de registro completos
+      registrationData,
+      password 
+    } = body;
 
     if (!visionId || !email || !originalPrice) {
       return NextResponse.json(
@@ -51,6 +62,12 @@ export async function POST(request: Request) {
       (typeof session.user.id === 'string' ? parseInt(session.user.id) : session.user.id) : 
       null;
 
+    // Hashear password si viene
+    let passwordHash = null;
+    if (password) {
+      passwordHash = await bcrypt.hash(password, 10);
+    }
+
     // Verificar si ya existe un checkout activo para este email y visión
     const existingCheckout = await prisma.abandonedCheckout.findFirst({
       where: {
@@ -70,6 +87,9 @@ export async function POST(request: Request) {
           firstName: firstName || existingCheckout.firstName,
           lastName: lastName || existingCheckout.lastName,
           phone: phone || existingCheckout.phone,
+          // Actualizar datos de registro si vienen
+          ...(registrationData && { registrationData }),
+          ...(passwordHash && { passwordHash }),
         },
       });
 
@@ -93,6 +113,9 @@ export async function POST(request: Request) {
         originalPrice: originalPrice,
         status: 'IN_CHECKOUT',
         checkoutStartedAt: new Date(),
+        // Guardar datos de registro para crear usuario después
+        registrationData: registrationData || null,
+        passwordHash: passwordHash,
       },
     });
 

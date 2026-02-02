@@ -5,9 +5,10 @@ import { sendWhatsAppTextMessage } from '@/lib/whatsapp';
 
 // Este endpoint procesa checkouts abandonados:
 // 1. Encuentra registros IN_CHECKOUT con más de 5 minutos
-// 2. Crea ticket PENDING_PAYMENT para el usuario
-// 3. Envía email ofreciendo anticipo
-// 4. Actualiza estado a EMAIL_SENT
+// 2. Si el usuario no existe, lo crea con los datos guardados
+// 3. Crea ticket PENDING_PAYMENT para el usuario
+// 4. Envía email ofreciendo anticipo
+// 5. Actualiza estado a EMAIL_SENT
 
 export async function POST(request: Request) {
   try {
@@ -59,6 +60,7 @@ export async function POST(request: Request) {
 
     const results = {
       processed: 0,
+      usersCreated: 0,
       ticketsCreated: 0,
       emailsSent: 0,
       whatsappSent: 0,
@@ -95,40 +97,91 @@ export async function POST(request: Request) {
           paymentDeadline.setHours(13, 0, 0, 0); // 1 PM
         }
 
-        // Verificar que el usuario exista
-        if (!checkout.userId || !checkout.user) {
-          results.errors.push(`Checkout ${checkout.id}: Usuario no encontrado`);
-          continue;
+        // Verificar si el usuario existe o si necesitamos crearlo
+        let userId = checkout.userId;
+        let userName = checkout.user?.nombre || checkout.firstName || 'Participante';
+        
+        // Si no hay userId pero tenemos los datos de registro, crear el usuario
+        if (!userId && (checkout as any).registrationData && (checkout as any).passwordHash) {
+          const regData = (checkout as any).registrationData as any;
+          
+          // Verificar que no exista ya un usuario con ese email
+          const existingUser = await prisma.usuario.findUnique({
+            where: { email: checkout.email }
+          });
+          
+          if (existingUser) {
+            // Usuario ya existe, usar ese
+            userId = existingUser.id;
+            userName = existingUser.nombre;
+            console.log(`✅ Usuario ya existía: ${checkout.email} (ID: ${userId})`);
+          } else {
+            // Crear el nuevo usuario
+            const newUser = await prisma.usuario.create({
+              data: {
+                nombre: regData.nombre || `${checkout.firstName || ''} ${checkout.lastName || ''}`.trim(),
+                apodo: regData.apodo || null,
+                email: checkout.email,
+                password: (checkout as any).passwordHash,
+                telefono: checkout.phone || regData.telefono || null,
+                horarioLlamada: regData.horarioLlamada || null,
+                rol: 'PARTICIPANTE',
+                organizationId: checkout.organizationId,
+                profession: regData.profession || null,
+                birthdate: regData.birthdate ? new Date(regData.birthdate) : null,
+                children: regData.children || 0,
+                goals: regData.goals || [],
+                expectations: regData.expectations || null,
+                referralCode: regData.referralCode || null,
+                isActive: true,
+                emailVerified: false,
+              },
+            });
+            
+            userId = newUser.id;
+            userName = newUser.nombre;
+            results.usersCreated++;
+            console.log(`✅ Usuario creado desde checkout abandonado: ${checkout.email} (ID: ${userId})`);
+            
+            // Actualizar el checkout con el userId
+            await prisma.abandonedCheckout.update({
+              where: { id: checkout.id },
+              data: { userId: userId },
+            });
+          }
         }
 
-        // Crear ticket PENDING_PAYMENT para el usuario
-        const ticket = await prisma.ticket.create({
-          data: {
-            ownerId: checkout.userId,
-            organizationId: checkout.organizationId,
-            visionId: checkout.visionId,
-            level: 'BASIC',
-            type: 'STANDARD',
-            status: 'PENDING_PAYMENT',
-            paymentStatus: 'UNPAID',
-            isTransferable: false, // Anticipos no son transferibles
-            isAnticipo: true,
-            costAtPurchase: checkout.originalPrice,
-            amountPaid: 0,
-            validUntil: paymentDeadline,
-          },
-        });
+        // Crear ticket solo si tenemos userId
+        let ticket = null;
+        if (userId) {
+          // Crear ticket PENDING_PAYMENT para el usuario
+          ticket = await prisma.ticket.create({
+            data: {
+              ownerId: userId,
+              organizationId: checkout.organizationId,
+              visionId: checkout.visionId,
+              level: 'BASIC',
+              type: 'STANDARD',
+              status: 'PENDING_PAYMENT',
+              paymentStatus: 'UNPAID',
+              isTransferable: false, // Anticipos no son transferibles
+              isAnticipo: true,
+              costAtPurchase: checkout.originalPrice,
+              amountPaid: 0,
+              validUntil: paymentDeadline,
+            },
+          });
+          results.ticketsCreated++;
+        }
 
-        results.ticketsCreated++;
-
-        // Actualizar el checkout con el ticket creado
+        // Actualizar el checkout (con o sin ticket)
         await prisma.abandonedCheckout.update({
           where: { id: checkout.id },
           data: {
             status: 'EMAIL_SENT',
             abandonedAt: new Date(),
             emailSentAt: new Date(),
-            ticketId: ticket.id,
+            ticketId: ticket?.id || null,
           },
         });
 
@@ -137,8 +190,12 @@ export async function POST(request: Request) {
         const totalPrice = Number(checkout.originalPrice);
         const remaining = totalPrice - anticipoAmountNum;
 
+        // Ahora siempre tenemos userId (creado o existente), ir al dashboard
+        const ctaUrl = `${process.env.NEXTAUTH_URL}/login?callbackUrl=/dashboard/my-tickets`;
+        const ctaText = 'Iniciar Sesión y Completar Pago';
+
         const emailHtml = `
-          <!DOCTYPE html>
+          <!DOCTYPE html>>
           <html>
           <head>
             <meta charset="utf-8">
@@ -167,12 +224,17 @@ export async function POST(request: Request) {
               </div>
               
               <p style="color: #cbd5e1; line-height: 1.6;">
-                Hola <strong>${checkout.firstName || checkout.user?.nombre || 'Participante'}</strong>,
+                Hola <strong>${userName}</strong>,
               </p>
               
               <p style="color: #cbd5e1; line-height: 1.6;">
                 Notamos que no completaste tu inscripción a <strong>${checkout.vision.nombre}</strong>. 
                 ¡Queremos ayudarte a reservar tu lugar!
+              </p>
+              
+              <p style="color: #cbd5e1; line-height: 1.6;">
+                <strong>Ya creamos tu cuenta</strong> con el correo <strong>${checkout.email}</strong>. 
+                Solo necesitas iniciar sesión y completar tu pago.
               </p>
 
               <div class="highlight-box">
@@ -188,8 +250,8 @@ export async function POST(request: Request) {
               </div>
 
               <div style="text-align: center;">
-                <a href="${process.env.NEXTAUTH_URL}/dashboard/my-tickets" class="cta-button">
-                  Ver Mi Ticket y Pagar
+                <a href="${ctaUrl}" class="cta-button">
+                  ${ctaText}
                 </a>
               </div>
 
@@ -227,7 +289,7 @@ export async function POST(request: Request) {
         // Enviar WhatsApp si tiene número de teléfono
         if (checkout.phone) {
           try {
-            const whatsappMessage = `🎓 ¡Hola ${checkout.firstName || checkout.user?.nombre || 'Participante'}!
+            const whatsappMessage = `🎓 ¡Hola ${userName}!
 
 Notamos que no completaste tu inscripción a *${checkout.vision.nombre}*.
 
@@ -237,8 +299,10 @@ Notamos que no completaste tu inscripción a *${checkout.vision.nombre}*.
 💰 Anticipo: $${anticipoAmountNum.toLocaleString()} MXN
 📅 Restante: $${remaining.toLocaleString()} MXN
 
-👉 Completa tu pago aquí:
-${process.env.NEXTAUTH_URL}/dashboard/my-tickets
+✅ Ya creamos tu cuenta con el correo *${checkout.email}*
+
+👉 Inicia sesión y completa tu pago:
+${ctaUrl}
 
 ⚠️ Los anticipos no son reembolsables. El pago restante debe completarse antes de la 1:00 PM del primer día de la visión.
 
@@ -268,9 +332,11 @@ ${process.env.NEXTAUTH_URL}/dashboard/my-tickets
       }
     }
 
+    console.log('📊 Resultados del procesamiento de checkouts abandonados:', results);
+
     return NextResponse.json({
       success: true,
-      message: `Procesados ${results.processed} checkouts abandonados`,
+      message: `Procesados ${results.processed} checkouts abandonados. Usuarios creados: ${results.usersCreated}. Tickets: ${results.ticketsCreated}. Emails: ${results.emailsSent}`,
       results,
     });
   } catch (error: any) {
