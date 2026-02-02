@@ -40,13 +40,19 @@ export async function GET(
 
     // Determinar si tiene una master organization
     let masterOrganization = null;
-    let childOrganizations = [];
+    let childOrganizations: Array<{
+      id: number;
+      name: string;
+      logoUrl: string | null;
+      brandColor: string | null;
+      slug: string;
+    }> = [];
 
     if (organization.masterOrganizationId) {
       // Buscar la master organization en la tabla MasterOrganization
       console.log('📍 Buscando MasterOrganization ID:', organization.masterOrganizationId);
       
-      masterOrganization = await prisma.masterOrganization.findUnique({
+      const masterOrgData = await prisma.masterOrganization.findUnique({
         where: { id: organization.masterOrganizationId },
         select: {
           id: true,
@@ -55,7 +61,7 @@ export async function GET(
         }
       });
 
-      console.log('🏢 Master Organization encontrada:', masterOrganization);
+      console.log('🏢 Master Organization encontrada:', masterOrgData);
 
       // Buscar todas las organizaciones que pertenecen a esta master
       childOrganizations = await prisma.organization.findMany({
@@ -75,6 +81,14 @@ export async function GET(
       });
 
       console.log(`🏢 Sedes encontradas: ${childOrganizations.length}`, childOrganizations);
+
+      // Agregar slug a la masterOrganization (usa el slug de la primera sede)
+      if (masterOrgData) {
+        masterOrganization = {
+          ...masterOrgData,
+          slug: childOrganizations[0]?.slug || organization.slug // Usar slug de primera sede o la actual
+        };
+      }
     } else {
       // No tiene master organization - retornar solo esta organización
       console.log('⚠️ Organización sin master, usando solo esta sede');

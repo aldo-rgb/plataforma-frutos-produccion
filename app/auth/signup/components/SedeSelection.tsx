@@ -1,4 +1,6 @@
 import { motion } from 'framer-motion';
+import Link from 'next/link';
+import { Info } from 'lucide-react';
 import { tw } from '@/lib/theme/quantum';
 
 interface Organization {
@@ -84,6 +86,29 @@ export function SedeSelection({
           >
             Selecciona la sede más cercana para continuar
           </motion.p>
+
+          {/* Botón Más Información */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="mt-6"
+          >
+            <Link
+              href={`/org/${masterOrganization.slug}`}
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 hover:border-[#00F0FF]/50 rounded-full text-slate-300 hover:text-[#00F0FF] transition-all duration-300 text-sm font-medium group"
+            >
+              <Info className="w-4 h-4" />
+              <span>Más información sobre el programa</span>
+              <motion.span
+                animate={{ x: [0, 3, 0] }}
+                transition={{ repeat: Infinity, duration: 1.5 }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                →
+              </motion.span>
+            </Link>
+          </motion.div>
         </div>
       )}
 

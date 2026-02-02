@@ -182,7 +182,7 @@ function HeroSection({ organization, scrollToLogin }: { organization: OrgData; s
 
         {/* Subheadline */}
         <p className="text-xl md:text-2xl text-slate-300 max-w-3xl mx-auto mb-10 leading-relaxed">
-          Transforma tu vida, tus relaciones y tu negocio en <span className="text-cyan-400 font-semibold">8 semanas de entrenamiento intensivo</span> con metodología probada por más de 25 años.
+          Transforma tu vida, tus relaciones y tu negocio en <span className="text-cyan-400 font-semibold">10 semanas de entrenamiento intensivo</span> con metodología probada por más de 25 años.
         </p>
 
         {/* CTA Buttons */}
