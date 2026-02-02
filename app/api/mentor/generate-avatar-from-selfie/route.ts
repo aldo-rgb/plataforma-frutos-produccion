@@ -118,13 +118,17 @@ export async function POST(request: NextRequest) {
 
     // Obtener datos del request
     const body = await request.json();
-    const { image } = body;
+    const { image, images } = body;
 
-    if (!image) {
-      return NextResponse.json({ error: 'Imagen requerida' }, { status: 400 });
+    // Soportar múltiples imágenes o imagen única (compatibilidad hacia atrás)
+    const inputImages: string[] = images && images.length > 0 ? images : (image ? [image] : []);
+
+    if (inputImages.length === 0) {
+      return NextResponse.json({ error: 'Al menos una imagen es requerida' }, { status: 400 });
     }
 
     console.log('✅ Usuario encontrado:', usuario.id, usuario.nombre, usuario.rol);
+    console.log('📸 Número de imágenes recibidas:', inputImages.length);
 
     // Prompt específico para mentores/maestros con perfil avanzado
     const mentorPrompt = `A photo of a img person, professional master teacher appearance, highly evolved human, advanced mentor presence, wise and accomplished look, professional business attire with subtle futuristic elements, confident and inspiring expression, guru-like aura, sophisticated and refined aesthetic, premium lighting with soft glow, high-end professional background with elegant tech elements, cinematic quality, 8k ultra detailed, photorealistic render, sharp focus, professional portrait photography, from shoulders up, masterful composition, premium quality`;
@@ -143,18 +147,40 @@ export async function POST(request: NextRequest) {
       }, { status: 503 });
     }
 
+    // Preparar imágenes de entrada
+    // PhotoMaker soporta múltiples imágenes para mejor fidelidad facial
+    const primaryImage = inputImages[0];
+    
+    // Configurar parámetros base
+    const inputParams: any = {
+      input_image: primaryImage,
+      prompt: mentorPrompt,
+      negative_prompt: negativePrompt,
+      num_outputs: 1,
+      guidance_scale: inputImages.length > 1 ? 5.0 : 7.5, // Ajustado para múltiples fotos
+      num_inference_steps: inputImages.length > 1 ? 50 : 30, // Más pasos con múltiples fotos
+      scheduler: "DPMSolverMultistep",
+      style_strength_ratio: inputImages.length > 1 ? 20 : 15, // Mejor consistencia con múltiples fotos
+    };
+
+    // Agregar imágenes adicionales si están disponibles (mejora la fidelidad facial)
+    if (inputImages.length > 1 && inputImages[1]) {
+      inputParams.input_image2 = inputImages[1];
+      console.log('📸 Agregando imagen secundaria para mejor fidelidad');
+    }
+    if (inputImages.length > 2 && inputImages[2]) {
+      inputParams.input_image3 = inputImages[2];
+      console.log('📸 Agregando tercera imagen');
+    }
+    if (inputImages.length > 3 && inputImages[3]) {
+      inputParams.input_image4 = inputImages[3];
+      console.log('📸 Agregando cuarta imagen');
+    }
+
     // Crear predicción en Replicate
     const prediction = await replicateClient.predictions.create({
       version: "ddfc2b08d209f9fa8c1eca692712918bd449f695dabb4a958da31802a9570fe4",
-      input: {
-        input_image: image,
-        prompt: mentorPrompt,
-        negative_prompt: negativePrompt,
-        num_outputs: 1,
-        guidance_scale: 7.5,
-        num_inference_steps: 30,
-        scheduler: "DPMSolverMultistep",
-      }
+      input: inputParams
     });
 
     console.log('🔄 Predicción creada:', prediction.id);
