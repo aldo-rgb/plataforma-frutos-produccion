@@ -134,13 +134,15 @@ export async function POST(request: NextRequest) {
     console.log('📸 Número de imágenes recibidas:', inputImages.length);
     console.log('👤 Género seleccionado:', genderWord);
 
-    // Prompt para AVATAR FUTURISTA DE MAESTRO - estilo personaje de videojuego/película
+    // PROMPT MAESTRO: EL MENTOR CUÁNTICO
+    // Estilo: Premium 3D semi-realista anime (como RPG de alta gama, Valorant/Overwatch cinematics)
+    // Vibra: Sabiduría, Poder Visionario, Accesibilidad - sonrisa cálida y confiada
     // IMPORTANTE: "img" es el trigger word de PhotoMaker y DEBE seguir a una clase (man/woman)
-    const mentorPrompt = `Futuristic sci-fi portrait of a ${genderWord} img, upper body shot from waist up, wearing sleek futuristic armor suit with glowing neon blue accents, high-tech mentor character, holographic interface elements, cyberpunk master teacher aesthetic, dramatic cinematic lighting, dark background with subtle tech glow, sharp detailed face, confident wise expression, movie poster quality, 8k, unreal engine 5 render, highly detailed`;
+    const mentorPrompt = `A high-quality 3D stylized character render of a ${genderWord} img as a Master Leadership Mentor, upper body portrait from waist up, premium 3D semi-realistic anime style like high-end RPG game art or Valorant cinematics, clean textures smooth shading vibrant digital lighting, projecting Wisdom Visionary Power and Approachability, warm confident smile inspiring focused gaze, wearing Grandmaster futuristic tech-wear sleek long tactical trench coat with intricate glowing circuitry Gold and Cyan accents high collar elegant design, interacting with floating holographic interface glowing data-sphere, background high-tech command center digital stage, aura of Quantum Mastery subtle particles floating upwards, 8k resolution cinematic lighting shallow depth of field Unreal Engine 5 render style octane render`;
 
-    const negativePrompt = 'ugly, deformed, disfigured, bad anatomy, extra limbs, watermark, text, logo, low quality, blurry, full body, legs, feet, amateur, cartoon, anime';
+    const negativePrompt = 'ugly, deformed, disfigured, bad anatomy, extra limbs, watermark, text, logo, low quality, blurry, full body, legs, feet, amateur, realistic photo, photograph, plain background, simple, casual clothes, t-shirt';
 
-    console.log('🎨 Generando avatar de maestro con Replicate...');
+    console.log('🎨 Generando avatar MENTOR CUÁNTICO con Replicate...');
     console.log('📝 Prompt:', mentorPrompt);
 
     // Obtener instancia de Replicate
