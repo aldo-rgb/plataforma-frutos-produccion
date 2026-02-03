@@ -196,9 +196,9 @@ export async function POST(request: Request) {
         const totalPrice = Number(checkout.originalPrice);
         const remaining = totalPrice - anticipoAmountNum;
 
-        // Ahora siempre tenemos userId (creado o existente), ir al dashboard
-        const ctaUrl = `${process.env.NEXTAUTH_URL}/login?callbackUrl=/dashboard/my-tickets`;
-        const ctaText = 'Iniciar Sesión y Completar Pago';
+        // URL directo a la página de pago de anticipo
+        const ctaUrl = `${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL}/checkout/anticipo?id=${checkout.id}`;
+        const ctaText = 'COMPLETAR MI INSCRIPCIÓN';
 
         // Generar sección del logo si existe
         const logoSection = checkout.organization.logoUrl ? `

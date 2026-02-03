@@ -257,8 +257,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Anticipos no habilitados' }, { status: 400 });
       }
 
-      // Construir URL de pago con anticipo
-      const paymentUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/checkout?org=${checkout.organizationId}&vision=${checkout.visionId}&anticipo=true&email=${encodeURIComponent(checkout.email)}`;
+      // Construir URL de pago con anticipo - página dedicada
+      const paymentUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/checkout/anticipo?id=${checkout.id}`;
 
       // Enviar email real
       const emailResult = await sendAnticipoEmail(checkout.email, {
