@@ -609,6 +609,56 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // ACCIÓN: Actualizar misión de tribu (solo Capitán de Tribu)
+    if (action === 'update_mission') {
+      const { tribeMission } = body;
+
+      if (!tribeMission || tribeMission.trim().length < 10) {
+        return NextResponse.json({ 
+          error: "La misión debe tener al menos 10 caracteres" 
+        }, { status: 400 });
+      }
+
+      // Verificar que el usuario sea el Capitán de Tribu
+      const tribeCaptaincy = await prisma.tribeCaptaincy.findUnique({
+        where: {
+          visionId_roleType: {
+            visionId: parseInt(visionId),
+            roleType: 'TRIBE_CAPTAIN'
+          }
+        },
+        include: {
+          assignments: {
+            where: { 
+              userId: usuario.id,
+              status: 'ACCEPTED'
+            }
+          }
+        }
+      });
+
+      const isStaff = ['ADMINISTRADOR', 'SUPER_ADMIN', 'GAMECHANGER', 'COORDINATOR', 'COORDINATOR_ADVANCED'].includes(usuario.rol);
+      const isTribeCaptain = tribeCaptaincy && tribeCaptaincy.assignments.length > 0;
+
+      if (!isStaff && !isTribeCaptain) {
+        return NextResponse.json({ 
+          error: "Solo el Capitán de Tribu puede editar la misión" 
+        }, { status: 403 });
+      }
+
+      // Actualizar la misión
+      await prisma.vision.update({
+        where: { id: parseInt(visionId) },
+        data: { tribeMission: tribeMission.trim() }
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Misión actualizada correctamente",
+        tribeMission: tribeMission.trim()
+      });
+    }
+
     // ACCIÓN: Nominar capitán (Staff, Capitán de Tribu o Co-Capitán de Tribu puede hacer esto)
     if (action === 'nominate_captain') {
       const isStaff = ['ADMINISTRADOR', 'SUPER_ADMIN', 'GAMECHANGER', 'COORDINATOR', 'COORDINATOR_ADVANCED'].includes(usuario.rol);

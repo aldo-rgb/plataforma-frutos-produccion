@@ -32,6 +32,8 @@ import {
   Scale,
   PartyPopper,
   LucideIcon,
+  Pencil,
+  Target,
 } from 'lucide-react';
 
 // Tipos
@@ -152,6 +154,11 @@ export default function LegacyVisionBuilderPage() {
     loading: boolean;
   }>({ show: false, loading: false });
   const [tribeMission, setTribeMission] = useState('');
+
+  // Estado para editar misión existente
+  const [editingMission, setEditingMission] = useState(false);
+  const [editMissionText, setEditMissionText] = useState('');
+  const [savingMission, setSavingMission] = useState(false);
 
   // Modal para crear campaña de Legacy Builder (COMMUNITY_SERVICE)
   const [campaignModal, setCampaignModal] = useState<{
@@ -394,6 +401,41 @@ export default function LegacyVisionBuilderPage() {
       showToast('Error de conexión', 'error');
     } finally {
       setMissionModal(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  // Función para guardar misión editada
+  const handleSaveMission = async () => {
+    if (!editMissionText.trim()) {
+      showToast('La misión no puede estar vacía', 'error');
+      return;
+    }
+
+    setSavingMission(true);
+    try {
+      const res = await fetch('/api/legacy-vision-builder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_mission',
+          visionId: data?.visionId,
+          tribeMission: editMissionText.trim(),
+        }),
+      });
+
+      const result = await res.json();
+
+      if (res.ok) {
+        showToast('✅ Misión actualizada', 'success');
+        setEditingMission(false);
+        await fetchData();
+      } else {
+        showToast(result.error || 'Error al guardar misión', 'error');
+      }
+    } catch (error) {
+      showToast('Error de conexión', 'error');
+    } finally {
+      setSavingMission(false);
     }
   };
 
@@ -1272,6 +1314,91 @@ export default function LegacyVisionBuilderPage() {
                             </>
                           )}
                         </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sección de Misión de la Tribu (visible cuando hay capitán) */}
+                  {hasTribeCaptain && (
+                    <div className="bg-gradient-to-r from-amber-900/30 to-yellow-900/20 rounded-2xl border border-yellow-500/30 overflow-hidden">
+                      <div className="p-6">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-start gap-4 flex-1">
+                            <div className="p-3 bg-yellow-500/20 rounded-xl flex-shrink-0">
+                              <Target className="w-6 h-6 text-yellow-400" />
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="text-lg font-bold text-white mb-1">Misión de la Tribu</h3>
+                              <p className="text-yellow-200/60 text-sm mb-3">Tu legado transformacional</p>
+                              
+                              {editingMission ? (
+                                <div className="space-y-3">
+                                  <textarea
+                                    value={editMissionText}
+                                    onChange={(e) => setEditMissionText(e.target.value)}
+                                    placeholder="Escribe la misión de tu tribu..."
+                                    rows={3}
+                                    maxLength={500}
+                                    className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 resize-none"
+                                  />
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-gray-500 text-xs">{editMissionText.length}/500</span>
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => {
+                                          setEditingMission(false);
+                                          setEditMissionText('');
+                                        }}
+                                        disabled={savingMission}
+                                        className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors"
+                                      >
+                                        Cancelar
+                                      </button>
+                                      <button
+                                        onClick={handleSaveMission}
+                                        disabled={savingMission || editMissionText.trim().length < 10}
+                                        className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+                                      >
+                                        {savingMission ? (
+                                          <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                          <Check className="w-4 h-4" />
+                                        )}
+                                        Guardar
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div>
+                                  {data.tribeMission ? (
+                                    <p className="text-slate-200 leading-relaxed italic text-lg">
+                                      "{data.tribeMission}"
+                                    </p>
+                                  ) : (
+                                    <p className="text-gray-500 italic">
+                                      No se ha definido la misión de la tribu
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Botón de editar - solo visible para el capitán */}
+                          {currentUserIsCaptain && !editingMission && (
+                            <button
+                              onClick={() => {
+                                setEditMissionText(data.tribeMission || '');
+                                setEditingMission(true);
+                              }}
+                              className="p-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 rounded-lg transition-colors"
+                              title="Editar misión"
+                            >
+                              <Pencil className="w-5 h-5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
