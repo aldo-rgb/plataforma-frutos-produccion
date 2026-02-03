@@ -44,6 +44,7 @@ export async function GET(request: Request) {
             comisionPlataforma: true,
             enlaceVideoLlamada: true,
             tipoVideoLlamada: true,
+            videoIntroUrl: true,
             maxDisciplineClients: true,
             acceptingNewClients: true,
             profileApprovalStatus: true,
@@ -153,6 +154,7 @@ export async function PUT(request: Request) {
             disponible: perfilMentorData.disponible,
             enlaceVideoLlamada: perfilMentorData.enlaceVideoLlamada,
             tipoVideoLlamada: perfilMentorData.tipoVideoLlamada,
+            videoIntroUrl: perfilMentorData.videoIntroUrl,
             maxDisciplineClients: perfilMentorData.maxDisciplineClients !== undefined ? Number(perfilMentorData.maxDisciplineClients) : undefined,
             acceptingNewClients: perfilMentorData.acceptingNewClients,
             updatedAt: new Date()
@@ -217,6 +219,7 @@ export async function PUT(request: Request) {
             comisionPlataforma: perfilMentorData.comisionPlataforma || 30,
             enlaceVideoLlamada: perfilMentorData.enlaceVideoLlamada,
             tipoVideoLlamada: perfilMentorData.tipoVideoLlamada,
+            videoIntroUrl: perfilMentorData.videoIntroUrl,
             maxDisciplineClients: perfilMentorData.maxDisciplineClients !== undefined ? Number(perfilMentorData.maxDisciplineClients) : 10,
             acceptingNewClients: perfilMentorData.acceptingNewClients !== undefined ? perfilMentorData.acceptingNewClients : true
           }

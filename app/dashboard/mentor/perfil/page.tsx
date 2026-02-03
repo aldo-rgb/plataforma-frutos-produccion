@@ -44,6 +44,7 @@ export default function MentorProfileEditorPage() {
     comisionPlataforma: 30,
     enlaceVideoLlamada: '',
     tipoVideoLlamada: 'zoom' as 'zoom' | 'meet' | 'teams',
+    videoIntroUrl: '',
     maxDisciplineClients: 10,
     acceptingNewClients: true
   });
@@ -209,6 +210,7 @@ export default function MentorProfileEditorPage() {
             comisionPlataforma: data.comisionPlataforma || 30,
             enlaceVideoLlamada: data.enlaceVideoLlamada || '',
             tipoVideoLlamada: data.tipoVideoLlamada || 'zoom',
+            videoIntroUrl: data.videoIntroUrl || '',
             maxDisciplineClients: data.maxDisciplineClients !== undefined ? data.maxDisciplineClients : 10,
             acceptingNewClients: data.acceptingNewClients !== undefined ? data.acceptingNewClients : true
           };
@@ -316,6 +318,7 @@ export default function MentorProfileEditorPage() {
         disponible: formData.disponible,
         enlaceVideoLlamada: formData.enlaceVideoLlamada,
         tipoVideoLlamada: formData.tipoVideoLlamada,
+        videoIntroUrl: formData.videoIntroUrl,
         maxDisciplineClients: Number(formData.maxDisciplineClients),
         acceptingNewClients: formData.acceptingNewClients
       }
@@ -826,6 +829,36 @@ export default function MentorProfileEditorPage() {
                 Este enlace se compartirá con los estudiantes cuando confirmes una sesión. 
                 Asegúrate de usar tu sala personal o un enlace que no expire.
               </p>
+            </div>
+
+            <div className="lg:col-span-2">
+              <label className="block text-slate-300 font-medium mb-2 text-sm">
+                🎬 Video de Bienvenida (opcional)
+              </label>
+              <input 
+                type="url" 
+                name="videoIntroUrl" 
+                value={formData.videoIntroUrl} 
+                onChange={handleChange} 
+                className="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none transition-all" 
+                placeholder="https://youtube.com/watch?v=... o https://vimeo.com/..." 
+              />
+              <p className="text-xs text-slate-400 mt-2">
+                Pega el enlace de un video donde te presentes. Se mostrará en tu perfil público para que los estudiantes te conozcan mejor.
+              </p>
+              {formData.videoIntroUrl && (
+                <div className="mt-3 p-3 bg-slate-900/50 rounded-lg border border-slate-700">
+                  <p className="text-xs text-green-400 mb-2">✅ Video configurado</p>
+                  <a 
+                    href={formData.videoIntroUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-purple-400 text-sm hover:underline break-all"
+                  >
+                    {formData.videoIntroUrl}
+                  </a>
+                </div>
+              )}
             </div>
           </div>
         </section>
