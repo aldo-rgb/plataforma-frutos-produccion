@@ -4,7 +4,7 @@ import { sendEmail } from '@/lib/email';
 import { sendWhatsAppTextMessage } from '@/lib/whatsapp';
 
 // Este endpoint procesa checkouts abandonados:
-// 1. Encuentra registros IN_CHECKOUT con más de 5 minutos
+// 1. Encuentra registros IN_CHECKOUT con más de 30 minutos de antigüedad
 // 2. Si el usuario no existe, lo crea con los datos guardados
 // 3. Crea ticket PENDING_PAYMENT para el usuario
 // 4. Envía email ofreciendo anticipo
@@ -16,21 +16,25 @@ export async function POST(request: Request) {
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
     
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    // Vercel Cron envía este header especial
+    const isVercelCron = request.headers.get('x-vercel-cron') === '1';
+    
+    if (!isVercelCron && cronSecret && authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json(
         { success: false, error: 'No autorizado' },
         { status: 401 }
       );
     }
 
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    // 30 minutos de espera antes de enviar el email de anticipo
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
 
-    // Buscar checkouts abandonados (más de 5 min en IN_CHECKOUT)
+    // Buscar checkouts abandonados (más de 30 min en IN_CHECKOUT)
     const abandonedCheckouts = await prisma.abandonedCheckout.findMany({
       where: {
         status: 'IN_CHECKOUT',
         checkoutStartedAt: {
-          lt: fiveMinutesAgo,
+          lt: thirtyMinutesAgo,
         },
       },
       include: {
@@ -367,40 +371,60 @@ ${ctaUrl}
   }
 }
 
-// GET - Obtener estadísticas de checkouts abandonados
+// GET - Procesar checkouts abandonados (llamado por Vercel Cron)
+// También soporta ?stats=true para obtener solo estadísticas
 export async function GET(request: Request) {
   try {
+    const url = new URL(request.url);
+    const statsOnly = url.searchParams.get('stats') === 'true';
+    
+    // Verificar autorización para Vercel Cron
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
     
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    // Vercel Cron no envía Authorization header, pero sí un header especial
+    const isVercelCron = request.headers.get('x-vercel-cron') === '1';
+    
+    if (!isVercelCron && cronSecret && authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json(
         { success: false, error: 'No autorizado' },
         { status: 401 }
       );
     }
 
-    const stats = await prisma.abandonedCheckout.groupBy({
-      by: ['status'],
-      _count: true,
-    });
+    // Si solo quieren estadísticas
+    if (statsOnly) {
+      const stats = await prisma.abandonedCheckout.groupBy({
+        by: ['status'],
+        _count: true,
+      });
 
-    const pending = await prisma.abandonedCheckout.count({
-      where: {
-        status: 'IN_CHECKOUT',
-        checkoutStartedAt: {
-          lt: new Date(Date.now() - 5 * 60 * 1000),
+      const pending = await prisma.abandonedCheckout.count({
+        where: {
+          status: 'IN_CHECKOUT',
+          checkoutStartedAt: {
+            lt: new Date(Date.now() - 30 * 60 * 1000),
+          },
         },
-      },
-    });
+      });
 
-    return NextResponse.json({
-      success: true,
-      stats: stats.reduce((acc: Record<string, number>, s: any) => ({ ...acc, [s.status]: s._count }), {}),
-      pendingToProcess: pending,
+      return NextResponse.json({
+        success: true,
+        stats: stats.reduce((acc: Record<string, number>, s: any) => ({ ...acc, [s.status]: s._count }), {}),
+        pendingToProcess: pending,
+      });
+    }
+
+    // Procesar checkouts abandonados (misma lógica que POST)
+    // Redirigir internamente al POST
+    const postRequest = new Request(request.url, {
+      method: 'POST',
+      headers: request.headers,
     });
+    
+    return POST(postRequest);
   } catch (error: any) {
-    console.error('Error getting stats:', error);
+    console.error('Error in GET handler:', error);
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }
