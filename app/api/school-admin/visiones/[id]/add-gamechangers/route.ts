@@ -129,27 +129,33 @@ export async function POST(
         }
       }
 
-      // Verificar créditos disponibles si hay usuarios que necesitan licencia
+      // Verificar licencias disponibles si hay usuarios que necesitan licencia
       if (usersNeedingLicense > 0) {
-        const schoolCredit = await prisma.schoolCredit.findFirst({
+        // Obtener todas las licencias activas de la organización
+        const allLicenses = await prisma.license.findMany({
           where: {
             organizationId: director.organizationId,
-            isActive: true
-          }
+            isActive: true,
+          },
+          select: { code: true }
         });
 
-        if (!schoolCredit) {
-          return NextResponse.json({ 
-            success: false, 
-            error: 'No hay créditos de licencias configurados para esta organización' 
-          }, { status: 400 });
-        }
+        // Obtener códigos de licencias ya asignadas
+        const assignedCodes = await prisma.licenseAssignment.findMany({
+          where: {
+            organizationId: director.organizationId,
+            isActive: true,
+          },
+          select: { licenseCode: true }
+        });
 
-        const availableCredits = (schoolCredit.totalPurchased || 0) - (schoolCredit.totalAllocated || 0);
-        if (availableCredits < usersNeedingLicense) {
+        const assignedCodesSet = new Set(assignedCodes.map(a => a.licenseCode));
+        const availableLicenses = allLicenses.filter(l => !assignedCodesSet.has(l.code));
+
+        if (availableLicenses.length < usersNeedingLicense) {
           return NextResponse.json({ 
             success: false, 
-            error: `Créditos insuficientes. Disponibles: ${availableCredits}, Necesarios: ${usersNeedingLicense}` 
+            error: `Licencias insuficientes. Disponibles: ${availableLicenses.length}, Necesarias: ${usersNeedingLicense}. Compra más licencias primero.` 
           }, { status: 400 });
         }
       }
@@ -258,17 +264,6 @@ export async function POST(
               }
             });
 
-            // Descontar de SchoolCredit
-            await prisma.schoolCredit.updateMany({
-              where: {
-                organizationId: director.organizationId,
-                isActive: true
-              },
-              data: {
-                totalAllocated: { increment: 1 }
-              }
-            });
-
             licensesCreated.push(licenseCode);
             console.log(`✅ Licencia ${level} creada para Game Changer ${user.nombre} (${user.email}): ${licenseCode} - Expira: ${finalExpiryDate}`);
           }
@@ -313,28 +308,34 @@ export async function POST(
 
     const newEmails = emailList.filter((e: string) => !allExistingUsers.find(u => u.email === e));
 
-    // Verificar créditos disponibles antes de crear
+    // Verificar licencias disponibles antes de crear
     const totalNewUsers = newEmails.length + usersWithoutOrg.length;
     if (totalNewUsers > 0) {
-      const schoolCredit = await prisma.schoolCredit.findFirst({
+      // Obtener todas las licencias activas de la organización
+      const allLicensesForEmails = await prisma.license.findMany({
         where: {
           organizationId: director.organizationId,
-          isActive: true
-        }
+          isActive: true,
+        },
+        select: { code: true }
       });
 
-      if (!schoolCredit) {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'No hay créditos de licencias configurados para esta organización' 
-        }, { status: 400 });
-      }
+      // Obtener códigos de licencias ya asignadas
+      const assignedCodesForEmails = await prisma.licenseAssignment.findMany({
+        where: {
+          organizationId: director.organizationId,
+          isActive: true,
+        },
+        select: { licenseCode: true }
+      });
 
-      const availableCredits = (schoolCredit.totalPurchased || 0) - (schoolCredit.totalAllocated || 0);
-      if (availableCredits < totalNewUsers) {
+      const assignedCodesSetForEmails = new Set(assignedCodesForEmails.map(a => a.licenseCode));
+      const availableLicensesForEmails = allLicensesForEmails.filter(l => !assignedCodesSetForEmails.has(l.code));
+
+      if (availableLicensesForEmails.length < totalNewUsers) {
         return NextResponse.json({ 
           success: false, 
-          error: `Créditos insuficientes. Disponibles: ${availableCredits}, Necesarios: ${totalNewUsers}` 
+          error: `Licencias insuficientes. Disponibles: ${availableLicensesForEmails.length}, Necesarias: ${totalNewUsers}. Compra más licencias primero.` 
         }, { status: 400 });
       }
     }
@@ -379,17 +380,6 @@ export async function POST(
           activatedAt: new Date(), // Fecha de activación
           expiresAt: vision.endDate, // Expira cuando termina la visión
           notes: 'Licencia STANDARD automática - Game Changer - Activada'
-        }
-      });
-
-      // Descontar de SchoolCredit
-      await prisma.schoolCredit.updateMany({
-        where: {
-          organizationId: director.organizationId,
-          isActive: true
-        },
-        data: {
-          totalAllocated: { increment: 1 }
         }
       });
       
@@ -472,17 +462,6 @@ export async function POST(
           activatedAt: new Date(),
           expiresAt: vision.endDate, // Expira cuando termina la visión
           notes: 'Licencia STANDARD automática - Lobo Solitario convertido a Game Changer - Activada'
-        }
-      });
-
-      // Descontar de SchoolCredit
-      await prisma.schoolCredit.updateMany({
-        where: {
-          organizationId: director.organizationId,
-          isActive: true
-        },
-        data: {
-          totalAllocated: { increment: 1 }
         }
       });
     }
