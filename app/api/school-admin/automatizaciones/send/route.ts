@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
     let sent = 0;
     let failed = 0;
     const errors: string[] = [];
+    const videoLabel = getVideoLabel(videoKey);
 
     // Obtener información de la organización y su MasterOrganization para personalizar
     const organization = await prisma.organization.findUnique({
@@ -99,11 +100,12 @@ export async function POST(request: NextRequest) {
 
         let emailSent = false;
         let whatsappSent = false;
+        let emailError: string | null = null;
+        let whatsappError: string | null = null;
 
         // Enviar email
         if ((sendMethod === 'email' || sendMethod === 'both') && targetUser.email) {
           try {
-            const videoLabel = getVideoLabel(videoKey);
             const emailResult = await sendEmail(
               targetUser.email,
               `🎬 ${videoLabel} - ${organizationName}`,
@@ -115,11 +117,29 @@ export async function POST(request: NextRequest) {
               emailSent = true;
               console.log(`📧 Email enviado a ${targetUser.email}`);
             } else {
+              emailError = emailResult.error || 'Error desconocido';
               console.warn(`⚠️ Email fallido a ${targetUser.email}:`, emailResult.error);
             }
-          } catch (emailError) {
-            console.error(`❌ Error email a ${targetUser.email}:`, emailError);
+          } catch (err: any) {
+            emailError = err.message || 'Error de envío';
+            console.error(`❌ Error email a ${targetUser.email}:`, err);
           }
+
+          // Guardar log de email
+          await prisma.automationMessageLog.create({
+            data: {
+              organizationId: user.organizationId!,
+              userId: targetUser.id,
+              videoKey,
+              videoLabel,
+              channel: 'EMAIL',
+              recipient: targetUser.email,
+              status: emailSent ? 'SENT' : 'FAILED',
+              errorMessage: emailError,
+              sentAt: emailSent ? new Date() : null,
+              source: 'MANUAL',
+            }
+          });
         }
 
         // Enviar WhatsApp
@@ -134,18 +154,34 @@ export async function POST(request: NextRequest) {
               whatsappSent = true;
               console.log(`📱 WhatsApp enviado a ${targetUser.telefono}`);
             } else {
+              whatsappError = whatsappResult.error || 'Error desconocido';
               console.warn(`⚠️ WhatsApp fallido a ${targetUser.telefono}:`, whatsappResult.error);
             }
-          } catch (whatsappError) {
-            console.error(`❌ Error WhatsApp a ${targetUser.telefono}:`, whatsappError);
+          } catch (err: any) {
+            whatsappError = err.message || 'Error de envío';
+            console.error(`❌ Error WhatsApp a ${targetUser.telefono}:`, err);
           }
+
+          // Guardar log de WhatsApp
+          await prisma.automationMessageLog.create({
+            data: {
+              organizationId: user.organizationId!,
+              userId: targetUser.id,
+              videoKey,
+              videoLabel,
+              channel: 'WHATSAPP',
+              recipient: targetUser.telefono,
+              status: whatsappSent ? 'SENT' : 'FAILED',
+              errorMessage: whatsappError,
+              sentAt: whatsappSent ? new Date() : null,
+              source: 'MANUAL',
+            }
+          });
         }
 
         // Contar como enviado si al menos un método funcionó
         if (emailSent || whatsappSent) {
           sent++;
-          
-          // Log del envío (sin guardar en DB por ahora)
           console.log(`✅ Mensaje enviado a ${targetUser.nombre} - Email: ${emailSent}, WhatsApp: ${whatsappSent}`);
         } else {
           failed++;

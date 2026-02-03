@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { 
   Rocket, Mail, MessageCircle, Users, Filter, Send, 
   CheckCircle, AlertCircle, Loader2, ArrowLeft, Video,
-  ChevronDown, Search, Check, X
+  ChevronDown, Search, Check, X, History, Clock,
+  RefreshCw, XCircle
 } from 'lucide-react';
 
 interface Usuario {
@@ -34,6 +35,38 @@ interface VideoOption {
   label: string;
   description: string;
   icon: string;
+}
+
+interface MessageLog {
+  id: number;
+  videoKey: string;
+  videoLabel: string;
+  channel: 'EMAIL' | 'WHATSAPP';
+  recipient: string;
+  status: 'PENDING' | 'SENT' | 'FAILED' | 'DELIVERED';
+  errorMessage: string | null;
+  sentAt: string | null;
+  createdAt: string;
+  source: 'MANUAL' | 'CRON';
+  Usuario: {
+    id: number;
+    nombre: string;
+    email: string;
+    telefono: string | null;
+  };
+  Vision: {
+    id: number;
+    nombre: string;
+  } | null;
+}
+
+interface LogStats {
+  totalEmails: number;
+  emailsSent: number;
+  emailsFailed: number;
+  totalWhatsapp: number;
+  whatsappSent: number;
+  whatsappFailed: number;
 }
 
 const VIDEO_OPTIONS: VideoOption[] = [
@@ -389,6 +422,14 @@ export default function AutomatizacionesPage() {
     type: 'success'
   });
   const [sendResults, setSendResults] = useState<{ sent: number; failed: number } | null>(null);
+  
+  // Historial de envíos
+  const [activeTab, setActiveTab] = useState<'send' | 'history'>('send');
+  const [logs, setLogs] = useState<MessageLog[]>([]);
+  const [logStats, setLogStats] = useState<LogStats | null>(null);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logPage, setLogPage] = useState(1);
+  const [totalLogPages, setTotalLogPages] = useState(1);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -438,6 +479,30 @@ export default function AutomatizacionesPage() {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
   };
+
+  const fetchLogs = async (page: number = 1) => {
+    setLogsLoading(true);
+    try {
+      const res = await fetch(`/api/school-admin/automatizaciones/logs?page=${page}&limit=20`);
+      const data = await res.json();
+      if (data.success) {
+        setLogs(data.logs);
+        setLogStats(data.stats);
+        setLogPage(data.pagination.page);
+        setTotalLogPages(data.pagination.totalPages);
+      }
+    } catch (error) {
+      console.error('Error fetching logs:', error);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'history') {
+      fetchLogs(logPage);
+    }
+  }, [activeTab]);
 
   const getFilteredUsers = () => {
     if (!selectedVision) return [];
@@ -577,8 +642,36 @@ export default function AutomatizacionesPage() {
           <p className="text-slate-400 mt-2">
             Envía videos promocionales y de seguimiento a tus usuarios por correo o WhatsApp
           </p>
+
+          {/* Tabs */}
+          <div className="mt-6 flex gap-2">
+            <button
+              onClick={() => setActiveTab('send')}
+              className={`px-6 py-3 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                activeTab === 'send'
+                  ? 'bg-cyan-500/20 border border-cyan-500 text-cyan-400'
+                  : 'bg-slate-800 border border-slate-700 text-slate-400 hover:bg-slate-700'
+              }`}
+            >
+              <Send size={18} />
+              Enviar Mensajes
+            </button>
+            <button
+              onClick={() => setActiveTab('history')}
+              className={`px-6 py-3 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                activeTab === 'history'
+                  ? 'bg-purple-500/20 border border-purple-500 text-purple-400'
+                  : 'bg-slate-800 border border-slate-700 text-slate-400 hover:bg-slate-700'
+              }`}
+            >
+              <History size={18} />
+              Historial de Envíos
+            </button>
+          </div>
         </div>
 
+        {/* Tab Content */}
+        {activeTab === 'send' ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Panel de Configuración */}
           <div className="lg:col-span-1 space-y-6">
@@ -949,6 +1042,217 @@ export default function AutomatizacionesPage() {
             )}
           </div>
         </div>
+        ) : (
+          /* Historial de Envíos */
+          <div className="space-y-6">
+            {/* Estadísticas */}
+            {logStats && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-slate-800 rounded-xl p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                      <Mail className="text-blue-400" size={24} />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-white">{logStats.totalEmails}</p>
+                      <p className="text-sm text-slate-400">Emails Totales</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex gap-4 text-sm">
+                    <span className="text-green-400">✓ {logStats.emailsSent} enviados</span>
+                    <span className="text-red-400">✗ {logStats.emailsFailed} fallidos</span>
+                  </div>
+                </div>
+
+                <div className="bg-slate-800 rounded-xl p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
+                      <MessageCircle className="text-green-400" size={24} />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-white">{logStats.totalWhatsapp}</p>
+                      <p className="text-sm text-slate-400">WhatsApp Totales</p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex gap-4 text-sm">
+                    <span className="text-green-400">✓ {logStats.whatsappSent} enviados</span>
+                    <span className="text-red-400">✗ {logStats.whatsappFailed} fallidos</span>
+                  </div>
+                </div>
+
+                <div className="bg-slate-800 rounded-xl p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+                      <CheckCircle className="text-cyan-400" size={24} />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-white">
+                        {logStats.emailsSent + logStats.whatsappSent}
+                      </p>
+                      <p className="text-sm text-slate-400">Total Enviados</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-800 rounded-xl p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-red-500/20 rounded-lg flex items-center justify-center">
+                      <XCircle className="text-red-400" size={24} />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-white">
+                        {logStats.emailsFailed + logStats.whatsappFailed}
+                      </p>
+                      <p className="text-sm text-slate-400">Total Fallidos</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Tabla de Registros */}
+            <div className="bg-slate-800 rounded-xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-white font-bold flex items-center gap-2">
+                  <History size={18} className="text-purple-400" />
+                  Registro de Mensajes Enviados
+                </h3>
+                <button
+                  onClick={() => fetchLogs(logPage)}
+                  disabled={logsLoading}
+                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <RefreshCw size={16} className={logsLoading ? 'animate-spin' : ''} />
+                  Actualizar
+                </button>
+              </div>
+
+              {logsLoading ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="animate-spin text-cyan-500" size={32} />
+                </div>
+              ) : logs.length === 0 ? (
+                <div className="text-center py-12">
+                  <History size={48} className="mx-auto text-slate-600 mb-4" />
+                  <p className="text-slate-400">No hay mensajes enviados aún</p>
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-slate-700">
+                          <th className="text-left py-3 px-4 text-slate-400 font-medium text-sm">Usuario</th>
+                          <th className="text-left py-3 px-4 text-slate-400 font-medium text-sm">Video</th>
+                          <th className="text-left py-3 px-4 text-slate-400 font-medium text-sm">Canal</th>
+                          <th className="text-left py-3 px-4 text-slate-400 font-medium text-sm">Destinatario</th>
+                          <th className="text-left py-3 px-4 text-slate-400 font-medium text-sm">Estado</th>
+                          <th className="text-left py-3 px-4 text-slate-400 font-medium text-sm">Fuente</th>
+                          <th className="text-left py-3 px-4 text-slate-400 font-medium text-sm">Fecha</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {logs.map(log => (
+                          <tr key={log.id} className="border-b border-slate-700/50 hover:bg-slate-700/30">
+                            <td className="py-3 px-4">
+                              <div>
+                                <p className="text-white font-medium">{log.Usuario.nombre}</p>
+                                {log.Vision && (
+                                  <p className="text-xs text-slate-500">{log.Vision.nombre}</p>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="text-slate-300 text-sm">{log.videoLabel}</span>
+                            </td>
+                            <td className="py-3 px-4">
+                              {log.channel === 'EMAIL' ? (
+                                <span className="flex items-center gap-1 text-blue-400">
+                                  <Mail size={14} /> Email
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1 text-green-400">
+                                  <MessageCircle size={14} /> WhatsApp
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="text-slate-400 text-sm">{log.recipient}</span>
+                            </td>
+                            <td className="py-3 px-4">
+                              {log.status === 'SENT' || log.status === 'DELIVERED' ? (
+                                <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs">
+                                  ✓ Enviado
+                                </span>
+                              ) : log.status === 'FAILED' ? (
+                                <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-xs" title={log.errorMessage || ''}>
+                                  ✗ Fallido
+                                </span>
+                              ) : (
+                                <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs">
+                                  ⏳ Pendiente
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className={`px-2 py-1 rounded text-xs ${
+                                log.source === 'CRON' 
+                                  ? 'bg-purple-500/20 text-purple-400'
+                                  : 'bg-slate-500/20 text-slate-400'
+                              }`}>
+                                {log.source === 'CRON' ? '🤖 Auto' : '👤 Manual'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="text-sm">
+                                <p className="text-slate-300">
+                                  {new Date(log.createdAt).toLocaleDateString('es-MX', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric'
+                                  })}
+                                </p>
+                                <p className="text-slate-500 text-xs">
+                                  {new Date(log.createdAt).toLocaleTimeString('es-MX', {
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </p>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Paginación */}
+                  {totalLogPages > 1 && (
+                    <div className="flex justify-center gap-2 mt-4">
+                      <button
+                        onClick={() => fetchLogs(logPage - 1)}
+                        disabled={logPage === 1}
+                        className="px-3 py-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded text-sm"
+                      >
+                        ← Anterior
+                      </button>
+                      <span className="px-3 py-1 text-slate-400">
+                        Página {logPage} de {totalLogPages}
+                      </span>
+                      <button
+                        onClick={() => fetchLogs(logPage + 1)}
+                        disabled={logPage === totalLogPages}
+                        className="px-3 py-1 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded text-sm"
+                      >
+                        Siguiente →
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

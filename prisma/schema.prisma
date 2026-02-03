@@ -1091,6 +1091,7 @@ model Organization {
   coordinator_commission_config                         coordinator_commission_config[]
   coordinator_commissions                               coordinator_commissions[]
   weekly_payout_summary                                 weekly_payout_summary[]
+  AutomationMessageLog                                  AutomationMessageLog[]
 
   @@index([masterOrganizationId])
   @@index([slug])
@@ -2463,6 +2464,7 @@ model Usuario {
   vision_enrollments_vision_enrollments_userIdToUsuario                  vision_enrollments[]            @relation("vision_enrollments_userIdToUsuario")
   weekly_payout_summary_weekly_payout_summary_approvedByToUsuario        weekly_payout_summary[]         @relation("weekly_payout_summary_approvedByToUsuario")
   weekly_payout_summary_weekly_payout_summary_generatedByToUsuario       weekly_payout_summary[]         @relation("weekly_payout_summary_generatedByToUsuario")
+  AutomationMessageLog                                                   AutomationMessageLog[]
 
   @@index([communityOrganizationId])
 }
@@ -2560,6 +2562,7 @@ model Vision {
   coordinator_commissions       coordinator_commissions[]
   vision_enrollments            vision_enrollments[]
   weekly_payout_summary         weekly_payout_summary[]
+  AutomationMessageLog          AutomationMessageLog[]
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -6157,4 +6160,51 @@ enum ReportStatus {
   REVIEWED
   DISMISSED
   ACTION_TAKEN
+}
+
+// ============================================
+// AUTOMATION MESSAGE LOGS
+// ============================================
+
+model AutomationMessageLog {
+  id              Int                       @id @default(autoincrement())
+  organizationId  Int
+  userId          Int
+  videoKey        String                    // ej: videoEnrolamientoUrl, videoBienvenidaLideres1Url
+  videoLabel      String                    // ej: "Enrolamiento", "Bienvenida Básico"
+  channel         AutomationChannel         // EMAIL, WHATSAPP
+  recipient       String                    // email o teléfono
+  status          AutomationMessageStatus   @default(PENDING)
+  errorMessage    String?
+  sentAt          DateTime?
+  createdAt       DateTime                  @default(now())
+  source          AutomationSource          @default(MANUAL) // MANUAL o CRON
+  visionId        Int?
+  
+  Organization    Organization              @relation(fields: [organizationId], references: [id])
+  Usuario         Usuario                   @relation(fields: [userId], references: [id])
+  Vision          Vision?                   @relation(fields: [visionId], references: [id])
+  
+  @@index([organizationId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([status])
+  @@index([videoKey])
+}
+
+enum AutomationChannel {
+  EMAIL
+  WHATSAPP
+}
+
+enum AutomationMessageStatus {
+  PENDING
+  SENT
+  FAILED
+  DELIVERED
+}
+
+enum AutomationSource {
+  MANUAL
+  CRON
 }
