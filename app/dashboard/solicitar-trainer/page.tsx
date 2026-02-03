@@ -40,6 +40,7 @@ export default function SolicitarTrainerPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const especialidades = [
+    'Transformación Cuántica',
     'Transformación Personal',
     'Liderazgo y Desarrollo',
     'Coaching de Equipos',
@@ -318,8 +319,8 @@ export default function SolicitarTrainerPage() {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-orange-500/20 rounded-2xl mb-4">
             <Dumbbell className="w-10 h-10 text-orange-400" />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-2">Solicitar ser Entrenador</h1>
-          <p className="text-slate-400 text-lg">Quantum Leap - Programa de Transformación</p>
+          <h1 className="text-4xl font-bold text-white mb-2">Soy Entrenador</h1>
+          <p className="text-slate-400 text-lg">Programa de Transformación</p>
         </div>
 
         {/* Beneficios */}
