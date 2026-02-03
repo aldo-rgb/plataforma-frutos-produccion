@@ -50,7 +50,21 @@ import {
   Award,
   FileText,
   AlertCircle,
-  Briefcase
+  Briefcase,
+  Calendar,
+  CalendarDays,
+  CalendarClock,
+  Video,
+  Users2,
+  Timer,
+  CreditCard,
+  Bell,
+  Stethoscope,
+  Dumbbell,
+  Sparkle,
+  Brain,
+  User,
+  Layers
 } from 'lucide-react';
 
 // Tipos
@@ -96,6 +110,58 @@ interface WebContent {
   services: { icon: string; title: string; description: string }[];
   ctaText: string;
   testimonials: { name: string; text: string; rating: number }[];
+}
+
+// ============================================
+// TIPOS PARA AGENDA DE SERVICIOS EN LÍNEA
+// ============================================
+type ServiceModality = 'presencial' | 'virtual' | 'ambos';
+type ServiceCapacity = 'individual' | 'grupal';
+type AppointmentCategory = 'salud' | 'deporte' | 'esoterico' | 'coaching' | 'belleza' | 'otro';
+
+interface AppointmentService {
+  id: string;
+  name: string;
+  description: string;
+  duration: number; // en minutos
+  price: number;
+  priceType: 'fijo' | 'cotizar';
+  modality: ServiceModality;
+  capacity: ServiceCapacity;
+  maxParticipants?: number; // para servicios grupales
+  bufferTime: number; // minutos entre citas
+  color: string;
+  active: boolean;
+  requireDeposit: boolean;
+  depositPercentage?: number;
+  customQuestions?: { question: string; required: boolean }[];
+}
+
+interface AvailabilitySlot {
+  day: 'lunes' | 'martes' | 'miercoles' | 'jueves' | 'viernes' | 'sabado' | 'domingo';
+  enabled: boolean;
+  slots: { start: string; end: string }[]; // Puede tener múltiples rangos por día
+}
+
+interface AvailabilityConfig {
+  weeklySchedule: AvailabilitySlot[];
+  blockedDates: string[]; // ISO dates
+  minAdvanceHours: number; // Mínimo de horas de anticipación
+  maxAdvanceDays: number; // Máximo días hacia adelante
+  autoConfirm: boolean; // Si es true, las citas se confirman automáticamente
+}
+
+interface AppointmentsConfig {
+  category: AppointmentCategory;
+  services: AppointmentService[];
+  availability: AvailabilityConfig;
+  address?: string; // Para servicios presenciales
+  virtualPlatform: 'zoom' | 'meet' | 'jitsi' | 'whatsapp' | 'manual';
+  reminderHours: number; // Horas antes para enviar recordatorio
+  enableWaitlist: boolean;
+  cancellationPolicy?: string;
+  cancellationHours: number; // Horas de anticipación para cancelar
+  autoReminders: boolean; // Enviar recordatorios automáticos
 }
 
 interface BusinessInfo {
@@ -220,12 +286,12 @@ export default function QuantumWebEngine() {
   const router = useRouter();
   
   // Estados del wizard
-  const [step, setStep] = useState<'intro' | 'site-type' | 'template' | 'info' | 'content' | 'products' | 'preview' | 'published'>('intro');
+  const [step, setStep] = useState<'intro' | 'site-type' | 'template' | 'info' | 'content' | 'products' | 'appointments-services' | 'appointments-schedule' | 'preview' | 'published'>('intro');
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   
-  // Tipo de sitio: tienda o informativa
-  const [siteType, setSiteType] = useState<'store' | 'informative' | null>(null);
+  // Tipo de sitio: tienda, informativa o citas
+  const [siteType, setSiteType] = useState<'store' | 'informative' | 'appointments' | null>(null);
   
   // Datos del negocio (precargados del perfil si existe)
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo>({
@@ -243,6 +309,9 @@ export default function QuantumWebEngine() {
   
   // Template seleccionado
   const [selectedTemplate, setSelectedTemplate] = useState<QuantumTemplate | null>(null);
+  
+  // Colores personalizados de la marca (3 colores)
+  const [brandColors, setBrandColors] = useState<[string, string, string]>(['#8B5CF6', '#EC4899', '#F97316']);
   
   // Contenido generado por IA
   const [webContent, setWebContent] = useState<WebContent | null>(null);
@@ -290,6 +359,38 @@ export default function QuantumWebEngine() {
     sabado: { abierto: true, desde: '10:00', hasta: '14:00' },
     domingo: { abierto: false, desde: '10:00', hasta: '14:00' },
   });
+  
+  // ============================================
+  // ESTADO PARA AGENDA DE SERVICIOS EN LÍNEA
+  // ============================================
+  const [appointmentsConfig, setAppointmentsConfig] = useState<AppointmentsConfig>({
+    category: 'salud',
+    services: [],
+    availability: {
+      weeklySchedule: [
+        { day: 'lunes', enabled: true, slots: [{ start: '09:00', end: '14:00' }, { start: '16:00', end: '20:00' }] },
+        { day: 'martes', enabled: true, slots: [{ start: '09:00', end: '14:00' }, { start: '16:00', end: '20:00' }] },
+        { day: 'miercoles', enabled: true, slots: [{ start: '09:00', end: '14:00' }, { start: '16:00', end: '20:00' }] },
+        { day: 'jueves', enabled: true, slots: [{ start: '09:00', end: '14:00' }, { start: '16:00', end: '20:00' }] },
+        { day: 'viernes', enabled: true, slots: [{ start: '09:00', end: '14:00' }, { start: '16:00', end: '20:00' }] },
+        { day: 'sabado', enabled: true, slots: [{ start: '10:00', end: '14:00' }] },
+        { day: 'domingo', enabled: false, slots: [] },
+      ],
+      blockedDates: [],
+      minAdvanceHours: 24,
+      maxAdvanceDays: 30,
+      autoConfirm: false,
+    },
+    virtualPlatform: 'meet',
+    reminderHours: 24,
+    enableWaitlist: true,
+    cancellationHours: 24,
+    autoReminders: true,
+  });
+  
+  // Modal para editar/agregar servicios de citas
+  const [showServiceModal, setShowServiceModal] = useState(false);
+  const [editingService, setEditingService] = useState<AppointmentService | null>(null);
   
   // Cargar datos del perfil existente o del localStorage (idea millonaria)
   useEffect(() => {
@@ -781,122 +882,985 @@ export default function QuantumWebEngine() {
           </motion.p>
         </div>
         
-        {/* Options */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          {/* Tienda Online */}
+        {/* Options - Layout Horizontal */}
+        <div className="space-y-6 max-w-4xl mx-auto">
+          
+          {/* 1. Tienda Online - Horizontal */}
           <motion.button
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.3 }}
-            whileHover={{ scale: 1.03, y: -5 }}
-            whileTap={{ scale: 0.98 }}
+            whileHover={{ scale: 1.01, y: -3 }}
+            whileTap={{ scale: 0.99 }}
             onClick={() => {
               setSiteType('store');
               setStep('template');
             }}
-            className={`relative p-8 rounded-3xl border-2 text-left transition-all ${
+            className={`relative w-full p-6 rounded-3xl border-2 text-left transition-all ${
               siteType === 'store' 
                 ? 'border-green-500 bg-green-500/10' 
                 : 'border-slate-700 bg-slate-800/50 hover:border-green-500/50'
             }`}
           >
-            <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-2xl shadow-green-500/30">
-              <ShoppingBag className="w-10 h-10 text-white" />
-            </div>
-            
-            <h3 className="text-2xl font-bold text-white mb-3 text-center">Tienda Online</h3>
-            <p className="text-slate-400 mb-6 text-center">
-              Vende tus productos o servicios creados por ti directamente desde tu sitio web
-            </p>
-            
-            <div className="space-y-3">
-              {[
-                'Catálogo de productos propios',
-                'Precios y descripciones',
-                'Botón de WhatsApp para comprar',
-                'Galería de imágenes',
-                'Ideal para: artesanos, chefs, diseñadores, creadores'
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3 text-sm text-slate-300">
-                  <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                    <Check className="w-3 h-3 text-green-400" />
-                  </div>
-                  {item}
+            <div className="flex flex-col md:flex-row items-start gap-6">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-2xl shadow-green-500/30 flex-shrink-0 mx-auto md:mx-0">
+                <ShoppingBag className="w-10 h-10 text-white" />
+              </div>
+              
+              <div className="flex-1">
+                <h3 className="text-2xl font-bold text-white mb-2 text-center md:text-left">Tienda Online</h3>
+                <p className="text-slate-400 mb-4 text-center md:text-left">
+                  Vende tus productos o servicios creados por ti directamente desde tu sitio web
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
+                  {[
+                    'Catálogo de productos propios',
+                    'Precios y descripciones',
+                    'Botón de WhatsApp para comprar',
+                    'Galería de imágenes',
+                    'Ideal para: artesanos, chefs, diseñadores, creadores'
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm text-slate-300">
+                      <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                        <Check className="w-3 h-3 text-green-400" />
+                      </div>
+                      {item}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            
-            <div className="mt-6 py-3 rounded-xl bg-green-500/20 text-green-400 font-semibold text-center">
-              Incluye Catálogo de Productos
-            </div>
-            
-            {/* Aviso de uso exclusivo */}
-            <div className="mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
-              <p className="text-xs text-amber-300/90 text-center leading-relaxed">
-                ⚠️ <strong>Uso exclusivo:</strong> Solo para productos o servicios fabricados, creados o hechos por ti mismo. 
-                <span className="block mt-1 text-amber-400/70">
-                  Prohibido: reventa de artículos, productos usados o electrónicos.
-                </span>
-              </p>
+                
+                <div className="flex flex-col md:flex-row gap-3">
+                  <div className="py-2 px-4 rounded-xl bg-green-500/20 text-green-400 font-semibold text-center">
+                    Incluye Catálogo de Productos
+                  </div>
+                  <div className="py-2 px-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-center">
+                    <p className="text-xs text-amber-300/90">
+                      ⚠️ <strong>Uso exclusivo:</strong> Solo productos fabricados o hechos por ti
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </motion.button>
           
-          {/* Página Informativa */}
+          {/* 2. Página Informativa - Horizontal */}
           <motion.button
-            initial={{ opacity: 0, x: 30 }}
+            initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.4 }}
-            whileHover={{ scale: 1.03, y: -5 }}
-            whileTap={{ scale: 0.98 }}
+            whileHover={{ scale: 1.01, y: -3 }}
+            whileTap={{ scale: 0.99 }}
             onClick={() => {
               setSiteType('informative');
               setStep('template');
             }}
-            className={`relative p-8 rounded-3xl border-2 text-left transition-all ${
+            className={`relative w-full p-6 rounded-3xl border-2 text-left transition-all ${
               siteType === 'informative' 
                 ? 'border-blue-500 bg-blue-500/10' 
                 : 'border-slate-700 bg-slate-800/50 hover:border-blue-500/50'
             }`}
           >
-            <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-2xl shadow-blue-500/30">
-              <FileText className="w-10 h-10 text-white" />
-            </div>
-            
-            <h3 className="text-2xl font-bold text-white mb-3 text-center">Página Informativa</h3>
-            <p className="text-slate-400 mb-6 text-center">
-              Presenta tu negocio, servicios y datos de contacto de forma profesional
-            </p>
-            
-            <div className="space-y-3">
-              {[
-                'Información de tu negocio',
-                'Servicios que ofreces',
-                'Sobre nosotros',
-                'Datos de contacto',
-                'Ideal para: profesionales, consultores, agencias'
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3 text-sm text-slate-300">
-                  <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                    <Check className="w-3 h-3 text-blue-400" />
-                  </div>
-                  {item}
+            <div className="flex flex-col md:flex-row items-start gap-6">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-2xl shadow-blue-500/30 flex-shrink-0 mx-auto md:mx-0">
+                <FileText className="w-10 h-10 text-white" />
+              </div>
+              
+              <div className="flex-1">
+                <h3 className="text-2xl font-bold text-white mb-2 text-center md:text-left">Página Informativa</h3>
+                <p className="text-slate-400 mb-4 text-center md:text-left">
+                  Presenta tu negocio, servicios y datos de contacto de forma profesional
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
+                  {[
+                    'Información de tu negocio',
+                    'Servicios que ofreces',
+                    'Sobre nosotros',
+                    'Datos de contacto',
+                    'Ideal para: profesionales, consultores, agencias'
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm text-slate-300">
+                      <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                        <Check className="w-3 h-3 text-blue-400" />
+                      </div>
+                      {item}
+                    </div>
+                  ))}
                 </div>
-              ))}
+                
+                <div className="py-2 px-4 rounded-xl bg-blue-500/20 text-blue-400 font-semibold text-center md:text-left inline-block">
+                  Servicios Cotizador en linea
+                </div>
+              </div>
+            </div>
+          </motion.button>
+          
+          {/* 3. Agenda de Servicios en Línea - Horizontal (ya estaba) */}
+          <motion.button
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.5 }}
+            whileHover={{ scale: 1.01, y: -3 }}
+            whileTap={{ scale: 0.99 }}
+            onClick={() => {
+              setSiteType('appointments');
+              setStep('template');
+            }}
+            className={`relative w-full p-6 rounded-3xl border-2 text-left transition-all ${
+              siteType === 'appointments' 
+                ? 'border-purple-500 bg-purple-500/10' 
+                : 'border-slate-700 bg-slate-800/50 hover:border-purple-500/50'
+            }`}
+          >
+            {/* Badge NUEVO */}
+            <div className="absolute -top-3 left-6 md:left-1/2 md:-translate-x-1/2 px-4 py-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full text-white text-xs font-bold shadow-lg">
+              ✨ NUEVO
             </div>
             
-            <div className="mt-6 py-3 rounded-xl bg-blue-500/20 text-blue-400 font-semibold text-center">
-              Sin Catálogo de Productos
+            <div className="flex flex-col md:flex-row items-start gap-6">
+              <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 flex items-center justify-center shadow-2xl shadow-purple-500/30 flex-shrink-0 mx-auto md:mx-0">
+                <CalendarClock className="w-12 h-12 text-white" />
+              </div>
+              
+              <div className="flex-1">
+                <h3 className="text-2xl font-bold text-white mb-2 text-center md:text-left">Agenda de Servicios en Línea</h3>
+                <p className="text-slate-400 mb-4 text-center md:text-left">
+                  Sistema completo de agenda, reservas y gestión de clientes. Ideal para profesionales de salud, coaches, deportes, belleza y más.
+                </p>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                  {[
+                    { icon: Calendar, label: 'Agenda Online' },
+                    { icon: Clock, label: 'Horarios Flexibles' },
+                    { icon: Users, label: 'Gestión de Clientes' },
+                    { icon: Video, label: 'Citas Virtuales' },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm text-purple-300">
+                      <item.icon className="w-4 h-4" />
+                      {item.label}
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {[
+                    { icon: Stethoscope, label: 'Salud', color: 'bg-red-500/20 text-red-400' },
+                    { icon: Dumbbell, label: 'Deporte', color: 'bg-green-500/20 text-green-400' },
+                    { icon: Sparkle, label: 'Bienestar', color: 'bg-purple-500/20 text-purple-400' },
+                    { icon: Brain, label: 'Coaching', color: 'bg-blue-500/20 text-blue-400' },
+                  ].map((cat, i) => (
+                    <span key={i} className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${cat.color}`}>
+                      <cat.icon className="w-3 h-3" />
+                      {cat.label}
+                    </span>
+                  ))}
+                </div>
+                
+                <div className="py-3 px-4 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-300 font-semibold text-center border border-purple-500/30">
+                  📅 Reservas + 👥 CRM + 🔔 Recordatorios
+                </div>
+              </div>
             </div>
           </motion.button>
         </div>
         
         {/* Note */}
-        <p className="text-slate-500 text-sm">
+        <p className="text-slate-500 text-sm text-center mt-8">
           💡 No te preocupes, podrás cambiar esto después
         </p>
       </div>
     </motion.div>
   );
+
+  // ============================================================
+  // AGENDA DE SERVICIOS - Configuración de Servicios
+  // ============================================================
+  
+  const handleAddService = (service: Omit<AppointmentService, 'id'>) => {
+    const newService: AppointmentService = {
+      ...service,
+      id: `service-${Date.now()}`,
+    };
+    setAppointmentsConfig(prev => ({
+      ...prev,
+      services: [...prev.services, newService]
+    }));
+    setShowServiceModal(false);
+  };
+
+  const handleUpdateService = (service: AppointmentService) => {
+    setAppointmentsConfig(prev => ({
+      ...prev,
+      services: prev.services.map(s => s.id === service.id ? service : s)
+    }));
+    setShowServiceModal(false);
+    setEditingService(null);
+  };
+
+  const handleDeleteService = (id: string) => {
+    setAppointmentsConfig(prev => ({
+      ...prev,
+      services: prev.services.filter(s => s.id !== id)
+    }));
+  };
+
+  const ServiceModal = () => {
+    const [formData, setFormData] = useState<Omit<AppointmentService, 'id'>>({
+      name: editingService?.name || '',
+      description: editingService?.description || '',
+      duration: editingService?.duration || 60,
+      price: editingService?.price || 0,
+      priceType: editingService?.priceType || 'fijo',
+      modality: editingService?.modality || 'presencial',
+      capacity: editingService?.capacity || 'individual',
+      maxParticipants: editingService?.maxParticipants || 1,
+      bufferTime: editingService?.bufferTime || 15,
+      color: editingService?.color || '#8B5CF6',
+      active: editingService?.active ?? true,
+      requireDeposit: editingService?.requireDeposit ?? false,
+    });
+
+    const durations = [15, 30, 45, 60, 90, 120, 180];
+    const colors = ['#8B5CF6', '#EC4899', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#6366F1'];
+
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        onClick={() => { setShowServiceModal(false); setEditingService(null); }}
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          onClick={(e) => e.stopPropagation()}
+          className="w-full max-w-lg bg-slate-900 rounded-3xl border border-slate-700 p-6 max-h-[90vh] overflow-y-auto"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-white">
+              {editingService ? 'Editar Servicio' : 'Nuevo Servicio'}
+            </h3>
+            <button
+              onClick={() => { setShowServiceModal(false); setEditingService(null); }}
+              className="p-2 hover:bg-slate-800 rounded-xl transition-colors"
+            >
+              <X className="w-5 h-5 text-slate-400" />
+            </button>
+          </div>
+
+          <div className="space-y-5">
+            {/* Nombre del servicio */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Nombre del Servicio *
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Ej: Consulta General, Clase de Yoga, Sesión de Coaching..."
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Descripción */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Descripción
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Describe brevemente tu servicio..."
+                rows={3}
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+              />
+            </div>
+
+            {/* Duración y Precio */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Duración
+                </label>
+                <select
+                  value={formData.duration}
+                  onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                >
+                  {durations.map(d => (
+                    <option key={d} value={d}>
+                      {d >= 60 ? `${d / 60}h ${d % 60 > 0 ? `${d % 60}min` : ''}` : `${d} min`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Precio (MXN)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Modalidad */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Modalidad
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: 'presencial' as const, label: 'Presencial', icon: MapPin },
+                  { value: 'virtual' as const, label: 'Virtual', icon: Video },
+                  { value: 'ambos' as const, label: 'Ambos', icon: Globe },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, modality: opt.value })}
+                    className={`p-3 rounded-xl border text-center transition-all ${
+                      formData.modality === opt.value
+                        ? 'border-purple-500 bg-purple-500/20 text-purple-300'
+                        : 'border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600'
+                    }`}
+                  >
+                    <opt.icon className="w-5 h-5 mx-auto mb-1" />
+                    <span className="text-xs">{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Capacidad */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Tipo de Sesión
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: 'individual' as const, label: 'Individual', icon: User },
+                  { value: 'grupal' as const, label: 'Grupal', icon: Users2 },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, capacity: opt.value, maxParticipants: opt.value === 'individual' ? 1 : 10 })}
+                    className={`p-3 rounded-xl border text-center transition-all ${
+                      formData.capacity === opt.value
+                        ? 'border-purple-500 bg-purple-500/20 text-purple-300'
+                        : 'border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-600'
+                    }`}
+                  >
+                    <opt.icon className="w-5 h-5 mx-auto mb-1" />
+                    <span className="text-xs">{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+              {formData.capacity === 'grupal' && (
+                <div className="mt-3">
+                  <label className="block text-xs text-slate-400 mb-1">
+                    Máx. Participantes
+                  </label>
+                  <input
+                    type="number"
+                    min="2"
+                    max="100"
+                    value={formData.maxParticipants}
+                    onChange={(e) => setFormData({ ...formData, maxParticipants: parseInt(e.target.value) || 2 })}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white text-sm"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Tiempo Buffer */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Tiempo entre citas (buffer)
+              </label>
+              <select
+                value={formData.bufferTime}
+                onChange={(e) => setFormData({ ...formData, bufferTime: parseInt(e.target.value) })}
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                {[0, 5, 10, 15, 30, 45, 60].map(t => (
+                  <option key={t} value={t}>{t === 0 ? 'Sin tiempo buffer' : `${t} minutos`}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Color */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Color del Servicio
+              </label>
+              <div className="flex gap-2">
+                {colors.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, color })}
+                    className={`w-8 h-8 rounded-full transition-transform ${
+                      formData.color === color ? 'scale-125 ring-2 ring-white ring-offset-2 ring-offset-slate-900' : ''
+                    }`}
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Botones */}
+          <div className="flex gap-3 mt-6">
+            <button
+              onClick={() => { setShowServiceModal(false); setEditingService(null); }}
+              className="flex-1 py-3 rounded-xl border border-slate-700 text-slate-400 hover:bg-slate-800 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => {
+                if (!formData.name.trim()) return;
+                if (editingService) {
+                  handleUpdateService({ ...formData, id: editingService.id });
+                } else {
+                  handleAddService(formData);
+                }
+              }}
+              disabled={!formData.name.trim()}
+              className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold hover:from-purple-500 hover:to-pink-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {editingService ? 'Guardar Cambios' : 'Agregar Servicio'}
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+    );
+  };
+
+  const renderAppointmentsServices = () => (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-8 px-4"
+    >
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="w-20 h-20 rounded-3xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-purple-500/30"
+          >
+            <CalendarClock className="w-10 h-10 text-white" />
+          </motion.div>
+          <h1 className="text-3xl font-bold text-white mb-3">Configura tus Servicios</h1>
+          <p className="text-slate-400 text-lg">
+            Agrega los servicios o citas que ofreces. Podrás configurar precios, duración y más.
+          </p>
+        </div>
+
+        {/* Category Selection */}
+        <div className="mb-8">
+          <label className="block text-sm font-medium text-slate-300 mb-3">
+            ¿Cuál es tu categoría principal?
+          </label>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {[
+              { value: 'salud' as const, label: 'Salud', icon: Stethoscope, color: 'from-red-500 to-rose-600' },
+              { value: 'deporte' as const, label: 'Deporte', icon: Dumbbell, color: 'from-green-500 to-emerald-600' },
+              { value: 'esoterico' as const, label: 'Bienestar', icon: Sparkle, color: 'from-purple-500 to-violet-600' },
+              { value: 'coaching' as const, label: 'Coaching', icon: Brain, color: 'from-blue-500 to-cyan-600' },
+              { value: 'belleza' as const, label: 'Belleza', icon: Sparkles, color: 'from-pink-500 to-fuchsia-600' },
+              { value: 'otro' as const, label: 'Otro', icon: Layers, color: 'from-slate-500 to-slate-600' },
+            ].map((cat) => (
+              <button
+                key={cat.value}
+                onClick={() => setAppointmentsConfig(prev => ({ ...prev, category: cat.value }))}
+                className={`p-4 rounded-2xl border-2 transition-all ${
+                  appointmentsConfig.category === cat.value
+                    ? 'border-purple-500 bg-purple-500/10'
+                    : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${cat.color} flex items-center justify-center mx-auto mb-2`}>
+                  <cat.icon className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-sm font-medium text-white">{cat.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Virtual Platform Selection */}
+        {appointmentsConfig.services.some(s => s.modality !== 'presencial') && (
+          <div className="mb-8 p-4 rounded-2xl bg-slate-800/50 border border-slate-700">
+            <label className="block text-sm font-medium text-slate-300 mb-3">
+              <Video className="w-4 h-4 inline mr-2" />
+              Plataforma para citas virtuales
+            </label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {([
+                { key: 'zoom' as const, label: 'Zoom' },
+                { key: 'meet' as const, label: 'Google Meet' },
+                { key: 'whatsapp' as const, label: 'WhatsApp' },
+                { key: 'manual' as const, label: 'Manual' },
+              ]).map((platform) => (
+                <button
+                  key={platform.key}
+                  onClick={() => setAppointmentsConfig(prev => ({ ...prev, virtualPlatform: platform.key }))}
+                  className={`py-2 px-4 rounded-xl text-sm transition-all ${
+                    appointmentsConfig.virtualPlatform === platform.key
+                      ? 'bg-purple-500 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  {platform.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Services List */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-white">
+              Tus Servicios ({appointmentsConfig.services.length})
+            </h2>
+            <button
+              onClick={() => { setEditingService(null); setShowServiceModal(true); }}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Agregar Servicio
+            </button>
+          </div>
+
+          {appointmentsConfig.services.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="p-12 rounded-3xl border-2 border-dashed border-slate-700 text-center"
+            >
+              <Calendar className="w-16 h-16 text-slate-600 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-slate-400 mb-2">
+                No tienes servicios aún
+              </h3>
+              <p className="text-slate-500 mb-6">
+                Agrega tus servicios, citas o clases para que tus clientes puedan reservar
+              </p>
+              <button
+                onClick={() => setShowServiceModal(true)}
+                className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg shadow-purple-500/25"
+              >
+                <Plus className="w-5 h-5 inline mr-2" />
+                Agregar Mi Primer Servicio
+              </button>
+            </motion.div>
+          ) : (
+            <div className="space-y-3">
+              <AnimatePresence mode="popLayout">
+                {appointmentsConfig.services.map((service) => (
+                  <motion.div
+                    key={service.id}
+                    layout
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: -100 }}
+                    className="p-4 rounded-2xl bg-slate-800/70 border border-slate-700 hover:border-slate-600 transition-all"
+                  >
+                    <div className="flex items-center gap-4">
+                      {/* Color indicator */}
+                      <div 
+                        className="w-3 h-16 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: service.color }}
+                      />
+                      
+                      {/* Service Info */}
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-white">{service.name}</h3>
+                        {service.description && (
+                          <p className="text-sm text-slate-400 line-clamp-1">{service.description}</p>
+                        )}
+                        <div className="flex flex-wrap items-center gap-3 mt-2">
+                          <span className="flex items-center gap-1 text-xs text-slate-400">
+                            <Timer className="w-3 h-3" />
+                            {service.duration} min
+                          </span>
+                          <span className="flex items-center gap-1 text-xs text-green-400">
+                            <CreditCard className="w-3 h-3" />
+                            ${service.price.toLocaleString()} MXN
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs ${
+                            service.modality === 'presencial' ? 'bg-blue-500/20 text-blue-400' :
+                            service.modality === 'virtual' ? 'bg-purple-500/20 text-purple-400' :
+                            'bg-cyan-500/20 text-cyan-400'
+                          }`}>
+                            {service.modality === 'presencial' ? '📍 Presencial' :
+                             service.modality === 'virtual' ? '🎥 Virtual' : '🔄 Híbrido'}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs ${
+                            service.capacity === 'individual' 
+                              ? 'bg-slate-500/20 text-slate-400'
+                              : 'bg-orange-500/20 text-orange-400'
+                          }`}>
+                            {service.capacity === 'individual' ? '👤 Individual' : `👥 Grupal (${service.maxParticipants})`}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => { setEditingService(service); setShowServiceModal(true); }}
+                          className="p-2 hover:bg-slate-700 rounded-xl transition-colors"
+                        >
+                          <Edit3 className="w-4 h-4 text-slate-400" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteService(service.id)}
+                          className="p-2 hover:bg-red-500/20 rounded-xl transition-colors group"
+                        >
+                          <Trash2 className="w-4 h-4 text-slate-400 group-hover:text-red-400" />
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation Buttons */}
+        <div className="flex justify-between items-center pt-6 border-t border-slate-800">
+          <button
+            onClick={() => setStep('template')}
+            className="px-6 py-3 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
+          >
+            ← Volver
+          </button>
+          <button
+            onClick={() => setStep('appointments-schedule')}
+            disabled={appointmentsConfig.services.length === 0}
+            className="px-8 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Configurar Horarios →
+          </button>
+        </div>
+      </div>
+
+      {/* Service Modal */}
+      <AnimatePresence>
+        {showServiceModal && <ServiceModal />}
+      </AnimatePresence>
+    </motion.div>
+  );
+
+  // ============================================================
+  // AGENDA DE SERVICIOS - Configuración de Disponibilidad
+  // ============================================================
+
+  const toggleDayEnabled = (dayIndex: number) => {
+    setAppointmentsConfig(prev => ({
+      ...prev,
+      availability: {
+        ...prev.availability,
+        weeklySchedule: prev.availability.weeklySchedule.map((day, i) => 
+          i === dayIndex ? { ...day, enabled: !day.enabled } : day
+        )
+      }
+    }));
+  };
+
+  const updateDaySlots = (dayIndex: number, slots: { start: string; end: string }[]) => {
+    setAppointmentsConfig(prev => ({
+      ...prev,
+      availability: {
+        ...prev.availability,
+        weeklySchedule: prev.availability.weeklySchedule.map((day, i) => 
+          i === dayIndex ? { ...day, slots } : day
+        )
+      }
+    }));
+  };
+
+  const renderAppointmentsSchedule = () => {
+    const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-8 px-4"
+      >
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-10">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-purple-500/30"
+            >
+              <CalendarDays className="w-10 h-10 text-white" />
+            </motion.div>
+            <h1 className="text-3xl font-bold text-white mb-3">Configura tu Disponibilidad</h1>
+            <p className="text-slate-400 text-lg">
+              Define los días y horarios en que puedes atender citas
+            </p>
+          </div>
+
+          {/* Weekly Schedule */}
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-purple-400" />
+              Horario Semanal
+            </h2>
+            
+            <div className="space-y-3">
+              {appointmentsConfig.availability.weeklySchedule.map((day, index) => (
+                <div 
+                  key={day.day}
+                  className={`p-4 rounded-2xl border transition-all ${
+                    day.enabled 
+                      ? 'bg-slate-800/70 border-slate-700' 
+                      : 'bg-slate-900/50 border-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => toggleDayEnabled(index)}
+                        className={`w-12 h-6 rounded-full relative transition-colors ${
+                          day.enabled ? 'bg-purple-500' : 'bg-slate-700'
+                        }`}
+                      >
+                        <motion.div 
+                          animate={{ x: day.enabled ? 24 : 2 }}
+                          className="w-5 h-5 bg-white rounded-full absolute top-0.5"
+                        />
+                      </button>
+                      <span className={`font-medium ${day.enabled ? 'text-white' : 'text-slate-500'}`}>
+                        {dayNames[index]}
+                      </span>
+                    </div>
+                    
+                    {day.enabled && (
+                      <div className="flex items-center gap-2">
+                        {day.slots.map((slot, slotIndex) => (
+                          <div key={slotIndex} className="flex items-center gap-2">
+                            <input
+                              type="time"
+                              value={slot.start}
+                              onChange={(e) => {
+                                const newSlots = [...day.slots];
+                                newSlots[slotIndex] = { ...slot, start: e.target.value };
+                                updateDaySlots(index, newSlots);
+                              }}
+                              className="bg-slate-700 border border-slate-600 rounded-lg px-2 py-1.5 text-white text-sm focus:ring-2 focus:ring-purple-500"
+                            />
+                            <span className="text-slate-500">a</span>
+                            <input
+                              type="time"
+                              value={slot.end}
+                              onChange={(e) => {
+                                const newSlots = [...day.slots];
+                                newSlots[slotIndex] = { ...slot, end: e.target.value };
+                                updateDaySlots(index, newSlots);
+                              }}
+                              className="bg-slate-700 border border-slate-600 rounded-lg px-2 py-1.5 text-white text-sm focus:ring-2 focus:ring-purple-500"
+                            />
+                            {day.slots.length > 1 && (
+                              <button
+                                onClick={() => {
+                                  const newSlots = day.slots.filter((_, i) => i !== slotIndex);
+                                  updateDaySlots(index, newSlots);
+                                }}
+                                className="p-1 hover:bg-red-500/20 rounded-lg transition-colors"
+                              >
+                                <X className="w-4 h-4 text-red-400" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        <button
+                          onClick={() => {
+                            const newSlots = [...day.slots, { start: '14:00', end: '18:00' }];
+                            updateDaySlots(index, newSlots);
+                          }}
+                          className="p-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
+                          title="Agregar otro horario"
+                        >
+                          <Plus className="w-4 h-4 text-slate-400" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Additional Settings */}
+          <div className="grid md:grid-cols-2 gap-6 mb-8">
+            {/* Minimum Advance Notice */}
+            <div className="p-5 rounded-2xl bg-slate-800/50 border border-slate-700">
+              <label className="block text-sm font-medium text-slate-300 mb-3">
+                <Timer className="w-4 h-4 inline mr-2 text-blue-400" />
+                Anticipación mínima para reservar
+              </label>
+              <select
+                value={appointmentsConfig.availability.minAdvanceHours}
+                onChange={(e) => setAppointmentsConfig(prev => ({
+                  ...prev,
+                  availability: {
+                    ...prev.availability,
+                    minAdvanceHours: parseInt(e.target.value)
+                  }
+                }))}
+                className="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500"
+              >
+                <option value={1}>1 hora antes</option>
+                <option value={2}>2 horas antes</option>
+                <option value={4}>4 horas antes</option>
+                <option value={12}>12 horas antes</option>
+                <option value={24}>24 horas antes</option>
+                <option value={48}>48 horas antes</option>
+              </select>
+            </div>
+
+            {/* Max Advance Days */}
+            <div className="p-5 rounded-2xl bg-slate-800/50 border border-slate-700">
+              <label className="block text-sm font-medium text-slate-300 mb-3">
+                <CalendarDays className="w-4 h-4 inline mr-2 text-purple-400" />
+                ¿Con cuánta anticipación pueden reservar?
+              </label>
+              <select
+                value={appointmentsConfig.availability.maxAdvanceDays}
+                onChange={(e) => setAppointmentsConfig(prev => ({
+                  ...prev,
+                  availability: {
+                    ...prev.availability,
+                    maxAdvanceDays: parseInt(e.target.value)
+                  }
+                }))}
+                className="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500"
+              >
+                <option value={7}>1 semana</option>
+                <option value={14}>2 semanas</option>
+                <option value={30}>1 mes</option>
+                <option value={60}>2 meses</option>
+                <option value={90}>3 meses</option>
+              </select>
+            </div>
+
+            {/* Cancellation Policy */}
+            <div className="p-5 rounded-2xl bg-slate-800/50 border border-slate-700">
+              <label className="block text-sm font-medium text-slate-300 mb-3">
+                <Bell className="w-4 h-4 inline mr-2 text-yellow-400" />
+                Política de cancelación
+              </label>
+              <select
+                value={appointmentsConfig.cancellationHours}
+                onChange={(e) => setAppointmentsConfig(prev => ({
+                  ...prev,
+                  cancellationHours: parseInt(e.target.value)
+                }))}
+                className="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-purple-500"
+              >
+                <option value={0}>Sin restricción</option>
+                <option value={2}>2 horas de anticipación</option>
+                <option value={4}>4 horas de anticipación</option>
+                <option value={12}>12 horas de anticipación</option>
+                <option value={24}>24 horas de anticipación</option>
+                <option value={48}>48 horas de anticipación</option>
+              </select>
+            </div>
+
+            {/* Auto Reminders */}
+            <div className="p-5 rounded-2xl bg-slate-800/50 border border-slate-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="block text-sm font-medium text-slate-300">
+                    <Bell className="w-4 h-4 inline mr-2 text-green-400" />
+                    Recordatorios automáticos
+                  </label>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Enviar recordatorios por WhatsApp/Email
+                  </p>
+                </div>
+                <button
+                  onClick={() => setAppointmentsConfig(prev => ({
+                    ...prev,
+                    autoReminders: !prev.autoReminders
+                  }))}
+                  className={`w-12 h-6 rounded-full relative transition-colors ${
+                    appointmentsConfig.autoReminders ? 'bg-green-500' : 'bg-slate-700'
+                  }`}
+                >
+                  <motion.div 
+                    animate={{ x: appointmentsConfig.autoReminders ? 24 : 2 }}
+                    className="w-5 h-5 bg-white rounded-full absolute top-0.5"
+                  />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Summary */}
+          <div className="p-6 rounded-2xl bg-gradient-to-br from-purple-900/30 to-pink-900/30 border border-purple-500/30 mb-8">
+            <h3 className="text-lg font-semibold text-white mb-4">📋 Resumen de tu Configuración</h3>
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="text-center p-3 rounded-xl bg-slate-900/50">
+                <p className="text-2xl font-bold text-purple-400">{appointmentsConfig.services.length}</p>
+                <p className="text-sm text-slate-400">Servicios</p>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-slate-900/50">
+                <p className="text-2xl font-bold text-blue-400">
+                  {appointmentsConfig.availability.weeklySchedule.filter(d => d.enabled).length}
+                </p>
+                <p className="text-sm text-slate-400">Días disponibles</p>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-slate-900/50">
+                <p className="text-2xl font-bold text-green-400">
+                  {appointmentsConfig.services.some(s => s.modality !== 'presencial') ? '🌐' : '📍'}
+                </p>
+                <p className="text-sm text-slate-400">
+                  {appointmentsConfig.services.some(s => s.modality !== 'presencial') ? 'Citas Virtuales' : 'Solo Presencial'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between items-center pt-6 border-t border-slate-800">
+            <button
+              onClick={() => setStep('appointments-services')}
+              className="px-6 py-3 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
+            >
+              ← Volver a Servicios
+            </button>
+            <button
+              onClick={() => setStep('info')}
+              className="px-8 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg shadow-purple-500/25"
+            >
+              Continuar →
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
   
   // Selección de Template
   const renderTemplateSelection = () => (
@@ -923,6 +1887,99 @@ export default function QuantumWebEngine() {
             Selecciona el diseño que mejor represente tu marca
           </p>
         </div>
+        
+        {/* Selector de 3 Colores de Marca */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mb-10 p-6 rounded-2xl bg-slate-800/50 border border-slate-700/50"
+        >
+          <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+            <Palette className="w-5 h-5 text-purple-400" />
+            Colores de tu Marca
+          </h3>
+          <p className="text-slate-400 text-sm mb-6">
+            Elige 3 colores que representen tu marca. Los usaremos en toda tu página.
+          </p>
+          
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            {/* Los 3 colores */}
+            <div className="flex gap-4">
+              {(['Color Principal', 'Color Secundario', 'Color Acento'] as const).map((label, i) => (
+                <div key={i} className="text-center">
+                  <label className="block text-xs text-slate-400 mb-2">{label}</label>
+                  <div className="relative">
+                    <input
+                      type="color"
+                      value={brandColors[i]}
+                      onChange={(e) => {
+                        const newColors = [...brandColors] as [string, string, string];
+                        newColors[i] = e.target.value;
+                        setBrandColors(newColors);
+                      }}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <div 
+                      className="w-16 h-16 rounded-xl border-2 border-white/20 shadow-lg cursor-pointer hover:scale-105 transition"
+                      style={{ backgroundColor: brandColors[i] }}
+                    />
+                  </div>
+                  <span className="text-xs text-slate-500 mt-1 block">{brandColors[i]}</span>
+                </div>
+              ))}
+            </div>
+            
+            {/* Preview de cómo se verían */}
+            <div className="flex-1 p-4 rounded-xl bg-slate-900/50 border border-slate-700/30">
+              <p className="text-xs text-slate-500 mb-3">Vista previa:</p>
+              <div className="flex items-center gap-3">
+                <div 
+                  className="px-4 py-2 rounded-lg font-semibold text-white text-sm"
+                  style={{ backgroundColor: brandColors[0] }}
+                >
+                  Botón Principal
+                </div>
+                <div 
+                  className="px-4 py-2 rounded-lg font-semibold text-white text-sm"
+                  style={{ backgroundColor: brandColors[1] }}
+                >
+                  Secundario
+                </div>
+                <div 
+                  className="w-8 h-8 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: brandColors[2] }}
+                >
+                  <Sparkle className="w-4 h-4 text-white" />
+                </div>
+              </div>
+            </div>
+            
+            {/* Paletas predefinidas */}
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-slate-500">Paletas sugeridas:</p>
+              <div className="flex gap-2">
+                {[
+                  ['#8B5CF6', '#EC4899', '#F97316'], // Púrpura-Rosa-Naranja
+                  ['#10B981', '#3B82F6', '#F59E0B'], // Verde-Azul-Ámbar
+                  ['#EF4444', '#F97316', '#FBBF24'], // Rojo-Naranja-Amarillo
+                  ['#06B6D4', '#8B5CF6', '#EC4899'], // Cyan-Púrpura-Rosa
+                  ['#1F2937', '#6B7280', '#D1D5DB'], // Gris oscuro (profesional)
+                ].map((palette, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setBrandColors(palette as [string, string, string])}
+                    className="flex rounded-lg overflow-hidden border-2 border-transparent hover:border-white/30 transition"
+                  >
+                    {palette.map((color, j) => (
+                      <div key={j} className="w-5 h-8" style={{ backgroundColor: color }} />
+                    ))}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </motion.div>
         
         {/* Templates Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1000,7 +2057,14 @@ export default function QuantumWebEngine() {
           >
             <div className="max-w-md mx-auto">
               <button
-                onClick={() => setStep('info')}
+                onClick={() => {
+                  // Si es Appointments, primero configurar servicios
+                  if (siteType === 'appointments') {
+                    setStep('appointments-services');
+                  } else {
+                    setStep('info');
+                  }
+                }}
                 className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-lg shadow-2xl shadow-purple-500/30 flex items-center justify-center gap-3"
               >
                 Continuar con {selectedTemplate.name}
@@ -1766,6 +2830,8 @@ export default function QuantumWebEngine() {
       {step === 'intro' && renderIntro()}
       {step === 'site-type' && renderSiteTypeSelection()}
       {step === 'template' && renderTemplateSelection()}
+      {step === 'appointments-services' && renderAppointmentsServices()}
+      {step === 'appointments-schedule' && renderAppointmentsSchedule()}
       {step === 'info' && renderBusinessInfo()}
       {step === 'content' && renderContentEditor()}
       {step === 'products' && renderProducts()}

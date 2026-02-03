@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Eye, EyeOff, Loader2, CheckCircle, AlertCircle, UserPlus, Search, User } from 'lucide-react';
+import { Eye, EyeOff, Loader2, CheckCircle, AlertCircle, UserPlus, Search, User, LogIn, ArrowLeft } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 interface Vision {
@@ -25,6 +25,9 @@ interface AngelSuggestion {
   email: string;
 }
 
+// Tipo de modo de registro
+type RegistroMode = 'new' | 'existing';
+
 export default function RegistroPublicoPage() {
   const router = useRouter();
   const params = useParams();
@@ -35,8 +38,14 @@ export default function RegistroPublicoPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Modo de registro: 'new' = nuevo usuario, 'existing' = ya tiene cuenta
+  const [registroMode, setRegistroMode] = useState<RegistroMode>('new');
+  const [existingEmail, setExistingEmail] = useState('');
+  const [joinedUserName, setJoinedUserName] = useState('');
 
   // Nuevos estados para ángel de enrolamiento
   const [searchingAngel, setSearchingAngel] = useState(false);
@@ -187,6 +196,7 @@ export default function RegistroPublicoPage() {
       const data = await res.json();
 
       if (data.success) {
+        setSuccessMessage(`Tu cuenta ha sido creada exitosamente y has sido asignado a ${vision?.nombre}`);
         setSuccess(true);
         // Redirigir al login después de 3 segundos
         setTimeout(() => {
@@ -198,6 +208,65 @@ export default function RegistroPublicoPage() {
     } catch (error) {
       console.error('Error:', error);
       setError('Error al procesar el registro');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Nueva función: unirse a liderato con cuenta existente
+  const handleJoinExisting = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!existingEmail.trim()) {
+      setError('Por favor ingresa tu correo electrónico');
+      return;
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(existingEmail)) {
+      setError('Formato de correo electrónico inválido');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setError('');
+
+      const res = await fetch(`/api/registro/${visionId}/join-existing`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: existingEmail.toLowerCase().trim()
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setJoinedUserName(data.userName || '');
+        setSuccessMessage(data.message || `Te has unido exitosamente a ${vision?.nombre}`);
+        setSuccess(true);
+        // Redirigir al login después de 3 segundos
+        setTimeout(() => {
+          router.push('/login');
+        }, 3000);
+      } else {
+        if (data.code === 'USER_NOT_FOUND') {
+          setError('No existe una cuenta con este correo. ¿Quieres crear una cuenta nueva?');
+        } else if (data.code === 'ALREADY_ENROLLED') {
+          setError('Ya estás inscrito en este liderato. Puedes iniciar sesión directamente.');
+        } else {
+          setError(data.error || 'Error al unirse al liderato');
+        }
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setError('Error al procesar la solicitud');
+    } finally {
+      setSubmitting(false);
+    }
+  };
     } finally {
       setSubmitting(false);
     }
@@ -228,13 +297,22 @@ export default function RegistroPublicoPage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
         <div className="bg-slate-900/80 backdrop-blur border border-emerald-500/30 rounded-2xl p-8 max-w-md w-full text-center">
           <CheckCircle className="text-emerald-400 w-16 h-16 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-white mb-2">¡Registro Exitoso!</h2>
+          <h2 className="text-2xl font-bold text-white mb-2">
+            {registroMode === 'existing' ? '¡Te has unido exitosamente!' : '¡Registro Exitoso!'}
+          </h2>
           <p className="text-slate-300 mb-4">
-            Tu cuenta ha sido creada exitosamente y has sido asignado a <strong>{vision?.nombre}</strong>
+            {successMessage}
           </p>
-          <p className="text-slate-400 text-sm mb-4">
-            Se te ha asignado una licencia en estado "Pendiente". Tu coordinador activará tu acceso pronto.
-          </p>
+          {registroMode === 'new' && (
+            <p className="text-slate-400 text-sm mb-4">
+              Se te ha asignado una licencia en estado "Pendiente". Tu coordinador activará tu acceso pronto.
+            </p>
+          )}
+          {registroMode === 'existing' && joinedUserName && (
+            <p className="text-slate-400 text-sm mb-4">
+              Bienvenido de nuevo, <strong className="text-purple-400">{joinedUserName}</strong>. Ya puedes iniciar sesión.
+            </p>
+          )}
           <p className="text-purple-400 text-sm">
             Serás redirigido al inicio de sesión en unos segundos...
           </p>
@@ -279,12 +357,103 @@ export default function RegistroPublicoPage() {
           </div>
         )}
 
+        {/* Tabs para cambiar entre modo nuevo y existente */}
+        <div className="flex mb-6 bg-slate-800/50 rounded-xl p-1">
+          <button
+            type="button"
+            onClick={() => { setRegistroMode('new'); setError(''); }}
+            className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+              registroMode === 'new' 
+                ? 'bg-purple-600 text-white shadow-lg' 
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <UserPlus size={16} />
+            Nuevo Usuario
+          </button>
+          <button
+            type="button"
+            onClick={() => { setRegistroMode('existing'); setError(''); }}
+            className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+              registroMode === 'existing' 
+                ? 'bg-purple-600 text-white shadow-lg' 
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <LogIn size={16} />
+            Ya Tengo Cuenta
+          </button>
+        </div>
+
         {error && (
           <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4 mb-6">
             <p className="text-red-300 text-sm">{error}</p>
+            {error.includes('No existe una cuenta') && (
+              <button
+                type="button"
+                onClick={() => { setRegistroMode('new'); setError(''); }}
+                className="mt-2 text-purple-400 hover:text-purple-300 text-sm font-medium flex items-center gap-1"
+              >
+                <ArrowLeft size={14} />
+                Crear cuenta nueva
+              </button>
+            )}
+            {error.includes('Ya estás inscrito') && (
+              <a
+                href="/login"
+                className="mt-2 text-purple-400 hover:text-purple-300 text-sm font-medium flex items-center gap-1"
+              >
+                <LogIn size={14} />
+                Ir a iniciar sesión
+              </a>
+            )}
           </div>
         )}
 
+        {/* MODO: Usuario existente - Solo pide email */}
+        {registroMode === 'existing' && (
+          <form onSubmit={handleJoinExisting} className="space-y-6">
+            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-4">
+              <p className="text-blue-300 text-sm text-center">
+                💡 Si ya tienes una cuenta, ingresa tu correo para unirte a este liderato sin crear una cuenta nueva.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Correo electrónico de tu cuenta <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="email"
+                value={existingEmail}
+                onChange={(e) => setExistingEmail(e.target.value)}
+                placeholder="tu@email.com"
+                className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={submitting || Boolean(vision && vision.availableSlots !== null && vision.availableSlots <= 0)}
+              className="w-full px-6 py-3.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-slate-700 disabled:to-slate-700 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-all duration-200 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-2"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="animate-spin" size={20} />
+                  <span>Verificando...</span>
+                </>
+              ) : (
+                <>
+                  <LogIn size={20} />
+                  <span>Unirme a {vision?.nombre}</span>
+                </>
+              )}
+            </button>
+          </form>
+        )}
+
+        {/* MODO: Nuevo usuario - Formulario completo */}
+        {registroMode === 'new' && (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -490,10 +659,11 @@ export default function RegistroPublicoPage() {
             </button>
           </div>
         </form>
+        )}
 
         <div className="mt-6 text-center">
           <p className="text-slate-400 text-sm">
-            ¿Ya tienes cuenta?{' '}
+            ¿Prefieres ir directo al login?{' '}
             <a href="/login" className="text-purple-400 hover:text-purple-300 font-semibold">
               Inicia sesión
             </a>

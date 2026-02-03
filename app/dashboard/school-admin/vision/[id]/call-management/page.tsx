@@ -81,7 +81,7 @@ export default function CallManagementPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMyList, setFilterMyList] = useState(false);
   const [filterActiveHours, setFilterActiveHours] = useState(false);
-  const [filterByStatus, setFilterByStatus] = useState<'ALL' | 'PENDING' | 'ASISTE' | 'NO_ASISTE'>('ALL');
+  const [filterByStatus, setFilterByStatus] = useState<'ALL' | 'PENDING' | 'ASISTE' | 'NO_ASISTE'>('PENDING');
   const [excludeUnpaid, setExcludeUnpaid] = useState(true); // Por defecto excluir usuarios sin pago
   const [selectedLevel, setSelectedLevel] = useState<'BASIC' | 'ADVANCED' | 'PL'>(initialLevel);
   const [selectedCard, setSelectedCard] = useState<CallTrackingData | null>(null);
