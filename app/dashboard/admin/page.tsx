@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   BarChart3, Users, PhoneOff, Zap, AlertTriangle, 
-  Clock, TrendingUp, ShieldCheck, UserPlus, Gamepad2, CreditCard, Target
+  Clock, TrendingUp, ShieldCheck, UserPlus, Gamepad2, CreditCard, Target, Dumbbell
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -61,6 +61,7 @@ const PERFORMANCE_GAMECHANGERS = [
 
 export default function AdminPerformancePage() {
   const [mentoresInactivos, setMentoresInactivos] = useState(0);
+  const [entrenadoresPendientes, setEntrenadoresPendientes] = useState(0);
   const [lideresActivos, setLideresActivos] = useState(0);
   const [pendingPayments, setPendingPayments] = useState<any[]>([]);
   const [visionesActivas, setVisionesActivas] = useState<any[]>([]);
@@ -70,6 +71,7 @@ export default function AdminPerformancePage() {
 
   useEffect(() => {
     cargarMentoresInactivos();
+    cargarEntrenadoresPendientes();
     cargarPagosPendientes();
     cargarLideresActivos();
     cargarVisionesActivas();
@@ -115,6 +117,20 @@ export default function AdminPerformancePage() {
       console.error('Error al cargar mentores inactivos:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const cargarEntrenadoresPendientes = async () => {
+    try {
+      const res = await fetch('/api/admin/trainer-applications');
+      const data = await res.json();
+      if (data.success && data.applications) {
+        // Contar solicitudes pendientes de TrainerApplication
+        const pendientes = data.applications.filter((app: any) => app.status === 'PENDING').length;
+        setEntrenadoresPendientes(pendientes);
+      }
+    } catch (error) {
+      console.error('Error al cargar entrenadores pendientes:', error);
     }
   };
 
@@ -254,13 +270,16 @@ export default function AdminPerformancePage() {
             isClickable={true}
           />
         </Link>
-        <KpiCard 
-          icon={<Clock className="text-yellow-400" />} 
-          label="Tiempo Prom. Revisión" 
-          value="3.5h" 
-          trend="⚡ Muy rápido" 
-          color="yellow"
-        />
+        <Link href="/dashboard/admin/trainer-applications" className="block">
+          <KpiCard 
+            icon={<Dumbbell className="text-yellow-400" />} 
+            label="Entrenadores Pendientes" 
+            value={loading ? '...' : entrenadoresPendientes.toString()} 
+            trend={entrenadoresPendientes > 0 ? '⚠️ Requiere Autorización' : '✅ Todo al día'} 
+            color="yellow"
+            isClickable={true}
+          />
+        </Link>
         <KpiCard 
           icon={<UserPlus className="text-green-400" />} 
           label="Enrolamiento Staff" 

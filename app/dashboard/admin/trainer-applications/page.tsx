@@ -80,10 +80,14 @@ export default function TrainerApplicationsPage() {
       setLoading(true);
       const response = await fetch(`/api/admin/trainer-applications`);
       const data = await response.json();
-      if (data.success) {
+      console.log('API Response:', data);
+      if (data.success && data.applications) {
         // Filtrar por status
         const filtered = data.applications.filter((app: Application) => app.status === filter);
+        console.log('Filtered applications:', filtered.length, 'Filter:', filter);
         setApplications(filtered);
+      } else if (data.error) {
+        console.error('API Error:', data.error);
       }
     } catch (error) {
       console.error('Error:', error);

@@ -49,7 +49,15 @@ export async function GET(request: NextRequest) {
         loginWelcomeMessage: true,
         showPoweredBy: true,
         customLoginEnabled: true,
-        whatsappInviteImageUrl: true
+        whatsappInviteImageUrl: true,
+        // Videos descargables
+        videoBienvenidaLideres1Url: true,
+        videoBienvenidaLideres2Url: true,
+        video2daLlamadaPerdidaUrl: true,
+        videoInvitacionTransformadoraUrl: true,
+        video3raLlamadaUrl: true,
+        videoEnrolamientoUrl: true,
+        videoCierreLideresTuVidaUrl: true
       }
     });
 
@@ -115,7 +123,15 @@ export async function PUT(request: NextRequest) {
       loginWelcomeMessage,
       showPoweredBy,
       customLoginEnabled,
-      whatsappInviteImageUrl
+      whatsappInviteImageUrl,
+      // Videos descargables
+      videoBienvenidaLideres1Url,
+      videoBienvenidaLideres2Url,
+      video2daLlamadaPerdidaUrl,
+      videoInvitacionTransformadoraUrl,
+      video3raLlamadaUrl,
+      videoEnrolamientoUrl,
+      videoCierreLideresTuVidaUrl
     } = body;
 
     // Actualizar la organización
@@ -128,7 +144,15 @@ export async function PUT(request: NextRequest) {
         loginWelcomeMessage: loginWelcomeMessage || 'Bienvenido al Portal de Entrenamiento',
         showPoweredBy: showPoweredBy ?? true,
         customLoginEnabled: customLoginEnabled ?? false,
-        whatsappInviteImageUrl: whatsappInviteImageUrl || null
+        whatsappInviteImageUrl: whatsappInviteImageUrl || null,
+        // Videos descargables
+        videoBienvenidaLideres1Url: videoBienvenidaLideres1Url || null,
+        videoBienvenidaLideres2Url: videoBienvenidaLideres2Url || null,
+        video2daLlamadaPerdidaUrl: video2daLlamadaPerdidaUrl || null,
+        videoInvitacionTransformadoraUrl: videoInvitacionTransformadoraUrl || null,
+        video3raLlamadaUrl: video3raLlamadaUrl || null,
+        videoEnrolamientoUrl: videoEnrolamientoUrl || null,
+        videoCierreLideresTuVidaUrl: videoCierreLideresTuVidaUrl || null
       },
       select: {
         id: true,
@@ -140,7 +164,15 @@ export async function PUT(request: NextRequest) {
         loginWelcomeMessage: true,
         showPoweredBy: true,
         customLoginEnabled: true,
-        whatsappInviteImageUrl: true
+        whatsappInviteImageUrl: true,
+        // Videos descargables
+        videoBienvenidaLideres1Url: true,
+        videoBienvenidaLideres2Url: true,
+        video2daLlamadaPerdidaUrl: true,
+        videoInvitacionTransformadoraUrl: true,
+        video3raLlamadaUrl: true,
+        videoEnrolamientoUrl: true,
+        videoCierreLideresTuVidaUrl: true
       }
     });
 

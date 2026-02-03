@@ -599,19 +599,6 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             </Link>
 
             <Link 
-              href="/dashboard/school-admin/flyer-designer"
-              onClick={handleLinkClick}
-              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
-                pathname === '/dashboard/school-admin/flyer-designer'
-                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg'
-                  : 'text-slate-400 hover:text-white hover:bg-cyan-900/20'
-              }`}
-            >
-              <Image size={18} className="text-cyan-400" />
-              <span>Personalizar Invitación</span>
-            </Link>
-
-            <Link 
               href="/dashboard/director/treasury/batches"
               onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${

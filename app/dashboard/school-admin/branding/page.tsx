@@ -29,7 +29,15 @@ export default function BrandingPage() {
     showPoweredBy: true,
     customLoginEnabled: false,
     slug: '',
-    whatsappInviteImageUrl: ''
+    whatsappInviteImageUrl: '',
+    // Videos descargables
+    videoBienvenidaLideres1Url: '',
+    videoBienvenidaLideres2Url: '',
+    video2daLlamadaPerdidaUrl: '',
+    videoInvitacionTransformadoraUrl: '',
+    video3raLlamadaUrl: '',
+    videoEnrolamientoUrl: '',
+    videoCierreLideresTuVidaUrl: ''
   });
 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -63,7 +71,15 @@ export default function BrandingPage() {
           showPoweredBy: data.organization.showPoweredBy ?? true,
           customLoginEnabled: data.organization.customLoginEnabled ?? false,
           slug: data.organization.slug || '',
-          whatsappInviteImageUrl: data.organization.whatsappInviteImageUrl || ''
+          whatsappInviteImageUrl: data.organization.whatsappInviteImageUrl || '',
+          // Videos descargables
+          videoBienvenidaLideres1Url: data.organization.videoBienvenidaLideres1Url || '',
+          videoBienvenidaLideres2Url: data.organization.videoBienvenidaLideres2Url || '',
+          video2daLlamadaPerdidaUrl: data.organization.video2daLlamadaPerdidaUrl || '',
+          videoInvitacionTransformadoraUrl: data.organization.videoInvitacionTransformadoraUrl || '',
+          video3raLlamadaUrl: data.organization.video3raLlamadaUrl || '',
+          videoEnrolamientoUrl: data.organization.videoEnrolamientoUrl || '',
+          videoCierreLideresTuVidaUrl: data.organization.videoCierreLideresTuVidaUrl || ''
         });
       }
     } catch (error) {
@@ -382,24 +398,23 @@ export default function BrandingPage() {
               />
             </div>
 
-            {/* Show Powered By */}
-            <div className="flex items-center justify-between p-4 bg-slate-700/50 rounded-lg">
-              <div>
-                <label className="text-white font-medium">Mostrar "Powered by Appsync"</label>
-                <p className="text-slate-400 text-sm">Muestra el crédito a la plataforma</p>
+            {/* Botón de Automatizaciones */}
+            <div className="p-4 bg-gradient-to-r from-cyan-900/30 to-blue-900/30 border border-cyan-500/30 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-white font-medium flex items-center gap-2">
+                    🚀 Centro de Automatizaciones
+                  </label>
+                  <p className="text-slate-400 text-sm">Envía videos promocionales por correo o WhatsApp a tus usuarios</p>
+                </div>
+                <button
+                  onClick={() => router.push('/dashboard/school-admin/automatizaciones')}
+                  className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-medium rounded-lg transition-all flex items-center gap-2"
+                >
+                  <span>Abrir Panel</span>
+                  <ExternalLink size={16} />
+                </button>
               </div>
-              <button
-                onClick={() => setBranding({ ...branding, showPoweredBy: !branding.showPoweredBy })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  branding.showPoweredBy ? 'bg-purple-600' : 'bg-slate-600'
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    branding.showPoweredBy ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
             </div>
 
             {/* Separador */}
@@ -470,6 +485,121 @@ export default function BrandingPage() {
                   value={branding.whatsappInviteImageUrl}
                   onChange={(e) => setBranding({ ...branding, whatsappInviteImageUrl: e.target.value })}
                   placeholder="https://ejemplo.com/invitacion-basico.jpg"
+                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Separador - Videos Descargables */}
+            <div className="border-t border-slate-600 pt-6 mt-6">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-4">
+                🎬 Videos Descargables para Líderes
+              </h3>
+              <p className="text-slate-400 text-sm mb-4">
+                Configura las URLs de los videos que tus líderes podrán descargar. Estos videos aparecerán en la sección de "Descargables" de la plataforma.
+              </p>
+
+              {/* Video 1 - Bienvenida Líderes a Básico Video 1 */}
+              <div className="p-4 bg-slate-700/50 rounded-lg mb-4">
+                <label className="text-white font-medium flex items-center gap-2 mb-2">
+                  <span className="w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center text-xs font-bold text-black">1</span>
+                  Bienvenida Líderes a Básico Video 1
+                </label>
+                <input
+                  type="url"
+                  value={branding.videoBienvenidaLideres1Url}
+                  onChange={(e) => setBranding({ ...branding, videoBienvenidaLideres1Url: e.target.value })}
+                  placeholder="https://ejemplo.com/video-bienvenida-1.mp4"
+                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm"
+                />
+              </div>
+
+              {/* Video 2 - Bienvenida Líderes a Básico Video 2 */}
+              <div className="p-4 bg-slate-700/50 rounded-lg mb-4">
+                <label className="text-white font-medium flex items-center gap-2 mb-2">
+                  <span className="w-6 h-6 bg-slate-500 rounded-full flex items-center justify-center text-xs font-bold text-white">2</span>
+                  Bienvenida Líderes a Básico Video 2
+                </label>
+                <input
+                  type="url"
+                  value={branding.videoBienvenidaLideres2Url}
+                  onChange={(e) => setBranding({ ...branding, videoBienvenidaLideres2Url: e.target.value })}
+                  placeholder="https://ejemplo.com/video-bienvenida-2.mp4"
+                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm"
+                />
+              </div>
+
+              {/* Video 3 - 2da llamada perdida */}
+              <div className="p-4 bg-slate-700/50 rounded-lg mb-4">
+                <label className="text-white font-medium flex items-center gap-2 mb-2">
+                  <span className="w-6 h-6 bg-slate-500 rounded-full flex items-center justify-center text-xs font-bold text-white">3</span>
+                  2da Llamada Perdida
+                </label>
+                <input
+                  type="url"
+                  value={branding.video2daLlamadaPerdidaUrl}
+                  onChange={(e) => setBranding({ ...branding, video2daLlamadaPerdidaUrl: e.target.value })}
+                  placeholder="https://ejemplo.com/video-2da-llamada.mp4"
+                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm"
+                />
+              </div>
+
+              {/* Video 4 - Invitación Transformadora al Básico */}
+              <div className="p-4 bg-slate-700/50 rounded-lg mb-4">
+                <label className="text-white font-medium flex items-center gap-2 mb-2">
+                  <span className="w-6 h-6 bg-slate-500 rounded-full flex items-center justify-center text-xs font-bold text-white">4</span>
+                  Invitación Transformadora al Básico
+                </label>
+                <input
+                  type="url"
+                  value={branding.videoInvitacionTransformadoraUrl}
+                  onChange={(e) => setBranding({ ...branding, videoInvitacionTransformadoraUrl: e.target.value })}
+                  placeholder="https://ejemplo.com/video-invitacion.mp4"
+                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm"
+                />
+              </div>
+
+              {/* Video 5 - 3ra Llamada */}
+              <div className="p-4 bg-slate-700/50 rounded-lg mb-4">
+                <label className="text-white font-medium flex items-center gap-2 mb-2">
+                  <span className="w-6 h-6 bg-slate-500 rounded-full flex items-center justify-center text-xs font-bold text-white">5</span>
+                  3ra Llamada
+                </label>
+                <input
+                  type="url"
+                  value={branding.video3raLlamadaUrl}
+                  onChange={(e) => setBranding({ ...branding, video3raLlamadaUrl: e.target.value })}
+                  placeholder="https://ejemplo.com/video-3ra-llamada.mp4"
+                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm"
+                />
+              </div>
+
+              {/* Video 6 - Enrolamiento */}
+              <div className="p-4 bg-slate-700/50 rounded-lg mb-4">
+                <label className="text-white font-medium flex items-center gap-2 mb-2">
+                  <span className="w-6 h-6 bg-slate-500 rounded-full flex items-center justify-center text-xs font-bold text-white">6</span>
+                  Enrolamiento
+                </label>
+                <input
+                  type="url"
+                  value={branding.videoEnrolamientoUrl}
+                  onChange={(e) => setBranding({ ...branding, videoEnrolamientoUrl: e.target.value })}
+                  placeholder="https://ejemplo.com/video-enrolamiento.mp4"
+                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm"
+                />
+              </div>
+
+              {/* Video 7 - Cierre para líderes Tu Vida */}
+              <div className="p-4 bg-slate-700/50 rounded-lg mb-4">
+                <label className="text-white font-medium flex items-center gap-2 mb-2">
+                  <span className="w-6 h-6 bg-slate-500 rounded-full flex items-center justify-center text-xs font-bold text-white">7</span>
+                  Cierre para Líderes Tu Vida
+                </label>
+                <input
+                  type="url"
+                  value={branding.videoCierreLideresTuVidaUrl}
+                  onChange={(e) => setBranding({ ...branding, videoCierreLideresTuVidaUrl: e.target.value })}
+                  placeholder="https://ejemplo.com/video-cierre.mp4"
                   className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-sm"
                 />
               </div>

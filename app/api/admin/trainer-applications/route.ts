@@ -40,7 +40,7 @@ export async function GET() {
             imagen: true,
             rol: true,
             organizationId: true,
-            Organization: {
+            Organization_Usuario_organizationIdToOrganization: {
               select: {
                 id: true,
                 name: true
@@ -88,7 +88,10 @@ export async function GET() {
       rejectionReason: app.rejectionReason,
       createdAt: app.createdAt,
       updatedAt: app.updatedAt,
-      usuario: app.Usuario_TrainerApplication_usuarioIdToUsuario,
+      usuario: {
+        ...app.Usuario_TrainerApplication_usuarioIdToUsuario,
+        Organization: app.Usuario_TrainerApplication_usuarioIdToUsuario?.Organization_Usuario_organizationIdToOrganization
+      },
       reviewedByUser: app.Usuario_TrainerApplication_reviewedByToUsuario
     }));
 

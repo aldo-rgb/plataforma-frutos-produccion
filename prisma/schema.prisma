@@ -1037,6 +1037,13 @@ model Organization {
   bankName                                              String?
   bankReference                                         String?
   whatsappInviteImageUrl                                String?
+  videoBienvenidaLideres1Url                            String?
+  videoBienvenidaLideres2Url                            String?
+  video2daLlamadaPerdidaUrl                             String?
+  videoInvitacionTransformadoraUrl                      String?
+  video3raLlamadaUrl                                    String?
+  videoEnrolamientoUrl                                  String?
+  videoCierreLideresTuVidaUrl                           String?
   flyerBackgroundUrl                                    String?
   flyerCtaText                                          String?                         @default("Escanea para registrarte")
   flyerHeadline                                         String?

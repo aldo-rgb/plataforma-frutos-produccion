@@ -22,7 +22,12 @@ import {
   CheckCircle2,
   ArrowLeft,
   Sparkles,
-  PartyPopper
+  PartyPopper,
+  Lock,
+  Eye,
+  EyeOff,
+  X,
+  AlertCircle
 } from 'lucide-react';
 import Image from 'next/image';
 import { CondecoracionesGrid } from '@/components/condecoraciones/CondecoracionesBadge';
@@ -114,6 +119,20 @@ export default function ConfiguracionCompletaPage() {
   const [lastAvatarChange, setLastAvatarChange] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState('');
   const [visionesHistorial, setVisionesHistorial] = useState<Array<{nombre: string, rol: string, fecha: string}>>([]);
+  
+  // Estados para modal de cambio de contraseña
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
   
   const [config, setConfig] = useState<ConfiguracionData>({
     nombre: '',
@@ -263,6 +282,73 @@ export default function ConfiguracionCompletaPage() {
     } catch (error) {
       console.error('Error uploading image:', error);
       setError('Error al subir imagen');
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError(null);
+    setPasswordSuccess(false);
+
+    // Validaciones
+    if (!passwordData.currentPassword) {
+      setPasswordError('Ingresa tu contraseña actual');
+      return;
+    }
+
+    if (!passwordData.newPassword) {
+      setPasswordError('Ingresa la nueva contraseña');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      setPasswordError('La contraseña debe tener al menos 8 caracteres');
+      return;
+    }
+
+    const hasUpperCase = /[A-Z]/.test(passwordData.newPassword);
+    const hasLowerCase = /[a-z]/.test(passwordData.newPassword);
+    const hasNumber = /\d/.test(passwordData.newPassword);
+
+    if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+      setPasswordError('La contraseña debe contener mayúsculas, minúsculas y números');
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('Las contraseñas no coinciden');
+      return;
+    }
+
+    setChangingPassword(true);
+
+    try {
+      const res = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+          isMagicLink: false
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setPasswordSuccess(true);
+        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        setTimeout(() => {
+          setShowPasswordModal(false);
+          setPasswordSuccess(false);
+        }, 2000);
+      } else {
+        setPasswordError(data.error || 'Error al cambiar contraseña');
+      }
+    } catch (error) {
+      console.error('Error changing password:', error);
+      setPasswordError('Error al cambiar contraseña');
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -513,6 +599,21 @@ export default function ConfiguracionCompletaPage() {
                   onChange={(e) => setConfig({...config, ocupacion: e.target.value})}
                   className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
                 />
+              </div>
+              
+              {/* Botón Cambiar Contraseña */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+                  <Lock size={16} />
+                  Seguridad
+                </label>
+                <button
+                  onClick={() => setShowPasswordModal(true)}
+                  className="w-full px-4 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-cyan-500 rounded-lg text-cyan-400 font-medium transition-all flex items-center justify-center gap-2"
+                >
+                  <Lock size={18} />
+                  Cambiar Contraseña
+                </button>
               </div>
             </div>
           </div>
@@ -943,6 +1044,156 @@ export default function ConfiguracionCompletaPage() {
         </div>
 
       </div>
+      
+      {/* Modal de Cambiar Contraseña */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-cyan-500/20 rounded-lg">
+                  <Lock size={24} className="text-cyan-400" />
+                </div>
+                <h3 className="text-xl font-bold text-white">Cambiar Contraseña</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                  setPasswordError(null);
+                  setPasswordSuccess(false);
+                }}
+                className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-slate-400" />
+              </button>
+            </div>
+
+            {/* Success Message */}
+            {passwordSuccess && (
+              <div className="mb-4 bg-green-500/10 border border-green-500/30 rounded-xl p-4 flex items-center gap-3">
+                <CheckCircle2 className="text-green-400 flex-shrink-0" size={20} />
+                <p className="text-green-400 font-medium">¡Contraseña actualizada correctamente!</p>
+              </div>
+            )}
+
+            {/* Error Message */}
+            {passwordError && (
+              <div className="mb-4 bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-center gap-3">
+                <AlertCircle className="text-red-400 flex-shrink-0" size={20} />
+                <p className="text-red-400">{passwordError}</p>
+              </div>
+            )}
+
+            {/* Form */}
+            <div className="space-y-4">
+              {/* Current Password */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Contraseña Actual
+                </label>
+                <div className="relative">
+                  <input
+                    type={showCurrentPassword ? 'text' : 'password'}
+                    value={passwordData.currentPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                    placeholder="Ingresa tu contraseña actual"
+                    className="w-full px-4 py-3 pr-12 bg-slate-800 border border-slate-600 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                  >
+                    {showCurrentPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* New Password */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Nueva Contraseña
+                </label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                    placeholder="Mínimo 8 caracteres"
+                    className="w-full px-4 py-3 pr-12 bg-slate-800 border border-slate-600 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                  >
+                    {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-slate-500">
+                  Debe contener mayúsculas, minúsculas y números
+                </p>
+              </div>
+
+              {/* Confirm Password */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Confirmar Nueva Contraseña
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                    placeholder="Repite la nueva contraseña"
+                    className="w-full px-4 py-3 pr-12 bg-slate-800 border border-slate-600 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                  setPasswordError(null);
+                }}
+                className="flex-1 px-4 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-slate-300 font-medium transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleChangePassword}
+                disabled={changingPassword}
+                className="flex-1 px-4 py-3 bg-cyan-500 hover:bg-cyan-600 disabled:bg-slate-600 rounded-lg text-black font-bold transition-colors flex items-center justify-center gap-2"
+              >
+                {changingPassword ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Cambiando...
+                  </>
+                ) : (
+                  <>
+                    <Lock size={18} />
+                    Cambiar
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Modal de Avatar Cuántico */}
       <QuantumIdentityModal
