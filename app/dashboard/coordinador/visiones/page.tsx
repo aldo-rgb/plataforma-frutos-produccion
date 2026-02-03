@@ -182,9 +182,11 @@ export default function VisionesCoordinadorPage() {
                     <h3 className="text-xl font-semibold text-white mb-2">
                       {vision.nombre}
                     </h3>
-                    <p className="text-slate-400 text-sm line-clamp-2">
-                      {vision.descripcion || 'Sin descripción'}
-                    </p>
+                    {vision.descripcion && vision.descripcion !== 'Visión completa generada con Vision Builder' && (
+                      <p className="text-slate-400 text-sm line-clamp-2">
+                        {vision.descripcion}
+                      </p>
+                    )}
                   </div>
                   <div
                     className={`px-3 py-1 rounded-full text-xs font-semibold ${

@@ -195,14 +195,22 @@ export async function GET(
       }
     });
 
+    // Contar toda la comunidad Quantum Matter (usuarios activos)
+    const comunidadTotal = await prisma.usuario.count({
+      where: {
+        isActive: true
+      }
+    });
+
     return NextResponse.json({
       success: true,
       organization: {
         ...organization,
         stats: {
-          graduados: stats,
-          añosExperiencia: 25, // Hardcoded - Método Hanley desde 1999
-          paisesPresencia: 3 // México, USA, Latam
+          comunidadQuantumMatter: comunidadTotal,
+          graduadosMundo: '+1M',
+          habitantesMundo: '8.3B',
+          añosExperiencia: 25
         }
       },
       upcomingTrainings: formattedTrainings,

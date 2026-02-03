@@ -352,7 +352,7 @@ export default function VisionesSchoolAdminPage() {
       const visionData = {
         nombre: basicVisionData.nombre,
         colorIdentificador: basicVisionData.colorIdentificador,
-        descripcion: `Visión completa generada con Vision Builder`,
+        descripcion: null,
         maxParticipantes: 100,
         enabledLevels: ['BASIC', 'ADVANCED', 'PL'],
         currency: productPrices.currency, // Enviar la moneda detectada
@@ -569,7 +569,7 @@ export default function VisionesSchoolAdminPage() {
                     <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">
                       {vision.nombre}
                     </h3>
-                    {vision.descripcion && (
+                    {vision.descripcion && vision.descripcion !== 'Visión completa generada con Vision Builder' && (
                       <p className="text-slate-400 text-xs sm:text-sm line-clamp-1 sm:line-clamp-2">
                         {vision.descripcion}
                       </p>

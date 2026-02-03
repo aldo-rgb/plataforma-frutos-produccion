@@ -25,6 +25,7 @@ interface Mentor {
   nombre: string;
   email: string;
   imagen: string | null;
+  profileImage: string | null;
   rol: string;
   isActive: boolean;
   PerfilMentor?: {
@@ -945,9 +946,9 @@ export default function AsignacionMentoresPage() {
                           
                           {/* Foto de perfil superpuesta */}
                           <div className="absolute -bottom-12 left-6">
-                            {mentor.imagen ? (
+                            {(mentor.imagen || mentor.profileImage) ? (
                               <img
-                                src={mentor.imagen}
+                                src={mentor.profileImage || mentor.imagen}
                                 alt={mentor.nombre}
                                 className="w-24 h-24 rounded-full border-4 border-slate-800 object-cover shadow-xl"
                               />

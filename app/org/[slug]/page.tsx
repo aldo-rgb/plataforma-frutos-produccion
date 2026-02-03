@@ -20,9 +20,10 @@ interface OrgData {
   loginWelcomeMessage: string | null;
   showPoweredBy: boolean;
   stats: {
-    graduados: number;
+    comunidadQuantumMatter: number;
+    graduadosMundo: string;
+    habitantesMundo: string;
     añosExperiencia: number;
-    paisesPresencia: number;
   };
 }
 
@@ -212,24 +213,30 @@ function HeroSection({ organization, scrollToLogin }: { organization: OrgData; s
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
           <div className="text-center">
-            <div className="text-4xl md:text-5xl font-black bg-gradient-to-r from-cyan-400 to-cyan-300 bg-clip-text text-transparent">
-              {organization.stats.graduados.toLocaleString()}+
+            <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-cyan-400 to-cyan-300 bg-clip-text text-transparent">
+              {organization.stats.comunidadQuantumMatter.toLocaleString()}+
             </div>
-            <div className="text-slate-400 text-sm mt-1">Graduados</div>
+            <div className="text-slate-400 text-sm mt-1">Comunidad Quantum Matter</div>
           </div>
           <div className="text-center">
-            <div className="text-4xl md:text-5xl font-black bg-gradient-to-r from-violet-400 to-violet-300 bg-clip-text text-transparent">
+            <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-violet-400 to-violet-300 bg-clip-text text-transparent">
+              {organization.stats.graduadosMundo}
+            </div>
+            <div className="text-slate-400 text-sm mt-1">Graduados en el Mundo</div>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">
+              {organization.stats.habitantesMundo}
+            </div>
+            <div className="text-slate-400 text-sm mt-1">Habitantes en el Mundo</div>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl md:text-4xl font-black bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
               {organization.stats.añosExperiencia}+
             </div>
             <div className="text-slate-400 text-sm mt-1">Años de Experiencia</div>
-          </div>
-          <div className="text-center">
-            <div className="text-4xl md:text-5xl font-black bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">
-              {organization.stats.paisesPresencia}
-            </div>
-            <div className="text-slate-400 text-sm mt-1">Países</div>
           </div>
         </div>
 
@@ -959,7 +966,7 @@ function UpcomingTrainingsSection({ trainings }: { trainings: Training[] }) {
                 )}
                 
                 <h3 className="text-xl font-bold text-slate-900 mb-2">{training.nombre}</h3>
-                {training.descripcion && (
+                {training.descripcion && training.descripcion !== 'Visión completa generada con Vision Builder' && (
                   <p className="text-slate-600 text-sm mb-4">{training.descripcion}</p>
                 )}
 
