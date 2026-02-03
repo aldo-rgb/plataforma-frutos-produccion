@@ -2138,7 +2138,7 @@ export default function CartaWizardRelacional() {
 
         {/* Paso 3: Metas Dinámicas - ITERATIVO POR OBJETIVO */}
         {currentStep === 3 && (
-          <div className="space-y-6">
+          <div className="space-y-6 pb-32">
             {objetivosFlattened.length === 0 ? (
               <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-8 text-center">
                 <AlertCircle className="mx-auto mb-4 text-red-400" size={48} />
@@ -2302,49 +2302,52 @@ export default function CartaWizardRelacional() {
                   </>
                 )}
 
-                {/* Navegación entre objetivos */}
-                <div className="flex items-center justify-between gap-4 pt-4">
-                  <button
-                    onClick={handlePrevObjetivo}
-                    disabled={currentObjetivoIndexStep3 === 0}
-                    className="px-6 py-3 bg-gray-800 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                  >
-                    <ChevronLeft size={20} />
-                    Objetivo Anterior
-                  </button>
-
-                  <div className="text-center flex-1">
-                    <p className="text-sm text-gray-400 mb-2">
-                      Progreso: {currentObjetivoData.index} de {currentObjetivoData.total} objetivos
-                    </p>
-                    <div className="flex gap-1 justify-center">
-                      {objetivosFlattened.map((_, idx) => (
-                        <div
-                          key={idx}
-                          className={`h-2 w-8 rounded-full transition-all ${
-                            idx === currentObjetivoIndexStep3 ? 'bg-purple-500' : 'bg-gray-700'
-                          }`}
-                        />
-                      ))}
+                {/* Navegación entre objetivos - FIJO EN MÓVIL */}
+                <div className="sticky bottom-0 left-0 right-0 bg-[#0a0b0d]/95 backdrop-blur-sm border-t border-gray-800 -mx-4 px-4 py-4 mt-4 z-20">
+                  {/* Barra de progreso compacta */}
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-gray-400">Progreso</span>
+                      <span className="text-xs font-bold text-purple-300">
+                        {currentObjetivoData.index} / {currentObjetivoData.total}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-800 rounded-full h-2">
+                      <div 
+                        className="bg-gradient-to-r from-purple-600 to-pink-600 h-2 rounded-full transition-all"
+                        style={{ width: `${(currentObjetivoData.index / currentObjetivoData.total) * 100}%` }}
+                      />
                     </div>
                   </div>
 
-                  <button
-                    onClick={handleNextObjetivo}
-                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-all"
-                  >
-                    {currentObjetivoIndexStep3 < objetivosFlattened.length - 1 ? (
-                      <>
-                        Siguiente Objetivo
-                        <ChevronRight size={20} />
-                      </>
-                    ) : (
-                      <>
-                        Continuar al Paso 4
-                        <ChevronRight size={20} />
-                      </>
-                    )}
-                  </button>
+                  {/* Botones de navegación */}
+                  <div className="flex items-center justify-between gap-3">
+                    <button
+                      onClick={handlePrevObjetivo}
+                      disabled={currentObjetivoIndexStep3 === 0}
+                      className="px-4 py-3 bg-gray-800 text-white rounded-xl font-bold flex items-center gap-2 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex-shrink-0"
+                    >
+                      <ChevronLeft size={20} />
+                      <span className="hidden sm:inline">Anterior</span>
+                    </button>
+
+                    <button
+                      onClick={handleNextObjetivo}
+                      className="flex-1 sm:flex-none px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all shadow-lg shadow-purple-500/30"
+                    >
+                      {currentObjetivoIndexStep3 < objetivosFlattened.length - 1 ? (
+                        <>
+                          Siguiente
+                          <ChevronRight size={20} />
+                        </>
+                      ) : (
+                        <>
+                          Continuar
+                          <ChevronRight size={20} />
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </>
             ) : null}

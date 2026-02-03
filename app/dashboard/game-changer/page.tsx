@@ -23,6 +23,7 @@ import {
 import Link from 'next/link';
 import VisionHistoryWidget from '@/components/widgets/VisionHistoryWidget';
 import GCLegacyRewardBanner from '@/components/dashboard/GCLegacyRewardBanner';
+import PLCallsWidget from '@/components/dashboard/PLCallsWidget';
 
 interface Participante {
   id: number;
@@ -182,6 +183,11 @@ export default function GameChangerDashboard() {
         {/* Vision History Widget */}
         <div className="mb-8">
           <VisionHistoryWidget />
+        </div>
+
+        {/* PL Calls Widget - Solo visible si el GC tiene squad PL */}
+        <div className="mb-8">
+          <PLCallsWidget />
         </div>
 
         {/* Filter by Vision */}
