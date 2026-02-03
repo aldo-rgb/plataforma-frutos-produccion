@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Dumbbell, ArrowLeft, Upload, CheckCircle, Loader2,
-  Star, Users, TrendingUp, Calendar, AlertCircle, X
+  Star, Users, TrendingUp, Calendar, AlertCircle, X,
+  AlertTriangle, Info
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -15,6 +17,12 @@ interface TrainerApplication {
   rejectionReason?: string;
 }
 
+interface Toast {
+  id: number;
+  type: 'error' | 'warning' | 'success' | 'info';
+  message: string;
+}
+
 export default function SolicitarTrainerPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -23,6 +31,19 @@ export default function SolicitarTrainerPage() {
   const [existingApplication, setExistingApplication] = useState<TrainerApplication | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  
+  const showToast = (type: Toast['type'], message: string) => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, type, message }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
+  };
+
+  const removeToast = (id: number) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
   
   const [formData, setFormData] = useState({
     titulo: '',
@@ -106,7 +127,7 @@ export default function SolicitarTrainerPage() {
       window.scrollTo(0, 0);
     } else {
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      alert('Por favor completa todos los campos requeridos correctamente');
+      showToast('warning', 'Por favor completa todos los campos requeridos correctamente');
     }
   };
 
@@ -138,7 +159,7 @@ export default function SolicitarTrainerPage() {
       }
     } catch (error: any) {
       console.error('Error:', error);
-      alert(error.message || 'Error al procesar la solicitud');
+      showToast('error', error.message || 'Error al procesar la solicitud');
     } finally {
       setSubmitting(false);
     }
@@ -170,13 +191,13 @@ export default function SolicitarTrainerPage() {
         const file = files[i];
         
         if (file.size > 5 * 1024 * 1024) {
-          alert(`El archivo ${file.name} es muy grande. Máximo 5MB.`);
+          showToast('warning', `El archivo ${file.name} es muy grande. Máximo 5MB.`);
           continue;
         }
         
         const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
         if (!allowedTypes.includes(file.type)) {
-          alert(`El archivo ${file.name} no es un tipo válido. Solo PDF, JPG o PNG.`);
+          showToast('warning', `El archivo ${file.name} no es un tipo válido. Solo PDF, JPG o PNG.`);
           continue;
         }
         
@@ -203,7 +224,7 @@ export default function SolicitarTrainerPage() {
       }));
     } catch (error: any) {
       console.error('Error uploading files:', error);
-      alert(error.message || 'Error al subir archivos');
+      showToast('error', error.message || 'Error al subir archivos');
     } finally {
       setUploadingDocs(false);
     }
@@ -710,6 +731,43 @@ export default function SolicitarTrainerPage() {
           </div>
         </div>
       )}
+
+      {/* Toast Notifications */}
+      <AnimatePresence>
+        {toasts.length > 0 && (
+          <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
+            {toasts.map((toast) => (
+              <motion.div
+                key={toast.id}
+                initial={{ opacity: 0, x: 100, scale: 0.9 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: 100, scale: 0.9 }}
+                className={`flex items-center gap-3 px-5 py-4 rounded-xl shadow-2xl backdrop-blur-sm border ${
+                  toast.type === 'error' 
+                    ? 'bg-red-500/90 border-red-400/50 text-white' 
+                    : toast.type === 'warning'
+                    ? 'bg-amber-500/90 border-amber-400/50 text-white'
+                    : toast.type === 'success'
+                    ? 'bg-green-500/90 border-green-400/50 text-white'
+                    : 'bg-blue-500/90 border-blue-400/50 text-white'
+                }`}
+              >
+                {toast.type === 'error' && <AlertCircle className="w-5 h-5 flex-shrink-0" />}
+                {toast.type === 'warning' && <AlertTriangle className="w-5 h-5 flex-shrink-0" />}
+                {toast.type === 'success' && <CheckCircle className="w-5 h-5 flex-shrink-0" />}
+                {toast.type === 'info' && <Info className="w-5 h-5 flex-shrink-0" />}
+                <span className="font-medium">{toast.message}</span>
+                <button 
+                  onClick={() => removeToast(toast.id)}
+                  className="ml-2 p-1 hover:bg-white/20 rounded-full transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
