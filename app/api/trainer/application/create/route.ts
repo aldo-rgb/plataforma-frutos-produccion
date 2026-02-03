@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     // Verificar que no tenga una solicitud pendiente
     const existingApplication = await prisma.trainerApplication.findFirst({
       where: {
-        userId,
+        usuarioId: userId,
         status: 'PENDING',
       },
     });
@@ -94,18 +94,18 @@ export async function POST(request: Request) {
     // Crear la solicitud directamente en estado PENDING (no hay pago como en mentor)
     const application = await prisma.trainerApplication.create({
       data: {
-        userId,
+        usuarioId: userId,
         status: 'PENDING',
         titulo: titulo.trim(),
         especialidad: especialidadFinal.trim(),
-        biografia: bioText.trim(),
-        experienciaAnios: experienciaAnios ? parseInt(String(experienciaAnios)) : null,
-        experienciaDescripcion: experienciaDescripcion?.trim() || null,
-        certificaciones: Array.isArray(logros) ? logros.join(', ') : (certificaciones?.trim() || null),
-        metodologia: Array.isArray(expertiseTags) ? expertiseTags.join(', ') : (metodologia?.trim() || null),
-        disponibilidad: Array.isArray(especialidadesSecundarias) ? especialidadesSecundarias.join(', ') : (disponibilidad?.trim() || null),
-        ubicacion: ubicacion?.trim() || null,
-        documentos: documentosUrls || documentos || null,
+        biografiaCompleta: bioText.trim(),
+        experienciaAnios: experienciaAnios ? parseInt(String(experienciaAnios)) : 1,
+        especialidadesSecundarias: Array.isArray(especialidadesSecundarias) ? especialidadesSecundarias : [],
+        logros: Array.isArray(logros) ? logros : [],
+        expertiseTags: Array.isArray(expertiseTags) ? expertiseTags : [],
+        documentosUrls: Array.isArray(documentosUrls) ? documentosUrls : (Array.isArray(documentos) ? documentos : []),
+        videoIntroUrl: videoIntroUrl || null,
+        updatedAt: new Date(),
       },
     });
 

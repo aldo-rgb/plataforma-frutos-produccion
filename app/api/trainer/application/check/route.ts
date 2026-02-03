@@ -19,13 +19,13 @@ export async function GET() {
 
     // Buscar solicitud existente del usuario
     const existingApplication = await prisma.trainerApplication.findFirst({
-      where: { userId },
+      where: { usuarioId: userId },
       orderBy: { createdAt: 'desc' },
     });
 
     // También verificar si ya tiene perfil de entrenador activo
     const existingProfile = await prisma.perfilTrainer.findUnique({
-      where: { userId },
+      where: { usuarioId: userId },
     });
 
     // Verificar si el usuario ya es entrenador
