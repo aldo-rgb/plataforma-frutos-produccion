@@ -64,6 +64,7 @@ export async function GET(req: NextRequest) {
     // Obtener ángel de enrolamiento desde vision_enrollments
     let angelEnrolamientoNombre = '';
     let tribeLogoUrl = '';
+    let tribeMission = '';
     try {
       // Buscar el enrollment más reciente del usuario
       const enrollment = await (prisma as any).vision_enrollments.findFirst({
@@ -74,7 +75,7 @@ export async function GET(req: NextRequest) {
             select: { nombre: true }
           },
           Vision: {
-            select: { tribeLogoUrl: true }
+            select: { tribeLogoUrl: true, tribeMission: true }
           }
         }
       });
@@ -88,9 +89,13 @@ export async function GET(req: NextRequest) {
         if (enrollment.Vision?.tribeLogoUrl) {
           tribeLogoUrl = enrollment.Vision.tribeLogoUrl;
         }
+        // Misión de la tribu desde la visión
+        if (enrollment.Vision?.tribeMission) {
+          tribeMission = enrollment.Vision.tribeMission;
+        }
       }
     } catch (angelError) {
-      console.log('⚠️ Error obteniendo ángel/logo (no crítico):', angelError);
+      console.log('⚠️ Error obteniendo ángel/logo/misión (no crítico):', angelError);
     }
 
     // Obtener historial completo de visiones
@@ -248,6 +253,8 @@ export async function GET(req: NextRequest) {
     const angelEnrolamientoFinal = angelEnrolamientoNombre || perfilCompleto.angelEnrolamiento || '';
     // Usar logo de tribu desde Vision.tribeLogoUrl, fallback a perfilCompleto
     const logoTribuFinal = tribeLogoUrl || perfilCompleto.logoTribu || '';
+    // Usar misión de tribu desde Vision.tribeMission, fallback a perfilCompleto
+    const misionTribuFinal = tribeMission || perfilCompleto.misionTribu || '';
     // Usar talla de votación si no tiene talla en perfil
     const tallaCamisetaFinal = perfilCompleto.tallaCamiseta || tallaVotacion || 'M';
 
@@ -263,6 +270,7 @@ export async function GET(req: NextRequest) {
         ocupacion: ocupacionFinal,
         angelEnrolamiento: angelEnrolamientoFinal,
         logoTribu: logoTribuFinal,
+        misionTribu: misionTribuFinal,
         tallaCamiseta: tallaCamisetaFinal,
         gameChangerNombre
       },

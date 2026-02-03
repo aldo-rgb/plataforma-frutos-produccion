@@ -2312,6 +2312,9 @@ model Usuario {
   ReportedBreaches                                                       TribeBreachReport[]             @relation("ReportedBreaches")
   UserBreaches                                                           TribeBreachReport[]             @relation("UserBreaches")
   ResolvedBreaches                                                       TribeBreachReport[]             @relation("ResolvedBreaches")
+  TribeBudget                                                            TribeBudget[]
+  TribeBudgetPayment_TribeBudgetPayment_userIdToUsuario                  TribeBudgetPayment[]            @relation("TribeBudgetPayment_userIdToUsuario")
+  TribeBudgetPayment_TribeBudgetPayment_verifiedByIdToUsuario            TribeBudgetPayment[]            @relation("TribeBudgetPayment_verifiedByIdToUsuario")
   NominatedCaptains                                                      TribeCaptainAssignment[]        @relation("NominatedCaptains")
   CaptainAssignments                                                     TribeCaptainAssignment[]        @relation("UserCaptainAssignments")
   CommunityProjectsCreated                                               TribeCommunityProject[]         @relation("UserCommunityProjects")
@@ -2333,6 +2336,9 @@ model Usuario {
   TribePollChatReport_TribePollChatReport_reviewedByToUsuario            TribePollChatReport[]           @relation("TribePollChatReport_reviewedByToUsuario")
   PollVotes                                                              TribePollVote[]                 @relation("UserPollVotes")
   ShirtOrders                                                            TribeShirtOrder[]               @relation("UserShirtOrders")
+  TribeShirtPayment_TribeShirtPayment_userIdToUsuario                    TribeShirtPayment[]             @relation("TribeShirtPayment_userIdToUsuario")
+  TribeShirtPayment_TribeShirtPayment_verifiedByIdToUsuario              TribeShirtPayment[]             @relation("TribeShirtPayment_verifiedByIdToUsuario")
+  TribeShirtProduct                                                      TribeShirtProduct[]
   AssignedTribeTasks                                                     TribeTask[]                     @relation("AssignedTribeTasks")
   CreatedTribeTasks                                                      TribeTask[]                     @relation("CreatedTribeTasks")
   UserCollectionProgress                                                 UserCollectionProgress[]
@@ -2440,6 +2446,7 @@ model Vision {
   TribeAuditChecklists          TribeAuditChecklist[]          @relation("VisionAuditChecklists")
   BankAccount                   TribeBankAccount?              @relation("VisionBankAccount")
   TribeBreachReports            TribeBreachReport[]            @relation("VisionBreachReports")
+  TribeBudget                   TribeBudget[]
   TribeCaptaincies              TribeCaptaincy[]               @relation("VisionCaptaincies")
   CommunityProjects             TribeCommunityProject[]        @relation("VisionCommunityProjects")
   TribeFoodAllergies            TribeFoodAllergy[]             @relation("VisionFoodAllergies")
@@ -2450,6 +2457,7 @@ model Vision {
   TribeOaths                    TribeOath[]                    @relation("VisionTribeOaths")
   TribePolls                    TribePoll[]                    @relation("VisionPolls")
   ShirtOrders                   TribeShirtOrder[]              @relation("VisionShirtOrders")
+  TribeShirtProduct             TribeShirtProduct[]
   TribeTasks                    TribeTask[]                    @relation("VisionTribeTasks")
   UserSongs                     UserSong[]                     @relation("VisionSongs")
   Usuario                       Usuario                        @relation(fields: [coordinadorId], references: [id], onDelete: Cascade)
@@ -4952,6 +4960,88 @@ model TribePollChatReport {
   @@index([chatId])
   @@index([reporterId])
   @@index([status])
+}
+
+model TribeBudget {
+  id                 Int                  @id @default(autoincrement())
+  visionId           Int
+  name               String               @db.VarChar(255)
+  description        String?
+  totalAmount        Decimal              @default(0) @db.Decimal(10, 2)
+  isActive           Boolean              @default(true)
+  createdById        Int
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @default(now())
+  Usuario            Usuario              @relation(fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Vision             Vision               @relation(fields: [visionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  TribeBudgetItem    TribeBudgetItem[]
+  TribeBudgetPayment TribeBudgetPayment[]
+}
+
+model TribeBudgetItem {
+  id          Int         @id @default(autoincrement())
+  budgetId    Int
+  concept     String      @db.VarChar(255)
+  amount      Decimal     @default(0) @db.Decimal(10, 2)
+  createdAt   DateTime    @default(now())
+  TribeBudget TribeBudget @relation(fields: [budgetId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model TribeBudgetPayment {
+  id                                               Int         @id @default(autoincrement())
+  budgetId                                         Int
+  userId                                           Int
+  amount                                           Decimal     @db.Decimal(10, 2)
+  isPaid                                           Boolean     @default(false)
+  paidAt                                           DateTime?
+  verifiedById                                     Int?
+  proofImage                                       String?
+  notes                                            String?
+  createdAt                                        DateTime    @default(now())
+  updatedAt                                        DateTime    @default(now())
+  TribeBudget                                      TribeBudget @relation(fields: [budgetId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  Usuario_TribeBudgetPayment_userIdToUsuario       Usuario     @relation("TribeBudgetPayment_userIdToUsuario", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Usuario_TribeBudgetPayment_verifiedByIdToUsuario Usuario?    @relation("TribeBudgetPayment_verifiedByIdToUsuario", fields: [verifiedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([budgetId, userId])
+}
+
+model TribeShirtPayment {
+  id                                              Int               @id @default(autoincrement())
+  shirtProductId                                  Int
+  userId                                          Int
+  size                                            String?           @db.VarChar(10)
+  quantity                                        Int               @default(1)
+  totalAmount                                     Decimal           @db.Decimal(10, 2)
+  isPaid                                          Boolean           @default(false)
+  paidAt                                          DateTime?
+  verifiedById                                    Int?
+  proofImage                                      String?
+  deliveredAt                                     DateTime?
+  notes                                           String?
+  createdAt                                       DateTime          @default(now())
+  updatedAt                                       DateTime          @default(now())
+  TribeShirtProduct                               TribeShirtProduct @relation(fields: [shirtProductId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  Usuario_TribeShirtPayment_userIdToUsuario       Usuario           @relation("TribeShirtPayment_userIdToUsuario", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Usuario_TribeShirtPayment_verifiedByIdToUsuario Usuario?          @relation("TribeShirtPayment_verifiedByIdToUsuario", fields: [verifiedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([shirtProductId, userId])
+}
+
+model TribeShirtProduct {
+  id                Int                 @id @default(autoincrement())
+  visionId          Int
+  name              String              @db.VarChar(255)
+  description       String?
+  price             Decimal             @default(0) @db.Decimal(10, 2)
+  imageUrl          String?
+  isActive          Boolean             @default(true)
+  createdById       Int
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @default(now())
+  TribeShirtPayment TribeShirtPayment[]
+  Usuario           Usuario             @relation(fields: [createdById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  Vision            Vision              @relation(fields: [visionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 enum PLCallType {

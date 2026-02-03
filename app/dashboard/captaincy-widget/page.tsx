@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import TribePollWidget from '@/app/components/TribePollWidget';
-import TreasuryWidget from '@/components/captaincy/TreasuryWidget';
+import TreasuryWidgetV2 from '@/components/captaincy/TreasuryWidgetV2';
 import ContextGuardianWidget from '@/components/captaincy/ContextGuardianWidget';
 import {
   ArrowLeft,
@@ -290,7 +290,7 @@ export default function CaptaincyWidgetPage() {
 
         {/* Widget específico del Tesorero */}
         {roleType === 'TREASURER' ? (
-          <TreasuryWidget
+          <TreasuryWidgetV2
             visionId={parseInt(visionId)}
             visionName={userData.visionName}
             isTreasurer={userData.isCaptain}

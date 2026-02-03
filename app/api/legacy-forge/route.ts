@@ -599,8 +599,12 @@ Responde SOLO con un JSON array con este formato exacto:
         });
 
         // Actualizar proyecto ganador a APPROVED
+        let budgetCreated = false;
+        let budgetId: number | null = null;
+        
         if (winner.projectId) {
-          await prisma.tribeCommunityProject.update({
+          // Obtener datos completos del proyecto ganador
+          const winnerProject = await prisma.tribeCommunityProject.update({
             where: { id: winner.projectId },
             data: { status: 'APPROVED' }
           });
@@ -616,6 +620,70 @@ Responde SOLO con un JSON array con este formato exacto:
               data: { status: 'DRAFT' } // Vuelven a borrador
             });
           }
+
+          // ============ CREAR PRESUPUESTO AUTOMÁTICO ============
+          // Si el proyecto tiene estimatedBudget, crear TribeBudget y pagos para cada miembro
+          if (winnerProject.estimatedBudget && Number(winnerProject.estimatedBudget) > 0) {
+            const totalBudget = Number(winnerProject.estimatedBudget);
+
+            // Obtener miembros de AMBAS fuentes: vision_enrollments Y VisionParticipante
+            const visionEnrollments = await prisma.vision_enrollments.findMany({
+              where: { 
+                visionId: parseInt(visionId),
+                enrollmentStatus: { in: ['ENROLLED', 'ACTIVE', 'COMPLETED'] }
+              },
+              select: { userId: true },
+              distinct: ['userId']
+            });
+
+            const visionParticipantes = await prisma.visionParticipante.findMany({
+              where: { visionId: parseInt(visionId) },
+              select: { participanteId: true }
+            });
+
+            // Combinar IDs sin duplicados
+            const memberIdSet = new Set<number>();
+            visionEnrollments.forEach(ve => memberIdSet.add(ve.userId));
+            visionParticipantes.forEach(vp => memberIdSet.add(vp.participanteId));
+            
+            const memberIds = Array.from(memberIdSet);
+            const memberCount = memberIds.length;
+
+            if (memberCount > 0) {
+              // Calcular cuota por miembro (dividido equitativamente)
+              const perPersonAmount = Math.ceil((totalBudget / memberCount) * 100) / 100; // Redondear a 2 decimales
+
+              // Crear el presupuesto
+              const newBudget = await prisma.tribeBudget.create({
+                data: {
+                  visionId: parseInt(visionId),
+                  name: `🌱 ${winnerProject.name}`,
+                  description: `Presupuesto comunitario para: ${winnerProject.description || winnerProject.name}. Aprobado por votación de la tribu.`,
+                  totalAmount: totalBudget,
+                  isActive: true,
+                  createdById: userId
+                }
+              });
+
+              budgetId = newBudget.id;
+
+              // Crear pagos para cada miembro
+              const paymentsData = memberIds.map(memberId => ({
+                budgetId: newBudget.id,
+                userId: memberId,
+                amount: perPersonAmount,
+                isPaid: false
+              }));
+
+              await prisma.tribeBudgetPayment.createMany({
+                data: paymentsData,
+                skipDuplicates: true
+              });
+
+              budgetCreated = true;
+              console.log(`✅ Presupuesto creado automáticamente: ${newBudget.name} - $${totalBudget} / ${memberCount} miembros = $${perPersonAmount} c/u`);
+            }
+          }
         }
 
         return NextResponse.json({
@@ -625,7 +693,12 @@ Responde SOLO con un JSON array con este formato exacto:
             : `Votación cerrada. Ganador: ${winner.projectName}`,
           results,
           winner,
-          isTie: issTie
+          isTie: issTie,
+          budgetCreated,
+          budgetId,
+          budgetMessage: budgetCreated 
+            ? `Se creó automáticamente un presupuesto para que todos los miembros de la tribu aporten al proyecto.` 
+            : null
         });
       }
 

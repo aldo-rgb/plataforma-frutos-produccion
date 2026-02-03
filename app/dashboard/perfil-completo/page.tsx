@@ -527,12 +527,9 @@ export default function ConfiguracionCompletaPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-slate-300 mb-2">Misión de Tribu</label>
-                <textarea
-                  value={config.misionTribu}
-                  onChange={(e) => setConfig({...config, misionTribu: e.target.value})}
-                  rows={3}
-                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-purple-500 focus:outline-none"
-                />
+                <div className="w-full px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-slate-300 min-h-[80px]">
+                  {config.misionTribu || <span className="text-slate-500 italic">Sin misión configurada</span>}
+                </div>
               </div>
               
               <div>

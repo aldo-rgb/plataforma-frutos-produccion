@@ -1,0 +1,387 @@
+================================================================================
+📋 INSTRUCTIVO COMPLETO - PLATAFORMA FRUTOS
+================================================================================
+Fecha: 2 de febrero de 2026
+Repositorio: plataforma-frutos-produccion (aldo-rgb)
+Ruta local: /Users/aldokmps/plataforma-frutos-FINAL
+
+================================================================================
+🎯 CONTEXTO DE CONTINUACIÓN
+================================================================================
+
+Estás continuando el desarrollo de Plataforma Frutos, una aplicación 
+educativa/comunitaria. El usuario es Aldo.
+
+FORMATO DE RESPUESTA ESPERADO:
+Cuando pida cambios, responder con formato "Buscar y Reemplazar Exacto":
+
+Para MODIFICAR código existente:
+  BUSCAR (en archivo X):
+  [código exacto a buscar con 3-5 líneas de contexto]
+
+  REEMPLAZAR CON:
+  [código nuevo completo]
+
+Para AGREGAR código nuevo:
+  DESPUÉS DE LA LÍNEA (en archivo X):
+  [línea completa existente]
+
+  AGREGAR:
+  [código nuevo]
+
+  ANTES DE LA LÍNEA:
+  [línea completa existente]
+
+================================================================================
+🏗️ ARQUITECTURA TÉCNICA
+================================================================================
+
+Stack Principal:
+- Framework: Next.js 16.1.1 (App Router con Turbopack)
+- Lenguaje: TypeScript
+- ORM: Prisma 5.22.0
+- Base de Datos: PostgreSQL (Neon)
+- Auth: NextAuth.js
+- UI: Tailwind CSS + Lucide Icons
+- Pagos: MercadoPago
+- AI: OpenAI API
+- Almacenamiento: Cloudinary (imágenes)
+
+Estructura de Carpetas Principal:
+/app
+  /api                    - APIs Route Handlers
+    /tribe-budgets        - ✅ CRUD presupuestos tribales
+    /tribe-shirts         - ✅ CRUD productos playeras
+    /legacy-forge         - ✅ Proyectos comunitarios + votaciones
+    /configuracion        - ✅ Perfil usuario + datos visión
+    /tribe-treasury       - Tesorería general
+  /dashboard
+    /captaincy-widget     - ✅ Widget de capitanías (roles tribales)
+    /legacy-forge         - UI proyectos comunitarios
+    /perfil-completo      - ✅ Perfil completo usuario
+    /legacy-vision-builder - Constructor de visiones
+/components
+  /captaincy
+    /TreasuryWidgetV2.tsx - ✅ Widget dual (Presupuestos + Playeras)
+/prisma
+  /schema.prisma          - ~6000+ líneas, esquema completo
+
+================================================================================
+📊 MODELOS DE BASE DE DATOS CLAVE
+================================================================================
+
+--- SISTEMA DE VISIONES (PROGRAMAS) ---
+
+model Vision {
+  id              Int      @id
+  nombre          String
+  isActive        Boolean
+  organizationId  Int?
+  tribeMission    String?        // ✅ Misión de tribu
+  tribeLogoUrl    String?        // Logo de tribu
+}
+
+model vision_enrollments {
+  id               Int
+  userId           Int
+  visionId         Int
+  level            String         // BASIC, ADVANCED, PL
+  enrollmentStatus String         // ENROLLED, ACTIVE, COMPLETED
+  // Tabla principal de inscripciones
+}
+
+model VisionParticipante {
+  id             Int
+  visionId       Int
+  participanteId Int
+  // Participantes manuales (alternativa a enrollments)
+}
+
+--- SISTEMA DE TESORERÍA TRIBAL ---
+
+model TribeBudget {
+  id          Int      @id
+  visionId    Int
+  name        String
+  description String?
+  totalAmount Decimal
+  isActive    Boolean  @default(true)
+  createdById Int
+}
+
+model TribeBudgetItem {
+  id       Int
+  budgetId Int
+  concept  String
+  amount   Decimal
+}
+
+model TribeBudgetPayment {
+  id           Int
+  budgetId     Int
+  userId       Int
+  amount       Decimal
+  isPaid       Boolean  @default(false)
+  paidAt       DateTime?
+  verifiedById Int?
+  proofImage   String?
+  // @@unique([budgetId, userId])
+}
+
+model TribeShirtProduct {
+  id          Int
+  visionId    Int
+  name        String
+  price       Decimal
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+  createdById Int
+}
+
+model TribeShirtPayment {
+  id             Int
+  shirtProductId Int
+  userId         Int
+  size           String?
+  quantity       Int      @default(1)
+  totalAmount    Decimal
+  isPaid         Boolean  @default(false)
+  deliveredAt    DateTime?
+  // @@unique([shirtProductId, userId])
+}
+
+--- SISTEMA DE PROYECTOS COMUNITARIOS ---
+
+model TribeCommunityProject {
+  id              Int
+  visionId        Int
+  name            String
+  description     String
+  category        CommunityProjectCategory
+  estimatedBudget Decimal?
+  status          CommunityProjectStatus  
+  // Estados: DRAFT, PROPOSED, VOTING, APPROVED, IN_PROGRESS, COMPLETED
+  createdById     Int
+}
+
+model TribePoll {
+  id          Int
+  visionId    Int
+  title       String
+  category    TribePollCategory  // COMMUNITY_PROJECT, LOGO, etc.
+  status      TribePollStatus    // DRAFT, ACTIVE, CLOSED
+}
+
+model TribePollOption {
+  id        Int
+  pollId    Int
+  projectId Int?    // Vincula con TribeCommunityProject
+  title     String
+}
+
+model TribePollVote {
+  id       Int
+  pollId   Int
+  optionId Int
+  userId   Int
+  weight   Int    @default(1)  // Capitanes tienen peso 2
+}
+
+--- ROLES DE CAPITANÍA ---
+
+model TribeCaptaincy {
+  id       Int
+  visionId Int
+  roleType TribeCaptaincyRole  
+  // Valores: TRIBE_CAPTAIN, TRIBE_CO_CAPTAIN, TREASURER, COMMUNITY_SERVICE, etc.
+}
+
+model TribeCaptainAssignment {
+  id          Int
+  captaincyId Int
+  userId      Int
+  status      String  // PENDING, ACCEPTED, REJECTED
+}
+
+================================================================================
+✅ FUNCIONALIDADES COMPLETADAS
+================================================================================
+
+1. WIDGET DE TESORERÍA V2 (TreasuryWidgetV2.tsx)
+   - Diseño dual: Caja izquierda (Presupuestos) + Caja derecha (Playeras)
+   - Presupuestos: Crear, ver pagos por miembro, marcar como pagado, archivar
+   - Playeras: Crear producto, asignar miembros, marcar pagado/entregado
+   - Miembros: Se cargan de AMBAS tablas (vision_enrollments + VisionParticipante)
+   - Selección automática: Al crear nuevo, todos los miembros vienen seleccionados
+
+2. APIs DE TESORERÍA
+   - /api/tribe-budgets: GET (lista), POST (crear/toggle payment/add members/toggle active)
+   - /api/tribe-shirts: GET (lista), POST (crear producto/toggle payment/toggle delivered/add members)
+   - Acceso: Solo TREASURER, TRIBE_CAPTAIN, TRIBE_CO_CAPTAIN o Staff
+
+3. FLUJO DE VOTACIÓN COMUNITARIA (/api/legacy-forge)
+   - Crear proyecto: action: 'save_project' → status DRAFT
+   - Crear votación: action: 'create_poll' → proyectos pasan a PROPOSED
+   - Publicar votación: action: 'publish_poll' → status ACTIVE, proyectos a VOTING
+   - Cerrar votación: action: 'close_poll' → 
+     * Proyecto ganador → APPROVED
+     * ✅ NUEVO: Crea automáticamente TribeBudget + TribeBudgetPayment para cada miembro
+     * Monto dividido equitativamente entre todos los miembros de la visión
+
+4. MISIÓN DE TRIBU
+   - Campo tribeMission en modelo Vision
+   - Se carga en /api/configuracion desde el enrollment del usuario
+   - Campo de solo lectura en /dashboard/perfil-completo
+
+================================================================================
+🔄 CÓDIGO CLAVE IMPLEMENTADO
+================================================================================
+
+--- OBTENCIÓN DE MIEMBROS (usado en tribe-budgets y tribe-shirts) ---
+
+// Obtener miembros de AMBAS fuentes: vision_enrollments Y VisionParticipante
+const visionEnrollments = await prisma.vision_enrollments.findMany({
+  where: { 
+    visionId: parseInt(visionId),
+    enrollmentStatus: { in: ['ENROLLED', 'ACTIVE', 'COMPLETED'] }
+  },
+  include: {
+    Usuario_vision_enrollments_userIdToUsuario: {
+      select: { id: true, nombre: true, email: true, profileImage: true }
+    }
+  },
+  distinct: ['userId']
+});
+
+const visionParticipantes = await prisma.visionParticipante.findMany({
+  where: { visionId: parseInt(visionId) },
+  include: {
+    Usuario_VisionParticipante_participanteIdToUsuario: {
+      select: { id: true, nombre: true, email: true, profileImage: true }
+    }
+  }
+});
+
+// Combinar sin duplicados usando Map
+const memberMap = new Map<number, Member>();
+visionEnrollments.forEach(ve => { /* agregar */ });
+visionParticipantes.forEach(vp => { /* agregar */ });
+const members = Array.from(memberMap.values());
+
+--- CREACIÓN AUTOMÁTICA DE PRESUPUESTO AL CERRAR VOTACIÓN (legacy-forge) ---
+
+case 'close_poll': {
+  // ... determinar ganador ...
+  
+  if (winnerProject.estimatedBudget && Number(winnerProject.estimatedBudget) > 0) {
+    // Obtener miembros de ambas fuentes
+    const visionEnrollments = await prisma.vision_enrollments.findMany({...});
+    const visionParticipantes = await prisma.visionParticipante.findMany({...});
+    
+    // Combinar IDs sin duplicados
+    const memberIdSet = new Set<number>();
+    visionEnrollments.forEach(ve => memberIdSet.add(ve.userId));
+    visionParticipantes.forEach(vp => memberIdSet.add(vp.participanteId));
+    
+    const memberIds = Array.from(memberIdSet);
+    const perPersonAmount = Math.ceil((totalBudget / memberIds.length) * 100) / 100;
+
+    // Crear presupuesto
+    const newBudget = await prisma.tribeBudget.create({
+      data: {
+        visionId: parseInt(visionId),
+        name: `🌱 ${winnerProject.name}`,
+        description: `Presupuesto comunitario para: ${winnerProject.description}`,
+        totalAmount: totalBudget,
+        isActive: true,
+        createdById: userId
+      }
+    });
+
+    // Crear pagos para cada miembro
+    await prisma.tribeBudgetPayment.createMany({
+      data: memberIds.map(memberId => ({
+        budgetId: newBudget.id,
+        userId: memberId,
+        amount: perPersonAmount,
+        isPaid: false
+      }))
+    });
+  }
+}
+
+================================================================================
+❌ PENDIENTE POR DESARROLLAR
+================================================================================
+
+SISTEMA DE TESORERÍA:
+1. Integración con TribeIncome: Los pagos verificados deberían crear registros de ingreso
+2. Reportes financieros: Dashboard con totales, gráficas, exportación
+3. Comprobantes de pago: Subir imagen de comprobante y validación
+
+SISTEMA DE CAPITANÍAS:
+1. Widget para otros roles: COMMUNITY_SERVICE, FUNDRAISING, LOGISTICS, etc.
+2. Asignación de capitanes: UI para que staff asigne roles
+3. Notificaciones: Alertas cuando hay nuevos pagos pendientes
+
+SISTEMA COMUNITARIO:
+1. Logística de proyectos: Items de logística, asignación de tareas
+2. Seguimiento de proyecto: Estado IN_PROGRESS → COMPLETED
+3. Galería de evidencias: Fotos del proyecto realizado
+
+VOTACIONES:
+1. Notificaciones: Alertar a tribu cuando hay nueva votación
+2. Recordatorios: Antes de que cierre la votación
+3. Resultados públicos: Mostrar resultados a todos después de cerrar
+
+================================================================================
+🔧 USUARIOS DE PRUEBA
+================================================================================
+
+- Elena Santoro (ID 332): TREASURER para Vision 3 (V2 GDL)
+- Vision 3 (V2 GDL): 29 enrollments activos
+- tribeMission: "Somo magicos empoderados"
+
+================================================================================
+🚀 COMANDOS ÚTILES
+================================================================================
+
+# Regenerar Prisma client
+npx prisma generate
+
+# Sincronizar schema con DB
+npx prisma db push
+
+# Reiniciar servidor
+lsof -ti:3000 | xargs kill -9 2>/dev/null; sleep 1; npm run dev
+
+# Ver miembros de una visión
+node -e "
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+prisma.vision_enrollments.findMany({
+  where: { visionId: 3 },
+  include: { Usuario_vision_enrollments_userIdToUsuario: { select: { id: true, nombre: true } } }
+}).then(console.log).finally(() => prisma.\$disconnect());
+"
+
+================================================================================
+⚠️ NOTAS IMPORTANTES
+================================================================================
+
+1. Prisma genera relaciones con nombres largos como 
+   Usuario_vision_enrollments_userIdToUsuario - siempre verificar el schema
+
+2. Dos tablas de miembros: vision_enrollments (inscripciones) y 
+   VisionParticipante (manual) - usar AMBAS
+
+3. El servidor corre en puerto 3000 - a veces queda colgado, usar:
+   lsof -ti:3000 | xargs kill -9
+
+4. Los cambios de TypeScript requieren reiniciar el servidor para Hot Reload completo
+
+5. Middleware deprecado - Next.js muestra warning pero funciona
+
+================================================================================
+FIN DEL INSTRUCTIVO
+================================================================================
