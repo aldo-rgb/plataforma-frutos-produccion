@@ -365,6 +365,8 @@ export async function sendAnticipoEmail(
     deadlineHours: number;
     paymentUrl: string;
     orgName: string;
+    logoUrl?: string;
+    website?: string;
   }
 ): Promise<SendEmailResult> {
   const nombre = data.firstName || 'Participante';
@@ -382,6 +384,22 @@ export async function sendAnticipoEmail(
 
   const subject = `¡Reserva tu lugar en ${data.visionName}! - Anticipo disponible`;
   
+  // Generar sección del logo si existe
+  const logoSection = data.logoUrl ? `
+          <div style="margin-bottom: 20px;">
+            <img src="${data.logoUrl}" alt="${data.orgName}" style="max-height: 60px; max-width: 200px; object-fit: contain;" />
+          </div>
+  ` : '';
+
+  // Generar enlace al website si existe
+  const websiteLink = data.website ? `
+          <p style="margin: 15px 0 0 0;">
+            <a href="${data.website}" style="color: #818cf8; text-decoration: none; font-size: 13px;">
+              🌐 ${data.website.replace('https://', '').replace('http://', '')}
+            </a>
+          </p>
+  ` : '';
+  
   const html = `
     <!DOCTYPE html>
     <html>
@@ -395,8 +413,9 @@ export async function sendAnticipoEmail(
         
         <!-- Header con gradiente -->
         <div style="background: linear-gradient(135deg, #9333ea 0%, #4f46e5 50%, #06b6d4 100%); border-radius: 16px 16px 0 0; padding: 40px 30px; text-align: center;">
+          ${logoSection}
           <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">
-            ¡No pierdas tu lugar! 🎯
+            🎓 ¡No pierdas tu lugar!
           </h1>
           <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">
             ${data.visionName}
@@ -473,6 +492,7 @@ export async function sendAnticipoEmail(
           <p style="color: #64748b; font-size: 12px; line-height: 1.6; margin: 0;">
             Este correo fue enviado por <strong style="color: #94a3b8;">${data.orgName}</strong>
           </p>
+          ${websiteLink}
           <p style="color: #475569; font-size: 11px; margin: 10px 0 0 0;">
             Si tienes dudas, responde a este correo o contáctanos.
           </p>

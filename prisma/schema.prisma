@@ -1052,6 +1052,7 @@ model Organization {
   flyerSubheadline                                      String?
   flyerUrgencyText                                      String?                         @default("CUPO LIMITADO")
   flyerWhatsappNumber                                   String?
+  website                                               String?
   customDomain                                          String?                         @unique
   AbandonedCheckout                                     AbandonedCheckout[]
   Archetypes                                            Archetype[]

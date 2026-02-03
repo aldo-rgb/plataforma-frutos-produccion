@@ -46,6 +46,8 @@ export async function POST(request: Request) {
             id: true,
             name: true,
             contactEmail: true,
+            logoUrl: true,
+            website: true,
           },
         },
         user: {
@@ -194,6 +196,22 @@ export async function POST(request: Request) {
         const ctaUrl = `${process.env.NEXTAUTH_URL}/login?callbackUrl=/dashboard/my-tickets`;
         const ctaText = 'Iniciar Sesión y Completar Pago';
 
+        // Generar sección del logo si existe
+        const logoSection = checkout.organization.logoUrl ? `
+                <div style="margin-bottom: 16px;">
+                  <img src="${checkout.organization.logoUrl}" alt="${checkout.organization.name}" style="max-height: 50px; max-width: 180px; object-fit: contain;" />
+                </div>
+        ` : '<div class="logo">🎓</div>';
+
+        // Generar enlace al website si existe
+        const websiteLink = checkout.organization.website ? `
+                <p style="margin-top: 8px;">
+                  <a href="${checkout.organization.website}" style="color: #818cf8; text-decoration: none; font-size: 12px;">
+                    🌐 ${checkout.organization.website.replace('https://', '').replace('http://', '')}
+                  </a>
+                </p>
+        ` : '';
+
         const emailHtml = `
           <!DOCTYPE html>>
           <html>
@@ -219,7 +237,7 @@ export async function POST(request: Request) {
           <body>
             <div class="container">
               <div class="header">
-                <div class="logo">🎓</div>
+                ${logoSection}
                 <h1>¡No pierdas tu lugar!</h1>
               </div>
               
@@ -262,6 +280,7 @@ export async function POST(request: Request) {
 
               <div class="footer">
                 <p>${checkout.organization.name}</p>
+                ${websiteLink}
                 <p>Este correo fue enviado porque iniciaste el proceso de inscripción.</p>
               </div>
             </div>

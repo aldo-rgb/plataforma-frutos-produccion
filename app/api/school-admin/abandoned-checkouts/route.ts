@@ -269,7 +269,9 @@ export async function POST(request: NextRequest) {
         anticipoAmount: checkout.organization.anticipoAmount?.toNumber() || 1500,
         deadlineHours: checkout.organization.anticipoDeadlineHours || 72,
         paymentUrl,
-        orgName: checkout.organization.name || 'Quantum'
+        orgName: checkout.organization.name || 'Quantum',
+        logoUrl: checkout.organization.logoUrl || undefined,
+        website: checkout.organization.website || undefined
       });
 
       if (!emailResult.success) {
