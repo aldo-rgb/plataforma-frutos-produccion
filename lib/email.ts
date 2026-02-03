@@ -15,17 +15,35 @@ interface SendEmailResult {
   error?: string;
 }
 
+interface SendEmailOptions {
+  fromName?: string; // Nombre personalizado del remitente
+}
+
 /**
  * Envía un correo electrónico usando Resend API
+ * @param to - Dirección de correo del destinatario
+ * @param subject - Asunto del correo
+ * @param html - Contenido HTML del correo
+ * @param options - Opciones adicionales como nombre del remitente
  */
 export async function sendEmail(
   to: string,
   subject: string,
-  html: string
+  html: string,
+  options?: SendEmailOptions
 ): Promise<SendEmailResult> {
   try {
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
-    const FROM_EMAIL = process.env.EMAIL_FROM || 'noreply@frutos.com';
+    const FROM_EMAIL_BASE = process.env.EMAIL_FROM || 'noreply@frutos.com';
+    
+    // Si se proporciona un nombre personalizado, usarlo
+    let FROM_EMAIL = FROM_EMAIL_BASE;
+    if (options?.fromName) {
+      // Extraer solo el email si FROM_EMAIL_BASE tiene formato "Nombre <email>"
+      const emailMatch = FROM_EMAIL_BASE.match(/<(.+)>/);
+      const emailOnly = emailMatch ? emailMatch[1] : FROM_EMAIL_BASE;
+      FROM_EMAIL = `${options.fromName} <${emailOnly}>`;
+    }
 
     if (!RESEND_API_KEY) {
       console.warn('⚠️ RESEND_API_KEY not configured. Email not sent.');

@@ -70,11 +70,19 @@ export async function POST(request: NextRequest) {
     let failed = 0;
     const errors: string[] = [];
 
-    // Obtener información de la organización para personalizar
+    // Obtener información de la organización y su MasterOrganization para personalizar
     const organization = await prisma.organization.findUnique({
       where: { id: user.organizationId! },
-      select: { name: true }
+      select: { 
+        name: true,
+        MasterOrganization: {
+          select: { name: true }
+        }
+      }
     });
+
+    // El nombre del remitente será: MasterOrganization > Organization > "Tu Equipo"
+    const senderName = organization?.MasterOrganization?.name || organization?.name || 'Tu Equipo';
 
     for (const targetUser of users) {
       try {
@@ -96,8 +104,9 @@ export async function POST(request: NextRequest) {
             const videoLabel = getVideoLabel(videoKey);
             const emailResult = await sendEmail(
               targetUser.email,
-              `🎬 ${videoLabel} - ${organization?.name || 'Tu Equipo'}`,
-              formatEmailHtml(personalizedEmail, videoLabel)
+              `🎬 ${videoLabel} - ${senderName}`,
+              formatEmailHtml(personalizedEmail, videoLabel),
+              { fromName: senderName }
             );
 
             if (emailResult.success) {
