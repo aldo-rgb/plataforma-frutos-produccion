@@ -9,6 +9,10 @@ export default function SocketStatus() {
   const { data: session } = useSession();
   const { isConnected, transport } = useSocket(session?.user?.id?.toString());
 
+  // Componente oculto - descomentar para mostrar indicador de conexión
+  return null;
+
+  /*
   if (!session?.user) return null;
 
   return (
@@ -29,4 +33,5 @@ export default function SocketStatus() {
       </div>
     </div>
   );
+  */
 }

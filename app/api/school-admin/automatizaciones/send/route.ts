@@ -243,7 +243,7 @@ function formatEmailHtml(content: string, title: string): string {
         <!-- Footer -->
         <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #334155;">
           <p style="color: #64748b; font-size: 12px; margin: 0;">
-            Este mensaje fue enviado con Quantum para impulsar tu transformación
+            Este mensaje fue enviado con Quantummatter.app para impulsar tu transformación
           </p>
         </div>
       </div>
