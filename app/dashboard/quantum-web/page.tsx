@@ -1467,6 +1467,9 @@ export default function QuantumWebEngine() {
                 <Plus className="w-5 h-5 inline mr-2" />
                 Agregar Mi Primer Servicio
               </button>
+              <p className="text-slate-500 text-sm mt-4">
+                💡 También puedes continuar y agregar servicios después
+              </p>
             </motion.div>
           ) : (
             <div className="space-y-3">
@@ -1551,13 +1554,19 @@ export default function QuantumWebEngine() {
           >
             ← Volver
           </button>
-          <button
-            onClick={() => setStep('appointments-schedule')}
-            disabled={appointmentsConfig.services.length === 0}
-            className="px-8 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Configurar Horarios →
-          </button>
+          <div className="flex items-center gap-3">
+            {appointmentsConfig.services.length === 0 && (
+              <span className="text-slate-500 text-sm hidden sm:block">
+                Puedes agregar servicios después
+              </span>
+            )}
+            <button
+              onClick={() => setStep('appointments-schedule')}
+              className="px-8 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg shadow-purple-500/25"
+            >
+              {appointmentsConfig.services.length === 0 ? 'Continuar sin servicios →' : 'Configurar Horarios →'}
+            </button>
+          </div>
         </div>
       </div>
 
