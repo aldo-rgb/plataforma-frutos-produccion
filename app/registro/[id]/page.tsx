@@ -267,10 +267,6 @@ export default function RegistroPublicoPage() {
       setSubmitting(false);
     }
   };
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   if (loading) {
     return (
