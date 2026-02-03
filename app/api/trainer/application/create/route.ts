@@ -46,21 +46,31 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validar campos requeridos
+    // Validar campos requeridos - soportar ambos nombres de campos
     const {
       titulo,
       especialidad,
+      especialidadOtra,
+      especialidadesSecundarias,
       biografia,
+      biografiaCompleta,
       experienciaAnios,
       experienciaDescripcion,
       certificaciones,
+      logros,
+      expertiseTags,
       metodologia,
       disponibilidad,
       ubicacion,
       documentos,
+      documentosUrls,
+      videoIntroUrl,
     } = body;
 
-    if (!titulo || !especialidad || !biografia) {
+    // Usar biografiaCompleta si biografia no está presente
+    const bioText = biografia || biografiaCompleta;
+
+    if (!titulo || !especialidad || !bioText) {
       return NextResponse.json(
         { error: 'Faltan campos requeridos: título, especialidad y biografía son obligatorios' },
         { status: 400 }
@@ -68,7 +78,7 @@ export async function POST(request: Request) {
     }
 
     // Validar longitud mínima de biografía (20 palabras)
-    const palabrasBio = biografia.trim().split(/\s+/).length;
+    const palabrasBio = bioText.trim().split(/\s+/).length;
     if (palabrasBio < 20) {
       return NextResponse.json(
         { error: 'La biografía debe tener al menos 20 palabras' },
@@ -76,21 +86,26 @@ export async function POST(request: Request) {
       );
     }
 
+    // Preparar especialidad final
+    const especialidadFinal = especialidad === 'Otros' && especialidadOtra 
+      ? especialidadOtra 
+      : especialidad;
+
     // Crear la solicitud directamente en estado PENDING (no hay pago como en mentor)
     const application = await prisma.trainerApplication.create({
       data: {
         userId,
         status: 'PENDING',
         titulo: titulo.trim(),
-        especialidad: especialidad.trim(),
-        biografia: biografia.trim(),
-        experienciaAnios: experienciaAnios ? parseInt(experienciaAnios) : null,
+        especialidad: especialidadFinal.trim(),
+        biografia: bioText.trim(),
+        experienciaAnios: experienciaAnios ? parseInt(String(experienciaAnios)) : null,
         experienciaDescripcion: experienciaDescripcion?.trim() || null,
-        certificaciones: certificaciones?.trim() || null,
-        metodologia: metodologia?.trim() || null,
-        disponibilidad: disponibilidad?.trim() || null,
+        certificaciones: Array.isArray(logros) ? logros.join(', ') : (certificaciones?.trim() || null),
+        metodologia: Array.isArray(expertiseTags) ? expertiseTags.join(', ') : (metodologia?.trim() || null),
+        disponibilidad: Array.isArray(especialidadesSecundarias) ? especialidadesSecundarias.join(', ') : (disponibilidad?.trim() || null),
         ubicacion: ubicacion?.trim() || null,
-        documentos: documentos || null,
+        documentos: documentosUrls || documentos || null,
       },
     });
 
