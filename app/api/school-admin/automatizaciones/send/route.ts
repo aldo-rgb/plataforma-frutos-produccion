@@ -83,6 +83,8 @@ export async function POST(request: NextRequest) {
 
     // El nombre del remitente será: MasterOrganization > Organization > "Tu Equipo"
     const senderName = organization?.MasterOrganization?.name || organization?.name || 'Tu Equipo';
+    // El nombre para el subject del email usa el nombre de la organización específica
+    const organizationName = organization?.name || 'Tu Equipo';
 
     for (const targetUser of users) {
       try {
@@ -104,7 +106,7 @@ export async function POST(request: NextRequest) {
             const videoLabel = getVideoLabel(videoKey);
             const emailResult = await sendEmail(
               targetUser.email,
-              `🎬 ${videoLabel} - ${senderName}`,
+              `🎬 ${videoLabel} - ${organizationName}`,
               formatEmailHtml(personalizedEmail, videoLabel),
               { fromName: senderName }
             );
@@ -176,8 +178,8 @@ export async function POST(request: NextRequest) {
 
 function getVideoLabel(videoKey: string): string {
   const labels: Record<string, string> = {
-    videoBienvenidaLideres1Url: 'Bienvenida Líderes Video 1',
-    videoBienvenidaLideres2Url: 'Bienvenida Líderes Video 2',
+    videoBienvenidaLideres1Url: 'Bienvenida Básico',
+    videoBienvenidaLideres2Url: 'Bienvenida Básico 2',
     video2daLlamadaPerdidaUrl: '2da Llamada Perdida',
     videoInvitacionTransformadoraUrl: 'Invitación Transformadora',
     video3raLlamadaUrl: '3ra Llamada',
@@ -241,7 +243,7 @@ function formatEmailHtml(content: string, title: string): string {
         <!-- Footer -->
         <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #334155;">
           <p style="color: #64748b; font-size: 12px; margin: 0;">
-            Este mensaje fue enviado con ❤️ para impulsar tu transformación
+            Este mensaje fue enviado con Quantum para impulsar tu transformación
           </p>
         </div>
       </div>

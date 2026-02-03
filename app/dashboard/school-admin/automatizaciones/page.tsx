@@ -39,14 +39,14 @@ interface VideoOption {
 const VIDEO_OPTIONS: VideoOption[] = [
   { 
     key: 'videoBienvenidaLideres1Url', 
-    label: 'Bienvenida Líderes Video 1',
-    description: 'Video de bienvenida inicial para nuevos líderes',
+    label: 'Bienvenida Básico',
+    description: 'Video de bienvenida para el programa básico',
     icon: '🎬'
   },
   { 
     key: 'videoBienvenidaLideres2Url', 
-    label: 'Bienvenida Líderes Video 2',
-    description: 'Segundo video de bienvenida con información adicional',
+    label: 'Bienvenida Básico 2',
+    description: 'Segundo video de bienvenida para el programa básico',
     icon: '🎥'
   },
   { 
