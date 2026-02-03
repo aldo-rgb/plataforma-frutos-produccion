@@ -2409,6 +2409,7 @@ model Vision {
   platformFeePercent            Float                          @default(0)
   tribeLogoUrl                  String?
   tribeShirtDesignUrl           String?
+  tribeMission                  String?
   AbandonedCheckouts            AbandonedCheckout[]
   AdvancedQuestionnaires        AdvancedQuestionnaire[]
   ArchetypeAssignments          ArchetypeAssignment[]          @relation("VisionArchetypeAssignments")

@@ -97,6 +97,7 @@ interface LegacyBuilderData {
   isStaff: boolean;
   visionId: number;
   visionName: string;
+  tribeMission: string | null;
   oathSigned: boolean;
   oathSignedAt: string | null;
   promises: TribePromise[];
@@ -144,6 +145,13 @@ export default function LegacyVisionBuilderPage() {
     show: boolean;
     notification: PendingNotification | null;
   }>({ show: false, notification: null });
+
+  // Modal para capturar la misión de la tribu
+  const [missionModal, setMissionModal] = useState<{
+    show: boolean;
+    loading: boolean;
+  }>({ show: false, loading: false });
+  const [tribeMission, setTribeMission] = useState('');
 
   // Modal para crear campaña de Legacy Builder (COMMUNITY_SERVICE)
   const [campaignModal, setCampaignModal] = useState<{
@@ -347,9 +355,20 @@ export default function LegacyVisionBuilderPage() {
     }
   };
 
-  // Función para reclamar la capitanía de tribu
+  // Función para reclamar la capitanía de tribu - ahora abre modal para misión
   const handleClaimTribeCaptain = async () => {
-    setNominating(true);
+    // Primero mostrar el modal para capturar la misión
+    setMissionModal({ show: true, loading: false });
+  };
+
+  // Función para confirmar reclamación con misión
+  const handleConfirmClaimWithMission = async () => {
+    if (!tribeMission.trim()) {
+      showToast('Por favor escribe la misión de tu tribu', 'error');
+      return;
+    }
+
+    setMissionModal(prev => ({ ...prev, loading: true }));
     try {
       const res = await fetch('/api/legacy-vision-builder', {
         method: 'POST',
@@ -357,6 +376,7 @@ export default function LegacyVisionBuilderPage() {
         body: JSON.stringify({
           action: 'claim_tribe_captain',
           visionId: data?.visionId,
+          tribeMission: tribeMission.trim(),
         }),
       });
 
@@ -364,6 +384,8 @@ export default function LegacyVisionBuilderPage() {
 
       if (res.ok) {
         showToast('👑 ' + result.message, 'success');
+        setMissionModal({ show: false, loading: false });
+        setTribeMission('');
         await fetchData();
       } else {
         showToast(result.error || 'Error al reclamar capitanía', 'error');
@@ -371,7 +393,7 @@ export default function LegacyVisionBuilderPage() {
     } catch (error) {
       showToast('Error de conexión', 'error');
     } finally {
-      setNominating(false);
+      setMissionModal(prev => ({ ...prev, loading: false }));
     }
   };
 
@@ -696,6 +718,107 @@ export default function LegacyVisionBuilderPage() {
                   className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
                 >
                   Rechazar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para Capturar Misión de la Tribu */}
+      {missionModal.show && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-gray-900 rounded-2xl border border-amber-600/30 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            {/* Header del Modal */}
+            <div className="bg-gradient-to-r from-amber-600 to-yellow-600 p-6 rounded-t-2xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-white/20 rounded-xl">
+                    <Crown className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">¡Estás a punto de ser Capitán!</h2>
+                    <p className="text-amber-200 text-sm">Define la misión de tu tribu</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setMissionModal({ show: false, loading: false });
+                    setTribeMission('');
+                  }}
+                  className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Contenido */}
+            <div className="p-6 space-y-6">
+              {/* Contexto */}
+              <div className="bg-amber-900/30 border border-amber-600/30 rounded-xl p-4">
+                <p className="text-amber-200 text-sm flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 flex-shrink-0" />
+                  <span>
+                    La misión de la tribu es el propósito que los unirá durante todo el programa. 
+                    Se mostrará en tu <strong>Legado Transformacional</strong>.
+                  </span>
+                </p>
+              </div>
+
+              {/* Campo de misión */}
+              <div>
+                <label className="block text-white text-sm font-medium mb-2">
+                  ¿Cuál es la misión de tu tribu? *
+                </label>
+                <textarea
+                  value={tribeMission}
+                  onChange={(e) => setTribeMission(e.target.value)}
+                  placeholder="Ej: Ser la tribu más unida y comprometida, generando un impacto positivo en nuestra comunidad..."
+                  rows={4}
+                  maxLength={500}
+                  className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 resize-none"
+                />
+                <p className="text-gray-500 text-xs mt-1 text-right">
+                  {tribeMission.length}/500 caracteres
+                </p>
+              </div>
+
+              {/* Ejemplos */}
+              <div className="bg-gray-800/50 rounded-xl p-4">
+                <p className="text-gray-400 text-xs font-medium mb-2">💡 Ejemplos de misiones:</p>
+                <ul className="text-gray-500 text-xs space-y-1">
+                  <li>• "Transformar vidas a través del servicio y la excelencia"</li>
+                  <li>• "Construir un legado de integridad y liderazgo auténtico"</li>
+                  <li>• "Inspirar el cambio positivo en nuestra comunidad"</li>
+                </ul>
+              </div>
+
+              {/* Botones de acción */}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleConfirmClaimWithMission}
+                  disabled={missionModal.loading || !tribeMission.trim()}
+                  className="flex-1 px-6 py-4 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {missionModal.loading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Crown className="w-5 h-5" />
+                      Reclamar Capitanía
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setMissionModal({ show: false, loading: false });
+                    setTribeMission('');
+                  }}
+                  disabled={missionModal.loading}
+                  className="px-6 py-4 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
+                >
+                  Cancelar
                 </button>
               </div>
             </div>

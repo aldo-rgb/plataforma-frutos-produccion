@@ -282,6 +282,7 @@ export async function GET(request: NextRequest) {
         nombre: true,
         tribeLogoUrl: true,
         tribeShirtDesignUrl: true,
+        tribeMission: true,
       }
     });
 
@@ -379,12 +380,16 @@ export async function GET(request: NextRequest) {
       tribeLogoUrl: visionInfo?.tribeLogoUrl || null,
       tribeShirtDesignUrl: visionInfo?.tribeShirtDesignUrl || null,
       
+      // Misión de la tribu (legado transformacional)
+      tribeMission: visionInfo?.tribeMission || null,
+      
       // Visión completa para Identity Lab
       vision: visionInfo ? {
         id: visionInfo.id,
         nombre: visionInfo.nombre,
         tribeLogoUrl: visionInfo.tribeLogoUrl,
         tribeShirtDesignUrl: visionInfo.tribeShirtDesignUrl,
+        tribeMission: visionInfo.tribeMission,
       } : null,
       
       // Fase 1: Juramento
@@ -500,6 +505,15 @@ export async function POST(request: NextRequest) {
 
     // ACCIÓN: Reclamar capitanía de tribu (primer participante que lo reclama)
     if (action === 'claim_tribe_captain') {
+      const { tribeMission } = body;
+      
+      // Validar que se proporcione la misión
+      if (!tribeMission || tribeMission.trim().length < 10) {
+        return NextResponse.json({ 
+          error: "La misión de la tribu debe tener al menos 10 caracteres" 
+        }, { status: 400 });
+      }
+
       // Verificar que el usuario tenga enrollment PL en esta visión
       const plEnrollment = await prisma.vision_enrollments.findFirst({
         where: {
@@ -566,6 +580,12 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      // Guardar la misión de la tribu en la visión
+      await prisma.vision.update({
+        where: { id: parseInt(visionId) },
+        data: { tribeMission: tribeMission.trim() }
+      });
+
       // Crear la asignación directamente como ACCEPTED (se auto-asigna)
       const assignment = await prisma.tribeCaptainAssignment.create({
         data: {
@@ -584,7 +604,8 @@ export async function POST(request: NextRequest) {
           id: assignment.id,
           roleType: 'TRIBE_CAPTAIN',
           status: 'ACCEPTED',
-        }
+        },
+        tribeMission: tribeMission.trim()
       });
     }
 

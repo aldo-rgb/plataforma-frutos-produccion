@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Users, UserPlus, Award, TrendingUp } from 'lucide-react';
+import { Users, UserPlus, Award, TrendingUp, Target } from 'lucide-react';
 import Image from 'next/image';
 
 interface TribeStats {
@@ -15,13 +15,15 @@ interface TribeManagementWidgetProps {
   onInviteClick?: () => void;
   tribeLogoUrl?: string | null;
   tribeName?: string;
+  tribeMission?: string | null;
 }
 
 export default function TribeManagementWidget({ 
   stats, 
   onInviteClick, 
   tribeLogoUrl,
-  tribeName 
+  tribeName,
+  tribeMission 
 }: TribeManagementWidgetProps) {
   const enrolledCount = stats?.enrolledCount || 0;
   const graduatedCount = stats?.graduatedCount || 0;
@@ -54,6 +56,21 @@ export default function TribeManagementWidget({
           </div>
         </div>
       </div>
+
+      {/* Misión de la Tribu */}
+      {tribeMission && (
+        <div className="mb-6 bg-gradient-to-r from-amber-900/30 to-yellow-900/20 rounded-xl p-4 border border-yellow-500/20">
+          <div className="flex items-start gap-3">
+            <Target className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs text-yellow-400/80 font-medium mb-1">Nuestra Misión</p>
+              <p className="text-sm text-slate-200 leading-relaxed italic">
+                "{tribeMission}"
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stats Grid - Solo Enrollados y Graduados */}
       <div className="grid grid-cols-2 gap-4 mb-6">

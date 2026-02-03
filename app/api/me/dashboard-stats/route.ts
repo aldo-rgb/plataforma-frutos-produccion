@@ -278,17 +278,19 @@ export async function GET() {
     let tribeStats = null;
     let tribeLogoUrl = null;
     let tribeName = null;
+    let tribeMission = null;
     
     if (currentLevel === 'PL' && vision) {
       const invitedCount = await prisma.usuario.count({
         where: { invitedBy: usuario.id }
       });
 
-      // Obtener logo de tribu y nombre de la visión con el logo
+      // Obtener logo de tribu, misión y nombre de la visión
       const visionWithLogo = await prisma.vision.findUnique({
         where: { id: vision.id },
         select: { 
           tribeLogoUrl: true,
+          tribeMission: true,
           nombre: true
         }
       });
@@ -299,6 +301,7 @@ export async function GET() {
       };
       
       tribeLogoUrl = visionWithLogo?.tribeLogoUrl || null;
+      tribeMission = visionWithLogo?.tribeMission || null;
       tribeName = visionWithLogo?.nombre || null;
     }
 
@@ -333,6 +336,7 @@ export async function GET() {
         buddyInfo,
         tribeStats,
         tribeLogoUrl,
+        tribeMission,
         tribeName,
         isLoboSolitario: currentLevel === 'LOBO_SOLITARIO',
         hasVision: !!vision,

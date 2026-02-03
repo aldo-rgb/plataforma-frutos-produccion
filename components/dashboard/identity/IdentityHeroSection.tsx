@@ -54,6 +54,7 @@ interface DashboardStatsResponse {
       graduatedCount?: number;
     } | null;
     tribeLogoUrl?: string | null;
+    tribeMission?: string | null;
     tribeName?: string | null;
     isLoboSolitario: boolean;
     hasVision: boolean;
@@ -182,6 +183,7 @@ export default function IdentityHeroSection({ initialData, cartaData }: Identity
               onInviteClick={() => setShowQRModal(true)}
               tribeLogoUrl={data?.tribeLogoUrl}
               tribeName={data?.tribeName || data?.visionInfo?.nombre}
+              tribeMission={data?.tribeMission}
             />
             <PromiseWidget 
               hasCompletedCarta={cartaData?.hasCompletedCarta}
