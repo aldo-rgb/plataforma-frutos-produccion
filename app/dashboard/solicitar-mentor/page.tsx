@@ -166,8 +166,9 @@ export default function SolicitarMentorPage() {
         newErrors.especialidadOtra = 'Especifica tu especialidad';
       }
       if (formData.experienciaAnios < 1) newErrors.experienciaAnios = 'Mínimo 1 año de experiencia';
-      if (!formData.biografiaCompleta || formData.biografiaCompleta.length < 200) {
-        newErrors.biografiaCompleta = 'Mínimo 200 caracteres para tu biografía';
+      const wordCount = formData.biografiaCompleta.trim().split(/\s+/).filter(w => w.length > 0).length;
+      if (!formData.biografiaCompleta || wordCount < 20) {
+        newErrors.biografiaCompleta = 'Mínimo 20 palabras para tu biografía';
       }
     }
     
@@ -1015,7 +1016,7 @@ export default function SolicitarMentorPage() {
               
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Biografía Completa * (mín. 200 caracteres)
+                  Biografía Completa * (mín. 20 palabras)
                 </label>
                 <textarea
                   value={formData.biografiaCompleta}
@@ -1028,7 +1029,7 @@ export default function SolicitarMentorPage() {
                   <span className={errors.biografiaCompleta ? 'text-red-400' : 'text-slate-500'}>
                     {errors.biografiaCompleta || 'Comparte tu experiencia y filosofía como mentor'}
                   </span>
-                  <span className="text-slate-500">{formData.biografiaCompleta.length} caracteres</span>
+                  <span className="text-slate-500">{formData.biografiaCompleta.trim().split(/\s+/).filter(w => w.length > 0).length} palabras</span>
                 </div>
               </div>
             </div>

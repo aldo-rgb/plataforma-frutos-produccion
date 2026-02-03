@@ -525,14 +525,12 @@ export default function CoordinadoresPage() {
                   <option value="COORDINADOR">Coordinador Liderato (Tu Vida)</option>
                   <option value="COORDINATOR_BASIC">Coordinador Básico (Discovery)</option>
                   <option value="COORDINATOR_ADVANCED">Coordinador Avanzado (Breakthrough)</option>
-                  <option value="TRAINER">Trainer (Quantum Leap)</option>
                   <option value="SCHOOL_ADMIN">Administrador de Escuela</option>
                 </select>
                 <p className="mt-2 text-xs text-slate-500">
                   {formCoordinador.rol === 'COORDINADOR' && '🎯 Tu Vida - Acceso completo a todas las funciones'}
                   {formCoordinador.rol === 'COORDINATOR_BASIC' && '📋 Logística, Pagos y Asistencia'}
                   {formCoordinador.rol === 'COORDINATOR_ADVANCED' && '🎪 Dinámicas y Staff'}
-                  {formCoordinador.rol === 'TRAINER' && '🚀 Mentores, Cartas y Gamificación'}
                   {formCoordinador.rol === 'SCHOOL_ADMIN' && '🏫 Acceso total - Gestión de escuela, licencias y configuración'}
                 </p>
               </div>
