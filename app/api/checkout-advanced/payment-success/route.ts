@@ -237,10 +237,11 @@ export async function GET(request: NextRequest) {
 
         console.log(`✅ Inscripción ADVANCED creada para usuario ${userId} en visión ${visionId}`);
 
-        // If COMBO or APARTADO, also create PL
+        // If COMBO or APARTADO, also create PL with full/partial payment
         if (packageType === 'COMBO' || packageType === 'APARTADO') {
           const plPaymentStatus = packageType === 'COMBO' ? 'PAID' : 'PENDING';
           const plTicketStatus = packageType === 'COMBO' ? 'ACTIVE' : 'PENDING_PAYMENT';
+          const plTicketType = packageType === 'APARTADO' ? 'APARTADO' : 'STANDARD';
           
           await tx.vision_enrollments.create({
             data: {
@@ -261,7 +262,7 @@ export async function GET(request: NextRequest) {
               organizationId: organizationId,
               visionId: visionId,
               level: 'PL',
-              type: 'STANDARD',
+              type: plTicketType,
               status: plTicketStatus,
               paymentStatus: plPaymentStatus,
               costAtPurchase: prices?.PL || 9000,
@@ -272,6 +273,47 @@ export async function GET(request: NextRequest) {
           });
 
           console.log(`✅ Inscripción PL también creada (${packageType})`);
+        } else {
+          // ADVANCED_ONLY or similar: Create PL enrollment and ticket with PROMO_RESERVABLE
+          // This allows user to pay promo price ($9,000) during their advanced training
+          
+          // Calculate deposit deadline: 11 PM of day before advanced starts
+          let depositDeadline: Date | null = null;
+          if (vision.advancedEndDate) {
+            depositDeadline = new Date(vision.advancedEndDate);
+            depositDeadline.setHours(23, 0, 0, 0); // 11 PM of last day of advanced
+          }
+          
+          await tx.vision_enrollments.create({
+            data: {
+              userId: userId,
+              visionId: visionId,
+              coordinatorId: coordinatorId,
+              level: 'PL',
+              enrollmentStatus: 'PENDING',
+              paymentStatus: 'PENDING',
+              enrolledAt: new Date(),
+              updatedAt: new Date(),
+            },
+          });
+
+          await tx.ticket.create({
+            data: {
+              ownerId: userId,
+              organizationId: organizationId,
+              visionId: visionId,
+              level: 'PL',
+              type: 'PROMO_RESERVABLE',
+              status: 'PROMO_AVAILABLE',
+              paymentStatus: 'PENDING',
+              costAtPurchase: 9000, // Precio promo durante avanzado
+              amountPaid: 0,
+              isTransferable: false,
+              validUntil: depositDeadline, // Válido hasta el final del avanzado
+            },
+          });
+
+          console.log(`✅ Ticket PL PROMO_RESERVABLE creado para usuario ${userId}`);
         }
       }
     });
