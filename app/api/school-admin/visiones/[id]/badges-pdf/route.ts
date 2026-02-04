@@ -77,6 +77,12 @@ export async function GET(
             name: true,
             logoUrl: true,
             brandColor: true,
+            MasterOrganization: {
+              select: {
+                name: true,
+                logoUrl: true,
+              },
+            },
           },
         },
       },
@@ -241,10 +247,11 @@ export async function GET(
       }, { status: 400 });
     }
 
-    // Organization branding
-    const orgName = vision.Organization?.name || 'Impacto Cuántico';
+    // Organization branding - Usar MasterOrganization si existe, sino Organization
+    const masterOrg = vision.Organization?.MasterOrganization;
+    const orgName = masterOrg?.name || vision.Organization?.name || 'Impacto Cuántico';
     const brandColor = vision.Organization?.brandColor || '#00BFFF'; // Cyan default
-    const logoUrl = vision.Organization?.logoUrl;
+    const logoUrl = masterOrg?.logoUrl || vision.Organization?.logoUrl;
 
     // Generate PDF with jsPDF
     const pdfBuffer = await generateBadgesPDF(
