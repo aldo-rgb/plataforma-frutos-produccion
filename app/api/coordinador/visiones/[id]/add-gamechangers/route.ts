@@ -186,6 +186,16 @@ export async function POST(
             asignadoPorId: session.user.id
           } 
         });
+        
+        // Actualizar el usuario a rol GAMECHANGER y flag esGameChanger
+        await prisma.usuario.update({
+          where: { id: user.id },
+          data: {
+            rol: 'GAMECHANGER',
+            esGameChanger: true
+          }
+        });
+        
         results.push(user.email);
 
         // Si el usuario ya existía, reiniciar su wizard

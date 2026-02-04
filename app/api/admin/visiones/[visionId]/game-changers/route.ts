@@ -89,6 +89,15 @@ export async function POST(
       }
     });
 
+    // Actualizar el usuario a rol GAMECHANGER y flag esGameChanger
+    await prisma.usuario.update({
+      where: { id: gameChangerId },
+      data: {
+        rol: 'GAMECHANGER',
+        esGameChanger: true
+      }
+    });
+
     return NextResponse.json({ 
       success: true, 
       message: 'Game Changer asignado exitosamente',

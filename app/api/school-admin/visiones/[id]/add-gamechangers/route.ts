@@ -192,6 +192,15 @@ export async function POST(
             }
           });
 
+          // Actualizar el usuario a rol GAMECHANGER y flag esGameChanger
+          await prisma.usuario.update({
+            where: { id: userId },
+            data: {
+              rol: 'GAMECHANGER',
+              esGameChanger: true
+            }
+          });
+
           // Lógica de licencias diferente según el nivel
           let shouldCreateLicense = false;
           let finalExpiryDate = licenseExpiryDate;
@@ -490,6 +499,16 @@ export async function POST(
             level: level
           } 
         });
+        
+        // Actualizar el usuario a rol GAMECHANGER y flag esGameChanger
+        await prisma.usuario.update({
+          where: { id: user.id },
+          data: {
+            rol: 'GAMECHANGER',
+            esGameChanger: true
+          }
+        });
+        
         results.push(user.email);
 
         // Si el usuario ya existía en la organización (no es recién creado), crear NUEVA licencia para la NUEVA visión
