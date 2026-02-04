@@ -159,8 +159,18 @@ export default function PaymentGatewayPage() {
       if (data.success) {
         showNotification('success', data.message);
         setHasExistingConfig(true);
-        // Recargar configuración desde el servidor para asegurar datos frescos
-        await fetchConfig();
+        // Actualizar estado con valores del servidor (enmascarados para secretos)
+        if (data.config) {
+          setConfig(prev => ({
+            ...prev,
+            id: data.config.id,
+            provider: data.config.provider,
+            publicKey: data.config.publicKey || '',
+            secretKey: data.config.secretKey || '', // Será el valor enmascarado
+            webhookSecret: data.config.webhookSecret || '',
+            isActive: data.config.isActive,
+          }));
+        }
       } else {
         showNotification('error', data.error || 'Error al guardar');
       }

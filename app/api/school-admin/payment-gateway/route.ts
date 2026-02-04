@@ -92,6 +92,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { provider, publicKey, secretKey, webhookSecret, isActive } = body;
 
+    console.log('🔵 [payment-gateway] POST request:', {
+      provider,
+      publicKeyLength: publicKey?.length,
+      secretKeyLength: secretKey?.length,
+      secretKeyContainsAsterisk: secretKey?.includes('*'),
+      isActive,
+    });
+
     // Validar provider
     const validProviders = ['MERCADOPAGO', 'STRIPE', 'PAYPAL'];
     if (!provider || !validProviders.includes(provider)) {
@@ -140,6 +148,9 @@ export async function POST(request: NextRequest) {
       // Solo actualizar secretKey si no está enmascarada (contiene asteriscos)
       if (secretKey && !secretKey.includes('*')) {
         updateData.secretKey = secretKey;
+        console.log('🟢 [payment-gateway] Actualizando secretKey (nueva credencial)');
+      } else {
+        console.log('🟡 [payment-gateway] Manteniendo secretKey existente (valor enmascarado)');
       }
 
       // Solo actualizar webhookSecret si no está enmascarado
@@ -147,10 +158,14 @@ export async function POST(request: NextRequest) {
         updateData.webhookSecret = webhookSecret;
       }
 
+      console.log('🔵 [payment-gateway] updateData keys:', Object.keys(updateData));
+
       config = await prisma.paymentGatewayConfig.update({
         where: { id: existingConfig.id },
         data: updateData,
       });
+      
+      console.log('🟢 [payment-gateway] Config actualizada, id:', config.id);
     } else {
       // Crear nueva configuración
       config = await prisma.paymentGatewayConfig.create({
