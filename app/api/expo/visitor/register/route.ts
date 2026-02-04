@@ -24,19 +24,21 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validaciones
-    if (!name || !email || !phone) {
+    if (!name) {
       return NextResponse.json(
-        { error: 'Nombre, email y teléfono son requeridos' },
+        { error: 'Nombre es requerido' },
         { status: 400 }
       );
     }
 
-    if (!relationship) {
-      return NextResponse.json(
-        { error: 'Relación es requerida' },
-        { status: 400 }
-      );
-    }
+    // relationship solo es requerido si se proporcionó
+    // (para visitantes express puede no tener)
+    // if (!relationship) {
+    //   return NextResponse.json(
+    //     { error: 'Relación es requerida' },
+    //     { status: 400 }
+    //   );
+    // }
 
     // Usar referrerId directamente si se proporcionó, si no buscar por nombre
     let referredById: number | null = referrerId ? parseInt(referrerId) : null;
@@ -73,10 +75,10 @@ export async function POST(request: NextRequest) {
       data: {
         token: generateUUID(),
         name: name.trim(),
-        email: email.trim().toLowerCase(),
-        phone: phone.trim(),
+        email: email ? email.trim().toLowerCase() : null,
+        phone: phone ? phone.trim() : null,
         referredById,
-        referralRelation: relationship,
+        referralRelation: relationship || 'visitor',
         deviceFingerprint,
         organizationId
       }
