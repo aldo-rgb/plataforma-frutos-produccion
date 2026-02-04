@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { sendEmail } from '@/lib/email';
 
 // Este endpoint es solo para pruebas - eliminar después
 export async function GET(request: Request) {
@@ -8,6 +7,17 @@ export async function GET(request: Request) {
   
   if (!testEmail) {
     return NextResponse.json({ error: 'Email requerido como parámetro' }, { status: 400 });
+  }
+
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  const FROM_EMAIL = process.env.EMAIL_FROM || 'Quantum Matter <noreply@quantummatter.app>';
+
+  if (!RESEND_API_KEY) {
+    return NextResponse.json({ 
+      success: false, 
+      error: 'RESEND_API_KEY no configurado',
+      hint: 'Agrega RESEND_API_KEY en las variables de entorno de Vercel'
+    }, { status: 500 });
   }
 
   const emailHtml = `
@@ -142,23 +152,34 @@ export async function GET(request: Request) {
   `;
 
   try {
-    const result = await sendEmail(
-      testEmail,
-      '🎫 [PRUEBA] ¡Ricardo Yair te transfirió un ticket para VISIÓN 5!',
-      emailHtml,
-      { fromName: 'Impacto Cuántico Oaxaca' }
-    );
+    // Usar Resend directamente como en automatizaciones
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: FROM_EMAIL,
+        to: testEmail,
+        subject: '🎫 [PRUEBA] ¡Ricardo Yair te transfirió un ticket para VISIÓN 5!',
+        html: emailHtml
+      })
+    });
 
-    if (result.success) {
+    const data = await response.json();
+
+    if (response.ok) {
       return NextResponse.json({ 
         success: true, 
         message: `Correo de prueba enviado a ${testEmail}`,
-        messageId: result.messageId 
+        messageId: data.id 
       });
     } else {
       return NextResponse.json({ 
         success: false, 
-        error: result.error 
+        error: data.message || 'Error de Resend',
+        details: data
       }, { status: 500 });
     }
   } catch (error) {
