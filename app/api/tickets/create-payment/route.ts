@@ -3,6 +3,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+// Forzar que esta ruta sea dinámica (sin caché)
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 /**
  * POST /api/tickets/create-payment
  * 

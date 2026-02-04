@@ -3,6 +3,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+// Forzar que esta ruta sea dinámica (sin caché)
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 /**
  * POST /api/checkout-advanced/create-payment
  * 
@@ -92,6 +96,14 @@ export async function POST(request: NextRequest) {
       case 'APARTADO':
         productTitle = 'Apartado Avanzado + Tu VIDA (PL)';
         productDescription = 'Apartado para Combo Avanzado + PL - Frutos del Espíritu';
+        break;
+      case 'PL_APARTADO':
+        productTitle = 'Apartado Tu VIDA (PL)';
+        productDescription = 'Apartado $1,500 para Combo Tu VIDA - Frutos del Espíritu';
+        break;
+      case 'PL_COMPLETO':
+        productTitle = 'Combo Completo Tu VIDA (PL)';
+        productDescription = 'Completar Combo Avanzado + Tu VIDA - Frutos del Espíritu';
         break;
       case 'PL_BASE':
       case 'PL_CON_CREDITO':

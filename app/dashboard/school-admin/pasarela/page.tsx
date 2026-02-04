@@ -107,7 +107,10 @@ export default function PaymentGatewayPage() {
 
   const fetchConfig = async () => {
     try {
-      const res = await fetch('/api/school-admin/payment-gateway');
+      const res = await fetch('/api/school-admin/payment-gateway', {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
       const data = await res.json();
 
       if (data.success) {
@@ -156,15 +159,8 @@ export default function PaymentGatewayPage() {
       if (data.success) {
         showNotification('success', data.message);
         setHasExistingConfig(true);
-        // Actualizar config con valores enmascarados del servidor
-        if (data.config) {
-          setConfig(prev => ({
-            ...prev,
-            id: data.config.id,
-            secretKey: data.config.secretKey || prev.secretKey,
-            webhookSecret: data.config.webhookSecret || prev.webhookSecret,
-          }));
-        }
+        // Recargar configuración desde el servidor para asegurar datos frescos
+        await fetchConfig();
       } else {
         showNotification('error', data.error || 'Error al guardar');
       }

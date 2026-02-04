@@ -3,6 +3,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+// Forzar que esta ruta sea dinámica (sin caché)
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 // GET - Obtener configuración de pasarela de pagos
 export async function GET(request: NextRequest) {
   try {
@@ -55,11 +59,17 @@ export async function GET(request: NextRequest) {
       updatedAt: config.updatedAt,
     } : null;
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       config: safeConfig,
       organizationName: organization.name,
     });
+    
+    // Prevenir caché del navegador
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+    response.headers.set('Pragma', 'no-cache');
+    
+    return response;
   } catch (error) {
     console.error('Error fetching payment gateway config:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });

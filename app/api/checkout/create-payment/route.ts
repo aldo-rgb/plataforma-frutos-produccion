@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+// Forzar que esta ruta sea dinámica (sin caché)
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 /**
  * POST /api/checkout/create-payment
  * 

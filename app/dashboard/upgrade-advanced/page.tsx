@@ -76,7 +76,16 @@ type PackageType =
   | 'COMBO_BASE'          // Panorama 1 y 2: Combo precio base
   | 'APARTADO'            // Panorama 1: Apartado (paga promo avanzado + deuda promo PL)
   | 'PL_BASE'             // Panorama 3: PL precio base
-  | 'PL_CON_CREDITO';     // Panorama 3: PL con crédito de apartado
+  | 'PL_CON_CREDITO'      // Panorama 3: PL con crédito de apartado
+  | 'PL_APARTADO'         // Panorama 3 (AVANZADO_EN_CURSO): Pagar $1,500 para apartar combo
+  | 'PL_COMPLETO';        // Panorama 3 (AVANZADO_EN_CURSO): Pagar $7,000 para completar combo
+
+// Constantes de precio para usuarios que YA pagaron Avanzado ($7,500)
+const ADVANCED_PAID_AMOUNT = 7500;  // Lo que ya pagaron por Avanzado
+const COMBO_TOTAL = 14500;          // Precio total del combo
+const APARTADO_DEPOSIT = 1500;      // Pago para apartar ($7,500 + $1,500 = $9,000)
+const REMAINING_AFTER_APARTADO = 5500; // Restante después de apartar
+const COMPLETE_COMBO_PAYMENT = 7000;   // Pago único para completar combo
 
 export default function UpgradeAdvancedPage() {
   const router = useRouter();
@@ -209,15 +218,27 @@ export default function UpgradeAdvancedPage() {
       case 'PL_CON_CREDITO':
         // Con crédito: precio promo - saldo a favor
         return Math.max(0, prices.PL - prices.APARTADO_SALDO);
+      case 'PL_APARTADO':
+        // Usuario ya pagó Avanzado ($7,500), paga $1,500 para apartar
+        return APARTADO_DEPOSIT;
+      case 'PL_COMPLETO':
+        // Usuario ya pagó Avanzado ($7,500), paga $7,000 para completar combo
+        return COMPLETE_COMBO_PAYMENT;
       default:
         return 0;
     }
   };
 
-  // Deuda pendiente (solo aplica para APARTADO)
+  // Deuda pendiente (solo aplica para APARTADO y PL_APARTADO)
   const getPendingDebt = (): number => {
-    if (!prices || selectedPackage !== 'APARTADO') return 0;
-    return prices.PL; // Debe pagar el promo de PL antes del inicio de avanzado
+    if (!prices) return 0;
+    if (selectedPackage === 'APARTADO') {
+      return prices.PL; // Debe pagar el promo de PL antes del inicio de avanzado
+    }
+    if (selectedPackage === 'PL_APARTADO') {
+      return REMAINING_AFTER_APARTADO; // Debe pagar $5,500 antes del inicio de avanzado
+    }
+    return 0;
   };
 
   const handleConfirm = async () => {
@@ -399,17 +420,17 @@ export default function UpgradeAdvancedPage() {
 
           {/* Opciones de Pago para PL */}
           <div className="space-y-4">
-            {/* Opción 1: Completar Apartado con $1,500 */}
+            {/* Opción 1: Apartar con $1,500 */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
               className={`p-5 rounded-2xl border-2 transition-all cursor-pointer ${
-                selectedPackage === 'APARTADO'
+                selectedPackage === 'PL_APARTADO'
                   ? 'border-cyan-500 bg-gradient-to-br from-cyan-900/30 to-blue-900/20'
                   : 'border-slate-700 bg-slate-800/30 hover:border-cyan-500/50'
               }`}
-              onClick={() => setSelectedPackage('APARTADO')}
+              onClick={() => setSelectedPackage('PL_APARTADO')}
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -421,7 +442,7 @@ export default function UpgradeAdvancedPage() {
                     <p className="text-xs text-slate-400">Reserva tu lugar y paga el resto después</p>
                   </div>
                 </div>
-                {selectedPackage === 'APARTADO' && (
+                {selectedPackage === 'PL_APARTADO' && (
                   <Check className="w-6 h-6 text-cyan-400" />
                 )}
               </div>
@@ -429,25 +450,25 @@ export default function UpgradeAdvancedPage() {
               <div className="bg-slate-900/50 rounded-xl p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">Ya pagaste (Avanzado):</span>
-                  <span className="text-emerald-400 font-semibold">$7,500 ✓</span>
+                  <span className="text-emerald-400 font-semibold">${formatPrice(ADVANCED_PAID_AMOUNT)} ✓</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">Paga ahora:</span>
-                  <span className="text-cyan-400 font-bold text-lg">$1,500</span>
+                  <span className="text-cyan-400 font-bold text-lg">${formatPrice(APARTADO_DEPOSIT)}</span>
                 </div>
                 <div className="border-t border-slate-700 pt-2 mt-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">Total apartado:</span>
-                    <span className="text-white font-semibold">$9,000</span>
+                    <span className="text-white font-semibold">${formatPrice(ADVANCED_PAID_AMOUNT + APARTADO_DEPOSIT)}</span>
                   </div>
                   <div className="flex justify-between text-sm mt-1">
                     <span className="text-slate-400">Restante (antes del Avanzado):</span>
-                    <span className="text-yellow-400 font-semibold">$5,500</span>
+                    <span className="text-yellow-400 font-semibold">${formatPrice(REMAINING_AFTER_APARTADO)}</span>
                   </div>
                 </div>
               </div>
               <p className="text-xs text-slate-500 mt-2 text-center">
-                Combo total: $14,500 = $9,000 apartado + $5,500 restante
+                Combo total: ${formatPrice(COMBO_TOTAL)} = ${formatPrice(ADVANCED_PAID_AMOUNT + APARTADO_DEPOSIT)} apartado + ${formatPrice(REMAINING_AFTER_APARTADO)} restante
               </p>
             </motion.div>
 
@@ -457,11 +478,11 @@ export default function UpgradeAdvancedPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
               className={`p-5 rounded-2xl border-2 transition-all cursor-pointer relative ${
-                selectedPackage === 'PL_BASE'
+                selectedPackage === 'PL_COMPLETO'
                   ? 'border-emerald-500 bg-gradient-to-br from-emerald-900/30 to-green-900/20'
                   : 'border-slate-700 bg-slate-800/30 hover:border-emerald-500/50'
               }`}
-              onClick={() => setSelectedPackage('PL_BASE')}
+              onClick={() => setSelectedPackage('PL_COMPLETO')}
             >
               {/* Badge Recomendado */}
               <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -480,7 +501,7 @@ export default function UpgradeAdvancedPage() {
                     <p className="text-xs text-slate-400">Activa tu lugar en Liderato ahora</p>
                   </div>
                 </div>
-                {selectedPackage === 'PL_BASE' && (
+                {selectedPackage === 'PL_COMPLETO' && (
                   <Check className="w-6 h-6 text-emerald-400" />
                 )}
               </div>
@@ -488,16 +509,16 @@ export default function UpgradeAdvancedPage() {
               <div className="bg-slate-900/50 rounded-xl p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-400">Ya pagaste (Avanzado):</span>
-                  <span className="text-emerald-400 font-semibold">$7,500 ✓</span>
+                  <span className="text-emerald-400 font-semibold">${formatPrice(ADVANCED_PAID_AMOUNT)} ✓</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400 text-sm">Paga ahora y completa:</span>
-                  <span className="text-emerald-400 font-black text-2xl">$7,000</span>
+                  <span className="text-emerald-400 font-black text-2xl">${formatPrice(COMPLETE_COMBO_PAYMENT)}</span>
                 </div>
                 <div className="border-t border-slate-700 pt-2 mt-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-white font-semibold">COMBO Total:</span>
-                    <span className="text-yellow-400 font-bold">$14,500 ✓</span>
+                    <span className="text-yellow-400 font-bold">${formatPrice(COMBO_TOTAL)} ✓</span>
                   </div>
                 </div>
               </div>

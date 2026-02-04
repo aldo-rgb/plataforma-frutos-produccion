@@ -34,7 +34,7 @@ interface PriceConfig {
   APARTADO_SALDO?: number;
 }
 
-type PackageType = 'ADVANCED_ONLY' | 'COMBO' | 'APARTADO' | 'PL_BASE' | 'PL_CON_CREDITO';
+type PackageType = 'ADVANCED_ONLY' | 'COMBO' | 'APARTADO' | 'PL_BASE' | 'PL_CON_CREDITO' | 'PL_APARTADO' | 'PL_COMPLETO';
 
 interface UpgradeData {
   type: string;
@@ -385,6 +385,10 @@ export default function CheckoutAdvancedPage() {
                         ? 'Combo Avanzado + PL' 
                         : upgradeData.packageType === 'APARTADO'
                         ? 'Apartado - Avanzado + PL'
+                        : upgradeData.packageType === 'PL_APARTADO'
+                        ? 'Apartado Combo - Tu VIDA'
+                        : upgradeData.packageType === 'PL_COMPLETO'
+                        ? 'Combo Completo - Tu VIDA'
                         : upgradeData.packageType === 'PL_BASE' || upgradeData.packageType === 'PL_CON_CREDITO'
                         ? 'Tu VIDA'
                         : 'Entrenamiento Avanzado'}
@@ -408,6 +412,10 @@ export default function CheckoutAdvancedPage() {
                       ? 'Inversión Combo (Avanzado + PL)'
                       : upgradeData.packageType === 'APARTADO'
                       ? 'Apartado hoy'
+                      : upgradeData.packageType === 'PL_APARTADO'
+                      ? 'Pago para apartar'
+                      : upgradeData.packageType === 'PL_COMPLETO'
+                      ? 'Pago para completar COMBO'
                       : upgradeData.packageType === 'PL_BASE' || upgradeData.packageType === 'PL_CON_CREDITO'
                       ? 'Inversión Tu VIDA'
                       : 'Inversión Avanzado'}
@@ -416,7 +424,8 @@ export default function CheckoutAdvancedPage() {
                     <span className="text-2xl font-bold text-white">
                       ${totalPrice.toLocaleString()} MXN
                     </span>
-                    {upgradeData.prices && (
+                    {/* No mostrar precio tachado para PL_APARTADO o PL_COMPLETO ya que son precios especiales */}
+                    {upgradeData.prices && upgradeData.packageType !== 'PL_APARTADO' && upgradeData.packageType !== 'PL_COMPLETO' && (
                       <span className="text-lg text-slate-500 line-through">
                         ${(upgradeData.packageType === 'COMBO' 
                           ? upgradeData.prices.COMBO_BASE 
@@ -443,8 +452,8 @@ export default function CheckoutAdvancedPage() {
                   </div>
                 )}
 
-                {/* Mostrar deuda pendiente si es APARTADO */}
-                {upgradeData.packageType === 'APARTADO' && upgradeData.pendingDebt && upgradeData.pendingDebt > 0 && (
+                {/* Mostrar deuda pendiente si es APARTADO o PL_APARTADO */}
+                {(upgradeData.packageType === 'APARTADO' || upgradeData.packageType === 'PL_APARTADO') && upgradeData.pendingDebt && upgradeData.pendingDebt > 0 && (
                   <div className="p-3 bg-orange-500/10 border border-orange-500/30 rounded-xl">
                     <div className="flex items-center justify-between">
                       <div>
@@ -453,6 +462,21 @@ export default function CheckoutAdvancedPage() {
                       </div>
                       <span className="text-xl font-bold text-orange-400">
                         ${upgradeData.pendingDebt.toLocaleString()} MXN
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Mostrar desglose de lo ya pagado si es PL_APARTADO o PL_COMPLETO */}
+                {(upgradeData.packageType === 'PL_APARTADO' || upgradeData.packageType === 'PL_COMPLETO') && (
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-emerald-400 font-medium text-sm">✓ Ya pagaste (Avanzado)</p>
+                        <p className="text-xs text-slate-400">Inversión previa acreditada</p>
+                      </div>
+                      <span className="text-xl font-bold text-emerald-400">
+                        $7,500 MXN
                       </span>
                     </div>
                   </div>
