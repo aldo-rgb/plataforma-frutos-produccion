@@ -30,26 +30,26 @@ export async function GET(request: Request) {
     const tareas = await prisma.adminTask.findMany({
       where: whereClause,
       include: {
-        Creator: {
+        Usuario: {
           select: {
             id: true,
             nombre: true
           }
         },
-        Submissions: {
+        TaskSubmission: {
           orderBy: {
             submittedAt: 'desc'
           },
           take: 1,
           include: {
-            Usuario: {
+            Usuario_TaskSubmission_usuarioIdToUsuario: {
               select: {
                 id: true,
                 nombre: true,
                 email: true
               }
             },
-            Reviewer: {
+            Usuario_TaskSubmission_reviewedByToUsuario: {
               select: {
                 nombre: true
               }
