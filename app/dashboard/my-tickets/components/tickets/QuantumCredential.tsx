@@ -280,10 +280,13 @@ export function QuantumCredential({ ticket, userName, userInitials, userPhoto }:
         <div className="relative z-10 px-4 space-y-1.5">
           <DataRow label="CODENAME" value={userName.split(' ')[0].toUpperCase()} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment || isPromoAvailable || isReserved} />
           <DataRow label="LEVEL" value={config.levelText} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment || isPromoAvailable || isReserved} />
-          <DataRow label="STATUS" value={isPromoAvailable ? 'PROMO $9,000' : isReserved ? 'RESERVADO' : isPendingPayment ? 'PAGO PENDIENTE' : isExpiredPayment ? 'EXPIRADO' : config.status} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment || isPromoAvailable || isReserved} />
+          {/* Solo mostrar STATUS si NO es promo available (evitar duplicado) */}
+          {!isPromoAvailable && !isReserved && (
+            <DataRow label="STATUS" value={isPendingPayment ? 'PAGO PENDIENTE' : isExpiredPayment ? 'EXPIRADO' : config.status} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment} />
+          )}
           <DataRow label="VISION" value={ticket.vision.nombre.substring(0, 12)} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment || isPromoAvailable || isReserved} />
-          {/* Fecha según nivel */}
-          {(() => {
+          {/* Fecha según nivel - Solo mostrar si NO es promo/reservado para dar espacio */}
+          {!isPromoAvailable && !isReserved && (() => {
             // Para BASIC: mostrar fecha de inicio básico
             if (ticket.level === 'BASIC' && ticket.vision.startDate) {
               const date = new Date(ticket.vision.startDate);
@@ -296,18 +299,16 @@ export function QuantumCredential({ ticket, userName, userInitials, userPhoto }:
               const formatted = date.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }).toUpperCase();
               return <DataRow label="FECHA" value={formatted} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment} />;
             }
-            // Para PL: mostrar fecha solo si ya terminó el avanzado
+            // Para PL activo: mostrar fecha
             if (ticket.level === 'PL') {
               const advEndDate = ticket.vision.advancedEndDate ? new Date(ticket.vision.advancedEndDate) : null;
               const now = new Date();
-              // Solo mostrar si el avanzado ya terminó
               if (advEndDate && now > advEndDate && ticket.vision.plStartDate) {
                 const date = new Date(ticket.vision.plStartDate);
                 const formatted = date.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }).toUpperCase();
-                return <DataRow label="FECHA" value={formatted} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment || isPromoAvailable || isReserved} />;
+                return <DataRow label="FECHA" value={formatted} color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment} />;
               }
-              // Si aún no termina avanzado, mostrar "PRÓXIMAMENTE"
-              return <DataRow label="FECHA" value="PRÓXIMAMENTE" color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment || isPromoAvailable || isReserved} />;
+              return <DataRow label="FECHA" value="PRÓXIMAMENTE" color={primaryColor} isActive={isActive || isPendingPayment || isExpiredPayment} />;
             }
             return null;
           })()}
@@ -316,27 +317,29 @@ export function QuantumCredential({ ticket, userName, userInitials, userPhoto }:
         {/* Bottom Section - QR, Payment Button, or Expired Message */}
         <div className="absolute bottom-0 left-0 right-0 p-3">
           {isPromoAvailable ? (
-            /* Promo Available - Show deposit button */
+            /* Promo Available - Show payment options */
             <div className="space-y-2">
               <div 
-                className="p-2 rounded-lg text-center"
+                className="p-3 rounded-lg"
                 style={{
                   background: 'rgba(6, 182, 212, 0.1)',
                   border: '1px solid rgba(6, 182, 212, 0.3)',
                 }}
               >
-                <div className="flex items-center justify-center gap-1.5 mb-1">
-                  <Sparkles className="w-3 h-3 text-cyan-400" />
-                  <span className="text-[10px] text-cyan-400 font-bold tracking-wide" style={{ fontFamily: 'monospace' }}>
-                    PRECIO PROMO DISPONIBLE
+                <div className="flex items-center justify-center gap-1.5 mb-2">
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                  <span className="text-[11px] text-cyan-400 font-bold tracking-wide" style={{ fontFamily: 'monospace' }}>
+                    APARTADO DISPONIBLE
                   </span>
                 </div>
-                <p className="text-lg font-black text-cyan-400" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                  $9,000 MXN
-                </p>
-                <p className="text-[10px] text-cyan-400/70 mt-0.5" style={{ fontFamily: 'monospace' }}>
-                  Reserva con $1,500 • Precio base: $11,000
-                </p>
+                <div className="flex items-center justify-between text-[10px] mb-1" style={{ fontFamily: 'monospace' }}>
+                  <span className="text-slate-400">Apartado COMBO:</span>
+                  <span className="text-cyan-400 font-bold">$9,000</span>
+                </div>
+                <div className="flex items-center justify-between text-[10px]" style={{ fontFamily: 'monospace' }}>
+                  <span className="text-slate-400">Completa con:</span>
+                  <span className="text-white font-bold">$1,500</span>
+                </div>
               </div>
               
               <Link 
@@ -346,7 +349,7 @@ export function QuantumCredential({ ticket, userName, userInitials, userPhoto }:
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full py-2 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer text-white"
+                  className="w-full py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer text-white"
                   style={{
                     background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
                     boxShadow: '0 4px 15px rgba(6, 182, 212, 0.4)',
@@ -362,24 +365,26 @@ export function QuantumCredential({ ticket, userName, userInitials, userPhoto }:
             /* Reserved - Show remaining payment button */
             <div className="space-y-2">
               <div 
-                className="p-2 rounded-lg text-center"
+                className="p-3 rounded-lg"
                 style={{
                   background: 'rgba(34, 197, 94, 0.1)',
                   border: '1px solid rgba(34, 197, 94, 0.3)',
                 }}
               >
-                <div className="flex items-center justify-center gap-1.5 mb-1">
-                  <CheckCircle className="w-3 h-3 text-green-400" />
-                  <span className="text-[10px] text-green-400 font-bold tracking-wide" style={{ fontFamily: 'monospace' }}>
-                    PROMO RESERVADA
+                <div className="flex items-center justify-center gap-1.5 mb-2">
+                  <CheckCircle className="w-3.5 h-3.5 text-green-400" />
+                  <span className="text-[11px] text-green-400 font-bold tracking-wide" style={{ fontFamily: 'monospace' }}>
+                    APARTADO RESERVADO ✓
                   </span>
                 </div>
-                <p className="text-lg font-black text-green-400" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                  Saldo: $7,500 MXN
-                </p>
-                <p className="text-[10px] text-green-400/70 mt-0.5" style={{ fontFamily: 'monospace' }}>
-                  Depósito: $1,500 ✓ • Precio promo asegurado
-                </p>
+                <div className="flex items-center justify-between text-[10px] mb-1" style={{ fontFamily: 'monospace' }}>
+                  <span className="text-slate-400">Apartado pagado:</span>
+                  <span className="text-green-400 font-bold">$9,000 ✓</span>
+                </div>
+                <div className="flex items-center justify-between text-[10px]" style={{ fontFamily: 'monospace' }}>
+                  <span className="text-slate-400">Saldo pendiente:</span>
+                  <span className="text-white font-bold">$5,500</span>
+                </div>
               </div>
               
               <Link 
@@ -389,7 +394,7 @@ export function QuantumCredential({ ticket, userName, userInitials, userPhoto }:
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full py-2 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer text-white"
+                  className="w-full py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer text-white"
                   style={{
                     background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
                     boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
