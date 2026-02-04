@@ -32,14 +32,17 @@ export async function GET(
       );
     }
 
-    // 🎯 Obtener TODOS los mentores profesionales con rol MENTOR
+    // 🎯 Obtener TODOS los mentores: rol MENTOR O usuarios con esMentor=true
     const mentoresProfesionales = await prisma.usuario.findMany({
       where: {
-        rol: 'MENTOR',
         isActive: true,
         PerfilMentor: {
           isNot: null // Debe tener perfil (DRAFT o APPROVED, ambos aceptados)
-        }
+        },
+        OR: [
+          { rol: 'MENTOR' },
+          { esMentor: true } // Incluir SCHOOL_ADMIN u otros roles con esMentor
+        ]
       },
       select: {
         id: true,
@@ -49,6 +52,7 @@ export async function GET(
         profileImage: true,
         isActive: true,
         rol: true,
+        esMentor: true,
         accumulatedMissedCalls: true,
         PerfilMentor: {
           select: {
@@ -71,7 +75,7 @@ export async function GET(
       }
     });
 
-    console.log('👥 Mentores profesionales (rol MENTOR) encontrados:', mentoresProfesionales.length);
+    console.log('👥 Mentores (rol MENTOR o esMentor=true) encontrados:', mentoresProfesionales.length);
 
     // Obtener mentores asignados a esta visión (que ya están en VisionMentor)
     const mentoresAsignados = await prisma.visionMentor.findMany({
@@ -264,7 +268,7 @@ export async function GET(
           rol: vm.Usuario_VisionMentor_mentorIdToUsuario?.rol // Incluir rol del mentor
         }
       })),
-      // 🎯 mentoresDisponibles = SOLO mentores certificados (rol MENTOR)
+      // 🎯 mentoresDisponibles = Mentores certificados (rol MENTOR o esMentor=true)
       mentoresDisponibles: mentoresConEspacios.map(m => ({
         id: m.id,
         nombre: m.nombre,
@@ -276,6 +280,7 @@ export async function GET(
         PerfilMentor: m.PerfilMentor,
         tieneHorarios: m.CallAvailability && m.CallAvailability.length > 0,
         rol: m.rol,
+        esMentor: m.esMentor,
         availabilityInfo: m.availabilityInfo,
       })),
       // 🏢 lideresDisponibles = mentores privados de la organización (rol LIDER)
