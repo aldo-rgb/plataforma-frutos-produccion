@@ -12,11 +12,21 @@ export async function GET(request: Request) {
   const RESEND_API_KEY = process.env.RESEND_API_KEY;
   const FROM_EMAIL = process.env.EMAIL_FROM || 'Quantum Matter <noreply@quantummatter.app>';
 
+  // Debug: mostrar si hay variables configuradas
+  const hasResendKey = !!RESEND_API_KEY;
+  const keyLength = RESEND_API_KEY ? RESEND_API_KEY.length : 0;
+  
   if (!RESEND_API_KEY) {
     return NextResponse.json({ 
       success: false, 
       error: 'RESEND_API_KEY no configurado',
-      hint: 'Agrega RESEND_API_KEY en las variables de entorno de Vercel'
+      debug: {
+        hasResendKey,
+        keyLength,
+        fromEmail: FROM_EMAIL,
+        envKeys: Object.keys(process.env).filter(k => k.includes('RESEND') || k.includes('EMAIL')).join(', ')
+      },
+      hint: 'Agrega RESEND_API_KEY en las variables de entorno de Vercel (Production)'
     }, { status: 500 });
   }
 
