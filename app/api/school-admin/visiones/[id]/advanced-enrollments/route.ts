@@ -91,6 +91,7 @@ export async function GET(
           nombre: enrollment.Usuario_vision_enrollments_userIdToUsuario.nombre,
           email: enrollment.Usuario_vision_enrollments_userIdToUsuario.email,
           telefono: enrollment.Usuario_vision_enrollments_userIdToUsuario.telefono,
+          profileImage: enrollment.Usuario_vision_enrollments_userIdToUsuario.profileImage,
           referralCode: enrollment.Usuario_vision_enrollments_userIdToUsuario.referralCode,
           organizationId: enrollment.Usuario_vision_enrollments_userIdToUsuario.organizationId,
           createdAt: enrollment.Usuario_vision_enrollments_userIdToUsuario.createdAt,
