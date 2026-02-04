@@ -148,6 +148,15 @@ export default function PaymentGatewayPage() {
 
     setSaving(true);
     try {
+      // Log para debug
+      console.log('🔵 [pasarela-frontend] Enviando config:', {
+        provider: config.provider,
+        publicKeyLength: config.publicKey?.length,
+        secretKeyLength: config.secretKey?.length,
+        secretKeyContainsAsterisk: config.secretKey?.includes('*'),
+        isActive: config.isActive,
+      });
+      
       const res = await fetch('/api/school-admin/payment-gateway', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -365,7 +374,15 @@ export default function PaymentGatewayPage() {
                     type={showSecretKey ? 'text' : 'password'}
                     value={config.secretKey}
                     onChange={(e) => setConfig(prev => ({ ...prev, secretKey: e.target.value }))}
-                    placeholder={`Ingresa tu ${selectedProvider.fields.secretKey}`}
+                    onFocus={() => {
+                      // Si el valor actual contiene asteriscos (enmascarado), limpiar al hacer focus
+                      if (config.secretKey.includes('*')) {
+                        setConfig(prev => ({ ...prev, secretKey: '' }));
+                      }
+                    }}
+                    placeholder={hasExistingConfig && config.secretKey.includes('*') 
+                      ? 'Ingresa nueva credencial para actualizar' 
+                      : `Ingresa tu ${selectedProvider.fields.secretKey}`}
                     className="w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                   />
                   <button
@@ -378,7 +395,7 @@ export default function PaymentGatewayPage() {
                 </div>
                 {hasExistingConfig && config.secretKey.includes('*') && (
                   <p className="text-xs text-gray-500 mt-1">
-                    La clave está enmascarada. Déjala así o ingresa una nueva para actualizarla.
+                    La clave está enmascarada. Haz clic en el campo para ingresar una nueva.
                   </p>
                 )}
               </div>
