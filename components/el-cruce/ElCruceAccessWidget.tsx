@@ -44,6 +44,7 @@ interface CrossingSession {
     id: number
     name: string
     levelType: string
+    visionId?: number
   }
   targetProduct?: {
     id: number
@@ -301,6 +302,12 @@ export default function ElCruceAccessWidget({
       const params = new URLSearchParams()
       if (organizationId) params.append('organizationId', String(organizationId))
       
+      // Si hay una sesión activa, filtrar solo por su visionId
+      const activeSession = sessions.find(s => ['WAITING', 'ACTIVE', 'PAUSED'].includes(s.status))
+      if (activeSession?.product?.visionId) {
+        params.append('visionId', String(activeSession.product.visionId))
+      }
+      
       const res = await fetch(`/api/el-cruce/participantes-pendientes?${params.toString()}`)
       if (res.ok) {
         const data = await res.json()
@@ -321,6 +328,12 @@ export default function ElCruceAccessWidget({
         const params = new URLSearchParams()
         if (organizationId) params.append('organizationId', String(organizationId))
         
+        // Si hay una sesión activa, filtrar solo por su visionId
+        const activeSession = sessions.find(s => ['WAITING', 'ACTIVE', 'PAUSED'].includes(s.status))
+        if (activeSession?.product?.visionId) {
+          params.append('visionId', String(activeSession.product.visionId))
+        }
+        
         const res = await fetch(`/api/el-cruce/participantes-pendientes?${params.toString()}`)
         if (res.ok) {
           const data = await res.json()
@@ -334,7 +347,7 @@ export default function ElCruceAccessWidget({
     // Actualizar cada 30 segundos
     const interval = setInterval(fetchCount, 30000)
     return () => clearInterval(interval)
-  }, [organizationId])
+  }, [organizationId, sessions])
 
   // Abrir modal de participantes pendientes
   const openParticipantesModal = () => {

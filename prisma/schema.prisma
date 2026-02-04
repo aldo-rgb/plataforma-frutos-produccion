@@ -5650,6 +5650,7 @@ enum TicketType {
   COMBO_PARTIAL
   PROMO_RESERVABLE
   PROMO_RESERVED
+  APARTADO
 }
 
 enum TicketStatus {

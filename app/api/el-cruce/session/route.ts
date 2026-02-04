@@ -52,21 +52,24 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "Sesión no encontrada" }, { status: 404 })
       }
 
-      // Obtener el producto de PL de la misma organización (para Tu Vida)
+      // Obtener la visionId del producto de la sesión
+      const sessionVisionId = await prisma.schoolProduct.findUnique({
+        where: { id: crossingSession.productId },
+        select: { visionId: true }
+      })
+      
+      // Solo buscar tickets de PL de la MISMA VISION del producto de la sesión
+      // (NO de todas las visiones de la organización para evitar mezclar participantes)
+      const visionIds = sessionVisionId?.visionId ? [sessionVisionId.visionId] : []
+      
+      // Obtener el producto de PL de la misma visión (para Tu Vida)
       const plProduct = await prisma.schoolProduct.findFirst({
         where: {
-          organizationId: crossingSession.product.organizationId,
+          visionId: sessionVisionId?.visionId,
           levelType: 'PL'
         },
         select: { id: true }
       })
-
-      // Obtener las visiones de la organización para buscar tickets de PL
-      const orgVisions = await prisma.vision.findMany({
-        where: { organizationId: crossingSession.product.organizationId },
-        select: { id: true }
-      })
-      const visionIds = orgVisions.map(v => v.id)
 
       // Obtener participantes en paralelo para mayor velocidad
       const [checkedInUsers, preRegistered, plTicketHolders] = await Promise.all([
@@ -606,7 +609,7 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           product: {
-            select: { id: true, name: true, levelType: true, organizationId: true, trainingStatus: true }
+            select: { id: true, name: true, levelType: true, organizationId: true, trainingStatus: true, visionId: true }
           },
           creator: {
             select: { id: true, nombre: true }

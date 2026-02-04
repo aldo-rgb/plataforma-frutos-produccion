@@ -162,8 +162,8 @@ export default function CatalogoExpoPage({ params }: { params: Promise<{ visionI
 
       if (data.success) {
         // Guardar token y redirigir
-        localStorage.setItem('expoVisitorToken', data.token);
-        localStorage.setItem('expoVisitorName', registerName.trim());
+        localStorage.setItem('expo_visitor_token', data.token);
+        localStorage.setItem('expo_visitor_name', registerName.trim());
         
         // Redirigir al proceso de calificación
         if (selectedReferrer) {
