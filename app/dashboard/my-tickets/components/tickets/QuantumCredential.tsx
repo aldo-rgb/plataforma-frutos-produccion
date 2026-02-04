@@ -343,7 +343,7 @@ export function QuantumCredential({ ticket, userName, userInitials, userPhoto }:
               </div>
               
               <Link 
-                href="/dashboard/pay-pl"
+                href="/dashboard/upgrade-advanced"
                 className="block w-full"
               >
                 <motion.div
@@ -388,7 +388,7 @@ export function QuantumCredential({ ticket, userName, userInitials, userPhoto }:
               </div>
               
               <Link 
-                href="/dashboard/pay-pl"
+                href="/dashboard/upgrade-advanced"
                 className="block w-full"
               >
                 <motion.div

@@ -397,104 +397,153 @@ export default function UpgradeAdvancedPage() {
             </motion.div>
           )}
 
-          {/* PL Option Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className={`p-6 rounded-2xl border-2 transition-all cursor-pointer ${
-              selectedPackage === 'PL_BASE' || selectedPackage === 'PL_CON_CREDITO'
-                ? 'border-yellow-500 bg-gradient-to-br from-yellow-900/30 to-amber-900/20'
-                : 'border-slate-700 bg-slate-800/30 hover:border-yellow-500/50'
-            }`}
-            onClick={() => setSelectedPackage(hasApartadoCredit ? 'PL_CON_CREDITO' : 'PL_BASE')}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-gradient-to-br from-yellow-500/30 to-amber-500/20 rounded-xl">
-                  <Crown className="w-6 h-6 text-yellow-400" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">TU VIDA</h3>
-                  <p className="text-sm text-slate-400">El nivel más alto de formación</p>
-                </div>
-              </div>
-              {(selectedPackage === 'PL_BASE' || selectedPackage === 'PL_CON_CREDITO') && (
-                <Check className="w-6 h-6 text-yellow-400" />
-              )}
-            </div>
-
-            <div className="border-t border-slate-700 pt-4">
-              {hasApartadoCredit && prices && prices.APARTADO_SALDO > 0 ? (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-slate-500">
-                    <span>Precio base:</span>
-                    <span className="line-through">${formatPrice(prices.PL_BASE)}</span>
-                  </div>
-                  <div className="flex justify-between text-yellow-400 font-semibold">
-                    <span>🔥 Precio promo:</span>
-                    <span>${formatPrice(prices.PL)}</span>
-                  </div>
-                  <div className="flex justify-between text-emerald-400">
-                    <span>✨ Tu saldo a favor:</span>
-                    <span>-${formatPrice(prices.APARTADO_SALDO)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-white text-xl font-bold pt-3 mt-2 border-t border-slate-600">
-                    <span>Disponible por solo:</span>
-                    <span className="text-2xl text-yellow-400">${formatPrice(Math.max(0, prices.PL - prices.APARTADO_SALDO))}</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-slate-500">
-                    <span>Precio base:</span>
-                    <span className="line-through">${formatPrice(prices?.PL_BASE || 11000)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-yellow-400 font-semibold">🔥 Precio promo:</span>
-                    <span className="text-3xl font-black text-yellow-400">${formatPrice(prices?.PL || 9000)}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Quantum AI Highlight */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.4 }}
-              className="mt-4 p-4 bg-gradient-to-r from-purple-600/20 via-cyan-500/20 to-blue-600/20 border border-purple-500/40 rounded-xl"
+          {/* Opciones de Pago para PL */}
+          <div className="space-y-4">
+            {/* Opción 1: Completar Apartado con $1,500 */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className={`p-5 rounded-2xl border-2 transition-all cursor-pointer ${
+                selectedPackage === 'APARTADO'
+                  ? 'border-cyan-500 bg-gradient-to-br from-cyan-900/30 to-blue-900/20'
+                  : 'border-slate-700 bg-slate-800/30 hover:border-cyan-500/50'
+              }`}
+              onClick={() => setSelectedPackage('APARTADO')}
             >
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-br from-purple-500 to-cyan-500 rounded-lg">
-                  <Zap className="w-5 h-5 text-white" />
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-gradient-to-br from-cyan-500/30 to-blue-500/20 rounded-xl">
+                    <CreditCard className="w-5 h-5 text-cyan-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Opción 1: Apartar Lugar</h3>
+                    <p className="text-xs text-slate-400">Reserva tu lugar y paga el resto después</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-bold text-white flex items-center gap-2">
-                    Incluye acceso a Quantum AI
-                    <span className="px-2 py-0.5 bg-purple-500/30 rounded text-[10px] text-purple-300 font-bold">EXCLUSIVO</span>
-                  </p>
-                  <p className="text-sm text-slate-400">
-                    Mentoría asistida por Inteligencia Artificial para acelerar tu crecimiento
-                  </p>
+                {selectedPackage === 'APARTADO' && (
+                  <Check className="w-6 h-6 text-cyan-400" />
+                )}
+              </div>
+
+              <div className="bg-slate-900/50 rounded-xl p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Ya pagaste (Avanzado):</span>
+                  <span className="text-emerald-400 font-semibold">$7,500 ✓</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Paga ahora:</span>
+                  <span className="text-cyan-400 font-bold text-lg">$1,500</span>
+                </div>
+                <div className="border-t border-slate-700 pt-2 mt-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-400">Total apartado:</span>
+                    <span className="text-white font-semibold">$9,000</span>
+                  </div>
+                  <div className="flex justify-between text-sm mt-1">
+                    <span className="text-slate-400">Restante (antes del Avanzado):</span>
+                    <span className="text-yellow-400 font-semibold">$5,500</span>
+                  </div>
                 </div>
               </div>
+              <p className="text-xs text-slate-500 mt-2 text-center">
+                Combo total: $14,500 = $9,000 apartado + $5,500 restante
+              </p>
             </motion.div>
 
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              {[
-                '8 sesiones intensivas',
-                'Entrenadores Certificados',
-                'Comunidad exclusiva',
-                'Mentoría personalizada',
-              ].map((benefit, idx) => (
-                <div key={idx} className="flex items-center gap-2 text-sm text-slate-300">
-                  <Check className="w-4 h-4 text-yellow-400 flex-shrink-0" />
-                  <span>{benefit}</span>
+            {/* Opción 2: Completar COMBO con $7,000 */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+              className={`p-5 rounded-2xl border-2 transition-all cursor-pointer relative ${
+                selectedPackage === 'PL_BASE'
+                  ? 'border-emerald-500 bg-gradient-to-br from-emerald-900/30 to-green-900/20'
+                  : 'border-slate-700 bg-slate-800/30 hover:border-emerald-500/50'
+              }`}
+              onClick={() => setSelectedPackage('PL_BASE')}
+            >
+              {/* Badge Recomendado */}
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                <span className="px-3 py-1 bg-gradient-to-r from-emerald-500 to-green-500 text-white text-xs font-bold rounded-full shadow-lg">
+                  ⭐ RECOMENDADO
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between mb-3 mt-2">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-gradient-to-br from-emerald-500/30 to-green-500/20 rounded-xl">
+                    <Package className="w-5 h-5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Opción 2: Completar COMBO</h3>
+                    <p className="text-xs text-slate-400">Activa tu lugar en Liderato ahora</p>
+                  </div>
                 </div>
-              ))}
+                {selectedPackage === 'PL_BASE' && (
+                  <Check className="w-6 h-6 text-emerald-400" />
+                )}
+              </div>
+
+              <div className="bg-slate-900/50 rounded-xl p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Ya pagaste (Avanzado):</span>
+                  <span className="text-emerald-400 font-semibold">$7,500 ✓</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400 text-sm">Paga ahora y completa:</span>
+                  <span className="text-emerald-400 font-black text-2xl">$7,000</span>
+                </div>
+                <div className="border-t border-slate-700 pt-2 mt-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-white font-semibold">COMBO Total:</span>
+                    <span className="text-yellow-400 font-bold">$14,500 ✓</span>
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-emerald-400 mt-2 text-center font-semibold">
+                ¡Sin pagos pendientes! Lugar asegurado inmediatamente
+              </p>
+            </motion.div>
+          </div>
+
+          {/* Quantum AI Highlight */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.35 }}
+            className="mt-6 p-4 bg-gradient-to-r from-purple-600/20 via-cyan-500/20 to-blue-600/20 border border-purple-500/40 rounded-xl"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-purple-500 to-cyan-500 rounded-lg">
+                <Zap className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="font-bold text-white flex items-center gap-2">
+                  Incluye acceso a Quantum AI
+                  <span className="px-2 py-0.5 bg-purple-500/30 rounded text-[10px] text-purple-300 font-bold">EXCLUSIVO</span>
+                </p>
+                <p className="text-sm text-slate-400">
+                  Mentoría asistida por IA para acelerar tu crecimiento
+                </p>
+              </div>
             </div>
           </motion.div>
+
+          {/* Benefits Grid */}
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {[
+              '8 sesiones intensivas',
+              'Entrenadores Certificados',
+              'Comunidad exclusiva',
+              'Mentoría personalizada',
+            ].map((benefit, idx) => (
+              <div key={idx} className="flex items-center gap-2 text-sm text-slate-300">
+                <Check className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+                <span>{benefit}</span>
+              </div>
+            ))}
+          </div>
 
           {/* Error Message */}
           {error && (
