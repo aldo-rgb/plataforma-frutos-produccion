@@ -270,6 +270,7 @@ export async function GET(
         nombre: m.nombre,
         email: m.email,
         imagen: m.imagen,
+        profileImage: m.profileImage,
         isActive: m.isActive,
         accumulatedMissedCalls: m.accumulatedMissedCalls || 0,
         PerfilMentor: m.PerfilMentor,
