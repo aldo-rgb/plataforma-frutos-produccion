@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Clock, Save, CheckCircle2, AlertTriangle, Loader2, Info } from 'lucide-react';
+import { Clock, Save, CheckCircle2, AlertTriangle, Loader2, Info, X, Settings2 } from 'lucide-react';
 
 interface DisciplineSchedule {
   id: number;
@@ -11,23 +11,69 @@ interface DisciplineSchedule {
   isActive: boolean;
 }
 
+interface BlockedSlot {
+  id: number;
+  dayOfWeek: number;
+  time: string;
+}
+
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
 // Solo horas permitidas para disciplina: 5 AM - 8 AM
 const HORAS_DISCIPLINA = ['05:00', '06:00', '07:00'];
+
+// Slots de 20 minutos para cada hora
+const SLOTS_20_MIN: { [key: string]: string[] } = {
+  '05:00': ['05:00', '05:20', '05:40'],
+  '06:00': ['06:00', '06:20', '06:40'],
+  '07:00': ['07:00', '07:20', '07:40'],
+};
 
 export default function DisciplineScheduleManager() {
   const [horarios, setHorarios] = useState<{ [key: number]: string[] }>({
     0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: []
   });
   
+  const [blockedSlots, setBlockedSlots] = useState<{ [key: number]: string[] }>({
+    0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: []
+  });
+  
   const [loading, setLoading] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null);
+  
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [savingSlots, setSavingSlots] = useState(false);
 
   useEffect(() => {
     cargarHorarios();
+    cargarBlockedSlots();
   }, []);
+
+  const cargarBlockedSlots = async () => {
+    try {
+      const res = await fetch('/api/mentor/disciplina/blocked-slots');
+      const data = await res.json();
+      
+      if (data.success) {
+        const slotsMap: { [key: number]: string[] } = {
+          0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: []
+        };
+        
+        data.blockedSlots.forEach((slot: BlockedSlot) => {
+          if (!slotsMap[slot.dayOfWeek].includes(slot.time)) {
+            slotsMap[slot.dayOfWeek].push(slot.time);
+          }
+        });
+        
+        setBlockedSlots(slotsMap);
+      }
+    } catch (error) {
+      console.error('Error cargando slots bloqueados:', error);
+    }
+  };
 
   const cargarHorarios = async () => {
     setLoading(true);
@@ -127,6 +173,66 @@ export default function DisciplineScheduleManager() {
 
   const contarDiasActivos = () => {
     return Object.values(horarios).filter(horas => horas.length > 0).length;
+  };
+
+  // Funciones para el modal de slots ocupados
+  const openDetailsModal = (day: number) => {
+    setSelectedDay(day);
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setSelectedDay(null);
+  };
+
+  const toggleBlockedSlot = (day: number, time: string) => {
+    const currentSlots = blockedSlots[day] || [];
+    if (currentSlots.includes(time)) {
+      setBlockedSlots({
+        ...blockedSlots,
+        [day]: currentSlots.filter(t => t !== time)
+      });
+    } else {
+      setBlockedSlots({
+        ...blockedSlots,
+        [day]: [...currentSlots, time].sort()
+      });
+    }
+  };
+
+  const saveBlockedSlots = async () => {
+    if (selectedDay === null) return;
+    
+    setSavingSlots(true);
+    try {
+      const res = await fetch('/api/mentor/disciplina/blocked-slots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dayOfWeek: selectedDay,
+          blockedTimes: blockedSlots[selectedDay] || []
+        })
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        mostrarMensaje('success', `✅ Slots ocupados guardados para ${DIAS_SEMANA[selectedDay]}`);
+        closeModal();
+      } else {
+        mostrarMensaje('error', data.error || 'Error al guardar slots');
+      }
+    } catch (error) {
+      console.error('Error guardando slots:', error);
+      mostrarMensaje('error', 'Error al guardar slots ocupados');
+    } finally {
+      setSavingSlots(false);
+    }
+  };
+
+  const getBlockedSlotsCount = (day: number) => {
+    return (blockedSlots[day] || []).length;
   };
 
   if (loading) {
@@ -271,6 +377,20 @@ export default function DisciplineScheduleManager() {
                           </button>
                         ))}
                       </div>
+
+                      {/* Botón Detalles */}
+                      <button
+                        onClick={() => openDetailsModal(index)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-slate-700 hover:bg-slate-600 text-slate-300 transition-all"
+                      >
+                        <Settings2 size={14} />
+                        <span>Detalles</span>
+                        {getBlockedSlotsCount(index) > 0 && (
+                          <span className="bg-orange-500 text-white px-1.5 py-0.5 rounded-full text-[10px] font-bold">
+                            {getBlockedSlotsCount(index)}
+                          </span>
+                        )}
+                      </button>
                     </div>
                   ) : (
                     <div className="pl-8 text-xs lg:text-sm text-slate-500">
@@ -292,6 +412,79 @@ export default function DisciplineScheduleManager() {
         </div>
 
       </div>
+
+      {/* Modal de Slots Ocupados */}
+      {modalOpen && selectedDay !== null && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white">
+                📅 {DIAS_SEMANA[selectedDay]} - Slots Ocupados
+              </h3>
+              <button
+                onClick={closeModal}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <p className="text-sm text-slate-400 mb-4">
+              Marca los slots de 20 minutos donde <strong>NO</strong> podrás atender mentorías:
+            </p>
+
+            <div className="space-y-4">
+              {HORAS_DISCIPLINA.map(hora => (
+                <div key={hora} className="bg-slate-800/50 rounded-lg p-3">
+                  <p className="text-xs text-slate-400 mb-2 font-medium">{hora} - {parseInt(hora.split(':')[0]) + 1}:00</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {SLOTS_20_MIN[hora]?.map(slot => {
+                      const isBlocked = (blockedSlots[selectedDay] || []).includes(slot);
+                      return (
+                        <button
+                          key={slot}
+                          onClick={() => toggleBlockedSlot(selectedDay, slot)}
+                          className={`px-3 py-2 rounded text-sm font-medium transition-all ${
+                            isBlocked
+                              ? 'bg-orange-500 text-white'
+                              : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                          }`}
+                        >
+                          {slot}
+                          {isBlocked && ' 🚫'}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={closeModal}
+                className="flex-1 px-4 py-2.5 rounded-lg font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={saveBlockedSlots}
+                disabled={savingSlots}
+                className="flex-1 px-4 py-2.5 rounded-lg font-bold bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+              >
+                {savingSlots ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  'Guardar'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

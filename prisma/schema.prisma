@@ -517,6 +517,20 @@ model DisciplineSchedule {
   Usuario     Usuario  @relation(fields: [mentorId], references: [id], onDelete: Cascade)
 }
 
+// Slots ocupados por el mentor (ej: 6:40, 7:00, 7:20)
+model DisciplineBlockedSlot {
+  id        Int      @id @default(autoincrement())
+  mentorId  Int
+  dayOfWeek Int      // 0=Domingo, 1=Lunes, etc.
+  time      String   // ej: "06:40", "07:00", "07:20"
+  reason    String?  // Razón opcional del bloqueo
+  createdAt DateTime @default(now())
+  mentor    Usuario  @relation("DisciplineBlockedSlots", fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@unique([mentorId, dayOfWeek, time])
+  @@index([mentorId, dayOfWeek])
+}
+
 model DisciplineSubscription {
   id                                                Int      @id @default(autoincrement())
   studentId                                         Int      @unique
@@ -2280,6 +2294,7 @@ model Usuario {
   DirectorAudits                                                         DirectorAudit[]                 @relation("DirectorAudits")
   DisciplineConfig                                                       DisciplineConfig?
   DisciplineSchedule                                                     DisciplineSchedule?
+  DisciplineBlockedSlots                                                 DisciplineBlockedSlot[]         @relation("DisciplineBlockedSlots")
   DisciplineSubscription_DisciplineSubscription_mentorIdToUsuario        DisciplineSubscription[]        @relation("DisciplineSubscription_mentorIdToUsuario")
   DisciplineSubscription_DisciplineSubscription_studentIdToUsuario       DisciplineSubscription?         @relation("DisciplineSubscription_studentIdToUsuario")
   Evidencia                                                              Evidencia[]
