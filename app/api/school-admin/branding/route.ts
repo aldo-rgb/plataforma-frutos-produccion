@@ -123,6 +123,7 @@ export async function PUT(request: NextRequest) {
       loginWelcomeMessage,
       showPoweredBy,
       customLoginEnabled,
+      customLoginUrl,
       whatsappInviteImageUrl,
       // Videos descargables
       videoBienvenidaLideres1Url,
@@ -144,6 +145,7 @@ export async function PUT(request: NextRequest) {
         loginWelcomeMessage: loginWelcomeMessage || 'Bienvenido al Portal de Entrenamiento',
         showPoweredBy: showPoweredBy ?? true,
         customLoginEnabled: customLoginEnabled ?? false,
+        customLoginUrl: customLoginUrl || null,
         whatsappInviteImageUrl: whatsappInviteImageUrl || null,
         // Videos descargables
         videoBienvenidaLideres1Url: videoBienvenidaLideres1Url || null,
@@ -164,6 +166,7 @@ export async function PUT(request: NextRequest) {
         loginWelcomeMessage: true,
         showPoweredBy: true,
         customLoginEnabled: true,
+        customLoginUrl: true,
         whatsappInviteImageUrl: true,
         // Videos descargables
         videoBienvenidaLideres1Url: true,

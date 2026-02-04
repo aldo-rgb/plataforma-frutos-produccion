@@ -28,6 +28,7 @@ export default function BrandingPage() {
     loginWelcomeMessage: 'Bienvenido al Portal de Entrenamiento',
     showPoweredBy: true,
     customLoginEnabled: false,
+    customLoginUrl: '',
     slug: '',
     whatsappInviteImageUrl: '',
     // Videos descargables
@@ -70,6 +71,7 @@ export default function BrandingPage() {
           loginWelcomeMessage: data.organization.loginWelcomeMessage || 'Bienvenido al Portal de Entrenamiento',
           showPoweredBy: data.organization.showPoweredBy ?? true,
           customLoginEnabled: data.organization.customLoginEnabled ?? false,
+          customLoginUrl: data.organization.customLoginUrl || '',
           slug: data.organization.slug || '',
           whatsappInviteImageUrl: data.organization.whatsappInviteImageUrl || '',
           // Videos descargables
@@ -244,6 +246,36 @@ export default function BrandingPage() {
                 </div>
               </div>
             )}
+
+            {/* URL de Login para Correos de Transferencia */}
+            <div className="p-4 bg-slate-700/50 rounded-lg">
+              <label className="text-white font-medium flex items-center gap-2 mb-2">
+                🔗 URL de Login para Correos
+              </label>
+              <p className="text-slate-400 text-sm mb-3">
+                Esta URL se incluirá en los correos de transferencia de tickets. Si está vacía, se usará la URL por defecto.
+              </p>
+              <input
+                type="url"
+                value={branding.customLoginUrl}
+                onChange={(e) => setBranding({ ...branding, customLoginUrl: e.target.value })}
+                placeholder="https://tu-dominio.com/login o https://quantummatter.app/oaxaca/login"
+                className="w-full bg-slate-900 text-white px-4 py-3 rounded-lg border border-slate-600 focus:border-purple-500 focus:outline-none"
+              />
+              {branding.customLoginUrl && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-green-400 text-sm">✓ URL configurada:</span>
+                  <a 
+                    href={branding.customLoginUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-purple-400 text-sm hover:underline truncate"
+                  >
+                    {branding.customLoginUrl}
+                  </a>
+                </div>
+              )}
+            </div>
 
             {/* Logo Upload */}
             <div className="p-4 bg-slate-700/50 rounded-lg">
