@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { CheckCircle, XCircle, X, Key, ArrowRightLeft, UserPlus, Upload, Download, FileSpreadsheet } from 'lucide-react';
 
@@ -70,12 +70,18 @@ interface GameChanger {
 export default function VisionManagePage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, status } = useSession();
   const visionId = params.id as string;
 
+  // Leer tab inicial desde URL (si existe)
+  const tabFromUrl = searchParams.get('tab') as 'info' | 'avanzado' | 'liderato' | 'fechas' | 'staff' | null;
+  const validTabs = ['info', 'avanzado', 'liderato', 'fechas', 'staff'];
+  const initialTab = tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : 'info';
+
   const [vision, setVision] = useState<Vision | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'info' | 'avanzado' | 'liderato' | 'fechas' | 'staff'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'avanzado' | 'liderato' | 'fechas' | 'staff'>(initialTab);
   
   // Verificar autenticación y permisos
   useEffect(() => {
