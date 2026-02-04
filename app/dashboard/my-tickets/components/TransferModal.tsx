@@ -25,6 +25,7 @@ interface Props {
 
 export function TransferModal({ ticket, onClose, onSuccess }: Props) {
   const [email, setEmail] = useState('');
+  const [confirmEmail, setConfirmEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState<'form' | 'confirm' | 'success'>('form');
@@ -36,6 +37,13 @@ export function TransferModal({ ticket, onClose, onSuccess }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    // Validar que los emails coincidan
+    if (email.toLowerCase() !== confirmEmail.toLowerCase()) {
+      setError('Los correos electrónicos no coinciden');
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -195,8 +203,38 @@ export function TransferModal({ ticket, onClose, onSuccess }: Props) {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="ejemplo@email.com"
                   required
+                  autoComplete="off"
+                  onPaste={(e) => e.preventDefault()}
                   className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00F0FF]/50 focus:border-[#00F0FF]/50 transition-all"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Confirmar email <span className={tw.textQuantum}>*</span>
+                </label>
+                <input
+                  type="email"
+                  value={confirmEmail}
+                  onChange={(e) => setConfirmEmail(e.target.value)}
+                  placeholder="Escribe el email nuevamente"
+                  required
+                  autoComplete="off"
+                  onPaste={(e) => e.preventDefault()}
+                  className={`w-full px-4 py-3 bg-slate-800/50 border rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 transition-all ${
+                    confirmEmail && email.toLowerCase() !== confirmEmail.toLowerCase()
+                      ? 'border-red-500/50 focus:ring-red-500/50 focus:border-red-500/50'
+                      : confirmEmail && email.toLowerCase() === confirmEmail.toLowerCase()
+                      ? 'border-green-500/50 focus:ring-green-500/50 focus:border-green-500/50'
+                      : 'border-slate-700/50 focus:ring-[#00F0FF]/50 focus:border-[#00F0FF]/50'
+                  }`}
+                />
+                {confirmEmail && email.toLowerCase() !== confirmEmail.toLowerCase() && (
+                  <p className="text-xs text-red-400 mt-1">Los correos no coinciden</p>
+                )}
+                {confirmEmail && email.toLowerCase() === confirmEmail.toLowerCase() && (
+                  <p className="text-xs text-green-400 mt-1">✓ Los correos coinciden</p>
+                )}
                 <p className="text-xs text-slate-500 mt-2">
                   Si no tiene cuenta, se creará una automáticamente
                 </p>

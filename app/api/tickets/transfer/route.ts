@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request: Request) {
   try {
@@ -125,25 +125,41 @@ export async function POST(request: Request) {
     }
 
     // Buscar o crear usuario receptor
+    const DEFAULT_PASSWORD = 'Quantum123.';
+    const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, 10);
+    
     let recipient = await prisma.usuario.findUnique({
       where: { email: recipientEmail.toLowerCase() },
     });
 
     if (!recipient) {
-      // Crear shadow user (usuario invitado que aún no se ha registrado)
-      const tempPassword = crypto.randomBytes(32).toString('hex');
+      // Crear nuevo usuario con contraseña por defecto que deberá cambiar
       const recipientName = recipientEmail.split('@')[0];
 
       recipient = await prisma.usuario.create({
         data: {
           email: recipientEmail.toLowerCase(),
           nombre: recipientName,
-          password: tempPassword, // Deberán establecer su propia contraseña al registrarse
-          tipo: 'PARTICIPANTE',
-          status: 'PENDIENTE', // Estado especial para shadow users
-          organizationId: ticket.organizationId, // Misma organización que el ticket
+          password: hashedPassword,
+          rol: 'PARTICIPANTE',
+          isActive: true,
+          requirePasswordChange: true, // Obligar a cambiar contraseña al primer login
+          organizationId: ticket.organizationId,
         },
       });
+      
+      console.log(`✅ Nuevo usuario creado para transferencia: ${recipient.email}`);
+    } else {
+      // Usuario ya existe - actualizar contraseña a Quantum123. y exigir cambio
+      recipient = await prisma.usuario.update({
+        where: { id: recipient.id },
+        data: {
+          password: hashedPassword,
+          requirePasswordChange: true,
+        },
+      });
+      
+      console.log(`🔄 Usuario existente actualizado para transferencia: ${recipient.email}`);
     }
 
     // Buscar TODOS los tickets activos del usuario para la misma visión
