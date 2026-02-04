@@ -28,7 +28,8 @@ export async function GET() {
       coordinadorId: usuario.id,
       email: usuario.email,
       nombre: usuario.nombre,
-      rol: usuario.rol
+      rol: usuario.rol,
+      organizationId: usuario.organizationId
     });
 
     // Buscar visiones donde el usuario está asignado como staff coordinador
@@ -48,14 +49,24 @@ export async function GET() {
 
     console.log('📋 Visiones asignadas en VisionStaff:', visionIds);
 
+    // Construir condiciones de búsqueda
+    const orConditions: any[] = [
+      { coordinadorId: usuario.id },
+      { id: { in: visionIds.length > 0 ? visionIds : [0] } }
+    ];
+
+    // Para rol COORDINADOR, también incluir visiones de su organización
+    if (usuario.rol === 'COORDINADOR' && usuario.organizationId) {
+      orConditions.push({ organizationId: usuario.organizationId });
+      console.log('📋 Incluyendo visiones de organización:', usuario.organizationId);
+    }
+
     // Obtener visiones donde el coordinador es el coordinador asignado
     // O donde está asignado en VisionStaff
+    // O donde pertenece a la misma organización (solo para COORDINADOR)
     const visiones = await prisma.vision.findMany({
       where: {
-        OR: [
-          { coordinadorId: usuario.id },
-          { id: { in: visionIds.length > 0 ? visionIds : [0] } }
-        ]
+        OR: orConditions
       },
       include: {
         _count: {
