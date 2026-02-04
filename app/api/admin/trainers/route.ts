@@ -26,10 +26,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Obtener TODOS los trainers activos del sistema (sin filtrar por organización)
+    // Un trainer puede tener rol: 'TRAINER' O el flag esEntrenador = true
     const trainers = await prisma.usuario.findMany({
       where: {
-        rol: 'TRAINER',
-        isActive: true
+        isActive: true,
+        OR: [
+          { rol: 'TRAINER' },
+          { esEntrenador: true }
+        ]
       },
       select: {
         id: true,
