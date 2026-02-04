@@ -241,8 +241,22 @@ export async function GET(request: Request) {
     const promoDeadline = (plTicket.status as any) === 'RESERVED' ? plTicket.validUntil : 
       (plTicket.vision?.advancedEndDate ? new Date(new Date(plTicket.vision.advancedEndDate).setHours(23, 0, 0, 0)) : null);
 
+    // Precios según estructura:
+    // COMBO (Avanzado + PL) = $14,500
+    // Solo Avanzado = $7,500
+    // Solo PL promo = $9,000 (para quien ya pagó avanzado)
+    // Solo PL base = $11,000
+    // Completar COMBO = $7,000 ($14,500 - $7,500 ya pagados)
+    const COMBO_PRICE = 14500;
+    const ADVANCED_PRICE = 7500;
+    const PL_PROMO_PRICE = 9000;
+    const PL_BASE_PRICE = 11000;
+    const COMPLETE_COMBO_PRICE = COMBO_PRICE - ADVANCED_PRICE; // $7,000
+    const DEPOSIT_FOR_RESERVE = 1500; // Para reservar los $9,000 promo
+    const REMAINING_AFTER_DEPOSIT = PL_PROMO_PRICE - DEPOSIT_FOR_RESERVE; // $7,500
+
     // Determine current price based on status and deadlines
-    let currentPrice = 11000; // Base price
+    let currentPrice = PL_BASE_PRICE; // Base price
     let canPayPromo = false;
     let hasDeposit = Number(plTicket.amountPaid) > 0;
     let depositAmount = hasDeposit ? Number(plTicket.amountPaid) : 0;
@@ -250,17 +264,17 @@ export async function GET(request: Request) {
     if ((plTicket.status as any) === 'PROMO_AVAILABLE') {
       // Can still make deposit if deadline hasn't passed
       if (depositDeadline && now <= new Date(depositDeadline)) {
-        currentPrice = 9000; // Promo price available
+        currentPrice = PL_PROMO_PRICE; // Promo price available
         canPayPromo = true;
       }
     } else if ((plTicket.status as any) === 'RESERVED') {
       // Has deposit, check if promo deadline passed
       if (promoDeadline && now <= new Date(promoDeadline)) {
-        currentPrice = 9000; // Promo price still valid
+        currentPrice = PL_PROMO_PRICE; // Promo price still valid
         canPayPromo = true;
       } else {
         // Promo expired, deposit is lost
-        currentPrice = 11000;
+        currentPrice = PL_BASE_PRICE;
         depositAmount = 0; // Lost the deposit
       }
     }
@@ -280,8 +294,13 @@ export async function GET(request: Request) {
         organizationName: plTicket.organization?.name,
       },
       pricing: {
-        basePrice: 11000,
-        promoPrice: 9000,
+        basePrice: PL_BASE_PRICE,           // $11,000
+        promoPrice: PL_PROMO_PRICE,         // $9,000
+        comboPrice: COMBO_PRICE,            // $14,500
+        advancedPaid: ADVANCED_PRICE,       // $7,500 (ya pagado)
+        completeComboPrice: COMPLETE_COMBO_PRICE, // $7,000 para completar combo
+        depositForReserve: DEPOSIT_FOR_RESERVE,   // $1,500 para reservar
+        remainingAfterDeposit: REMAINING_AFTER_DEPOSIT, // $7,500 restante después de depósito
         currentPrice: currentPrice,
         depositAmount: depositAmount,
         hasDeposit: hasDeposit,

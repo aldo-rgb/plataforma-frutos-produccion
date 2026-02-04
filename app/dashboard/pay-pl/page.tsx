@@ -16,6 +16,7 @@ import {
   Timer,
   CreditCard,
   Gift,
+  Package,
 } from 'lucide-react';
 
 interface PLTicketInfo {
@@ -31,6 +32,11 @@ interface PLTicketInfo {
 interface PricingInfo {
   basePrice: number;
   promoPrice: number;
+  comboPrice: number;
+  advancedPaid: number;
+  completeComboPrice: number;
+  depositForReserve: number;
+  remainingAfterDeposit: number;
   currentPrice: number;
   depositAmount: number;
   hasDeposit: boolean;
@@ -193,6 +199,29 @@ export default function PayPLPage() {
     }
   };
 
+  // Pagar para completar el COMBO ($7,000)
+  const handlePayCombo = async () => {
+    if (!ticket || !pricing) return;
+
+    const paymentData = {
+      type: 'PL_COMBO_COMPLETE',
+      ticketId: ticket.id,
+      visionName: ticket.visionName,
+      organizationName: ticket.organizationName,
+      price: pricing.completeComboPrice, // $7,000
+      originalPrice: pricing.comboPrice, // $14,500 (combo total)
+      advancedPaid: pricing.advancedPaid, // $7,500 (ya pagado)
+      hasDeposit: false,
+      depositAmount: 0,
+      isPromo: true,
+      isComboComplete: true,
+    };
+
+    sessionStorage.setItem('pendingPLPayment', JSON.stringify(paymentData));
+    router.push('/dashboard/checkout-pl');
+  };
+
+  // Pagar el monto restante (después de depósito o precio completo)
   const handlePayFull = async () => {
     if (!ticket || !pricing) return;
 
@@ -370,32 +399,55 @@ export default function PayPLPage() {
         >
           <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <CreditCard className="w-5 h-5 text-yellow-400" />
-            Resumen de Pago
+            Opciones de Pago
           </h3>
 
           <div className="space-y-3">
-            {/* Base/Promo Price */}
-            <div className="flex justify-between items-center">
-              <span className="text-slate-400">
-                {pricing?.canPayPromo ? 'Precio Promocional:' : 'Precio Base:'}
-              </span>
-              <div className="text-right">
-                <span className="text-2xl font-black text-yellow-400">
-                  ${formatPrice(pricing?.currentPrice || 11000)}
-                </span>
-                {pricing?.canPayPromo && (
-                  <span className="text-slate-500 text-sm line-through ml-2">
-                    ${formatPrice(pricing?.basePrice || 11000)}
-                  </span>
-                )}
-              </div>
-            </div>
+            {/* Show available options when PROMO_AVAILABLE */}
+            {ticket?.status === 'PROMO_AVAILABLE' && pricing?.canPayPromo && !pricing?.hasDeposit && (
+              <>
+                <div className="flex justify-between items-center py-2 px-3 bg-cyan-500/10 rounded-lg border border-cyan-500/30">
+                  <span className="text-cyan-400 text-sm">Opción 1: Reservar promo</span>
+                  <span className="font-bold text-cyan-400">${formatPrice(pricing?.depositForReserve || 1500)}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 px-3 bg-emerald-500/10 rounded-lg border border-emerald-500/30">
+                  <span className="text-emerald-400 text-sm">Opción 2: Completar COMBO</span>
+                  <span className="font-bold text-emerald-400">${formatPrice(pricing?.completeComboPrice || 7000)}</span>
+                </div>
+                <div className="border-t border-slate-700 pt-3 mt-3">
+                  <p className="text-xs text-slate-500">
+                    Ya pagaste <span className="text-white font-semibold">${formatPrice(pricing?.advancedPaid || 7500)}</span> de Avanzado. 
+                    COMBO total: <span className="text-yellow-400 font-semibold">${formatPrice(pricing?.comboPrice || 14500)}</span>
+                  </p>
+                </div>
+              </>
+            )}
 
-            {/* Deposit if applicable */}
+            {/* Show remaining after deposit */}
             {pricing?.hasDeposit && pricing.canPayPromo && (
-              <div className="flex justify-between items-center text-emerald-400">
-                <span>Tu saldo a favor:</span>
-                <span className="font-bold">-${formatPrice(pricing.depositAmount)}</span>
+              <>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Precio Promocional PL:</span>
+                  <span className="text-xl font-bold text-yellow-400">${formatPrice(pricing.promoPrice)}</span>
+                </div>
+                <div className="flex justify-between items-center text-emerald-400">
+                  <span>Depósito pagado:</span>
+                  <span className="font-bold">-${formatPrice(pricing.depositAmount)}</span>
+                </div>
+                <div className="border-t border-slate-700 pt-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-white font-bold">Restante a pagar:</span>
+                    <span className="text-2xl font-black text-white">${formatPrice(pricing.amountToPay)}</span>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Show base price if promo expired */}
+            {!pricing?.canPayPromo && (
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">Precio Base PL:</span>
+                <span className="text-2xl font-black text-yellow-400">${formatPrice(pricing?.basePrice || 11000)}</span>
               </div>
             )}
 
@@ -406,16 +458,6 @@ export default function PayPLPage() {
                 <span className="font-bold">-${formatPrice(appliedCode.value)}</span>
               </div>
             )}
-
-            {/* Divider */}
-            <div className="border-t border-slate-700 pt-3">
-              <div className="flex justify-between items-center">
-                <span className="text-white font-bold">Total a Pagar:</span>
-                <span className="text-3xl font-black text-white">
-                  ${formatPrice(Math.max(0, (pricing?.amountToPay || 11000) - (appliedCode?.value || 0)))}
-                </span>
-              </div>
-            </div>
           </div>
         </motion.div>
 
@@ -426,17 +468,19 @@ export default function PayPLPage() {
           transition={{ delay: 0.3 }}
           className="space-y-4"
         >
-          {/* Option 1: Pay $1,500 deposit (only if PROMO_AVAILABLE) */}
+          {/* Option 1: Pay $1,500 deposit to reserve promo price (only if PROMO_AVAILABLE) */}
           {ticket?.status === 'PROMO_AVAILABLE' && !deadlines?.depositExpired && (
-            <div className="bg-gradient-to-r from-cyan-900/30 to-blue-900/20 border border-cyan-500/30 rounded-2xl p-6">
+            <div className="bg-gradient-to-r from-cyan-900/30 to-blue-900/20 border-2 border-cyan-500/50 rounded-2xl p-6">
               <div className="flex items-start gap-3 mb-4">
                 <Gift className="w-6 h-6 text-cyan-400 flex-shrink-0 mt-1" />
                 <div>
-                  <h4 className="text-white font-bold">Opción 1: Reservar con Depósito</h4>
+                  <h4 className="text-white font-bold text-lg">Opción 1: Reservar Precio Promo</h4>
                   <p className="text-slate-400 text-sm mt-1">
-                    Paga solo <span className="text-cyan-400 font-bold">$1,500</span> ahora para 
-                    asegurar el precio promocional de <span className="text-yellow-400 font-bold">$9,000</span>.
-                    Después pagarás los <span className="text-white font-bold">$7,500</span> restantes 
+                    Paga <span className="text-cyan-400 font-bold">${formatPrice(pricing?.depositForReserve || 1500)}</span> ahora para 
+                    reservar el precio de <span className="text-yellow-400 font-bold">${formatPrice(pricing?.promoPrice || 9000)}</span>.
+                  </p>
+                  <p className="text-slate-500 text-xs mt-2">
+                    Después pagarás <span className="text-white font-semibold">${formatPrice(pricing?.remainingAfterDeposit || 7500)}</span> restantes 
                     antes del fin del Avanzado.
                   </p>
                 </div>
@@ -472,7 +516,7 @@ export default function PayPLPage() {
                   </>
                 ) : (
                   <>
-                    Pagar Depósito $1,500
+                    Reservar con ${formatPrice(pricing?.depositForReserve || 1500)}
                     <ArrowRight className="w-5 h-5" />
                   </>
                 )}
@@ -480,57 +524,115 @@ export default function PayPLPage() {
             </div>
           )}
 
-          {/* Option 2: Pay full amount */}
-          <div className={`bg-gradient-to-r from-yellow-900/30 to-amber-900/20 border border-yellow-500/30 rounded-2xl p-6 ${
-            ticket?.status === 'PROMO_AVAILABLE' && !deadlines?.depositExpired ? '' : ''
-          }`}>
-            <div className="flex items-start gap-3 mb-4">
-              <Crown className="w-6 h-6 text-yellow-400 flex-shrink-0 mt-1" />
-              <div>
-                <h4 className="text-white font-bold">
-                  {ticket?.status === 'PROMO_AVAILABLE' && !deadlines?.depositExpired 
-                    ? 'Opción 2: Pagar Completo Ahora'
-                    : 'Pagar Liderato'}
-                </h4>
-                <p className="text-slate-400 text-sm mt-1">
-                  {pricing?.canPayPromo ? (
-                    <>
-                      Paga <span className="text-yellow-400 font-bold">${formatPrice(pricing.amountToPay)}</span> ahora 
-                      y activa tu lugar inmediatamente.
-                      {pricing.hasDeposit && (
-                        <> Ya tienes <span className="text-emerald-400 font-bold">${formatPrice(pricing.depositAmount)}</span> a favor.</>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      El precio promocional ha expirado. El precio actual es de 
-                      <span className="text-yellow-400 font-bold"> ${formatPrice(pricing?.basePrice || 11000)}</span>.
-                    </>
-                  )}
-                </p>
+          {/* Option 2: Complete COMBO - Pay $7,000 (only if PROMO_AVAILABLE and no deposit yet) */}
+          {ticket?.status === 'PROMO_AVAILABLE' && !deadlines?.depositExpired && !pricing?.hasDeposit && (
+            <div className="bg-gradient-to-r from-emerald-900/30 to-green-900/20 border-2 border-emerald-500/50 rounded-2xl p-6">
+              <div className="flex items-start gap-3 mb-4">
+                <Package className="w-6 h-6 text-emerald-400 flex-shrink-0 mt-1" />
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h4 className="text-white font-bold text-lg">Opción 2: Completar COMBO</h4>
+                    <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded-full">RECOMENDADO</span>
+                  </div>
+                  <p className="text-slate-400 text-sm mt-1">
+                    Paga <span className="text-emerald-400 font-bold">${formatPrice(pricing?.completeComboPrice || 7000)}</span> y completa el 
+                    <span className="text-yellow-400 font-bold"> COMBO Avanzado + Liderato</span> de ${formatPrice(pricing?.comboPrice || 14500)}.
+                  </p>
+                  <p className="text-slate-500 text-xs mt-2">
+                    Ya pagaste ${formatPrice(pricing?.advancedPaid || 7500)} de Avanzado. ¡Activa tu lugar en Liderato ahora!
+                  </p>
+                </div>
               </div>
+
+              <button
+                onClick={handlePayCombo}
+                disabled={processing}
+                className="w-full py-4 bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 disabled:from-slate-700 disabled:to-slate-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all"
+              >
+                {processing ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Procesando...
+                  </>
+                ) : (
+                  <>
+                    Completar COMBO ${formatPrice(pricing?.completeComboPrice || 7000)}
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
+              </button>
             </div>
+          )}
 
-            <button
-              onClick={handlePayFull}
-              disabled={processing}
-              className="w-full py-4 bg-gradient-to-r from-yellow-600 to-amber-500 hover:from-yellow-500 hover:to-amber-400 disabled:from-slate-700 disabled:to-slate-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all"
-            >
-              {processing ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Procesando...
-                </>
-              ) : (
-                <>
-                  Pagar ${formatPrice(pricing?.amountToPay || 11000)}
-                  <ArrowRight className="w-5 h-5" />
-                </>
-              )}
-            </button>
-          </div>
+          {/* If RESERVED (has deposit) - Show remaining payment */}
+          {ticket?.status === 'RESERVED' && pricing?.canPayPromo && (
+            <div className="bg-gradient-to-r from-yellow-900/30 to-amber-900/20 border-2 border-yellow-500/50 rounded-2xl p-6">
+              <div className="flex items-start gap-3 mb-4">
+                <Crown className="w-6 h-6 text-yellow-400 flex-shrink-0 mt-1" />
+                <div>
+                  <h4 className="text-white font-bold text-lg">Completar Pago de Liderato</h4>
+                  <p className="text-slate-400 text-sm mt-1">
+                    Ya tienes <span className="text-emerald-400 font-bold">${formatPrice(pricing.depositAmount)}</span> de depósito.
+                    Paga <span className="text-yellow-400 font-bold">${formatPrice(pricing.amountToPay)}</span> para activar tu lugar.
+                  </p>
+                </div>
+              </div>
 
-          {/* Warning if promo expired */}
+              <button
+                onClick={handlePayFull}
+                disabled={processing}
+                className="w-full py-4 bg-gradient-to-r from-yellow-600 to-amber-500 hover:from-yellow-500 hover:to-amber-400 disabled:from-slate-700 disabled:to-slate-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all"
+              >
+                {processing ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Procesando...
+                  </>
+                ) : (
+                  <>
+                    Pagar ${formatPrice(pricing.amountToPay)}
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* If promo expired - Show base price option */}
+          {!pricing?.canPayPromo && (
+            <div className="bg-gradient-to-r from-yellow-900/30 to-amber-900/20 border border-yellow-500/30 rounded-2xl p-6">
+              <div className="flex items-start gap-3 mb-4">
+                <Crown className="w-6 h-6 text-yellow-400 flex-shrink-0 mt-1" />
+                <div>
+                  <h4 className="text-white font-bold">Pagar Liderato</h4>
+                  <p className="text-slate-400 text-sm mt-1">
+                    El precio promocional ha expirado. El precio actual es de 
+                    <span className="text-yellow-400 font-bold"> ${formatPrice(pricing?.basePrice || 11000)}</span>.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={handlePayFull}
+                disabled={processing}
+                className="w-full py-4 bg-gradient-to-r from-yellow-600 to-amber-500 hover:from-yellow-500 hover:to-amber-400 disabled:from-slate-700 disabled:to-slate-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all"
+              >
+                {processing ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Procesando...
+                  </>
+                ) : (
+                  <>
+                    Pagar ${formatPrice(pricing?.basePrice || 11000)}
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Warning if promo expired with deposit */}
           {!pricing?.canPayPromo && pricing?.hasDeposit && (
             <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
