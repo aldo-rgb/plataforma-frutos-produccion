@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
         loginWelcomeMessage: true,
         showPoweredBy: true,
         customLoginEnabled: true,
+        customLoginUrl: true,
         whatsappInviteImageUrl: true,
         // Videos descargables
         videoBienvenidaLideres1Url: true,
