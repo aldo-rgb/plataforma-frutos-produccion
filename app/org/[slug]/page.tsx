@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { signIn, useSession } from 'next-auth/react';
+import { signIn, signOut, useSession } from 'next-auth/react';
 import { 
   Play, ChevronDown, Sparkles, Target, Users, Trophy, 
   Brain, Zap, Shield, Star, ArrowRight, Mail, Lock, 
@@ -1001,10 +1001,12 @@ function UpcomingTrainingsSection({ trainings }: { trainings: Training[] }) {
 // Footer Section with Login
 function FooterSection({ 
   organization, 
-  loginRef 
+  loginRef,
+  slug 
 }: { 
   organization: OrgData;
   loginRef: React.RefObject<HTMLDivElement | null>;
+  slug: string;
 }) {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -1048,12 +1050,20 @@ function FooterSection({
             ¡Bienvenido de vuelta, {session.user.name?.split(' ')[0]}!
           </h2>
           <p className="text-slate-400 mb-8">Ya tienes una sesión activa.</p>
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white font-bold text-lg rounded-xl hover:scale-105 transition-transform"
-          >
-            Ir al Dashboard
-          </button>
+          <div className="flex flex-col items-center gap-4">
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white font-bold text-lg rounded-xl hover:scale-105 transition-transform"
+            >
+              Ir al Dashboard
+            </button>
+            <button
+              onClick={() => signOut({ callbackUrl: `/org/${slug}` })}
+              className="text-slate-400 hover:text-white text-sm underline underline-offset-4 transition-colors"
+            >
+              No soy yo
+            </button>
+          </div>
         </div>
       </footer>
     );
@@ -1307,7 +1317,7 @@ export default function OrgLandingPage() {
       <PlatformFeaturesSection />
       {testimonials.length > 0 && <TestimonialsSection testimonials={testimonials} />}
       {trainings.length > 0 && <UpcomingTrainingsSection trainings={trainings} />}
-      <FooterSection organization={organization} loginRef={loginRef} />
+      <FooterSection organization={organization} loginRef={loginRef} slug={slug} />
     </main>
   );
 }

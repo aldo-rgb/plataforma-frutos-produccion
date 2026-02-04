@@ -92,13 +92,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { provider, publicKey, secretKey, webhookSecret, isActive } = body;
 
-    console.log('🔵 [payment-gateway] POST request:', {
-      provider,
-      publicKeyLength: publicKey?.length,
-      secretKeyLength: secretKey?.length,
-      secretKeyContainsAsterisk: secretKey?.includes('*'),
-      isActive,
-    });
+    // Log detallado para debug
+    console.log('🔵 [payment-gateway] POST body recibido:', JSON.stringify({
+      provider: provider || 'undefined',
+      publicKeyLen: publicKey?.length || 0,
+      secretKeyLen: secretKey?.length || 0,
+      secretKeyFirst4: secretKey?.substring(0, 4) || 'N/A',
+      secretKeyHasAsterisk: secretKey?.includes('*') || false,
+      isActive: isActive,
+    }));
 
     // Validar provider
     const validProviders = ['MERCADOPAGO', 'STRIPE', 'PAYPAL'];
