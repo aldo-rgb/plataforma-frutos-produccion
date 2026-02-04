@@ -161,7 +161,7 @@ export default function SuspensionModal({
                     <h4 className="text-lg font-semibold text-white">Comprar Vida</h4>
                   </div>
                   <p className="text-gray-300 text-sm leading-relaxed mb-4">
-                    Usa <span className="text-yellow-400 font-semibold">500 Puntos Cuánticos</span> para comprar una vida extra 
+                    Usa <span className="text-yellow-400 font-semibold">1000 Puntos Cuánticos</span> para comprar una vida extra 
                     y reactivar tu acceso inmediatamente.
                   </p>
                   {error && (
@@ -174,7 +174,7 @@ export default function SuspensionModal({
                     disabled={purchasing}
                     className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 text-gray-900 font-semibold py-3 rounded-lg hover:from-yellow-400 hover:to-yellow-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {purchasing ? 'Procesando...' : 'Comprar Vida - 500 PC'}
+                    {purchasing ? 'Procesando...' : 'Comprar Vida - 1000 PC'}
                   </button>
                 </div>
               </div>

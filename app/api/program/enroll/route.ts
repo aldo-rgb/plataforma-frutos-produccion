@@ -511,7 +511,7 @@ export async function POST(request: Request) {
             }
           });
         } else {
-          // Nuevo enrollment
+                  // Nuevo enrollment
           console.log('✨ Creando nuevo enrollment');
           enrollment = await tx.programEnrollment.create({
             data: {

@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
-const COSTO_VIDA_EXTRA = 500; // Puntos cuánticos necesarios para comprar una vida
+const COSTO_VIDA_EXTRA = 1000; // Puntos cuánticos necesarios para comprar una vida
 
 export async function POST(request: NextRequest) {
   try {
