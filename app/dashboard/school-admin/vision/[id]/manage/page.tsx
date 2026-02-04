@@ -214,6 +214,14 @@ export default function VisionManagePage() {
   });
   const [addingParticipant, setAddingParticipant] = useState(false);
   
+  // Estados para modal de mover a otra visión (solo ADMINISTRADOR)
+  const [showMoveVisionModal, setShowMoveVisionModal] = useState(false);
+  const [availableVisions, setAvailableVisions] = useState<Array<{id: number; nombre: string; organizationName?: string}>>([]);
+  const [selectedUsersToMove, setSelectedUsersToMove] = useState<number[]>([]);
+  const [targetVisionId, setTargetVisionId] = useState<number | null>(null);
+  const [movingUsers, setMovingUsers] = useState(false);
+  const [moveLevel, setMoveLevel] = useState<'BASIC' | 'ADVANCED' | 'PL'>('BASIC');
+  
   // Estados para carga masiva desde Excel
   const [uploadingExcel, setUploadingExcel] = useState(false);
   const [excelResults, setExcelResults] = useState<{success: number; errors: string[]} | null>(null);
@@ -416,6 +424,79 @@ export default function VisionManagePage() {
         message: 'Error de conexión',
         type: 'error'
       });
+    }
+  };
+
+  // Estado para el modal de mover usuario
+  const [moveUserData, setMoveUserData] = useState<{userId: number; userName: string; level: string} | null>(null);
+
+  // Función para abrir modal de mover a otra visión
+  const openMoveVisionModal = async (userId: number, userName: string, level: string) => {
+    setMoveUserData({ userId, userName, level });
+    setShowMoveVisionModal(true);
+    setTargetVisionId(null);
+    
+    // Cargar visiones disponibles
+    try {
+      const res = await fetch('/api/admin/visiones?active=true');
+      const data = await res.json();
+      if (data.success) {
+        // Filtrar la visión actual
+        const otherVisions = (data.visiones || []).filter((v: any) => v.id !== parseInt(visionId));
+        setAvailableVisions(otherVisions);
+      }
+    } catch (error) {
+      console.error('Error loading visions:', error);
+    }
+  };
+
+  // Función para ejecutar el movimiento de visión
+  const handleMoveToVision = async () => {
+    if (!moveUserData || !targetVisionId) return;
+    
+    setMovingUsers(true);
+    try {
+      const res = await fetch('/api/admin/move-user-vision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: moveUserData.userId,
+          fromVisionId: parseInt(visionId),
+          toVisionId: targetVisionId,
+          level: moveUserData.level
+        })
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        setToast({
+          show: true,
+          message: `✅ ${moveUserData.userName} movido a la nueva visión`,
+          type: 'success'
+        });
+        setShowMoveVisionModal(false);
+        setMoveUserData(null);
+        // Recargar datos
+        fetchBasicEnrollments();
+        fetchAdvancedEnrollments();
+        fetchPlEnrollments();
+      } else {
+        setToast({
+          show: true,
+          message: data.error || 'Error al mover usuario',
+          type: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Error moving user:', error);
+      setToast({
+        show: true,
+        message: 'Error de conexión',
+        type: 'error'
+      });
+    } finally {
+      setMovingUsers(false);
     }
   };
 
@@ -1673,9 +1754,17 @@ export default function VisionManagePage() {
                             >
                               <td className="py-4 px-4">
                                 <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white font-bold">
-                                    {enrollment.Usuario?.nombre?.charAt(0).toUpperCase()}
-                                  </div>
+                                  {enrollment.Usuario?.profileImage ? (
+                                    <img 
+                                      src={enrollment.Usuario.profileImage} 
+                                      alt={enrollment.Usuario?.nombre}
+                                      className="w-10 h-10 rounded-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white font-bold">
+                                      {enrollment.Usuario?.nombre?.charAt(0).toUpperCase()}
+                                    </div>
+                                  )}
                                   <div>
                                     <div className="text-white font-bold">{enrollment.Usuario?.nombre}</div>
                                     <div className="text-slate-400 text-xs">ID: {enrollment.userId}</div>
@@ -1749,13 +1838,22 @@ export default function VisionManagePage() {
                               </td>
                               {userRole === 'ADMINISTRADOR' && (
                                 <td className="py-4 px-4">
-                                  <button
-                                    onClick={() => handlePromoteToNextLevel(enrollment.userId || enrollment.Usuario?.id, enrollment.Usuario?.nombre, 'BASIC')}
-                                    className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1"
-                                    title="Crear ticket pagado para Avanzado"
-                                  >
-                                    🔥 → Avanzado
-                                  </button>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => handlePromoteToNextLevel(enrollment.userId || enrollment.Usuario?.id, enrollment.Usuario?.nombre, 'BASIC')}
+                                      className="px-3 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1"
+                                      title="Crear ticket pagado para Avanzado"
+                                    >
+                                      🔥 → Avanzado
+                                    </button>
+                                    <button
+                                      onClick={() => openMoveVisionModal(enrollment.userId || enrollment.Usuario?.id, enrollment.Usuario?.nombre, 'BASIC')}
+                                      className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1"
+                                      title="Mover a otra visión"
+                                    >
+                                      <ArrowRightLeft className="w-3 h-3" /> Mover
+                                    </button>
+                                  </div>
                                 </td>
                               )}
                             </tr>
@@ -3274,6 +3372,96 @@ export default function VisionManagePage() {
       )}
 
       {/* Modal de Restablecer Contraseña */}
+      
+      {/* Modal Mover a otra Visión (solo ADMINISTRADOR) */}
+      {showMoveVisionModal && moveUserData && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl border border-purple-500/30 shadow-2xl max-w-md w-full animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="p-6 border-b border-slate-700">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                    <ArrowRightLeft className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Mover a otra Visión</h3>
+                    <p className="text-slate-400 text-sm">{moveUserData.userName}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowMoveVisionModal(false);
+                    setMoveUserData(null);
+                  }}
+                  className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
+            </div>
+            
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Seleccionar Visión Destino
+                </label>
+                <select
+                  value={targetVisionId || ''}
+                  onChange={(e) => setTargetVisionId(e.target.value ? parseInt(e.target.value) : null)}
+                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl text-white focus:outline-none focus:border-purple-500"
+                >
+                  <option value="">Seleccionar visión...</option>
+                  {availableVisions.map(v => (
+                    <option key={v.id} value={v.id}>
+                      {v.nombre} {v.organizationName ? `(${v.organizationName})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
+                <p className="text-amber-300 text-sm">
+                  ⚠️ Esta acción moverá al usuario <strong>{moveUserData.userName}</strong> y todos sus datos 
+                  (tickets, enrollments, etc.) del nivel <strong>{moveUserData.level}</strong> a la visión seleccionada.
+                </p>
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="p-6 border-t border-slate-700 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowMoveVisionModal(false);
+                  setMoveUserData(null);
+                }}
+                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-medium transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleMoveToVision}
+                disabled={!targetVisionId || movingUsers}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors flex items-center gap-2"
+              >
+                {movingUsers ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Moviendo...
+                  </>
+                ) : (
+                  <>
+                    <ArrowRightLeft className="w-4 h-4" />
+                    Mover Usuario
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal Agregar Participantes (solo ADMINISTRADOR) */}
       {showAddParticipantModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">

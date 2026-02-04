@@ -6,7 +6,7 @@ import { authOptions } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 
 // GET - Listar todas las visiones
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
@@ -22,8 +22,13 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
+    // Obtener parámetro de filtro activo
+    const { searchParams } = new URL(request.url);
+    const activeOnly = searchParams.get('active') === 'true';
+
     // Sistema de Visiones con jerarquía implementado
     const visiones = await prisma.vision.findMany({
+      where: activeOnly ? { isActive: true } : undefined,
       orderBy: { createdAt: 'desc' },
       include: {
         Usuario: {
@@ -71,6 +76,7 @@ export async function GET() {
       
       return {
         ...v,
+        organizationName: v.Organization?.name || null,
         vision_enrollments: undefined, // No enviar enrollments individuales
         _count: {
           Participantes: participantes,
@@ -83,7 +89,7 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ visiones: visionesTransformed });
+    return NextResponse.json({ success: true, visiones: visionesTransformed });
 
   } catch (error) {
     console.error('Error loading visiones:', error);
