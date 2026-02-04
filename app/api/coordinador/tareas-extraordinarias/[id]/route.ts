@@ -44,7 +44,7 @@ export async function PATCH(
       );
     }
 
-    // Obtener la submission
+    // Obtener la submission con el enrollment del usuario
     const submission = await prisma.taskSubmission.findUnique({
       where: { id: submissionId },
       include: {
@@ -59,7 +59,13 @@ export async function PATCH(
           select: {
             id: true,
             nombre: true,
-            missedCallsCount: true
+            email: true,
+            missedCallsCount: true,
+            ProgramEnrollment_ProgramEnrollment_userIdToUsuario: {
+              where: { status: 'SUSPENDED' },
+              orderBy: { createdAt: 'desc' },
+              take: 1
+            }
           }
         }
       }
@@ -89,16 +95,60 @@ export async function PATCH(
     // Si se aprueba, otorgar la vida extra
     if (aprobado) {
       const usuario = submission.Usuario;
+      const enrollment = usuario.ProgramEnrollment_ProgramEnrollment_userIdToUsuario[0];
       
-      // Si tiene 3 o más llamadas perdidas, está bloqueado
-      // Al aprobar la tarea, resetear a 2 llamadas perdidas (vida extra)
-      if (usuario.missedCallsCount >= 3) {
+      if (enrollment) {
+        // Verificar que no haya usado ya su vida extra
+        const fullEnrollment = await prisma.programEnrollment.findUnique({
+          where: { id: enrollment.id },
+          select: { extraLifeUsed: true, missedCallsCount: true }
+        });
+
+        if (fullEnrollment?.extraLifeUsed) {
+          return NextResponse.json({
+            success: false,
+            error: 'El usuario ya utilizó su vida extra. No puede obtener otra por tarea extraordinaria.'
+          }, { status: 400 });
+        }
+
+        // Otorgar vida extra correctamente:
+        // 1. Resetear missedCallsCount a 0
+        // 2. Marcar extraLifeUsed = true
+        // 3. Cambiar status a ACTIVE
+        // 4. Reactivar sesiones futuras canceladas
+        await prisma.programEnrollment.update({
+          where: { id: enrollment.id },
+          data: {
+            missedCallsCount: 0,
+            status: 'ACTIVE',
+            extraLifeUsed: true,
+            extraLifeGrantedBy: 'TAREA_EXTRAORDINARIA',
+            extraLifeGrantedAt: new Date()
+          }
+        });
+
+        // Reactivar sesiones futuras canceladas
+        await prisma.callBooking.updateMany({
+          where: {
+            programEnrollmentId: enrollment.id,
+            scheduledAt: { gt: new Date() },
+            status: 'CANCELLED'
+          },
+          data: {
+            status: 'PENDING'
+          }
+        });
+
+        console.log(`✅ Vida extra otorgada a ${usuario.nombre} por tarea extraordinaria (Enrollment ${enrollment.id})`);
+      } else {
+        // Fallback: actualizar Usuario.missedCallsCount si no hay enrollment
         await prisma.usuario.update({
           where: { id: usuario.id },
           data: {
-            missedCallsCount: 2 // Le damos una vida extra
+            missedCallsCount: 0
           }
         });
+        console.log(`⚠️ Vida extra otorgada a ${usuario.nombre} (sin enrollment activo)`);
       }
 
       // Notificar al usuario
@@ -107,7 +157,7 @@ export async function PATCH(
           userId: usuario.id,
           type: 'SYSTEM_ALERT',
           title: '🎉 Tarea Extraordinaria Aprobada',
-          message: `Tu tarea "${submission.AdminTask.titulo}" ha sido aprobada. Has ganado una vida extra y tu cuenta ha sido reactivada.`,
+          message: `Tu tarea "${submission.AdminTask.titulo}" ha sido aprobada. Has ganado una vida extra, tu cuenta ha sido reactivada y tus sesiones futuras han sido restauradas.`,
           isRead: false
         }
       });
@@ -127,7 +177,7 @@ export async function PATCH(
     return NextResponse.json({
       success: true,
       message: aprobado 
-        ? 'Tarea aprobada. El participante ha recuperado su vida extra.' 
+        ? 'Tarea aprobada. El participante ha recuperado su vida extra y sus sesiones han sido reactivadas.' 
         : 'Tarea rechazada.'
     });
 
