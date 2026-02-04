@@ -242,18 +242,20 @@ export async function GET(request: Request) {
       (plTicket.vision?.advancedEndDate ? new Date(new Date(plTicket.vision.advancedEndDate).setHours(23, 0, 0, 0)) : null);
 
     // Precios según estructura:
-    // COMBO (Avanzado + PL) = $14,500
+    // COMBO (Avanzado + PL) precio base = $14,500
     // Solo Avanzado = $7,500
-    // Solo PL promo = $9,000 (para quien ya pagó avanzado)
+    // APARTADO COMBO = $9,000 (precio promo para separar lugar en combo)
     // Solo PL base = $11,000
     // Completar COMBO = $7,000 ($14,500 - $7,500 ya pagados)
+    // Depósito para completar APARTADO = $1,500 ($9,000 - $7,500 ya pagados)
+    // Restante después de apartado = $5,500 ($14,500 - $9,000 apartado)
     const COMBO_PRICE = 14500;
     const ADVANCED_PRICE = 7500;
-    const PL_PROMO_PRICE = 9000;
+    const APARTADO_PRICE = 9000; // Precio promo para separar combo
     const PL_BASE_PRICE = 11000;
     const COMPLETE_COMBO_PRICE = COMBO_PRICE - ADVANCED_PRICE; // $7,000
-    const DEPOSIT_FOR_RESERVE = 1500; // Para reservar los $9,000 promo
-    const REMAINING_AFTER_DEPOSIT = PL_PROMO_PRICE - DEPOSIT_FOR_RESERVE; // $7,500
+    const DEPOSIT_FOR_APARTADO = APARTADO_PRICE - ADVANCED_PRICE; // $1,500 para completar apartado
+    const REMAINING_AFTER_APARTADO = COMBO_PRICE - APARTADO_PRICE; // $5,500 restantes después de apartado
 
     // Determine current price based on status and deadlines
     let currentPrice = PL_BASE_PRICE; // Base price
@@ -295,12 +297,12 @@ export async function GET(request: Request) {
       },
       pricing: {
         basePrice: PL_BASE_PRICE,           // $11,000
-        promoPrice: PL_PROMO_PRICE,         // $9,000
+        apartadoPrice: APARTADO_PRICE,      // $9,000 (apartado combo)
         comboPrice: COMBO_PRICE,            // $14,500
         advancedPaid: ADVANCED_PRICE,       // $7,500 (ya pagado)
         completeComboPrice: COMPLETE_COMBO_PRICE, // $7,000 para completar combo
-        depositForReserve: DEPOSIT_FOR_RESERVE,   // $1,500 para reservar
-        remainingAfterDeposit: REMAINING_AFTER_DEPOSIT, // $7,500 restante después de depósito
+        depositForApartado: DEPOSIT_FOR_APARTADO, // $1,500 para completar apartado
+        remainingAfterApartado: REMAINING_AFTER_APARTADO, // $5,500 restante después de apartado
         currentPrice: currentPrice,
         depositAmount: depositAmount,
         hasDeposit: hasDeposit,

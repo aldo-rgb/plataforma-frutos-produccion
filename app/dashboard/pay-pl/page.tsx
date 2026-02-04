@@ -31,12 +31,12 @@ interface PLTicketInfo {
 
 interface PricingInfo {
   basePrice: number;
-  promoPrice: number;
+  apartadoPrice: number;
   comboPrice: number;
   advancedPaid: number;
   completeComboPrice: number;
-  depositForReserve: number;
-  remainingAfterDeposit: number;
+  depositForApartado: number;
+  remainingAfterApartado: number;
   currentPrice: number;
   depositAmount: number;
   hasDeposit: boolean;
@@ -407,8 +407,8 @@ export default function PayPLPage() {
             {ticket?.status === 'PROMO_AVAILABLE' && pricing?.canPayPromo && !pricing?.hasDeposit && (
               <>
                 <div className="flex justify-between items-center py-2 px-3 bg-cyan-500/10 rounded-lg border border-cyan-500/30">
-                  <span className="text-cyan-400 text-sm">Opción 1: Reservar promo</span>
-                  <span className="font-bold text-cyan-400">${formatPrice(pricing?.depositForReserve || 1500)}</span>
+                  <span className="text-cyan-400 text-sm">Opción 1: Completar apartado ($9,000)</span>
+                  <span className="font-bold text-cyan-400">${formatPrice(pricing?.depositForApartado || 1500)}</span>
                 </div>
                 <div className="flex justify-between items-center py-2 px-3 bg-emerald-500/10 rounded-lg border border-emerald-500/30">
                   <span className="text-emerald-400 text-sm">Opción 2: Completar COMBO</span>
@@ -417,27 +417,28 @@ export default function PayPLPage() {
                 <div className="border-t border-slate-700 pt-3 mt-3">
                   <p className="text-xs text-slate-500">
                     Ya pagaste <span className="text-white font-semibold">${formatPrice(pricing?.advancedPaid || 7500)}</span> de Avanzado. 
-                    COMBO total: <span className="text-yellow-400 font-semibold">${formatPrice(pricing?.comboPrice || 14500)}</span>
+                    COMBO total: <span className="text-yellow-400 font-semibold">${formatPrice(pricing?.comboPrice || 14500)}</span>.
+                    Con apartado debes <span className="text-cyan-400 font-semibold">${formatPrice(pricing?.remainingAfterApartado || 5500)}</span> antes del inicio.
                   </p>
                 </div>
               </>
             )}
 
-            {/* Show remaining after deposit */}
+            {/* Show remaining after deposit/apartado */}
             {pricing?.hasDeposit && pricing.canPayPromo && (
               <>
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Precio Promocional PL:</span>
-                  <span className="text-xl font-bold text-yellow-400">${formatPrice(pricing.promoPrice)}</span>
+                  <span className="text-slate-400">COMBO Avanzado + PL:</span>
+                  <span className="text-xl font-bold text-yellow-400">${formatPrice(pricing.comboPrice)}</span>
                 </div>
                 <div className="flex justify-between items-center text-emerald-400">
-                  <span>Depósito pagado:</span>
-                  <span className="font-bold">-${formatPrice(pricing.depositAmount)}</span>
+                  <span>Apartado pagado:</span>
+                  <span className="font-bold">-${formatPrice(pricing.apartadoPrice)}</span>
                 </div>
                 <div className="border-t border-slate-700 pt-3">
                   <div className="flex justify-between items-center">
                     <span className="text-white font-bold">Restante a pagar:</span>
-                    <span className="text-2xl font-black text-white">${formatPrice(pricing.amountToPay)}</span>
+                    <span className="text-2xl font-black text-white">${formatPrice(pricing.remainingAfterApartado)}</span>
                   </div>
                 </div>
               </>
@@ -474,14 +475,14 @@ export default function PayPLPage() {
               <div className="flex items-start gap-3 mb-4">
                 <Gift className="w-6 h-6 text-cyan-400 flex-shrink-0 mt-1" />
                 <div>
-                  <h4 className="text-white font-bold text-lg">Opción 1: Reservar Precio Promo</h4>
+                  <h4 className="text-white font-bold text-lg">Opción 1: Completar APARTADO</h4>
                   <p className="text-slate-400 text-sm mt-1">
-                    Paga <span className="text-cyan-400 font-bold">${formatPrice(pricing?.depositForReserve || 1500)}</span> ahora para 
-                    reservar el precio de <span className="text-yellow-400 font-bold">${formatPrice(pricing?.promoPrice || 9000)}</span>.
+                    Paga <span className="text-cyan-400 font-bold">${formatPrice(pricing?.depositForApartado || 1500)}</span> ahora para 
+                    completar el apartado de <span className="text-yellow-400 font-bold">${formatPrice(pricing?.apartadoPrice || 9000)}</span>.
                   </p>
                   <p className="text-slate-500 text-xs mt-2">
-                    Después pagarás <span className="text-white font-semibold">${formatPrice(pricing?.remainingAfterDeposit || 7500)}</span> restantes 
-                    antes del fin del Avanzado.
+                    Después pagarás <span className="text-white font-semibold">${formatPrice(pricing?.remainingAfterApartado || 5500)}</span> restantes 
+                    antes del inicio del Avanzado.
                   </p>
                 </div>
               </div>
@@ -516,7 +517,7 @@ export default function PayPLPage() {
                   </>
                 ) : (
                   <>
-                    Reservar con ${formatPrice(pricing?.depositForReserve || 1500)}
+                    Completar Apartado ${formatPrice(pricing?.depositForApartado || 1500)}
                     <ArrowRight className="w-5 h-5" />
                   </>
                 )}
