@@ -54,7 +54,16 @@ export async function POST() {
       }, { status: 400 });
     }
 
-    const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    // Usar NEXTAUTH_URL o NEXT_PUBLIC_APP_URL, asegurando HTTPS en producción
+    let baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://localhost:3000';
+    
+    // Asegurar que sea HTTPS en producción (Vercel)
+    if (process.env.VERCEL_URL && !baseUrl.startsWith('https://')) {
+      baseUrl = `https://${process.env.VERCEL_URL}`;
+    }
+    
+    console.log('🧪 Test payment - Base URL:', baseUrl);
+    
     const orgName = config.organization?.name || 'Organización';
 
     if (config.provider === 'MERCADOPAGO') {
