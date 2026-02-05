@@ -128,8 +128,11 @@ export async function POST(request: Request) {
         },
       });
 
-      // Para modo sandbox/prueba, usar sandbox_init_point si está disponible
-      const paymentUrl = preferenceData.sandbox_init_point || preferenceData.init_point;
+      // Usar init_point para producción, solo sandbox_init_point si es TEST
+      const isTestCredentials = mpToken.startsWith('TEST-');
+      const paymentUrl = isTestCredentials 
+        ? (preferenceData.sandbox_init_point || preferenceData.init_point)
+        : preferenceData.init_point;
 
       return NextResponse.json({
         success: true,

@@ -128,8 +128,12 @@ export async function POST() {
 
       const preferenceData = JSON.parse(responseText);
       
-      // Usar sandbox_init_point si está disponible (modo prueba)
-      const paymentUrl = preferenceData.sandbox_init_point || preferenceData.init_point;
+      // Usar init_point para producción (credenciales APP_USR-)
+      // Solo usar sandbox_init_point si las credenciales son TEST-
+      const isTestCredentials = config.secretKey.startsWith('TEST-');
+      const paymentUrl = isTestCredentials 
+        ? (preferenceData.sandbox_init_point || preferenceData.init_point)
+        : preferenceData.init_point;
 
       if (!paymentUrl) {
         return NextResponse.json({ 
@@ -139,6 +143,7 @@ export async function POST() {
       }
 
       console.log('✅ Test payment created:', preferenceData.id);
+      console.log('   Using:', isTestCredentials ? 'sandbox_init_point' : 'init_point');
       console.log('   URL:', paymentUrl);
 
       return NextResponse.json({

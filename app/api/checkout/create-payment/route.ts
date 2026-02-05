@@ -258,8 +258,12 @@ async function createMercadoPagoPreference(
 
   const preferenceData = JSON.parse(responseText);
 
-  // Para modo sandbox/prueba, usar sandbox_init_point si está disponible
-  const paymentUrl = preferenceData.sandbox_init_point || preferenceData.init_point;
+  // Usar init_point para producción (credenciales APP_USR-)
+  // Solo usar sandbox_init_point si las credenciales empiezan con TEST-
+  const isTestCredentials = accessToken.startsWith('TEST-');
+  const paymentUrl = isTestCredentials 
+    ? (preferenceData.sandbox_init_point || preferenceData.init_point)
+    : preferenceData.init_point;
 
   if (!paymentUrl) {
     console.error('❌ MercadoPago no devolvió init_point:', preferenceData);
@@ -267,8 +271,7 @@ async function createMercadoPagoPreference(
   }
 
   console.log('✅ MercadoPago preferencia creada:', preferenceData.id);
-  console.log('   init_point:', preferenceData.init_point);
-  console.log('   sandbox_init_point:', preferenceData.sandbox_init_point);
+  console.log('   Modo:', isTestCredentials ? 'TEST (sandbox)' : 'PRODUCCIÓN');
   console.log('   Usando:', paymentUrl);
 
   return paymentUrl;
