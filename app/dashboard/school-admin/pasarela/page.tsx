@@ -16,6 +16,9 @@ import {
   Shield,
   ExternalLink,
   Info,
+  Zap,
+  HelpCircle,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -94,6 +97,8 @@ export default function PaymentGatewayPage() {
   const [showSecretKey, setShowSecretKey] = useState(false);
   const [showWebhookSecret, setShowWebhookSecret] = useState(false);
   const [hasExistingConfig, setHasExistingConfig] = useState(false);
+  const [testingPayment, setTestingPayment] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -225,6 +230,35 @@ export default function PaymentGatewayPage() {
     }
   };
 
+  const handleTestPayment = async () => {
+    if (!hasExistingConfig) {
+      showNotification('error', 'Primero guarda la configuración de la pasarela');
+      return;
+    }
+
+    setTestingPayment(true);
+    try {
+      const res = await fetch('/api/school-admin/payment-gateway/test-payment', {
+        method: 'POST',
+      });
+
+      const data = await res.json();
+
+      if (data.success && data.paymentUrl) {
+        // Abrir el link de pago en nueva pestaña
+        window.open(data.paymentUrl, '_blank');
+        showNotification('success', `Link de pago de $${data.amount} MXN abierto en nueva pestaña`);
+      } else {
+        showNotification('error', data.error || 'Error al crear pago de prueba');
+      }
+    } catch (error) {
+      console.error('Error creating test payment:', error);
+      showNotification('error', 'Error al crear pago de prueba');
+    } finally {
+      setTestingPayment(false);
+    }
+  };
+
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 5000);
@@ -243,22 +277,158 @@ export default function PaymentGatewayPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Link
-            href="/dashboard/school-admin"
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Pasarela de Pagos
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Configura cómo tu organización recibe pagos con tarjeta
-            </p>
+        {/* Help Modal */}
+        {showHelpModal && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                    Cómo configurar Mercado Pago
+                  </h2>
+                  <button
+                    onClick={() => setShowHelpModal(false)}
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Paso 1 */}
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 bg-amber-500 text-white rounded-full flex items-center justify-center font-bold">
+                      1
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                        Accede al Panel de Desarrolladores
+                      </h3>
+                      <p className="text-gray-600 dark:text-gray-400 mb-3">
+                        Inicia sesión en tu cuenta de Mercado Pago y ve al panel de desarrolladores.
+                      </p>
+                      <a
+                        href="https://www.mercadopago.com.mx/developers/panel/app"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        Ir a Mercado Pago Developers
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Paso 2 */}
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 bg-amber-500 text-white rounded-full flex items-center justify-center font-bold">
+                      2
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                        Crea o selecciona tu aplicación
+                      </h3>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        Si no tienes una aplicación, haz clic en "Crear aplicación". 
+                        Selecciona "Pagos online" → "CheckoutPro".
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Paso 3 */}
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 bg-amber-500 text-white rounded-full flex items-center justify-center font-bold">
+                      3
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                        Copia las credenciales de PRODUCCIÓN
+                      </h3>
+                      <p className="text-gray-600 dark:text-gray-400 mb-2">
+                        En tu aplicación, ve a <strong>"Credenciales"</strong> y selecciona la pestaña <strong>"Productivas"</strong>.
+                      </p>
+                      <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 space-y-2">
+                        <p className="text-sm">
+                          <strong>Public Key:</strong> Copia la "Public Key" y pégala aquí
+                        </p>
+                        <p className="text-sm">
+                          <strong>Access Token:</strong> Copia el "Access Token" y pégalo en el campo correspondiente
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Paso 4 */}
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 bg-amber-500 text-white rounded-full flex items-center justify-center font-bold">
+                      4
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                        Guarda y prueba
+                      </h3>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        Haz clic en "Guardar configuración" y luego usa el botón "Probar $10" 
+                        para verificar que todo funciona correctamente.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Nota importante */}
+                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                    <div className="flex gap-3">
+                      <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-amber-900 dark:text-amber-300 mb-1">
+                          Importante
+                        </p>
+                        <p className="text-sm text-amber-800 dark:text-amber-400">
+                          Usa las credenciales de <strong>Producción</strong> (no las de Prueba) para recibir pagos reales. 
+                          Los pagos irán directamente a tu cuenta de Mercado Pago.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => setShowHelpModal(false)}
+                    className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors"
+                  >
+                    Entendido
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
+        )}
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <Link
+              href="/dashboard/school-admin"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Pasarela de Pagos
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                Configura cómo tu organización recibe pagos con tarjeta
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowHelpModal(true)}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
+          >
+            <HelpCircle className="w-4 h-4" />
+            Ayuda
+          </button>
         </div>
 
         {/* Notification */}
@@ -447,6 +617,36 @@ export default function PaymentGatewayPage() {
                   />
                 </button>
               </div>
+
+              {/* Test Payment Button */}
+              {hasExistingConfig && config.isActive && (
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-amber-900 dark:text-amber-300">
+                          Probar pasarela de pagos
+                        </p>
+                        <p className="text-sm text-amber-700 dark:text-amber-400">
+                          Genera un link de pago de $10 MXN para verificar que todo funciona
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleTestPayment}
+                        disabled={testingPayment}
+                        className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+                      >
+                        {testingPayment ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Zap className="w-4 h-4" />
+                        )}
+                        Probar $10
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

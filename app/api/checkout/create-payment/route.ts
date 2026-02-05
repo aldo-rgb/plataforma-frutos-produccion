@@ -258,15 +258,20 @@ async function createMercadoPagoPreference(
 
   const preferenceData = JSON.parse(responseText);
 
-  if (!preferenceData.init_point) {
+  // Para modo sandbox/prueba, usar sandbox_init_point si está disponible
+  const paymentUrl = preferenceData.sandbox_init_point || preferenceData.init_point;
+
+  if (!paymentUrl) {
     console.error('❌ MercadoPago no devolvió init_point:', preferenceData);
     throw new Error('Mercado Pago no devolvió URL de pago');
   }
 
   console.log('✅ MercadoPago preferencia creada:', preferenceData.id);
   console.log('   init_point:', preferenceData.init_point);
+  console.log('   sandbox_init_point:', preferenceData.sandbox_init_point);
+  console.log('   Usando:', paymentUrl);
 
-  return preferenceData.init_point;
+  return paymentUrl;
 }
 
 // ============================================================================

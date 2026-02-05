@@ -128,9 +128,12 @@ export async function POST(request: Request) {
         },
       });
 
+      // Para modo sandbox/prueba, usar sandbox_init_point si está disponible
+      const paymentUrl = preferenceData.sandbox_init_point || preferenceData.init_point;
+
       return NextResponse.json({
         success: true,
-        paymentUrl: preferenceData.init_point,
+        paymentUrl: paymentUrl,
         preferenceId: preferenceData.id,
       });
     }

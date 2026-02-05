@@ -1,0 +1,178 @@
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+
+export const dynamic = 'force-dynamic';
+
+/**
+ * POST /api/school-admin/payment-gateway/test-payment
+ * 
+ * Crea un link de pago de prueba de $10 MXN para verificar la configuración
+ */
+export async function POST() {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 });
+    }
+
+    // Get user's organization
+    const user = await prisma.usuario.findUnique({
+      where: { id: Number(session.user.id) },
+      select: { organizationId: true, email: true, nombre: true },
+    });
+
+    if (!user?.organizationId) {
+      return NextResponse.json({ success: false, error: 'Usuario sin organización' }, { status: 400 });
+    }
+
+    // Get payment gateway config
+    const config = await prisma.paymentGatewayConfig.findUnique({
+      where: { organizationId: user.organizationId },
+      include: { organization: { select: { name: true } } },
+    });
+
+    if (!config || !config.secretKey) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'No hay pasarela de pagos configurada' 
+      }, { status: 400 });
+    }
+
+    if (!config.isActive) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'La pasarela de pagos está desactivada' 
+      }, { status: 400 });
+    }
+
+    const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const orgName = config.organization?.name || 'Organización';
+
+    if (config.provider === 'MERCADOPAGO') {
+      // Crear preferencia de MercadoPago
+      const preferenceBody = {
+        items: [
+          {
+            id: `test-payment-${Date.now()}`,
+            title: 'Pago de Prueba - Verificación de Pasarela',
+            description: `Pago de prueba para verificar configuración de ${orgName}`,
+            quantity: 1,
+            unit_price: 10,
+            currency_id: 'MXN',
+          },
+        ],
+        payer: {
+          email: user.email,
+          name: user.nombre,
+        },
+        back_urls: {
+          success: `${baseUrl}/dashboard/school-admin/pasarela?test=success`,
+          failure: `${baseUrl}/dashboard/school-admin/pasarela?test=failure`,
+          pending: `${baseUrl}/dashboard/school-admin/pasarela?test=pending`,
+        },
+        auto_return: 'approved',
+        external_reference: JSON.stringify({
+          type: 'TEST_PAYMENT',
+          organizationId: user.organizationId,
+          userId: session.user.id,
+          timestamp: Date.now(),
+        }),
+        statement_descriptor: orgName.substring(0, 22),
+      };
+
+      console.log('🧪 Creating test payment preference for MercadoPago...');
+
+      const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.secretKey}`,
+        },
+        body: JSON.stringify(preferenceBody),
+      });
+
+      const responseText = await response.text();
+      console.log('   MercadoPago response status:', response.status);
+
+      if (!response.ok) {
+        console.error('❌ MercadoPago error:', responseText);
+        return NextResponse.json({ 
+          success: false, 
+          error: `Error de MercadoPago: ${response.status}` 
+        }, { status: 400 });
+      }
+
+      const preferenceData = JSON.parse(responseText);
+      
+      // Usar sandbox_init_point si está disponible (modo prueba)
+      const paymentUrl = preferenceData.sandbox_init_point || preferenceData.init_point;
+
+      if (!paymentUrl) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'MercadoPago no devolvió URL de pago' 
+        }, { status: 400 });
+      }
+
+      console.log('✅ Test payment created:', preferenceData.id);
+      console.log('   URL:', paymentUrl);
+
+      return NextResponse.json({
+        success: true,
+        paymentUrl,
+        preferenceId: preferenceData.id,
+        amount: 10,
+        provider: 'MERCADOPAGO',
+      });
+
+    } else if (config.provider === 'STRIPE') {
+      // Para Stripe
+      const Stripe = require('stripe');
+      const stripe = new Stripe(config.secretKey);
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'mxn',
+              product_data: {
+                name: 'Pago de Prueba - Verificación de Pasarela',
+                description: `Pago de prueba para verificar configuración de ${orgName}`,
+              },
+              unit_amount: 1000, // $10.00 MXN en centavos
+            },
+            quantity: 1,
+          },
+        ],
+        mode: 'payment',
+        success_url: `${baseUrl}/dashboard/school-admin/pasarela?test=success`,
+        cancel_url: `${baseUrl}/dashboard/school-admin/pasarela?test=failure`,
+      });
+
+      return NextResponse.json({
+        success: true,
+        paymentUrl: session.url,
+        sessionId: session.id,
+        amount: 10,
+        provider: 'STRIPE',
+      });
+
+    } else {
+      return NextResponse.json({ 
+        success: false, 
+        error: `Proveedor ${config.provider} no soportado para pagos de prueba` 
+      }, { status: 400 });
+    }
+
+  } catch (error: any) {
+    console.error('Error creating test payment:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Error al crear pago de prueba' },
+      { status: 500 }
+    );
+  }
+}
