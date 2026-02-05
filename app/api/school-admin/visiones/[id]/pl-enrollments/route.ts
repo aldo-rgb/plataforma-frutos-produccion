@@ -102,9 +102,43 @@ export async function GET(
       };
     });
 
+    // Obtener staff asignado al nivel PL (Trainers y GameChangers)
+    const visionStaff = await prisma.visionStaff.findMany({
+      where: {
+        visionId,
+        level: 'PL'
+      },
+      include: {
+        Usuario_VisionStaff_userIdToUsuario: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+            telefono: true,
+            referralCode: true
+          }
+        }
+      }
+    });
+
+    // Formatear staff para el frontend
+    const formattedStaff = visionStaff.map(s => ({
+      id: s.id,
+      oderId: s.id, // Para compatibilidad con el componente de badges
+      rol: s.role, // TRAINER o GAMECHANGER
+      Usuario: {
+        id: s.Usuario_VisionStaff_userIdToUsuario.id,
+        nombre: s.Usuario_VisionStaff_userIdToUsuario.nombre,
+        email: s.Usuario_VisionStaff_userIdToUsuario.email,
+        telefono: s.Usuario_VisionStaff_userIdToUsuario.telefono,
+        referralCode: s.Usuario_VisionStaff_userIdToUsuario.referralCode
+      }
+    }));
+
     return NextResponse.json({
       success: true,
-      enrollments: formattedEnrollments
+      enrollments: formattedEnrollments,
+      staff: formattedStaff
     });
 
   } catch (error) {
