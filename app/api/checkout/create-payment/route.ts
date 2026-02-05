@@ -122,7 +122,8 @@ export async function POST(request: NextRequest) {
           productTitle,
           productDescription,
           amount,
-          baseUrl
+          baseUrl,
+          organization.name
         );
         break;
       
@@ -197,7 +198,8 @@ async function createMercadoPagoPreference(
   productTitle: string,
   productDescription: string,
   amount: number,
-  baseUrl: string
+  baseUrl: string,
+  organizationName: string = 'Impacto Cuantico'
 ): Promise<string> {
   console.log('🔵 MercadoPago - Creando preferencia');
   console.log('   Base URL:', baseUrl);
@@ -207,6 +209,7 @@ async function createMercadoPagoPreference(
   const preferenceBody = {
     items: [
       {
+        id: `checkout-${Date.now()}`,
         title: productTitle,
         description: productDescription,
         quantity: 1,
@@ -216,6 +219,7 @@ async function createMercadoPagoPreference(
     ],
     payer: {
       name: userData.nombre || '',
+      surname: '',
       email: userData.email || '',
     },
     back_urls: {
@@ -228,6 +232,7 @@ async function createMercadoPagoPreference(
       type: 'REGISTRATION',
       ...orderData,
     }),
+    statement_descriptor: organizationName.substring(0, 22),
   };
 
   console.log('   Preference body:', JSON.stringify(preferenceBody, null, 2));
