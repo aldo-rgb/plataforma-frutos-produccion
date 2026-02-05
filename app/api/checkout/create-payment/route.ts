@@ -233,6 +233,11 @@ async function createMercadoPagoPreference(
       ...orderData,
     }),
     statement_descriptor: organizationName.substring(0, 22),
+    payment_methods: {
+      excluded_payment_methods: [],
+      excluded_payment_types: [],
+      installments: 12,
+    },
   };
 
   console.log('   Preference body:', JSON.stringify(preferenceBody, null, 2));
