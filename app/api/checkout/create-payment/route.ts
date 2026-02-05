@@ -223,21 +223,20 @@ async function createMercadoPagoPreference(
       email: userData.email || '',
     },
     back_urls: {
-      success: `${baseUrl}/api/checkout/payment-success?provider=mercadopago`,
+      success: `${baseUrl}/api/checkout/payment-success?provider=mercadopago&data=${encodeURIComponent(JSON.stringify(orderData))}`,
       failure: `${baseUrl}/checkout?payment=failed`,
       pending: `${baseUrl}/checkout?payment=pending`,
     },
     auto_return: 'approved',
     external_reference: JSON.stringify({
       type: 'REGISTRATION',
-      ...orderData,
+      organizationId: orderData.organizationId,
+      visionId: orderData.visionId,
+      ticketSelection: orderData.ticketSelection,
+      amount: orderData.amount,
+      email: userData.email,
     }),
     statement_descriptor: organizationName.substring(0, 22),
-    payment_methods: {
-      excluded_payment_methods: [],
-      excluded_payment_types: [],
-      installments: 12,
-    },
   };
 
   console.log('   Preference body:', JSON.stringify(preferenceBody, null, 2));
