@@ -14,6 +14,8 @@ export async function POST() {
   try {
     const session = await getServerSession(authOptions);
 
+    console.log('🧪 Test payment - Session:', session?.user?.id, session?.user?.email);
+
     if (!session?.user?.id) {
       return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 });
     }
@@ -24,6 +26,8 @@ export async function POST() {
       select: { organizationId: true, email: true, nombre: true },
     });
 
+    console.log('🧪 Test payment - User:', user?.email, 'OrgId:', user?.organizationId);
+
     if (!user?.organizationId) {
       return NextResponse.json({ success: false, error: 'Usuario sin organización' }, { status: 400 });
     }
@@ -33,6 +37,8 @@ export async function POST() {
       where: { organizationId: user.organizationId },
       include: { organization: { select: { name: true } } },
     });
+
+    console.log('🧪 Test payment - Config:', config?.provider, 'Active:', config?.isActive, 'HasSecret:', !!config?.secretKey);
 
     if (!config || !config.secretKey) {
       return NextResponse.json({ 
@@ -96,12 +102,18 @@ export async function POST() {
 
       const responseText = await response.text();
       console.log('   MercadoPago response status:', response.status);
+      console.log('   MercadoPago response:', responseText);
 
       if (!response.ok) {
         console.error('❌ MercadoPago error:', responseText);
+        let errorMsg = `Error de MercadoPago: ${response.status}`;
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMsg = errorData.message || errorData.error || errorMsg;
+        } catch {}
         return NextResponse.json({ 
           success: false, 
-          error: `Error de MercadoPago: ${response.status}` 
+          error: errorMsg
         }, { status: 400 });
       }
 
