@@ -204,7 +204,6 @@ export function TransferModal({ ticket, onClose, onSuccess }: Props) {
                   placeholder="ejemplo@email.com"
                   required
                   autoComplete="off"
-                  onPaste={(e) => e.preventDefault()}
                   className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00F0FF]/50 focus:border-[#00F0FF]/50 transition-all"
                 />
               </div>
@@ -220,7 +219,6 @@ export function TransferModal({ ticket, onClose, onSuccess }: Props) {
                   placeholder="Escribe el email nuevamente"
                   required
                   autoComplete="off"
-                  onPaste={(e) => e.preventDefault()}
                   className={`w-full px-4 py-3 bg-slate-800/50 border rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 transition-all ${
                     confirmEmail && email.toLowerCase() !== confirmEmail.toLowerCase()
                       ? 'border-red-500/50 focus:ring-red-500/50 focus:border-red-500/50'
