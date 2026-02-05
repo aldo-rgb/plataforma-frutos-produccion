@@ -32,8 +32,13 @@ const isRedRole = (role: string): boolean => {
   return redRoles.some(r => role.toUpperCase().includes(r));
 };
 
-// Obtener el nombre a mostrar (solo primer nombre)
-const getDisplayName = (name: string): string => {
+// Obtener el nombre a mostrar (apodo si existe, sino primer nombre)
+const getDisplayName = (name: string, nickname?: string): string => {
+  // Si tiene apodo, usarlo
+  if (nickname && nickname.trim() && nickname.trim().toLowerCase() !== name.split(' ')[0].toLowerCase()) {
+    return nickname.trim().toUpperCase();
+  }
+  // Si no, usar el primer nombre
   const firstName = name.split(' ')[0];
   return firstName.toUpperCase();
 };
@@ -143,8 +148,8 @@ export default function BadgePreview({
     ctx.textAlign = 'center';
     ctx.fillText(organization.name.toUpperCase(), BADGE_WIDTH / 2, 32);
 
-    // NOMBRE ENORME del participante (centrado)
-    const displayName = getDisplayName(participant.name);
+    // NOMBRE ENORME del participante (centrado) - Usa apodo si existe
+    const displayName = getDisplayName(participant.name, participant.nickname);
     ctx.fillStyle = textColor;
     ctx.textAlign = 'center';
     

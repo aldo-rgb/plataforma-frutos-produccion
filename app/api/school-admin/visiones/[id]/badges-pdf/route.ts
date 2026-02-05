@@ -33,6 +33,7 @@ interface Participant {
   email: string;
   referralCode: string | null;
   rol: string; // Rol del usuario
+  apodo?: string | null; // Nombre como le gusta que le digan
 }
 
 /**
@@ -108,6 +109,7 @@ export async function GET(
             email: true,
             referralCode: true,
             rol: true, // Incluir rol del usuario
+            apodo: true, // Nombre como le gusta que le digan
           },
         },
       },
@@ -128,6 +130,7 @@ export async function GET(
             email: true,
             referralCode: true,
             rol: true,
+            apodo: true,
           },
         },
         Coordinator: {
@@ -137,6 +140,7 @@ export async function GET(
             email: true,
             referralCode: true,
             rol: true,
+            apodo: true,
           },
         },
       },
@@ -153,6 +157,7 @@ export async function GET(
         email: schoolProduct.Trainer.email,
         referralCode: schoolProduct.Trainer.referralCode,
         rol: 'TRAINER',
+        apodo: schoolProduct.Trainer.apodo,
       });
     }
     
@@ -166,6 +171,7 @@ export async function GET(
           email: schoolProduct.Coordinator.email,
           referralCode: schoolProduct.Coordinator.referralCode,
           rol: 'COORDINADOR',
+          apodo: schoolProduct.Coordinator.apodo,
         });
       }
     }
@@ -183,6 +189,7 @@ export async function GET(
             nombre: true,
             email: true,
             referralCode: true,
+            apodo: true,
           }
         }
       }
@@ -200,6 +207,7 @@ export async function GET(
           email: gcUser.email,
           referralCode: gcUser.referralCode,
           rol: 'GAME CHANGER',
+          apodo: gcUser.apodo,
         });
       }
     }
@@ -237,6 +245,7 @@ export async function GET(
         email: enrolledUser.email,
         referralCode: enrolledUser.referralCode,
         rol: displayRole,
+        apodo: enrolledUser.apodo,
       });
     });
 
@@ -286,8 +295,13 @@ function hexToRgb(hex: string): [number, number, number] {
     : [0, 191, 255]; // Default cyan
 }
 
-// Helper: Get display name (first name only)
-function getDisplayName(fullName: string): string {
+// Helper: Get display name (apodo if available, otherwise first name)
+function getDisplayName(fullName: string, apodo?: string | null): string {
+  // Si tiene apodo (nombre como le gusta que le digan), usarlo
+  if (apodo && apodo.trim()) {
+    return apodo.trim().toUpperCase();
+  }
+  // Si no, usar el primer nombre
   return fullName.split(' ')[0].toUpperCase();
 }
 
@@ -434,8 +448,8 @@ function drawBadgeFront(
   doc.setFont('helvetica', 'bold');
   doc.text(orgName.toUpperCase(), x + (logoBase64 ? 48 : 12), y + 27);
 
-  // Participant first name (LARGE)
-  const displayName = getDisplayName(participant.nombre);
+  // Participant display name: apodo if available, otherwise first name (LARGE)
+  const displayName = getDisplayName(participant.nombre, participant.apodo);
   
   // Color based on role: black for PARTICIPANTE, red for others
   const isRed = isRedRole(participant.rol);

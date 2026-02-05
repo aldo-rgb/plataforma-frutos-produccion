@@ -12,6 +12,7 @@ interface Participant {
   Usuario: {
     id: number;
     nombre: string;
+    apodo?: string;
     email: string;
     telefono?: string;
     referralCode?: string;
@@ -165,6 +166,7 @@ export default function BadgesPage() {
       participant: {
         id: participant.Usuario.id,
         name: participant.Usuario.nombre,
+        nickname: participant.Usuario.apodo,
         role: participant.rol || 'PARTICIPANTE',
         referralCode: participant.Usuario.referralCode || `USER-${participant.Usuario.id}`
       },

@@ -89,6 +89,7 @@ export async function GET(
         Usuario: {
           id: enrollment.Usuario_vision_enrollments_userIdToUsuario.id,
           nombre: enrollment.Usuario_vision_enrollments_userIdToUsuario.nombre,
+          apodo: enrollment.Usuario_vision_enrollments_userIdToUsuario.apodo,
           email: enrollment.Usuario_vision_enrollments_userIdToUsuario.email,
           telefono: enrollment.Usuario_vision_enrollments_userIdToUsuario.telefono,
           profileImage: enrollment.Usuario_vision_enrollments_userIdToUsuario.profileImage,
