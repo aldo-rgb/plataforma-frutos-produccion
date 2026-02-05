@@ -48,7 +48,7 @@ export async function POST(request: Request) {
           select: {
             id: true,
             startDate: true,
-            name: true,
+            nombre: true,
           },
         },
         organization: {
