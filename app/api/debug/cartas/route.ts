@@ -1,8 +1,30 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '../../../../lib/prisma';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Solo disponible en desarrollo o para admins autenticados
+    const isDev = process.env.NODE_ENV === 'development';
+    
+    if (!isDev) {
+      // En producción, requiere autenticación de admin
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.id) {
+        return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+      }
+      
+      const user = await prisma.usuario.findUnique({
+        where: { id: session.user.id },
+        select: { rol: true }
+      });
+      
+      if (!user || !['ADMINISTRADOR', 'SUPER_ADMIN'].includes(user.rol)) {
+        return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
+      }
+    }
+
     const cartas = await prisma.cartaFrutos.findMany({
       include: {
         Tarea: true,

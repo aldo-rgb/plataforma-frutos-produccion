@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// Este endpoint es solo para pruebas - eliminar después
+// Este endpoint es solo para pruebas - protegido para producción
 export async function GET(request: Request) {
+  // Solo disponible en desarrollo
+  if (process.env.NODE_ENV !== 'development') {
+    return NextResponse.json({ error: 'Endpoint solo disponible en desarrollo' }, { status: 403 });
+  }
+
   const { searchParams } = new URL(request.url);
   const testEmail = searchParams.get('email');
   

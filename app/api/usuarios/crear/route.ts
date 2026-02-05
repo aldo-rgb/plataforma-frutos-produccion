@@ -6,6 +6,10 @@ import { sendOrganicWelcomeEmail } from '@/lib/email';
 
 const prisma = new PrismaClient();
 
+// Roles permitidos para registro público (sin autenticación)
+// Roles privilegiados como ADMIN, SCHOOL_ADMIN, COORDINADOR, TRAINER requieren proceso administrativo
+const ALLOWED_PUBLIC_ROLES = ['MENTOR', 'PARTICIPANTE', 'LIDER'];
+
 export async function POST(request: NextRequest) {
   try {
     const { nombre, email, password, telefono, rol } = await request.json();
@@ -15,6 +19,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Todos los campos son requeridos' },
         { status: 400 }
+      );
+    }
+
+    // SEGURIDAD: Validar que el rol sea permitido para registro público
+    if (!ALLOWED_PUBLIC_ROLES.includes(rol)) {
+      console.warn(`⚠️ Intento de crear usuario con rol no permitido: ${rol} - email: ${email}`);
+      return NextResponse.json(
+        { error: 'Rol no permitido para registro público' },
+        { status: 403 }
       );
     }
 

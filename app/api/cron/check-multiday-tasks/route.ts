@@ -8,6 +8,12 @@ import { prisma } from '@/lib/prisma';
  */
 export async function GET(req: Request) {
   try {
+    // Verificar secret key para seguridad
+    const authHeader = req.headers.get('authorization');
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
     console.log('🔍 Verificando misiones multi-día...');
 
     const ahora = new Date();
