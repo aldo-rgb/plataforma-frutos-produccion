@@ -104,7 +104,7 @@ export async function GET(
       };
     });
 
-    // Obtener staff asignado al nivel PL (Trainers y GameChangers)
+    // Obtener staff asignado al nivel PL (Trainers y Coordinators desde VisionStaff)
     const visionStaff = await prisma.visionStaff.findMany({
       where: {
         visionId,
@@ -123,19 +123,68 @@ export async function GET(
       }
     });
 
-    // Formatear staff para el frontend
-    const formattedStaff = visionStaff.map(s => ({
-      id: s.id,
-      oderId: s.id, // Para compatibilidad con el componente de badges
-      rol: s.role, // TRAINER o GAMECHANGER
-      Usuario: {
-        id: s.Usuario_VisionStaff_userIdToUsuario.id,
-        nombre: s.Usuario_VisionStaff_userIdToUsuario.nombre,
-        email: s.Usuario_VisionStaff_userIdToUsuario.email,
-        telefono: s.Usuario_VisionStaff_userIdToUsuario.telefono,
-        referralCode: s.Usuario_VisionStaff_userIdToUsuario.referralCode
+    // Obtener Game Changers de VisionGameChanger para nivel PL
+    const visionGameChangers = await prisma.visionGameChanger.findMany({
+      where: { 
+        visionId,
+        level: 'PL'
+      },
+      include: {
+        Usuario_VisionGameChanger_gameChangerIdToUsuario: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+            telefono: true,
+            referralCode: true,
+          }
+        }
       }
-    }));
+    });
+
+    // Formatear staff para el frontend
+    const formattedStaff: any[] = [];
+    
+    // Agregar staff de VisionStaff (Trainers, Coordinators)
+    visionStaff.forEach(s => {
+      // Mapear roles para display
+      let displayRole = s.role;
+      if (s.role === 'PL_TRAINER') displayRole = 'TRAINER';
+      if (s.role === 'PL_COORDINATOR') displayRole = 'COORDINATOR';
+      
+      formattedStaff.push({
+        id: s.id,
+        oderId: s.Usuario_VisionStaff_userIdToUsuario.id,
+        rol: displayRole,
+        Usuario: {
+          id: s.Usuario_VisionStaff_userIdToUsuario.id,
+          nombre: s.Usuario_VisionStaff_userIdToUsuario.nombre,
+          email: s.Usuario_VisionStaff_userIdToUsuario.email,
+          telefono: s.Usuario_VisionStaff_userIdToUsuario.telefono,
+          referralCode: s.Usuario_VisionStaff_userIdToUsuario.referralCode
+        }
+      });
+    });
+    
+    // Agregar Game Changers de VisionGameChanger
+    visionGameChangers.forEach(gc => {
+      const gcUser = gc.Usuario_VisionGameChanger_gameChangerIdToUsuario;
+      // Evitar duplicados si ya está en staff
+      if (formattedStaff.find(s => s.Usuario.id === gcUser.id)) return;
+      
+      formattedStaff.push({
+        id: gc.id + 100000, // ID único para evitar colisiones
+        oderId: gcUser.id,
+        rol: 'GAME CHANGER',
+        Usuario: {
+          id: gcUser.id,
+          nombre: gcUser.nombre,
+          email: gcUser.email,
+          telefono: gcUser.telefono,
+          referralCode: gcUser.referralCode
+        }
+      });
+    });
 
     return NextResponse.json({
       success: true,
