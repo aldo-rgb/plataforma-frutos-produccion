@@ -147,10 +147,30 @@ export async function GET(
       },
     });
 
+    // Si no hay SchoolProduct, buscar staff en VisionStaff (especialmente para PL)
+    const visionStaff = await prisma.visionStaff.findMany({
+      where: {
+        visionId,
+        level: level,
+      },
+      include: {
+        Usuario_VisionStaff_userIdToUsuario: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+            referralCode: true,
+            rol: true,
+            apodo: true,
+          },
+        },
+      },
+    });
+
     // Mapear participantes con su rol determinado por nivel o rol de usuario
     const participants: Participant[] = [];
     
-    // Agregar Trainer primero (si existe y no está filtrado por userIds)
+    // Agregar Trainer primero desde SchoolProduct (si existe)
     if (schoolProduct?.Trainer && (!userIds || userIds.includes(schoolProduct.Trainer.id))) {
       participants.push({
         id: schoolProduct.Trainer.id,
@@ -162,9 +182,8 @@ export async function GET(
       });
     }
     
-    // Agregar Coordinador segundo (si existe y no está filtrado por userIds)
+    // Agregar Coordinador desde SchoolProduct (si existe)
     if (schoolProduct?.Coordinator && (!userIds || userIds.includes(schoolProduct.Coordinator.id))) {
-      // Evitar duplicado si el coordinador también es trainer
       if (!participants.find(p => p.id === schoolProduct.Coordinator!.id)) {
         participants.push({
           id: schoolProduct.Coordinator.id,
@@ -175,6 +194,37 @@ export async function GET(
           apodo: schoolProduct.Coordinator.apodo,
         });
       }
+    }
+
+    // También agregar staff desde VisionStaff (para visiones sin SchoolProduct o PL con múltiples trainers)
+    for (const staff of visionStaff) {
+      const staffUser = staff.Usuario_VisionStaff_userIdToUsuario;
+      if (!staffUser) continue;
+      
+      // Verificar si está en los IDs solicitados
+      if (userIds && !userIds.includes(staffUser.id)) continue;
+      
+      // Evitar duplicados
+      if (participants.find(p => p.id === staffUser.id)) continue;
+      
+      // Determinar el rol de display basado en el role de VisionStaff
+      let displayRole = 'STAFF';
+      if (staff.role === 'PL_TRAINER' || staff.role === 'TRAINER') {
+        displayRole = 'TRAINER';
+      } else if (staff.role === 'PL_COORDINATOR' || staff.role === 'COORDINATOR') {
+        displayRole = 'COORDINADOR';
+      } else if (staff.role === 'GAMECHANGER' || staff.role === 'GAME_CHANGER') {
+        displayRole = 'GAME CHANGER';
+      }
+      
+      participants.push({
+        id: staffUser.id,
+        nombre: staffUser.nombre,
+        email: staffUser.email,
+        referralCode: staffUser.referralCode,
+        rol: displayRole,
+        apodo: staffUser.apodo,
+      });
     }
 
     // Obtener los Game Changers reales de esta visión (VisionGameChanger) con sus datos
