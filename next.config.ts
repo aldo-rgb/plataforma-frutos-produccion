@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import path from "path";
 import createNextIntlPlugin from 'next-intl/plugin';
+import { withSentryConfig } from "@sentry/nextjs";
 
 const withNextIntl = createNextIntlPlugin();
 
@@ -95,4 +96,34 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+// Sentry configuration options
+const sentryWebpackPluginOptions = {
+  // For all available options, see:
+  // https://github.com/getsentry/sentry-webpack-plugin#options
+
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // Only upload source maps in production
+  silent: !process.env.CI,
+  
+  // Suppresses source map uploading logs during build
+  hideSourceMaps: true,
+
+  // Automatically tree-shake Sentry logger statements to reduce bundle size
+  disableLogger: true,
+
+  // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers
+  tunnelRoute: "/monitoring",
+
+  // Enables automatic instrumentation of Vercel Cron Monitors
+  automaticVercelMonitors: true,
+};
+
+// Only wrap with Sentry if DSN is configured
+const finalConfig = process.env.SENTRY_DSN
+  ? withSentryConfig(withNextIntl(nextConfig), sentryWebpackPluginOptions)
+  : withNextIntl(nextConfig);
+
+export default finalConfig;

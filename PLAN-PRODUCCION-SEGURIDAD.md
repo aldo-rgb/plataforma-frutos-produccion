@@ -173,12 +173,30 @@ APIs sin autenticación (intencional):
 - [x] Retry logic con backoff exponencial ✅
 - [x] Helper `fetchWithTimeout()` disponible ✅
 
-### 3.4 Monitoreo y Observabilidad
-**Estado:** PENDIENTE (recomendado post-lanzamiento)
+### 3.4 Monitoreo y Observabilidad ✅
+**Estado:** COMPLETADO
 
-- [ ] Configurar Vercel Analytics
-- [ ] Implementar Sentry para error tracking
-- [ ] Configurar alertas para errores críticos
+- [x] Configurar Vercel Analytics ✅
+- [x] Implementar Sentry para error tracking ✅
+- [x] Configurar alertas para errores críticos ✅
+
+**Archivos creados:**
+- `sentry.client.config.ts` - Configuración cliente
+- `sentry.server.config.ts` - Configuración servidor
+- `sentry.edge.config.ts` - Configuración edge
+- `app/global-error.tsx` - Error boundary global
+- `lib/sentry-alerts.ts` - Helper para alertas críticas
+
+**Variables de entorno requeridas:**
+- `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN`
+- `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN`
+
+**Alertas configuradas:**
+- `CriticalErrors.paymentFailed()` - Fallos de pago
+- `CriticalErrors.databaseError()` - Errores de BD
+- `CriticalErrors.aiServiceDown()` - Fallas de IA
+- `CriticalErrors.authBypass()` - Alertas de seguridad
+- `CriticalErrors.rateLimitAbuse()` - Abuso de rate limit
 
 ---
 
