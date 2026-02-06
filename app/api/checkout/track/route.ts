@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import logger from '@/lib/logger';
 
 // POST - Registrar inicio de checkout (para detectar abandonos)
 export async function POST(request: Request) {
@@ -125,7 +126,7 @@ export async function POST(request: Request) {
       checkoutId: checkout.id,
     });
   } catch (error: any) {
-    console.error('Error registering checkout:', error);
+    logger.error('Error registering checkout:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Error interno' },
       { status: 500 }
@@ -177,7 +178,7 @@ export async function PUT(request: Request) {
       checkout: updated,
     });
   } catch (error: any) {
-    console.error('Error updating checkout:', error);
+    logger.error('Error updating checkout:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Error interno' },
       { status: 500 }
@@ -218,7 +219,7 @@ export async function DELETE(request: Request) {
       message: 'Checkout eliminado',
     });
   } catch (error: any) {
-    console.error('Error deleting checkout:', error);
+    logger.error('Error deleting checkout:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Error interno' },
       { status: 500 }

@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import logger from '@/lib/logger';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 
 const prisma = new PrismaClient();
 
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting para APIs públicas
+    const { response } = rateLimit(request, RateLimitPresets.public);
+    if (response) {
+      logger.warn('Rate limit exceeded on public/search-referrals');
+      return response;
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get('query');
     const orgId = searchParams.get('orgId');
@@ -76,7 +85,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ users });
   } catch (error) {
-    console.error('Error searching referrals:', error);
+    logger.error('Error searching referrals:', error);
     return NextResponse.json(
       { error: 'Error al buscar referidos' },
       { status: 500 }

@@ -10,6 +10,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { VisionLevel } from '@prisma/client';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -173,7 +174,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error en GET /api/gc/legacy-reward-status:', error);
+    logger.error('Error en GET /api/gc/legacy-reward-status:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }
@@ -330,7 +331,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error en POST /api/gc/legacy-reward-status:', error);
+    logger.error('Error en POST /api/gc/legacy-reward-status:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Inicializar Stripe si hay key
 let stripe: any = null;
@@ -21,17 +22,17 @@ export async function GET(req: NextRequest) {
     const sessionId = searchParams.get('session_id');
     const orderId = searchParams.get('orderId');
 
-    console.log('🔵 [STRIPE-SUCCESS] Procesando callback:', { sessionId, orderId });
+    logger.debug('🔵 [STRIPE-SUCCESS] Procesando callback:', { sessionId, orderId });
 
     if (!sessionId || !orderId) {
-      console.log('❌ [STRIPE-SUCCESS] Parámetros faltantes');
+      logger.debug('❌ [STRIPE-SUCCESS] Parámetros faltantes');
       return NextResponse.redirect(
         `${process.env.NEXTAUTH_URL}/dashboard/school-admin/visiones?payment=error&reason=missing_params`
       );
     }
 
     if (!stripe) {
-      console.log('❌ [STRIPE-SUCCESS] Stripe no configurado');
+      logger.debug('❌ [STRIPE-SUCCESS] Stripe no configurado');
       return NextResponse.redirect(
         `${process.env.NEXTAUTH_URL}/dashboard/school-admin/visiones?payment=error&reason=stripe_not_configured`
       );
@@ -40,14 +41,14 @@ export async function GET(req: NextRequest) {
     // Verificar la sesión de Stripe
     const stripeSession = await stripe.checkout.sessions.retrieve(sessionId);
 
-    console.log('🔵 [STRIPE-SUCCESS] Sesión de Stripe:', {
+    logger.debug('🔵 [STRIPE-SUCCESS] Sesión de Stripe:', {
       id: stripeSession.id,
       payment_status: stripeSession.payment_status,
       amount_total: stripeSession.amount_total,
     });
 
     if (stripeSession.payment_status !== 'paid') {
-      console.log('❌ [STRIPE-SUCCESS] Pago no completado');
+      logger.debug('❌ [STRIPE-SUCCESS] Pago no completado');
       return NextResponse.redirect(
         `${process.env.NEXTAUTH_URL}/dashboard/school-admin/visiones?payment=error&reason=payment_not_completed`
       );
@@ -59,14 +60,14 @@ export async function GET(req: NextRequest) {
     });
 
     if (!order) {
-      console.log('❌ [STRIPE-SUCCESS] Orden no encontrada');
+      logger.debug('❌ [STRIPE-SUCCESS] Orden no encontrada');
       return NextResponse.redirect(
         `${process.env.NEXTAUTH_URL}/dashboard/school-admin/visiones?payment=error&reason=order_not_found`
       );
     }
 
     if (order.status === 'COMPLETED') {
-      console.log('ℹ️ [STRIPE-SUCCESS] Orden ya procesada, redirigiendo...');
+      logger.debug('ℹ️ [STRIPE-SUCCESS] Orden ya procesada, redirigiendo...');
       return NextResponse.redirect(
         `${process.env.NEXTAUTH_URL}/dashboard/school-admin/visiones?payment=success`
       );
@@ -81,7 +82,7 @@ export async function GET(req: NextRequest) {
           : order.paymentData;
       }
     } catch (e) {
-      console.error('Error parseando paymentData:', e);
+      logger.error('Error parseando paymentData:', e);
     }
 
     // Obtener el usuario de la organización para la asignación
@@ -112,7 +113,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    console.log('✅ [STRIPE-SUCCESS] Orden actualizada:', updatedOrder.id);
+    logger.debug('✅ [STRIPE-SUCCESS] Orden actualizada:', updatedOrder.id);
 
     // Procesar asignaciones de mentores
     if (paymentData.type === 'VISION_MENTOR_PAYMENT') {
@@ -120,7 +121,7 @@ export async function GET(req: NextRequest) {
       const mentorAssignments = paymentData.mentorAssignments || [];
       const totalStudents = paymentData.totalStudents || 0;
 
-      console.log('📋 [STRIPE-SUCCESS] Procesando asignaciones:', {
+      logger.debug('📋 [STRIPE-SUCCESS] Procesando asignaciones:', {
         visionId,
         mentorAssignments: mentorAssignments.length,
         totalStudents,
@@ -145,7 +146,7 @@ export async function GET(req: NextRequest) {
               asignadoPorId: assignerId,
             },
           });
-          console.log(`✅ Mentor ${mentorId} asignado a visión ${visionId}`);
+          logger.debug(`✅ Mentor ${mentorId} asignado a visión ${visionId}`);
         }
       }
 
@@ -187,7 +188,7 @@ export async function GET(req: NextRequest) {
         });
       }
 
-      console.log('✅ [STRIPE-SUCCESS] Llamadas acreditadas:', totalCalls);
+      logger.debug('✅ [STRIPE-SUCCESS] Llamadas acreditadas:', totalCalls);
     }
 
     // Redirigir a página de éxito
@@ -196,7 +197,7 @@ export async function GET(req: NextRequest) {
     );
 
   } catch (error: any) {
-    console.error('❌ [STRIPE-SUCCESS] Error:', error);
+    logger.error('❌ [STRIPE-SUCCESS] Error:', error);
     return NextResponse.redirect(
       `${process.env.NEXTAUTH_URL}/dashboard/school-admin/visiones?payment=error&reason=${encodeURIComponent(error.message)}`
     );

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 const DEPOSIT_AMOUNT = 1500; // $1,500 MXN para reservar precio promo
 
@@ -168,7 +169,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error: any) {
-    console.error('Error processing PL deposit:', error);
+    logger.error('Error processing PL deposit:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Error interno del servidor' },
       { status: 500 }
@@ -317,7 +318,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error: any) {
-    console.error('Error fetching PL deposit status:', error);
+    logger.error('Error fetching PL deposit status:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Error interno del servidor' },
       { status: 500 }

@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { nanoid } from 'nanoid';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -118,7 +119,7 @@ export async function POST(
 
       if (vision?.endDate) {
         expirationDate = new Date(vision.endDate);
-        console.log(`✅ Licencias vinculadas a visión "${autoAssignVision}" expirarán el: ${expirationDate.toISOString()}`);
+        logger.debug(`✅ Licencias vinculadas a visión "${autoAssignVision}" expirarán el: ${expirationDate.toISOString()}`);
       }
     }
 
@@ -263,7 +264,7 @@ export async function POST(
           },
         });
 
-        console.log('✅ Orden de pago y notificación creadas para el director:', {
+        logger.debug('✅ Orden de pago y notificación creadas para el director:', {
           orderId: paymentOrder.id,
           schoolAdmin: schoolAdmin.email,
           amount: totalAmount,
@@ -293,7 +294,7 @@ export async function POST(
       { status: 201 }
     );
   } catch (error: any) {
-    console.error('Error generating licenses:', error);
+    logger.error('Error generating licenses:', error);
 
     // Manejar error de código duplicado
     if (error.code === 'P2002') {
@@ -349,7 +350,7 @@ export async function GET(
 
     return NextResponse.json(licenses);
   } catch (error) {
-    console.error('Error fetching licenses:', error);
+    logger.error('Error fetching licenses:', error);
     return NextResponse.json({ error: 'Error al obtener licencias' }, { status: 500 });
   }
 }

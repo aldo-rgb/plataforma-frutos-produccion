@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/cron/check-expired-memberships
@@ -71,7 +72,7 @@ export async function GET(req: Request) {
       }
 
       // TODO: Enviar email de membresía expirada
-      console.log(`Membresía expirada para mentor ${mentor.id} - ${mentor.Usuario.email}`);
+      logger.debug(`Membresía expirada para mentor ${mentor.id} - ${mentor.Usuario.email}`);
       results.deactivated++;
     }
 
@@ -101,7 +102,7 @@ export async function GET(req: Request) {
 
     for (const mentor of expiring30Days) {
       // TODO: Enviar email recordatorio 30 días
-      console.log(`Recordatorio 30 días para ${mentor.Usuario.email}`);
+      logger.debug(`Recordatorio 30 días para ${mentor.Usuario.email}`);
       results.notifications.thirtyDays++;
     }
 
@@ -121,7 +122,7 @@ export async function GET(req: Request) {
 
     for (const mentor of expiring7Days) {
       // TODO: Enviar email recordatorio 7 días
-      console.log(`Recordatorio 7 días para ${mentor.Usuario.email}`);
+      logger.debug(`Recordatorio 7 días para ${mentor.Usuario.email}`);
       results.notifications.sevenDays++;
     }
 
@@ -141,7 +142,7 @@ export async function GET(req: Request) {
 
     for (const mentor of expiring1Day) {
       // TODO: Enviar email recordatorio 1 día
-      console.log(`Recordatorio 1 día para ${mentor.Usuario.email}`);
+      logger.debug(`Recordatorio 1 día para ${mentor.Usuario.email}`);
       results.notifications.oneDay++;
     }
 
@@ -152,7 +153,7 @@ export async function GET(req: Request) {
     });
 
   } catch (error) {
-    console.error('Error checking expired memberships:', error);
+    logger.error('Error checking expired memberships:', error);
     return NextResponse.json(
       { error: 'Error al verificar membresías' },
       { status: 500 }

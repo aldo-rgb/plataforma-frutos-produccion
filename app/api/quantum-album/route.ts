@@ -6,6 +6,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PhotoCategory, PhotoStatus, TrainingLevel } from "@prisma/client";
+import logger from '@/lib/logger';
 
 // GET: Obtener álbum del usuario con todas las fotos
 export async function GET(request: NextRequest) {
@@ -165,7 +166,7 @@ export async function GET(request: NextRequest) {
       categories: Object.values(PhotoCategory),
     });
   } catch (error) {
-    console.error("Error en GET /api/quantum-album:", error);
+    logger.error("Error en GET /api/quantum-album:", error);
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }
@@ -253,7 +254,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error en POST /api/quantum-album:", error);
+    logger.error("Error en POST /api/quantum-album:", error);
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }
@@ -334,7 +335,7 @@ export async function PUT(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error en PUT /api/quantum-album:", error);
+    logger.error("Error en PUT /api/quantum-album:", error);
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }
@@ -394,7 +395,7 @@ export async function DELETE(request: NextRequest) {
       message: "Foto eliminada correctamente",
     });
   } catch (error) {
-    console.error("Error en DELETE /api/quantum-album:", error);
+    logger.error("Error en DELETE /api/quantum-album:", error);
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }

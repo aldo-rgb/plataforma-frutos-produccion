@@ -10,6 +10,7 @@ const prisma = new PrismaClient()
 // Importar tanto el emisor local como el cliente externo
 import { emitCrossing, emitCrossingStats, emitPreRegistrationAlert } from "@/lib/socket"
 import { emitCrossingToExternal, emitCrossingStatsToExternal, emitPreRegistrationAlertToExternal } from "@/lib/socket-client"
+import logger from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -268,7 +269,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error("Error en escaneo:", error)
+    logger.error("Error en escaneo:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }
@@ -339,7 +340,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error("Error al verificar:", error)
+    logger.error("Error al verificar:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }

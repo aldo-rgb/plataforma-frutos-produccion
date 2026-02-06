@@ -1,6 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 
 // OpenAI se inicializa solo si hay API key
 let openai: any = null;
@@ -15,8 +17,15 @@ export const dynamic = 'force-dynamic';
  * POST /api/quantum/speak
  * Convierte texto a audio usando TTS de OpenAI
  */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    // Rate limiting - TTS API es costosa
+    const { response } = rateLimit(req, RateLimitPresets.ai);
+    if (response) {
+      logger.warn('Rate limit exceeded on quantum/speak');
+      return response;
+    }
+
     if (!openai) {
       return NextResponse.json({ error: 'Servicio de IA no configurado' }, { status: 503 });
     }
@@ -32,7 +41,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No se proporcionó texto' }, { status: 400 });
     }
 
-    console.log('🗣️ Generando audio para texto:', text.substring(0, 100) + '...');
+    logger.debug('🗣️ Generando audio para texto:', text.substring(0, 100) + '...');
 
     // Generar audio con voz autoritaria y profesional
     const mp3 = await openai.audio.speech.create({
@@ -45,7 +54,7 @@ export async function POST(req: Request) {
     // Convertir a buffer
     const buffer = Buffer.from(await mp3.arrayBuffer());
 
-    console.log('✅ Audio generado:', buffer.length, 'bytes');
+    logger.debug('✅ Audio generado:', buffer.length, 'bytes');
 
     // Retornar audio como stream
     return new NextResponse(buffer, {
@@ -56,7 +65,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error) {
-    console.error('❌ Error generando audio:', error);
+    logger.error('❌ Error generando audio:', error);
     return NextResponse.json(
       { error: 'Error al generar audio' },
       { status: 500 }

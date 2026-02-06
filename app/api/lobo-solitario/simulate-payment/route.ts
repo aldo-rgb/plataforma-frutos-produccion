@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * 🎭 GET /api/lobo-solitario/simulate-payment
@@ -415,7 +416,7 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error: any) {
-    console.error('Error en simulación de pago:', error);
+    logger.error('Error en simulación de pago:', error);
     return new NextResponse(
       `
       <!DOCTYPE html>

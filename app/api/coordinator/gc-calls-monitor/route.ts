@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/coordinator/gc-calls-monitor
@@ -44,7 +45,7 @@ export async function GET(request: Request) {
     const now = new Date();
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-    console.log('📊 Filtro de fecha:', {
+    logger.debug('📊 Filtro de fecha:', {
       filter,
       now: now.toISOString(),
       yesterday: yesterday.toISOString(),
@@ -73,7 +74,7 @@ export async function GET(request: Request) {
       ? {} // Sin filtro de organización para admins o si no tiene org
       : { organizationId: coordinator.organizationId };
 
-    console.log('📊 Monitor GC Calls - Filtros:', {
+    logger.debug('📊 Monitor GC Calls - Filtros:', {
       coordinatorId: coordinator.id,
       rol: coordinator.rol,
       organizationId: coordinator.organizationId,
@@ -97,7 +98,7 @@ export async function GET(request: Request) {
       productFilter.organizationId = coordinator.organizationId;
     }
 
-    console.log('📊 Product filter:', productFilter);
+    logger.debug('📊 Product filter:', productFilter);
 
     // Helper para obtener fecha UTC sin hora
     const getDateOnlyUTC = (date: Date) => {
@@ -129,13 +130,13 @@ export async function GET(request: Request) {
       return todayUTC >= startDateOnly && todayUTC <= endDateOnly;
     });
 
-    console.log('📊 Productos en curso hoy:', productosEnCurso.map(p => ({ id: p.id, level: p.levelType, visionId: p.visionId })));
+    logger.debug('📊 Productos en curso hoy:', productosEnCurso.map(p => ({ id: p.id, level: p.levelType, visionId: p.visionId })));
 
     // Obtener los niveles activos y visionIds
     const nivelesActivos = productosEnCurso.map(p => p.levelType);
     const visionIdsActivas = [...new Set(productosEnCurso.filter(v => v.visionId).map(v => v.visionId!))];
 
-    console.log('📊 Visiones activas encontradas:', visionIdsActivas, 'Niveles:', nivelesActivos);
+    logger.debug('📊 Visiones activas encontradas:', visionIdsActivas, 'Niveles:', nivelesActivos);
 
     // Si no hay visiones activas, retornar vacío
     if (visionIdsActivas.length === 0) {
@@ -177,7 +178,7 @@ export async function GET(request: Request) {
       orderBy: { createdAt: 'desc' },
     });
 
-    console.log('📊 Squads encontrados:', squads.length, 'para niveles:', nivelesActivos);
+    logger.debug('📊 Squads encontrados:', squads.length, 'para niveles:', nivelesActivos);
 
     // Si no hay squads, retornar vacío
     if (squads.length === 0) {
@@ -249,7 +250,7 @@ export async function GET(request: Request) {
           },
         };
         } catch (err) {
-          console.error(`Error fetching attempts for squad ${squad.id}:`, err);
+          logger.error(`Error fetching attempts for squad ${squad.id}:`, err);
           return {
             id: squad.id,
             name: squad.name,
@@ -272,8 +273,8 @@ export async function GET(request: Request) {
     // Para 'today', siempre mostrar todos los átomos aunque no tengan llamadas
     const filteredAtoms = atomsWithAttempts;
 
-    console.log('📊 Átomos con intentos:', atomsWithAttempts.filter(a => a.attempts.length > 0).length);
-    console.log('📊 Total átomos:', filteredAtoms.length);
+    logger.debug('📊 Átomos con intentos:', atomsWithAttempts.filter(a => a.attempts.length > 0).length);
+    logger.debug('📊 Total átomos:', filteredAtoms.length);
     
     // Calcular totales globales
     const globalStats = {
@@ -281,7 +282,7 @@ export async function GET(request: Request) {
       completedCalls: filteredAtoms.reduce((sum, a) => sum + a.stats.completedCalls, 0),
       missedCalls: filteredAtoms.reduce((sum, a) => sum + a.stats.missedCalls, 0),
     };
-    console.log('📊 Stats globales:', globalStats);
+    logger.debug('📊 Stats globales:', globalStats);
 
     // Ordenar por cantidad de llamadas (más activos primero)
     filteredAtoms.sort((a, b) => b.stats.totalCalls - a.stats.totalCalls);
@@ -293,7 +294,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error fetching GC calls monitor:', error);
+    logger.error('Error fetching GC calls monitor:', error);
     return NextResponse.json({ 
       success: false, 
       error: 'Error interno del servidor' 

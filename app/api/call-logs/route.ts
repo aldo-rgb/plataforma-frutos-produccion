@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 // POST: Registrar asistencia o falta
 export async function POST(request: Request) {
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
           }
         });
 
-        console.log(`⚠️ Estudiante ${studentId} suspendido por 3 faltas`);
+        logger.debug(`⚠️ Estudiante ${studentId} suspendido por 3 faltas`);
 
         return NextResponse.json({
           success: true,
@@ -86,9 +87,9 @@ export async function POST(request: Request) {
         });
       }
 
-      console.log(`❌ Falta registrada para estudiante ${studentId}. Total: ${updatedSub.missedCallsCount}/3`);
+      logger.debug(`❌ Falta registrada para estudiante ${studentId}. Total: ${updatedSub.missedCallsCount}/3`);
     } else if (status === 'ATTENDED') {
-      console.log(`✅ Asistencia registrada para estudiante ${studentId}`);
+      logger.debug(`✅ Asistencia registrada para estudiante ${studentId}`);
     }
 
     return NextResponse.json({
@@ -98,7 +99,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error al registrar asistencia:', error);
+    logger.error('Error al registrar asistencia:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }
@@ -188,7 +189,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error al obtener historial de llamadas:', error);
+    logger.error('Error al obtener historial de llamadas:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }

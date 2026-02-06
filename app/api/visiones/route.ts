@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/visiones
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
     const activeOnly = searchParams.get('activeOnly') === 'true';
     const detailed = searchParams.get('detailed') === 'true';
 
-    console.log('👁️ Cargando visiones...', { activeOnly, detailed });
+    logger.debug('👁️ Cargando visiones...', { activeOnly, detailed });
 
     // Construir la consulta según los parámetros
     const whereClause: any = {};
@@ -65,7 +66,7 @@ export async function GET(request: Request) {
       }
     });
 
-    console.log(`✅ ${visiones.length} visiones encontradas`);
+    logger.debug(`✅ ${visiones.length} visiones encontradas`);
 
     // Si solo necesita info básica (para selectores)
     if (!detailed) {
@@ -86,7 +87,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ Error obteniendo visiones:', error);
+    logger.error('❌ Error obteniendo visiones:', error);
     return NextResponse.json(
       { 
         error: 'Error obteniendo visiones',

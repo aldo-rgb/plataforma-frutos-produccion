@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET(req: NextRequest) {
   try {
@@ -91,7 +92,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[ARENA API] Error en active-duel:', error);
+    logger.error('[ARENA API] Error en active-duel:', error);
     return NextResponse.json(
       { error: 'Error al obtener duelo activo' },
       { status: 500 }

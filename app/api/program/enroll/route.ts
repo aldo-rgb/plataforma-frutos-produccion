@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { addWeeks, startOfDay, setHours, setMinutes } from 'date-fns';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -316,7 +317,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('Error en GET /api/program/enroll:', error);
+    logger.error('Error en GET /api/program/enroll:', error);
     return NextResponse.json({ 
       error: 'Error al obtener información del programa' 
     }, { status: 500 });
@@ -339,7 +340,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { mentorId, slot1, slot2, totalWeeks = 8 } = body;
 
-    console.log('📥 POST /api/program/enroll - Datos recibidos:', {
+    logger.debug('📥 POST /api/program/enroll - Datos recibidos:', {
       userId: session.user.id,
       mentorId,
       slot1,
@@ -395,13 +396,13 @@ export async function POST(request: Request) {
 
     // Log apropiado según el tipo de acceso
     if (activeLicense) {
-      console.log('✅ Usuario tiene licencia activa:', {
+      logger.debug('✅ Usuario tiene licencia activa:', {
         userId: session.user.id,
         licenseCode: activeLicense.licenseCode,
         expiresAt: activeLicense.expiresAt
       });
     } else if (activePackage) {
-      console.log('✅ Usuario tiene paquete Lobo Solitario activo:', {
+      logger.debug('✅ Usuario tiene paquete Lobo Solitario activo:', {
         userId: session.user.id,
         remainingSessions: activePackage.remainingSessions,
         totalSessions: activePackage.totalSessions
@@ -458,7 +459,7 @@ export async function POST(request: Request) {
       }
       
       // Si tiene menos sesiones de las esperadas, puede completarlas
-      console.log(`✅ Usuario tiene ${activeSessionsCount} de ${expectedSessions} sesiones. Puede completar.`);
+      logger.debug(`✅ Usuario tiene ${activeSessionsCount} de ${expectedSessions} sesiones. Puede completar.`);
     }
 
     // Si tiene enrollment sin sesiones (mentor fue cambiado), reutilizarlo
@@ -499,7 +500,7 @@ export async function POST(request: Request) {
       if (!isLoboSolitario) {
         if (enrollmentToUse) {
           // Reagendando: reutilizar enrollment existente y actualizar mentor si cambió
-          console.log('🔄 Reutilizando enrollment existente para reagendar:', enrollmentToUse.id);
+          logger.debug('🔄 Reutilizando enrollment existente para reagendar:', enrollmentToUse.id);
           enrollment = await tx.programEnrollment.update({
             where: { id: enrollmentToUse.id },
             data: {
@@ -512,7 +513,7 @@ export async function POST(request: Request) {
           });
         } else {
                   // Nuevo enrollment
-          console.log('✨ Creando nuevo enrollment');
+          logger.debug('✨ Creando nuevo enrollment');
           enrollment = await tx.programEnrollment.create({
             data: {
               userId: session.user.id,
@@ -526,9 +527,9 @@ export async function POST(request: Request) {
             }
           });
         }
-        console.log(`✅ Program Enrollment creado: ID=${enrollment.id}`);
+        logger.debug(`✅ Program Enrollment creado: ID=${enrollment.id}`);
       } else {
-        console.log('📦 Lobo Solitario: No se crea ProgramEnrollment');
+        logger.debug('📦 Lobo Solitario: No se crea ProgramEnrollment');
       }
 
       // 2. Generar las sesiones (2 por semana x N semanas)
@@ -541,10 +542,10 @@ export async function POST(request: Request) {
         const slot1DateTime = createScheduledDateTime(slot1Date, slot1.time);
         const slot1Key = `${Number(mentorId)}-${slot1DateTime.toISOString()}`;
 
-        console.log(`Week ${week + 1} Slot 1: ${slot1DateTime.toISOString()} (Day: ${DIAS_SEMANA[slot1.dayOfWeek]} ${slot1.time})`);
+        logger.debug(`Week ${week + 1} Slot 1: ${slot1DateTime.toISOString()} (Day: ${DIAS_SEMANA[slot1.dayOfWeek]} ${slot1.time})`);
 
         if (usedTimes.has(slot1Key)) {
-          console.error(`⚠️ DUPLICADO DETECTADO: ${slot1Key}`);
+          logger.error(`⚠️ DUPLICADO DETECTADO: ${slot1Key}`);
           throw new Error(`Fecha duplicada detectada: ${slot1DateTime.toISOString()}`);
         }
         usedTimes.add(slot1Key);
@@ -566,10 +567,10 @@ export async function POST(request: Request) {
         const slot2DateTime = createScheduledDateTime(slot2Date, slot2.time);
         const slot2Key = `${Number(mentorId)}-${slot2DateTime.toISOString()}`;
 
-        console.log(`Week ${week + 1} Slot 2: ${slot2DateTime.toISOString()} (Day: ${DIAS_SEMANA[slot2.dayOfWeek]} ${slot2.time})`);
+        logger.debug(`Week ${week + 1} Slot 2: ${slot2DateTime.toISOString()} (Day: ${DIAS_SEMANA[slot2.dayOfWeek]} ${slot2.time})`);
 
         if (usedTimes.has(slot2Key)) {
-          console.error(`⚠️ DUPLICADO DETECTADO: ${slot2Key}`);
+          logger.error(`⚠️ DUPLICADO DETECTADO: ${slot2Key}`);
           throw new Error(`Fecha duplicada detectada: ${slot2DateTime.toISOString()}`);
         }
         usedTimes.add(slot2Key);
@@ -592,7 +593,7 @@ export async function POST(request: Request) {
         data: bookings
       });
 
-      console.log(`✅ ${bookings.length} sesiones creadas${enrollment ? ` para programa ${enrollment.id}` : ' para Lobo Solitario'}`);
+      logger.debug(`✅ ${bookings.length} sesiones creadas${enrollment ? ` para programa ${enrollment.id}` : ' para Lobo Solitario'}`);
 
       // 4. Obtener la próxima sesión
       const nextSession = await tx.callBooking.findFirst({
@@ -626,10 +627,10 @@ export async function POST(request: Request) {
       });
 
       if (notificacionesActualizadas.count > 0) {
-        console.log(`📬 Marcadas ${notificacionesActualizadas.count} notificaciones como leídas`);
+        logger.debug(`📬 Marcadas ${notificacionesActualizadas.count} notificaciones como leídas`);
       }
     } catch (notifError) {
-      console.warn('⚠️ No se pudieron marcar las notificaciones como leídas:', notifError);
+      logger.warn('⚠️ No se pudieron marcar las notificaciones como leídas:', notifError);
       // No fallar la operación principal si falla la actualización de notificaciones
     }
 
@@ -647,7 +648,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ Error en program/enroll:', error);
+    logger.error('❌ Error en program/enroll:', error);
     return NextResponse.json({ 
       error: 'Error al inscribir en el programa',
       details: error instanceof Error ? error.message : 'Error desconocido'

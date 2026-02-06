@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/admin/schools
@@ -15,7 +16,7 @@ export async function GET() {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
-    console.log('🏫 Cargando organizaciones...');
+    logger.debug('🏫 Cargando organizaciones...');
 
     // Obtener todas las organizaciones con conteo de usuarios
     const schools = await prisma.organization.findMany({
@@ -35,7 +36,7 @@ export async function GET() {
       }
     });
 
-    console.log(`✅ ${schools.length} organizaciones encontradas`);
+    logger.debug(`✅ ${schools.length} organizaciones encontradas`);
 
     return NextResponse.json({
       schools: schools.map(school => ({
@@ -48,7 +49,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('❌ Error obteniendo escuelas:', error);
+    logger.error('❌ Error obteniendo escuelas:', error);
     return NextResponse.json(
       { 
         error: 'Error obteniendo escuelas',

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Stripe se inicializa solo si hay API key
 let stripe: any = null;
@@ -114,7 +115,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error creando checkout:', error);
+    logger.error('❌ Error creando checkout:', error);
     return NextResponse.json(
       { error: error.message || 'Error al crear sesión de pago' },
       { status: 500 }

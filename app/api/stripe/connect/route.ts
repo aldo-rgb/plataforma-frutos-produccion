@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Stripe se inicializa solo si hay API key
 let stripe: any = null;
@@ -97,7 +98,7 @@ export async function POST(req: NextRequest) {
       accountId,
     });
   } catch (error) {
-    console.error('Error en Stripe Connect:', error);
+    logger.error('Error en Stripe Connect:', error);
     return NextResponse.json(
       { error: 'Error al conectar con Stripe' },
       { status: 500 }
@@ -161,7 +162,7 @@ export async function GET(req: NextRequest) {
       platformFeePercent: stripeConfig.platformFeePercent,
     });
   } catch (error) {
-    console.error('Error obteniendo estado de Stripe:', error);
+    logger.error('Error obteniendo estado de Stripe:', error);
     return NextResponse.json(
       { error: 'Error al obtener estado' },
       { status: 500 }

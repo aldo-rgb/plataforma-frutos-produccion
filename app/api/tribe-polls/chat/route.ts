@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Chat de debate para votaciones de tribu
 // Permite discusión antes y durante la votación
@@ -169,7 +170,7 @@ export async function GET(req: NextRequest) {
       userPermissions
     });
   } catch (error) {
-    console.error('Error en GET /api/tribe-polls/chat:', error);
+    logger.error('Error en GET /api/tribe-polls/chat:', error);
     return NextResponse.json(
       { error: 'Error al obtener chat', details: String(error) },
       { status: 500 }
@@ -622,7 +623,7 @@ export async function POST(req: NextRequest) {
         );
     }
   } catch (error) {
-    console.error('Error en POST /api/tribe-polls/chat:', error);
+    logger.error('Error en POST /api/tribe-polls/chat:', error);
     return NextResponse.json(
       { error: 'Error en chat', details: String(error) },
       { status: 500 }

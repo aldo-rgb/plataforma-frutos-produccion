@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET: Listar todas las organizaciones master
 export async function GET(req: NextRequest) {
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(masterOrgsWithCount);
   } catch (error: any) {
-    console.error('Error obteniendo master organizations:', error);
+    logger.error('Error obteniendo master organizations:', error);
     return NextResponse.json(
       { error: 'Error al obtener organizaciones master' },
       { status: 500 }
@@ -115,7 +116,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(masterOrg, { status: 201 });
   } catch (error: any) {
-    console.error('Error creando master organization:', error);
+    logger.error('Error creando master organization:', error);
     return NextResponse.json(
       { error: 'Error al crear organización master' },
       { status: 500 }

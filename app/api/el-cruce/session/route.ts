@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { PrismaClient } from "@prisma/client"
+import logger from '@/lib/logger';
 
 // Forzar modo dinámico para tiempo real
 export const dynamic = 'force-dynamic'
@@ -253,7 +254,7 @@ export async function GET(request: NextRequest) {
             }
           } catch (e) {
             // Ignorar errores de duplicados
-            console.error('Error creating preRegistration for PL user:', e)
+            logger.error('Error creating preRegistration for PL user:', e)
           }
         }
       }
@@ -566,7 +567,7 @@ export async function GET(request: NextRequest) {
             }
           }
         } catch (err) {
-          console.error("Error getting master org stats:", err)
+          logger.error("Error getting master org stats:", err)
           // No bloquear la respuesta si falla
         }
       }
@@ -643,7 +644,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Se requiere sessionId, productId, o active=true" }, { status: 400 })
 
   } catch (error) {
-    console.error("Error al obtener sesión:", error)
+    logger.error("Error al obtener sesión:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }
@@ -707,7 +708,7 @@ export async function POST(request: NextRequest) {
     // Obtener total de participantes (los que hicieron check-in)
     const totalParticipants = product._count.CheckInRecord
 
-    console.log("Datos para crear sesión:", {
+    logger.debug("Datos para crear sesión:", {
       productId,
       targetLevel,
       targetProductId,
@@ -743,8 +744,8 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error("Error al crear sesión:", error)
-    console.error("Error details:", error?.message, error?.code)
+    logger.error("Error al crear sesión:", error)
+    logger.error("Error details:", error?.message, error?.code)
     return NextResponse.json({ error: "Error interno", details: error?.message }, { status: 500 })
   }
 }
@@ -800,7 +801,7 @@ export async function PATCH(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error("Error al actualizar sesión:", error)
+    logger.error("Error al actualizar sesión:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }
@@ -834,7 +835,7 @@ export async function DELETE(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error("Error al cerrar sesión:", error)
+    logger.error("Error al cerrar sesión:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }

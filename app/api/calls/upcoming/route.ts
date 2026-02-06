@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { addDays, startOfDay, endOfDay } from 'date-fns';
+import logger from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
@@ -92,8 +93,8 @@ export async function GET(request: Request) {
       }
     });
 
-    console.log(`📞 Llamadas mentoría para usuario ${user.id}:`, mentorCalls.length);
-    console.log(`📞 Llamadas GC para usuario ${user.id}:`, gcCalls.length);
+    logger.debug(`📞 Llamadas mentoría para usuario ${user.id}:`, mentorCalls.length);
+    logger.debug(`📞 Llamadas GC para usuario ${user.id}:`, gcCalls.length);
 
     // Formatear llamadas de mentoría
     const formattedMentorCalls = mentorCalls.map((call: any) => {
@@ -158,7 +159,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error fetching upcoming calls:', error);
+    logger.error('Error fetching upcoming calls:', error);
     return NextResponse.json(
       { error: 'Error al obtener llamadas' },
       { status: 500 }

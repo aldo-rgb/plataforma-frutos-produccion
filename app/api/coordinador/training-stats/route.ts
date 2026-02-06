@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/coordinador/training-stats
@@ -39,7 +40,7 @@ export async function GET(request: Request) {
 
     const orgId = user.organizationId;
     const now = new Date();
-    console.log('[training-stats] User:', user.id, 'OrgId:', orgId, 'Rol:', user.rol, 'Now:', now);
+    logger.debug('[training-stats] User:', user.id, 'OrgId:', orgId, 'Rol:', user.rol, 'Now:', now);
 
     // Obtener productos activos de la organización (BASIC, ADVANCED y PL)
     const activeProducts = await prisma.schoolProduct.findMany({
@@ -75,7 +76,7 @@ export async function GET(request: Request) {
     };
     const todayDateUTC = getDateOnlyUTC(now);
     
-    console.log('[training-stats] Today UTC:', todayDateUTC.toISOString());
+    logger.debug('[training-stats] Today UTC:', todayDateUTC.toISOString());
 
     // Función para determinar si un producto está activo/en curso
     const isProductActive = (p: any) => {
@@ -90,7 +91,7 @@ export async function GET(request: Request) {
       const startsToday = startDateOnly.getTime() === todayDateUTC.getTime();
       const isWithinPeriod = todayDateUTC >= startDateOnly && todayDateUTC <= endDateOnly;
       
-      console.log('[training-stats] Product check:', p.levelType, 'startDate:', start.toISOString(), 'startsToday:', startsToday, 'isWithinPeriod:', isWithinPeriod, 'isInProgress:', isInProgress);
+      logger.debug('[training-stats] Product check:', p.levelType, 'startDate:', start.toISOString(), 'startsToday:', startsToday, 'isWithinPeriod:', isWithinPeriod, 'isInProgress:', isInProgress);
       
       return isInProgress || startsToday || isWithinPeriod;
     };
@@ -110,7 +111,7 @@ export async function GET(request: Request) {
       currentProduct = activeProducts.find(p => isProductActive(p));
     }
 
-    console.log('[training-stats] Current product in course:', currentProduct?.id, currentProduct?.name, currentProduct?.levelType, 'UserRole:', user.rol);
+    logger.debug('[training-stats] Current product in course:', currentProduct?.id, currentProduct?.name, currentProduct?.levelType, 'UserRole:', user.rol);
 
     const productIds = activeProducts.map(p => p.id);
     const visionIds = activeProducts.filter(p => p.visionId).map(p => p.visionId as number);
@@ -148,7 +149,7 @@ export async function GET(request: Request) {
     if (user.rol === 'COORDINADOR') {
       // Para COORDINADOR, buscar la visión con producto PL que tenga enrollments de PL
       const plProducts = activeProducts.filter(p => p.levelType === 'PL' && p.Vision);
-      console.log('[training-stats] PL Products for org', orgId, ':', plProducts.map(p => ({ id: p.id, name: p.name, visionId: p.visionId })));
+      logger.debug('[training-stats] PL Products for org', orgId, ':', plProducts.map(p => ({ id: p.id, name: p.name, visionId: p.visionId })));
       
       // Verificar cuál tiene enrollments de PL
       for (const plProduct of plProducts) {
@@ -156,10 +157,10 @@ export async function GET(request: Request) {
           const plCount = await prisma.vision_enrollments.count({
             where: { visionId: plProduct.visionId, level: 'PL' }
           });
-          console.log('[training-stats] Vision', plProduct.visionId, 'has', plCount, 'PL enrollments');
+          logger.debug('[training-stats] Vision', plProduct.visionId, 'has', plCount, 'PL enrollments');
           if (plCount > 0) {
             activeVision = plProduct.Vision;
-            console.log('[training-stats] Found PL vision with', plCount, 'enrollments:', plProduct.visionId);
+            logger.debug('[training-stats] Found PL vision with', plCount, 'enrollments:', plProduct.visionId);
             break;
           }
         }
@@ -167,7 +168,7 @@ export async function GET(request: Request) {
       // Fallback: usar el primer producto PL disponible
       if (!activeVision) {
         activeVision = plProducts[0]?.Vision || activeProducts.find(p => p.Vision)?.Vision || null;
-        console.log('[training-stats] Using fallback vision:', activeVision?.id);
+        logger.debug('[training-stats] Using fallback vision:', activeVision?.id);
       }
     } else if (user.rol === 'COORDINATOR_ADVANCED') {
       // Para COORDINATOR_ADVANCED, buscar la visión con producto ADVANCED activo
@@ -177,7 +178,7 @@ export async function GET(request: Request) {
       // Para otros roles, usar la primera visión disponible
       activeVision = activeProducts.find(p => p.Vision)?.Vision || null;
     }
-    console.log('[training-stats] Active vision for role', user.rol, ':', activeVision?.id, activeVision?.nombre);
+    logger.debug('[training-stats] Active vision for role', user.rol, ':', activeVision?.id, activeVision?.nombre);
     
     // Obtener TODOS los productos ADVANCED activos
     const advancedProducts = activeProducts.filter(p => p.levelType === 'ADVANCED');
@@ -187,7 +188,7 @@ export async function GET(request: Request) {
     // Obtener producto de BASIC activo
     const basicProduct = activeProducts.find(p => p.levelType === 'BASIC');
 
-    console.log('[training-stats] Advanced Products:', advancedProductIds, 'Vision IDs:', advancedVisionIds);
+    logger.debug('[training-stats] Advanced Products:', advancedProductIds, 'Vision IDs:', advancedVisionIds);
 
     // Conteos específicos por nivel ADVANCED (sumando todos los productos ADVANCED)
     let advancedStats = { pending: 0, enrolled: 0, total: 0 };
@@ -236,7 +237,7 @@ export async function GET(request: Request) {
         }
       });
       
-      console.log('[training-stats] ADVANCED - Pending:', advancedPending, 'Enrolled:', advancedEnrolled, 'Paid:', advancedPaid, 'TotalPreReg:', totalPreRegistros);
+      logger.debug('[training-stats] ADVANCED - Pending:', advancedPending, 'Enrolled:', advancedEnrolled, 'Paid:', advancedPaid, 'TotalPreReg:', totalPreRegistros);
       
       // Usar el mayor entre enrollments y pre-registros pagados
       const enrolled = Math.max(advancedEnrolled, advancedPaid);
@@ -247,7 +248,7 @@ export async function GET(request: Request) {
         total: advancedPending + enrolled
       };
       
-      console.log('[training-stats] ADVANCED Stats final:', advancedStats);
+      logger.debug('[training-stats] ADVANCED Stats final:', advancedStats);
     }
     
     // Obtener el nombre de la visión del primer producto ADVANCED para mostrar
@@ -373,14 +374,14 @@ export async function GET(request: Request) {
             total: totalPreRegistros
           };
           
-          console.log('[training-stats] NEXT LEVEL (AVANZADO) Stats:', nextLevelStats);
-          console.log('[training-stats] Declarados:', declaradosNumerator, '/', declaradosDenominator);
-          console.log('[training-stats] Inscritos:', inscritosNumerator, '/', inscritosDenominator);
+          logger.debug('[training-stats] NEXT LEVEL (AVANZADO) Stats:', nextLevelStats);
+          logger.debug('[training-stats] Declarados:', declaradosNumerator, '/', declaradosDenominator);
+          logger.debug('[training-stats] Inscritos:', inscritosNumerator, '/', inscritosDenominator);
         } else {
           // No hay producto ADVANCED para esta visión
           declaradosDenominator = basicEnrolledCount;
           nextLevelStats = { pending: 0, enrolled: 0, total: 0 };
-          console.log('[training-stats] No hay producto ADVANCED para esta visión');
+          logger.debug('[training-stats] No hay producto ADVANCED para esta visión');
         }
         
       } else if (currentProduct.levelType === 'ADVANCED') {
@@ -469,13 +470,13 @@ export async function GET(request: Request) {
           total: totalDeclarados
         };
         
-        console.log('[training-stats] ADVANCED - Enrolled:', advancedEnrolledCount);
-        console.log('[training-stats] NEXT LEVEL (PL) - Pending:', plPending, 'Enrolled:', plEnrolled, 'TotalDeclarados:', totalDeclarados);
-        console.log('[training-stats] Declarados:', declaradosNumerator, '/', declaradosDenominator);
-        console.log('[training-stats] Inscritos:', inscritosNumerator, '/', inscritosDenominator);
+        logger.debug('[training-stats] ADVANCED - Enrolled:', advancedEnrolledCount);
+        logger.debug('[training-stats] NEXT LEVEL (PL) - Pending:', plPending, 'Enrolled:', plEnrolled, 'TotalDeclarados:', totalDeclarados);
+        logger.debug('[training-stats] Declarados:', declaradosNumerator, '/', declaradosDenominator);
+        logger.debug('[training-stats] Inscritos:', inscritosNumerator, '/', inscritosDenominator);
         
         if (!plProduct) {
-          console.log('[training-stats] No hay producto PL para esta visión');
+          logger.debug('[training-stats] No hay producto PL para esta visión');
         }
       }
     }
@@ -502,7 +503,7 @@ export async function GET(request: Request) {
       total: 0
     };
 
-    console.log('[training-stats] ProductIds:', productIds, 'VisionIds:', visionIds, 'TotalParticipants:', totalParticipants, 'InscritosCount:', inscritosCount);
+    logger.debug('[training-stats] ProductIds:', productIds, 'VisionIds:', visionIds, 'TotalParticipants:', totalParticipants, 'InscritosCount:', inscritosCount);
 
     preRegistroStats.forEach(stat => {
       const count = stat._count.id;
@@ -650,7 +651,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error fetching training stats:', error);
+    logger.error('Error fetching training stats:', error);
     return NextResponse.json(
       { error: 'Error al obtener estadísticas' },
       { status: 500 }

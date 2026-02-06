@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { addDays } from 'date-fns';
+import logger from '@/lib/logger';
 
 // PUT: Aprobar una carta
 export async function PUT(
@@ -69,7 +70,7 @@ export async function PUT(
       }
     });
 
-    console.log(`✅ Carta ${cartaId} APROBADA por ${mentor.nombre} para ${carta.Usuario.nombre}`);
+    logger.debug(`✅ Carta ${cartaId} APROBADA por ${mentor.nombre} para ${carta.Usuario.nombre}`);
 
     // Verificar si el usuario ya tiene un ciclo activo
     const cicloExistente = await prisma.programEnrollment.findFirst({
@@ -98,9 +99,9 @@ export async function PUT(
         }
       });
       
-      console.log(`🎯 Ciclo de 63 días creado para ${carta.Usuario.nombre}`);
+      logger.debug(`🎯 Ciclo de 63 días creado para ${carta.Usuario.nombre}`);
     } else {
-      console.log(`ℹ️  ${carta.Usuario.nombre} ya tiene un ciclo activo`);
+      logger.debug(`ℹ️  ${carta.Usuario.nombre} ya tiene un ciclo activo`);
     }
 
     // TODO: Aquí puedes agregar notificación al usuario
@@ -115,7 +116,7 @@ export async function PUT(
     }, { status: 200 });
 
   } catch (error) {
-    console.error('❌ Error al aprobar carta:', error);
+    logger.error('❌ Error al aprobar carta:', error);
     return NextResponse.json({ error: 'Error al aprobar carta' }, { status: 500 });
   }
 }

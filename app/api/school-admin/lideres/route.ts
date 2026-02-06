@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcrypt';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/school-admin/lideres
@@ -129,7 +130,7 @@ export async function GET() {
     });
 
   } catch (error: any) {
-    console.error('Error obteniendo líderes:', error);
+    logger.error('Error obteniendo líderes:', error);
     return NextResponse.json(
       { error: 'Error al obtener líderes', details: error.message },
       { status: 500 }
@@ -203,7 +204,7 @@ export async function POST(request: Request) {
     });
 
     if (!organization) {
-      console.log(`⚠️ Organización no encontrada: ${admin.organizationId}`);
+      logger.debug(`⚠️ Organización no encontrada: ${admin.organizationId}`);
       return NextResponse.json(
         { 
           error: 'Organización no encontrada', 
@@ -216,7 +217,7 @@ export async function POST(request: Request) {
     const availableLicenses = organization.totalLicenses - organization.activeLicenses;
 
     if (availableLicenses <= 0) {
-      console.log(`⚠️ Sin licencias disponibles. Total: ${organization.totalLicenses}, Activas: ${organization.activeLicenses}`);
+      logger.debug(`⚠️ Sin licencias disponibles. Total: ${organization.totalLicenses}, Activas: ${organization.activeLicenses}`);
       return NextResponse.json(
         { 
           error: 'No hay licencias disponibles', 
@@ -271,8 +272,8 @@ export async function POST(request: Request) {
       }
     });
 
-    console.log(`✅ Líder creado con licencia estándar: ${standardLicenseCode}`);
-    console.log(`📊 Licencias - Organización: ${organization.name}, Total: ${organization.totalLicenses}, Activas: ${organization.activeLicenses + 1}, Disponibles: ${availableLicenses - 1}`);
+    logger.debug(`✅ Líder creado con licencia estándar: ${standardLicenseCode}`);
+    logger.debug(`📊 Licencias - Organización: ${organization.name}, Total: ${organization.totalLicenses}, Activas: ${organization.activeLicenses + 1}, Disponibles: ${availableLicenses - 1}`);
 
     return NextResponse.json({
       success: true,
@@ -286,7 +287,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('Error creando líder:', error);
+    logger.error('Error creando líder:', error);
     return NextResponse.json(
       { error: 'Error al crear líder', details: error.message },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // PATCH - Revisar evidencia de tarea extraordinaria
 export async function PATCH(
@@ -139,7 +140,7 @@ export async function PATCH(
           }
         });
 
-        console.log(`✅ Vida extra otorgada a ${usuario.nombre} por tarea extraordinaria (Enrollment ${enrollment.id})`);
+        logger.debug(`✅ Vida extra otorgada a ${usuario.nombre} por tarea extraordinaria (Enrollment ${enrollment.id})`);
       } else {
         // Fallback: actualizar Usuario.missedCallsCount si no hay enrollment
         await prisma.usuario.update({
@@ -148,7 +149,7 @@ export async function PATCH(
             missedCallsCount: 0
           }
         });
-        console.log(`⚠️ Vida extra otorgada a ${usuario.nombre} (sin enrollment activo)`);
+        logger.debug(`⚠️ Vida extra otorgada a ${usuario.nombre} (sin enrollment activo)`);
       }
 
       // Notificar al usuario
@@ -182,7 +183,7 @@ export async function PATCH(
     });
 
   } catch (error: any) {
-    console.error('❌ Error revisando tarea:', error);
+    logger.error('❌ Error revisando tarea:', error);
     return NextResponse.json(
       { 
         error: 'Error al revisar tarea',

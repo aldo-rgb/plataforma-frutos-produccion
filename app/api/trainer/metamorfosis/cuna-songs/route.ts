@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // POST - Crear una nueva canción de cuna
 export async function POST(request: Request) {
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(cunaSong);
   } catch (error) {
-    console.error('Error al crear canción de cuna:', error);
+    logger.error('Error al crear canción de cuna:', error);
     return NextResponse.json({ error: 'Error al crear elemento' }, { status: 500 });
   }
 }
@@ -73,7 +74,7 @@ export async function GET() {
 
     return NextResponse.json(cunaSongs);
   } catch (error) {
-    console.error('Error al obtener canciones de cuna:', error);
+    logger.error('Error al obtener canciones de cuna:', error);
     return NextResponse.json({ error: 'Error al obtener elementos' }, { status: 500 });
   }
 }

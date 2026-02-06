@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '../../../lib/prisma';
+import logger from '@/lib/logger';
 
 export async function POST(request: Request) {
   try {
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return NextResponse.json({ error: 'Error al procesar evidencia' }, { status: 500 });
   }
 }

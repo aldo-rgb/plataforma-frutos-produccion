@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import OpenAI from 'openai';
+import logger from '@/lib/logger';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -76,7 +77,7 @@ Responde SOLO con un JSON válido en este formato exacto:
       const parsed = JSON.parse(cleanedResponse);
       return NextResponse.json(parsed);
     } catch (parseError) {
-      console.error('Error parsing AI response:', cleanedResponse);
+      logger.error('Error parsing AI response:', cleanedResponse);
       
       // Si falla el parsing, intentar extraer el texto mejorado de otra forma
       const match = cleanedResponse.match(/"mejorado":\s*"([^"]+)"/);
@@ -91,7 +92,7 @@ Responde SOLO con un JSON válido en este formato exacto:
     }
 
   } catch (error) {
-    console.error('❌ Error mejorando copy:', error);
+    logger.error('❌ Error mejorando copy:', error);
     return NextResponse.json(
       { error: 'Error al mejorar el texto' },
       { status: 500 }

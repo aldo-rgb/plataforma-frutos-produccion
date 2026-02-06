@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import Stripe from 'stripe';
+import logger from '@/lib/logger';
 
 // Inicializar Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
@@ -11,13 +12,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
 
 export async function POST(req: NextRequest) {
   try {
-    console.log('🔵 [CHECKOUT] Iniciando procesamiento de pago...');
+    logger.debug('🔵 [CHECKOUT] Iniciando procesamiento de pago...');
     
     const session = await getServerSession(authOptions);
-    console.log('🔵 [CHECKOUT] Sesión:', session?.user?.email);
+    logger.debug('🔵 [CHECKOUT] Sesión:', session?.user?.email);
 
     if (!session?.user) {
-      console.log('❌ [CHECKOUT] No hay sesión');
+      logger.debug('❌ [CHECKOUT] No hay sesión');
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
@@ -26,28 +27,28 @@ export async function POST(req: NextRequest) {
       select: { id: true, rol: true, organizationId: true },
     });
 
-    console.log('🔵 [CHECKOUT] Usuario:', { id: user?.id, rol: user?.rol, orgId: user?.organizationId });
+    logger.debug('🔵 [CHECKOUT] Usuario:', { id: user?.id, rol: user?.rol, orgId: user?.organizationId });
 
     if (!user || user.rol !== 'SCHOOL_ADMIN') {
-      console.log('❌ [CHECKOUT] Usuario no autorizado');
+      logger.debug('❌ [CHECKOUT] Usuario no autorizado');
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
     const body = await req.json();
     const { orderId, paymentMethod } = body;
-    console.log('🔵 [CHECKOUT] Datos recibidos:', { orderId, paymentMethod });
+    logger.debug('🔵 [CHECKOUT] Datos recibidos:', { orderId, paymentMethod });
 
     if (!orderId || !paymentMethod) {
-      console.log('❌ [CHECKOUT] Datos incompletos');
+      logger.debug('❌ [CHECKOUT] Datos incompletos');
       return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 });
     }
 
-    console.log('🔵 [CHECKOUT] Buscando orden...');
+    logger.debug('🔵 [CHECKOUT] Buscando orden...');
     const order = await prisma.licenseOrder.findUnique({
       where: { id: orderId },
     });
 
-    console.log('🔵 [CHECKOUT] Orden encontrada:', order ? `ID: ${order.id}, Status: ${order.status}` : 'NO ENCONTRADA');
+    logger.debug('🔵 [CHECKOUT] Orden encontrada:', order ? `ID: ${order.id}, Status: ${order.status}` : 'NO ENCONTRADA');
 
     if (!order) {
       return NextResponse.json({ error: 'Orden no encontrada' }, { status: 404 });
@@ -72,12 +73,12 @@ export async function POST(req: NextRequest) {
         }
       }
     } catch (error) {
-      console.error('Error parseando paymentData:', error);
+      logger.error('Error parseando paymentData:', error);
     }
 
     // 🔵 SI ES STRIPE, CREAR SESIÓN DE CHECKOUT REAL
     if (paymentMethod === 'stripe' && process.env.STRIPE_SECRET_KEY) {
-      console.log('🔵 [CHECKOUT] Creando sesión de Stripe Checkout...');
+      logger.debug('🔵 [CHECKOUT] Creando sesión de Stripe Checkout...');
       
       try {
         const checkoutSession = await stripe.checkout.sessions.create({
@@ -106,7 +107,7 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        console.log('✅ [CHECKOUT] Sesión de Stripe creada:', checkoutSession.id);
+        logger.debug('✅ [CHECKOUT] Sesión de Stripe creada:', checkoutSession.id);
 
         return NextResponse.json({
           success: true,
@@ -115,7 +116,7 @@ export async function POST(req: NextRequest) {
           sessionId: checkoutSession.id,
         });
       } catch (stripeError: any) {
-        console.error('❌ [CHECKOUT] Error de Stripe:', stripeError);
+        logger.error('❌ [CHECKOUT] Error de Stripe:', stripeError);
         return NextResponse.json({
           error: 'Error al crear sesión de pago con Stripe',
           details: stripeError.message,
@@ -140,7 +141,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log('✅ Pago de visión completado:', {
+    logger.debug('✅ Pago de visión completado:', {
       orderId: updatedOrder.id,
       paymentMethod,
       amount: updatedOrder.amount,
@@ -152,7 +153,7 @@ export async function POST(req: NextRequest) {
       const mentorAssignments = existingPaymentData.mentorAssignments || [];
       const totalStudents = existingPaymentData.totalStudents || 0;
 
-      console.log('📋 Procesando asignaciones:', {
+      logger.debug('📋 Procesando asignaciones:', {
         visionId,
         mentorAssignments: mentorAssignments.length,
         totalStudents,
@@ -162,7 +163,7 @@ export async function POST(req: NextRequest) {
       for (const assignment of mentorAssignments) {
         const { mentorId, studentCount } = assignment;
 
-        console.log(`🔍 Procesando mentor ID: ${mentorId}`);
+        logger.debug(`🔍 Procesando mentor ID: ${mentorId}`);
 
         // El mentorId ya es el usuario ID, no el perfil mentor ID
         // Verificar si ya está asignado
@@ -182,9 +183,9 @@ export async function POST(req: NextRequest) {
               asignadoPorId: user.id,
             },
           });
-          console.log(`✅ Mentor ${mentorId} asignado a visión ${visionId}`);
+          logger.debug(`✅ Mentor ${mentorId} asignado a visión ${visionId}`);
         } else {
-          console.log(`ℹ️ Mentor ${mentorId} ya estaba asignado a visión ${visionId}`);
+          logger.debug(`ℹ️ Mentor ${mentorId} ya estaba asignado a visión ${visionId}`);
         }
       }
 
@@ -193,7 +194,7 @@ export async function POST(req: NextRequest) {
       const callsPerStudent = 18; // 18 llamadas por paquete de mentoría
       const totalCalls = totalStudents * callsPerStudent;
 
-      console.log('💰 Acreditando llamadas:', {
+      logger.debug('💰 Acreditando llamadas:', {
         totalStudents,
         callsPerStudent,
         totalCalls,
@@ -237,7 +238,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      console.log('✅ Llamadas acreditadas:', {
+      logger.debug('✅ Llamadas acreditadas:', {
         totalCalls,
         totalPurchased: schoolCredit.totalPurchased,
       });
@@ -258,7 +259,7 @@ export async function POST(req: NextRequest) {
       message: 'Pago procesado exitosamente',
     });
   } catch (error: any) {
-    console.error('❌ Error procesando pago de visión:', error);
+    logger.error('❌ Error procesando pago de visión:', error);
     return NextResponse.json(
       {
         error: 'Error al procesar el pago',

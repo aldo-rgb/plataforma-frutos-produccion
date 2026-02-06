@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/admin/submissions/pending
@@ -38,7 +39,7 @@ export async function GET() {
       }, { status: 403 });
     }
 
-    console.log(`🔍 ${usuario.rol} ${usuario.id} solicitando submissions pendientes`);
+    logger.debug(`🔍 ${usuario.rol} ${usuario.id} solicitando submissions pendientes`);
 
     // Construir filtros según el rol
     let whereUsuarios: any = {};
@@ -127,7 +128,7 @@ export async function GET() {
       }
     });
 
-    console.log(`✅ ${submissions.length} submissions encontradas para ${usuario.rol}`);
+    logger.debug(`✅ ${submissions.length} submissions encontradas para ${usuario.rol}`);
 
     return NextResponse.json({
       success: true,
@@ -160,7 +161,7 @@ export async function GET() {
     });
 
   } catch (error: any) {
-    console.error('❌ Error obteniendo submissions pendientes:', error);
+    logger.error('❌ Error obteniendo submissions pendientes:', error);
     return NextResponse.json(
       { error: 'Error al obtener submissions', details: error.message },
       { status: 500 }

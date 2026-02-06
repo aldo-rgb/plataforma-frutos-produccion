@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 interface QuantumTemplate {
   id: string;
@@ -280,7 +281,7 @@ export async function POST(req: Request) {
           }
         });
       } catch (profileError) {
-        console.error('Error creando BusinessProfile (no crítico):', profileError);
+        logger.error('Error creando BusinessProfile (no crítico):', profileError);
         // No fallar si hay error en BusinessProfile, el sitio ya se creó
       }
     }
@@ -298,9 +299,9 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('Error publicando sitio:', error);
-    console.error('Error code:', error?.code);
-    console.error('Error message:', error?.message);
+    logger.error('Error publicando sitio:', error);
+    logger.error('Error code:', error?.code);
+    logger.error('Error message:', error?.message);
     
     // Manejar errores específicos de Prisma
     const errorCode = error?.code;
@@ -378,7 +379,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ website });
 
   } catch (error) {
-    console.error('Error obteniendo sitio:', error);
+    logger.error('Error obteniendo sitio:', error);
     return NextResponse.json({ website: null });
   }
 }

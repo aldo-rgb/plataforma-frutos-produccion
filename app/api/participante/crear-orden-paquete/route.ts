@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/participante/crear-orden-paquete
@@ -88,11 +89,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log(`✅ Orden de paquete creada: ${orden.id}`);
-    console.log(`   Usuario: ${usuario.nombre} (${usuario.email})`);
-    console.log(`   Mentor: ${mentor.nombre}`);
-    console.log(`   Cantidad: ${cantidad} sesiones`);
-    console.log(`   Total: $${precioTotal} MXN`);
+    logger.debug(`✅ Orden de paquete creada: ${orden.id}`);
+    logger.debug(`   Usuario: ${usuario.nombre} (${usuario.email})`);
+    logger.debug(`   Mentor: ${mentor.nombre}`);
+    logger.debug(`   Cantidad: ${cantidad} sesiones`);
+    logger.debug(`   Total: $${precioTotal} MXN`);
 
     return NextResponse.json({
       success: true,
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
       mensaje: 'Orden creada exitosamente',
     });
   } catch (error: any) {
-    console.error('❌ Error al crear orden de paquete:', error);
+    logger.error('❌ Error al crear orden de paquete:', error);
     return NextResponse.json(
       {
         error: 'Error al crear la orden',

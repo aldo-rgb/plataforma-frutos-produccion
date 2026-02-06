@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/mentor/application/create
@@ -58,12 +59,12 @@ export async function POST(req: Request) {
     });
 
   } catch (error) {
-    console.error('Error creating application:', error);
+    logger.error('Error creating application:', error);
     
     // Log detallado del error
     if (error instanceof Error) {
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
+      logger.error('Error message:', error.message);
+      logger.error('Error stack:', error.stack);
     }
     
     return NextResponse.json(

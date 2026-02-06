@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/admin/user/[id]
@@ -140,7 +141,7 @@ export async function GET(
     });
 
   } catch (error: any) {
-    console.error('❌ Error obteniendo usuario:', error);
+    logger.error('❌ Error obteniendo usuario:', error);
     return NextResponse.json(
       { error: 'Error al obtener usuario', details: error.message },
       { status: 500 }

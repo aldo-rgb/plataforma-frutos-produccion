@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener asignaciones del trainer
 export async function GET(request: Request) {
@@ -69,7 +70,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ assignments, stats });
 
   } catch (error) {
-    console.error('Error fetching assignments:', error);
+    logger.error('Error fetching assignments:', error);
     return NextResponse.json({ error: 'Error al obtener asignaciones' }, { status: 500 });
   }
 }
@@ -193,7 +194,7 @@ export async function POST(request: Request) {
           }
         });
 
-        console.log(`✅ Arquetipo ${archetype.name} asignado a participante ${participantId} con tarea y notificación`);
+        logger.debug(`✅ Arquetipo ${archetype.name} asignado a participante ${participantId} con tarea y notificación`);
 
         return { participantId, assignment, success: true };
       })
@@ -209,7 +210,7 @@ export async function POST(request: Request) {
     }, { status: 201 });
 
   } catch (error) {
-    console.error('Error creating assignment:', error);
+    logger.error('Error creating assignment:', error);
     return NextResponse.json({ error: 'Error al crear asignación' }, { status: 500 });
   }
 }
@@ -294,7 +295,7 @@ export async function PUT(request: Request) {
       }
     });
 
-    console.log(`✅ Arquetipo cambiado de ${existingAssignment.Archetype.name} a ${newArchetype.name} para participante ${existingAssignment.participantId}`);
+    logger.debug(`✅ Arquetipo cambiado de ${existingAssignment.Archetype.name} a ${newArchetype.name} para participante ${existingAssignment.participantId}`);
 
     return NextResponse.json({ 
       message: 'Personaje actualizado exitosamente',
@@ -302,7 +303,7 @@ export async function PUT(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error updating assignment:', error);
+    logger.error('Error updating assignment:', error);
     return NextResponse.json({ error: 'Error al actualizar asignación' }, { status: 500 });
   }
 }

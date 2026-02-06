@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/admin/cycle/restart
@@ -38,8 +39,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'userId es requerido' }, { status: 400 });
     }
 
-    console.log(`🚨 REINICIO DE CICLO iniciado por Admin #${adminId} para Usuario #${userId}`);
-    console.log(`   Razón: ${reason || 'No especificada'}`);
+    logger.debug(`🚨 REINICIO DE CICLO iniciado por Admin #${adminId} para Usuario #${userId}`);
+    logger.debug(`   Razón: ${reason || 'No especificada'}`);
 
     // Obtener información del usuario antes de borrar
     const user = await prisma.usuario.findUnique({
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
       const deletedTasks = await tx.taskInstance.deleteMany({
         where: { usuarioId: userId }
       });
-      console.log(`   ❌ ${deletedTasks.count} tareas eliminadas`);
+      logger.debug(`   ❌ ${deletedTasks.count} tareas eliminadas`);
 
       // 2. Eliminar inscripciones activas
       const deletedEnrollments = await tx.programEnrollment.deleteMany({
@@ -66,7 +67,7 @@ export async function POST(req: Request) {
           status: 'ACTIVE'
         }
       });
-      console.log(`   ❌ ${deletedEnrollments.count} enrollments eliminados`);
+      logger.debug(`   ❌ ${deletedEnrollments.count} enrollments eliminados`);
 
       // 3. Regresar carta a BORRADOR (si existe)
       const updatedCartas = await tx.cartaFrutos.updateMany({
@@ -84,7 +85,7 @@ export async function POST(req: Request) {
           fechaActualizacion: new Date()
         }
       });
-      console.log(`   🔄 ${updatedCartas.count} cartas devueltas a BORRADOR`);
+      logger.debug(`   🔄 ${updatedCartas.count} cartas devueltas a BORRADOR`);
 
       // 4. Registrar en log de auditoría
       await tx.adminActionLog.create({
@@ -104,7 +105,7 @@ export async function POST(req: Request) {
       });
     });
 
-    console.log(`✅ Ciclo reiniciado exitosamente para ${user.nombre}`);
+    logger.debug(`✅ Ciclo reiniciado exitosamente para ${user.nombre}`);
 
     return NextResponse.json({
       success: true,
@@ -117,7 +118,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error reiniciando ciclo:', error);
+    logger.error('❌ Error reiniciando ciclo:', error);
     return NextResponse.json(
       { error: 'Error al reiniciar ciclo', details: error.message },
       { status: 500 }

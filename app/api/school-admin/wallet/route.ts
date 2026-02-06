@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * 🏦 TICKET 4: Organization Wallet API
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
       updatedAt: wallet.updatedAt,
     });
   } catch (error) {
-    console.error('❌ Error fetching wallet:', error);
+    logger.error('❌ Error fetching wallet:', error);
     return NextResponse.json(
       { error: 'Error al obtener información de la billetera' },
       { status: 500 }
@@ -165,7 +166,7 @@ export async function POST(request: NextRequest) {
       newBalance: parseFloat(result.wallet.balance.toString()),
     });
   } catch (error) {
-    console.error('❌ Error adding funds:', error);
+    logger.error('❌ Error adding funds:', error);
     return NextResponse.json(
       { error: 'Error al agregar fondos' },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -125,7 +126,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('❌ Error al cargar evidencias de la bóveda:', error);
+    logger.error('❌ Error al cargar evidencias de la bóveda:', error);
     return NextResponse.json({ error: 'Error al cargar datos' }, { status: 500 });
   }
 }

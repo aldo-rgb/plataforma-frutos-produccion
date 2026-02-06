@@ -2,23 +2,24 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
-      console.log('❌ No hay sesión');
+      logger.debug('❌ No hay sesión');
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    console.log('✅ Sesión encontrada:', session.user.email);
+    logger.debug('✅ Sesión encontrada:', session.user.email);
 
     const usuario = await prisma.usuario.findUnique({
       where: { email: session.user.email }
     });
 
-    console.log('✅ Usuario encontrado:', { id: usuario?.id, rol: usuario?.rol });
+    logger.debug('✅ Usuario encontrado:', { id: usuario?.id, rol: usuario?.rol });
 
     // Roles válidos de coordinador
     const coordinadorRoles = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER'];
@@ -28,11 +29,11 @@ export async function GET() {
     const tieneFlagCoordinador = usuario?.esCoordinador || usuario?.esCoordinadorBasico || usuario?.esCoordinadorAvanzado || usuario?.esEntrenador;
     
     if (!usuario || (!tieneRolCoordinador && !tieneFlagCoordinador)) {
-      console.log('❌ No es coordinador');
+      logger.debug('❌ No es coordinador');
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
-    console.log('🔍 Buscando usuarios para coordinador:', {
+    logger.debug('🔍 Buscando usuarios para coordinador:', {
       coordinadorId: usuario.id,
       organizationId: usuario.organizationId
     });
@@ -56,7 +57,7 @@ export async function GET() {
             }
           },
         });
-        console.log(`✅ Encontrados ${usuarios.length} usuarios por organizationId`);
+        logger.debug(`✅ Encontrados ${usuarios.length} usuarios por organizationId`);
       }
 
       // Si no hay usuarios por organización, buscar por coordinadorId
@@ -74,16 +75,16 @@ export async function GET() {
             }
           },
         });
-        console.log(`✅ Encontrados ${usuarios.length} usuarios por coordinadorId`);
+        logger.debug(`✅ Encontrados ${usuarios.length} usuarios por coordinadorId`);
       }
     } catch (dbError: any) {
-      console.error('❌ Error en query de usuarios:', dbError);
+      logger.error('❌ Error en query de usuarios:', dbError);
       throw dbError;
     }
 
     // Si no hay usuarios, retornar datos vacíos
     if (usuarios.length === 0) {
-      console.log('⚠️ No hay usuarios, retornando datos vacíos');
+      logger.debug('⚠️ No hay usuarios, retornando datos vacíos');
       return NextResponse.json({
         success: true,
         stats: {
@@ -100,7 +101,7 @@ export async function GET() {
       });
     }
 
-    console.log('📊 Calculando estadísticas...');
+    logger.debug('📊 Calculando estadísticas...');
 
     // Calcular estadísticas
     const totalStudents = usuarios.filter(u => 
@@ -167,23 +168,23 @@ export async function GET() {
           // Calcular licencias disponibles = total - activas
           availableCredits = (organization.totalLicenses || 0) - (organization.activeLicenses || 0);
           
-          console.log('✅ Licencias de organización:', {
+          logger.debug('✅ Licencias de organización:', {
             organizationId: usuario.organizationId,
             totalLicenses: organization.totalLicenses,
             activeLicenses: organization.activeLicenses,
             available: availableCredits
           });
         } else {
-          console.log('⚠️ Organización no encontrada');
+          logger.debug('⚠️ Organización no encontrada');
         }
       } catch (orgError) {
-        console.error('⚠️ Error obteniendo licencias de organización:', orgError);
+        logger.error('⚠️ Error obteniendo licencias de organización:', orgError);
       }
     } else {
-      console.log('⚠️ Coordinador sin organizationId');
+      logger.debug('⚠️ Coordinador sin organizationId');
     }
 
-    console.log('✅ Estadísticas calculadas exitosamente');
+    logger.debug('✅ Estadísticas calculadas exitosamente');
 
     return NextResponse.json({
       success: true,
@@ -201,8 +202,8 @@ export async function GET() {
     });
 
   } catch (error: any) {
-    console.error('❌ Error obteniendo estadísticas del coordinador:', error);
-    console.error('Stack:', error?.stack);
+    logger.error('❌ Error obteniendo estadísticas del coordinador:', error);
+    logger.error('Stack:', error?.stack);
     return NextResponse.json(
       { 
         error: 'Error al obtener estadísticas',

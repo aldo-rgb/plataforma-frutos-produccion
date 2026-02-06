@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // =====================================================
 // OBTENER PERMISOS (GET)
@@ -24,7 +25,7 @@ export async function GET() {
 
     return NextResponse.json(permisos);
   } catch (error) {
-    console.error('Error al cargar permisos:', error);
+    logger.error('Error al cargar permisos:', error);
     return NextResponse.json({ error: 'Error al cargar permisos' }, { status: 500 });
   }
 }
@@ -67,7 +68,7 @@ export async function POST(request: Request) {
       count: actualizaciones.length 
     });
   } catch (error) {
-    console.error('Error al guardar permisos:', error);
+    logger.error('Error al guardar permisos:', error);
     return NextResponse.json({ error: 'Error al guardar permisos' }, { status: 500 });
   }
 }

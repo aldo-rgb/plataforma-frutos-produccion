@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/coordinador/actualizar-pago
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log(`✅ [actualizar-pago] Enrollment ${enrollmentId} actualizado a paymentStatus=${paymentStatus} por ${session.user.email}`);
+    logger.debug(`✅ [actualizar-pago] Enrollment ${enrollmentId} actualizado a paymentStatus=${paymentStatus} por ${session.user.email}`);
 
     return NextResponse.json({
       success: true,
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Error actualizando pago:', error);
+    logger.error('❌ Error actualizando pago:', error);
     return NextResponse.json(
       { success: false, error: 'Error al actualizar el pago' },
       { status: 500 }

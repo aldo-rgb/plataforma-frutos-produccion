@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import logger from '@/lib/logger';
 
 /**
  * PATCH /api/director/coordinadores/[id]/password
@@ -86,7 +87,7 @@ export async function PATCH(
       }
     });
 
-    console.log(`✅ Director ${directorId} cambió contraseña de ${targetUser.rol} ${targetUser.nombre} (ID: ${targetUserId})`);
+    logger.debug(`✅ Director ${directorId} cambió contraseña de ${targetUser.rol} ${targetUser.nombre} (ID: ${targetUserId})`);
 
     return NextResponse.json({
       success: true,
@@ -99,7 +100,7 @@ export async function PATCH(
     });
 
   } catch (error: any) {
-    console.error('❌ Error cambiando contraseña:', error);
+    logger.error('❌ Error cambiando contraseña:', error);
     return NextResponse.json(
       { error: 'Error al cambiar contraseña', message: error?.message },
       { status: 500 }

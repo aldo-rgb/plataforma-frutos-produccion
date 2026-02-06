@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import logger from '@/lib/logger';
 
 // GET: Obtener suscripciones activas de los alumnos del mentor
 export async function GET(request: Request) {
@@ -57,7 +58,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error("Error obteniendo suscripciones del mentor:", error);
+    logger.error("Error obteniendo suscripciones del mentor:", error);
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }

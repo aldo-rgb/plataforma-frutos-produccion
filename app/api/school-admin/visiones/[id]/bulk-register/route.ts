@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import logger from '@/lib/logger';
 
 interface ExcelUser {
   nombre: string;
@@ -244,7 +245,7 @@ export async function POST(
         results.success.push({ email, nombre });
 
       } catch (error: any) {
-        console.error(`Error registrando usuario ${email}:`, error);
+        logger.error(`Error registrando usuario ${email}:`, error);
         results.failed.push({
           email,
           nombre,
@@ -265,7 +266,7 @@ export async function POST(
     });
 
   } catch (error: any) {
-    console.error('Error en bulk register:', error);
+    logger.error('Error en bulk register:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Error interno del servidor' },
       { status: 500 }

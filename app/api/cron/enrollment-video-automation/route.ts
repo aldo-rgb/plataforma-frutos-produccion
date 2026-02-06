@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
 import { sendWhatsAppTextMessage } from '@/lib/whatsapp';
+import logger from '@/lib/logger';
 
 /**
  * Cron Job: Video de Enrolamiento para Liderato
@@ -35,7 +36,7 @@ export async function GET(request: Request) {
       visionsChecked: 0,
     };
 
-    console.log(`🎯 Ejecutando automatización de video Enrolamiento - ${now.toISOString()}`);
+    logger.debug(`🎯 Ejecutando automatización de video Enrolamiento - ${now.toISOString()}`);
 
     // Calcular el día de HOY (en zona horaria CST)
     // El cron se ejecuta a las 5:30 AM UTC, que es 11:30 PM CST del día anterior
@@ -49,7 +50,7 @@ export async function GET(request: Request) {
     const todayEnd = new Date(todayCST);
     todayEnd.setHours(23, 59, 59, 999);
 
-    console.log(`📅 Buscando visiones con liderato que empezó HOY: ${todayStart.toDateString()}`);
+    logger.debug(`📅 Buscando visiones con liderato que empezó HOY: ${todayStart.toDateString()}`);
 
     // Buscar visiones cuyo primer día de liderato (plWeekend1StartDate) es HOY
     const visions = await prisma.vision.findMany({
@@ -63,11 +64,11 @@ export async function GET(request: Request) {
     });
 
     results.visionsChecked = visions.length;
-    console.log(`📋 Encontradas ${visions.length} visiones con liderato que empezó hoy`);
+    logger.debug(`📋 Encontradas ${visions.length} visiones con liderato que empezó hoy`);
 
     for (const vision of visions) {
       if (!vision.organizationId) {
-        console.log(`⚠️ Vision ${vision.nombre} sin organizationId`);
+        logger.debug(`⚠️ Vision ${vision.nombre} sin organizationId`);
         continue;
       }
 
@@ -86,11 +87,11 @@ export async function GET(request: Request) {
       });
 
       if (!organization?.videoEnrolamientoUrl) {
-        console.log(`⚠️ Vision ${vision.nombre} no tiene video de Enrolamiento configurado`);
+        logger.debug(`⚠️ Vision ${vision.nombre} no tiene video de Enrolamiento configurado`);
         continue;
       }
 
-      console.log(`\n🎬 Procesando video Enrolamiento para Vision: ${vision.nombre}`);
+      logger.debug(`\n🎬 Procesando video Enrolamiento para Vision: ${vision.nombre}`);
 
       // Obtener participantes de nivel PL (liderato) activos en esta visión
       const enrollments = await prisma.vision_enrollments.findMany({
@@ -105,7 +106,7 @@ export async function GET(request: Request) {
         }
       });
 
-      console.log(`👥 Encontrados ${enrollments.length} participantes PL en ${vision.nombre}`);
+      logger.debug(`👥 Encontrados ${enrollments.length} participantes PL en ${vision.nombre}`);
 
       const senderName = organization?.MasterOrganization?.name || organization?.name || 'Tu Equipo';
       const orgName = organization?.name || 'Tu Equipo';
@@ -157,10 +158,10 @@ ${orgName}`;
 
             if (emailResult.success) {
               results.emailsSent++;
-              console.log(`📧 Email de Enrolamiento enviado a ${user.email}`);
+              logger.debug(`📧 Email de Enrolamiento enviado a ${user.email}`);
             }
           } catch (err) {
-            console.error(`❌ Error email a ${user.email}:`, err);
+            logger.error(`❌ Error email a ${user.email}:`, err);
             results.errors.push(`Email fallido: ${user.email}`);
           }
         }
@@ -172,10 +173,10 @@ ${orgName}`;
             
             if (whatsappResult.success) {
               results.whatsappSent++;
-              console.log(`📱 WhatsApp de Enrolamiento enviado a ${user.telefono}`);
+              logger.debug(`📱 WhatsApp de Enrolamiento enviado a ${user.telefono}`);
             }
           } catch (err) {
-            console.error(`❌ Error WhatsApp a ${user.telefono}:`, err);
+            logger.error(`❌ Error WhatsApp a ${user.telefono}:`, err);
             results.errors.push(`WhatsApp fallido: ${user.telefono}`);
           }
         }
@@ -185,7 +186,7 @@ ${orgName}`;
       }
     }
 
-    console.log('📊 Resultados:', results);
+    logger.debug('📊 Resultados:', results);
 
     return NextResponse.json({
       success: true,
@@ -195,7 +196,7 @@ ${orgName}`;
     });
 
   } catch (error: any) {
-    console.error('❌ Error en automatización de Enrolamiento:', error);
+    logger.error('❌ Error en automatización de Enrolamiento:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Error interno' },
       { status: 500 }

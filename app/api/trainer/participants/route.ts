@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener participantes del trainer actual
 export async function GET(request: Request) {
@@ -117,7 +118,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error fetching trainer participants:', error);
+    logger.error('Error fetching trainer participants:', error);
     return NextResponse.json({ error: 'Error al obtener participantes' }, { status: 500 });
   }
 }

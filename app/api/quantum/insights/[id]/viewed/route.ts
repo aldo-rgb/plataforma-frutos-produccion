@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       message: 'Insight marcado como visto',
     });
   } catch (error) {
-    console.error('[QUANTUM API] Error al marcar como visto:', error);
+    logger.error('[QUANTUM API] Error al marcar como visto:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/school-admin/cartas-tracking
@@ -163,7 +164,7 @@ export async function GET(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('Error getting cartas tracking:', error);
+    logger.error('Error getting cartas tracking:', error);
     return NextResponse.json(
       { error: 'Error al obtener seguimiento de cartas', details: error.message },
       { status: 500 }

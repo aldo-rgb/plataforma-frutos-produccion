@@ -1,7 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 
 // OpenAI se inicializa solo si hay API key
 let openai: any = null;
@@ -17,8 +19,15 @@ export const dynamic = 'force-dynamic';
  * Endpoint optimizado para conversaciones por voz
  * Retorna respuestas más cortas y conversacionales
  */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    // Rate limiting - Chat voice es costoso
+    const { response } = rateLimit(req, RateLimitPresets.ai);
+    if (response) {
+      logger.warn('Rate limit exceeded on quantum/chat-voice');
+      return response;
+    }
+
     if (!openai) {
       return NextResponse.json({ error: 'Servicio de IA no configurado' }, { status: 503 });
     }
@@ -103,7 +112,7 @@ Ahora responde al usuario con estas reglas.`;
 
     const response = completion.choices[0].message.content;
 
-    console.log('🤖 Respuesta de voz generada:', response);
+    logger.debug('🤖 Respuesta de voz generada:', response);
 
     return NextResponse.json({
       success: true,
@@ -111,7 +120,7 @@ Ahora responde al usuario con estas reglas.`;
     });
 
   } catch (error) {
-    console.error('❌ Error en chat por voz:', error);
+    logger.error('❌ Error en chat por voz:', error);
     return NextResponse.json(
       { error: 'Error al procesar mensaje por voz' },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Personajes predefinidos del sistema
 const SYSTEM_ARCHETYPES = [
@@ -365,7 +366,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error loading system archetypes:', error);
+    logger.error('Error loading system archetypes:', error);
     return NextResponse.json({ error: 'Error al cargar arquetipos' }, { status: 500 });
   }
 }
@@ -388,7 +389,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error fetching system archetypes:', error);
+    logger.error('Error fetching system archetypes:', error);
     return NextResponse.json({ error: 'Error al obtener arquetipos' }, { status: 500 });
   }
 }

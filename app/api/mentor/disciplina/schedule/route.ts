@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET: Obtener horarios de disciplina del mentor
 export async function GET(req: NextRequest) {
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error obteniendo horarios de disciplina:', error);
+    logger.error('Error obteniendo horarios de disciplina:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener horarios' },
       { status: 500 }
@@ -148,7 +149,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error guardando horarios de disciplina:', error);
+    logger.error('Error guardando horarios de disciplina:', error);
     return NextResponse.json(
       { success: false, error: 'Error al guardar horarios' },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // POST - Asignación aleatoria de mentores y game changers
 export async function POST(
@@ -144,7 +145,7 @@ export async function POST(
       };
     });
 
-    console.log('[random-assign] Disponibilidad de mentores:', mentoresDisponiblesConLimite);
+    logger.debug('[random-assign] Disponibilidad de mentores:', mentoresDisponiblesConLimite);
 
     // Obtener Game Changers de la visión
     const gameChangersDisponibles = await prisma.visionGameChanger.findMany({
@@ -186,7 +187,7 @@ export async function POST(
     const errors: string[] = [];
     const skippedByLimit: string[] = [];
 
-    console.log(`[random-assign] Vision ${visionId}: ${enrollments.length} PL enrollments, ${mentoresConHorarios.length} mentores, ${gameChangerIds.length} GCs`);
+    logger.debug(`[random-assign] Vision ${visionId}: ${enrollments.length} PL enrollments, ${mentoresConHorarios.length} mentores, ${gameChangerIds.length} GCs`);
 
     // Función para obtener mentor con disponibilidad (round-robin respetando límites)
     const getNextAvailableMentor = () => {
@@ -255,7 +256,7 @@ export async function POST(
           }
         }
       } catch (error: any) {
-        console.error(`Error asignando a ${userData.nombre}:`, error);
+        logger.error(`Error asignando a ${userData.nombre}:`, error);
         errors.push(`${userData.nombre}: ${error.message}`);
       }
     }
@@ -279,7 +280,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('Error in random assignment:', error);
+    logger.error('Error in random assignment:', error);
     return NextResponse.json(
       { success: false, error: 'Error en la asignación aleatoria' },
       { status: 500 }

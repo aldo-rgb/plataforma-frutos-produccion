@@ -1,7 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 
 // OpenAI se inicializa solo si hay API key
 let openai: any = null;
@@ -16,8 +18,15 @@ export const dynamic = 'force-dynamic';
  * POST /api/quantum/extract-carta
  * Extrae información de carta desde la conversación con Quantum IA
  */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    // Rate limiting
+    const { response } = rateLimit(req, RateLimitPresets.ai);
+    if (response) {
+      logger.warn('Rate limit exceeded on quantum/extract-carta');
+      return response;
+    }
+
     if (!openai) {
       return NextResponse.json({ error: 'Servicio de IA no configurado' }, { status: 503 });
     }
@@ -74,7 +83,7 @@ export async function POST(req: Request) {
       comunidad: false,
     };
 
-    console.log('📋 Áreas asignadas desde Vision:', areasAsignadas);
+    logger.debug('📋 Áreas asignadas desde Vision:', areasAsignadas);
 
     // Construir lista de áreas disponibles
     const areasDisponibles = [];
@@ -206,7 +215,7 @@ ${JSON.stringify(conversacion, null, 2)}`;
     });
 
   } catch (error) {
-    console.error('❌ Error extrayendo carta:', error);
+    logger.error('❌ Error extrayendo carta:', error);
     return NextResponse.json(
       { error: 'Error al extraer información de la carta' },
       { status: 500 }

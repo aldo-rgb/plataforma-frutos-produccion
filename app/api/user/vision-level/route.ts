@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/user/vision-level
@@ -197,7 +198,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('Error fetching vision level:', error);
+    logger.error('Error fetching vision level:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener nivel de visión' },
       { status: 500 }

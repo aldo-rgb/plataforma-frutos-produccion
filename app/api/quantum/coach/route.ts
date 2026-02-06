@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
+import logger from '@/lib/logger';
 
 const SYSTEM_PROMPT = `Eres QUANTUM, coach ontológico del sistema F.R.U.T.O.S.
 Tu ÚNICO objetivo es ayudar al usuario a construir sus "Declaraciones del Ser" para las áreas clave de su vida.
@@ -115,6 +117,13 @@ REGLAS:
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limiting para APIs de IA (costosas)
+    const { result, response } = rateLimit(req, RateLimitPresets.ai);
+    if (response) {
+      logger.warn('Rate limit exceeded on quantum/coach');
+      return response;
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
@@ -148,7 +157,7 @@ export async function POST(req: NextRequest) {
     if (action === 'initialize') {
       const hasExistingDeclaraciones = currentDeclaraciones && Object.keys(currentDeclaraciones).length > 0;
       
-      console.log('🔍 Áreas configuradas para Quantum:', areasConfig);
+      logger.debug('🔍 Áreas configuradas para Quantum:', areasConfig);
       const areasListText = areasConfig.map(a => `${a.emoji} ${a.name}`).join(' → ');
       const totalAreas = areasConfig.length;
       
@@ -182,16 +191,16 @@ Soy Quantum. Vamos a construir declaraciones precisas del SER para ${totalAreas}
       const { areasRequeridas = 6 } = body;
       const areasKeys = areasConfig.map(a => a.key);
       
-      console.log('📊 Áreas configuradas:', areasConfig.map(a => `${a.key}: ${a.name}`));
-      console.log('📋 Declaraciones actuales:', currentDeclaraciones);
+      logger.debug('📊 Áreas configuradas:', areasConfig.map(a => `${a.key}: ${a.name}`));
+      logger.debug('📋 Declaraciones actuales:', currentDeclaraciones);
       
       // Contar áreas ya completadas
       const areasCompletadas = areasKeys.filter(key => 
         currentDeclaraciones?.[key] && currentDeclaraciones[key].trim().length > 0
       );
       
-      console.log(`✅ Áreas completadas (${areasCompletadas.length}/${areasConfig.length}):`, areasCompletadas);
-      console.log(`⏳ Áreas pendientes:`, areasKeys.filter(k => !areasCompletadas.includes(k)));
+      logger.debug(`✅ Áreas completadas (${areasCompletadas.length}/${areasConfig.length}):`, areasCompletadas);
+      logger.debug(`⏳ Áreas pendientes:`, areasKeys.filter(k => !areasCompletadas.includes(k)));
       
       const contextMessage = `\n\n[CONTEXTO DEL SISTEMA - NO MENCIONES ESTO AL USUARIO]
 Áreas configuradas para este usuario: ${areasConfig.map(a => `${a.emoji} ${a.name}`).join(', ')}
@@ -227,7 +236,7 @@ ${areasCompletadas.length >= areasConfig.length ?
 
       if (!response.ok) {
         const error = await response.text();
-        console.error('OpenAI API Error:', error);
+        logger.error('OpenAI API Error:', error);
         throw new Error('Error al comunicarse con la IA');
       }
 
@@ -300,7 +309,7 @@ ${areasCompletadas.length >= areasConfig.length ?
     return NextResponse.json({ error: 'Acción no válida' }, { status: 400 });
 
   } catch (error: any) {
-    console.error('❌ Error en Quantum Coach:', error);
+    logger.error('❌ Error en Quantum Coach:', error);
     return NextResponse.json(
       { error: error.message || 'Error interno del servidor' },
       { status: 500 }

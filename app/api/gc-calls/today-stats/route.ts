@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { ProductLevelType, TrainingType } from '@prisma/client';
+import logger from '@/lib/logger';
 
 const ADMIN_ROLES = ['TRAINER', 'SCHOOL_ADMIN', 'COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
 
@@ -80,7 +81,7 @@ export async function GET(request: Request) {
 
     // Si hay datos de BasicCallTracking, usar esos como fuente principal
     if (totalCallTrackingParticipants > 0) {
-      console.log('[today-stats] Using BasicCallTracking data:', { 
+      logger.debug('[today-stats] Using BasicCallTracking data:', { 
         level, 
         total: totalCallTrackingParticipants, 
         completed: completedCallTracking 
@@ -224,7 +225,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Error fetching today stats:', error);
+    logger.error('Error fetching today stats:', error);
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -30,7 +31,7 @@ export async function GET() {
       }
     });
 
-    console.log('🔗 Enlace del perfil mentor:', perfilMentor?.enlaceVideoLlamada);
+    logger.debug('🔗 Enlace del perfil mentor:', perfilMentor?.enlaceVideoLlamada);
 
     // Obtener fecha de hoy (inicio y fin del día en UTC)
     const hoy = new Date();
@@ -39,7 +40,7 @@ export async function GET() {
     const mañana = new Date(hoy);
     mañana.setDate(mañana.getDate() + 1);
 
-    console.log('🔍 Buscando sesiones para:', {
+    logger.debug('🔍 Buscando sesiones para:', {
       mentorId: session.user.id,
       desde: hoy.toISOString(),
       hasta: mañana.toISOString()
@@ -94,7 +95,7 @@ export async function GET() {
       }
     });
 
-    console.log('📞 CallBookings encontrados:', callBookings.length);
+    logger.debug('📞 CallBookings encontrados:', callBookings.length);
 
     // 2. OBTENER MENTORÍAS PAGADAS (SolicitudMentoria)
     // SQL equivalente:
@@ -151,7 +152,7 @@ export async function GET() {
       }
     });
 
-    console.log('🎓 Solicitudes Mentoría encontradas:', solicitudesMentoria.length);
+    logger.debug('🎓 Solicitudes Mentoría encontradas:', solicitudesMentoria.length);
 
     // 3. FORMATEAR Y COMBINAR LAS SESIONES
     const sesiones = [
@@ -240,7 +241,7 @@ export async function GET() {
       ultimaHora: sesiones.length > 0 ? sesiones[sesiones.length - 1].horaInicio : null
     };
 
-    console.log('📊 Estadísticas:', stats);
+    logger.debug('📊 Estadísticas:', stats);
 
     return NextResponse.json({ 
       success: true,
@@ -256,7 +257,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('❌ Error obteniendo agenda del día:', error);
+    logger.error('❌ Error obteniendo agenda del día:', error);
     return NextResponse.json(
       { 
         success: false,

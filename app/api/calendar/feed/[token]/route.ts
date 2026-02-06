@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET /api/calendar/feed/[token]?categories=events,contributions,tasks,missions
 // Genera un feed iCal dinámico para suscripción webcal://
@@ -272,7 +273,7 @@ export async function GET(
     });
     
   } catch (error: any) {
-    console.error('Error generando feed iCal:', error);
+    logger.error('Error generando feed iCal:', error);
     return new NextResponse('Error interno', { status: 500 });
   }
 }

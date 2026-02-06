@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/gc-calls/my-gc
@@ -232,7 +233,7 @@ export async function GET(request: Request) {
       hasAvailability: availabilities.length > 0,
     });
   } catch (error) {
-    console.error('Error fetching my GC:', error);
+    logger.error('Error fetching my GC:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener información del GC' },
       { status: 500 }

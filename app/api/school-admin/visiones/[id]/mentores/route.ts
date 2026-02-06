@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -75,7 +76,7 @@ export async function GET(
       }
     });
 
-    console.log('👥 Mentores (rol MENTOR o esMentor=true) encontrados:', mentoresProfesionales.length);
+    logger.debug('👥 Mentores (rol MENTOR o esMentor=true) encontrados:', mentoresProfesionales.length);
 
     // Obtener mentores asignados a esta visión (que ya están en VisionMentor)
     const mentoresAsignados = await prisma.visionMentor.findMany({
@@ -128,8 +129,8 @@ export async function GET(
       };
     });
 
-    console.log('👥 Mentores asignados a la visión:', mentoresAsignados.length);
-    console.log('📦 Mentores con paquetes contratados:', mentoresAsignadosConInfo.filter((m: any) => 
+    logger.debug('👥 Mentores asignados a la visión:', mentoresAsignados.length);
+    logger.debug('📦 Mentores con paquetes contratados:', mentoresAsignadosConInfo.filter((m: any) => 
       m.Usuario_VisionMentor_mentorIdToUsuario.rol === 'MENTOR'
     ).length);
 
@@ -143,7 +144,7 @@ export async function GET(
       return tieneHorariosValidos;
     });
 
-    console.log('✅ Mentores profesionales con horarios válidos (05:00-08:00):', mentoresProfesionalesConHorarios.length);
+    logger.debug('✅ Mentores profesionales con horarios válidos (05:00-08:00):', mentoresProfesionalesConHorarios.length);
 
     // 📊 Calcular espacios disponibles para cada mentor profesional
     const mentoresConEspacios = await Promise.all(
@@ -160,7 +161,7 @@ export async function GET(
 
         const availableSlots = Math.max(0, maxClients - currentClientsCount);
 
-        console.log(`📊 Mentor Profesional ${mentor.nombre}:`, {
+        logger.debug(`📊 Mentor Profesional ${mentor.nombre}:`, {
           maxClients,
           currentClients: currentClientsCount,
           availableSlots,
@@ -215,16 +216,16 @@ export async function GET(
       }
     });
 
-    console.log('👤 Mentores PRIVADOS (LIDER) encontrados:', mentoresPrivados.length);
+    logger.debug('👤 Mentores PRIVADOS (LIDER) encontrados:', mentoresPrivados.length);
     mentoresPrivados.forEach(m => {
-      console.log(`  - ${m.nombre} (${m.email}): ${m.CallAvailability.length} horarios DISCIPLINE`);
+      logger.debug(`  - ${m.nombre} (${m.email}): ${m.CallAvailability.length} horarios DISCIPLINE`);
     });
 
     // Los mentores privados (LIDER) NO requieren horarios DISCIPLINE para ser asignados
     // Son mentores internos de la organización que pueden configurar horarios después
     const mentoresPrivadosConHorarios = mentoresPrivados; // No filtrar por horarios
 
-    console.log('✅ Mentores PRIVADOS disponibles para asignar:', mentoresPrivadosConHorarios.length);
+    logger.debug('✅ Mentores PRIVADOS disponibles para asignar:', mentoresPrivadosConHorarios.length);
 
     // Calcular espacios disponibles para mentores privados
     const mentoresPrivadosConEspacios = await Promise.all(
@@ -299,7 +300,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('Error al obtener mentores:', error);
+    logger.error('Error al obtener mentores:', error);
     return NextResponse.json(
       { error: 'Error al obtener mentores' },
       { status: 500 }
@@ -446,7 +447,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('Error al asignar mentor:', error);
+    logger.error('Error al asignar mentor:', error);
     return NextResponse.json(
       { error: 'Error al asignar mentor' },
       { status: 500 }
@@ -488,7 +489,7 @@ export async function DELETE(
     });
 
   } catch (error) {
-    console.error('Error al remover mentor:', error);
+    logger.error('Error al remover mentor:', error);
     return NextResponse.json(
       { error: 'Error al remover mentor' },
       { status: 500 }

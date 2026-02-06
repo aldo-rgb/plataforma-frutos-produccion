@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
+import logger from '@/lib/logger';
 
 // GET: Obtener las misiones activas del participante
 export async function GET(request: NextRequest) {
@@ -98,7 +99,7 @@ export async function GET(request: NextRequest) {
       }))
     })
   } catch (error) {
-    console.error('Error fetching participant tasks:', error)
+    logger.error('Error fetching participant tasks:', error)
     return NextResponse.json(
       { success: false, error: 'Error al obtener tareas' },
       { status: 500 }
@@ -217,7 +218,7 @@ export async function POST(request: NextRequest) {
         (updatedSubmission.mission.bonusPoints || 0)
     })
   } catch (error) {
-    console.error('Error submitting mission:', error)
+    logger.error('Error submitting mission:', error)
     return NextResponse.json(
       { success: false, error: 'Error al enviar la entrega' },
       { status: 500 }

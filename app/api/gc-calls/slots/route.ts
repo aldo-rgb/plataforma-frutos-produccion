@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { ensureDefaultAvailability } from '@/lib/gcDefaultAvailability';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/gc-calls/slots
@@ -39,7 +40,7 @@ export async function GET(request: Request) {
     const targetDate = new Date(year, month - 1, day); // Mes es 0-indexed
     const dayOfWeek = targetDate.getDay(); // 0=Domingo, 1=Lunes, etc.
     
-    console.log(`📅 Slots request: date=${dateStr}, dayOfWeek=${dayOfWeek}, gcId=${gcId}`);
+    logger.debug(`📅 Slots request: date=${dateStr}, dayOfWeek=${dayOfWeek}, gcId=${gcId}`);
 
     // Buscar disponibilidad por día de la semana O fecha específica
     const availabilities = await prisma.gCAvailability.findMany({
@@ -63,13 +64,13 @@ export async function GET(request: Request) {
       },
     });
 
-    console.log(`📅 Found ${availabilities.length} availabilities for GC ${gcId}, dayOfWeek ${dayOfWeek}`);
+    logger.debug(`📅 Found ${availabilities.length} availabilities for GC ${gcId}, dayOfWeek ${dayOfWeek}`);
     if (availabilities.length > 0) {
-      console.log(`📅 Times:`, availabilities.map(a => `${a.startTime}-${a.endTime}`));
+      logger.debug(`📅 Times:`, availabilities.map(a => `${a.startTime}-${a.endTime}`));
     }
 
     if (availabilities.length === 0) {
-      console.log(`📅 No availabilities found for dayOfWeek=${dayOfWeek}`);
+      logger.debug(`📅 No availabilities found for dayOfWeek=${dayOfWeek}`);
       return NextResponse.json({
         success: true,
         availableSlots: [],
@@ -116,7 +117,7 @@ export async function GET(request: Request) {
       availableSlots: allSlots,
     });
   } catch (error) {
-    console.error('Error fetching available slots:', error);
+    logger.error('Error fetching available slots:', error);
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }
@@ -250,7 +251,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Error booking slot:', error);
+    logger.error('Error booking slot:', error);
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }
@@ -319,7 +320,7 @@ export async function DELETE(request: Request) {
       message: 'Cita cancelada',
     });
   } catch (error) {
-    console.error('Error cancelling slot:', error);
+    logger.error('Error cancelling slot:', error);
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }

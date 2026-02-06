@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener formularios médicos con alertas para el coordinador
 export async function GET(request: Request) {
@@ -212,7 +213,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error fetching medical forms:', error);
+    logger.error('Error fetching medical forms:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener formularios médicos' },
       { status: 500 }
@@ -258,7 +259,7 @@ export async function PATCH(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error marking alert as reviewed:', error);
+    logger.error('Error marking alert as reviewed:', error);
     return NextResponse.json(
       { success: false, error: 'Error al marcar alerta' },
       { status: 500 }
@@ -304,7 +305,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error marking alert as reviewed:', error);
+    logger.error('Error marking alert as reviewed:', error);
     return NextResponse.json(
       { success: false, error: 'Error al marcar alerta' },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/user/assign-mentor
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error al asignar mentor:', error);
+    logger.error('Error al asignar mentor:', error);
     return NextResponse.json(
       { error: 'Error al asignar mentor' },
       { status: 500 }

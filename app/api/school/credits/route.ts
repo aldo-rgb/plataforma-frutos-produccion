@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -107,7 +108,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Error fetching school balance:', error);
+    logger.error('Error fetching school balance:', error);
     return NextResponse.json({ error: 'Error al obtener balance de créditos' }, { status: 500 });
   }
 }

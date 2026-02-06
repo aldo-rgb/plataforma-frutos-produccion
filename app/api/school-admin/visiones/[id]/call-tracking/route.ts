@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 // GET: Obtener todos los registros de seguimiento de llamadas por nivel
 export async function GET(
@@ -22,16 +23,16 @@ export async function GET(
     const level = searchParams.get('level') || 'BASIC';
     const excludeUnpaid = searchParams.get('excludeUnpaid') === 'true';
 
-    console.log('📞 [call-tracking] Request:', { visionId, level, excludeUnpaid });
+    logger.debug('📞 [call-tracking] Request:', { visionId, level, excludeUnpaid });
 
     // DEBUG: Verificar enrollments con ese visionId primero
     const debugEnrollments = await prisma.vision_enrollments.findMany({
       where: { visionId },
       select: { id: true, userId: true, level: true, paymentStatus: true },
     });
-    console.log('📞 [call-tracking] DEBUG: All enrollments for vision:', debugEnrollments.length);
-    console.log('📞 [call-tracking] DEBUG: By level:', debugEnrollments.filter((e: any) => e.level === level).length);
-    console.log('📞 [call-tracking] DEBUG: Sample enrollments:', JSON.stringify(debugEnrollments.slice(0, 5)));
+    logger.debug('📞 [call-tracking] DEBUG: All enrollments for vision:', debugEnrollments.length);
+    logger.debug('📞 [call-tracking] DEBUG: By level:', debugEnrollments.filter((e: any) => e.level === level).length);
+    logger.debug('📞 [call-tracking] DEBUG: Sample enrollments:', JSON.stringify(debugEnrollments.slice(0, 5)));
 
     // Obtener todos los enrollments del nivel especificado con su tracking info
     // @ts-ignore - Prisma relations exist but TypeScript doesn't recognize them
@@ -171,13 +172,13 @@ export async function GET(
 
     // Filtrar enrollments si excludeUnpaid está activo
     let filteredEnrollments = enrollments;
-    console.log('📞 [call-tracking] Enrollments found:', enrollments.length);
+    logger.debug('📞 [call-tracking] Enrollments found:', enrollments.length);
     
     if (excludeUnpaid) {
       filteredEnrollments = enrollments.filter((enrollment: any) => {
         const tickets = enrollment.Usuario_vision_enrollments_userIdToUsuario.Ticket_TicketOwner || [];
         const status = getPaymentStatus(tickets, enrollment.paymentStatus);
-        console.log('📞 [call-tracking] Filtering:', { 
+        logger.debug('📞 [call-tracking] Filtering:', { 
           enrollmentId: enrollment.id, 
           userId: enrollment.userId,
           enrollmentPaymentStatus: enrollment.paymentStatus,
@@ -188,7 +189,7 @@ export async function GET(
       });
     }
 
-    console.log('📞 [call-tracking] After filter:', filteredEnrollments.length);
+    logger.debug('📞 [call-tracking] After filter:', filteredEnrollments.length);
 
     // Formatear la respuesta con toda la información necesaria
     // @ts-ignore - Prisma relations work at runtime despite TypeScript errors
@@ -248,7 +249,7 @@ export async function GET(
 
     return NextResponse.json(formattedData);
   } catch (error) {
-    console.error('Error fetching call tracking data:', error);
+    logger.error('Error fetching call tracking data:', error);
     return NextResponse.json(
       { error: 'Error al obtener datos de seguimiento' },
       { status: 500 }
@@ -300,7 +301,7 @@ export async function POST(
       return NextResponse.json(created);
     }
   } catch (error) {
-    console.error('Error saving call tracking:', error);
+    logger.error('Error saving call tracking:', error);
     return NextResponse.json(
       { error: 'Error al guardar seguimiento' },
       { status: 500 }

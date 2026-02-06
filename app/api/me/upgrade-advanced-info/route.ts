@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Tipo de panorama del usuario
 type UserPanorama = 'BASICO_EN_CURSO' | 'BASICO_COMPLETADO' | 'AVANZADO_EN_CURSO' | 'YA_INSCRITO_PL' | 'NO_INSCRITO';
@@ -393,7 +394,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('Error fetching upgrade info:', error);
+    logger.error('Error fetching upgrade info:', error);
     return NextResponse.json(
       { success: false, error: 'Error interno del servidor' },
       { status: 500 }

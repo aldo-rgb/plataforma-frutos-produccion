@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET: Obtener todas las metas de un usuario por categoría
 export async function GET(request: NextRequest) {
@@ -79,7 +80,7 @@ export async function GET(request: NextRequest) {
     }, { status: 200 });
 
   } catch (error) {
-    console.error('❌ Error al obtener metas:', error);
+    logger.error('❌ Error al obtener metas:', error);
     return NextResponse.json({ error: 'Error al cargar metas' }, { status: 500 });
   }
 }
@@ -197,7 +198,7 @@ export async function PUT(request: NextRequest) {
     }, { status: 200 });
 
   } catch (error) {
-    console.error('❌ Error al enviar carta a revisión:', error);
+    logger.error('❌ Error al enviar carta a revisión:', error);
     return NextResponse.json({ error: 'Error al enviar carta' }, { status: 500 });
   }
 }
@@ -291,7 +292,7 @@ export async function POST(request: NextRequest) {
     }, { status: 200 });
 
   } catch (error) {
-    console.error('❌ Error al guardar metas:', error);
+    logger.error('❌ Error al guardar metas:', error);
     return NextResponse.json({ error: 'Error al guardar metas' }, { status: 500 });
   }
 }
@@ -323,7 +324,7 @@ export async function DELETE(request: NextRequest) {
     }, { status: 200 });
 
   } catch (error) {
-    console.error('❌ Error al eliminar meta:', error);
+    logger.error('❌ Error al eliminar meta:', error);
     return NextResponse.json({ error: 'Error al eliminar meta' }, { status: 500 });
   }
 }

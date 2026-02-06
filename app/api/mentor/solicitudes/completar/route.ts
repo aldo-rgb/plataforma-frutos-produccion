@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { PrismaClient } from '@prisma/client';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
       })
     ]);
 
-    console.log(`✅ Sesión #${solicitudId} completada por mentor ${session.user.id}`);
+    logger.debug(`✅ Sesión #${solicitudId} completada por mentor ${session.user.id}`);
 
     return NextResponse.json({
       success: true,
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error al completar sesión:', error);
+    logger.error('❌ Error al completar sesión:', error);
     
     return NextResponse.json(
       { 

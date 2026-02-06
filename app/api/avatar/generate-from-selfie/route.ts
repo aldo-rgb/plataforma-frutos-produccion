@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import Replicate from 'replicate';
 import { createClient } from '@supabase/supabase-js';
+import logger from '@/lib/logger';
 
 // Inicialización lazy de Replicate - solo si hay API token
 let replicate: Replicate | null = null;
@@ -34,12 +35,12 @@ function getSupabase() {
 async function uploadImageToSupabase(imageUrl: string, userId: number): Promise<string> {
   const supabaseClient = getSupabase();
   if (!supabaseClient) {
-    console.warn('⚠️ Supabase no configurado, usando URL temporal');
+    logger.warn('⚠️ Supabase no configurado, usando URL temporal');
     return imageUrl;
   }
 
   try {
-    console.log('📥 Descargando imagen de Replicate...');
+    logger.debug('📥 Descargando imagen de Replicate...');
     const response = await fetch(imageUrl);
     if (!response.ok) {
       throw new Error(`Error descargando imagen: ${response.status}`);
@@ -48,7 +49,7 @@ async function uploadImageToSupabase(imageUrl: string, userId: number): Promise<
     const imageBuffer = await response.arrayBuffer();
     const fileName = `avatars/${userId}-${Date.now()}.png`;
     
-    console.log('📤 Subiendo a Supabase Storage:', fileName);
+    logger.debug('📤 Subiendo a Supabase Storage:', fileName);
     const { data, error } = await supabaseClient.storage
       .from('mentor-assets')
       .upload(fileName, imageBuffer, {
@@ -57,7 +58,7 @@ async function uploadImageToSupabase(imageUrl: string, userId: number): Promise<
       });
 
     if (error) {
-      console.error('❌ Error subiendo a Supabase:', error);
+      logger.error('❌ Error subiendo a Supabase:', error);
       throw error;
     }
 
@@ -66,10 +67,10 @@ async function uploadImageToSupabase(imageUrl: string, userId: number): Promise<
       .from('mentor-assets')
       .getPublicUrl(fileName);
 
-    console.log('✅ Imagen guardada permanentemente:', publicUrl);
+    logger.debug('✅ Imagen guardada permanentemente:', publicUrl);
     return publicUrl;
   } catch (error) {
-    console.error('❌ Error en uploadImageToSupabase:', error);
+    logger.error('❌ Error en uploadImageToSupabase:', error);
     // Si falla, retornar la URL temporal como fallback
     return imageUrl;
   }
@@ -81,20 +82,20 @@ async function uploadImageToSupabase(imageUrl: string, userId: number): Promise<
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log('🚀 POST /api/avatar/generate-from-selfie - Iniciando');
+    logger.debug('🚀 POST /api/avatar/generate-from-selfie - Iniciando');
     
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
-      console.log('❌ No hay sesión de usuario');
+      logger.debug('❌ No hay sesión de usuario');
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    console.log('✅ Usuario autenticado:', session.user.email);
+    logger.debug('✅ Usuario autenticado:', session.user.email);
 
     // Verificar que Replicate esté configurado
     if (!process.env.REPLICATE_API_TOKEN || process.env.REPLICATE_API_TOKEN === 'tu_api_key_aqui') {
-      console.error('❌ REPLICATE_API_TOKEN no configurado');
+      logger.error('❌ REPLICATE_API_TOKEN no configurado');
       return NextResponse.json({
         error: 'Servicio de generación de avatares no configurado. Contacta al administrador.',
         hint: 'REPLICATE_API_TOKEN no está configurado en las variables de entorno'
@@ -108,12 +109,12 @@ export async function POST(request: NextRequest) {
     // Soportar múltiples imágenes o imagen única
     const inputImages: string[] = images && images.length > 0 ? images : (image ? [image] : []);
 
-    console.log('📥 Request recibido:');
-    console.log('  - Gender:', gender);
-    console.log('  - Vibe:', vibe);
-    console.log('  - Designation:', designation);
-    console.log('  - Archetype:', archetype);
-    console.log('  - Número de imágenes:', inputImages.length);
+    logger.debug('📥 Request recibido:');
+    logger.debug('  - Gender:', gender);
+    logger.debug('  - Vibe:', vibe);
+    logger.debug('  - Designation:', designation);
+    logger.debug('  - Archetype:', archetype);
+    logger.debug('  - Número de imágenes:', inputImages.length);
 
     if (inputImages.length === 0) {
       return NextResponse.json({ error: 'Al menos una imagen es requerida' }, { status: 400 });
@@ -132,9 +133,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    console.log('✅ Usuario encontrado:', usuario.id, usuario.nombre);
-    console.log('🎭 Designación:', designation);
-    console.log('🏷️ Visual Tags:', visualTags);
+    logger.debug('✅ Usuario encontrado:', usuario.id, usuario.nombre);
+    logger.debug('🎭 Designación:', designation);
+    logger.debug('🏷️ Visual Tags:', visualTags);
 
     // TEMPORAL: Comentado mientras se regenera el cliente de Prisma
     // TODO: Descomentar después de verificar que el modelo existe
@@ -156,10 +157,10 @@ export async function POST(request: NextRequest) {
       }, { status: 429 });
     }
 
-    console.log(`📊 Intentos usados: ${attemptCount}/3`);
+    logger.debug(`📊 Intentos usados: ${attemptCount}/3`);
     */
 
-    console.log('⚠️ Verificación de límites temporalmente deshabilitada');
+    logger.debug('⚠️ Verificación de límites temporalmente deshabilitada');
 
     // Construir el prompt según el género y vibe
     const genderPrompts: Record<string, string> = {
@@ -273,21 +274,21 @@ export async function POST(request: NextRequest) {
     
       negativePromptToUse = 'photorealistic, real photo, photography, realistic skin texture, muted colors, dark gritty, weapons, guns, swords, aggressive, ugly, deformed, bad anatomy, watermark, text, blurry, low quality, cropped, headshot only, face only';
       
-      console.log('🎭 Prompt Anime/Digital 3D Style para PhotoMaker');
-      console.log('🏢 Designación:', designation);
-      console.log('🏢 Arquetipo:', archetype);
-      console.log('👤 Rol:', characterRole);
+      logger.debug('🎭 Prompt Anime/Digital 3D Style para PhotoMaker');
+      logger.debug('🏢 Designación:', designation);
+      logger.debug('🏢 Arquetipo:', archetype);
+      logger.debug('👤 Rol:', characterRole);
     }
 
-    console.log('🎨 Generando con Replicate...');
-    console.log('Vibe:', vibe);
-    console.log('Gender:', gender);
-    console.log('Número de imágenes de entrada:', inputImages.length);
+    logger.debug('🎨 Generando con Replicate...');
+    logger.debug('Vibe:', vibe);
+    logger.debug('Gender:', gender);
+    logger.debug('Número de imágenes de entrada:', inputImages.length);
 
     // Obtener instancia de Replicate
     const replicateClient = getReplicate();
     if (!replicateClient) {
-      console.error('❌ Replicate client no disponible');
+      logger.error('❌ Replicate client no disponible');
       return NextResponse.json({
         error: 'Servicio de generación de avatares no disponible.',
         hint: 'REPLICATE_API_TOKEN no está configurado'
@@ -314,15 +315,15 @@ export async function POST(request: NextRequest) {
     // Agregar imágenes adicionales si están disponibles
     if (inputImages.length > 1 && inputImages[1]) {
       inputParams.input_image2 = inputImages[1];
-      console.log('📸 Agregando imagen secundaria para mejor fidelidad');
+      logger.debug('📸 Agregando imagen secundaria para mejor fidelidad');
     }
     if (inputImages.length > 2 && inputImages[2]) {
       inputParams.input_image3 = inputImages[2];
-      console.log('📸 Agregando tercera imagen');
+      logger.debug('📸 Agregando tercera imagen');
     }
     if (inputImages.length > 3 && inputImages[3]) {
       inputParams.input_image4 = inputImages[3];
-      console.log('📸 Agregando cuarta imagen');
+      logger.debug('📸 Agregando cuarta imagen');
     }
 
     // IMPORTANTE: Usamos el método de predictions para obtener URLs directamente
@@ -334,35 +335,35 @@ export async function POST(request: NextRequest) {
       input: inputParams
     });
 
-    console.log('🔄 Predicción creada:', prediction.id);
+    logger.debug('🔄 Predicción creada:', prediction.id);
 
     // Polling: Esperar a que termine la generación
     let result = prediction;
     while (result.status !== 'succeeded' && result.status !== 'failed') {
-      console.log('⏳ Estado:', result.status);
+      logger.debug('⏳ Estado:', result.status);
       await new Promise(resolve => setTimeout(resolve, 1000)); // Esperar 1 segundo
       result = await replicateClient.predictions.get(prediction.id);
     }
 
     if (result.status === 'failed') {
-      console.error('❌ Predicción falló:', result.error);
+      logger.error('❌ Predicción falló:', result.error);
       return NextResponse.json({
         success: false,
         error: 'La generación falló: ' + result.error
       }, { status: 500 });
     }
 
-    console.log('✅ Imagen generada por IA');
-    console.log('Output:', result.output);
+    logger.debug('✅ Imagen generada por IA');
+    logger.debug('Output:', result.output);
 
     // El output ahora es un array de URLs (strings)
     let replicateUrl = Array.isArray(result.output) ? result.output[0] : result.output;
 
     // IMPORTANTE: Subir la imagen a Supabase Storage para URL permanente
     // Las URLs de Replicate son temporales y expiran
-    console.log('🔄 Guardando imagen permanentemente en Supabase...');
+    logger.debug('🔄 Guardando imagen permanentemente en Supabase...');
     let avatarUrl = await uploadImageToSupabase(replicateUrl, usuario.id);
-    console.log('✅ URL permanente:', avatarUrl);
+    logger.debug('✅ URL permanente:', avatarUrl);
 
     // TEMPORAL: Comentado mientras se regenera el cliente de Prisma
     /*
@@ -378,10 +379,10 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log('✅ Intento registrado en BD');
+    logger.debug('✅ Intento registrado en BD');
     */
 
-    console.log('⚠️ Registro de intento temporalmente deshabilitado');
+    logger.debug('⚠️ Registro de intento temporalmente deshabilitado');
 
     // Actualizar profileImage del usuario
     await prisma.usuario.update({
@@ -392,7 +393,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log('✅ Avatar actualizado en perfil del usuario');
+    logger.debug('✅ Avatar actualizado en perfil del usuario');
 
     // Si hay identityId, actualizar también el QuantumIdentity
     if (identityId && selectedOptionId) {
@@ -406,9 +407,9 @@ export async function POST(request: NextRequest) {
             completedAt: new Date()
           }
         });
-        console.log('✅ QuantumIdentity actualizado con ID:', identityId);
+        logger.debug('✅ QuantumIdentity actualizado con ID:', identityId);
       } catch (qiError) {
-        console.error('⚠️ Error actualizando QuantumIdentity:', qiError);
+        logger.error('⚠️ Error actualizando QuantumIdentity:', qiError);
         // No fallar la request, el avatar ya está guardado en el usuario
       }
     }
@@ -424,10 +425,10 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error generando avatar:', error);
-    console.error('❌ Stack trace:', error.stack);
-    console.error('❌ Error name:', error.name);
-    console.error('❌ Error message:', error.message);
+    logger.error('❌ Error generando avatar:', error);
+    logger.error('❌ Stack trace:', error.stack);
+    logger.error('❌ Error name:', error.name);
+    logger.error('❌ Error message:', error.message);
     return NextResponse.json(
       { 
         error: 'Error al generar el avatar',

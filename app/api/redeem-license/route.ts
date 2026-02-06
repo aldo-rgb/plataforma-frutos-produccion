@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -107,7 +108,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error redeeming license:', error);
+    logger.error('Error redeeming license:', error);
     return NextResponse.json({ 
       error: 'Error al canjear código' 
     }, { status: 500 });

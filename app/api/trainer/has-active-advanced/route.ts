@@ -3,6 +3,7 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
+import logger from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -78,7 +79,7 @@ export async function GET() {
     })
 
   } catch (error) {
-    console.error('Error checking active advanced:', error)
+    logger.error('Error checking active advanced:', error)
     return NextResponse.json({ hasActiveAdvanced: false }, { status: 200 })
   }
 }

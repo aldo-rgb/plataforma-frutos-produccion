@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { triggerEnrollmentTaskCompletion } from '@/lib/enrollment-task-trigger';
+import logger from '@/lib/logger';
 
 // POST - Completar el check-in: registrar asistencia y consumir licencia
 export async function POST(request: NextRequest) {
@@ -152,7 +153,7 @@ export async function POST(request: NextRequest) {
     // Verificar si quedó en negativo
     if (updatedOrg.licensesAvailable < 0) {
       licensesWentNegative = true;
-      console.log(`⚠️ ALERTA: Organización ${organization.name} tiene ${updatedOrg.licensesAvailable} licencias (NEGATIVO)`);
+      logger.debug(`⚠️ ALERTA: Organización ${organization.name} tiene ${updatedOrg.licensesAvailable} licencias (NEGATIVO)`);
     }
 
     // *** CREAR LICENSEASSIGNMENT PARA PARTICIPANTES ***
@@ -183,7 +184,7 @@ export async function POST(request: NextRequest) {
           }
         });
         
-        console.log(`✅ LicenseAssignment creado para usuario ${user.nombre} (ID: ${user.id}) en org ${organization.name}`);
+        logger.debug(`✅ LicenseAssignment creado para usuario ${user.nombre} (ID: ${user.id}) en org ${organization.name}`);
       }
     }
 
@@ -228,7 +229,7 @@ export async function POST(request: NextRequest) {
             attendanceStatus: 'ATTENDED'
           }
         });
-        console.log(`✅ Asistencia marcada automáticamente para enrollment ${enrollment.id} - Usuario: ${user.nombre}`);
+        logger.debug(`✅ Asistencia marcada automáticamente para enrollment ${enrollment.id} - Usuario: ${user.nombre}`);
 
         // *** TRIGGER: Completar tarea de enrolamiento del invitador ***
         // Si este usuario fue invitado por alguien y está asistiendo a BASIC,
@@ -241,13 +242,13 @@ export async function POST(request: NextRequest) {
             );
             
             if (triggerResult.taskCompleted) {
-              console.log(`🎉 Tarea de enrolamiento completada: ${triggerResult.inviterName} enroló a ${triggerResult.guestName}`);
+              logger.debug(`🎉 Tarea de enrolamiento completada: ${triggerResult.inviterName} enroló a ${triggerResult.guestName}`);
             } else {
-              console.log(`ℹ️ Trigger de enrolamiento: ${triggerResult.message}`);
+              logger.debug(`ℹ️ Trigger de enrolamiento: ${triggerResult.message}`);
             }
           } catch (triggerError) {
             // No fallar el check-in si el trigger falla
-            console.error('⚠️ Error en trigger de enrolamiento (no crítico):', triggerError);
+            logger.error('⚠️ Error en trigger de enrolamiento (no crítico):', triggerError);
           }
         }
       }
@@ -295,7 +296,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error completando check-in:', error);
+    logger.error('Error completando check-in:', error);
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
   }
 }
@@ -376,7 +377,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error obteniendo estadísticas:', error);
+    logger.error('Error obteniendo estadísticas:', error);
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
   }
 }

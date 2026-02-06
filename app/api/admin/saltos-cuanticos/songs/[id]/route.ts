@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // PUT - Actualizar canción
 export async function PUT(
@@ -43,7 +44,7 @@ export async function PUT(
 
     return NextResponse.json(song);
   } catch (error) {
-    console.error('Error al actualizar canción:', error);
+    logger.error('Error al actualizar canción:', error);
     return NextResponse.json({ error: 'Error al actualizar canción' }, { status: 500 });
   }
 }
@@ -86,7 +87,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error al eliminar canción:', error);
+    logger.error('Error al eliminar canción:', error);
     return NextResponse.json({ error: 'Error al eliminar canción' }, { status: 500 });
   }
 }

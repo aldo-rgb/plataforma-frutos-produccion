@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -46,7 +47,7 @@ export async function GET(
         : '0.00',
     });
   } catch (error) {
-    console.error('Error fetching school credit:', error);
+    logger.error('Error fetching school credit:', error);
     return NextResponse.json({ error: 'Error al obtener crédito' }, { status: 500 });
   }
 }
@@ -121,7 +122,7 @@ export async function PATCH(
 
     return NextResponse.json(updatedCredit);
   } catch (error) {
-    console.error('Error updating school credit:', error);
+    logger.error('Error updating school credit:', error);
     return NextResponse.json({ error: 'Error al actualizar crédito' }, { status: 500 });
   }
 }
@@ -162,7 +163,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Crédito eliminado exitosamente' });
   } catch (error) {
-    console.error('Error deleting school credit:', error);
+    logger.error('Error deleting school credit:', error);
     return NextResponse.json({ error: 'Error al eliminar crédito' }, { status: 500 });
   }
 }

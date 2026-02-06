@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '../../../lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../../lib/auth';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +26,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    console.log('🔍 Buscando carta para usuario:', usuario.id);
+    logger.debug('🔍 Buscando carta para usuario:', usuario.id);
 
     // Buscamos la carta del usuario autenticado
     const carta = await prisma.cartaFrutos.findFirst({
@@ -36,12 +37,12 @@ export async function GET() {
       }
     });
 
-    console.log('📊 Carta encontrada:', carta ? `ID ${carta.id}` : 'No existe');
+    logger.debug('📊 Carta encontrada:', carta ? `ID ${carta.id}` : 'No existe');
 
     // Si no tiene carta, devolvemos un objeto vacío pero exitoso
     return NextResponse.json(carta || {});
   } catch (error) {
-    console.error('❌ Error cargando carta:', error);
+    logger.error('❌ Error cargando carta:', error);
     return NextResponse.json({ error: 'Error cargando carta' }, { status: 500 });
   }
 }
@@ -161,7 +162,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(cartaActualizada);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return NextResponse.json({ error: 'Error guardando carta' }, { status: 500 });
   }
 }

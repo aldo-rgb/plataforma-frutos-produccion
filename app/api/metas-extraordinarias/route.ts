@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(metas);
 
   } catch (error) {
-    console.error('Error al obtener metas:', error);
+    logger.error('Error al obtener metas:', error);
     return NextResponse.json(
       { error: 'Error al obtener metas extraordinarias' },
       { status: 500 }
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(nuevaMeta, { status: 201 });
 
   } catch (error) {
-    console.error('Error al crear meta:', error);
+    logger.error('Error al crear meta:', error);
     return NextResponse.json(
       { error: 'Error al crear meta extraordinaria' },
       { status: 500 }

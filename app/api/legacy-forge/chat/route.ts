@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener mensajes del chat de una votación
 export async function GET(request: NextRequest) {
@@ -92,7 +93,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error obteniendo chat:', error);
+    logger.error('Error obteniendo chat:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }
@@ -201,7 +202,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error enviando mensaje:', error);
+    logger.error('Error enviando mensaje:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }
@@ -268,7 +269,7 @@ export async function DELETE(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error eliminando mensaje:', error);
+    logger.error('Error eliminando mensaje:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

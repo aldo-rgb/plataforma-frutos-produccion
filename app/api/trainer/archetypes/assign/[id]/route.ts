@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener una asignación específica
 export async function GET(
@@ -45,7 +46,7 @@ export async function GET(
     return NextResponse.json({ assignment });
 
   } catch (error) {
-    console.error('Error fetching assignment:', error);
+    logger.error('Error fetching assignment:', error);
     return NextResponse.json({ error: 'Error al obtener asignación' }, { status: 500 });
   }
 }
@@ -130,7 +131,7 @@ export async function PUT(
     return NextResponse.json({ assignment: updated });
 
   } catch (error) {
-    console.error('Error updating assignment:', error);
+    logger.error('Error updating assignment:', error);
     return NextResponse.json({ error: 'Error al actualizar asignación' }, { status: 500 });
   }
 }
@@ -180,7 +181,7 @@ export async function DELETE(
     return NextResponse.json({ message: 'Asignación eliminada' });
 
   } catch (error) {
-    console.error('Error deleting assignment:', error);
+    logger.error('Error deleting assignment:', error);
     return NextResponse.json({ error: 'Error al eliminar asignación' }, { status: 500 });
   }
 }

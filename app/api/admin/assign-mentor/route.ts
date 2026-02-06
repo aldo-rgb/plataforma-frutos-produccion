@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,11 +62,11 @@ export async function GET() {
       assignedMentor: s.Usuario_Usuario_assignedMentorIdToUsuario
     }));
 
-    console.log(`📊 Cargados: ${mentors.length} mentores, ${students.length} alumnos`);
+    logger.debug(`📊 Cargados: ${mentors.length} mentores, ${students.length} alumnos`);
 
     return NextResponse.json({ mentors, students });
   } catch (error) {
-    console.error('❌ Error cargando datos:', error);
+    logger.error('❌ Error cargando datos:', error);
     return NextResponse.json({ error: 'Error cargando datos' }, { status: 500 });
   }
 }
@@ -109,14 +110,14 @@ export async function POST(request: Request) {
       data: { assignedMentorId: Number(mentorId) }
     });
 
-    console.log(`✅ Asignación exitosa: Estudiante ${studentId} → Mentor ${mentorId}`);
+    logger.debug(`✅ Asignación exitosa: Estudiante ${studentId} → Mentor ${mentorId}`);
 
     return NextResponse.json({ 
       success: true,
       message: `${student.nombre} asignado a ${mentor.nombre}`
     });
   } catch (error: any) {
-    console.error('❌ Error al asignar:', error);
+    logger.error('❌ Error al asignar:', error);
     return NextResponse.json({ error: 'Error al asignar mentor' }, { status: 500 });
   }
 }
@@ -140,11 +141,11 @@ export async function DELETE(request: Request) {
       data: { assignedMentorId: null }
     });
 
-    console.log(`🔓 Desvinculado: Estudiante ${studentId}`);
+    logger.debug(`🔓 Desvinculado: Estudiante ${studentId}`);
 
     return NextResponse.json({ success: true, message: 'Mentor desvinculado' });
   } catch (error) {
-    console.error('❌ Error al desvincular:', error);
+    logger.error('❌ Error al desvincular:', error);
     return NextResponse.json({ error: 'Error al desvincular' }, { status: 500 });
   }
 }

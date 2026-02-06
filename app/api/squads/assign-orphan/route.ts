@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/squads/assign-orphan
@@ -157,7 +158,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Error assigning orphan:', error);
+    logger.error('Error assigning orphan:', error);
     return NextResponse.json(
       { success: false, error: 'Error al asignar participante' },
       { status: 500 }

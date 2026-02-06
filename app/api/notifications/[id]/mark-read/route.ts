@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { PrismaClient } from '@prisma/client';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -68,7 +69,7 @@ export async function PATCH(
     });
 
   } catch (error) {
-    console.error('Error marking notification as read:', error);
+    logger.error('Error marking notification as read:', error);
     return NextResponse.json(
       { error: 'Error al marcar notificación como leída' },
       { status: 500 }

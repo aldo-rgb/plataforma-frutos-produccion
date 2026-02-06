@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/mentor/my-mentorados
@@ -16,7 +17,7 @@ export async function GET(req: Request) {
 
     const mentorId = session.user.id;
 
-    console.log('🔍 Buscando mentorados para mentor ID:', mentorId);
+    logger.debug('🔍 Buscando mentorados para mentor ID:', mentorId);
 
     // Verificar rol
     const mentor = await prisma.usuario.findUnique({
@@ -50,9 +51,9 @@ export async function GET(req: Request) {
       orderBy: { nombre: 'asc' }
     });
 
-    console.log('📊 Mentorados encontrados:', mentorados.length);
+    logger.debug('📊 Mentorados encontrados:', mentorados.length);
     mentorados.forEach(m => {
-      console.log(`  - ${m.nombre} (ID: ${m.id}) - Carta:`, m.CartaFrutos[0] ? { id: m.CartaFrutos[0].id, estado: m.CartaFrutos[0].estado } : 'sin carta');
+      logger.debug(`  - ${m.nombre} (ID: ${m.id}) - Carta:`, m.CartaFrutos[0] ? { id: m.CartaFrutos[0].id, estado: m.CartaFrutos[0].estado } : 'sin carta');
     });
 
     // Obtener estadísticas de tareas para cada mentorado
@@ -123,7 +124,7 @@ export async function GET(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error obteniendo mentorados:', error);
+    logger.error('❌ Error obteniendo mentorados:', error);
     return NextResponse.json(
       { error: 'Error al obtener mentorados', details: error.message },
       { status: 500 }

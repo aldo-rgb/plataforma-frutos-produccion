@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/checkout/validate-code
@@ -119,7 +120,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Error validating code:', error);
+    logger.error('Error validating code:', error);
     return NextResponse.json(
       { success: false, error: 'Error al validar código' },
       { status: 500 }

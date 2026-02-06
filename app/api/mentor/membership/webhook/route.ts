@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import type Stripe from 'stripe';
+import logger from '@/lib/logger';
 
 // Stripe se inicializa solo si hay API key
 let stripe: any = null;
@@ -37,11 +38,11 @@ export async function POST(req: Request) {
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
     } catch (err: any) {
-      console.error('Webhook signature verification failed:', err.message);
+      logger.error('Webhook signature verification failed:', err.message);
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
-    console.log('📥 Webhook event received:', event.type);
+    logger.debug('📥 Webhook event received:', event.type);
 
     // Renovación manual completada (checkout.session.completed)
     if (event.type === 'checkout.session.completed') {
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
       const renewalType = session.metadata?.renewalType; // "manual" or "subscription"
 
       if (!mentorId) {
-        console.error('Missing mentorId in metadata');
+        logger.error('Missing mentorId in metadata');
         return NextResponse.json({ error: 'Missing metadata' }, { status: 400 });
       }
 
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
       });
 
       if (!mentor) {
-        console.error('Mentor not found:', mentorId);
+        logger.error('Mentor not found:', mentorId);
         return NextResponse.json({ error: 'Mentor not found' }, { status: 404 });
       }
 
@@ -110,7 +111,7 @@ export async function POST(req: Request) {
         });
       });
 
-      console.log(`✅ Membresía renovada para mentor ${mentorId} hasta ${newExpiryDate.toISOString()}`);
+      logger.debug(`✅ Membresía renovada para mentor ${mentorId} hasta ${newExpiryDate.toISOString()}`);
 
       // TODO: Enviar email de confirmación
       // await sendEmail({
@@ -141,7 +142,7 @@ export async function POST(req: Request) {
       });
 
       if (!mentor) {
-        console.error('Mentor not found for subscription:', subscriptionId);
+        logger.error('Mentor not found for subscription:', subscriptionId);
         return NextResponse.json({ error: 'Mentor not found' }, { status: 404 });
       }
 
@@ -184,7 +185,7 @@ export async function POST(req: Request) {
         });
       });
 
-      console.log(`✅ Auto-renovación exitosa para mentor ${mentor.id}`);
+      logger.debug(`✅ Auto-renovación exitosa para mentor ${mentor.id}`);
 
       return NextResponse.json({ received: true, status: 'auto-renewed' });
     }
@@ -200,7 +201,7 @@ export async function POST(req: Request) {
       });
 
       if (!mentor) {
-        console.error('Mentor not found for failed payment:', subscriptionId);
+        logger.error('Mentor not found for failed payment:', subscriptionId);
         return NextResponse.json({ error: 'Mentor not found' }, { status: 404 });
       }
 
@@ -230,7 +231,7 @@ export async function POST(req: Request) {
         });
       });
 
-      console.log(`❌ Fallo en renovación automática para mentor ${mentor.id}`);
+      logger.debug(`❌ Fallo en renovación automática para mentor ${mentor.id}`);
 
       // TODO: Enviar email de alerta
       // await sendEmail({
@@ -254,7 +255,7 @@ export async function POST(req: Request) {
       });
 
       if (!mentor) {
-        console.error('Mentor not found for deleted subscription:', subscriptionId);
+        logger.error('Mentor not found for deleted subscription:', subscriptionId);
         return NextResponse.json({ error: 'Mentor not found' }, { status: 404 });
       }
 
@@ -279,7 +280,7 @@ export async function POST(req: Request) {
         });
       });
 
-      console.log(`ℹ️ Suscripción cancelada para mentor ${mentor.id}`);
+      logger.debug(`ℹ️ Suscripción cancelada para mentor ${mentor.id}`);
 
       return NextResponse.json({ received: true, status: 'subscription-cancelled' });
     }
@@ -288,7 +289,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ received: true, status: 'unhandled' });
 
   } catch (error) {
-    console.error('Webhook error:', error);
+    logger.error('Webhook error:', error);
     return NextResponse.json(
       { error: 'Webhook error' },
       { status: 500 }

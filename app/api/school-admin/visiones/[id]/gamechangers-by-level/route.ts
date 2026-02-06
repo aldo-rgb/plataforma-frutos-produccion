@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET: Obtener Game Changers filtrados por nivel
 export async function GET(
@@ -69,7 +70,7 @@ export async function GET(
 
     return NextResponse.json(formatted);
   } catch (error) {
-    console.error('Error fetching game changers by level:', error);
+    logger.error('Error fetching game changers by level:', error);
     return NextResponse.json(
       { error: 'Error al obtener game changers' },
       { status: 500 }

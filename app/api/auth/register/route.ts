@@ -1,16 +1,33 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
+import logger from '@/lib/logger';
+import { registerSchema, validateData, getValidationErrorMessage } from '@/lib/validations';
 
 export async function POST(request: Request) {
   try {
+    // Rate limiting - muy restrictivo para registro
+    const { result, response } = rateLimit(request, RateLimitPresets.auth);
+    if (response) {
+      logger.warn('Rate limit exceeded on register');
+      return response;
+    }
+
     const body = await request.json();
-    console.log('📝 Registro recibido:', { 
-      nombre: body.nombre,
+    
+    // Validar datos con Zod
+    const validation = validateData(registerSchema, body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { success: false, error: getValidationErrorMessage(validation.details) },
+        { status: 400 }
+      );
+    }
+    
+    logger.debug('Registro recibido', { 
       email: body.email,
       organizationId: body.organizationId,
-      referralCode: body.referralCode,
-      expectations: body.expectations
     });
     
     const { 
@@ -29,7 +46,7 @@ export async function POST(request: Request) {
       children,
       goals,
       expectations
-    } = body;
+    } = validation.data;
 
     // Validaciones básicas
     if (!nombre || !apodo || !telefono || !horarioLlamada || !email || !password) {
@@ -136,9 +153,9 @@ export async function POST(request: Request) {
           data: { invitedCount: { increment: 1 } }
         });
         
-        console.log(`✅ Referido encontrado: Usuario ${referrer.id} invitó con texto "${invitedByText}"`);
+        logger.debug(`✅ Referido encontrado: Usuario ${referrer.id} invitó con texto "${invitedByText}"`);
       } else {
-        console.log(`ℹ️ No se encontró referido para "${invitedByText}", pero se guardará el texto`);
+        logger.debug(`ℹ️ No se encontró referido para "${invitedByText}", pero se guardará el texto`);
       }
     }
 
@@ -189,7 +206,7 @@ export async function POST(request: Request) {
       });
 
       if (usersToLink.length > 0) {
-        console.log(`🔗 Encontrados ${usersToLink.length} usuarios pendientes de ligar con ${nombre}:`);
+        logger.debug(`🔗 Encontrados ${usersToLink.length} usuarios pendientes de ligar con ${nombre}:`);
         
         for (const userToLink of usersToLink) {
           // Verificar que el nombre coincida (búsqueda flexible)
@@ -209,12 +226,12 @@ export async function POST(request: Request) {
               data: { invitedCount: { increment: 1 } }
             });
             
-            console.log(`  ✅ ${userToLink.nombre} (ID: ${userToLink.id}) ligado a ${nombre} (ID: ${newUser.id})`);
+            logger.debug(`  ✅ ${userToLink.nombre} (ID: ${userToLink.id}) ligado a ${nombre} (ID: ${newUser.id})`);
           }
         }
       }
     } catch (linkError) {
-      console.error('Error al ligar usuarios pendientes:', linkError);
+      logger.error('Error al ligar usuarios pendientes:', linkError);
       // No fallar el registro si falla el ligado
     }
 
@@ -243,9 +260,9 @@ export async function POST(request: Request) {
 
       if (nextVision) {
         finalVisionId = nextVision.id;
-        console.log(`🎯 Visión BASIC encontrada automáticamente: ${nextVision.nombre} (ID: ${nextVision.id})`);
+        logger.debug(`🎯 Visión BASIC encontrada automáticamente: ${nextVision.nombre} (ID: ${nextVision.id})`);
       } else {
-        console.warn(`⚠️ No hay visión BASIC disponible para organización ${finalOrganizationId}`);
+        logger.warn(`⚠️ No hay visión BASIC disponible para organización ${finalOrganizationId}`);
       }
     }
 
@@ -270,12 +287,12 @@ export async function POST(request: Request) {
             }
           });
 
-          console.log(`✅ Usuario ${newUser.id} inscrito en visión ${finalVisionId}`);
+          logger.debug(`✅ Usuario ${newUser.id} inscrito en visión ${finalVisionId}`);
         } else {
-          console.warn(`⚠️ Visión ${finalVisionId} no tiene coordinador asignado`);
+          logger.warn(`⚠️ Visión ${finalVisionId} no tiene coordinador asignado`);
         }
       } catch (error) {
-        console.error('Error al inscribir usuario en visión:', error);
+        logger.error('Error al inscribir usuario en visión:', error);
         // No fallar el registro si falla la inscripción
       }
     }
@@ -287,7 +304,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error registering user:', error);
+    logger.error('Error registering user:', error);
     return NextResponse.json(
       { success: false, error: 'Error al registrar usuario' },
       { status: 500 }

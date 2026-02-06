@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { uploadAudio } from '@/lib/cloudinary'
+import logger from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Error uploading salto cuantico audio:', error)
+    logger.error('Error uploading salto cuantico audio:', error)
     return NextResponse.json({ 
       error: 'Error al subir el audio',
       details: error?.message 

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { PrismaClient } from "@prisma/client"
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient()
 
@@ -80,7 +81,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error("Error al obtener pre-registros:", error)
+    logger.error("Error al obtener pre-registros:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }
@@ -132,7 +133,7 @@ export async function PATCH(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error("Error al actualizar pre-registro:", error)
+    logger.error("Error al actualizar pre-registro:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }
@@ -165,7 +166,7 @@ export async function PUT(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error("Error en cron de expiración:", error)
+    logger.error("Error en cron de expiración:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }

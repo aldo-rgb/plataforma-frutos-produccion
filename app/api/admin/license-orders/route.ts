@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/admin/license-orders
@@ -51,7 +52,7 @@ export async function GET(req: NextRequest) {
       orders,
     });
   } catch (error) {
-    console.error('❌ Error al obtener órdenes:', error);
+    logger.error('❌ Error al obtener órdenes:', error);
     return NextResponse.json(
       {
         success: false,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { processBacklogForAllPaidLevels } from '@/lib/backlog-ticket';
+import logger from '@/lib/logger';
 
 // API para actualizar automáticamente los estados de asistencia
 // Puede ser llamado por Vercel Cron Jobs o manualmente
@@ -245,7 +246,7 @@ export async function POST(request: NextRequest) {
             
             if (ticketResult.success && ticketResult.totalTickets > 0) {
               results.backlogTicketsCreated += ticketResult.totalTickets;
-              console.log(`🎫 ${ticketResult.totalTickets} Ticket(s) BACKLOG creados para usuario ${enrollment.userId} -> ${ticketResult.levelsProcessed.join(', ')}`);
+              logger.debug(`🎫 ${ticketResult.totalTickets} Ticket(s) BACKLOG creados para usuario ${enrollment.userId} -> ${ticketResult.levelsProcessed.join(', ')}`);
             }
             
             // Contar los que ya habían usado su oportunidad
@@ -309,7 +310,7 @@ export async function POST(request: NextRequest) {
             
             if (ticketResult.success) {
               results.backlogTicketsCreated += ticketResult.totalTickets;
-              console.log(`🎫 ${ticketResult.totalTickets} Ticket(s) BACKLOG ADVANCED creados para usuario ${enrollment.userId}`);
+              logger.debug(`🎫 ${ticketResult.totalTickets} Ticket(s) BACKLOG ADVANCED creados para usuario ${enrollment.userId}`);
             }
             
             const alreadyUsed = ticketResult.ticketsCreated.filter(t => t.alreadyUsedBacklog).length;
@@ -367,7 +368,7 @@ export async function POST(request: NextRequest) {
             
             if (ticketResult.success) {
               results.backlogTicketsCreated += ticketResult.totalTickets;
-              console.log(`🎫 Ticket BACKLOG PL creado para usuario ${enrollment.userId}`);
+              logger.debug(`🎫 Ticket BACKLOG PL creado para usuario ${enrollment.userId}`);
             }
             
             const alreadyUsed = ticketResult.ticketsCreated.filter(t => t.alreadyUsedBacklog).length;
@@ -382,7 +383,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log('📊 Resultado de actualización automática de asistencia:', results);
+    logger.debug('📊 Resultado de actualización automática de asistencia:', results);
 
     return NextResponse.json({
       success: true,
@@ -392,7 +393,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error en cron de asistencia:', error);
+    logger.error('❌ Error en cron de asistencia:', error);
     return NextResponse.json(
       { error: 'Error al procesar actualización de asistencia', message: error?.message },
       { status: 500 }

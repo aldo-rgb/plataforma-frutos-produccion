@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,7 +49,7 @@ export async function GET() {
     return NextResponse.json({ usuarios });
 
   } catch (error) {
-    console.error('Error loading usuarios disponibles:', error);
+    logger.error('Error loading usuarios disponibles:', error);
     return NextResponse.json({ error: 'Error al cargar usuarios' }, { status: 500 });
   }
 }

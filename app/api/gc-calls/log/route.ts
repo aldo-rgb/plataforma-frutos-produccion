@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 const GC_ROLES = ['GAMECHANGER', 'TRAINER', 'SCHOOL_ADMIN', 'COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
 
@@ -103,7 +104,7 @@ export async function GET(request: Request) {
       })),
     });
   } catch (error) {
-    console.error('Error fetching call logs:', error);
+    logger.error('Error fetching call logs:', error);
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }
@@ -261,7 +262,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Error creating call log:', error);
+    logger.error('Error creating call log:', error);
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }
@@ -337,7 +338,7 @@ export async function PATCH(request: Request) {
       log,
     });
   } catch (error) {
-    console.error('Error updating call log:', error);
+    logger.error('Error updating call log:', error);
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }

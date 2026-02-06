@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 const AREA_MAP: Record<string, string> = {
   // IDs originales
@@ -31,7 +32,7 @@ export async function PUT(req: NextRequest) {
     areaId = body.areaId;
     const declaracion = body.declaracion;
 
-    console.log('🔄 Actualizando declaración:', { areaId, declaracion });
+    logger.debug('🔄 Actualizando declaración:', { areaId, declaracion });
 
     if (!areaId || !declaracion) {
       return NextResponse.json(
@@ -43,8 +44,8 @@ export async function PUT(req: NextRequest) {
     // Validar que el área existe
     const areaKey = AREA_MAP[areaId];
     if (!areaKey) {
-      console.error('❌ Área no encontrada en AREA_MAP:', areaId);
-      console.error('❌ Áreas disponibles:', Object.keys(AREA_MAP));
+      logger.error('❌ Área no encontrada en AREA_MAP:', areaId);
+      logger.error('❌ Áreas disponibles:', Object.keys(AREA_MAP));
       return NextResponse.json({ error: `Área inválida: ${areaId}` }, { status: 400 });
     }
 
@@ -60,8 +61,8 @@ export async function PUT(req: NextRequest) {
     // Construir el nombre del campo dinámicamente
     const fieldName = `${areaKey}Declaracion`;
 
-    console.log('📝 Actualizando campo:', fieldName);
-    console.log('📝 Carta ID:', carta.id);
+    logger.debug('📝 Actualizando campo:', fieldName);
+    logger.debug('📝 Carta ID:', carta.id);
 
     // Actualizar la declaración en CartaFrutos
     const updatedCarta = await prisma.cartaFrutos.update({
@@ -88,7 +89,7 @@ export async function PUT(req: NextRequest) {
       }
     });
 
-    console.log('✅ Declaración actualizada en CartaFrutos y Metas:', fieldName);
+    logger.debug('✅ Declaración actualizada en CartaFrutos y Metas:', fieldName);
 
     return NextResponse.json({
       success: true,
@@ -96,9 +97,9 @@ export async function PUT(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error actualizando declaración:', error);
-    console.error('❌ Stack:', error.stack);
-    console.error('❌ Message:', error.message);
+    logger.error('❌ Error actualizando declaración:', error);
+    logger.error('❌ Stack:', error.stack);
+    logger.error('❌ Message:', error.message);
     return NextResponse.json(
       { 
         error: 'Error al actualizar la declaración',

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/mentor/disciplina/horarios
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error al obtener horarios de disciplina:', error);
+    logger.error('❌ Error al obtener horarios de disciplina:', error);
     return NextResponse.json(
       { 
         error: 'Error al obtener horarios de disciplina',

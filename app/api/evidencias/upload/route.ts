@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/evidencias/upload
@@ -85,7 +86,7 @@ export async function POST(req: Request) {
       try {
         await writeFile(filePath, buffer);
       } catch (writeError) {
-        console.error('Error writing file:', writeError);
+        logger.error('Error writing file:', writeError);
         const { mkdir } = await import('fs/promises');
         await mkdir(uploadDir, { recursive: true });
         await writeFile(filePath, buffer);
@@ -131,7 +132,7 @@ export async function POST(req: Request) {
         }
       });
 
-      console.log(`✅ Evidencia CARTA subida para tarea ${taskId} por usuario ${userId} (${userTier}) - Estado: ${estadoInicial}`);
+      logger.debug(`✅ Evidencia CARTA subida para tarea ${taskId} por usuario ${userId} (${userTier}) - Estado: ${estadoInicial}`);
 
       return NextResponse.json({
         success: true,
@@ -229,7 +230,7 @@ export async function POST(req: Request) {
       try {
         await writeFile(filePath, buffer);
       } catch (writeError) {
-        console.error('Error writing file:', writeError);
+        logger.error('Error writing file:', writeError);
         const { mkdir } = await import('fs/promises');
         await mkdir(uploadDir, { recursive: true });
         await writeFile(filePath, buffer);
@@ -248,7 +249,7 @@ export async function POST(req: Request) {
         }
       });
 
-      console.log(`✅ Evidencia ADMIN subida para submission ${submissionId} por usuario ${userId}`);
+      logger.debug(`✅ Evidencia ADMIN subida para submission ${submissionId} por usuario ${userId}`);
 
       return NextResponse.json({
         success: true,
@@ -266,7 +267,7 @@ export async function POST(req: Request) {
     );
 
   } catch (error: any) {
-    console.error('❌ Error subiendo evidencia:', error);
+    logger.error('❌ Error subiendo evidencia:', error);
     return NextResponse.json(
       { error: 'Error al subir evidencia', details: error.message },
       { status: 500 }

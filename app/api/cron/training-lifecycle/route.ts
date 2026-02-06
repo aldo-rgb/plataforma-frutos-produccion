@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Cron job para gestionar el ciclo de vida de los entrenamientos
 // Se ejecuta cada hora para:
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
           }
         });
         results.registrationOpened++;
-        console.log(`📋 Registro abierto para: ${product.name}`);
+        logger.debug(`📋 Registro abierto para: ${product.name}`);
 
         // Enviar notificaciones por correo si no se han enviado
         if (!product.registrationNotifiedAt) {
@@ -110,7 +111,7 @@ export async function POST(request: NextRequest) {
             }
           });
           results.trainingStarted++;
-          console.log(`🏃 Entrenamiento iniciado: ${product.name}`);
+          logger.debug(`🏃 Entrenamiento iniciado: ${product.name}`);
         }
       } catch (error: any) {
         results.errors.push(`Error iniciando entrenamiento ${product.id}: ${error.message}`);
@@ -166,14 +167,14 @@ export async function POST(request: NextRequest) {
             }
           });
           results.trainingFinished++;
-          console.log(`✅ Entrenamiento auto-finalizado: ${product.name}`);
+          logger.debug(`✅ Entrenamiento auto-finalizado: ${product.name}`);
         } catch (error: any) {
           results.errors.push(`Error auto-finalizando ${product.id}: ${error.message}`);
         }
       }
     }
 
-    console.log('📊 Resultado del cron de entrenamientos:', results);
+    logger.debug('📊 Resultado del cron de entrenamientos:', results);
 
     return NextResponse.json({
       success: true,
@@ -183,7 +184,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error en cron de entrenamientos:', error);
+    logger.error('❌ Error en cron de entrenamientos:', error);
     return NextResponse.json(
       { error: 'Error procesando entrenamientos', message: error?.message },
       { status: 500 }
@@ -230,11 +231,11 @@ async function sendRegistrationOpenNotifications(product: any) {
 
         // TODO: Enviar emails usando Resend
         // Por ahora solo creamos notificaciones en el sistema
-        console.log(`📧 Notificaciones enviadas para apertura de ${product.name}`);
+        logger.debug(`📧 Notificaciones enviadas para apertura de ${product.name}`);
       }
     }
   } catch (error) {
-    console.error('Error enviando notificaciones:', error);
+    logger.error('Error enviando notificaciones:', error);
   }
 }
 

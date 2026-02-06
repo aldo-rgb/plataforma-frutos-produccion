@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 // POST: Registrar una interacción de llamada
 export async function POST(
@@ -61,7 +62,7 @@ export async function POST(
 
     return NextResponse.json(interaction);
   } catch (error) {
-    console.error('Error creating call interaction:', error);
+    logger.error('Error creating call interaction:', error);
     return NextResponse.json(
       { error: 'Error al registrar interacción' },
       { status: 500 }

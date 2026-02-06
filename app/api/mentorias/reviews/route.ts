@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { crearReview } from '@/lib/mentor-rating-service';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/mentorias/reviews
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error al crear reseña:', error);
+    logger.error('❌ Error al crear reseña:', error);
     
     return NextResponse.json(
       { 

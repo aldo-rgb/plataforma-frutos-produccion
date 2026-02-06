@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/coordinador/participantes-lista
@@ -214,7 +215,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching participantes lista:', error);
+    logger.error('Error fetching participantes lista:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener la lista de participantes' },
       { status: 500 }

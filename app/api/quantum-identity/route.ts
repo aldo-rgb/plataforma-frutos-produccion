@@ -3,21 +3,22 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@supabase/supabase-js';
+import logger from '@/lib/logger';
 
 // Log de configuración al inicio
-console.log('🔧 quantum-identity API - Verificando configuración:');
-console.log('  - OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? '✅ Configurado' : '❌ FALTA');
-console.log('  - NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Configurado' : '❌ FALTA');
-console.log('  - SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Configurado' : '❌ FALTA');
+logger.debug('🔧 quantum-identity API - Verificando configuración:');
+logger.debug('  - OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? '✅ Configurado' : '❌ FALTA');
+logger.debug('  - NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Configurado' : '❌ FALTA');
+logger.debug('  - SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Configurado' : '❌ FALTA');
 
 // OpenAI se inicializa solo si hay API key
 let openai: any = null;
 if (process.env.OPENAI_API_KEY) {
   const OpenAI = require('openai');
   openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  console.log('✅ OpenAI client inicializado');
+  logger.debug('✅ OpenAI client inicializado');
 } else {
-  console.error('❌ OPENAI_API_KEY no está configurada - la generación de avatares no funcionará');
+  logger.error('❌ OPENAI_API_KEY no está configurada - la generación de avatares no funcionará');
 }
 
 // Función para obtener cliente de Supabase (lazy initialization)
@@ -37,7 +38,7 @@ function getSupabaseClient() {
  */
 async function downloadAndUploadToSupabase(imageUrl: string, userId: number): Promise<string> {
   try {
-    console.log('📥 Descargando imagen de:', imageUrl);
+    logger.debug('📥 Descargando imagen de:', imageUrl);
     
     // Descargar la imagen
     const response = await fetch(imageUrl);
@@ -53,7 +54,7 @@ async function downloadAndUploadToSupabase(imageUrl: string, userId: number): Pr
     const fileName = `${userId}-quantum-${timestamp}.png`;
     const filePath = `profile-images/${fileName}`;
     
-    console.log('📤 Subiendo a Supabase Storage:', filePath);
+    logger.debug('📤 Subiendo a Supabase Storage:', filePath);
     
     // Subir a Supabase Storage
     const { data, error } = await getSupabaseClient().storage
@@ -64,7 +65,7 @@ async function downloadAndUploadToSupabase(imageUrl: string, userId: number): Pr
       });
     
     if (error) {
-      console.error('❌ Error subiendo a Supabase:', error);
+      logger.error('❌ Error subiendo a Supabase:', error);
       throw new Error(`Error subiendo a Supabase: ${error.message}`);
     }
     
@@ -73,11 +74,11 @@ async function downloadAndUploadToSupabase(imageUrl: string, userId: number): Pr
       .from('mentor-assets')
       .getPublicUrl(filePath);
     
-    console.log('✅ Imagen subida exitosamente a Supabase:', publicUrl);
+    logger.debug('✅ Imagen subida exitosamente a Supabase:', publicUrl);
     
     return publicUrl;
   } catch (error) {
-    console.error('❌ Error en downloadAndUploadToSupabase:', error);
+    logger.error('❌ Error en downloadAndUploadToSupabase:', error);
     throw error;
   }
 }
@@ -88,7 +89,7 @@ async function downloadAndUploadToSupabase(imageUrl: string, userId: number): Pr
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log('🚀 POST /api/quantum-identity - Iniciando generación de identidad cuántica');
+    logger.debug('🚀 POST /api/quantum-identity - Iniciando generación de identidad cuántica');
     
     if (!openai) {
       return NextResponse.json({ error: 'Servicio de IA no configurado' }, { status: 503 });
@@ -97,22 +98,22 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
-      console.log('❌ No hay sesión de usuario');
+      logger.debug('❌ No hay sesión de usuario');
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    console.log('✅ Usuario autenticado:', session.user.email);
+    logger.debug('✅ Usuario autenticado:', session.user.email);
 
     // Obtener el género del body
     const body = await request.json();
     const { gender } = body;
     
     if (!gender || !['male', 'female', 'neutral'].includes(gender)) {
-      console.log('❌ Género no válido:', gender);
+      logger.debug('❌ Género no válido:', gender);
       return NextResponse.json({ error: 'Género requerido' }, { status: 400 });
     }
 
-    console.log('✅ Género seleccionado:', gender);
+    logger.debug('✅ Género seleccionado:', gender);
 
     const usuario = await prisma.usuario.findUnique({
       where: { email: session.user.email },
@@ -140,21 +141,21 @@ export async function POST(request: NextRequest) {
     });
 
     if (!usuario) {
-      console.log('❌ Usuario no encontrado en BD');
+      logger.debug('❌ Usuario no encontrado en BD');
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    console.log('✅ Usuario encontrado:', usuario.id, usuario.nombre);
+    logger.debug('✅ Usuario encontrado:', usuario.id, usuario.nombre);
 
     // Permitir regenerar avatar si ya existe (solo registramos en log)
     if (usuario.profileImage) {
-      console.log('ℹ️ Usuario ya tiene profileImage, pero permitiendo regeneración:', usuario.profileImage);
+      logger.debug('ℹ️ Usuario ya tiene profileImage, pero permitiendo regeneración:', usuario.profileImage);
     }
 
     // Obtener metas si existen (opcional para el avatar)
     const carta = usuario.CartaFrutos[0];
     const metas = carta?.Meta || [];
-    console.log(`📊 Metas encontradas: ${metas.length}`);
+    logger.debug(`📊 Metas encontradas: ${metas.length}`);
 
     // Construir contexto para la IA (usar metas si existen, sino contexto genérico)
     const metasText = metas.length > 0 
@@ -171,7 +172,7 @@ METAS DEL USUARIO:
 ${metasText}
 `;
 
-    console.log('🤖 Llamando a OpenAI para generar designaciones...');
+    logger.debug('🤖 Llamando a OpenAI para generar designaciones...');
 
     // Generar designaciones con OpenAI
     const completion = await openai.chat.completions.create({
@@ -239,16 +240,16 @@ RESPONDE ÚNICAMENTE CON UN JSON en este formato exacto:
       response_format: { type: "json_object" }
     });
 
-    console.log('✅ Respuesta de OpenAI recibida');
+    logger.debug('✅ Respuesta de OpenAI recibida');
 
     const iaResponse = JSON.parse(completion.choices[0].message.content || '{}');
-    console.log('📝 Candidatos generados:', iaResponse.candidates?.length || 0);
+    logger.debug('📝 Candidatos generados:', iaResponse.candidates?.length || 0);
 
     // Guardar las opciones en la base de datos para referencia
-    console.log('💾 Intentando guardar en BD...');
-    console.log('Usuario ID:', usuario.id);
-    console.log('Candidates:', JSON.stringify(iaResponse.candidates));
-    console.log('Gender:', gender);
+    logger.debug('💾 Intentando guardar en BD...');
+    logger.debug('Usuario ID:', usuario.id);
+    logger.debug('Candidates:', JSON.stringify(iaResponse.candidates));
+    logger.debug('Gender:', gender);
     
     const identityRecord = await prisma.quantumIdentity.create({
       data: {
@@ -259,11 +260,11 @@ RESPONDE ÚNICAMENTE CON UN JSON en este formato exacto:
         gender: gender  // Guardar el género seleccionado
       }
     }).catch((dbError) => {
-      console.error('❌ Error en Prisma create:', dbError);
+      logger.error('❌ Error en Prisma create:', dbError);
       throw new Error(`Error de base de datos: ${dbError.message}`);
     });
 
-    console.log('✅ Identidad guardada en BD con ID:', identityRecord.id);
+    logger.debug('✅ Identidad guardada en BD con ID:', identityRecord.id);
 
     return NextResponse.json({
       success: true,
@@ -277,8 +278,8 @@ RESPONDE ÚNICAMENTE CON UN JSON en este formato exacto:
     });
 
   } catch (error) {
-    console.error('❌ Error generando identidad cuántica:', error);
-    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack');
+    logger.error('❌ Error generando identidad cuántica:', error);
+    logger.error('Stack trace:', error instanceof Error ? error.stack : 'No stack');
     
     return NextResponse.json(
       { 
@@ -441,9 +442,9 @@ ALWAYS:
 ✅ High-tech futuristic white armor with glowing accents
 ✅ Clean polished digital art aesthetic`;
 
-    console.log('🎨 Generando avatar Anime/Digital 3D con DALL-E...');
-    console.log('Rol del Consejo:', designation);
-    console.log('Arquetipo:', archetype);
+    logger.debug('🎨 Generando avatar Anime/Digital 3D con DALL-E...');
+    logger.debug('Rol del Consejo:', designation);
+    logger.debug('Arquetipo:', archetype);
 
     // Generar avatar con DALL-E
     const imageResponse = await openai.images.generate({
@@ -455,18 +456,18 @@ ALWAYS:
     });
 
     const temporaryAvatarUrl = imageResponse.data[0].url;
-    console.log('✅ Avatar generado por DALL-E (temporal):', temporaryAvatarUrl);
+    logger.debug('✅ Avatar generado por DALL-E (temporal):', temporaryAvatarUrl);
 
     // Descargar y subir a Supabase para tener URL permanente
-    console.log('🔄 Descargando y subiendo a Supabase Storage...');
+    logger.debug('🔄 Descargando y subiendo a Supabase Storage...');
     const permanentAvatarUrl = await downloadAndUploadToSupabase(temporaryAvatarUrl!, usuario.id);
-    console.log('✅ Avatar guardado permanentemente:', permanentAvatarUrl);
+    logger.debug('✅ Avatar guardado permanentemente:', permanentAvatarUrl);
 
     // ═══════════════════════════════════════════════════════════════
     // GUARDAR FOTO ANTERIOR EN THE VAULT (antes de reemplazar)
     // ═══════════════════════════════════════════════════════════════
     if (usuario.profileImage) {
-      console.log('📸 Guardando foto anterior en The Vault...');
+      logger.debug('📸 Guardando foto anterior en The Vault...');
       try {
         await prisma.avatarGenerationAttempt.create({
           data: {
@@ -477,17 +478,17 @@ ALWAYS:
             sourceImage: 'check-in-photo' // Indica que viene de fotos de check-in
           }
         });
-        console.log('✅ Foto anterior guardada en The Vault:', usuario.profileImage);
+        logger.debug('✅ Foto anterior guardada en The Vault:', usuario.profileImage);
       } catch (vaultError) {
-        console.error('⚠️ Error guardando foto en vault (continuando):', vaultError);
+        logger.error('⚠️ Error guardando foto en vault (continuando):', vaultError);
         // No bloquear el proceso si falla el guardado en vault
       }
     }
 
     // Actualizar usuario con la designación y avatar permanente
-    console.log('💾 Actualizando usuario con avatar permanente...');
-    console.log('Usuario ID:', usuario.id);
-    console.log('Avatar URL:', permanentAvatarUrl);
+    logger.debug('💾 Actualizando usuario con avatar permanente...');
+    logger.debug('Usuario ID:', usuario.id);
+    logger.debug('Avatar URL:', permanentAvatarUrl);
     
     await prisma.usuario.update({
       where: { id: usuario.id },
@@ -498,7 +499,7 @@ ALWAYS:
       }
     });
 
-    console.log('✅ Usuario actualizado exitosamente con profileImage');
+    logger.debug('✅ Usuario actualizado exitosamente con profileImage');
 
     // Actualizar el registro de identidad
     await prisma.quantumIdentity.update({
@@ -511,7 +512,7 @@ ALWAYS:
       }
     });
 
-    console.log('✅ QuantumIdentity actualizada a COMPLETED');
+    logger.debug('✅ QuantumIdentity actualizada a COMPLETED');
 
     return NextResponse.json({
       success: true,
@@ -521,10 +522,10 @@ ALWAYS:
     });
 
   } catch (error: any) {
-    console.error('Error seleccionando identidad:', error);
-    console.error('Error name:', error?.name);
-    console.error('Error message:', error?.message);
-    console.error('Error stack:', error?.stack);
+    logger.error('Error seleccionando identidad:', error);
+    logger.error('Error name:', error?.name);
+    logger.error('Error message:', error?.message);
+    logger.error('Error stack:', error?.stack);
     
     // Proporcionar mensajes de error más específicos
     let errorMessage = 'Error al generar avatar';

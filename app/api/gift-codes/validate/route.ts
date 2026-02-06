@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // POST - Validar código de regalo o código de pago (público, usado en checkout)
 export async function POST(request: Request) {
@@ -124,7 +125,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Error validating gift code:', error);
+    logger.error('Error validating gift code:', error);
     return NextResponse.json(
       { success: false, error: 'Error al validar código' },
       { status: 500 }

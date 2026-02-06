@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import logger from '@/lib/logger';
 
 // GET - Listar todas las locations
 export async function GET(req: NextRequest) {
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ locations });
   } catch (error: any) {
-    console.error('Error fetching locations:', error);
+    logger.error('Error fetching locations:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -106,7 +107,7 @@ export async function POST(req: NextRequest) {
       qrCodeHash // Devolver el hash para generar el QR físico
     }, { status: 201 });
   } catch (error: any) {
-    console.error('Error creating location:', error);
+    logger.error('Error creating location:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -142,7 +143,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ location });
   } catch (error: any) {
-    console.error('Error updating location:', error);
+    logger.error('Error updating location:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -179,7 +180,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ location });
   } catch (error: any) {
-    console.error('Error deleting location:', error);
+    logger.error('Error deleting location:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

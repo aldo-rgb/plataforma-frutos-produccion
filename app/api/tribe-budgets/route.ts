@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener presupuestos de la visión
 export async function GET(request: NextRequest) {
@@ -151,7 +152,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error al obtener presupuestos:', error);
+    logger.error('Error al obtener presupuestos:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
@@ -365,7 +366,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Error en presupuestos:', error);
+    logger.error('Error en presupuestos:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

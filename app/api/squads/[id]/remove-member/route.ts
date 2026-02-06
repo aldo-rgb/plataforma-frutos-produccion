@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/squads/[id]/remove-member
@@ -107,7 +108,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('Error removing member:', error);
+    logger.error('Error removing member:', error);
     return NextResponse.json(
       { success: false, error: 'Error al remover miembro' },
       { status: 500 }

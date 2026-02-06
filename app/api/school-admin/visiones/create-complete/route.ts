@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * Convierte una fecha string a Date de forma segura, evitando problemas de timezone.
@@ -160,9 +161,9 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    console.log(`✅ Visión completa creada: ${vision.nombre} (ID: ${vision.id})`);
-    console.log(`   Niveles habilitados: ${vision.enabledLevels.join(', ')}`);
-    console.log(`   Fechas: ${vision.startDate} - ${vision.endDate}`);
+    logger.debug(`✅ Visión completa creada: ${vision.nombre} (ID: ${vision.id})`);
+    logger.debug(`   Niveles habilitados: ${vision.enabledLevels.join(', ')}`);
+    logger.debug(`   Fechas: ${vision.startDate} - ${vision.endDate}`);
 
     // Crear los 3 productos asociados a esta visión
     const products = [];
@@ -194,7 +195,7 @@ export async function POST(req: NextRequest) {
         }
       });
       products.push(basicProduct);
-      console.log(`   ✅ Producto Básico creado: ${basicProduct.name} (ID: ${basicProduct.id})`);
+      logger.debug(`   ✅ Producto Básico creado: ${basicProduct.name} (ID: ${basicProduct.id})`);
     }
 
     // 2. Producto AVANZADO
@@ -224,7 +225,7 @@ export async function POST(req: NextRequest) {
         }
       });
       products.push(advancedProduct);
-      console.log(`   ✅ Producto Avanzado creado: ${advancedProduct.name} (ID: ${advancedProduct.id})`);
+      logger.debug(`   ✅ Producto Avanzado creado: ${advancedProduct.name} (ID: ${advancedProduct.id})`);
     }
 
     // 3. Producto LIDERATO
@@ -289,13 +290,13 @@ export async function POST(req: NextRequest) {
         }
       });
       products.push(plProduct);
-      console.log(`   ✅ Producto Liderato creado: ${plProduct.name} (ID: ${plProduct.id})`);
-      console.log(`      📅 Fin de Semana 1: ${weekend1?.startDate || 'N/A'} - ${weekend1?.endDate || 'N/A'}`);
-      console.log(`      📅 Fin de Semana 2: ${weekend2?.startDate || 'N/A'} - ${weekend2?.endDate || 'N/A'}`);
-      console.log(`      📅 Fin de Semana 3: ${weekend3?.startDate || 'N/A'} - ${weekend3?.endDate || 'N/A'}`);
+      logger.debug(`   ✅ Producto Liderato creado: ${plProduct.name} (ID: ${plProduct.id})`);
+      logger.debug(`      📅 Fin de Semana 1: ${weekend1?.startDate || 'N/A'} - ${weekend1?.endDate || 'N/A'}`);
+      logger.debug(`      📅 Fin de Semana 2: ${weekend2?.startDate || 'N/A'} - ${weekend2?.endDate || 'N/A'}`);
+      logger.debug(`      📅 Fin de Semana 3: ${weekend3?.startDate || 'N/A'} - ${weekend3?.endDate || 'N/A'}`);
     }
 
-    console.log(`✅ Total de productos creados: ${products.length}`);
+    logger.debug(`✅ Total de productos creados: ${products.length}`);
 
     // 🆕 Crear registros en VisionStaff para que aparezcan en la página de gestión
     const staffRecords = [];
@@ -379,7 +380,7 @@ export async function POST(req: NextRequest) {
         data: staffRecords,
         skipDuplicates: true, // Evitar errores si ya existen
       });
-      console.log(`✅ Registros de staff creados: ${staffRecords.length}`);
+      logger.debug(`✅ Registros de staff creados: ${staffRecords.length}`);
     }
 
     return NextResponse.json({
@@ -399,7 +400,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Error creating complete vision:', error);
+    logger.error('❌ Error creating complete vision:', error);
     return NextResponse.json(
       { success: false, error: 'Error al crear la visión completa' },
       { status: 500 }

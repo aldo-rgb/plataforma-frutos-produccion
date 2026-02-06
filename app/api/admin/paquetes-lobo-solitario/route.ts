@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/admin/paquetes-lobo-solitario
@@ -114,7 +115,7 @@ export async function GET(request: NextRequest) {
       stats,
     });
   } catch (error) {
-    console.error('Error al obtener paquetes lobo solitario:', error);
+    logger.error('Error al obtener paquetes lobo solitario:', error);
     return NextResponse.json(
       { error: 'Error al obtener los paquetes' },
       { status: 500 }

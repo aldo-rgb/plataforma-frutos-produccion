@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 const ALLOWED_ROLES = ['SCHOOL_ADMIN', 'ADMINISTRADOR', 'COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
 
@@ -30,7 +31,7 @@ export async function POST(
     const body = await request.json();
     const { gameChangerId } = body;
 
-    console.log('Toggle captain request:', { visionId, gameChangerId, body });
+    logger.debug('Toggle captain request:', { visionId, gameChangerId, body });
 
     if (!gameChangerId) {
       return NextResponse.json({ 
@@ -49,7 +50,7 @@ export async function POST(
       },
     });
 
-    console.log('Found VisionGameChanger:', visionGC);
+    logger.debug('Found VisionGameChanger:', visionGC);
 
     if (!visionGC) {
       return NextResponse.json({ 
@@ -100,7 +101,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('Error toggling captain:', error);
+    logger.error('Error toggling captain:', error);
     return NextResponse.json(
       { success: false, error: 'Error al actualizar capitán' },
       { status: 500 }

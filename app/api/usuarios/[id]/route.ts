@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -101,18 +102,18 @@ export async function PUT(
       }
     });
 
-    console.log(`✅ Usuario actualizado: ${usuarioActualizado.nombre} (${usuarioActualizado.email})`);
-    console.log(`   Rol: ${usuarioActualizado.rol}, Activo: ${usuarioActualizado.isActive}`);
+    logger.debug(`✅ Usuario actualizado: ${usuarioActualizado.nombre} (${usuarioActualizado.email})`);
+    logger.debug(`   Rol: ${usuarioActualizado.rol}, Activo: ${usuarioActualizado.isActive}`);
 
     // Si el email cambió, alertar que debe usar el nuevo para login
     if (email && email.trim().toLowerCase() !== body.email) {
-      console.log(`📧 Email actualizado: Nuevo correo para login → ${usuarioActualizado.email}`);
+      logger.debug(`📧 Email actualizado: Nuevo correo para login → ${usuarioActualizado.email}`);
     }
 
     // Si el rol cambió a MENTOR, loguear para visibilidad
     if (rol === 'MENTOR') {
-      console.log(`🎯 IMPORTANTE: Usuario ${usuarioActualizado.nombre} ahora es MENTOR`);
-      console.log(`   → Ahora aparecerá en el selector de "Gestión de Talentos"`);
+      logger.debug(`🎯 IMPORTANTE: Usuario ${usuarioActualizado.nombre} ahora es MENTOR`);
+      logger.debug(`   → Ahora aparecerá en el selector de "Gestión de Talentos"`);
     }
 
     return NextResponse.json({
@@ -122,7 +123,7 @@ export async function PUT(
     });
 
   } catch (error: any) {
-    console.error('❌ Error al actualizar usuario:', error);
+    logger.error('❌ Error al actualizar usuario:', error);
     
     // Error específico: usuario no encontrado
     if (error.code === 'P2025') {
@@ -196,7 +197,7 @@ export async function GET(
     return NextResponse.json(usuario);
 
   } catch (error: any) {
-    console.error('❌ Error al obtener usuario:', error);
+    logger.error('❌ Error al obtener usuario:', error);
     return NextResponse.json(
       { error: 'Error al obtener usuario' },
       { status: 500 }
@@ -256,8 +257,8 @@ export async function DELETE(
       }
     });
 
-    console.log(`🗑️ Usuario ELIMINADO: ${usuarioEliminado.nombre} (${usuarioEliminado.email})`);
-    console.log(`   ID: ${usuarioEliminado.id}, Rol: ${usuarioEliminado.rol}`);
+    logger.debug(`🗑️ Usuario ELIMINADO: ${usuarioEliminado.nombre} (${usuarioEliminado.email})`);
+    logger.debug(`   ID: ${usuarioEliminado.id}, Rol: ${usuarioEliminado.rol}`);
 
     return NextResponse.json({
       success: true,
@@ -266,7 +267,7 @@ export async function DELETE(
     });
 
   } catch (error: any) {
-    console.error('❌ Error eliminando usuario:', error);
+    logger.error('❌ Error eliminando usuario:', error);
 
     // Error: usuario no encontrado
     if (error.code === 'P2025') {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error verificando visitante:', error);
+    logger.error('Error verificando visitante:', error);
     return NextResponse.json(
       { error: 'Error al verificar' },
       { status: 500 }

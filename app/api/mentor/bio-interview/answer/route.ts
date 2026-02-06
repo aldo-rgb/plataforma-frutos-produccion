@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { processInterviewStep, type InterviewContext } from '@/lib/quantum-bio-writer';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function POST(request: Request) {
   try {
@@ -82,7 +83,7 @@ export async function POST(request: Request) {
     });
     
   } catch (error) {
-    console.error('Error processing interview answer:', error);
+    logger.error('Error processing interview answer:', error);
     return NextResponse.json(
       { error: 'Error al procesar respuesta' },
       { status: 500 }

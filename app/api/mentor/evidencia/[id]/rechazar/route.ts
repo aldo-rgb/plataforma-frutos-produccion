@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { emitToUser } from '@/lib/socket';
+import logger from '@/lib/logger';
 
 // PUT: Rechazar evidencia con comentario
 export async function PUT(
@@ -89,9 +90,9 @@ export async function PUT(
       })
     ]);
 
-    console.log(`🔴 Evidencia ${evidenciaId} RECHAZADA por ${mentor.nombre}`);
-    console.log(`   Usuario: ${evidencia.Usuario.nombre}`);
-    console.log(`   Comentario: "${comentario}"`);
+    logger.debug(`🔴 Evidencia ${evidenciaId} RECHAZADA por ${mentor.nombre}`);
+    logger.debug(`   Usuario: ${evidencia.Usuario.nombre}`);
+    logger.debug(`   Comentario: "${comentario}"`);
 
     // Enviar notificación en tiempo real
     try {
@@ -103,7 +104,7 @@ export async function PUT(
         accionTexto: evidencia.Accion?.texto || 'Acción'
       });
     } catch (socketError) {
-      console.error('Error al enviar notificación Socket.IO:', socketError);
+      logger.error('Error al enviar notificación Socket.IO:', socketError);
     }
 
     return NextResponse.json({ 
@@ -112,7 +113,7 @@ export async function PUT(
     }, { status: 200 });
 
   } catch (error) {
-    console.error('❌ Error al rechazar evidencia:', error);
+    logger.error('❌ Error al rechazar evidencia:', error);
     return NextResponse.json({ error: 'Error al rechazar evidencia' }, { status: 500 });
   }
 }

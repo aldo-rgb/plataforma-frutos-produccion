@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -23,7 +24,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Director sin organización asignada' }, { status: 400 });
     }
 
-    console.log('🔍 Director', usuario.id, 'cargando usuarios de organización', usuario.organizationId);
+    logger.debug('🔍 Director', usuario.id, 'cargando usuarios de organización', usuario.organizationId);
 
     // Obtener todos los usuarios (PARTICIPANTE y GAMECHANGER) de la organización del director
     const usuarios = await prisma.usuario.findMany({
@@ -60,7 +61,7 @@ export async function GET() {
       }
     });
 
-    console.log('✅ Usuarios encontrados:', usuarios.length);
+    logger.debug('✅ Usuarios encontrados:', usuarios.length);
 
     return NextResponse.json({
       success: true,
@@ -74,7 +75,7 @@ export async function GET() {
       }))
     });
   } catch (error) {
-    console.error('❌ Error fetching director usuarios:', error);
+    logger.error('❌ Error fetching director usuarios:', error);
     return NextResponse.json(
       { error: 'Error al obtener usuarios' },
       { status: 500 }

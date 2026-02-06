@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/admin/mentores/performance
@@ -25,7 +26,7 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
-    console.log('📊 Cargando rendimiento de mentores...');
+    logger.debug('📊 Cargando rendimiento de mentores...');
 
     // Obtener todos los mentores activos con sus datos
     const mentores = await prisma.usuario.findMany({
@@ -141,7 +142,7 @@ export async function GET() {
     const ordenStatus: Record<string, number> = { elite: 0, normal: 1, riesgo: 2 };
     mentoresConMetricas.sort((a, b) => (ordenStatus[a.status] || 1) - (ordenStatus[b.status] || 1));
 
-    console.log(`✅ ${mentoresConMetricas.length} mentores cargados con métricas`);
+    logger.debug(`✅ ${mentoresConMetricas.length} mentores cargados con métricas`);
 
     return NextResponse.json({
       success: true,
@@ -149,7 +150,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('❌ Error obteniendo rendimiento de mentores:', error);
+    logger.error('❌ Error obteniendo rendimiento de mentores:', error);
     return NextResponse.json(
       { 
         error: 'Error obteniendo rendimiento de mentores',

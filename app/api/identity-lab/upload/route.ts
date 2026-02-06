@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { uploadImage } from "@/lib/cloudinary";
+import logger from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +13,7 @@ export async function POST(request: NextRequest) {
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
     
     if (!cloudName || !apiKey || !apiSecret) {
-      console.error('Cloudinary config missing');
+      logger.error('Cloudinary config missing');
       return NextResponse.json(
         { error: "Configuración de Cloudinary incompleta" },
         { status: 500 }
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error("Error uploading identity image:", error);
+    logger.error("Error uploading identity image:", error);
     return NextResponse.json(
       { error: "Error al subir imagen" },
       { status: 500 }

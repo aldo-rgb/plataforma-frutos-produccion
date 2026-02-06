@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -97,7 +98,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('❌ Error verificando faltas del mentor:', error);
+    logger.error('❌ Error verificando faltas del mentor:', error);
     return NextResponse.json({ 
       error: 'Error al verificar faltas del mentor' 
     }, { status: 500 });

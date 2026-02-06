@@ -2,19 +2,20 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
 // GET - Listar usuarios por tipo de ciclo
 export async function GET(request: Request) {
   try {
-    console.log('🔵 Iniciando GET /api/admin/usuarios-ciclos');
+    logger.debug('🔵 Iniciando GET /api/admin/usuarios-ciclos');
     
     const session = await getServerSession(authOptions);
-    console.log('🔵 Session:', session?.user?.email);
+    logger.debug('🔵 Session:', session?.user?.email);
     
     if (!session?.user?.email) {
-      console.log('❌ No hay sesión');
+      logger.debug('❌ No hay sesión');
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
@@ -23,10 +24,10 @@ export async function GET(request: Request) {
       select: { rol: true, nombre: true }
     });
 
-    console.log('🔵 Usuario encontrado:', usuario?.nombre, 'Rol:', usuario?.rol);
+    logger.debug('🔵 Usuario encontrado:', usuario?.nombre, 'Rol:', usuario?.rol);
 
     if (usuario?.rol !== 'ADMINISTRADOR' && usuario?.rol !== 'COORDINADOR') {
-      console.log('❌ Sin permisos, rol:', usuario?.rol);
+      logger.debug('❌ Sin permisos, rol:', usuario?.rol);
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
@@ -67,8 +68,8 @@ export async function GET(request: Request) {
       }
     });
 
-    console.log(`📊 Total usuarios encontrados: ${usuarios.length}`);
-    console.log(`🔍 Filtro tipo: ${type}`);
+    logger.debug(`📊 Total usuarios encontrados: ${usuarios.length}`);
+    logger.debug(`🔍 Filtro tipo: ${type}`);
 
     // Filtrar por tipo de ciclo si es necesario
     let usuariosFiltrados = usuarios;
@@ -101,12 +102,12 @@ export async function GET(request: Request) {
       ProgramEnrollment: u.ProgramEnrollment_ProgramEnrollment_userIdToUsuario
     }));
 
-    console.log(`✅ Usuarios a retornar: ${usuariosFormateados.length}`);
+    logger.debug(`✅ Usuarios a retornar: ${usuariosFormateados.length}`);
     
     return NextResponse.json({ usuarios: usuariosFormateados });
 
   } catch (error) {
-    console.error('Error loading usuarios:', error);
+    logger.error('Error loading usuarios:', error);
     return NextResponse.json({ error: 'Error al cargar usuarios' }, { status: 500 });
   }
 }

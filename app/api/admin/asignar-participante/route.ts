@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { emitToMentor } from '@/lib/socket';
+import logger from '@/lib/logger';
 
 // POST: Asignar un participante a un mentor (Solo Admin/Coordinador)
 export async function POST(request: NextRequest) {
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log(`✅ ${admin.nombre} asignó a ${participante.nombre} → Mentor: ${mentor.nombre}`);
+    logger.debug(`✅ ${admin.nombre} asignó a ${participante.nombre} → Mentor: ${mentor.nombre}`);
 
     // 🔔 NOTIFICACIÓN SOCKET.IO EN TIEMPO REAL
     try {
@@ -89,9 +90,9 @@ export async function POST(request: NextRequest) {
         asignadoPor: admin.nombre,
         fecha: new Date().toISOString()
       });
-      console.log(`📡 Notificación Socket.IO enviada al mentor ${mentor.id}`);
+      logger.debug(`📡 Notificación Socket.IO enviada al mentor ${mentor.id}`);
     } catch (socketError) {
-      console.error('Error al enviar notificación Socket.IO:', socketError);
+      logger.error('Error al enviar notificación Socket.IO:', socketError);
       // No fallar la operación si falla el socket
     }
 
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
     }, { status: 200 });
 
   } catch (error) {
-    console.error('❌ Error al asignar participante:', error);
+    logger.error('❌ Error al asignar participante:', error);
     return NextResponse.json(
       { error: 'Error al asignar participante' },
       { status: 500 }

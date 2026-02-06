@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // POST - Crear una canción del sistema
 export async function POST(request: Request) {
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(song);
   } catch (error) {
-    console.error('Error al crear canción:', error);
+    logger.error('Error al crear canción:', error);
     return NextResponse.json({ error: 'Error al crear canción' }, { status: 500 });
   }
 }

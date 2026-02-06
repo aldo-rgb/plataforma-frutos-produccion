@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 const ALLOWED_ROLES = ['SCHOOL_ADMIN', 'COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
 
@@ -276,7 +277,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Error fetching treasury dashboard:', error);
+    logger.error('Error fetching treasury dashboard:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener dashboard' },
       { status: 500 }

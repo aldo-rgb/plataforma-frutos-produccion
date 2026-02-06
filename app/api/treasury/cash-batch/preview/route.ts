@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/treasury/cash-batch/preview
@@ -129,7 +130,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Error getting cash batch preview:', error);
+    logger.error('Error getting cash batch preview:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener vista previa' },
       { status: 500 }

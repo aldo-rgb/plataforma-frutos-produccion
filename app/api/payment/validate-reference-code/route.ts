@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 // POST /api/payment/validate-reference-code
 // Valida un código de referencia para pago de Avanzado
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
     );
 
   } catch (error) {
-    console.error('[validate-reference-code] Error:', error);
+    logger.error('[validate-reference-code] Error:', error);
     return NextResponse.json(
       { success: false, error: 'Error al procesar el pago' },
       { status: 500 }

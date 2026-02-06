@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { ensureDefaultAvailability } from '@/lib/gcDefaultAvailability';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/gc-calls/my-post-entreno
@@ -48,11 +49,11 @@ export async function GET(request: Request) {
     
     if (membership) {
       gcId = membership.group.leaderId;
-      console.log(`📞 User ${user.id} is in squad "${membership.group.name}", GC leaderId: ${gcId}`);
+      logger.debug(`📞 User ${user.id} is in squad "${membership.group.name}", GC leaderId: ${gcId}`);
     } else if (gameChangerIdParam) {
       // Fallback al parámetro si no hay membresía
       gcId = parseInt(gameChangerIdParam);
-      console.log(`📞 User ${user.id} has no squad, using param gcId: ${gcId}`);
+      logger.debug(`📞 User ${user.id} has no squad, using param gcId: ${gcId}`);
     }
 
     if (!gcId) {
@@ -113,7 +114,7 @@ export async function GET(request: Request) {
       },
     });
 
-    console.log(`📞 Post-Entreno check for GC ${gcId}:`, {
+    logger.debug(`📞 Post-Entreno check for GC ${gcId}:`, {
       availabilities: gcAvailabilities.length,
       times: gcAvailabilities.map(a => `${a.dayOfWeek}: ${a.startTime}-${a.endTime}`),
     });
@@ -139,12 +140,12 @@ export async function GET(request: Request) {
       // - O termina después de las 9:30 (endMinutes > 570)
       const isPostEntreno = startMinutes < staffStart || endMinutes > staffEnd;
       
-      console.log(`   Checking ${avail.startTime}-${avail.endTime}: start=${startMinutes}, end=${endMinutes}, isPostEntreno=${isPostEntreno}`);
+      logger.debug(`   Checking ${avail.startTime}-${avail.endTime}: start=${startMinutes}, end=${endMinutes}, isPostEntreno=${isPostEntreno}`);
       
       return isPostEntreno;
     });
 
-    console.log(`📞 Result: hasPostEntrenoAvailability=${hasPostEntrenoAvailability}`);
+    logger.debug(`📞 Result: hasPostEntrenoAvailability=${hasPostEntrenoAvailability}`);
 
     return NextResponse.json({
       success: true,
@@ -159,7 +160,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error fetching post-entreno info:', error);
+    logger.error('Error fetching post-entreno info:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener información' },
       { status: 500 }

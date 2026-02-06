@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function POST(req: Request) {
   try {
@@ -76,7 +77,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error asignando tarea extraordinaria:', error);
+    logger.error('❌ Error asignando tarea extraordinaria:', error);
     return NextResponse.json(
       { 
         error: 'Error al asignar tarea',

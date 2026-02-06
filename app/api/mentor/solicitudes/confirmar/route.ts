@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { PrismaClient } from '@prisma/client';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log(`✅ Solicitud #${solicitudId} confirmada por mentor ${session.user.id}`);
+    logger.debug(`✅ Solicitud #${solicitudId} confirmada por mentor ${session.user.id}`);
 
     return NextResponse.json({
       success: true,
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error al confirmar solicitud:', error);
+    logger.error('❌ Error al confirmar solicitud:', error);
     
     return NextResponse.json(
       { 

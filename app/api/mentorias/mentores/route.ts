@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -93,7 +94,7 @@ export async function GET() {
       };
     });
 
-    console.log(`📋 Listando ${mentoresFormateados.length} mentores disponibles`);
+    logger.debug(`📋 Listando ${mentoresFormateados.length} mentores disponibles`);
 
     return NextResponse.json({
       mentores: mentoresFormateados,
@@ -101,7 +102,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('❌ Error al obtener mentores:', error);
+    logger.error('❌ Error al obtener mentores:', error);
     return NextResponse.json(
       { error: 'Error al cargar mentores' },
       { status: 500 }

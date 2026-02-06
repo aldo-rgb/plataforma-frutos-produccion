@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/social/feed
@@ -113,7 +114,7 @@ export async function GET(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('Error fetching social feed:', error);
+    logger.error('Error fetching social feed:', error);
     return NextResponse.json(
       { error: 'Error al cargar el feed', details: error.message },
       { status: 500 }

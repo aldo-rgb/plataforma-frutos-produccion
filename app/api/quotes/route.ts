@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 import { nanoid } from 'nanoid';
+import logger from '@/lib/logger';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error: any) {
-    console.error('Error fetching quotes:', error);
+    logger.error('Error fetching quotes:', error);
     return NextResponse.json({ 
       error: error.message || 'Error al obtener cotizaciones' 
     }, { status: 500 });
@@ -175,7 +176,7 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error: any) {
-    console.error('Error creating quote:', error);
+    logger.error('Error creating quote:', error);
     return NextResponse.json({ 
       error: error.message || 'Error al crear cotización' 
     }, { status: 500 });
@@ -273,7 +274,7 @@ export async function PUT(request: NextRequest) {
     });
     
   } catch (error: any) {
-    console.error('Error updating quote:', error);
+    logger.error('Error updating quote:', error);
     return NextResponse.json({ 
       error: error.message || 'Error al actualizar cotización' 
     }, { status: 500 });
@@ -306,7 +307,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
     
   } catch (error: any) {
-    console.error('Error deleting quote:', error);
+    logger.error('Error deleting quote:', error);
     return NextResponse.json({ 
       error: error.message || 'Error al eliminar cotización' 
     }, { status: 500 });
@@ -413,7 +414,7 @@ function calculateStats(quotes: any[]) {
 async function sendQuoteNotification(quote: any, client: any) {
   // TODO: Integrar con sistema de notificaciones existente
   // Por ahora solo log
-  console.log('Enviando cotización a:', client);
+  logger.debug('Enviando cotización a:', client);
   
   // Si hay WhatsApp, enviar link
   if (client.whatsapp) {

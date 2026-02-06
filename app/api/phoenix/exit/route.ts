@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error al salir del Protocolo Fénix:', error);
+    logger.error('Error al salir del Protocolo Fénix:', error);
     return NextResponse.json(
       { success: false, message: 'Error al desactivar Protocolo Fénix' },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener todos los arquetipos del sistema (isSystemDefault = true)
 export async function GET(request: Request) {
@@ -65,7 +66,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error fetching system archetypes:', error);
+    logger.error('Error fetching system archetypes:', error);
     return NextResponse.json({ error: 'Error al obtener arquetipos del sistema' }, { status: 500 });
   }
 }
@@ -127,7 +128,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ archetype }, { status: 201 });
 
   } catch (error) {
-    console.error('Error creating system archetype:', error);
+    logger.error('Error creating system archetype:', error);
     return NextResponse.json({ error: 'Error al crear arquetipo del sistema' }, { status: 500 });
   }
 }

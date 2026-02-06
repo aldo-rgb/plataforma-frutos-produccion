@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET: Obtener evidencias pendientes SOLO de usuarios asignados al mentor
 export async function GET(request: NextRequest) {
@@ -164,7 +165,7 @@ export async function GET(request: NextRequest) {
       ...evidenciasExtraordinariasFormateadas
     ].sort((a, b) => new Date(b.fechaSubida).getTime() - new Date(a.fechaSubida).getTime());
 
-    console.log(`📋 Mentor ${mentor.nombre} consultó ${todasLasEvidencias.length} evidencias pendientes (${evidenciasCartaFormateadas.length} carta + ${evidenciasExtraordinariasFormateadas.length} extraordinarias)`);
+    logger.debug(`📋 Mentor ${mentor.nombre} consultó ${todasLasEvidencias.length} evidencias pendientes (${evidenciasCartaFormateadas.length} carta + ${evidenciasExtraordinariasFormateadas.length} extraordinarias)`);
 
     return NextResponse.json({ 
       evidencias: todasLasEvidencias,
@@ -176,7 +177,7 @@ export async function GET(request: NextRequest) {
     }, { status: 200 });
 
   } catch (error) {
-    console.error('❌ Error al obtener evidencias para validación:', error);
+    logger.error('❌ Error al obtener evidencias para validación:', error);
     return NextResponse.json({ error: 'Error al cargar evidencias' }, { status: 500 });
   }
 }

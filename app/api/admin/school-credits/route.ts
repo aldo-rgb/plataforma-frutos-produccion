@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -45,7 +46,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(creditsWithBalance);
   } catch (error) {
-    console.error('Error fetching school credits:', error);
+    logger.error('Error fetching school credits:', error);
     return NextResponse.json({ error: 'Error al obtener créditos' }, { status: 500 });
   }
 }
@@ -114,7 +115,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(schoolCredit, { status: 201 });
   } catch (error) {
-    console.error('Error creating school credit:', error);
+    logger.error('Error creating school credit:', error);
     return NextResponse.json({ error: 'Error al crear crédito escolar' }, { status: 500 });
   }
 }

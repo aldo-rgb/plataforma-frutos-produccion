@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener precios actuales de la organización
 export async function GET() {
@@ -64,7 +65,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('Error fetching precios:', error);
+    logger.error('Error fetching precios:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener los precios' },
       { status: 500 }
@@ -146,7 +147,7 @@ export async function PUT(request: Request) {
       precios: updatedOrganization,
     });
   } catch (error) {
-    console.error('Error updating precios:', error);
+    logger.error('Error updating precios:', error);
     return NextResponse.json(
       { success: false, error: 'Error al actualizar los precios' },
       { status: 500 }

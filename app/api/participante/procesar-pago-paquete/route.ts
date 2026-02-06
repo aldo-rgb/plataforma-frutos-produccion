@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/participante/procesar-pago-paquete
@@ -75,9 +76,9 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log(`✅ URL de pago generada para orden ${ordenId}`);
-    console.log(`   Método: ${metodoPago}`);
-    console.log(`   Monto: $${amount}`);
+    logger.debug(`✅ URL de pago generada para orden ${ordenId}`);
+    logger.debug(`   Método: ${metodoPago}`);
+    logger.debug(`   Monto: $${amount}`);
 
     return NextResponse.json({
       success: true,
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
       ordenId,
     });
   } catch (error: any) {
-    console.error('❌ Error al procesar pago de paquete:', error);
+    logger.error('❌ Error al procesar pago de paquete:', error);
     return NextResponse.json(
       {
         error: 'Error al procesar el pago',
@@ -172,7 +173,7 @@ async function createPayPalOrder(ordenId: string, amount: number): Promise<strin
     const approveLink = orderData.links.find((link: any) => link.rel === 'approve');
     return approveLink?.href || '';
   } catch (error: any) {
-    console.error('PayPal error:', error);
+    logger.error('PayPal error:', error);
     throw error;
   }
 }
@@ -218,7 +219,7 @@ async function createStripeCheckout(ordenId: string, amount: number): Promise<st
 
     return session.url || '';
   } catch (error: any) {
-    console.error('Stripe error:', error);
+    logger.error('Stripe error:', error);
     throw error;
   }
 }
@@ -271,7 +272,7 @@ async function createMercadoPagoPreference(ordenId: string, amount: number): Pro
 
     return preferenceData.init_point || '';
   } catch (error: any) {
-    console.error('Mercado Pago error:', error);
+    logger.error('Mercado Pago error:', error);
     throw error;
   }
 }

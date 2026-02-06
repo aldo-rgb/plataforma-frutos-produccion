@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import OpenAI from 'openai';
+import logger from '@/lib/logger';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -80,7 +81,7 @@ Responde SOLO con un JSON válido en este formato exacto:
       const parsed = JSON.parse(cleanedResponse);
       return NextResponse.json(parsed);
     } catch (parseError) {
-      console.error('Error parsing AI response:', cleanedResponse);
+      logger.error('Error parsing AI response:', cleanedResponse);
       
       // Fallback con ideas predefinidas basadas en el input
       return NextResponse.json({
@@ -108,7 +109,7 @@ Responde SOLO con un JSON válido en este formato exacto:
     }
 
   } catch (error) {
-    console.error('❌ Error generando ideas:', error);
+    logger.error('❌ Error generando ideas:', error);
     return NextResponse.json(
       { error: 'Error al generar ideas de negocio' },
       { status: 500 }

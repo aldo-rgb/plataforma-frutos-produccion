@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getMentorOccupancyStats } from '@/lib/dynamicPricing';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/mentor/pricing-stats
@@ -57,7 +58,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error al obtener estadísticas de precio:', error);
+    logger.error('❌ Error al obtener estadísticas de precio:', error);
     return NextResponse.json({ 
       error: 'Error interno del servidor',
       details: error.message 

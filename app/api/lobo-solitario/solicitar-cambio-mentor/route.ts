@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -110,7 +111,7 @@ export async function POST() {
       };
     });
 
-    console.log('✅ Cambio de mentor iniciado:', {
+    logger.debug('✅ Cambio de mentor iniciado:', {
       userId: session.user.id,
       oldMentorId: mentorId,
       canceledSessions: result.canceledSessions,
@@ -126,7 +127,7 @@ export async function POST() {
     });
 
   } catch (error) {
-    console.error('❌ Error solicitando cambio de mentor:', error);
+    logger.error('❌ Error solicitando cambio de mentor:', error);
     return NextResponse.json({ 
       error: 'Error al procesar cambio de mentor' 
     }, { status: 500 });

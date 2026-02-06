@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener datos del producto, participantes y asistencia
 export async function GET(
@@ -156,7 +157,7 @@ export async function GET(
     });
 
   } catch (error: any) {
-    console.error('❌ Error obteniendo datos de asistencia:', error);
+    logger.error('❌ Error obteniendo datos de asistencia:', error);
     return NextResponse.json(
       { error: 'Error al obtener datos', message: error?.message },
       { status: 500 }
@@ -239,7 +240,7 @@ export async function POST(
     });
 
   } catch (error: any) {
-    console.error('❌ Error guardando asistencia:', error);
+    logger.error('❌ Error guardando asistencia:', error);
     return NextResponse.json(
       { error: 'Error al guardar asistencia', message: error?.message },
       { status: 500 }

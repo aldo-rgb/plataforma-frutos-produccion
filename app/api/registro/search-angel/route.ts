@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * API: Buscar usuarios para ángel de enrolamiento
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error buscando ángel:', error);
+    logger.error('Error buscando ángel:', error);
     return NextResponse.json(
       { success: false, error: 'Error al buscar usuarios' },
       { status: 500 }

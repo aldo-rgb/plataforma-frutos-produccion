@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import logger from '@/lib/logger';
 
 export async function POST(
   request: NextRequest,
@@ -219,11 +220,11 @@ export async function POST(
           }
         });
 
-        console.log(`✅ Se enlazaron ${pendingInvitees.length} usuarios pendientes al nuevo ángel: ${nombre}`);
+        logger.debug(`✅ Se enlazaron ${pendingInvitees.length} usuarios pendientes al nuevo ángel: ${nombre}`);
       }
     } catch (linkError) {
       // No fallar el registro si hay error en el enlace automático
-      console.error('Error en enlace automático de invitados:', linkError);
+      logger.error('Error en enlace automático de invitados:', linkError);
     }
 
     return NextResponse.json({
@@ -233,7 +234,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('Error al registrar usuario:', error);
+    logger.error('Error al registrar usuario:', error);
     return NextResponse.json(
       { success: false, error: 'Error al procesar el registro' },
       { status: 500 }

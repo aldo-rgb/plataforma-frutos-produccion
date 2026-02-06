@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener avatares guardados del usuario
 export async function GET() {
@@ -34,7 +35,7 @@ export async function GET() {
       avatares
     });
   } catch (error) {
-    console.error('Error obteniendo avatares:', error);
+    logger.error('Error obteniendo avatares:', error);
     return NextResponse.json(
       { error: 'Error al cargar avatares' },
       { status: 500 }
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
       message: '✨ Avatar guardado en The Vault'
     });
   } catch (error) {
-    console.error('Error guardando avatar:', error);
+    logger.error('Error guardando avatar:', error);
     return NextResponse.json(
       { error: 'Error al guardar avatar' },
       { status: 500 }
@@ -132,7 +133,7 @@ export async function DELETE(request: Request) {
       message: 'Avatar eliminado del vault'
     });
   } catch (error) {
-    console.error('Error eliminando avatar:', error);
+    logger.error('Error eliminando avatar:', error);
     return NextResponse.json(
       { error: 'Error al eliminar avatar' },
       { status: 500 }

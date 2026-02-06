@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ attendances });
   } catch (error) {
-    console.error('Error fetching attendance:', error);
+    logger.error('Error fetching attendance:', error);
     return NextResponse.json({ error: 'Error al obtener asistencia' }, { status: 500 });
   }
 }
@@ -152,7 +153,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ attendance });
   } catch (error) {
-    console.error('Error updating attendance:', error);
+    logger.error('Error updating attendance:', error);
     return NextResponse.json({ error: 'Error al actualizar asistencia' }, { status: 500 });
   }
 }
@@ -196,7 +197,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ attendance }, { status: 201 });
   } catch (error: any) {
-    console.error('Error adding participant:', error);
+    logger.error('Error adding participant:', error);
     
     if (error.code === 'P2002') {
       return NextResponse.json({ 

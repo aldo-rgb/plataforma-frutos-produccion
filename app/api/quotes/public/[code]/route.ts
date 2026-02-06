@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import logger from '@/lib/logger';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -123,7 +124,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     });
     
   } catch (error: any) {
-    console.error('Error fetching public quote:', error);
+    logger.error('Error fetching public quote:', error);
     return NextResponse.json({ 
       error: error.message || 'Error al cargar propuesta' 
     }, { status: 500 });
@@ -291,7 +292,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
     
   } catch (error: any) {
-    console.error('Error processing quote action:', error);
+    logger.error('Error processing quote action:', error);
     return NextResponse.json({ 
       error: error.message || 'Error al procesar acción' 
     }, { status: 500 });
@@ -300,22 +301,22 @@ export async function POST(request: NextRequest, { params }: Params) {
 
 // Notificaciones al proveedor
 async function notifyProviderViewed(quote: any) {
-  console.log('🔔 Cotización vista:', quote.short_code);
+  logger.debug('🔔 Cotización vista:', quote.short_code);
   // TODO: Integrar con sistema de notificaciones
   // Enviar push notification, email, etc.
 }
 
 async function notifyProviderApproved(quote: any, total: number) {
-  console.log('🎉 Cotización aprobada:', quote.short_code, 'Total:', total);
+  logger.debug('🎉 Cotización aprobada:', quote.short_code, 'Total:', total);
   // TODO: Integrar con sistema de notificaciones
 }
 
 async function notifyProviderRejected(quote: any, comment?: string) {
-  console.log('❌ Cotización rechazada:', quote.short_code, 'Razón:', comment);
+  logger.debug('❌ Cotización rechazada:', quote.short_code, 'Razón:', comment);
   // TODO: Integrar con sistema de notificaciones
 }
 
 async function notifyProviderComment(quote: any, comment: string) {
-  console.log('💬 Nuevo comentario en cotización:', quote.short_code);
+  logger.debug('💬 Nuevo comentario en cotización:', quote.short_code);
   // TODO: Integrar con sistema de notificaciones
 }

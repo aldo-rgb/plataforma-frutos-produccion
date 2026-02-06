@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { PrismaClient } from "@prisma/client"
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient()
 
@@ -131,7 +132,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error("Error al obtener misiones:", error)
+    logger.error("Error al obtener misiones:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }
@@ -263,7 +264,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error("Error al lanzar misión:", error)
+    logger.error("Error al lanzar misión:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }
@@ -329,8 +330,8 @@ async function createSubmissionsForMission(
       })
     }
 
-    console.log(`✅ Creadas ${participantIds.length} submissions para misión ${missionId} (solo usuarios con check-in)`)
+    logger.debug(`✅ Creadas ${participantIds.length} submissions para misión ${missionId} (solo usuarios con check-in)`)
   } catch (error) {
-    console.error("Error creando submissions:", error)
+    logger.error("Error creando submissions:", error)
   }
 }

@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { notifyCartaSubmitted, notifyCartaApproved } from '@/lib/notifications';
 import { validateCartaForSubmission } from '@/lib/validaciones-carta';
 import { generateTasksForLetter } from '@/lib/taskGenerator';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/carta/submit
@@ -92,9 +93,9 @@ export async function POST(req: Request) {
     // Si pertenece a una Vision, NO tiene mentor y NO es usuario FREE graduado → BLOQUEAR
     // Si es FREE graduado sin mentor, permitir continuar (se manejará con confirmación en frontend)
     if (perteneceAVision && !mentorId && !isGraduatedFreeUser) {
-      console.log('❌ Usuario de Vision sin mentor - Bloqueando envío');
-      console.log('   Vision:', visionParticipante?.Vision?.nombre || 'N/A');
-      console.log('   UserId:', userId);
+      logger.debug('❌ Usuario de Vision sin mentor - Bloqueando envío');
+      logger.debug('   Vision:', visionParticipante?.Vision?.nombre || 'N/A');
+      logger.debug('   UserId:', userId);
       
       return NextResponse.json({ 
         error: 'Mentor requerido',
@@ -111,7 +112,7 @@ export async function POST(req: Request) {
       const { continueWithoutMentor } = data;
       
       if (!continueWithoutMentor) {
-        console.log('⚠️ Usuario graduado FREE sin mentor - Requiere confirmación');
+        logger.debug('⚠️ Usuario graduado FREE sin mentor - Requiere confirmación');
         return NextResponse.json({ 
           error: 'Confirmación requerida',
           message: 'Como usuario graduado sin licencia activa, puedes continuar sin mentor. Tu carta será auto-aprobada y se generarán tus tareas automáticamente.',
@@ -122,7 +123,7 @@ export async function POST(req: Request) {
         }, { status: 200 }); // 200 porque no es un error, es una confirmación pendiente
       }
       
-      console.log('✅ Usuario graduado FREE confirmó continuar sin mentor - Auto-aprobando carta');
+      logger.debug('✅ Usuario graduado FREE confirmó continuar sin mentor - Auto-aprobando carta');
     }
     // ==================================================================
 
@@ -130,26 +131,26 @@ export async function POST(req: Request) {
     if (usuario?.rol === 'PARTICIPANTE') {
       const userTier = usuario.tier || 'FREE';
       
-      console.log('🔍 Validación de licencia - Usuario:', userId);
-      console.log('   Tier:', userTier);
-      console.log('   Suscripción:', usuario.suscripcion);
-      console.log('   Tiene licencia asignada:', !!licenseAssignment);
-      console.log('   Pertenece a Vision:', perteneceAVision);
-      console.log('   Tiene mentor:', !!mentorId);
+      logger.debug('🔍 Validación de licencia - Usuario:', userId);
+      logger.debug('   Tier:', userTier);
+      logger.debug('   Suscripción:', usuario.suscripcion);
+      logger.debug('   Tiene licencia asignada:', !!licenseAssignment);
+      logger.debug('   Pertenece a Vision:', perteneceAVision);
+      logger.debug('   Tiene mentor:', !!mentorId);
       
       // 🎫 Si tiene LICENCIA ASIGNADA de organización, permitir envío
       if (licenseAssignment) {
-        console.log('🎫 Usuario tiene licencia de organización asignada - Permitiendo envío');
+        logger.debug('🎫 Usuario tiene licencia de organización asignada - Permitiendo envío');
         // La licencia se activará después de validar y enviar la carta al mentor
       } 
       // ✅ Usuario graduado FREE que confirmó continuar sin mentor -> Auto-aprobar
       else if (isGraduatedFreeUser && data.continueWithoutMentor) {
-        console.log('✅ Usuario graduado FREE con confirmación - Permitiendo auto-aprobación');
+        logger.debug('✅ Usuario graduado FREE con confirmación - Permitiendo auto-aprobación');
         // Se manejará más adelante con auto-aprobación
       }
       // ❌ Si es FREE sin licencia y NO es graduado FREE confirmado -> Redirigir a PRICING
       else if (userTier === 'FREE' && !isGraduatedFreeUser) {
-        console.log('❌ Usuario FREE sin licencia - Requiere comprar plan');
+        logger.debug('❌ Usuario FREE sin licencia - Requiere comprar plan');
         return NextResponse.json({ 
           error: 'Plan requerido',
           message: 'Necesitas adquirir un plan para enviar tu carta a revisión con un mentor',
@@ -159,12 +160,12 @@ export async function POST(req: Request) {
       }
       // ✅ STANDARD o PREMIUM (ACTIVO o INACTIVO) -> Enviar a mentor
       else if (userTier === 'STANDARD' || userTier === 'PREMIUM') {
-        console.log(`✅ Usuario ${userTier} - Permitiendo envío a mentor (sin importar si está activo o inactivo)`);
+        logger.debug(`✅ Usuario ${userTier} - Permitiendo envío a mentor (sin importar si está activo o inactivo)`);
         // Continuar con el flujo normal de envío al mentor
       }
       // ❌ Cualquier otro caso -> Por seguridad, redirigir a pricing
       else {
-        console.log('❌ Tier no reconocido o sin acceso - Requiere plan');
+        logger.debug('❌ Tier no reconocido o sin acceso - Requiere plan');
         return NextResponse.json({ 
           error: 'Plan requerido',
           message: 'Necesitas un plan válido para enviar tu carta a revisión',
@@ -175,10 +176,10 @@ export async function POST(req: Request) {
     }
     // ==================================================================
 
-    console.log('📋 Carta encontrada ID:', carta.id);
-    console.log('📊 Total de metas encontradas:', carta.Meta?.length || 0);
+    logger.debug('📋 Carta encontrada ID:', carta.id);
+    logger.debug('📊 Total de metas encontradas:', carta.Meta?.length || 0);
     if (carta.Meta && carta.Meta.length > 0) {
-      console.log('📝 Metas con acciones:', carta.Meta.map(m => ({
+      logger.debug('📝 Metas con acciones:', carta.Meta.map(m => ({
         id: m.id,
         categoria: m.categoria,
         acciones: m.Accion?.length || 0
@@ -189,7 +190,7 @@ export async function POST(req: Request) {
     try {
       validateCartaForSubmission(carta, carta.Meta);
     } catch (validationError: any) {
-      console.error('❌ Validación fallida:', validationError.message);
+      logger.error('❌ Validación fallida:', validationError.message);
       return NextResponse.json({ 
         error: 'Validación fallida', 
         message: validationError.message,
@@ -204,7 +205,7 @@ export async function POST(req: Request) {
     // CASO ESPECIAL: Usuario graduado FREE sin mentor - AUTO-APROBAR
     // =====================================================
     if (isGraduatedFreeUser && data.continueWithoutMentor && !mentorId) {
-      console.log('🎯 Auto-aprobando carta para usuario graduado FREE sin mentor');
+      logger.debug('🎯 Auto-aprobando carta para usuario graduado FREE sin mentor');
       
       // Actualizar carta a APROBADA directamente
       const updatedCarta = await prisma.cartaFrutos.update({
@@ -224,15 +225,15 @@ export async function POST(req: Request) {
         data: { wizardCompleted: true }
       });
       
-      console.log('✅ Carta auto-aprobada para usuario graduado FREE:', carta.id);
+      logger.debug('✅ Carta auto-aprobada para usuario graduado FREE:', carta.id);
       
       // 🚀 GENERAR TAREAS automáticamente
-      console.log(`🚀 Generando tareas automáticas para carta graduado FREE #${carta.id}`);
+      logger.debug(`🚀 Generando tareas automáticas para carta graduado FREE #${carta.id}`);
       try {
         const result = await generateTasksForLetter(carta.id);
         
         if (result.success) {
-          console.log(`✅ ${result.tasksCreated} tareas creadas exitosamente`);
+          logger.debug(`✅ ${result.tasksCreated} tareas creadas exitosamente`);
           
           // Enviar notificación al usuario
           await notifyCartaApproved(userId, result.tasksCreated);
@@ -245,7 +246,7 @@ export async function POST(req: Request) {
             message: `🎉 ¡Tu carta ha sido aprobada! Se generaron ${result.tasksCreated} tareas. ¡Comienza tu transformación!`
           });
         } else {
-          console.error('❌ Error al generar tareas:', result.errors);
+          logger.error('❌ Error al generar tareas:', result.errors);
           return NextResponse.json({
             success: true,
             carta: updatedCarta,
@@ -256,7 +257,7 @@ export async function POST(req: Request) {
           });
         }
       } catch (taskError: any) {
-        console.error('❌ Excepción al generar tareas:', taskError);
+        logger.error('❌ Excepción al generar tareas:', taskError);
         return NextResponse.json({
           success: true,
           carta: updatedCarta,
@@ -275,11 +276,11 @@ export async function POST(req: Request) {
     if (mentorId) {
       // Enviar notificación al mentor
       await notifyCartaSubmitted(userId, mentorId);
-      console.log(`📧 Notificación: Carta #${carta.id} pendiente de revisión para mentor #${mentorId}`);
+      logger.debug(`📧 Notificación: Carta #${carta.id} pendiente de revisión para mentor #${mentorId}`);
     } else {
       // Enviar notificación a admins
       await notifyCartaSubmitted(userId);
-      console.log(`📧 Notificación: Carta #${carta.id} pendiente de revisión para admin (usuario sin mentor)`);
+      logger.debug(`📧 Notificación: Carta #${carta.id} pendiente de revisión para admin (usuario sin mentor)`);
     }
 
     // Actualizar estado de la carta
@@ -317,11 +318,11 @@ export async function POST(req: Request) {
         }
       });
       
-      console.log('🎫 Licencia activada para usuario:', userId, '- Vision:', licenseAssignment.Vision?.nombre || 'N/A');
-      console.log('⬆️ Tier actualizado a STANDARD y suscripción activada');
+      logger.debug('🎫 Licencia activada para usuario:', userId, '- Vision:', licenseAssignment.Vision?.nombre || 'N/A');
+      logger.debug('⬆️ Tier actualizado a STANDARD y suscripción activada');
     }
 
-    console.log('✅ Wizard marcado como completado para usuario:', userId);
+    logger.debug('✅ Wizard marcado como completado para usuario:', userId);
 
     return NextResponse.json({
       success: true,
@@ -332,7 +333,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('Error submitting carta:', error);
+    logger.error('Error submitting carta:', error);
     return NextResponse.json(
       { error: 'Error al enviar la carta', details: error.message },
       { status: 500 }

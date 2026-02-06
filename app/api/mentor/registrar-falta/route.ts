@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * ⚠️ API: Registrar llamada perdida (Strike)
@@ -94,10 +95,10 @@ export async function POST(request: Request) {
       }
     });
 
-    console.log(`⚠️ Strike registrado: ${alumno.nombre} ahora tiene ${nuevoContador}/3 faltas`);
+    logger.debug(`⚠️ Strike registrado: ${alumno.nombre} ahora tiene ${nuevoContador}/3 faltas`);
 
     if (shouldDeactivate) {
-      console.log(`💀 ALUMNO ELIMINADO: ${alumno.nombre} (3 strikes)`);
+      logger.debug(`💀 ALUMNO ELIMINADO: ${alumno.nombre} (3 strikes)`);
     }
 
     return NextResponse.json({
@@ -115,7 +116,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ Error al registrar falta:', error);
+    logger.error('❌ Error al registrar falta:', error);
     return NextResponse.json({ 
       error: 'Error al registrar la falta',
       details: error instanceof Error ? error.message : 'Unknown error'
@@ -165,7 +166,7 @@ export async function DELETE(request: Request) {
       }
     });
 
-    console.log(`🔄 Strikes reseteados para ${alumno.nombre} por ${session.user.name}`);
+    logger.debug(`🔄 Strikes reseteados para ${alumno.nombre} por ${session.user.name}`);
 
     return NextResponse.json({
       success: true,
@@ -174,7 +175,7 @@ export async function DELETE(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ Error al resetear strikes:', error);
+    logger.error('❌ Error al resetear strikes:', error);
     return NextResponse.json({ 
       error: 'Error al resetear strikes',
       details: error instanceof Error ? error.message : 'Unknown error'

@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 
 export async function GET(req: NextRequest) {
   try {
+    // Rate limiting para APIs públicas
+    const { response } = rateLimit(req, RateLimitPresets.public);
+    if (response) {
+      logger.warn('Rate limit exceeded on public/prices');
+      return response;
+    }
+
     const { searchParams } = new URL(req.url);
     const organizationId = searchParams.get('organizationId');
 
@@ -61,7 +70,7 @@ export async function GET(req: NextRequest) {
       prices,
     });
   } catch (error) {
-    console.error('Error fetching prices:', error);
+    logger.error('Error fetching prices:', error);
     return NextResponse.json(
       { 
         success: true, 

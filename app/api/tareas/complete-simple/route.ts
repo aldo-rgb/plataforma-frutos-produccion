@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/tareas/complete-simple
@@ -116,7 +117,7 @@ export async function POST(req: Request) {
       }
     }
 
-    console.log(`✅ Tarea ${submissionId} completada por usuario ${userId}. Puntos: +${pointsReward}`);
+    logger.debug(`✅ Tarea ${submissionId} completada por usuario ${userId}. Puntos: +${pointsReward}`);
 
     return NextResponse.json({
       success: true,
@@ -126,7 +127,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('Error completing task:', error);
+    logger.error('Error completing task:', error);
     return NextResponse.json(
       { error: 'Error al completar la tarea', details: error.message },
       { status: 500 }

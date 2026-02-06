@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    console.log(`🔍 [Disciplina] Mentor ${mentor.id} tiene ${participantes.length} participantes activos`);
+    logger.debug(`🔍 [Disciplina] Mentor ${mentor.id} tiene ${participantes.length} participantes activos`);
 
     // Enriquecer con información de llamadas
     const participantesEnriquecidos = await Promise.all(
@@ -121,8 +122,8 @@ export async function GET(request: NextRequest) {
     // Filtrar nulls (participantes sin enrollment activo)
     const participantesValidos = participantesEnriquecidos.filter(Boolean);
 
-    console.log(`✅ [Disciplina] Retornando ${participantesValidos.length} participantes válidos`);
-    console.log(`📊 [Disciplina] Detalles:`, participantesValidos.map(p => ({
+    logger.debug(`✅ [Disciplina] Retornando ${participantesValidos.length} participantes válidos`);
+    logger.debug(`📊 [Disciplina] Detalles:`, participantesValidos.map(p => ({
       nombre: p?.nombre,
       tieneHoy: !!p?.llamadaHoy,
       tieneProxima: !!p?.proximaLlamada
@@ -134,7 +135,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error obteniendo participantes:', error);
+    logger.error('Error obteniendo participantes:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Error obteniendo participantes' 

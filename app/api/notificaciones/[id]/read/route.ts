@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/notificaciones/[id]/read
@@ -49,7 +50,7 @@ export async function POST(
     return NextResponse.json({ success: true });
 
   } catch (error: any) {
-    console.error('Error marcando notificación:', error);
+    logger.error('Error marcando notificación:', error);
     return NextResponse.json(
       { error: 'Error al marcar notificación', details: error.message },
       { status: 500 }

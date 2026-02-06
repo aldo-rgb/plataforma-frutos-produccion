@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Helper para crear submissions según targetType
 async function crearSubmissionsMultiDay(
@@ -40,7 +41,7 @@ async function crearSubmissionsMultiDay(
       }
     }
 
-    console.log(`✅ ${usuarios.length} usuarios × ${tareasDiarias.length} días = ${usuarios.length * tareasDiarias.length} submissions creadas`);
+    logger.debug(`✅ ${usuarios.length} usuarios × ${tareasDiarias.length} días = ${usuarios.length * tareasDiarias.length} submissions creadas`);
     
   } else if (targetType === 'GROUP' && targetId) {
     const whereClause: any = {
@@ -71,7 +72,7 @@ async function crearSubmissionsMultiDay(
       }
     }
 
-    console.log(`✅ Grupo: ${usuarios.length} usuarios × ${tareasDiarias.length} días`);
+    logger.debug(`✅ Grupo: ${usuarios.length} usuarios × ${tareasDiarias.length} días`);
     
   } else if (targetType === 'USER' && targetId) {
     if (usuario.rol === 'MENTOR') {
@@ -95,7 +96,7 @@ async function crearSubmissionsMultiDay(
       });
     }
 
-    console.log(`✅ Usuario individual: ${tareasDiarias.length} tareas diarias asignadas`);
+    logger.debug(`✅ Usuario individual: ${tareasDiarias.length} tareas diarias asignadas`);
   }
 }
 
@@ -107,7 +108,7 @@ export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     
-    console.log('🔍 GET /api/admin/tareas - Session:', session?.user?.id ? `User ${session.user.id}` : 'No session');
+    logger.debug('🔍 GET /api/admin/tareas - Session:', session?.user?.id ? `User ${session.user.id}` : 'No session');
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
@@ -119,7 +120,7 @@ export async function GET(req: Request) {
       select: { rol: true, id: true, nombre: true }
     });
 
-    console.log('👤 Usuario solicitando tareas:', { id: user?.id, rol: user?.rol, nombre: user?.nombre });
+    logger.debug('👤 Usuario solicitando tareas:', { id: user?.id, rol: user?.rol, nombre: user?.nombre });
 
     if (!user) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
@@ -129,7 +130,7 @@ export async function GET(req: Request) {
     const rolesPermitidos = ['ADMINISTRADOR', 'ADMIN', 'COORDINADOR', 'DIRECTOR', 'SCHOOL_ADMIN'];
     
     if (!rolesPermitidos.includes(user.rol)) {
-      console.log('❌ Acceso denegado para rol:', user.rol);
+      logger.debug('❌ Acceso denegado para rol:', user.rol);
       return NextResponse.json({ 
         error: 'Acceso denegado',
         mensaje: `Tu rol actual es ${user.rol}. Solo Administradores, Coordinadores, Directores y School Admins pueden acceder.`
@@ -172,7 +173,7 @@ export async function GET(req: Request) {
       }
     });
 
-    console.log('✅ Tareas encontradas:', tareas.length);
+    logger.debug('✅ Tareas encontradas:', tareas.length);
 
     const tareasFormatted = tareas.map(tarea => ({
       ...tarea,
@@ -187,8 +188,8 @@ export async function GET(req: Request) {
     return NextResponse.json(tareasFormatted);
 
   } catch (error: any) {
-    console.error('❌ Error obteniendo tareas admin:', error);
-    console.error('Error stack:', error.stack);
+    logger.error('❌ Error obteniendo tareas admin:', error);
+    logger.error('Error stack:', error.stack);
     return NextResponse.json(
       { error: 'Error al obtener tareas', details: error.message, stack: error.stack },
       { status: 500 }
@@ -215,7 +216,7 @@ export async function POST(req: Request) {
       select: { rol: true, nombre: true }
     });
 
-    console.log('👤 Usuario creando tarea:', { id: userId, rol: usuario?.rol, nombre: usuario?.nombre });
+    logger.debug('👤 Usuario creando tarea:', { id: userId, rol: usuario?.rol, nombre: usuario?.nombre });
 
     if (!usuario) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
@@ -224,7 +225,7 @@ export async function POST(req: Request) {
     const rolesPermitidos = ['ADMINISTRADOR', 'ADMIN', 'COORDINADOR', 'DIRECTOR', 'SCHOOL_ADMIN'];
     
     if (!rolesPermitidos.includes(usuario.rol)) {
-      console.log('❌ Acceso denegado para rol:', usuario.rol);
+      logger.debug('❌ Acceso denegado para rol:', usuario.rol);
       return NextResponse.json({ 
         error: 'Acceso denegado',
         mensaje: `Tu rol actual es ${usuario.rol}. Solo Administradores, Coordinadores, Directores y School Admins pueden crear tareas.`
@@ -324,7 +325,7 @@ export async function POST(req: Request) {
       // Añadimos 'T00:00:00.000Z' para que se interprete como UTC
       const fecha = new Date(fechaStr + 'T00:00:00.000Z');
       
-      console.log('📅 parseFechaLocal UTC:', {
+      logger.debug('📅 parseFechaLocal UTC:', {
         input: fechaStr,
         fechaCreada: fecha,
         fechaString: fecha.toString(),
@@ -335,7 +336,7 @@ export async function POST(req: Request) {
       return fecha;
     };
 
-    console.log('🔧 Datos de entrada para fechas:', {
+    logger.debug('🔧 Datos de entrada para fechas:', {
       fechaLimite,
       fechaEvento,
       horaEvento
@@ -344,14 +345,14 @@ export async function POST(req: Request) {
     const fechaLimiteParsed = fechaLimite ? parseFechaLocal(fechaLimite) : null;
     const fechaEventoParsed = fechaEvento ? parseFechaLocal(fechaEvento) : null;
 
-    console.log('🔧 Fechas parseadas:', {
+    logger.debug('🔧 Fechas parseadas:', {
       fechaLimiteParsed,
       fechaEventoParsed
     });
 
     // Si es multi-día, crear tarea padre y tareas diarias
     if (isMultiDay && duracionDias && duracionDias > 1) {
-      console.log(`🗓️ Creando misión multi-día de ${duracionDias} días`);
+      logger.debug(`🗓️ Creando misión multi-día de ${duracionDias} días`);
 
       // Crear la tarea padre (contenedor)
       const tareaParent = await prisma.adminTask.create({
@@ -401,7 +402,7 @@ export async function POST(req: Request) {
         tareasDiarias.push(tareaHija);
       }
 
-      console.log(`✅ Misión multi-día creada: 1 padre + ${tareasDiarias.length} tareas diarias`);
+      logger.debug(`✅ Misión multi-día creada: 1 padre + ${tareasDiarias.length} tareas diarias`);
 
       // Auto-crear submissions para las tareas diarias
       await crearSubmissionsMultiDay(tareasDiarias, targetType, targetId, usuario, userId);
@@ -472,7 +473,7 @@ export async function POST(req: Request) {
         });
       }
 
-      console.log(`✅ Tarea ${tarea.id} creada por ${usuario.rol} con ${usuarios.length} submissions automáticas`);
+      logger.debug(`✅ Tarea ${tarea.id} creada por ${usuario.rol} con ${usuarios.length} submissions automáticas`);
       
     } else if (targetType === 'GROUP') {
       // Filtrar por visión/grupo (PARTICIPANTES y GAMECHANGERS)
@@ -504,7 +505,7 @@ export async function POST(req: Request) {
         });
       }
 
-      console.log(`✅ Tarea ${tarea.id} creada para grupo con ${usuarios.length} submissions`);
+      logger.debug(`✅ Tarea ${tarea.id} creada para grupo con ${usuarios.length} submissions`);
       
     } else if (targetType === 'USER' && targetId) {
       // Verificar que el usuario target sea mentorado del mentor (si aplica)
@@ -531,7 +532,7 @@ export async function POST(req: Request) {
         }
       });
 
-      console.log(`✅ Tarea ${tarea.id} creada para usuario individual ${targetId}`);
+      logger.debug(`✅ Tarea ${tarea.id} creada para usuario individual ${targetId}`);
     }
 
     return NextResponse.json({
@@ -540,7 +541,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error creando tarea admin:', error);
+    logger.error('❌ Error creando tarea admin:', error);
     return NextResponse.json(
       { error: 'Error al crear tarea', details: error.message },
       { status: 500 }

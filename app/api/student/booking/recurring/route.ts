@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { addDays, format, getDay } from 'date-fns';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 export async function POST(request: Request) {
   try {
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
       }
     }
 
-    console.log(`📅 Intentando crear ${bookingsToCreate.length} llamadas recurrentes para estudiante ${studentId} con mentor ${mentorId}`);
+    logger.debug(`📅 Intentando crear ${bookingsToCreate.length} llamadas recurrentes para estudiante ${studentId} con mentor ${mentorId}`);
 
     // 6. TRANSACCIÓN ATÓMICA (Todo o Nada)
     // Intentamos reservar todo el bloque. Si un día choca (@@unique), fallará todo.
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
       )
     );
 
-    console.log(`✅ Se crearon ${createdBookings.length} llamadas exitosamente. GroupId: ${groupId}`);
+    logger.debug(`✅ Se crearon ${createdBookings.length} llamadas exitosamente. GroupId: ${groupId}`);
 
     return NextResponse.json({ 
       success: true,
@@ -100,7 +101,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error al crear llamadas recurrentes:', error);
+    logger.error('❌ Error al crear llamadas recurrentes:', error);
     
     // Si falla por choque de horario (P2002 = violación de constraint unique)
     if (error.code === 'P2002') {
@@ -187,7 +188,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error al obtener llamadas recurrentes:', error);
+    logger.error('Error al obtener llamadas recurrentes:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }
@@ -223,7 +224,7 @@ export async function DELETE(request: Request) {
       }
     });
 
-    console.log(`🗑️ Canceladas ${result.count} llamadas del grupo ${groupId}`);
+    logger.debug(`🗑️ Canceladas ${result.count} llamadas del grupo ${groupId}`);
 
     return NextResponse.json({ 
       success: true,
@@ -232,7 +233,7 @@ export async function DELETE(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error al cancelar llamadas recurrentes:', error);
+    logger.error('Error al cancelar llamadas recurrentes:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }

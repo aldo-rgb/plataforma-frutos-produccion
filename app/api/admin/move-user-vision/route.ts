@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
       }
 
       // 6. Registrar el movimiento en el log
-      console.log(`[MOVE-VISION] Usuario ${userId} movido de visión ${fromVisionId} a ${toVisionId} (nivel ${level}) por admin ${session.user.id}`);
+      logger.debug(`[MOVE-VISION] Usuario ${userId} movido de visión ${fromVisionId} a ${toVisionId} (nivel ${level}) por admin ${session.user.id}`);
     });
 
     return NextResponse.json({
@@ -125,7 +126,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error moving user between visions:', error);
+    logger.error('Error moving user between visions:', error);
     return NextResponse.json(
       { error: 'Error al mover usuario', details: error?.message },
       { status: 500 }

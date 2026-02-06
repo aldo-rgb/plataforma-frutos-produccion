@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener campañas disponibles para el participante
 export async function GET(request: NextRequest) {
@@ -111,7 +112,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching legacy campaigns:', error);
+    logger.error('Error fetching legacy campaigns:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }
@@ -185,7 +186,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error joining campaign:', error);
+    logger.error('Error joining campaign:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

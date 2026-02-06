@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * ✅ Marcar pago como completado
@@ -65,7 +66,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('❌ Error marcando pago:', error);
+    logger.error('❌ Error marcando pago:', error);
     return NextResponse.json(
       { error: 'Error al marcar pago como completado' },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { v2 as cloudinary } from 'cloudinary';
+import logger from '@/lib/logger';
 
 // Configurar Cloudinary
 cloudinary.config({
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error subiendo imagen desde URL:', error);
+    logger.error('❌ Error subiendo imagen desde URL:', error);
     return NextResponse.json(
       { error: 'Error al subir la imagen', details: error.message },
       { status: 500 }

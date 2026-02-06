@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ call, stats });
   } catch (error) {
-    console.error('Error fetching PL call:', error);
+    logger.error('Error fetching PL call:', error);
     return NextResponse.json({ error: 'Error al obtener llamada' }, { status: 500 });
   }
 }
@@ -222,7 +223,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ call: updatedCall });
   } catch (error) {
-    console.error('Error updating PL call:', error);
+    logger.error('Error updating PL call:', error);
     return NextResponse.json({ error: 'Error al actualizar llamada' }, { status: 500 });
   }
 }
@@ -260,7 +261,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting PL call:', error);
+    logger.error('Error deleting PL call:', error);
     return NextResponse.json({ error: 'Error al eliminar llamada' }, { status: 500 });
   }
 }

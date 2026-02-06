@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function POST(
   request: NextRequest,
@@ -125,10 +126,10 @@ export async function POST(
             }
           });
 
-          console.log(`Licencia ${licenseCode} cancelada al eliminar ${isGameChanger ? 'game changer' : 'participante'}`);
+          logger.debug(`Licencia ${licenseCode} cancelada al eliminar ${isGameChanger ? 'game changer' : 'participante'}`);
         }
       } catch (licenseError) {
-        console.error('Error al cancelar licencia:', licenseError);
+        logger.error('Error al cancelar licencia:', licenseError);
         // Continuar con la eliminación aunque falle la cancelación
       }
     }
@@ -152,7 +153,7 @@ export async function POST(
         : `${userType} eliminado de la visión`,
     });
   } catch (error) {
-    console.error('Error removing participante from vision:', error);
+    logger.error('Error removing participante from vision:', error);
     return NextResponse.json(
       { success: false, error: 'Error al eliminar participante' },
       { status: 500 }

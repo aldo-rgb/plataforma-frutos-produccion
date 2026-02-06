@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { addWeeks, startOfDay, setHours, setMinutes, addDays } from 'date-fns';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/program/reagendar
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
     const semanasCompletadas = Math.floor(sesionesCompletadas / 2);
     const semanasRestantes = programa.totalWeeks - semanasCompletadas;
 
-    console.log(`
+    logger.debug(`
 📊 CÁLCULO DE RE-AGENDAMIENTO
 Total de semanas: ${programa.totalWeeks}
 Sesiones completadas: ${sesionesCompletadas}
@@ -152,7 +153,7 @@ Semanas restantes: ${semanasRestantes}
       data: nuevasSesiones as any
     });
 
-    console.log(`✅ Re-agendadas ${nuevasSesiones.length} sesiones para ${semanasRestantes} semanas`);
+    logger.debug(`✅ Re-agendadas ${nuevasSesiones.length} sesiones para ${semanasRestantes} semanas`);
 
     // 6. Marcar como leídas todas las notificaciones de MENTOR_ASSIGNMENT del usuario
     try {
@@ -168,10 +169,10 @@ Semanas restantes: ${semanasRestantes}
       });
 
       if (notificacionesActualizadas.count > 0) {
-        console.log(`📬 Marcadas ${notificacionesActualizadas.count} notificaciones como leídas`);
+        logger.debug(`📬 Marcadas ${notificacionesActualizadas.count} notificaciones como leídas`);
       }
     } catch (notifError) {
-      console.warn('⚠️ No se pudieron marcar las notificaciones como leídas:', notifError);
+      logger.warn('⚠️ No se pudieron marcar las notificaciones como leídas:', notifError);
       // No fallar la operación principal si falla la actualización de notificaciones
     }
 
@@ -187,7 +188,7 @@ Semanas restantes: ${semanasRestantes}
     });
 
   } catch (error) {
-    console.error('Error al re-agendar programa:', error);
+    logger.error('Error al re-agendar programa:', error);
     return NextResponse.json(
       { error: 'Error interno al re-agendar' },
       { status: 500 }

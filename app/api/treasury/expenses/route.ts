@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 const ALLOWED_ROLES = ['SCHOOL_ADMIN', 'COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
 
@@ -103,7 +104,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Error creating expense:', error);
+    logger.error('Error creating expense:', error);
     return NextResponse.json(
       { success: false, error: 'Error al registrar gasto' },
       { status: 500 }
@@ -230,7 +231,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Error fetching expenses:', error);
+    logger.error('Error fetching expenses:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener gastos' },
       { status: 500 }

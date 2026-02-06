@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/user/desert
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    console.log(`⚠️ DESERCIÓN iniciada por Usuario #${userId}`);
+    logger.debug(`⚠️ DESERCIÓN iniciada por Usuario #${userId}`);
 
     // Obtener usuario
     const user = await prisma.usuario.findUnique({
@@ -99,7 +100,7 @@ export async function POST(req: Request) {
       });
     });
 
-    console.log(`❌ ${user.nombre} ha desertado del ciclo`);
+    logger.debug(`❌ ${user.nombre} ha desertado del ciclo`);
 
     // TODO: Notificar al mentor/admin
 
@@ -115,7 +116,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error procesando deserción:', error);
+    logger.error('❌ Error procesando deserción:', error);
     return NextResponse.json(
       { error: 'Error al procesar deserción', details: error.message },
       { status: 500 }
@@ -187,7 +188,7 @@ export async function GET(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error verificando deserción:', error);
+    logger.error('❌ Error verificando deserción:', error);
     return NextResponse.json(
       { error: 'Error al verificar', details: error.message },
       { status: 500 }

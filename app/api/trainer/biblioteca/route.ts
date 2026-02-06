@@ -3,34 +3,35 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { PrismaClient } from "@prisma/client"
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient()
 
 // GET - Obtener todas las plantillas del trainer
 export async function GET(request: NextRequest) {
-  console.log('📚 GET /api/trainer/biblioteca iniciando...')
+  logger.debug('📚 GET /api/trainer/biblioteca iniciando...')
   try {
     const session = await getServerSession(authOptions)
-    console.log('📚 Session:', session?.user)
+    logger.debug('📚 Session:', session?.user)
     
     if (!session?.user?.id) {
-      console.log('📚 No session user id')
+      logger.debug('📚 No session user id')
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
     const userId = Number(session.user.id)
-    console.log('📚 userId:', userId)
+    logger.debug('📚 userId:', userId)
 
     // Verificar que es TRAINER
     const usuario = await prisma.usuario.findUnique({
       where: { id: userId },
       select: { id: true, rol: true }
     })
-    console.log('📚 Usuario encontrado:', usuario)
+    logger.debug('📚 Usuario encontrado:', usuario)
 
     const trainerRoles = ['TRAINER', 'trainer', 'Trainer']
     if (!usuario || !trainerRoles.includes(usuario.rol)) {
-      console.log('📚 Usuario no es trainer:', usuario?.rol)
+      logger.debug('📚 Usuario no es trainer:', usuario?.rol)
       return NextResponse.json({ error: "Solo trainers pueden acceder" }, { status: 403 })
     }
 
@@ -95,9 +96,9 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error("❌ Error al obtener biblioteca:", error)
-    console.error("❌ Error message:", error?.message)
-    console.error("❌ Error stack:", error?.stack)
+    logger.error("❌ Error al obtener biblioteca:", error)
+    logger.error("❌ Error message:", error?.message)
+    logger.error("❌ Error stack:", error?.stack)
     return NextResponse.json({ 
       error: "Error interno", 
       details: error?.message || 'Unknown error'
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest) {
 
 // POST - Crear nueva plantilla
 export async function POST(request: NextRequest) {
-  console.log('📚 POST /api/trainer/biblioteca - Creando plantilla...')
+  logger.debug('📚 POST /api/trainer/biblioteca - Creando plantilla...')
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = Number(session.user.id)
-    console.log('📚 userId:', userId, 'session:', session.user)
+    logger.debug('📚 userId:', userId, 'session:', session.user)
 
     // Verificar que es TRAINER
     const usuario = await prisma.usuario.findUnique({
@@ -123,11 +124,11 @@ export async function POST(request: NextRequest) {
       select: { id: true, rol: true }
     })
 
-    console.log('📚 usuario encontrado:', usuario)
+    logger.debug('📚 usuario encontrado:', usuario)
 
     const trainerRoles = ['TRAINER', 'trainer', 'Trainer']
     if (!usuario || !trainerRoles.includes(usuario.rol)) {
-      console.log('📚 ERROR: Usuario no es TRAINER, rol actual:', usuario?.rol)
+      logger.debug('📚 ERROR: Usuario no es TRAINER, rol actual:', usuario?.rol)
       return NextResponse.json({ error: "Solo trainers pueden crear plantillas" }, { status: 403 })
     }
 
@@ -156,7 +157,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Tipo de tarea inválido" }, { status: 400 })
     }
 
-    console.log('📚 Creando plantilla con datos:', { title, type, tags, trainerId: userId })
+    logger.debug('📚 Creando plantilla con datos:', { title, type, tags, trainerId: userId })
 
     // Crear plantilla con preguntas si es cuestionario
     try {
@@ -194,19 +195,19 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      console.log('📚 Plantilla creada exitosamente:', template.id)
+      logger.debug('📚 Plantilla creada exitosamente:', template.id)
 
       return NextResponse.json({
         success: true,
         template
       })
     } catch (prismaError) {
-      console.error('📚 Error de Prisma al crear plantilla:', prismaError)
+      logger.error('📚 Error de Prisma al crear plantilla:', prismaError)
       throw prismaError
     }
 
   } catch (error) {
-    console.error("Error al crear plantilla:", error)
+    logger.error("Error al crear plantilla:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }

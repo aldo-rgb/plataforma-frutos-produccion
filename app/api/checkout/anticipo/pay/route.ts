@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import Stripe from 'stripe';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
+import logger from '@/lib/logger';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -146,7 +147,7 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   } catch (error: any) {
-    console.error('Error creating anticipo payment:', error);
+    logger.error('Error creating anticipo payment:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Error al crear el pago' },
       { status: 500 }

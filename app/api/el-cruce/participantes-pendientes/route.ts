@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
     const userId = session.user.id
     const userRole = session.user.rol || ''
 
-    console.log(`[participantes-pendientes] userId=${userId}, role=${userRole}`)
+    logger.debug(`[participantes-pendientes] userId=${userId}, role=${userRole}`)
 
     // Determinar las visiones a las que tiene acceso el usuario
     let allowedVisionIds: number[] = []
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
         select: { visionId: true }
       })
       allowedVisionIds = [...new Set(staffAssignments.map(s => s.visionId))]
-      console.log(`[participantes-pendientes] COORDINATOR_BASIC userId=${userId}:`, allowedVisionIds)
+      logger.debug(`[participantes-pendientes] COORDINATOR_BASIC userId=${userId}:`, allowedVisionIds)
     } else if (['COORDINATOR_ADVANCED', 'COORDINADOR'].includes(userRole)) {
       // Coordinador Avanzado: ve visiones donde está asignado (para promover de BASIC a ADVANCED)
       const staffAssignments = await prisma.visionStaff.findMany({
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
         select: { visionId: true }
       })
       allowedVisionIds = [...new Set(staffAssignments.map(s => s.visionId))]
-      console.log(`[participantes-pendientes] COORDINATOR_ADVANCED userId=${userId}:`, allowedVisionIds)
+      logger.debug(`[participantes-pendientes] COORDINATOR_ADVANCED userId=${userId}:`, allowedVisionIds)
     } else if (['TRAINER'].includes(userRole)) {
       // TRAINER: Solo ve visiones donde está asignado como BASIC_TRAINER
       // (El Atravesar es para promover de BASIC a ADVANCED, solo trainers de BASIC lo necesitan)
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
         select: { visionId: true }
       })
       allowedVisionIds = [...new Set(staffAssignments.map(s => s.visionId))]
-      console.log(`[participantes-pendientes] TRAINER (BASIC_TRAINER only) userId=${userId}:`, allowedVisionIds)
+      logger.debug(`[participantes-pendientes] TRAINER (BASIC_TRAINER only) userId=${userId}:`, allowedVisionIds)
     } else if (['MENTOR'].includes(userRole)) {
       // Mentores: visiones donde están asignados
       const staffAssignments = await prisma.visionStaff.findMany({
@@ -132,14 +133,14 @@ export async function GET(request: NextRequest) {
       whereProduct.visionId = { in: filteredVisionIds }
     } else if (!isAdmin) {
       // Si no es admin y no tiene visiones asignadas, no mostrar nada
-      console.log(`[participantes-pendientes] No vision assignments, returning empty`)
+      logger.debug(`[participantes-pendientes] No vision assignments, returning empty`)
       return NextResponse.json({
         participantes: [],
         stats: { total: 0, sinCruzar: 0, cruzaron: 0 }
       })
     }
 
-    console.log(`[participantes-pendientes] Filtering products with visionIds:`, allowedVisionIds)
+    logger.debug(`[participantes-pendientes] Filtering products with visionIds:`, allowedVisionIds)
 
     // Obtener productos básicos de las visiones permitidas
     const basicProducts = await prisma.schoolProduct.findMany({
@@ -225,7 +226,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error("Error al obtener participantes pendientes:", error)
+    logger.error("Error al obtener participantes pendientes:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }

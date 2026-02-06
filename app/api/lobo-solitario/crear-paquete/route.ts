@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/lobo-solitario/crear-paquete
@@ -203,12 +204,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log(`📦 Orden de paquete creada para lobo solitario: ${orden.id}`);
-    console.log(`   Usuario: ${session.user.id}`);
-    console.log(`   Mentor: ${mentorId}`);
-    console.log(`   Plan: ${plan} ${frecuencia}`);
-    console.log(`   Sesiones: ${cantidadSesiones}`);
-    console.log(`   Total: $${precioTotal} MXN`);
+    logger.debug(`📦 Orden de paquete creada para lobo solitario: ${orden.id}`);
+    logger.debug(`   Usuario: ${session.user.id}`);
+    logger.debug(`   Mentor: ${mentorId}`);
+    logger.debug(`   Plan: ${plan} ${frecuencia}`);
+    logger.debug(`   Sesiones: ${cantidadSesiones}`);
+    logger.debug(`   Total: $${precioTotal} MXN`);
 
     return NextResponse.json({
       success: true,
@@ -218,7 +219,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error creando paquete lobo solitario:', error);
+    logger.error('❌ Error creando paquete lobo solitario:', error);
     return NextResponse.json(
       { error: 'Error al crear el paquete', details: error.message },
       { status: 500 }

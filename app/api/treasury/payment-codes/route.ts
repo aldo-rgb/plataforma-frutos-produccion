@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
+import logger from '@/lib/logger';
 
 const ALLOWED_ROLES = ['SCHOOL_ADMIN', 'COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
 
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { amount, reference, visionId } = body;
 
-    console.log('Creating PaymentCode with:', { amount, reference, visionId, organizationId: user.organizationId, createdById: user.id });
+    logger.debug('Creating PaymentCode with:', { amount, reference, visionId, organizationId: user.organizationId, createdById: user.id });
 
     if (!amount || amount <= 0) {
       return NextResponse.json(
@@ -149,7 +150,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error: any) {
-    console.error('Error generating payment code:', error);
+    logger.error('Error generating payment code:', error);
     
     // Si es un error de Prisma de código duplicado
     if (error?.code === 'P2002') {
@@ -269,7 +270,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Error fetching payment codes:', error);
+    logger.error('Error fetching payment codes:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener códigos' },
       { status: 500 }

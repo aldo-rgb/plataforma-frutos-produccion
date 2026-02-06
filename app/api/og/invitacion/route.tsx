@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export const runtime = 'nodejs';
 
@@ -410,7 +411,7 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
-    console.error('Error generating OG image:', error);
+    logger.error('Error generating OG image:', error);
     
     // Fallback image
     return new ImageResponse(

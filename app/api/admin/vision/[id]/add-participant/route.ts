@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import logger from '@/lib/logger';
 
 export async function POST(
   request: Request,
@@ -61,11 +62,11 @@ export async function POST(
       if (referidoUser) {
         // Si encontramos al referido, lo ligamos directamente
         invitedById = referidoUser.id;
-        console.log(`✅ Referido encontrado: ${referidoUser.nombre} (ID: ${referidoUser.id})`);
+        logger.debug(`✅ Referido encontrado: ${referidoUser.nombre} (ID: ${referidoUser.id})`);
       } else {
         // Si no existe, guardamos el texto para ligarlo después
         invitedByText = referido.trim();
-        console.log(`📝 Referido no encontrado, guardando texto: "${invitedByText}"`);
+        logger.debug(`📝 Referido no encontrado, guardando texto: "${invitedByText}"`);
       }
     }
 
@@ -195,7 +196,7 @@ export async function POST(
     });
 
   } catch (error: any) {
-    console.error('Error adding participant:', error);
+    logger.error('Error adding participant:', error);
     return NextResponse.json({ 
       success: false, 
       error: error.message || 'Error al agregar participante' 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // PATCH - Actualizar estado de tarea personal (completar/reabrir)
 export async function PATCH(
@@ -65,7 +66,7 @@ export async function PATCH(
     return NextResponse.json({ task: updatedTask });
 
   } catch (error) {
-    console.error('❌ Error actualizando tarea personal:', error);
+    logger.error('❌ Error actualizando tarea personal:', error);
     return NextResponse.json(
       { error: 'Error actualizando tarea personal' },
       { status: 500 }
@@ -122,7 +123,7 @@ export async function DELETE(
     return NextResponse.json({ message: 'Tarea eliminada exitosamente' });
 
   } catch (error) {
-    console.error('❌ Error eliminando tarea personal:', error);
+    logger.error('❌ Error eliminando tarea personal:', error);
     return NextResponse.json(
       { error: 'Error eliminando tarea personal' },
       { status: 500 }

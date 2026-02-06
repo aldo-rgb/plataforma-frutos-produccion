@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { addMinutes, format, parse, isBefore, startOfDay } from 'date-fns';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
     });
 
     if (!perfilMentor) {
-      console.log(`❌ No se encontró perfil para mentor ${mentorId}`);
+      logger.debug(`❌ No se encontró perfil para mentor ${mentorId}`);
       return NextResponse.json([]);
     }
 
@@ -49,16 +50,16 @@ export async function GET(request: Request) {
 
       // Si hay una excepción activa (vacaciones, día bloqueado), no hay slots disponibles
       if (excepcion) {
-        console.log(`🚫 Día bloqueado para mentorías ${mentorId} el ${dateStr}: ${excepcion.motivo || 'Día no disponible'}`);
+        logger.debug(`🚫 Día bloqueado para mentorías ${mentorId} el ${dateStr}: ${excepcion.motivo || 'Día no disponible'}`);
         return NextResponse.json([]);
       }
     } else {
       // Para DISCIPLINE, ignoramos excepciones - las llamadas de disciplina son obligatorias
-      console.log(`✅ Llamada de disciplina - ignorando días bloqueados para mentor ${mentorId}`);
+      logger.debug(`✅ Llamada de disciplina - ignorando días bloqueados para mentor ${mentorId}`);
     }
 
     // 2. OBTENER CONFIGURACIÓN DEL MENTOR PARA ESE DÍA Y TIPO
-    console.log(`🔍 Buscando disponibilidad: fecha=${dateStr}, dayOfWeek=${dayOfWeek} (${['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][dayOfWeek]}), tipo=${type}, mentorId=${mentorId}`);
+    logger.debug(`🔍 Buscando disponibilidad: fecha=${dateStr}, dayOfWeek=${dayOfWeek} (${['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][dayOfWeek]}), tipo=${type}, mentorId=${mentorId}`);
     
     const availability = await prisma.callAvailability.findFirst({
       where: {
@@ -71,11 +72,11 @@ export async function GET(request: Request) {
 
     // Si el mentor no trabaja hoy, devolvemos array vacío
     if (!availability) {
-      console.log(`📅 Mentor ${mentorId} no trabaja los ${['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][dayOfWeek]} (dayOfWeek=${dayOfWeek}) para tipo ${type}`);
+      logger.debug(`📅 Mentor ${mentorId} no trabaja los ${['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][dayOfWeek]} (dayOfWeek=${dayOfWeek}) para tipo ${type}`);
       return NextResponse.json([]);
     }
 
-    console.log(`✅ Disponibilidad encontrada: ${availability.startTime} - ${availability.endTime}`);
+    logger.debug(`✅ Disponibilidad encontrada: ${availability.startTime} - ${availability.endTime}`);
 
     // 3. OBTENER RESERVAS YA OCUPADAS (CallBooking + SolicitudMentoria)
     const startOfDayDate = startOfDay(selectedDate);
@@ -114,7 +115,7 @@ export async function GET(request: Request) {
       ...existingMentorias.map(m => m.horaSolicitada).filter(Boolean) as string[]
     ];
     
-    console.log(`🚫 Horarios ocupados para ${dateStr} (${busyTimes.length} slots):`, busyTimes);
+    logger.debug(`🚫 Horarios ocupados para ${dateStr} (${busyTimes.length} slots):`, busyTimes);
 
     // 4. GENERAR HUECOS DE 15 MINUTOS (EL MAGO DEL TIEMPO)
     const slots = [];
@@ -143,11 +144,11 @@ export async function GET(request: Request) {
       currentTime = addMinutes(currentTime, SESSION_DURATION);
     }
 
-    console.log(`✅ ${slots.length} slots disponibles para mentor ${mentorId} el ${dateStr}`);
+    logger.debug(`✅ ${slots.length} slots disponibles para mentor ${mentorId} el ${dateStr}`);
     return NextResponse.json(slots);
 
   } catch (error) {
-    console.error('❌ Error calculando agenda:', error);
+    logger.error('❌ Error calculando agenda:', error);
     return NextResponse.json({ 
       error: 'Error calculando agenda',
       details: error instanceof Error ? error.message : 'Unknown error'

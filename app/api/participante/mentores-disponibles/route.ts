@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/participante/mentores-disponibles?visionId=123
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
       (m) => m.PerfilMentor !== null
     );
 
-    console.log(`✅ Encontrados ${mentoresDisponibles.length} mentores disponibles`);
+    logger.debug(`✅ Encontrados ${mentoresDisponibles.length} mentores disponibles`);
 
     return NextResponse.json({
       success: true,
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
       total: mentoresDisponibles.length,
     });
   } catch (error: any) {
-    console.error('❌ Error al obtener mentores disponibles:', error);
+    logger.error('❌ Error al obtener mentores disponibles:', error);
     return NextResponse.json(
       { 
         error: 'Error al obtener mentores',

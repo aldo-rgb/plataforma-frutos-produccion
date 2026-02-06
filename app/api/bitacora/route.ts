@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET: Obtener el cuestionario del usuario
 export async function GET(request: NextRequest) {
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error getting bitacora:', error);
+    logger.error('Error getting bitacora:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }
@@ -162,7 +163,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Acción no válida' }, { status: 400 });
 
   } catch (error) {
-    console.error('Error saving bitacora:', error);
+    logger.error('Error saving bitacora:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }

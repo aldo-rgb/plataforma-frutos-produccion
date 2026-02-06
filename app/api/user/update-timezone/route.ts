@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/user/update-timezone
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('🔍 Sesión del usuario:', {
+    logger.debug('🔍 Sesión del usuario:', {
       id: session.user.id,
       email: session.user.email,
       nombre: session.user.nombre
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!userExists) {
-      console.error(`❌ Usuario no encontrado: ID ${userId}`);
+      logger.error(`❌ Usuario no encontrado: ID ${userId}`);
       return NextResponse.json(
         { error: 'Usuario no encontrado' },
         { status: 404 }
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log(`🌍 Usuario ${updatedUser.nombre} actualizó su zona horaria a: ${timezone}`);
+    logger.debug(`🌍 Usuario ${updatedUser.nombre} actualizó su zona horaria a: ${timezone}`);
 
     return NextResponse.json({
       success: true,
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error al actualizar zona horaria:', error);
+    logger.error('❌ Error al actualizar zona horaria:', error);
     return NextResponse.json(
       { 
         error: 'Error al actualizar zona horaria',

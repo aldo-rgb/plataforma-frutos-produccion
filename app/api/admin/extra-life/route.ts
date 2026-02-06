@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Registrar en log
-    console.log(`[VIDA EXTRA] ${usuario.nombre || usuario.email} otorgó vida extra a ${enrollment.Usuario_ProgramEnrollment_userIdToUsuario.nombre} (Enrollment ${enrollmentId}). Razón: ${razon || 'No especificada'}`);
+    logger.debug(`[VIDA EXTRA] ${usuario.nombre || usuario.email} otorgó vida extra a ${enrollment.Usuario_ProgramEnrollment_userIdToUsuario.nombre} (Enrollment ${enrollmentId}). Razón: ${razon || 'No especificada'}`);
 
     return NextResponse.json({
       success: true,
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error otorgando vida extra:', error);
+    logger.error('Error otorgando vida extra:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Error otorgando vida extra' 

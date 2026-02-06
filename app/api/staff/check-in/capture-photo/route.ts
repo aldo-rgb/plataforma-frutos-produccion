@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // POST - Guardar foto de perfil capturada en check-in
 export async function POST(request: NextRequest) {
@@ -117,10 +118,10 @@ export async function POST(request: NextRequest) {
           gender: user.genero || 'neutro'
         }
       });
-      console.log(`📸 Foto de check-in guardada en The Vault para usuario ${userId}: ${checkInLabel}`);
+      logger.debug(`📸 Foto de check-in guardada en The Vault para usuario ${userId}: ${checkInLabel}`);
     } catch (vaultError) {
       // No fallar si no se puede guardar en vault
-      console.error('Error guardando en vault:', vaultError);
+      logger.error('Error guardando en vault:', vaultError);
     }
 
     return NextResponse.json({
@@ -135,7 +136,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error guardando foto:', error);
+    logger.error('Error guardando foto:', error);
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
   }
 }

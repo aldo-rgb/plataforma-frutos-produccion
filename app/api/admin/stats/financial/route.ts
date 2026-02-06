@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { PrismaClient } from '@prisma/client';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -185,7 +186,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error fetching financial stats:', error);
+    logger.error('Error fetching financial stats:', error);
     return NextResponse.json(
       { error: 'Error al obtener estadísticas financieras' },
       { status: 500 }

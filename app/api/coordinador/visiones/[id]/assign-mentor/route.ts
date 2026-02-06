@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -184,7 +185,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('Error al asignar mentor:', error);
+    logger.error('Error al asignar mentor:', error);
     return NextResponse.json(
       { error: 'Error al asignar mentor' },
       { status: 500 }
@@ -305,7 +306,7 @@ export async function DELETE(
     });
 
   } catch (error) {
-    console.error('Error al remover mentor:', error);
+    logger.error('Error al remover mentor:', error);
     return NextResponse.json(
       { error: 'Error al remover mentor' },
       { status: 500 }

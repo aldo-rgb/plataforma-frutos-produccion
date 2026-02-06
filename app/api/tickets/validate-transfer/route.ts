@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function POST(request: Request) {
   try {
@@ -146,7 +147,7 @@ export async function POST(request: Request) {
       transferDeadline: transferDeadline.toISOString(),
     });
   } catch (error) {
-    console.error('Error validating transfer:', error);
+    logger.error('Error validating transfer:', error);
     return NextResponse.json(
       { success: false, error: 'Error al validar transferencia' },
       { status: 500 }

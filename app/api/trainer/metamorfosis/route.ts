@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener todos los elementos de metamorfosis (bases, transforms, songs, cunaSongs)
 export async function GET() {
@@ -87,7 +88,7 @@ export async function GET() {
       cunaSongs
     });
   } catch (error) {
-    console.error('Error al obtener elementos de metamorfosis:', error);
+    logger.error('Error al obtener elementos de metamorfosis:', error);
     return NextResponse.json({ error: 'Error al obtener elementos' }, { status: 500 });
   }
 }

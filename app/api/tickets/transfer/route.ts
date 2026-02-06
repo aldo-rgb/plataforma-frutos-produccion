@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { sendEmail } from '@/lib/email';
 import { sendWhatsAppTextMessage } from '@/lib/whatsapp';
+import logger from '@/lib/logger';
+import { ticketTransferSchema, validateData, getValidationErrorMessage } from '@/lib/validations';
 
 export async function POST(request: Request) {
   try {
@@ -18,14 +20,17 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { ticketId, recipientEmail } = body;
-
-    if (!ticketId || !recipientEmail) {
+    
+    // Validar datos con Zod
+    const validation = validateData(ticketTransferSchema, body);
+    if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: 'Datos incompletos' },
+        { success: false, error: getValidationErrorMessage(validation.details) },
         { status: 400 }
       );
     }
+    
+    const { ticketId, recipientEmail } = validation.data;
 
     // Buscar usuario actual
     const currentUser = await prisma.usuario.findUnique({
@@ -152,7 +157,7 @@ export async function POST(request: Request) {
         },
       });
       
-      console.log(`✅ Nuevo usuario creado para transferencia: ${recipient.email}`);
+      logger.debug(`✅ Nuevo usuario creado para transferencia: ${recipient.email}`);
     } else {
       // Usuario ya existe - actualizar contraseña a Quantum123. y exigir cambio
       recipient = await prisma.usuario.update({
@@ -163,7 +168,7 @@ export async function POST(request: Request) {
         },
       });
       
-      console.log(`🔄 Usuario existente actualizado para transferencia: ${recipient.email}`);
+      logger.debug(`🔄 Usuario existente actualizado para transferencia: ${recipient.email}`);
     }
 
     // Buscar TODOS los tickets activos del usuario para la misma visión
@@ -382,9 +387,9 @@ export async function POST(request: Request) {
         emailHtml,
         { fromName: ticket.organization?.name || 'Quantum Matter' }
       );
-      console.log(`📧 Email de transferencia enviado a ${recipient!.email}`);
+      logger.debug(`📧 Email de transferencia enviado a ${recipient!.email}`);
     } catch (emailError) {
-      console.error('❌ Error enviando email de transferencia:', emailError);
+      logger.error('❌ Error enviando email de transferencia:', emailError);
     }
 
     // 📱 Enviar WhatsApp (si el receptor tiene teléfono)
@@ -416,9 +421,9 @@ export async function POST(request: Request) {
 
       try {
         await sendWhatsAppTextMessage(recipientWithPhone.telefono, whatsappMessage);
-        console.log(`📱 WhatsApp de transferencia enviado a ${recipientWithPhone.telefono}`);
+        logger.debug(`📱 WhatsApp de transferencia enviado a ${recipientWithPhone.telefono}`);
       } catch (whatsappError) {
-        console.error('❌ Error enviando WhatsApp de transferencia:', whatsappError);
+        logger.error('❌ Error enviando WhatsApp de transferencia:', whatsappError);
       }
     }
 
@@ -441,7 +446,7 @@ export async function POST(request: Request) {
       } : null,
     });
   } catch (error) {
-    console.error('Error executing transfer:', error);
+    logger.error('Error executing transfer:', error);
     return NextResponse.json(
       { success: false, error: 'Error al transferir ticket' },
       { status: 500 }

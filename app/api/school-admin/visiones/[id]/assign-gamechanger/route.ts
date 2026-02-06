@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 const ALLOWED_ROLES = ['SCHOOL_ADMIN', 'ADMINISTRADOR', 'COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
 
@@ -119,7 +120,7 @@ export async function POST(
       message: 'Game Changer asignado exitosamente',
     });
   } catch (error) {
-    console.error('Error assigning game changer:', error);
+    logger.error('Error assigning game changer:', error);
     return NextResponse.json(
       { success: false, error: 'Error al asignar Game Changer' },
       { status: 500 }

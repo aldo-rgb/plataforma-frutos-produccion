@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET(
   request: NextRequest,
@@ -74,7 +75,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('Error al obtener información de visión:', error);
+    logger.error('Error al obtener información de visión:', error);
     return NextResponse.json(
       { success: false, error: 'Error al cargar información' },
       { status: 500 }

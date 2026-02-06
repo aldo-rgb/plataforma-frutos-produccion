@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // POST - Inicializar productos CORE para una organización
 export async function POST() {
@@ -161,7 +162,7 @@ export async function POST() {
       products: coreProducts,
     });
   } catch (error) {
-    console.error('Error initializing core products:', error);
+    logger.error('Error initializing core products:', error);
     return NextResponse.json(
       { success: false, error: 'Error al inicializar los productos CORE' },
       { status: 500 }

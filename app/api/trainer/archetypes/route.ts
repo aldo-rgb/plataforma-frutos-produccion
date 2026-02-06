@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener todos los arquetipos disponibles para el trainer
 export async function GET(request: Request) {
@@ -93,7 +94,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error fetching archetypes:', error);
+    logger.error('Error fetching archetypes:', error);
     return NextResponse.json({ error: 'Error al obtener arquetipos' }, { status: 500 });
   }
 }
@@ -154,7 +155,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ archetype }, { status: 201 });
 
   } catch (error) {
-    console.error('Error creating archetype:', error);
+    logger.error('Error creating archetype:', error);
     return NextResponse.json({ error: 'Error al crear arquetipo' }, { status: 500 });
   }
 }

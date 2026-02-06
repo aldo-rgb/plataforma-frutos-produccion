@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import OpenAI from 'openai';
+import logger from '@/lib/logger';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -177,7 +178,7 @@ Responde SOLO con un JSON válido, sin explicaciones adicionales ni markdown.`;
       
       content = JSON.parse(cleanJson);
     } catch (parseError) {
-      console.error('Error parseando respuesta de OpenAI:', parseError);
+      logger.error('Error parseando respuesta de OpenAI:', parseError);
       // Contenido de fallback
       content = generateFallbackContent(businessInfo);
     }
@@ -216,7 +217,7 @@ Responde SOLO con un JSON válido, sin explicaciones adicionales ni markdown.`;
     return NextResponse.json({ content });
 
   } catch (error) {
-    console.error('Error generando contenido:', error);
+    logger.error('Error generando contenido:', error);
     
     return NextResponse.json({ 
       content: generateFallbackContent({ name: 'Mi Negocio', description: '', category: 'otro' })

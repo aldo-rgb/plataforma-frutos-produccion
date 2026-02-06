@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { sendOrganicWelcomeMessage } from '@/lib/whatsapp';
 import { sendOrganicWelcomeEmail } from '@/lib/email';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     // SEGURIDAD: Validar que el rol sea permitido para registro público
     if (!ALLOWED_PUBLIC_ROLES.includes(rol)) {
-      console.warn(`⚠️ Intento de crear usuario con rol no permitido: ${rol} - email: ${email}`);
+      logger.warn(`⚠️ Intento de crear usuario con rol no permitido: ${rol} - email: ${email}`);
       return NextResponse.json(
         { error: 'Rol no permitido para registro público' },
         { status: 403 }
@@ -70,9 +71,9 @@ export async function POST(request: NextRequest) {
     if (telefono && telefono.trim()) {
       try {
         await sendOrganicWelcomeMessage(telefono, nombre);
-        console.log(`📱 WhatsApp enviado a ${nombre} (${telefono})`);
+        logger.debug(`📱 WhatsApp enviado a ${nombre} (${telefono})`);
       } catch (error) {
-        console.warn('⚠️ No se pudo enviar WhatsApp:', error);
+        logger.warn('⚠️ No se pudo enviar WhatsApp:', error);
         // No fallar la creación del usuario si WhatsApp falla
       }
     }
@@ -80,9 +81,9 @@ export async function POST(request: NextRequest) {
     // Enviar correo de bienvenida
     try {
       await sendOrganicWelcomeEmail(email, nombre);
-      console.log(`📧 Email de bienvenida enviado a ${nombre} (${email})`);
+      logger.debug(`📧 Email de bienvenida enviado a ${nombre} (${email})`);
     } catch (error) {
-      console.warn('⚠️ No se pudo enviar email:', error);
+      logger.warn('⚠️ No se pudo enviar email:', error);
       // No fallar la creación del usuario si el email falla
     }
 
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error al crear usuario:', error);
+    logger.error('Error al crear usuario:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/checkout-advanced/payment-success
@@ -16,12 +17,12 @@ export async function GET(request: NextRequest) {
     const collectionStatus = searchParams.get('collection_status');
     const externalReference = searchParams.get('external_reference');
 
-    console.log('📨 Payment success callback received');
-    console.log('   Payment ID:', paymentId);
-    console.log('   Status:', status);
-    console.log('   Collection Status:', collectionStatus);
-    console.log('   External Reference:', externalReference);
-    console.log('   Data param:', dataParam ? 'present' : 'missing');
+    logger.debug('📨 Payment success callback received');
+    logger.debug('   Payment ID:', paymentId);
+    logger.debug('   Status:', status);
+    logger.debug('   Collection Status:', collectionStatus);
+    logger.debug('   External Reference:', externalReference);
+    logger.debug('   Data param:', dataParam ? 'present' : 'missing');
 
     // Parse order data from URL parameter
     let orderData: any = null;
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
       try {
         orderData = JSON.parse(decodeURIComponent(dataParam));
       } catch (e) {
-        console.error('Error parsing data param:', e);
+        logger.error('Error parsing data param:', e);
       }
     }
 
@@ -39,12 +40,12 @@ export async function GET(request: NextRequest) {
       try {
         orderData = JSON.parse(externalReference);
       } catch (e) {
-        console.error('Error parsing external_reference:', e);
+        logger.error('Error parsing external_reference:', e);
       }
     }
 
     if (!orderData || !orderData.userId || !orderData.visionId || !orderData.packageType) {
-      console.error('Missing order data');
+      logger.error('Missing order data');
       return NextResponse.redirect(
         new URL('/dashboard/checkout-advanced?payment=error&reason=datos-incompletos', request.url)
       );
@@ -63,15 +64,15 @@ export async function GET(request: NextRequest) {
 
     // Verify payment status (approved)
     if (status !== 'approved' && collectionStatus !== 'approved') {
-      console.log('Payment not approved:', status, collectionStatus);
+      logger.debug('Payment not approved:', status, collectionStatus);
       return NextResponse.redirect(
         new URL(`/dashboard/checkout-advanced?payment=failed&status=${status || collectionStatus}`, request.url)
       );
     }
 
-    console.log(`✅ Pago aprobado para usuario ${userId}`);
-    console.log(`   Paquete: ${packageType}`);
-    console.log(`   Monto: $${amount} MXN`);
+    logger.debug(`✅ Pago aprobado para usuario ${userId}`);
+    logger.debug(`   Paquete: ${packageType}`);
+    logger.debug(`   Monto: $${amount} MXN`);
 
     // Check if user already has the enrollment (avoid duplicates)
     const isPLOnly = packageType === 'PL_BASE' || packageType === 'PL_CON_CREDITO';
@@ -85,7 +86,7 @@ export async function GET(request: NextRequest) {
       });
 
       if (existingPL) {
-        console.log('Usuario ya tiene inscripción PL, redirigiendo a success');
+        logger.debug('Usuario ya tiene inscripción PL, redirigiendo a success');
         return NextResponse.redirect(
           new URL('/dashboard/upgrade-advanced/success?already=true', request.url)
         );
@@ -100,7 +101,7 @@ export async function GET(request: NextRequest) {
       });
 
       if (existingAdvanced) {
-        console.log('Usuario ya tiene inscripción ADVANCED, redirigiendo a success');
+        logger.debug('Usuario ya tiene inscripción ADVANCED, redirigiendo a success');
         return NextResponse.redirect(
           new URL('/dashboard/upgrade-advanced/success?already=true', request.url)
         );
@@ -117,7 +118,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!basicEnrollment) {
-      console.error('Usuario no tiene inscripción BASIC');
+      logger.error('Usuario no tiene inscripción BASIC');
       return NextResponse.redirect(
         new URL('/dashboard/checkout-advanced?payment=error&reason=sin-inscripcion-basico', request.url)
       );
@@ -202,7 +203,7 @@ export async function GET(request: NextRequest) {
           },
         });
 
-        console.log(`✅ Inscripción PL creada para usuario ${userId} en visión ${effectiveVisionId}`);
+        logger.debug(`✅ Inscripción PL creada para usuario ${userId} en visión ${effectiveVisionId}`);
       } else {
         // Create ADVANCED enrollment
         const advancedEnrollment = await tx.vision_enrollments.create({
@@ -235,7 +236,7 @@ export async function GET(request: NextRequest) {
           },
         });
 
-        console.log(`✅ Inscripción ADVANCED creada para usuario ${userId} en visión ${visionId}`);
+        logger.debug(`✅ Inscripción ADVANCED creada para usuario ${userId} en visión ${visionId}`);
 
         // If COMBO or APARTADO, also create PL with full/partial payment
         if (packageType === 'COMBO' || packageType === 'APARTADO') {
@@ -272,7 +273,7 @@ export async function GET(request: NextRequest) {
             },
           });
 
-          console.log(`✅ Inscripción PL también creada (${packageType})`);
+          logger.debug(`✅ Inscripción PL también creada (${packageType})`);
         } else {
           // ADVANCED_ONLY or similar: Create PL enrollment and ticket with PROMO_RESERVABLE
           // This allows user to pay promo price ($9,000) during their advanced training
@@ -313,7 +314,7 @@ export async function GET(request: NextRequest) {
             },
           });
 
-          console.log(`✅ Ticket PL PROMO_RESERVABLE creado para usuario ${userId}`);
+          logger.debug(`✅ Ticket PL PROMO_RESERVABLE creado para usuario ${userId}`);
         }
       }
     });
@@ -333,7 +334,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(successUrl);
 
   } catch (error: any) {
-    console.error('❌ Error processing payment success:', error);
+    logger.error('❌ Error processing payment success:', error);
     return NextResponse.redirect(
       new URL(`/dashboard/checkout-advanced?payment=error&reason=${encodeURIComponent(error.message)}`, request.url)
     );

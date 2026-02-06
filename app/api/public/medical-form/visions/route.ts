@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // API pública para obtener visiones con productos activos (para registro de formulario médico)
 export async function GET(req: NextRequest) {
@@ -56,7 +57,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ visions });
   } catch (error) {
-    console.error('Error fetching public visions:', error);
+    logger.error('Error fetching public visions:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

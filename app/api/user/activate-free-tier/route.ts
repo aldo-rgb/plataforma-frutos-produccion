@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { generateTasksForLetter } from '@/lib/taskGenerator';
 import { notifyCartaApproved } from '@/lib/notifications';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/user/activate-free-tier
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
 
     const userId = session.user.id;
 
-    console.log('🔄 Procesando aprobación automática de carta para usuario FREE:', userId);
+    logger.debug('🔄 Procesando aprobación automática de carta para usuario FREE:', userId);
 
     // 🎯 AUTO-APROBAR CARTA si existe una en BORRADOR o EN_REVISION
     const carta = await prisma.cartaFrutos.findFirst({
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
       }
     });
 
-    console.log('📝 Carta encontrada:', carta ? `ID: ${carta.id}, Estado: ${carta.estado}` : 'No hay carta');
+    logger.debug('📝 Carta encontrada:', carta ? `ID: ${carta.id}, Estado: ${carta.estado}` : 'No hay carta');
 
     if (carta) {
       // Actualizar estado a APROBADA
@@ -49,19 +50,19 @@ export async function POST(req: Request) {
         }
       });
 
-      console.log('✅ Carta auto-aprobada para usuario FREE:', carta.id);
+      logger.debug('✅ Carta auto-aprobada para usuario FREE:', carta.id);
 
       // 🚀 GENERAR TAREAS - Igual que en el flujo de pago
-      console.log(`🚀 Generando tareas automáticas para carta FREE #${carta.id}`);
+      logger.debug(`🚀 Generando tareas automáticas para carta FREE #${carta.id}`);
       try {
         const result = await generateTasksForLetter(carta.id);
 
         if (result.success) {
-          console.log(`✅ ${result.tasksCreated} tareas creadas exitosamente`);
+          logger.debug(`✅ ${result.tasksCreated} tareas creadas exitosamente`);
           
           // Enviar notificación al usuario
           await notifyCartaApproved(carta.usuarioId, result.tasksCreated);
-          console.log(`📧 Notificación enviada a ${carta.Usuario.nombre} (${carta.Usuario.email})`);
+          logger.debug(`📧 Notificación enviada a ${carta.Usuario.nombre} (${carta.Usuario.email})`);
 
           return NextResponse.json({
             success: true,
@@ -71,7 +72,7 @@ export async function POST(req: Request) {
             tasksCreated: result.tasksCreated
           });
         } else {
-          console.error('❌ Error al generar tareas:', result.errors);
+          logger.error('❌ Error al generar tareas:', result.errors);
           return NextResponse.json(
             { 
               error: 'Carta aprobada pero error al generar tareas', 
@@ -82,7 +83,7 @@ export async function POST(req: Request) {
           );
         }
       } catch (taskError: any) {
-        console.error('❌ Excepción al generar tareas:', taskError);
+        logger.error('❌ Excepción al generar tareas:', taskError);
         return NextResponse.json(
           { 
             error: 'Carta aprobada pero falló la generación de tareas', 
@@ -95,7 +96,7 @@ export async function POST(req: Request) {
     }
 
     // No hay carta para aprobar
-    console.log('ℹ️ No se encontró carta para aprobar');
+    logger.debug('ℹ️ No se encontró carta para aprobar');
     return NextResponse.json({
       success: true,
       message: 'No hay carta para aprobar',
@@ -103,10 +104,10 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error aprobando carta:', error);
-    console.error('Error name:', error.name);
-    console.error('Error message:', error.message);
-    console.error('Stack trace:', error.stack);
+    logger.error('❌ Error aprobando carta:', error);
+    logger.error('Error name:', error.name);
+    logger.error('Error message:', error.message);
+    logger.error('Stack trace:', error.stack);
     
     return NextResponse.json(
       { 

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { checkAndAwardBadges } from '@/lib/badgeSystem';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -98,8 +99,8 @@ export async function POST(request: Request) {
 
     const perfilMentorId = solicitud.perfilMentorId;
 
-    console.log(`📝 Creando review: Estudiante ${session.user.id} → Mentor ${solicitud.PerfilMentor.Usuario.id}`);
-    console.log(`   Solicitud ID: ${bookingId}, Perfil Mentor ID: ${perfilMentorId}`);
+    logger.debug(`📝 Creando review: Estudiante ${session.user.id} → Mentor ${solicitud.PerfilMentor.Usuario.id}`);
+    logger.debug(`   Solicitud ID: ${bookingId}, Perfil Mentor ID: ${perfilMentorId}`);
 
     // TRANSACCIÓN: Crear review y actualizar stats del mentor
     const result = await prisma.$transaction(async (tx) => {
@@ -116,7 +117,7 @@ export async function POST(request: Request) {
         }
       });
 
-      console.log(`   ✅ Review creada: ID ${review.id}, Rating: ${rating}/5`);
+      logger.debug(`   ✅ Review creada: ID ${review.id}, Rating: ${rating}/5`);
 
       // 2. Actualizar estadísticas del mentor
       // Obtener todas las reviews del mentor para recalcular
@@ -140,7 +141,7 @@ export async function POST(request: Request) {
         }
       });
 
-      console.log(`📊 Stats actualizadas: ${totalResenas} reviews, promedio ${promedioCalificacion.toFixed(2)}`);
+      logger.debug(`📊 Stats actualizadas: ${totalResenas} reviews, promedio ${promedioCalificacion.toFixed(2)}`);
 
       return {
         review,
@@ -150,17 +151,17 @@ export async function POST(request: Request) {
       };
     });
 
-    console.log(`✅ Review completada exitosamente para booking #${bookingId}`);
+    logger.debug(`✅ Review completada exitosamente para booking #${bookingId}`);
 
     // 3. AUTOMATIZACIÓN: Actualizar insignias del mentor (async, no bloqueante)
     checkAndAwardBadges(booking.mentorId)
       .then((badges) => {
         if (badges && badges.length > 0) {
-          console.log(`🏅 Insignias actualizadas para mentor ${booking.mentorId}:`, badges);
+          logger.debug(`🏅 Insignias actualizadas para mentor ${booking.mentorId}:`, badges);
         }
       })
       .catch((error) => {
-        console.error('❌ Error actualizando insignias:', error);
+        logger.error('❌ Error actualizando insignias:', error);
       });
 
     // Respuesta exitosa
@@ -179,7 +180,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error creando review:', error);
+    logger.error('❌ Error creando review:', error);
     
     // Error de duplicado (si ya existe una review)
     if (error.code === 'P2002') {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 const DIRECTOR_ROLES = ['DIRECTOR', 'ADMIN', 'SUPER_ADMIN'];
 
@@ -109,7 +110,7 @@ export async function GET() {
     });
 
   } catch (error: any) {
-    console.error('Error fetching director batches:', error);
+    logger.error('Error fetching director batches:', error);
     return NextResponse.json(
       { error: error?.message || 'Error al obtener cortes' },
       { status: 500 }

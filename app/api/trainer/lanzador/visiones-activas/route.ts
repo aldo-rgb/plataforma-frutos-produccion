@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { PrismaClient } from "@prisma/client"
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient()
 
@@ -87,7 +88,7 @@ export async function GET(request: NextRequest) {
 
     const visiones = Array.from(visionMap.values())
     
-    console.log('🚀 Visiones activas para trainer:', userId, visiones.map(v => ({ id: v.id, nombre: v.nombre })))
+    logger.debug('🚀 Visiones activas para trainer:', userId, visiones.map(v => ({ id: v.id, nombre: v.nombre })))
 
     return NextResponse.json({
       success: true,
@@ -95,7 +96,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error("Error al obtener visiones activas:", error)
+    logger.error("Error al obtener visiones activas:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }

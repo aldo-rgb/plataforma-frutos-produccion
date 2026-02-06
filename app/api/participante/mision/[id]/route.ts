@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { PrismaClient } from "@prisma/client"
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient()
 
@@ -124,7 +125,7 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error("Error al obtener submission:", error)
+    logger.error("Error al obtener submission:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }
@@ -252,7 +253,7 @@ export async function POST(
     })
 
   } catch (error) {
-    console.error("Error al enviar misión:", error)
+    logger.error("Error al enviar misión:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }

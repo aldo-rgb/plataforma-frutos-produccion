@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Buscar participantes por nombre para check-in manual
 export async function GET(request: NextRequest) {
@@ -104,7 +105,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ participants });
 
   } catch (error) {
-    console.error('Error buscando participantes:', error);
+    logger.error('Error buscando participantes:', error);
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
   }
 }

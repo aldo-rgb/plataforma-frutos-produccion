@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -48,7 +49,7 @@ export async function GET(request: Request, { params }: Params) {
     return NextResponse.json({ archetype });
 
   } catch (error) {
-    console.error('Error fetching system archetype:', error);
+    logger.error('Error fetching system archetype:', error);
     return NextResponse.json({ error: 'Error al obtener arquetipo del sistema' }, { status: 500 });
   }
 }
@@ -116,7 +117,7 @@ export async function PUT(request: Request, { params }: Params) {
     return NextResponse.json({ archetype });
 
   } catch (error) {
-    console.error('Error updating system archetype:', error);
+    logger.error('Error updating system archetype:', error);
     return NextResponse.json({ error: 'Error al actualizar arquetipo del sistema' }, { status: 500 });
   }
 }
@@ -183,7 +184,7 @@ export async function DELETE(request: Request, { params }: Params) {
     });
 
   } catch (error) {
-    console.error('Error deleting system archetype:', error);
+    logger.error('Error deleting system archetype:', error);
     return NextResponse.json({ error: 'Error al eliminar arquetipo del sistema' }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
 import { sendWhatsAppTextMessage } from '@/lib/whatsapp';
+import logger from '@/lib/logger';
 
 // Este endpoint procesa checkouts abandonados:
 // 1. Encuentra registros IN_CHECKOUT con más de 30 minutos de antigüedad
@@ -120,7 +121,7 @@ export async function POST(request: Request) {
             // Usuario ya existe, usar ese
             userId = existingUser.id;
             userName = existingUser.nombre;
-            console.log(`✅ Usuario ya existía: ${checkout.email} (ID: ${userId})`);
+            logger.debug(`✅ Usuario ya existía: ${checkout.email} (ID: ${userId})`);
           } else {
             // Crear el nuevo usuario
             const newUser = await prisma.usuario.create({
@@ -147,7 +148,7 @@ export async function POST(request: Request) {
             userId = newUser.id;
             userName = newUser.nombre;
             results.usersCreated++;
-            console.log(`✅ Usuario creado desde checkout abandonado: ${checkout.email} (ID: ${userId})`);
+            logger.debug(`✅ Usuario creado desde checkout abandonado: ${checkout.email} (ID: ${userId})`);
             
             // Actualizar el checkout con el userId
             await prisma.abandonedCheckout.update({
@@ -305,7 +306,7 @@ export async function POST(request: Request) {
             results.errors.push(`Checkout ${checkout.id}: ${emailResult.error}`);
           }
         } catch (emailError) {
-          console.error('Error sending email:', emailError);
+          logger.error('Error sending email:', emailError);
           results.errors.push(`Checkout ${checkout.id}: Error enviando email`);
         }
 
@@ -338,24 +339,24 @@ ${ctaUrl}
             
             if (whatsappResult.success) {
               results.whatsappSent++;
-              console.log(`✅ WhatsApp enviado a ${checkout.phone}`);
+              logger.debug(`✅ WhatsApp enviado a ${checkout.phone}`);
             } else {
-              console.warn(`⚠️ WhatsApp no enviado: ${whatsappResult.error}`);
+              logger.warn(`⚠️ WhatsApp no enviado: ${whatsappResult.error}`);
             }
           } catch (whatsappError) {
-            console.error('Error sending WhatsApp:', whatsappError);
+            logger.error('Error sending WhatsApp:', whatsappError);
             // No agregamos a errors porque WhatsApp es opcional
           }
         }
 
         results.processed++;
       } catch (checkoutError: any) {
-        console.error(`Error processing checkout ${checkout.id}:`, checkoutError);
+        logger.error(`Error processing checkout ${checkout.id}:`, checkoutError);
         results.errors.push(`Checkout ${checkout.id}: ${checkoutError.message}`);
       }
     }
 
-    console.log('📊 Resultados del procesamiento de checkouts abandonados:', results);
+    logger.debug('📊 Resultados del procesamiento de checkouts abandonados:', results);
 
     return NextResponse.json({
       success: true,
@@ -363,7 +364,7 @@ ${ctaUrl}
       results,
     });
   } catch (error: any) {
-    console.error('Error processing abandoned checkouts:', error);
+    logger.error('Error processing abandoned checkouts:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Error interno' },
       { status: 500 }
@@ -424,7 +425,7 @@ export async function GET(request: Request) {
     
     return POST(postRequest);
   } catch (error: any) {
-    console.error('Error in GET handler:', error);
+    logger.error('Error in GET handler:', error);
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET(
   request: NextRequest,
@@ -16,7 +17,7 @@ export async function GET(
       );
     }
 
-    console.log(`🔍 Cargando perfil público del mentor ID: ${mentorId}`);
+    logger.debug(`🔍 Cargando perfil público del mentor ID: ${mentorId}`);
 
     // Buscar el perfil del mentor con toda la información
     const perfilMentor = await prisma.perfilMentor.findFirst({
@@ -77,14 +78,14 @@ export async function GET(
       },
     };
 
-    console.log(`✅ Perfil público cargado: ${perfilMentor.Usuario.nombre}`);
+    logger.debug(`✅ Perfil público cargado: ${perfilMentor.Usuario.nombre}`);
 
     return NextResponse.json({
       success: true,
       perfil: perfilPublico,
     });
   } catch (error) {
-    console.error('❌ Error al cargar perfil público del mentor:', error);
+    logger.error('❌ Error al cargar perfil público del mentor:', error);
     return NextResponse.json(
       { 
         error: 'Error al cargar el perfil del mentor',

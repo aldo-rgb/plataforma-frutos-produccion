@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // API para que el TRAINER finalice un entrenamiento
 // Solo puede finalizar el día del endDate
@@ -158,7 +159,7 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      console.log(`🔒 ${gameChangers.length} Game Changers bloqueados para encuesta`);
+      logger.debug(`🔒 ${gameChangers.length} Game Changers bloqueados para encuesta`);
     }
 
     // 2. Notificar al Director/Coordinador para auditoría
@@ -215,7 +216,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log(`✅ Entrenamiento "${product.name}" finalizado por TRAINER ${trainer.nombre}`);
+    logger.debug(`✅ Entrenamiento "${product.name}" finalizado por TRAINER ${trainer.nombre}`);
 
     return NextResponse.json({
       success: true,
@@ -232,7 +233,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error finalizando entrenamiento:', error);
+    logger.error('❌ Error finalizando entrenamiento:', error);
     return NextResponse.json(
       { error: 'Error al finalizar entrenamiento', message: error?.message },
       { status: 500 }

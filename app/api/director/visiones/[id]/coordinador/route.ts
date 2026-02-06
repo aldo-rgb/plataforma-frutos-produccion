@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // PATCH - Actualizar coordinador de una visión
 export async function PATCH(
@@ -94,7 +95,7 @@ export async function PATCH(
     });
 
   } catch (error: any) {
-    console.error('❌ Error asignando coordinador:', error);
+    logger.error('❌ Error asignando coordinador:', error);
     return NextResponse.json(
       { 
         error: 'Error al asignar coordinador',
@@ -163,7 +164,7 @@ export async function DELETE(
     });
 
   } catch (error: any) {
-    console.error('❌ Error removiendo coordinador:', error);
+    logger.error('❌ Error removiendo coordinador:', error);
     return NextResponse.json(
       { 
         error: 'Error al remover coordinador',

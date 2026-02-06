@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // POST - Crear una nueva asignación de metamorfosis
 export async function POST(request: Request) {
@@ -143,11 +144,11 @@ export async function POST(request: Request) {
       }
     });
 
-    console.log(`✅ Metamorfosis ${transform?.name} asignada a participante ${participantId} con tarea (200 pts) y notificación`);
+    logger.debug(`✅ Metamorfosis ${transform?.name} asignada a participante ${participantId} con tarea (200 pts) y notificación`);
 
     return NextResponse.json(assignment);
   } catch (error) {
-    console.error('Error al crear asignación:', error);
+    logger.error('Error al crear asignación:', error);
     return NextResponse.json({ error: 'Error al crear asignación' }, { status: 500 });
   }
 }
@@ -199,7 +200,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(assignments);
   } catch (error) {
-    console.error('Error al obtener asignaciones:', error);
+    logger.error('Error al obtener asignaciones:', error);
     return NextResponse.json({ error: 'Error al obtener asignaciones' }, { status: 500 });
   }
 }

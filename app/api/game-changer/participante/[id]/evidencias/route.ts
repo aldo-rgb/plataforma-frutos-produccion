@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET(
   req: NextRequest,
@@ -108,7 +109,7 @@ export async function GET(
       evidencias: evidenciasFormateadas
     });
   } catch (error) {
-    console.error('Error en /api/game-changer/participante/[id]/evidencias:', error);
+    logger.error('Error en /api/game-changer/participante/[id]/evidencias:', error);
     return NextResponse.json(
       { error: 'Error al obtener las evidencias' },
       { status: 500 }

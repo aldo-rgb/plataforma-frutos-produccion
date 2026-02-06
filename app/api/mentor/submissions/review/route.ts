@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { notifyEvidenciaRechazada } from '@/lib/notifications';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/mentor/submissions/review
@@ -172,7 +173,7 @@ export async function POST(req: Request) {
         })
       ]);
 
-      console.log(
+      logger.debug(
         `✅ Mentor ${mentorId} APROBÓ submission ${submissionId} ` +
         `de ${submission.Usuario.nombre} - ` +
         `Otorgados ${submission.AdminTask.pointsReward} PC`
@@ -180,7 +181,7 @@ export async function POST(req: Request) {
 
       // 🗓️ VERIFICAR SI ES PARTE DE UNA MISIÓN MULTI-DÍA
       if (submission.AdminTask.parentTaskId) {
-        console.log(`🗓️ Esta tarea es parte de una misión multi-día (Parent: ${submission.AdminTask.parentTaskId})`);
+        logger.debug(`🗓️ Esta tarea es parte de una misión multi-día (Parent: ${submission.AdminTask.parentTaskId})`);
         
         // Obtener todas las tareas hermanas de esta misión multi-día
         const parentTask = await prisma.adminTask.findUnique({
@@ -206,7 +207,7 @@ export async function POST(req: Request) {
           );
 
           if (todasCompletadas) {
-            console.log(`🎉 Usuario ${submission.usuarioId} completó TODA la misión multi-día "${parentTask.titulo}"!`);
+            logger.debug(`🎉 Usuario ${submission.usuarioId} completó TODA la misión multi-día "${parentTask.titulo}"!`);
             
             // Otorgar los puntos del premio completo
             await prisma.usuario.update({
@@ -218,13 +219,13 @@ export async function POST(req: Request) {
               }
             });
 
-            console.log(`💰 Bonus otorgado: ${parentTask.pointsReward} PC por completar misión de ${parentTask.duracionDias} días`);
+            logger.debug(`💰 Bonus otorgado: ${parentTask.pointsReward} PC por completar misión de ${parentTask.duracionDias} días`);
           } else {
             const diasCompletados = parentTask.DailyTasks.filter(tarea => 
               tarea.Submissions.length > 0 && 
               tarea.Submissions[0].status === 'APPROVED'
             ).length;
-            console.log(`📊 Progreso: ${diasCompletados}/${parentTask.duracionDias} días completados`);
+            logger.debug(`📊 Progreso: ${diasCompletados}/${parentTask.duracionDias} días completados`);
           }
         }
       }
@@ -255,7 +256,7 @@ export async function POST(req: Request) {
         }
       });
 
-      console.log(
+      logger.debug(
         `❌ Mentor ${mentorId} RECHAZÓ submission ${submissionId} ` +
         `de ${submission.Usuario.nombre} - Feedback: ${feedback}`
       );
@@ -277,7 +278,7 @@ export async function POST(req: Request) {
     }
 
   } catch (error: any) {
-    console.error('❌ Error revisando submission:', error);
+    logger.error('❌ Error revisando submission:', error);
     return NextResponse.json(
       { error: 'Error al revisar submission', details: error.message },
       { status: 500 }

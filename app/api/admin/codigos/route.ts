@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET(req: NextRequest) {
   try {
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ codigos: codigosFormateados });
   } catch (error) {
-    console.error('Error obteniendo códigos:', error);
+    logger.error('Error obteniendo códigos:', error);
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Roles permitidos para acceder a esta API
 const ALLOWED_ROLES = [
@@ -97,7 +98,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('❌ Error fetching participantes:', error);
+    logger.error('❌ Error fetching participantes:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener participantes' },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/coordinador/carta-prellenada-status
@@ -121,7 +122,7 @@ export async function GET(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('Error en carta-prellenada-status:', error);
+    logger.error('Error en carta-prellenada-status:', error);
     return NextResponse.json(
       { error: 'Error al obtener estadísticas', details: error.message },
       { status: 500 }

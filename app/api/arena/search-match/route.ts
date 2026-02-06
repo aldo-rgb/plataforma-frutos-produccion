@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { searchMatch } from '@/lib/arena-matchmaker';
+import logger from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
       rival: result.rival,
     });
   } catch (error) {
-    console.error('[ARENA API] Error en search-match:', error);
+    logger.error('[ARENA API] Error en search-match:', error);
     return NextResponse.json(
       { error: 'Error al buscar rival' },
       { status: 500 }

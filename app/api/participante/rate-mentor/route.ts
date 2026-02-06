@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { crearReview } from '@/lib/mentor-rating-service';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/participante/rate-mentor
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`📝 Usuario ${userId} calificando ${sesionesSinReview.length} sesiones con mentor ${mentorId}`);
+    logger.debug(`📝 Usuario ${userId} calificando ${sesionesSinReview.length} sesiones con mentor ${mentorId}`);
 
     // Crear SolicitudMentoria y reseña para CADA sesión sin review
     // (El sistema de reviews requiere solicitudId)
@@ -113,9 +114,9 @@ export async function POST(request: NextRequest) {
 
         resenasCreadas.push(resena);
 
-        console.log(`✅ Reseña creada para booking ${booking.id}`);
+        logger.debug(`✅ Reseña creada para booking ${booking.id}`);
       } catch (error) {
-        console.error(`⚠️ Error al crear reseña para booking ${booking.id}:`, error);
+        logger.error(`⚠️ Error al crear reseña para booking ${booking.id}:`, error);
         // Continuar con las demás sesiones
       }
     }
@@ -137,8 +138,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log(`🎉 ${resenasCreadas.length} reseñas creadas para mentor ${mentorId}`);
-    console.log(`📊 Nuevo rating del mentor: ${perfilActualizado?.calificacionPromedio || 0}`);
+    logger.debug(`🎉 ${resenasCreadas.length} reseñas creadas para mentor ${mentorId}`);
+    logger.debug(`📊 Nuevo rating del mentor: ${perfilActualizado?.calificacionPromedio || 0}`);
 
     return NextResponse.json({
       success: true,
@@ -152,7 +153,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('❌ Error al calificar mentor:', error);
+    logger.error('❌ Error al calificar mentor:', error);
     return NextResponse.json(
       { 
         error: 'Error al procesar la calificación',

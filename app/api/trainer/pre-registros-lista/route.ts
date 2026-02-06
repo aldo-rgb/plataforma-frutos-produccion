@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { PreRegistrationStatus } from '@prisma/client'
+import logger from '@/lib/logger';
 
 /**
  * GET /api/trainer/pre-registros-lista
@@ -320,7 +321,7 @@ export async function GET(request: Request) {
     })
 
   } catch (error) {
-    console.error('Error obteniendo lista de pre-registros:', error)
+    logger.error('Error obteniendo lista de pre-registros:', error)
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

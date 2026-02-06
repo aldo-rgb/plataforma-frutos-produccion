@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/admin/cycle/drop
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'userId y motivo son requeridos' }, { status: 400 });
     }
 
-    console.log(`⚠️ BAJA DE USUARIO iniciada por Admin #${adminId} para Usuario #${userId}`);
+    logger.debug(`⚠️ BAJA DE USUARIO iniciada por Admin #${adminId} para Usuario #${userId}`);
 
     // Obtener usuario
     const user = await prisma.usuario.findUnique({
@@ -98,7 +99,7 @@ export async function POST(req: Request) {
       });
     });
 
-    console.log(`✅ Usuario ${user.nombre} dado de baja del ciclo`);
+    logger.debug(`✅ Usuario ${user.nombre} dado de baja del ciclo`);
 
     // TODO: Enviar notificación al usuario
 
@@ -113,7 +114,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error dando de baja usuario:', error);
+    logger.error('❌ Error dando de baja usuario:', error);
     return NextResponse.json(
       { error: 'Error al dar de baja', details: error.message },
       { status: 500 }

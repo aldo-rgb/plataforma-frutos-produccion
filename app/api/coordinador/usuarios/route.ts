@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -26,7 +27,7 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
-    console.log('🔍 Coordinador', usuario.id, 'cargando usuarios');
+    logger.debug('🔍 Coordinador', usuario.id, 'cargando usuarios');
 
     // Obtener IDs de visiones donde el coordinador está asignado
     const visiones = await prisma.vision.findMany({
@@ -40,7 +41,7 @@ export async function GET() {
     
     const visionIds = visiones.map(v => v.id);
 
-    console.log('📊 Visiones del coordinador:', visionIds);
+    logger.debug('📊 Visiones del coordinador:', visionIds);
 
     if (visionIds.length === 0) {
       return NextResponse.json({
@@ -111,7 +112,7 @@ export async function GET() {
       }
     });
 
-    console.log('✅ Usuarios encontrados:', usuarios.length);
+    logger.debug('✅ Usuarios encontrados:', usuarios.length);
 
     return NextResponse.json({
       success: true,
@@ -125,7 +126,7 @@ export async function GET() {
       }))
     });
   } catch (error) {
-    console.error('❌ Error fetching coordinador usuarios:', error);
+    logger.error('❌ Error fetching coordinador usuarios:', error);
     return NextResponse.json(
       { error: 'Error al obtener usuarios' },
       { status: 500 }

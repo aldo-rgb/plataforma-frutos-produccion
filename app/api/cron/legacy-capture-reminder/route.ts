@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // CRON Job: Notificar al GC el último día del entrenamiento
 // para que capture los legados de los participantes.
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log(
+    logger.debug(
       `[Legacy Capture CRON] Encontradas ${visionesUltimoDia.length} visiones que terminan hoy`
     );
 
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
         });
 
         if (notificacionExistente) {
-          console.log(
+          logger.debug(
             `[Legacy Capture CRON] Ya notificado: ${vision.nombre} a ${vision.gameChanger.nombreCompleto}`
           );
           continue;
@@ -138,14 +139,14 @@ export async function POST(request: NextRequest) {
           `${vision.nombre} → ${vision.gameChanger.nombreCompleto} (${participantesPendientes} pendientes)`
         );
 
-        console.log(
+        logger.debug(
           `[Legacy Capture CRON] Notificación enviada a ${vision.gameChanger.nombreCompleto} para ${vision.nombre}`
         );
 
         // Opcional: Enviar notificación por WhatsApp si hay integración
         // await sendWhatsAppNotification(vision.gameChanger.telefono, message);
       } catch (error: any) {
-        console.error(
+        logger.error(
           `[Legacy Capture CRON] Error procesando visión ${vision.id}:`,
           error
         );
@@ -226,7 +227,7 @@ export async function POST(request: NextRequest) {
       message: `Enviadas ${results.notificationsSent} notificaciones de último día y ${preAvisos} pre-avisos`,
     });
   } catch (error: any) {
-    console.error('[Legacy Capture CRON] Error general:', error);
+    logger.error('[Legacy Capture CRON] Error general:', error);
     return NextResponse.json(
       {
         success: false,

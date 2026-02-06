@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET(req: NextRequest) {
   try {
@@ -95,7 +96,7 @@ export async function GET(req: NextRequest) {
         }
       }
     } catch (angelError) {
-      console.log('⚠️ Error obteniendo ángel/logo/misión (no crítico):', angelError);
+      logger.debug('⚠️ Error obteniendo ángel/logo/misión (no crítico):', angelError);
     }
 
     // Obtener historial completo de visiones
@@ -200,11 +201,11 @@ export async function GET(req: NextRequest) {
         // Ordenar por fecha
         visionesHistorial.sort((a, b) => a.fecha.getTime() - b.fecha.getTime());
         
-        console.log('✅ Visiones historial encontradas:', visionesHistorial.length);
-        console.log('📊 Detalles:', visionesHistorial);
+        logger.debug('✅ Visiones historial encontradas:', visionesHistorial.length);
+        logger.debug('📊 Detalles:', visionesHistorial);
         
       } catch (visionError) {
-        console.log('⚠️ Error cargando visiones (no crítico):', visionError);
+        logger.debug('⚠️ Error cargando visiones (no crítico):', visionError);
       }
     }
 
@@ -242,7 +243,7 @@ export async function GET(req: NextRequest) {
         tallaVotacion = pollVote.shirtSize;
       }
     } catch (e) {
-      console.log('⚠️ Error obteniendo talla de votación (no crítico):', e);
+      logger.debug('⚠️ Error obteniendo talla de votación (no crítico):', e);
     }
 
     // Construir configuración con valores fallback
@@ -283,7 +284,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error en GET /api/configuracion:', error);
+    logger.error('❌ Error en GET /api/configuracion:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Error al cargar configuración' },
       { status: 500 }
@@ -389,7 +390,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error en POST /api/configuracion:', error);
+    logger.error('❌ Error en POST /api/configuracion:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Error al guardar configuración' },
       { status: 500 }

@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../../lib/auth";
 import { prisma } from "../../../lib/prisma";
 import { extraerJSONDeRespuestaIA } from "../../../utils/extraer-json";
+import logger from '@/lib/logger';
 
 // Configuración de tiempo máximo de ejecución (opcional, útil para modelos lentos)
 export const maxDuration = 30;
@@ -422,13 +423,13 @@ Generando tus objetivos personalizados...
         const resultado = extraerJSONDeRespuestaIA(text);
         
         if (resultado.status === 'exito' && resultado.data?.carta_de_frutos) {
-          console.log('✅ JSON de Carta detectado, procesando...');
-          console.log('📊 Datos recibidos:', JSON.stringify(resultado.data, null, 2));
+          logger.debug('✅ JSON de Carta detectado, procesando...');
+          logger.debug('📊 Datos recibidos:', JSON.stringify(resultado.data, null, 2));
           
           const cartaData = resultado.data.carta_de_frutos;
           const metas = cartaData.metas || [];
           
-          console.log(`📝 Procesando ${metas.length} metas...`);
+          logger.debug(`📝 Procesando ${metas.length} metas...`);
           
           // Mapear las metas al formato de la BD
           const metasFormateadas: any = {};
@@ -443,7 +444,7 @@ Generando tus objetivos personalizados...
                              meta.declaracion_poder || 
                              "";
             
-            console.log(`  ${index + 1}. ${area}: "${metaTexto}"`);
+            logger.debug(`  ${index + 1}. ${area}: "${metaTexto}"`);
             
             metasFormateadas[area] = {
               meta: metaTexto,
@@ -462,10 +463,10 @@ Generando tus objetivos personalizados...
              */
             if (meta.tareas_acciones && Array.isArray(meta.tareas_acciones)) {
               accionesSemanales[area] = meta.tareas_acciones;
-              console.log(`     ✓ ${meta.tareas_acciones.length} acción(es) detectada(s)`);
+              logger.debug(`     ✓ ${meta.tareas_acciones.length} acción(es) detectada(s)`);
             } else if (meta.accion_semanal) {
               accionesSemanales[area] = [meta.accion_semanal];
-              console.log(`     ✓ 1 acción detectada`);
+              logger.debug(`     ✓ 1 acción detectada`);
             }
           });
           
@@ -478,7 +479,7 @@ Generando tus objetivos personalizados...
 
           if (cartaExistente) {
             // Actualizar carta existente
-            console.log('🔄 Actualizando carta existente ID:', cartaExistente.id);
+            logger.debug('🔄 Actualizando carta existente ID:', cartaExistente.id);
             await prisma.cartaFrutos.update({
               where: { id: cartaExistente.id },
               data: {
@@ -492,10 +493,10 @@ Generando tus objetivos personalizados...
               }
             });
             cartaId = cartaExistente.id;
-            console.log('✅ Carta actualizada exitosamente');
+            logger.debug('✅ Carta actualizada exitosamente');
           } else {
             // Crear nueva carta
-            console.log('🆕 Creando nueva carta para usuario:', usuario.nombre);
+            logger.debug('🆕 Creando nueva carta para usuario:', usuario.nombre);
             const nuevaCarta = await prisma.cartaFrutos.create({
               data: {
                 usuarioId: usuario.id,
@@ -519,11 +520,11 @@ Generando tus objetivos personalizados...
               }
             });
             cartaId = nuevaCarta.id;
-            console.log('✅ Nueva carta creada con ID:', cartaId);
+            logger.debug('✅ Nueva carta creada con ID:', cartaId);
           }
 
           // Crear tareas para las acciones semanales
-          console.log('📋 Procesando tareas/acciones...');
+          logger.debug('📋 Procesando tareas/acciones...');
           const areasConTareas = Object.keys(accionesSemanales);
           let tareasCreadas = 0;
           let tareasExistentes = 0;
@@ -532,7 +533,7 @@ Generando tus objetivos personalizados...
             const categoriaLower = area.toLowerCase().replace(/_/g, '');
             const tareas = accionesSemanales[area]; // Ahora es un array
             
-            console.log(`   📂 ${area}: ${tareas.length} tarea(s)`);
+            logger.debug(`   📂 ${area}: ${tareas.length} tarea(s)`);
             
             // Iterar sobre cada tarea
             for (const descripcion of tareas) {
@@ -556,20 +557,20 @@ Generando tus objetivos personalizados...
                   }
                 });
                 tareasCreadas++;
-                console.log(`      ✓ Creada: "${descripcion.substring(0, 50)}..."`);
+                logger.debug(`      ✓ Creada: "${descripcion.substring(0, 50)}..."`);
               } else {
                 tareasExistentes++;
-                console.log(`      ⊘ Ya existe: "${descripcion.substring(0, 50)}..."`);
+                logger.debug(`      ⊘ Ya existe: "${descripcion.substring(0, 50)}..."`);
               }
             }
           }
           
-          console.log(`✅ Carta de Frutos guardada exitosamente`);
-          console.log(`📊 Resumen: ${tareasCreadas} tarea(s) nueva(s), ${tareasExistentes} ya existente(s)`);
+          logger.debug(`✅ Carta de Frutos guardada exitosamente`);
+          logger.debug(`📊 Resumen: ${tareasCreadas} tarea(s) nueva(s), ${tareasExistentes} ya existente(s)`);
         }
         
       } catch (error) {
-        console.error("Error en persistencia:", error);
+        logger.error("Error en persistencia:", error);
       }
     },
   });

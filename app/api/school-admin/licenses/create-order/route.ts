@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    console.log('🔍 Session data:', { 
+    logger.debug('🔍 Session data:', { 
       exists: !!session, 
       userId: session?.user?.id, 
       email: session?.user?.email,
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log('✅ Orden de licencias creada:', {
+    logger.debug('✅ Orden de licencias creada:', {
       orderId: order.id,
       quantity: order.quantity,
       amount: order.amount,
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
       message: 'Orden creada exitosamente',
     });
   } catch (error) {
-    console.error('Error al crear orden:', error);
+    logger.error('Error al crear orden:', error);
     return NextResponse.json(
       {
         success: false,

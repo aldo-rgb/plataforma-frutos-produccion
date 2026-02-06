@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { ShirtSize } from '@prisma/client';
+import logger from '@/lib/logger';
 
 // Tipos - usando null para coincidir con Prisma
 interface PollOption {
@@ -310,7 +311,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error en tribe-polls GET:', error);
+    logger.error('Error en tribe-polls GET:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }
@@ -686,13 +687,13 @@ export async function POST(request: NextRequest) {
             where: { id: poll.visionId },
             data: { tribeLogoUrl: finalWinner.imageUrl }
           });
-          console.log(`[Tribe Poll] Logo ganador guardado para visión ${poll.visionId}: ${finalWinner.imageUrl}`);
+          logger.debug(`[Tribe Poll] Logo ganador guardado para visión ${poll.visionId}: ${finalWinner.imageUrl}`);
         } else if (poll.category === 'SHIRT' && finalWinner.imageUrl) {
           await prisma.vision.update({
             where: { id: poll.visionId },
             data: { tribeShirtDesignUrl: finalWinner.imageUrl }
           });
-          console.log(`[Tribe Poll] Diseño de playera ganador guardado para visión ${poll.visionId}: ${finalWinner.imageUrl}`);
+          logger.debug(`[Tribe Poll] Diseño de playera ganador guardado para visión ${poll.visionId}: ${finalWinner.imageUrl}`);
         }
 
         // Contar participación final
@@ -821,7 +822,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Error en tribe-polls POST:', error);
+    logger.error('Error en tribe-polls POST:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

@@ -2,9 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limiting - proteger contra abuso de códigos
+    const { result, response } = rateLimit(req, RateLimitPresets.auth);
+    if (response) {
+      logger.warn('Rate limit exceeded on codigos/canjear');
+      return response;
+    }
+
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
@@ -145,7 +154,7 @@ export async function POST(req: NextRequest) {
               }
             } catch (e) {
               // Si no es JSON, es texto legacy
-              console.log('Geofencing como texto legacy:', geofencing);
+              logger.debug('Geofencing como texto legacy:', geofencing);
             }
           }
 
@@ -394,8 +403,8 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error canjeando código:', error);
-    console.error('Error details:', JSON.stringify(error, null, 2));
+    logger.error('Error canjeando código:', error);
+    logger.error('Error details:', JSON.stringify(error, null, 2));
     
     // Enviar mensaje de error más específico
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';

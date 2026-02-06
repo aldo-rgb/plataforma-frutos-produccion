@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET: Listar organizaciones master activas (endpoint público para formulario de registro)
 export async function GET(req: NextRequest) {
@@ -34,7 +35,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(masterOrgsFormatted);
   } catch (error) {
-    console.error('Error loading public master organizations:', error);
+    logger.error('Error loading public master organizations:', error);
     return NextResponse.json(
       { error: 'Error al cargar agrupaciones' },
       { status: 500 }

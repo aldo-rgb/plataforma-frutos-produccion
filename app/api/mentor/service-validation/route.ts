@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import logger from '@/lib/logger';
 
 // Recompensas por nivel de servicio
 const SERVICE_REWARDS = {
@@ -182,7 +183,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ contributions });
 
   } catch (error: any) {
-    console.error('Error fetching contributions:', error);
+    logger.error('Error fetching contributions:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -324,7 +325,7 @@ export async function PATCH(req: NextRequest) {
     }
 
   } catch (error: any) {
-    console.error('Error reviewing contribution:', error);
+    logger.error('Error reviewing contribution:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

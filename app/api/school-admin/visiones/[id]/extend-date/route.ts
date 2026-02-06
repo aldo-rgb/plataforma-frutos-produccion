@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -156,9 +157,9 @@ export async function POST(
     ]);
 
     // Log para confirmar la actualización
-    console.log(`✅ Fecha de visión ${visionId} (${vision.nombre}) extendida a ${newEnd.toISOString()}`);
-    console.log(`✅ Licencias con autoAssignVision="${vision.nombre}" actualizadas`);
-    console.log(`✅ Licencias en LicenseAssignment para visionId=${visionId} actualizadas`);
+    logger.debug(`✅ Fecha de visión ${visionId} (${vision.nombre}) extendida a ${newEnd.toISOString()}`);
+    logger.debug(`✅ Licencias con autoAssignVision="${vision.nombre}" actualizadas`);
+    logger.debug(`✅ Licencias en LicenseAssignment para visionId=${visionId} actualizadas`);
 
     const results = {
       extendedUsers: 0,
@@ -334,7 +335,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('Error extendiendo fecha de visión:', error);
+    logger.error('Error extendiendo fecha de visión:', error);
     return NextResponse.json(
       { error: 'Error al extender fecha de visión' },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET(req: NextRequest) {
   try {
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest) {
       settings,
     });
   } catch (error: any) {
-    console.error('Error fetching payment settings:', error);
+    logger.error('Error fetching payment settings:', error);
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }
@@ -89,14 +90,14 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log('✅ Configuración de pagos actualizada');
+    logger.debug('✅ Configuración de pagos actualizada');
 
     return NextResponse.json({
       success: true,
       message: 'Configuración guardada exitosamente',
     });
   } catch (error: any) {
-    console.error('❌ Error saving payment settings:', error);
+    logger.error('❌ Error saving payment settings:', error);
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 500 }

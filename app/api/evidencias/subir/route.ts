@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // POST: Subir evidencia de una acción
 export async function POST(request: NextRequest) {
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log(`📸 Nueva evidencia subida por ${usuario.nombre} para acción ${accionId}`);
+    logger.debug(`📸 Nueva evidencia subida por ${usuario.nombre} para acción ${accionId}`);
 
     return NextResponse.json({ 
       success: true,
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
     }, { status: 200 });
 
   } catch (error) {
-    console.error('❌ Error al subir evidencia:', error);
+    logger.error('❌ Error al subir evidencia:', error);
     return NextResponse.json({ error: 'Error al subir evidencia' }, { status: 500 });
   }
 }

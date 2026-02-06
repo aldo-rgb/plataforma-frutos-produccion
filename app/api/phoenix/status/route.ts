@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { PrismaClient } from '@prisma/client';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -54,7 +55,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error checking Phoenix status:', error);
+    logger.error('Error checking Phoenix status:', error);
     return NextResponse.json(
       { error: 'Error al verificar estado' },
       { status: 500 }

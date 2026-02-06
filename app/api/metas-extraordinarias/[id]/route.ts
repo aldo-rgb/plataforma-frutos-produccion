@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -19,7 +20,7 @@ export async function DELETE(
     return NextResponse.json({ success: true });
 
   } catch (error) {
-    console.error('Error al eliminar meta:', error);
+    logger.error('Error al eliminar meta:', error);
     return NextResponse.json(
       { error: 'Error al eliminar meta' },
       { status: 500 }
@@ -49,7 +50,7 @@ export async function PATCH(
     return NextResponse.json(metaActualizada);
 
   } catch (error) {
-    console.error('Error al actualizar meta:', error);
+    logger.error('Error al actualizar meta:', error);
     return NextResponse.json(
       { error: 'Error al actualizar meta' },
       { status: 500 }

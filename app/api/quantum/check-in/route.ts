@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import logger from '@/lib/logger';
 
 // 📍 Haversine Formula - Calcular distancia entre dos puntos geográficos
 function calculateDistance(
@@ -238,7 +239,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error en check-in:', error);
+    logger.error('Error en check-in:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -288,7 +289,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error fetching check-ins:', error);
+    logger.error('Error fetching check-ins:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -301,7 +302,7 @@ Quantum: ¡INCREÍBLE! Tu Carta F.R.U.T.O.S. está completa. He capturado toda l
     });
 
   } catch (error: any) {
-    console.error('Error generando datos de prueba:', error);
+    logger.error('Error generando datos de prueba:', error);
     return NextResponse.json(
       { error: 'Error generando datos de prueba', details: error.message },
       { status: 500 }

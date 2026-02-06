@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/ranking/permissions
@@ -220,7 +221,7 @@ export async function GET() {
       permissions.availableVisions = Array.from(visionesMap.values());
     }
 
-    console.log('🔐 Permisos de ranking para usuario:', {
+    logger.debug('🔐 Permisos de ranking para usuario:', {
       userId,
       rol,
       permissions: {
@@ -236,7 +237,7 @@ export async function GET() {
     return NextResponse.json(permissions);
 
   } catch (error) {
-    console.error('❌ Error obteniendo permisos de ranking:', error);
+    logger.error('❌ Error obteniendo permisos de ranking:', error);
     return NextResponse.json(
       { 
         error: 'Error obteniendo permisos',

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener usuario y visión directamente para formulario médico de emergencia
 export async function GET(request: NextRequest) {
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error en user-direct:', error);
+    logger.error('Error en user-direct:', error);
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
   }
 }

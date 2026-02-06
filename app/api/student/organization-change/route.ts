@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener solicitudes de cambio pendientes
 export async function GET(request: NextRequest) {
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error al obtener solicitud de cambio:', error);
+    logger.error('Error al obtener solicitud de cambio:', error);
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }
@@ -169,7 +170,7 @@ export async function POST(request: NextRequest) {
             });
           } catch (notifError) {
             // Si falla la notificación, solo lo registramos pero no fallar la transferencia
-            console.error('Error al crear notificación:', notifError);
+            logger.error('Error al crear notificación:', notifError);
           }
         }
       }
@@ -199,7 +200,7 @@ export async function POST(request: NextRequest) {
       });
     }
   } catch (error) {
-    console.error('Error al procesar cambio:', error);
+    logger.error('Error al procesar cambio:', error);
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 interface CallData {
   dayOffset: number;
@@ -25,7 +26,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { participantId, squadId, trainingEndDate, calls } = body;
 
-    console.log('📅 Datos recibidos:', { 
+    logger.debug('📅 Datos recibidos:', { 
       participantId, 
       squadId, 
       trainingEndDate,
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     });
 
     if (!participantId || !squadId || !trainingEndDate || !calls || calls.length === 0) {
-      console.log('❌ Validación fallida:', {
+      logger.debug('❌ Validación fallida:', {
         hasParticipantId: !!participantId,
         hasSquadId: !!squadId,
         hasTrainingEndDate: !!trainingEndDate,
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    console.log('📅 Agendando llamadas post-entreno:', { 
+    logger.debug('📅 Agendando llamadas post-entreno:', { 
       participantId, 
       squadId, 
       gcId,
@@ -228,7 +229,7 @@ export async function POST(request: Request) {
       });
     }
 
-    console.log(`✅ Creadas ${createdSlots.length} llamadas y ${createdTasks.length} tareas para participante ${participantId} y GC ${gcId}`);
+    logger.debug(`✅ Creadas ${createdSlots.length} llamadas y ${createdTasks.length} tareas para participante ${participantId} y GC ${gcId}`);
 
     return NextResponse.json({
       success: true,
@@ -238,7 +239,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error scheduling post-entreno calls:', error);
+    logger.error('Error scheduling post-entreno calls:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Error al agendar llamadas',
@@ -262,7 +263,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const squadId = searchParams.get('squadId');
 
-    console.log('📅 GET post-entreno schedule:', { gcId, squadId });
+    logger.debug('📅 GET post-entreno schedule:', { gcId, squadId });
 
     if (!squadId) {
       return NextResponse.json({ 
@@ -290,7 +291,7 @@ export async function GET(request: Request) {
       }
     });
 
-    console.log('📅 Squad encontrado:', { 
+    logger.debug('📅 Squad encontrado:', { 
       squadId: squad?.id, 
       leaderId: squad?.leaderId,
       gcId,
@@ -388,7 +389,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error getting post-entreno status:', error);
+    logger.error('Error getting post-entreno status:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Error al obtener estado'

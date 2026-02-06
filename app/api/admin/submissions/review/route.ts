@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/admin/submissions/review
@@ -152,7 +153,7 @@ export async function POST(req: Request) {
         })
       ]);
 
-      console.log(
+      logger.debug(
         `✅ ${usuario.rol} ${usuario.id} APROBÓ submission ${submissionId} ` +
         `de ${submission.Usuario.nombre} - ` +
         `Otorgados ${submission.AdminTask.pointsReward} PC`
@@ -161,7 +162,7 @@ export async function POST(req: Request) {
       // 🗓️ VERIFICAR SI ES PARTE DE UNA MISIÓN MULTI-DÍA
       let multiDayBonus = 0;
       if (submission.AdminTask.parentTaskId) {
-        console.log(`🗓️ Esta tarea es parte de una misión multi-día (Parent: ${submission.AdminTask.parentTaskId})`);
+        logger.debug(`🗓️ Esta tarea es parte de una misión multi-día (Parent: ${submission.AdminTask.parentTaskId})`);
         
         const parentTask = await prisma.adminTask.findUnique({
           where: { id: submission.AdminTask.parentTaskId },
@@ -185,7 +186,7 @@ export async function POST(req: Request) {
           );
 
           if (todasCompletadas) {
-            console.log(`🎉 Usuario ${submission.usuarioId} completó TODA la misión multi-día "${parentTask.titulo}"!`);
+            logger.debug(`🎉 Usuario ${submission.usuarioId} completó TODA la misión multi-día "${parentTask.titulo}"!`);
             
             await prisma.usuario.update({
               where: { id: submission.usuarioId },
@@ -197,7 +198,7 @@ export async function POST(req: Request) {
             });
 
             multiDayBonus = parentTask.pointsReward;
-            console.log(`💰 Bonus otorgado: ${parentTask.pointsReward} PC por completar misión de ${parentTask.duracionDias} días`);
+            logger.debug(`💰 Bonus otorgado: ${parentTask.pointsReward} PC por completar misión de ${parentTask.duracionDias} días`);
           }
         }
       }
@@ -225,7 +226,7 @@ export async function POST(req: Request) {
         }
       });
 
-      console.log(
+      logger.debug(
         `❌ ${usuario.rol} ${usuario.id} RECHAZÓ submission ${submissionId} ` +
         `de ${submission.Usuario.nombre} - Feedback: ${feedback}`
       );
@@ -238,7 +239,7 @@ export async function POST(req: Request) {
     }
 
   } catch (error: any) {
-    console.error('❌ Error revisando submission:', error);
+    logger.error('❌ Error revisando submission:', error);
     return NextResponse.json(
       { error: 'Error al revisar submission', details: error.message },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function POST(req: Request) {
   try {
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
 
     const { bookingId, present } = await req.json();
 
-    console.log('📞 Procesando asistencia:', { bookingId, present, mentorId: mentor.id });
+    logger.debug('📞 Procesando asistencia:', { bookingId, present, mentorId: mentor.id });
 
     // 1. Obtener info de la cita
     const booking: any = await prisma.callBooking.findUnique({
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
       } as any
     });
 
-    console.log('📋 Booking encontrado:', booking ? {
+    logger.debug('📋 Booking encontrado:', booking ? {
       id: booking.id,
       studentId: booking.studentId,
       mentorId: booking.mentorId,
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
     } : 'NULL');
 
     if (!booking) {
-      console.error('❌ Booking no encontrado:', bookingId);
+      logger.error('❌ Booking no encontrado:', bookingId);
       return NextResponse.json({ error: 'Cita no encontrada' }, { status: 404 });
     }
 
@@ -103,7 +104,7 @@ export async function POST(req: Request) {
       nuevoStatusPrograma = 'SUSPENDED';
       isSuspended = true;
       
-      console.log(`🚫 SUSPENSIÓN: ${booking.Usuario_CallBooking_studentIdToUsuario.nombre} alcanzó ${nuevosStrikes} faltas`);
+      logger.debug(`🚫 SUSPENSIÓN: ${booking.Usuario_CallBooking_studentIdToUsuario.nombre} alcanzó ${nuevosStrikes} faltas`);
       
       // ELIMINACIÓN AUTOMÁTICA DE FUTURAS CITAS
       const futureBookings = await prisma.callBooking.deleteMany({
@@ -114,7 +115,7 @@ export async function POST(req: Request) {
         } as any
       });
 
-      console.log(`🗑️ Canceladas ${futureBookings.count} llamadas futuras`);
+      logger.debug(`🗑️ Canceladas ${futureBookings.count} llamadas futuras`);
     }
 
     // Transacción para guardar todo
@@ -150,7 +151,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error) {
-    console.error('Error registrando asistencia:', error);
+    logger.error('Error registrando asistencia:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

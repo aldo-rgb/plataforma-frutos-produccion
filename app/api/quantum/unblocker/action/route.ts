@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/quantum/unblocker/action
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
 
     const { action, taskId, data } = await req.json();
 
-    console.log(`⚡ Acción solicitada: ${action} para tarea ${taskId}`);
+    logger.debug(`⚡ Acción solicitada: ${action} para tarea ${taskId}`);
 
     const usuario = await prisma.usuario.findUnique({
       where: { email: session.user.email },
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
             updatedAt: new Date()
           }
         });
-        console.log(`✅ Tarea ${taskId} movida a HOY`);
+        logger.debug(`✅ Tarea ${taskId} movida a HOY`);
         break;
 
       case 'MARK_COMPLETE':
@@ -64,7 +65,7 @@ export async function POST(req: Request) {
             updatedAt: new Date()
           }
         });
-        console.log(`✅ Tarea ${taskId} marcada como completada`);
+        logger.debug(`✅ Tarea ${taskId} marcada como completada`);
         break;
 
       case 'DELETE_TASK':
@@ -73,7 +74,7 @@ export async function POST(req: Request) {
           where: { id: taskId }
         });
         result = { deleted: true };
-        console.log(`✅ Tarea ${taskId} eliminada`);
+        logger.debug(`✅ Tarea ${taskId} eliminada`);
         break;
 
       case 'POSTPONE':
@@ -90,7 +91,7 @@ export async function POST(req: Request) {
             updatedAt: new Date()
           }
         });
-        console.log(`✅ Tarea ${taskId} pospuesta ${diasPosponer} días`);
+        logger.debug(`✅ Tarea ${taskId} pospuesta ${diasPosponer} días`);
         break;
 
       case 'RESCHEDULE':
@@ -106,7 +107,7 @@ export async function POST(req: Request) {
             updatedAt: new Date()
           }
         });
-        console.log(`✅ Tarea ${taskId} reprogramada a ${data.newDate}`);
+        logger.debug(`✅ Tarea ${taskId} reprogramada a ${data.newDate}`);
         break;
 
       default:
@@ -121,7 +122,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error ejecutando acción:', error);
+    logger.error('❌ Error ejecutando acción:', error);
     return NextResponse.json(
       { error: 'Error al ejecutar acción', details: error.message },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,14 +80,14 @@ export async function GET(
       createdAt: mentor.createdAt,
     };
 
-    console.log(`📋 [ADMIN] Mentor ${mentor.id} consultado: ${mentor.Usuario.nombre}`);
+    logger.debug(`📋 [ADMIN] Mentor ${mentor.id} consultado: ${mentor.Usuario.nombre}`);
 
     return NextResponse.json({
       success: true,
       mentor: mentorFormateado,
     });
   } catch (error: any) {
-    console.error('❌ Error al obtener mentor:', error);
+    logger.error('❌ Error al obtener mentor:', error);
     return NextResponse.json(
       { error: 'Error al obtener mentor', details: error.message },
       { status: 500 }
@@ -210,10 +211,10 @@ export async function PUT(
           ...(nuevoEstadoUsuario ? { esMentor: true } : {})
         }
       });
-      console.log(`✅ [ADMIN] Usuario ${mentorActualizado!.usuarioId} ${nuevoEstadoUsuario ? 'activado como mentor' : 'desactivado'} por ${session.user.nombre}`);
+      logger.debug(`✅ [ADMIN] Usuario ${mentorActualizado!.usuarioId} ${nuevoEstadoUsuario ? 'activado como mentor' : 'desactivado'} por ${session.user.nombre}`);
     }
 
-    console.log(
+    logger.debug(
       `✅ [ADMIN] Mentor ${mentorId} actualizado por ${session.user.nombre}:`,
       dataToUpdate
     );
@@ -224,7 +225,7 @@ export async function PUT(
       mentor: mentorActualizado,
     });
   } catch (error: any) {
-    console.error('❌ Error al actualizar mentor:', error);
+    logger.error('❌ Error al actualizar mentor:', error);
     return NextResponse.json(
       { error: 'Error al actualizar mentor', details: error.message },
       { status: 500 }
@@ -270,14 +271,14 @@ export async function DELETE(
       where: { id: mentorId },
     });
 
-    console.log(`🗑️ [ADMIN] Mentor ${mentorId} (${mentor.Usuario.nombre}) eliminado por ${session.user.nombre}`);
+    logger.debug(`🗑️ [ADMIN] Mentor ${mentorId} (${mentor.Usuario.nombre}) eliminado por ${session.user.nombre}`);
 
     return NextResponse.json({
       success: true,
       mensaje: 'Mentor eliminado exitosamente',
     });
   } catch (error: any) {
-    console.error('❌ Error al eliminar mentor:', error);
+    logger.error('❌ Error al eliminar mentor:', error);
     return NextResponse.json(
       { error: 'Error al eliminar mentor', details: error.message },
       { status: 500 }

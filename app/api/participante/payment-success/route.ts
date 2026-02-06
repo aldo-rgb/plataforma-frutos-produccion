@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { onPackagePurchaseCompleted } from '@/lib/commissionCalculator';
 import { createPackageCredits } from '@/lib/packageSessionManager';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/participante/payment-success
@@ -85,15 +86,15 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    console.log(`✅ Pago verificado y completado para orden ${ordenId}`);
-    console.log(`   Usuario: ${orden.Usuario.nombre}`);
-    console.log(`   Mentor: ${orden.Mentor.nombre}`);
-    console.log(`   Monto: $${orden.precioTotal} ${orden.currency}`);
+    logger.debug(`✅ Pago verificado y completado para orden ${ordenId}`);
+    logger.debug(`   Usuario: ${orden.Usuario.nombre}`);
+    logger.debug(`   Mentor: ${orden.Mentor.nombre}`);
+    logger.debug(`   Monto: $${orden.precioTotal} ${orden.currency}`);
 
     // 💰 COMISIÓN SE REGISTRA POR CADA SESIÓN COMPLETADA
     // Las comisiones NO se registran al comprar el paquete
     // Se crearán automáticamente cuando el mentor complete cada sesión ($90 por sesión)
-    console.log(`💰 Comisión se registrará conforme se completen las ${orden.cantidad} sesiones`);
+    logger.debug(`💰 Comisión se registrará conforme se completen las ${orden.cantidad} sesiones`);
     
     // DESACTIVADO: No registrar comisión anticipada
     // try {
@@ -106,9 +107,9 @@ export async function GET(request: NextRequest) {
     //     orden.cantidad,
     //     new Date()
     //   );
-    //   console.log(`💰 Comisión registrada en ledger para paquete ${ordenId}`);
+    //   logger.debug(`💰 Comisión registrada en ledger para paquete ${ordenId}`);
     // } catch (error) {
-    //   console.error(`⚠️ Error al registrar comisión (no crítico):`, error);
+    //   logger.error(`⚠️ Error al registrar comisión (no crítico):`, error);
     // }
 
     // 💳 CREAR CRÉDITOS DE SESIONES
@@ -118,9 +119,9 @@ export async function GET(request: NextRequest) {
       expiresAt.setMonth(expiresAt.getMonth() + 6);
 
       await createPackageCredits(ordenId, orden.cantidad, expiresAt);
-      console.log(`💳 Créditos creados: ${orden.cantidad} sesiones disponibles`);
+      logger.debug(`💳 Créditos creados: ${orden.cantidad} sesiones disponibles`);
     } catch (error) {
-      console.error(`⚠️ Error al crear créditos (no crítico):`, error);
+      logger.error(`⚠️ Error al crear créditos (no crítico):`, error);
       // No detenemos el flujo, los créditos se pueden crear manualmente
     }
 
@@ -135,7 +136,7 @@ export async function GET(request: NextRequest) {
       )
     );
   } catch (error: any) {
-    console.error('❌ Error al procesar confirmación de pago:', error);
+    logger.error('❌ Error al procesar confirmación de pago:', error);
     return NextResponse.redirect(
       new URL('/dashboard/participante?error=error-procesamiento', request.url)
     );
@@ -187,9 +188,9 @@ async function assignMentorToUser(usuarioId: number, mentorId: number, visionId:
       });
     }
 
-    console.log(`✅ Mentor ${mentorId} asignado al usuario ${usuarioId} en visión ${visionId}`);
+    logger.debug(`✅ Mentor ${mentorId} asignado al usuario ${usuarioId} en visión ${visionId}`);
   } catch (error) {
-    console.error('❌ Error al asignar mentor:', error);
+    logger.error('❌ Error al asignar mentor:', error);
     throw error;
   }
 }
@@ -236,7 +237,7 @@ async function verifyPayPalPayment(orderId: string, payerId: string | null): Pro
     const captureData = await captureRes.json();
     return captureData.status === 'COMPLETED';
   } catch (error) {
-    console.error('PayPal verification error:', error);
+    logger.error('PayPal verification error:', error);
     return false;
   }
 }
@@ -257,7 +258,7 @@ async function verifyStripePayment(sessionId: string): Promise<boolean> {
 
     return session.payment_status === 'paid';
   } catch (error) {
-    console.error('Stripe verification error:', error);
+    logger.error('Stripe verification error:', error);
     return false;
   }
 }
@@ -282,7 +283,7 @@ async function verifyMercadoPagoPayment(paymentId: string): Promise<boolean> {
     const paymentData = await paymentRes.json();
     return paymentData.status === 'approved';
   } catch (error) {
-    console.error('Mercado Pago verification error:', error);
+    logger.error('Mercado Pago verification error:', error);
     return false;
   }
 }

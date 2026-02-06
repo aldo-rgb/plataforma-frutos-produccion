@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/mentor/membership/toggle-auto-renewal
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error) {
-    console.error('Error toggling auto-renewal:', error);
+    logger.error('Error toggling auto-renewal:', error);
     return NextResponse.json(
       { error: 'Error al actualizar configuración' },
       { status: 500 }

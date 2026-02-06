@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { markCommissionsAsPaid } from '@/lib/commissionCalculator';
 import { nanoid } from 'nanoid';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
     // Generar ID único para el batch
     const payoutBatchId = `PAYOUT-${nanoid(10)}`;
 
-    console.log(`💸 Processing payout batch ${payoutBatchId} for ${ledgerIds.length} commissions`);
+    logger.debug(`💸 Processing payout batch ${payoutBatchId} for ${ledgerIds.length} commissions`);
 
     // Marcar como pagadas
     const result = await markCommissionsAsPaid(
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error processing payout:', error);
+    logger.error('❌ Error processing payout:', error);
     return NextResponse.json(
       { error: 'Error procesando pago', details: error.message },
       { status: 500 }

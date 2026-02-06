@@ -1,9 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
+import logger from '@/lib/logger';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 
 export const maxDuration = 30;
 
@@ -11,8 +13,15 @@ export const maxDuration = 30;
  * POST /api/quantum/unblocker/chat
  * Chat especializado para desbloqueo de tareas con contexto inyectado
  */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    // Rate limiting - API de IA costosa
+    const { response } = rateLimit(req, RateLimitPresets.ai);
+    if (response) {
+      logger.warn('Rate limit exceeded on quantum/unblocker/chat');
+      return response;
+    }
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
@@ -137,7 +146,7 @@ Ahora, el usuario te hablará. Recuerda: eres su aliado, no su juez. Abre posibi
             }
           });
         } catch (error) {
-          console.error('Error guardando mensaje:', error);
+          logger.error('Error guardando mensaje:', error);
         }
       }
     });
@@ -145,7 +154,7 @@ Ahora, el usuario te hablará. Recuerda: eres su aliado, no su juez. Abre posibi
     return result.toDataStreamResponse();
 
   } catch (error: any) {
-    console.error('❌ Error en chat unblocker:', error);
+    logger.error('❌ Error en chat unblocker:', error);
     return NextResponse.json(
       { error: 'Error en chat', details: error.message },
       { status: 500 }

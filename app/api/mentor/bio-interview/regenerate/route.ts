@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { regenerateBio, type InterviewContext } from '@/lib/quantum-bio-writer';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function POST(request: Request) {
   try {
@@ -79,7 +80,7 @@ export async function POST(request: Request) {
     });
     
   } catch (error) {
-    console.error('Error regenerating bio:', error);
+    logger.error('Error regenerating bio:', error);
     return NextResponse.json(
       { error: 'Error al regenerar biografía' },
       { status: 500 }

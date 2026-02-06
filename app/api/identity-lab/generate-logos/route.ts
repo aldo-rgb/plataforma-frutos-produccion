@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import OpenAI from 'openai';
 import { v2 as cloudinary } from 'cloudinary';
+import logger from '@/lib/logger';
 
 // Configurar Cloudinary
 cloudinary.config({
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'El nombre de la tribu es requerido' }, { status: 400 });
     }
 
-    console.log(`[Generate Logos] Generando 4 logos para tribu: ${tribeName}`);
+    logger.debug(`[Generate Logos] Generando 4 logos para tribu: ${tribeName}`);
 
     // Prompt base para generación de logos
     const basePrompt = `Create a modern, minimalist logo design for a team/tribe called "${tribeName}". 
@@ -73,7 +74,7 @@ The logo should evoke: unity, strength, achievement, and team spirit.`;
       const prompt = `${basePrompt}\n\nSpecific style for this variation: ${style}`;
       
       try {
-        console.log(`[Generate Logos] Generando logo ${index + 1}/4...`);
+        logger.debug(`[Generate Logos] Generando logo ${index + 1}/4...`);
         
         const response = await openai.images.generate({
           model: 'dall-e-3',
@@ -103,7 +104,7 @@ The logo should evoke: unity, strength, achievement, and team spirit.`;
           style: style
         };
       } catch (err) {
-        console.error(`[Generate Logos] Error generando logo ${index + 1}:`, err);
+        logger.error(`[Generate Logos] Error generando logo ${index + 1}:`, err);
         return null;
       }
     });
@@ -124,7 +125,7 @@ The logo should evoke: unity, strength, achievement, and team spirit.`;
       );
     }
 
-    console.log(`[Generate Logos] Se generaron ${generatedLogos.length} logos exitosamente`);
+    logger.debug(`[Generate Logos] Se generaron ${generatedLogos.length} logos exitosamente`);
 
     return NextResponse.json({
       success: true,
@@ -133,7 +134,7 @@ The logo should evoke: unity, strength, achievement, and team spirit.`;
     });
 
   } catch (error) {
-    console.error('[Generate Logos] Error:', error);
+    logger.error('[Generate Logos] Error:', error);
     return NextResponse.json(
       { error: 'Error al generar logos' }, 
       { status: 500 }

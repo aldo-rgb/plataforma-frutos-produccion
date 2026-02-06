@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sign } from 'jsonwebtoken';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/auth/activate?token=xxx
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
     return response;
 
   } catch (error) {
-    console.error('❌ Error activating magic link:', error);
+    logger.error('❌ Error activating magic link:', error);
     return NextResponse.redirect(new URL('/login?error=server_error', request.url));
   }
 }

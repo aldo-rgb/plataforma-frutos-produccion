@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -160,7 +161,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('❌ Error en program/status:', error);
+    logger.error('❌ Error en program/status:', error);
     return NextResponse.json({ 
       error: 'Error al obtener estado del programa' 
     }, { status: 500 });

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // POST /api/admin/promote-to-next-level
 // Solo ADMINISTRADOR puede usar esta API
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
         where: { id: currentEnrollment.id },
         data: { paymentStatus: 'PAID' }
       });
-      console.log(`[ADMIN] Enrollment ${currentLevel} actualizado a PAID para usuario ${userId}`);
+      logger.debug(`[ADMIN] Enrollment ${currentLevel} actualizado a PAID para usuario ${userId}`);
     }
     
     // PASO 2: Verificar/crear enrollment para el siguiente nivel
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
           updatedAt: new Date()
         }
       });
-      console.log(`[ADMIN] Enrollment ${nextLevel} creado para usuario ${userId}`);
+      logger.debug(`[ADMIN] Enrollment ${nextLevel} creado para usuario ${userId}`);
     }
     
     // PASO 3: Verificar/crear TICKET de entrada para el siguiente nivel
@@ -155,10 +156,10 @@ export async function POST(request: NextRequest) {
         }
       });
       ticketAction = 'created';
-      console.log(`[ADMIN] Ticket ${nextLevel} creado para usuario ${userId}`);
+      logger.debug(`[ADMIN] Ticket ${nextLevel} creado para usuario ${userId}`);
     }
     
-    console.log(`[ADMIN] Usuario ${user.nombre} (ID: ${userId}) promovido a ${nextLevel} en visión ${vision.nombre}`);
+    logger.debug(`[ADMIN] Usuario ${user.nombre} (ID: ${userId}) promovido a ${nextLevel} en visión ${vision.nombre}`);
     
     return NextResponse.json({ 
       success: true, 
@@ -167,7 +168,7 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error: any) {
-    console.error('Error en promote-to-next-level:', error);
+    logger.error('Error en promote-to-next-level:', error);
     return NextResponse.json({ 
       error: 'Error interno del servidor',
       details: error.message 

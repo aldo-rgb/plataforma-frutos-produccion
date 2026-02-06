@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 const ALLOWED_ROLES = ['SCHOOL_ADMIN', 'ADMINISTRADOR', 'COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
 
@@ -44,7 +45,7 @@ export async function GET(
       plCaptain: vision.PlCaptain || null
     });
   } catch (error) {
-    console.error('Error al obtener capitán PL:', error);
+    logger.error('Error al obtener capitán PL:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
@@ -118,7 +119,7 @@ export async function POST(
       plCaptain: captain
     });
   } catch (error) {
-    console.error('Error al asignar capitán PL:', error);
+    logger.error('Error al asignar capitán PL:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
@@ -149,7 +150,7 @@ export async function DELETE(
       message: 'Capitán PL removido exitosamente'
     });
   } catch (error) {
-    console.error('Error al remover capitán PL:', error);
+    logger.error('Error al remover capitán PL:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

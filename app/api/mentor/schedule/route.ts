@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
       }
     });
 
-    console.log(`🗑️ Horarios de tipo ${type} eliminados para mentor ${finalMentorId}`);
+    logger.debug(`🗑️ Horarios de tipo ${type} eliminados para mentor ${finalMentorId}`);
 
     const activeSlots = schedule
       .filter((s: any) => s.isActive === true)
@@ -108,9 +109,9 @@ export async function POST(request: Request) {
         data: activeSlots
       });
 
-      console.log(`✅ ${activeSlots.length} horarios de tipo ${type} guardados para mentor ${finalMentorId}`);
+      logger.debug(`✅ ${activeSlots.length} horarios de tipo ${type} guardados para mentor ${finalMentorId}`);
     } else {
-      console.log(`⚠️ No se guardaron horarios de tipo ${type} (todos inactivos)`);
+      logger.debug(`⚠️ No se guardaron horarios de tipo ${type} (todos inactivos)`);
     }
 
     const savedAvailability = await prisma.callAvailability.findMany({
@@ -136,7 +137,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ Error guardando horario:', error);
+    logger.error('❌ Error guardando horario:', error);
     
     return NextResponse.json({ 
       error: 'Error al guardar horario',
@@ -210,7 +211,7 @@ export async function GET(request: Request) {
       });
     });
 
-    console.log(`📅 Horarios de tipo ${type} consultados para mentor ${finalMentorId}: ${availability.length} slots`);
+    logger.debug(`📅 Horarios de tipo ${type} consultados para mentor ${finalMentorId}: ${availability.length} slots`);
 
     return NextResponse.json({
       success: true,
@@ -224,7 +225,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ Error obteniendo horario:', error);
+    logger.error('❌ Error obteniendo horario:', error);
     
     return NextResponse.json({ 
       error: 'Error al obtener horario',
@@ -296,7 +297,7 @@ export async function DELETE(request: Request) {
         where: { id: Number(slotId) }
       });
 
-      console.log(`🗑️ Slot ${slotId} eliminado`);
+      logger.debug(`🗑️ Slot ${slotId} eliminado`);
 
       return NextResponse.json({
         success: true,
@@ -309,7 +310,7 @@ export async function DELETE(request: Request) {
         where: { mentorId: finalMentorId }
       });
 
-      console.log(`🗑️ ${result.count} horarios eliminados para mentor ${finalMentorId}`);
+      logger.debug(`🗑️ ${result.count} horarios eliminados para mentor ${finalMentorId}`);
 
       return NextResponse.json({
         success: true,
@@ -319,7 +320,7 @@ export async function DELETE(request: Request) {
     }
 
   } catch (error) {
-    console.error('❌ Error eliminando horario:', error);
+    logger.error('❌ Error eliminando horario:', error);
     
     return NextResponse.json({ 
       error: 'Error al eliminar horario',

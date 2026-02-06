@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Función para convertir texto a Title Case (Primera letra mayúscula de cada palabra)
 function toTitleCase(str: string): string {
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
       organizations
     });
   } catch (error) {
-    console.error('Error fetching organizations:', error);
+    logger.error('Error fetching organizations:', error);
     return NextResponse.json(
       { error: 'Error al obtener organizaciones' },
       { status: 500 }
@@ -198,7 +199,7 @@ export async function POST(req: NextRequest) {
       });
       schoolAdminId = newSchoolAdmin.id;
       
-      console.log(`✅ School Admin creado: ${schoolAdminEmail}`);
+      logger.debug(`✅ School Admin creado: ${schoolAdminEmail}`);
     }
 
     // 🏫 PASO 3: Crear la organización con ambos roles asignados
@@ -233,7 +234,7 @@ export async function POST(req: NextRequest) {
       data: { organizationId: organization.id }
     });
 
-    console.log(`✅ Organización creada: ${organization.name} (ID: ${organization.id})`);
+    logger.debug(`✅ Organización creada: ${organization.name} (ID: ${organization.id})`);
 
     return NextResponse.json({
       success: true,
@@ -241,7 +242,7 @@ export async function POST(req: NextRequest) {
       message: 'Organización creada exitosamente con Coordinador y School Admin asignados'
     });
   } catch (error: any) {
-    console.error('Error creating organization:', error);
+    logger.error('Error creating organization:', error);
     return NextResponse.json(
       { error: error.message || 'Error al crear organización' },
       { status: 500 }

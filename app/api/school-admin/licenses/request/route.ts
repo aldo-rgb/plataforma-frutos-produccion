@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 const TIER_PRICES = {
   STANDARD: 50,
@@ -99,7 +100,7 @@ export async function POST(req: NextRequest) {
       amount,
     });
   } catch (error: any) {
-    console.error('❌ Error creating license order:', error);
+    logger.error('❌ Error creating license order:', error);
     return NextResponse.json(
       { error: error.message || 'Error al procesar solicitud' },
       { status: 500 }
@@ -180,7 +181,7 @@ async function createPayPalOrder(orderId: string, amount: number): Promise<strin
     const approveLink = orderData.links.find((link: any) => link.rel === 'approve');
     return approveLink?.href || '';
   } catch (error) {
-    console.error('PayPal error:', error);
+    logger.error('PayPal error:', error);
     throw error;
   }
 }
@@ -230,7 +231,7 @@ async function createStripeCheckout(orderId: string, amount: number): Promise<st
 
     return session.url || '';
   } catch (error) {
-    console.error('Stripe error:', error);
+    logger.error('Stripe error:', error);
     throw error;
   }
 }
@@ -287,7 +288,7 @@ async function createMercadoPagoPreference(orderId: string, amount: number): Pro
 
     return preferenceData.init_point || '';
   } catch (error) {
-    console.error('Mercado Pago error:', error);
+    logger.error('Mercado Pago error:', error);
     throw error;
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/admin/mentor-applications/[id]/approve
@@ -120,7 +121,7 @@ export async function POST(
             esMentor: true
           }
         });
-        console.log(`✅ Usuario ${usuarioActual.nombre} mantiene rol ${usuarioActual.rol}, activado esMentor`);
+        logger.debug(`✅ Usuario ${usuarioActual.nombre} mantiene rol ${usuarioActual.rol}, activado esMentor`);
       } else {
         // Cambiar rol a MENTOR y activar flag
         await tx.usuario.update({
@@ -130,7 +131,7 @@ export async function POST(
             esMentor: true
           }
         });
-        console.log(`✅ Usuario ${usuarioActual.nombre} cambió a rol MENTOR`);
+        logger.debug(`✅ Usuario ${usuarioActual.nombre} cambió a rol MENTOR`);
       }
 
       // 3. Actualizar aplicación
@@ -170,7 +171,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('Error approving application:', error);
+    logger.error('Error approving application:', error);
     
     // Proporcionar mensaje de error más descriptivo
     let errorMessage = 'Error al aprobar aplicación';

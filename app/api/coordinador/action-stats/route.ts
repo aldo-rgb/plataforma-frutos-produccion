@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { EstadoCarta } from '@prisma/client';
+import logger from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -108,7 +109,7 @@ export async function GET() {
     });
 
   } catch (error: any) {
-    console.error('❌ Error obteniendo estadísticas de acción:', error);
+    logger.error('❌ Error obteniendo estadísticas de acción:', error);
     return NextResponse.json(
       { 
         error: 'Error al obtener estadísticas',

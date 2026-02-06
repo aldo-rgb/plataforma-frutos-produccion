@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/admin/license-orders/[orderId]/reject
@@ -12,7 +13,7 @@ export async function POST(
   { params }: { params: { orderId: string } }
 ) {
   try {
-    console.log('❌ Rechazando orden:', params.orderId);
+    logger.debug('❌ Rechazando orden:', params.orderId);
     
     const session = await getServerSession(authOptions);
 
@@ -72,7 +73,7 @@ export async function POST(
       },
     });
 
-    console.log('✅ Orden rechazada exitosamente');
+    logger.debug('✅ Orden rechazada exitosamente');
 
     // TODO: Enviar notificación al director de escuela sobre el rechazo
     // Esto puede incluir un correo electrónico o una notificación en la plataforma
@@ -83,7 +84,7 @@ export async function POST(
       order: updatedOrder,
     });
   } catch (error: any) {
-    console.error('❌ Error al rechazar orden:', error);
+    logger.error('❌ Error al rechazar orden:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Error al rechazar la orden' },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/lobo-solitario/procesar-pago
@@ -96,9 +97,9 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log(`✅ URL de pago generada para lobo solitario: ${ordenId}`);
-    console.log(`   Método: ${metodoPago}`);
-    console.log(`   Monto: $${orden.precioTotal} MXN`);
+    logger.debug(`✅ URL de pago generada para lobo solitario: ${ordenId}`);
+    logger.debug(`   Método: ${metodoPago}`);
+    logger.debug(`   Monto: $${orden.precioTotal} MXN`);
 
     return NextResponse.json({
       success: true,
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
       ordenId,
     });
   } catch (error: any) {
-    console.error('Error al procesar pago lobo solitario:', error);
+    logger.error('Error al procesar pago lobo solitario:', error);
     return NextResponse.json(
       {
         error: 'Error al procesar el pago',
@@ -212,7 +213,7 @@ async function createPayPalOrder(
     const approveLink = orderData.links.find((link: any) => link.rel === 'approve');
     return approveLink?.href || '';
   } catch (error: any) {
-    console.error('Error PayPal:', error);
+    logger.error('Error PayPal:', error);
     throw error;
   }
 }
@@ -272,7 +273,7 @@ async function createStripeCheckout(
 
     return session.url || '';
   } catch (error: any) {
-    console.error('Error Stripe:', error);
+    logger.error('Error Stripe:', error);
     throw error;
   }
 }
@@ -342,7 +343,7 @@ async function createMercadoPagoPreference(
 
     return preferenceData.init_point;
   } catch (error: any) {
-    console.error('Error en MercadoPago:', error);
+    logger.error('Error en MercadoPago:', error);
     throw error;
   }
 }

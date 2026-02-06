@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET: Obtener acciones programadas para hoy con evidencias
 export async function GET(request: NextRequest) {
@@ -98,7 +99,7 @@ export async function GET(request: NextRequest) {
     }, { status: 200 });
 
   } catch (error) {
-    console.error('❌ Error al obtener acciones del día:', error);
+    logger.error('❌ Error al obtener acciones del día:', error);
     return NextResponse.json({ error: 'Error al cargar acciones' }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET(
   request: Request,
@@ -9,7 +10,7 @@ export async function GET(
     const { code } = await params;
     const organizationId = parseInt(code);
     
-    console.log('🔍 Searching next vision for organization:', organizationId);
+    logger.debug('🔍 Searching next vision for organization:', organizationId);
 
     if (isNaN(organizationId)) {
       return NextResponse.json(
@@ -61,7 +62,7 @@ export async function GET(
       }
     });
 
-    console.log('📅 Next vision found:', nextVision);
+    logger.debug('📅 Next vision found:', nextVision);
 
     const response = {
       success: true,
@@ -76,12 +77,12 @@ export async function GET(
       } : null
     };
 
-    console.log('✅ Sending response:', response);
+    logger.debug('✅ Sending response:', response);
 
     return NextResponse.json(response);
 
   } catch (error) {
-    console.error('Error fetching next vision:', error);
+    logger.error('Error fetching next vision:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener información' },
       { status: 500 }

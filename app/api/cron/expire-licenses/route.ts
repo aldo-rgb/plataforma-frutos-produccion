@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/cron/expire-licenses
@@ -57,7 +58,7 @@ export async function GET(req: Request) {
     });
 
     if (expiredAssignments.length === 0) {
-      console.log('✅ No hay licencias expiradas');
+      logger.cron('No hay licencias expiradas');
       return NextResponse.json({
         success: true,
         message: 'No hay licencias expiradas',
@@ -65,7 +66,7 @@ export async function GET(req: Request) {
       });
     }
 
-    console.log(`⚠️ Encontradas ${expiredAssignments.length} licencias expiradas`);
+    logger.cron(`Encontradas ${expiredAssignments.length} licencias expiradas`);
 
     const results = [];
 
@@ -115,7 +116,7 @@ export async function GET(req: Request) {
             }
           });
 
-          console.log(`🔄 Licencia recuperada de usuario: ${assignment.User.email}`);
+          logger.cron(`Licencia recuperada de usuario: ${assignment.User.email}`);
         });
 
         results.push({
@@ -127,12 +128,9 @@ export async function GET(req: Request) {
         });
 
       } catch (error) {
-        console.error(`❌ Error procesando licencia ${assignment.id}:`, error);
+        logger.error(`Error procesando licencia ${assignment.id}`, error);
         results.push({
-          userId: assignment.userId,
-          email: assignment.User.email,
-          status: 'error',
-          error: error instanceof Error ? error.message : 'Unknown error'
+          status: 'error'
         });
       }
     }
@@ -140,12 +138,11 @@ export async function GET(req: Request) {
     return NextResponse.json({
       success: true,
       message: `Procesadas ${expiredAssignments.length} licencias expiradas`,
-      processed: results.length,
-      details: results
+      processed: results.filter(r => r.status === 'recovered').length
     });
 
   } catch (error) {
-    console.error('❌ Error en cron de licencias expiradas:', error);
+    logger.error('Error en cron de licencias expiradas', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

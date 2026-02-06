@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener arquetipos asignados al participante actual
 export async function GET(request: Request) {
@@ -74,7 +75,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error fetching my archetypes:', error);
+    logger.error('Error fetching my archetypes:', error);
     return NextResponse.json({ error: 'Error al obtener arquetipos' }, { status: 500 });
   }
 }
@@ -139,7 +140,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ assignment: updated });
 
   } catch (error) {
-    console.error('Error updating archetype status:', error);
+    logger.error('Error updating archetype status:', error);
     return NextResponse.json({ error: 'Error al actualizar estado' }, { status: 500 });
   }
 }

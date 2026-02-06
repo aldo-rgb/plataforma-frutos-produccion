@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { onPackagePurchaseCompleted } from '@/lib/commissionCalculator';
 import { createPackageCredits } from '@/lib/packageSessionManager';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/lobo-solitario/payment-success
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
     let paymentData: any = {};
 
     if (isSimulatedPayment) {
-      console.log('🎭 Procesando pago simulado aprobado');
+      logger.debug('🎭 Procesando pago simulado aprobado');
       paymentVerified = true;
       paymentData = {
         simulated: true,
@@ -110,7 +111,7 @@ export async function GET(request: NextRequest) {
           paymentData = { paymentId };
           break;
         default:
-          console.error(`Método de pago desconocido: ${orden.metodoPago}`);
+          logger.error(`Método de pago desconocido: ${orden.metodoPago}`);
           paymentVerified = false;
       }
     }
@@ -139,16 +140,16 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    console.log(`✅ Pago verificado y completado para lobo solitario ${ordenId}`);
-    console.log(`   Usuario: ${orden.Usuario.nombre}`);
-    console.log(`   Mentor: ${orden.Mentor.nombre}`);
-    console.log(`   Monto: $${orden.precioTotal} ${orden.currency}`);
-    console.log(`   Sesiones: ${orden.cantidad}`);
+    logger.debug(`✅ Pago verificado y completado para lobo solitario ${ordenId}`);
+    logger.debug(`   Usuario: ${orden.Usuario.nombre}`);
+    logger.debug(`   Mentor: ${orden.Mentor.nombre}`);
+    logger.debug(`   Monto: $${orden.precioTotal} ${orden.currency}`);
+    logger.debug(`   Sesiones: ${orden.cantidad}`);
 
     // 2. 💰 COMISIÓN SE REGISTRA POR CADA SESIÓN COMPLETADA
     // Las comisiones NO se registran al comprar el paquete
     // Se crearán automáticamente cuando el mentor complete cada sesión ($90 por sesión)
-    console.log(`💰 Comisión se registrará conforme se completen las ${orden.cantidad} sesiones`);
+    logger.debug(`💰 Comisión se registrará conforme se completen las ${orden.cantidad} sesiones`);
     
     // DESACTIVADO: No registrar comisión anticipada
     // try {
@@ -161,9 +162,9 @@ export async function GET(request: NextRequest) {
     //     orden.cantidad,
     //     new Date()
     //   );
-    //   console.log(`💰 Comisión registrada en ledger para lobo ${ordenId}`);
+    //   logger.debug(`💰 Comisión registrada en ledger para lobo ${ordenId}`);
     // } catch (error) {
-    //   console.error(`⚠️ Error al registrar comisión (no crítico):`, error);
+    //   logger.error(`⚠️ Error al registrar comisión (no crítico):`, error);
     // }
 
     // 3. 💳 CREAR CRÉDITOS DE SESIONES
@@ -180,9 +181,9 @@ export async function GET(request: NextRequest) {
       }
 
       await createPackageCredits(ordenId, orden.cantidad, expiresAt);
-      console.log(`💳 Créditos creados: ${orden.cantidad} sesiones disponibles`);
+      logger.debug(`💳 Créditos creados: ${orden.cantidad} sesiones disponibles`);
     } catch (error) {
-      console.error(`⚠️ Error al crear créditos:`, error);
+      logger.error(`⚠️ Error al crear créditos:`, error);
     }
 
     // 4. 👤 ASIGNAR MENTOR AL USUARIO
@@ -191,9 +192,9 @@ export async function GET(request: NextRequest) {
         where: { id: orden.usuarioId },
         data: { assignedMentorId: orden.mentorId },
       });
-      console.log(`✅ Mentor ${orden.mentorId} asignado al usuario ${orden.usuarioId}`);
+      logger.debug(`✅ Mentor ${orden.mentorId} asignado al usuario ${orden.usuarioId}`);
     } catch (error) {
-      console.error('Error al asignar mentor:', error);
+      logger.error('Error al asignar mentor:', error);
     }
 
     // 5. 📝 CREAR O ACTUALIZAR PROGRAM ENROLLMENT
@@ -225,9 +226,9 @@ export async function GET(request: NextRequest) {
           },
         });
       }
-      console.log(`📝 Enrollment creado/actualizado para usuario ${orden.usuarioId}`);
+      logger.debug(`📝 Enrollment creado/actualizado para usuario ${orden.usuarioId}`);
     } catch (error) {
-      console.error('Error al crear enrollment:', error);
+      logger.error('Error al crear enrollment:', error);
     }
 
     // ========================================================================
@@ -252,7 +253,7 @@ export async function GET(request: NextRequest) {
             expiresAt: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
           },
         });
-        console.log(`🎫 Licencia ${planComprado} creada para usuario ${orden.usuarioId}`);
+        logger.debug(`🎫 Licencia ${planComprado} creada para usuario ${orden.usuarioId}`);
       } else if (licenciaActiva.licenseCode !== planComprado) {
         // Actualizar licencia existente si el plan es diferente
         await prisma.licenseAssignment.update({
@@ -264,7 +265,7 @@ export async function GET(request: NextRequest) {
             expiresAt: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
           },
         });
-        console.log(`🎫 Licencia actualizada a ${planComprado} para usuario ${orden.usuarioId}`);
+        logger.debug(`🎫 Licencia actualizada a ${planComprado} para usuario ${orden.usuarioId}`);
       }
       
       // ⭐ ACTUALIZAR TIER Y ESTADO DE SUSCRIPCIÓN DEL USUARIO
@@ -275,10 +276,10 @@ export async function GET(request: NextRequest) {
           estadoSuscripcion: 'ACTIVO',
         },
       });
-      console.log(`✅ Usuario actualizado: tier=${planComprado}, estadoSuscripcion=ACTIVO`);
+      logger.debug(`✅ Usuario actualizado: tier=${planComprado}, estadoSuscripcion=ACTIVO`);
       
     } catch (error) {
-      console.error('Error al gestionar licencia:', error);
+      logger.error('Error al gestionar licencia:', error);
     }
     
     // Segundo: Determinar redirección según estado de carta
@@ -294,9 +295,9 @@ export async function GET(request: NextRequest) {
             fechaActualizacion: new Date(),
           },
         });
-        console.log(`📝 Carta del usuario cambiada de APROBADA → EN_REVISION para revisión del mentor`);
+        logger.debug(`📝 Carta del usuario cambiada de APROBADA → EN_REVISION para revisión del mentor`);
       } catch (error) {
-        console.error('Error al actualizar estado de carta:', error);
+        logger.error('Error al actualizar estado de carta:', error);
       }
     }
     
@@ -304,12 +305,12 @@ export async function GET(request: NextRequest) {
     // El usuario acaba de comprar su paquete de Lobo Solitario y debe agendar sus sesiones
     let redirectUrl = '/dashboard/program/enroll?action=select-mentor';
     
-    console.log(`🎯 Pago de Lobo Solitario completado exitosamente`);
-    console.log(`📅 Redirigiendo a agendar sesiones: ${redirectUrl}`);
+    logger.debug(`🎯 Pago de Lobo Solitario completado exitosamente`);
+    logger.debug(`📅 Redirigiendo a agendar sesiones: ${redirectUrl}`);
     
     return NextResponse.redirect(new URL(redirectUrl, request.url));
   } catch (error: any) {
-    console.error('❌ Error al procesar confirmación de pago lobo solitario:', error);
+    logger.error('❌ Error al procesar confirmación de pago lobo solitario:', error);
     return NextResponse.redirect(
       new URL('/dashboard/suscripcion?error=error-procesamiento', request.url)
     );
@@ -332,7 +333,7 @@ async function verifyPayPalPayment(orderId: string, payerId: string | null): Pro
         : 'https://api-m.sandbox.paypal.com';
 
     if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
-      console.error('Credenciales de PayPal no configuradas');
+      logger.error('Credenciales de PayPal no configuradas');
       return false;
     }
 
@@ -363,7 +364,7 @@ async function verifyPayPalPayment(orderId: string, payerId: string | null): Pro
     
     return captureData.status === 'COMPLETED';
   } catch (error) {
-    console.error('Error al verificar pago PayPal:', error);
+    logger.error('Error al verificar pago PayPal:', error);
     return false;
   }
 }
@@ -373,7 +374,7 @@ async function verifyStripePayment(sessionId: string): Promise<boolean> {
     const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 
     if (!STRIPE_SECRET_KEY) {
-      console.error('Credenciales de Stripe no configuradas');
+      logger.error('Credenciales de Stripe no configuradas');
       return false;
     }
 
@@ -382,7 +383,7 @@ async function verifyStripePayment(sessionId: string): Promise<boolean> {
 
     return session.payment_status === 'paid';
   } catch (error) {
-    console.error('Error al verificar pago Stripe:', error);
+    logger.error('Error al verificar pago Stripe:', error);
     return false;
   }
 }
@@ -392,7 +393,7 @@ async function verifyMercadoPagoPayment(paymentId: string): Promise<boolean> {
     const MP_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN;
 
     if (!MP_ACCESS_TOKEN) {
-      console.error('Credenciales de Mercado Pago no configuradas');
+      logger.error('Credenciales de Mercado Pago no configuradas');
       return false;
     }
 
@@ -406,7 +407,7 @@ async function verifyMercadoPagoPayment(paymentId: string): Promise<boolean> {
 
     return paymentData.status === 'approved';
   } catch (error) {
-    console.error('Error al verificar pago Mercado Pago:', error);
+    logger.error('Error al verificar pago Mercado Pago:', error);
     return false;
   }
 }

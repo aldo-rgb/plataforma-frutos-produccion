@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET: Obtener llamadas PL de una visión/squad
 export async function GET(request: NextRequest) {
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ calls });
   } catch (error) {
-    console.error('Error fetching PL calls:', error);
+    logger.error('Error fetching PL calls:', error);
     return NextResponse.json({ error: 'Error al obtener llamadas' }, { status: 500 });
   }
 }
@@ -195,7 +196,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ call }, { status: 201 });
   } catch (error: any) {
-    console.error('Error creating PL call:', error);
+    logger.error('Error creating PL call:', error);
     
     // Manejar error de duplicado
     if (error.code === 'P2002') {

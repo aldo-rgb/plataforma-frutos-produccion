@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Helper para calcular hora de fin
 function calculateEndTime(startTime: string, durationMinutes: number): string {
@@ -63,7 +64,7 @@ export async function GET(request: Request) {
       hasSchedule: false,
     });
   } catch (error) {
-    console.error('Error getting schedule:', error);
+    logger.error('Error getting schedule:', error);
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }
@@ -156,7 +157,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Error saving schedule:', error);
+    logger.error('Error saving schedule:', error);
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }

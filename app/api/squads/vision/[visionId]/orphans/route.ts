@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { VisionLevel } from '@prisma/client';
+import logger from '@/lib/logger';
 
 const VALID_LEVELS: VisionLevel[] = ['BASIC', 'ADVANCED', 'PL'];
 
@@ -105,7 +106,7 @@ export async function GET(
       orphansByLevel: !level ? orphansByLevel : undefined,
     });
   } catch (error) {
-    console.error('Error fetching orphans:', error);
+    logger.error('Error fetching orphans:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener huérfanos' },
       { status: 500 }

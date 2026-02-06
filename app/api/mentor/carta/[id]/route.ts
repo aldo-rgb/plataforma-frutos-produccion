@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/mentor/carta/[id]
@@ -135,7 +136,7 @@ export async function GET(
     return NextResponse.json(response);
 
   } catch (error: any) {
-    console.error('❌ Error obteniendo carta:', error);
+    logger.error('❌ Error obteniendo carta:', error);
     return NextResponse.json(
       { error: 'Error al obtener carta', details: error.message },
       { status: 500 }

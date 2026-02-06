@@ -6,6 +6,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { VisionLevel, ProductLevelType } from "@prisma/client";
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -195,7 +196,7 @@ export async function GET(request: NextRequest) {
       visiones: visionesConCaptura,
     });
   } catch (error) {
-    console.error("Error en GET /api/legacy-capture:", error);
+    logger.error("Error en GET /api/legacy-capture:", error);
     return NextResponse.json(
       { error: "Error interno del servidor", details: String(error) },
       { status: 500 }
@@ -369,7 +370,7 @@ export async function POST(request: NextRequest) {
       capture: captura,
     });
   } catch (error) {
-    console.error("Error en POST /api/legacy-capture:", error);
+    logger.error("Error en POST /api/legacy-capture:", error);
     return NextResponse.json(
       { error: "Error interno del servidor", details: String(error) },
       { status: 500 }
@@ -434,7 +435,7 @@ export async function PUT(request: NextRequest) {
       capture: captura,
     });
   } catch (error) {
-    console.error("Error en PUT /api/legacy-capture:", error);
+    logger.error("Error en PUT /api/legacy-capture:", error);
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/user/current-plan
@@ -125,7 +126,7 @@ export async function GET() {
         paidAt: packageCredits.MentorPackageOrder.paidAt
       };
       
-      console.log('✅ Usuario tiene Lobo Solitario activo:', { plan, loboSolitarioInfo });
+      logger.debug('✅ Usuario tiene Lobo Solitario activo:', { plan, loboSolitarioInfo });
     } else if (esMiembroInstitucional) {
       // Usuario de escuela: tiene plan STANDARD (GOLD) pagado por la institución
       // Las licencias escolares siempre son STANDARD, no importa el tier del usuario
@@ -171,7 +172,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('Error obteniendo plan actual:', error);
+    logger.error('Error obteniendo plan actual:', error);
     return NextResponse.json(
       { error: 'Error al obtener plan' },
       { status: 500 }

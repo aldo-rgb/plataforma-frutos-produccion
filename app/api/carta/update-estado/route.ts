@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/carta/update-estado
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log(`🔄 Actualizando carta ${cartaId} a estado: ${estado}`);
+    logger.debug(`🔄 Actualizando carta ${cartaId} a estado: ${estado}`);
 
     // Actualizar el estado y la fecha de actualización
     const cartaActualizada = await prisma.cartaFrutos.update({
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
       }
     });
 
-    console.log(`✅ Carta ${cartaId} actualizada correctamente a estado: ${estado}`);
+    logger.debug(`✅ Carta ${cartaId} actualizada correctamente a estado: ${estado}`);
 
     return NextResponse.json({
       success: true,
@@ -59,7 +60,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error actualizando estado de carta:', error);
+    logger.error('❌ Error actualizando estado de carta:', error);
     return NextResponse.json(
       { error: 'Error al actualizar estado', details: error.message },
       { status: 500 }

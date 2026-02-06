@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { EstadoCarta } from '@prisma/client';
+import logger from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -197,7 +198,7 @@ export async function GET() {
     });
 
   } catch (error: any) {
-    console.error('❌ Error obteniendo cartas pendientes:', error);
+    logger.error('❌ Error obteniendo cartas pendientes:', error);
     return NextResponse.json(
       { 
         error: 'Error al obtener cartas',

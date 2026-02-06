@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { jsPDF } from 'jspdf';
 import QRCode from 'qrcode';
 import { VisionLevel } from '@prisma/client';
+import logger from '@/lib/logger';
 
 // Force Node.js runtime
 export const runtime = 'nodejs';
@@ -279,7 +280,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Error generating badges PDF:', error);
+    logger.error('Error generating badges PDF:', error);
     return NextResponse.json(
       { success: false, error: 'Error al generar PDF' },
       { status: 500 }
@@ -333,7 +334,7 @@ async function loadLogoAsBase64(logoUrl: string): Promise<string | null> {
     const mimeType = response.headers.get('content-type') || 'image/png';
     return `data:${mimeType};base64,${base64}`;
   } catch (error) {
-    console.error('Error loading logo:', error);
+    logger.error('Error loading logo:', error);
     return null;
   }
 }
@@ -438,7 +439,7 @@ function drawBadgeFront(
     try {
       doc.addImage(logoBase64, 'PNG', x + 10, y + 6, 30, 30);
     } catch (err) {
-      console.error('Error adding logo:', err);
+      logger.error('Error adding logo:', err);
     }
   }
 
@@ -523,7 +524,7 @@ function drawBadgeBackRotated(
     try {
       doc.addImage(logoBase64, 'PNG', x + BADGE_WIDTH - 40, y + 6, 30, 30);
     } catch (err) {
-      console.error('Error adding logo:', err);
+      logger.error('Error adding logo:', err);
     }
   }
 
@@ -543,7 +544,7 @@ function drawBadgeBackRotated(
     try {
       doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
     } catch (err) {
-      console.error('Error adding QR:', err);
+      logger.error('Error adding QR:', err);
     }
   }
 

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener un arquetipo específico
 export async function GET(
@@ -48,7 +49,7 @@ export async function GET(
     return NextResponse.json({ archetype });
 
   } catch (error) {
-    console.error('Error fetching archetype:', error);
+    logger.error('Error fetching archetype:', error);
     return NextResponse.json({ error: 'Error al obtener arquetipo' }, { status: 500 });
   }
 }
@@ -122,7 +123,7 @@ export async function PUT(
     return NextResponse.json({ archetype });
 
   } catch (error) {
-    console.error('Error updating archetype:', error);
+    logger.error('Error updating archetype:', error);
     return NextResponse.json({ error: 'Error al actualizar arquetipo' }, { status: 500 });
   }
 }
@@ -192,7 +193,7 @@ export async function DELETE(
     return NextResponse.json({ message: 'Arquetipo eliminado', deleted: true });
 
   } catch (error) {
-    console.error('Error deleting archetype:', error);
+    logger.error('Error deleting archetype:', error);
     return NextResponse.json({ error: 'Error al eliminar arquetipo' }, { status: 500 });
   }
 }

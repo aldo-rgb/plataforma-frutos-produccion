@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
       users,
     });
   } catch (error) {
-    console.error('Error fetching available users:', error);
+    logger.error('Error fetching available users:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener usuarios' },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function PUT(request: Request) {
   try {
@@ -13,7 +14,7 @@ export async function PUT(request: Request) {
     const body = await request.json();
     const { accionId, texto, frequency, assignedDays, specificDate, requiereEvidencia } = body;
 
-    console.log('🔄 Actualizando acción:', {
+    logger.debug('🔄 Actualizando acción:', {
       accionId,
       texto,
       frequency,
@@ -72,7 +73,7 @@ export async function PUT(request: Request) {
       }
     });
 
-    console.log('✅ Acción actualizada:', accionActualizada);
+    logger.debug('✅ Acción actualizada:', accionActualizada);
 
     return NextResponse.json({
       success: true,
@@ -80,7 +81,7 @@ export async function PUT(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error al actualizar acción:', error);
+    logger.error('❌ Error al actualizar acción:', error);
     return NextResponse.json(
       { error: 'Error al actualizar acción: ' + error.message },
       { status: 500 }

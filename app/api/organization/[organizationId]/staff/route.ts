@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * API para obtener el staff de una organización
@@ -156,7 +157,7 @@ export async function GET(
       return a.nombre.localeCompare(b.nombre);
     });
 
-    console.log(`📋 Staff encontrado para org ${orgId}:`, staff.length, staff.map(s => `${s.nombre} (${s.rol})`));
+    logger.debug(`📋 Staff encontrado para org ${orgId}:`, staff.length, staff.map(s => `${s.nombre} (${s.rol})`));
 
     return NextResponse.json({ 
       staff,
@@ -164,7 +165,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('❌ Error al obtener staff:', error);
+    logger.error('❌ Error al obtener staff:', error);
     return NextResponse.json(
       { error: 'Error al cargar el staff' },
       { status: 500 }

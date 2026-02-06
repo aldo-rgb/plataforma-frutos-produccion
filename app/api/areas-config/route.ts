@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 const DEFAULT_AREAS = [
   'finanzas',
@@ -99,7 +100,7 @@ export async function GET(req: NextRequest) {
     let perteneceAGrupo = isTierFree ? false : !!visionParticipante;
     
     if (isTierFree && visionParticipante) {
-      console.log('⚠️ Usuario tiene tier FREE - se trata como usuario independiente aunque tenga VisionParticipante');
+      logger.debug('⚠️ Usuario tiene tier FREE - se trata como usuario independiente aunque tenga VisionParticipante');
     }
 
     // Si no es VisionParticipante, verificar si tiene vision_enrollments (inscrito al programa)
@@ -140,7 +141,7 @@ export async function GET(req: NextRequest) {
         const firstEnrollment = enrollments[0];
         const visionId = firstEnrollment.visionId;
         
-        console.log('🔍 Usuario tiene enrollment en Vision:', firstEnrollment.Vision?.nombre);
+        logger.debug('🔍 Usuario tiene enrollment en Vision:', firstEnrollment.Vision?.nombre);
         perteneceAGrupo = true;
         visionConfig = firstEnrollment.Vision;
         
@@ -164,7 +165,7 @@ export async function GET(req: NextRequest) {
           const hasEnrollmentForLevel = enrollments.some(e => e.level === activeProduct.levelType);
           if (hasEnrollmentForLevel) {
             userLevel = activeProduct.levelType;
-            console.log('📊 Nivel del usuario basado en entrenamiento activo (IN_PROGRESS):', userLevel);
+            logger.debug('📊 Nivel del usuario basado en entrenamiento activo (IN_PROGRESS):', userLevel);
           } else {
             // El usuario no tiene enrollment para el nivel en progreso
             // Usar el nivel más bajo que tenga el usuario
@@ -175,7 +176,7 @@ export async function GET(req: NextRequest) {
                 break;
               }
             }
-            console.log('📊 Nivel del usuario (sin entrenamiento activo para su nivel):', userLevel);
+            logger.debug('📊 Nivel del usuario (sin entrenamiento activo para su nivel):', userLevel);
           }
         } else {
           // No hay entrenamiento IN_PROGRESS, usar el nivel más bajo del usuario
@@ -186,7 +187,7 @@ export async function GET(req: NextRequest) {
               break;
             }
           }
-          console.log('📊 Nivel del usuario (sin entrenamiento IN_PROGRESS):', userLevel);
+          logger.debug('📊 Nivel del usuario (sin entrenamiento IN_PROGRESS):', userLevel);
         }
       }
     } else {
@@ -230,7 +231,7 @@ export async function GET(req: NextRequest) {
         });
         userLevel = enrollment?.level || null;
       }
-      console.log('📊 Nivel del usuario (VisionParticipante):', userLevel);
+      logger.debug('📊 Nivel del usuario (VisionParticipante):', userLevel);
     }
     
     // Si no encontramos nivel en enrollment, usar currentVisionLevel del usuario
@@ -240,7 +241,7 @@ export async function GET(req: NextRequest) {
         select: { currentVisionLevel: true }
       });
       userLevel = userWithLevel?.currentVisionLevel || null;
-      console.log('📊 Nivel del usuario desde currentVisionLevel:', userLevel);
+      logger.debug('📊 Nivel del usuario desde currentVisionLevel:', userLevel);
     }
 
     // Si pertenece a una Vision, SIEMPRE usar la configuración de la Vision
@@ -248,31 +249,31 @@ export async function GET(req: NextRequest) {
     if (perteneceAGrupo && visionConfig) {
       const areasFromVision = [];
       
-      console.log('🔍 Usuario pertenece a Vision:', visionConfig.nombre);
-      console.log('📋 Construyendo áreas desde configuración de Vision...');
+      logger.debug('🔍 Usuario pertenece a Vision:', visionConfig.nombre);
+      logger.debug('📋 Construyendo áreas desde configuración de Vision...');
       
       if (visionConfig.forceFinanzasArea) {
-        console.log('  ✅ FINANZAS enabled');
+        logger.debug('  ✅ FINANZAS enabled');
         areasFromVision.push({ areaKey: 'finanzas', enabled: true });
       }
       if (visionConfig.forceRelacionesArea) {
-        console.log('  ✅ RELACIONES enabled');
+        logger.debug('  ✅ RELACIONES enabled');
         areasFromVision.push({ areaKey: 'relaciones', enabled: true });
       }
       if (visionConfig.forceTalentosArea) {
-        console.log('  ✅ TALENTOS enabled');
+        logger.debug('  ✅ TALENTOS enabled');
         areasFromVision.push({ areaKey: 'talentos', enabled: true });
       }
       if (visionConfig.forceSaludArea) {
-        console.log('  ✅ SALUD enabled');
+        logger.debug('  ✅ SALUD enabled');
         areasFromVision.push({ areaKey: 'salud', enabled: true });
       }
       if (visionConfig.forcePazMentalArea) {
-        console.log('  ✅ PAZ MENTAL enabled');
+        logger.debug('  ✅ PAZ MENTAL enabled');
         areasFromVision.push({ areaKey: 'pazMental', enabled: true });
       }
       if (visionConfig.forceOcioArea) {
-        console.log('  ✅ OCIO enabled');
+        logger.debug('  ✅ OCIO enabled');
         areasFromVision.push({ areaKey: 'ocio', enabled: true });
       }
       
@@ -290,23 +291,23 @@ export async function GET(req: NextRequest) {
       const hasPLAttendance = plEnrollments.some(e => e.attendanceStatus === 'ATTENDED');
       
       const canAccessServiceAreas = isPLLevel || hasPLAttendance;
-      console.log(`📊 Nivel actual: ${userLevel} | Es PL: ${isPLLevel} | Tiene asistencia PL: ${hasPLAttendance} | Acceso a áreas servicio: ${canAccessServiceAreas}`);
+      logger.debug(`📊 Nivel actual: ${userLevel} | Es PL: ${isPLLevel} | Tiene asistencia PL: ${hasPLAttendance} | Acceso a áreas servicio: ${canAccessServiceAreas}`);
       
       if (canAccessServiceAreas) {
         if (visionConfig.forceTransformationArea) {
-          console.log('  ✅ SERVICIO TRANS enabled (nivel PL o asistencia PL)');
+          logger.debug('  ✅ SERVICIO TRANS enabled (nivel PL o asistencia PL)');
           areasFromVision.push({ areaKey: 'servicioTrans', enabled: true });
         }
         if (visionConfig.forceCommunityServiceArea) {
-          console.log('  ✅ SERVICIO COMUN enabled (nivel PL o asistencia PL)');
+          logger.debug('  ✅ SERVICIO COMUN enabled (nivel PL o asistencia PL)');
           areasFromVision.push({ areaKey: 'servicioComun', enabled: true });
         }
       } else {
-        console.log('  ⛔ SERVICIO TRANS/COMUN ocultos (nivel BASIC/ADVANCED sin asistencia PL)');
+        logger.debug('  ⛔ SERVICIO TRANS/COMUN ocultos (nivel BASIC/ADVANCED sin asistencia PL)');
       }
 
-      console.log(`📋 Total áreas habilitadas: ${areasFromVision.length}`);
-      console.log('📤 Áreas finales:', areasFromVision.map(a => a.areaKey));
+      logger.debug(`📋 Total áreas habilitadas: ${areasFromVision.length}`);
+      logger.debug('📤 Áreas finales:', areasFromVision.map(a => a.areaKey));
 
       return NextResponse.json({
         areas: areasFromVision,
@@ -347,7 +348,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error getting areas config:', error);
+    logger.error('Error getting areas config:', error);
     return NextResponse.json(
       { error: 'Error al obtener configuración', details: error.message },
       { status: 500 }
@@ -416,13 +417,13 @@ export async function POST(req: NextRequest) {
     // Esto permite que graduados sin licencia puedan configurar sus áreas
     const perteneceAGrupo = isTierFree ? false : !!visionActiva;
     
-    console.log('🔍 POST /api/areas-config - Usuario:', currentUser.id);
-    console.log('💳 Tier del usuario:', currentUser.tier || 'FREE');
-    console.log('📋 Visión activa encontrada:', visionActiva ? visionActiva.Vision.nombre : 'Ninguna');
-    console.log('🎯 Pertenece a grupo (considerando tier):', perteneceAGrupo);
+    logger.debug('🔍 POST /api/areas-config - Usuario:', currentUser.id);
+    logger.debug('💳 Tier del usuario:', currentUser.tier || 'FREE');
+    logger.debug('📋 Visión activa encontrada:', visionActiva ? visionActiva.Vision.nombre : 'Ninguna');
+    logger.debug('🎯 Pertenece a grupo (considerando tier):', perteneceAGrupo);
     
     if (isTierFree && visionActiva) {
-      console.log('⚠️ Usuario tiene tier FREE - puede modificar sus áreas aunque tenga VisionParticipante');
+      logger.debug('⚠️ Usuario tiene tier FREE - puede modificar sus áreas aunque tenga VisionParticipante');
     }
     
     if (targetUserId) {
@@ -435,12 +436,12 @@ export async function POST(req: NextRequest) {
       // Usuarios SIN grupo o con tier FREE pueden modificar sus propias áreas
       // Usuarios CON grupo y con licencia activa NO pueden modificar (solo admin/coordinador)
       if (perteneceAGrupo) {
-        console.log('❌ Usuario pertenece a grupo activo con licencia, no puede modificar sus áreas');
+        logger.debug('❌ Usuario pertenece a grupo activo con licencia, no puede modificar sus áreas');
         return NextResponse.json({ 
           error: 'Los usuarios de grupo deben solicitar cambios a su coordinador' 
         }, { status: 403 });
       }
-      console.log('✅ Usuario puede modificar sus áreas (lobo solitario o tier FREE)');
+      logger.debug('✅ Usuario puede modificar sus áreas (lobo solitario o tier FREE)');
     }
 
     // Obtener info del usuario target para validación
@@ -502,7 +503,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error updating areas config:', error);
+    logger.error('Error updating areas config:', error);
     return NextResponse.json(
       { error: 'Error al actualizar configuración', details: error.message },
       { status: 500 }

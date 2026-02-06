@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener configuración de comisiones de una visión
 export async function GET(request: NextRequest) {
@@ -100,7 +101,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error obteniendo config de comisiones:', error);
+    logger.error('Error obteniendo config de comisiones:', error);
     return NextResponse.json(
       { error: 'Error al obtener configuración', details: error.message },
       { status: 500 }
@@ -187,7 +188,7 @@ export async function PUT(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error actualizando config de comisiones:', error);
+    logger.error('Error actualizando config de comisiones:', error);
     return NextResponse.json(
       { error: 'Error al actualizar configuración', details: error.message },
       { status: 500 }

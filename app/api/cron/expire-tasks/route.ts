@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/cron/expire-tasks
@@ -25,7 +26,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    console.log('🔍 Iniciando verificación de Misiones Flash expiradas...');
+    logger.cron('Iniciando verificación de Misiones Flash expiradas');
 
     const now = new Date();
 
@@ -48,7 +49,7 @@ export async function GET(req: Request) {
     });
 
     if (expiredTasks.length === 0) {
-      console.log('✅ No hay misiones expiradas');
+      logger.cron('No hay misiones expiradas');
       return NextResponse.json({
         success: true,
         message: 'No hay misiones para expirar',
@@ -56,7 +57,7 @@ export async function GET(req: Request) {
       });
     }
 
-    console.log(`⚠️ Encontradas ${expiredTasks.length} misiones con fecha vencida`);
+    logger.cron(`Encontradas ${expiredTasks.length} misiones con fecha vencida`);
 
     // 2. Para cada tarea expirada, actualizar submissions pendientes/submitted
     let totalExpired = 0;
@@ -98,9 +99,7 @@ export async function GET(req: Request) {
       totalExpired += result.count;
       totalUsersAffected += result.count;
 
-      console.log(
-        `💀 Tarea "${task.titulo}" (ID: ${task.id}): ${result.count} submissions expiradas`
-      );
+      logger.cron(`Tarea "${task.titulo}" (ID: ${task.id}): ${result.count} submissions expiradas`);
 
       // Opcional: Desactivar la tarea para que no aparezca más en el feed
       // await prisma.adminTask.update({
@@ -109,7 +108,7 @@ export async function GET(req: Request) {
       // });
     }
 
-    console.log(`✅ Proceso completado: ${totalExpired} submissions expiradas de ${totalUsersAffected} usuarios`);
+    logger.cron(`Proceso completado: ${totalExpired} submissions expiradas de ${totalUsersAffected} usuarios`);
 
     return NextResponse.json({
       success: true,
@@ -118,22 +117,15 @@ export async function GET(req: Request) {
         tasksChecked: expiredTasks.length,
         submissionsExpired: totalExpired,
         usersAffected: totalUsersAffected
-      },
-      expiredTasks: expiredTasks.map(t => ({
-        id: t.id,
-        titulo: t.titulo,
-        deadline: t.fechaLimite,
-        pointsLost: t.pointsReward
-      }))
+      }
     });
 
-  } catch (error: any) {
-    console.error('❌ Error en proceso de expiración:', error);
+  } catch (error) {
+    logger.error('Error en proceso de expiración', error);
     return NextResponse.json(
       { 
         success: false,
-        error: 'Error al expirar tareas', 
-        details: error.message 
+        error: 'Error al expirar tareas'
       },
       { status: 500 }
     );

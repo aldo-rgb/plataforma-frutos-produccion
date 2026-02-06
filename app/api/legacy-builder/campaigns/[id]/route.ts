@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener detalle de una campaña específica (mi bóveda)
 export async function GET(
@@ -169,7 +170,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('Error fetching campaign details:', error);
+    logger.error('Error fetching campaign details:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

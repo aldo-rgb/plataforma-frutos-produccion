@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/gc-calls/quick-log
@@ -121,7 +122,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error saving call attempt:', error);
+    logger.error('Error saving call attempt:', error);
     return NextResponse.json({ 
       success: false, 
       error: 'Error interno del servidor' 
@@ -177,7 +178,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error fetching call attempts:', error);
+    logger.error('Error fetching call attempts:', error);
     return NextResponse.json({ 
       success: false, 
       error: 'Error interno del servidor' 

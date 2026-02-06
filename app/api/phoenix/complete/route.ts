@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { PrismaClient } from '@prisma/client';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error completing Phoenix task:', error);
+    logger.error('Error completing Phoenix task:', error);
     return NextResponse.json(
       { error: 'Error al completar tarea Fénix' },
       { status: 500 }

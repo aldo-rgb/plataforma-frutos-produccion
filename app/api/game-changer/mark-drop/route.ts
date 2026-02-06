@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // API para que el GameChanger marque a un participante como DROP (abandonó el entrenamiento)
 
@@ -130,7 +131,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log(`🚫 Participante ${member.user.nombre} marcado como DROP en ${groupLevel} por GC ${gameChanger.nombre}`);
+    logger.debug(`🚫 Participante ${member.user.nombre} marcado como DROP en ${groupLevel} por GC ${gameChanger.nombre}`);
 
     return NextResponse.json({
       success: true,
@@ -144,7 +145,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error marcando DROP:', error);
+    logger.error('❌ Error marcando DROP:', error);
     return NextResponse.json(
       { error: 'Error al marcar participante como DROP', message: error?.message },
       { status: 500 }

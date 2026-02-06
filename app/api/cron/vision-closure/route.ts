@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * 🔒 TICKET 4: Vision Closure & Final Audit
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log(`🔍 Encontradas ${completedVisions.length} visiones para cerrar`);
+    logger.debug(`🔍 Encontradas ${completedVisions.length} visiones para cerrar`);
 
     const results = [];
 
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
       const escrow = vision.VisionEscrow;
       if (!escrow) continue;
 
-      console.log(`\n📊 Procesando Visión: ${vision.nombre} (ID: ${vision.id})`);
+      logger.debug(`\n📊 Procesando Visión: ${vision.nombre} (ID: ${vision.id})`);
 
       // Auditar el escrow
       const totalDeposited = Number(escrow.totalDeposited);
@@ -50,12 +51,12 @@ export async function POST(request: NextRequest) {
       const remainingBalance = Number(escrow.remainingBalance);
       const remanente = totalDeposited - totalPaid;
 
-      console.log(`  💰 Total depositado: $${totalDeposited}`);
-      console.log(`  💸 Total pagado: $${totalPaid}`);
-      console.log(`  🏦 Remanente: $${remanente}`);
+      logger.debug(`  💰 Total depositado: $${totalDeposited}`);
+      logger.debug(`  💸 Total pagado: $${totalPaid}`);
+      logger.debug(`  🏦 Remanente: $${remanente}`);
 
       if (Math.abs(remainingBalance - remanente) > 0.01) {
-        console.warn(`  ⚠️ Discrepancia en balance: esperado ${remanente}, actual ${remainingBalance}`);
+        logger.warn(`  ⚠️ Discrepancia en balance: esperado ${remanente}, actual ${remainingBalance}`);
       }
 
       // Procesar cierre
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
             }
           });
 
-          console.log(`  ✅ Wallet acreditado: $${remanente}`);
+          logger.debug(`  ✅ Wallet acreditado: $${remanente}`);
         }
 
         // 2. Cerrar escrow
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
           }
         });
 
-        console.log(`  🔒 Escrow cerrado`);
+        logger.debug(`  🔒 Escrow cerrado`);
 
         return { walletTransaction, remanente };
       });
@@ -135,7 +136,7 @@ export async function POST(request: NextRequest) {
       // await sendVisionClosureSummary(vision, result);
     }
 
-    console.log(`\n✅ Procesadas ${results.length} visiones`);
+    logger.debug(`\n✅ Procesadas ${results.length} visiones`);
 
     return NextResponse.json({
       success: true,
@@ -146,7 +147,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Error en vision-closure cron:', error);
+    logger.error('❌ Error en vision-closure cron:', error);
     return NextResponse.json(
       { error: 'Error al cerrar visiones' },
       { status: 500 }
@@ -209,7 +210,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Error obteniendo visiones pendientes:', error);
+    logger.error('❌ Error obteniendo visiones pendientes:', error);
     return NextResponse.json(
       { error: 'Error al obtener datos' },
       { status: 500 }

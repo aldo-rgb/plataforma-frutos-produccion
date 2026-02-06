@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { uploadImage, getThumbnailUrl } from "@/lib/cloudinary";
+import logger from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
     
     if (!cloudName || !apiKey || !apiSecret) {
-      console.error('Cloudinary config missing:', { 
+      logger.error('Cloudinary config missing:', { 
         cloudName: !!cloudName, 
         apiKey: !!apiKey, 
         apiSecret: !!apiSecret 
@@ -104,8 +105,8 @@ export async function POST(request: NextRequest) {
       size: result.bytes,
     });
   } catch (error: any) {
-    console.error("Error uploading to Cloudinary:", error);
-    console.error("Error details:", {
+    logger.error("Error uploading to Cloudinary:", error);
+    logger.error("Error details:", {
       message: error?.message,
       name: error?.name,
       http_code: error?.http_code,

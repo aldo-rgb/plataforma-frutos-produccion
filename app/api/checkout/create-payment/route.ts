@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
+import logger from '@/lib/logger';
+import { checkoutCreatePaymentSchema, validateData, getValidationErrorMessage } from '@/lib/validations';
 
 // Forzar que esta ruta sea dinámica (sin caché)
 export const dynamic = 'force-dynamic';
@@ -13,16 +16,26 @@ export const revalidate = 0;
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting para pagos
+    const { result, response } = rateLimit(request, RateLimitPresets.payment);
+    if (response) {
+      logger.warn('Rate limit exceeded on create-payment');
+      return response;
+    }
+
     const body = await request.json();
     
-    console.log('🔵 [create-payment] Request recibido:', JSON.stringify({
-      organizationId: body.organizationId,
-      visionId: body.visionId,
-      amount: body.amount,
-      ticketSelection: body.ticketSelection,
-      userEmail: body.userData?.email,
-      appliedCodesCount: body.appliedCodes?.length || 0,
-    }, null, 2));
+    // Validar datos con Zod
+    const validation = validateData(checkoutCreatePaymentSchema, body);
+    if (!validation.success) {
+      logger.debug('❌ [create-payment] Validación fallida:', { errors: validation.details });
+      return NextResponse.json(
+        { error: 'Datos inválidos', details: getValidationErrorMessage(validation.details) },
+        { status: 400 }
+      );
+    }
+    
+    logger.debug('create-payment request', { organizationId: body.organizationId });
     
     const { 
       organizationId,
@@ -31,30 +44,22 @@ export async function POST(request: NextRequest) {
       ticketSelection, // 'BASIC_ONLY' | 'FULL_VISION'
       userData, // { nombre, email, apodo, telefono }
       appliedCodes = [],
-    } = body;
-
-    if (!organizationId || !amount || !userData?.email) {
-      console.log('❌ [create-payment] Datos incompletos:', { organizationId, amount, email: userData?.email });
-      return NextResponse.json(
-        { error: 'Datos incompletos', details: `organizationId: ${organizationId}, amount: ${amount}, email: ${userData?.email}` },
-        { status: 400 }
-      );
-    }
+    } = validation.data;
 
     // Obtener configuración de pasarela de pago de la organización
-    console.log('🔍 [create-payment] Buscando gateway para orgId:', organizationId);
+    logger.debug('🔍 [create-payment] Buscando gateway para orgId:', organizationId);
     const gatewayConfig = await prisma.paymentGatewayConfig.findUnique({
       where: { organizationId: organizationId },
     });
 
-    console.log('🔍 [create-payment] Gateway encontrado:', gatewayConfig ? {
+    logger.debug('🔍 [create-payment] Gateway encontrado:', gatewayConfig ? {
       provider: gatewayConfig.provider,
       isActive: gatewayConfig.isActive,
       hasSecretKey: !!gatewayConfig.secretKey,
     } : 'NO ENCONTRADO');
 
     if (!gatewayConfig || !gatewayConfig.isActive) {
-      console.log('❌ [create-payment] Gateway no configurado o inactivo');
+      logger.debug('❌ [create-payment] Gateway no configurado o inactivo');
       return NextResponse.json(
         { error: 'La organización no tiene configurada una pasarela de pago. Contacta al administrador.', details: `orgId: ${organizationId}` },
         { status: 400 }
@@ -62,7 +67,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!gatewayConfig.secretKey) {
-      console.log('❌ [create-payment] Gateway sin credenciales');
+      logger.debug('❌ [create-payment] Gateway sin credenciales');
       return NextResponse.json(
         { error: 'La pasarela de pago no tiene credenciales configuradas' },
         { status: 400 }
@@ -84,7 +89,7 @@ export async function POST(request: NextRequest) {
     if (organization.customDomain) {
       baseUrl = `https://${organization.customDomain}`;
     }
-    console.log('🌐 Base URL para callbacks:', baseUrl);
+    logger.debug('🌐 Base URL para callbacks:', baseUrl);
 
     // Generar título del producto
     let productTitle = '';
@@ -162,10 +167,7 @@ export async function POST(request: NextRequest) {
       throw new Error('No se pudo generar la URL de pago');
     }
 
-    console.log(`✅ Pago de registro creado`);
-    console.log(`   Pasarela: ${gatewayConfig.provider}`);
-    console.log(`   Ticket: ${ticketSelection}`);
-    console.log(`   Monto: $${amount} MXN`);
+    logger.info('Pago de registro creado', { provider: gatewayConfig.provider, ticketSelection });
 
     return NextResponse.json({
       success: true,
@@ -173,15 +175,11 @@ export async function POST(request: NextRequest) {
       provider: gatewayConfig.provider,
     });
 
-  } catch (error: any) {
-    console.error('❌ Error al crear pago de registro:', error);
-    console.error('   Stack:', error.stack);
-    console.error('   Message:', error.message);
+  } catch (error) {
+    logger.error('Error al crear pago de registro', error);
     return NextResponse.json(
       {
         error: 'Error al crear el pago',
-        details: error.message || 'Error desconocido',
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       },
       { status: 500 }
     );
@@ -201,10 +199,10 @@ async function createMercadoPagoPreference(
   baseUrl: string,
   organizationName: string = 'Impacto Cuantico'
 ): Promise<string> {
-  console.log('🔵 MercadoPago - Creando preferencia');
-  console.log('   Base URL:', baseUrl);
-  console.log('   Amount:', amount);
-  console.log('   User:', userData.email);
+  logger.debug('🔵 MercadoPago - Creando preferencia');
+  logger.debug('   Base URL:', baseUrl);
+  logger.debug('   Amount:', amount);
+  logger.debug('   User:', userData.email);
 
   const preferenceBody = {
     items: [
@@ -239,7 +237,7 @@ async function createMercadoPagoPreference(
     statement_descriptor: organizationName.substring(0, 22),
   };
 
-  console.log('   Preference body:', JSON.stringify(preferenceBody, null, 2));
+  logger.debug('   Preference body:', JSON.stringify(preferenceBody, null, 2));
 
   const preferenceRes = await fetch('https://api.mercadopago.com/checkout/preferences', {
     method: 'POST',
@@ -251,8 +249,8 @@ async function createMercadoPagoPreference(
   });
 
   const responseText = await preferenceRes.text();
-  console.log('   MercadoPago response status:', preferenceRes.status);
-  console.log('   MercadoPago response:', responseText);
+  logger.debug('   MercadoPago response status:', preferenceRes.status);
+  logger.debug('   MercadoPago response:', responseText);
 
   if (!preferenceRes.ok) {
     let errorData;
@@ -261,7 +259,7 @@ async function createMercadoPagoPreference(
     } catch {
       errorData = { message: responseText };
     }
-    console.error('❌ Error de Mercado Pago:', errorData);
+    logger.error('❌ Error de Mercado Pago:', errorData);
     throw new Error(`Error de Mercado Pago: ${errorData.message || responseText}`);
   }
 
@@ -275,13 +273,13 @@ async function createMercadoPagoPreference(
     : preferenceData.init_point;
 
   if (!paymentUrl) {
-    console.error('❌ MercadoPago no devolvió init_point:', preferenceData);
+    logger.error('❌ MercadoPago no devolvió init_point:', preferenceData);
     throw new Error('Mercado Pago no devolvió URL de pago');
   }
 
-  console.log('✅ MercadoPago preferencia creada:', preferenceData.id);
-  console.log('   Modo:', isTestCredentials ? 'TEST (sandbox)' : 'PRODUCCIÓN');
-  console.log('   Usando:', paymentUrl);
+  logger.debug('✅ MercadoPago preferencia creada:', preferenceData.id);
+  logger.debug('   Modo:', isTestCredentials ? 'TEST (sandbox)' : 'PRODUCCIÓN');
+  logger.debug('   Usando:', paymentUrl);
 
   return paymentUrl;
 }
@@ -394,7 +392,7 @@ async function createPayPalOrder(
 
   if (!orderRes.ok) {
     const errorData = await orderRes.json();
-    console.error('Error de PayPal:', errorData);
+    logger.error('Error de PayPal:', errorData);
     throw new Error('Error al crear orden en PayPal');
   }
 

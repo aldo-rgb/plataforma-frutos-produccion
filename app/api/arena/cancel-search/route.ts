@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { cancelSearch } from '@/lib/arena-matchmaker';
+import logger from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
       message: result.message,
     });
   } catch (error) {
-    console.error('[ARENA API] Error en cancel-search:', error);
+    logger.error('[ARENA API] Error en cancel-search:', error);
     return NextResponse.json(
       { error: 'Error al cancelar búsqueda' },
       { status: 500 }

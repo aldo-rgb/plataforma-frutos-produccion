@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/notificaciones/quantum
@@ -86,7 +87,7 @@ export async function GET(req: Request) {
     */
 
   } catch (error: any) {
-    console.error('Error obteniendo notificación:', error);
+    logger.error('Error obteniendo notificación:', error);
     return NextResponse.json(
       { error: 'Error al obtener notificación', details: error.message },
       { status: 500 }

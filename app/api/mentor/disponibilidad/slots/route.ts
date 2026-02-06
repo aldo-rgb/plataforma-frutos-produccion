@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/mentor/disponibilidad/slots?mentorId=123&mes=2025-12&tipo=MENTORSHIP
@@ -220,7 +221,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ Error al calcular slots:', error);
+    logger.error('❌ Error al calcular slots:', error);
     return NextResponse.json({ 
       error: 'Error interno del servidor' 
     }, { status: 500 });

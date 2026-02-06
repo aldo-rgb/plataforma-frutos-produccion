@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { uploadImage } from '@/lib/cloudinary'
 import prisma from '@/lib/prisma'
+import logger from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Error uploading system archetype image:', error)
+    logger.error('Error uploading system archetype image:', error)
     return NextResponse.json({ 
       error: 'Error al subir la imagen',
       details: error?.message 

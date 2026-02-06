@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/mentores/disponibles
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log('🔍 Buscando mentores disponibles con horarios de llamadas activos...');
+    logger.debug('🔍 Buscando mentores disponibles con horarios de llamadas activos...');
 
     // Buscar mentores activos con perfil, aceptando nuevos clientes y con horarios de llamadas configurados
     const mentores = await prisma.usuario.findMany({
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    console.log(`📊 Encontrados ${mentores.length} mentores activos en total`);
+    logger.debug(`📊 Encontrados ${mentores.length} mentores activos en total`);
 
     // Mapear datos de mentores
     const mentoresDisponibles = mentores
@@ -83,15 +84,15 @@ export async function GET(request: NextRequest) {
         return b.totalSesiones - a.totalSesiones;
       });
 
-    console.log(`✅ ${mentoresDisponibles.length} mentores disponibles para mostrar`);
+    logger.debug(`✅ ${mentoresDisponibles.length} mentores disponibles para mostrar`);
 
     return NextResponse.json({
       mentores: mentoresDisponibles,
       total: mentoresDisponibles.length,
     });
   } catch (error: any) {
-    console.error('❌ Error al obtener mentores disponibles:', error);
-    console.error('Detalles del error:', error.message);
+    logger.error('❌ Error al obtener mentores disponibles:', error);
+    logger.error('Detalles del error:', error.message);
     return NextResponse.json(
       { 
         error: 'Error al obtener mentores',

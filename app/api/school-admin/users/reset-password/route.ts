@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import logger from '@/lib/logger';
 
 const ALLOWED_ROLES = ['SCHOOL_ADMIN', 'ADMINISTRADOR', 'COORDINADOR'];
 
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log(`🔑 Contraseña restablecida para usuario ${user.id} (${user.nombre}) por admin ${admin.id}`);
+    logger.debug(`🔑 Contraseña restablecida para usuario ${user.id} (${user.nombre}) por admin ${admin.id}`);
 
     return NextResponse.json({
       success: true,
@@ -93,7 +94,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('Error resetting password:', error);
+    logger.error('Error resetting password:', error);
     return NextResponse.json(
       { success: false, error: 'Error al restablecer contraseña' },
       { status: 500 }

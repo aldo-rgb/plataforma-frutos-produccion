@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -162,7 +163,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('❌ Error al obtener perfil de líder:', error);
+    logger.error('❌ Error al obtener perfil de líder:', error);
     return NextResponse.json({ 
       error: 'Error al cargar perfil',
       details: error instanceof Error ? error.message : 'Error desconocido'

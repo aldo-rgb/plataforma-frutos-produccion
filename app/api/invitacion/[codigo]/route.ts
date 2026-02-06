@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Force Node.js runtime for Prisma compatibility
 export const runtime = 'nodejs';
@@ -75,7 +76,7 @@ export async function GET(
     });
 
   } catch (error: any) {
-    console.error('Error fetching invitation data:', error);
+    logger.error('Error fetching invitation data:', error);
     return NextResponse.json({ 
       success: false, 
       error: 'Error interno del servidor',

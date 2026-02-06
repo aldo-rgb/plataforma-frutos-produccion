@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { nanoid } from 'nanoid';
+import logger from '@/lib/logger';
 
 /**
  * 💳 Crear orden de pago para asignación de mentores en visión
@@ -40,7 +41,7 @@ export async function POST(
     const visionId = parseInt(id);
     const body = await request.json();
     
-    console.log('📦 Body recibido:', JSON.stringify(body, null, 2));
+    logger.debug('📦 Body recibido:', JSON.stringify(body, null, 2));
     
     const { 
       totalAmount, 
@@ -115,7 +116,7 @@ export async function POST(
     });
 
   } catch (error: any) {
-    console.error('❌ Error creando orden de pago:', error);
+    logger.error('❌ Error creando orden de pago:', error);
     return NextResponse.json(
       { 
         error: 'Error al crear la orden de pago',

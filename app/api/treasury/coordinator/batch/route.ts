@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 const ALLOWED_ROLES = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER'];
 
@@ -140,7 +141,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('Error creating cash batch:', error);
+    logger.error('Error creating cash batch:', error);
     return NextResponse.json(
       { error: error?.message || 'Error al crear corte de caja' },
       { status: 500 }

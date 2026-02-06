@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -54,8 +55,8 @@ export async function GET(request: Request) {
       }
     });
 
-    console.log('🔍 Enlace leído de la BD:', usuario?.PerfilMentor?.enlaceVideoLlamada);
-    console.log('🔍 Tipo leído de la BD:', usuario?.PerfilMentor?.tipoVideoLlamada);
+    logger.debug('🔍 Enlace leído de la BD:', usuario?.PerfilMentor?.enlaceVideoLlamada);
+    logger.debug('🔍 Tipo leído de la BD:', usuario?.PerfilMentor?.tipoVideoLlamada);
 
     if (!usuario) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
@@ -69,7 +70,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(perfilCompleto);
   } catch (error) {
-    console.error('Error obteniendo perfil:', error);
+    logger.error('Error obteniendo perfil:', error);
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
   } finally {
     await prisma.$disconnect();
@@ -115,7 +116,7 @@ export async function PUT(request: Request) {
 
     // Actualizar o crear PerfilMentor si hay datos
     if (perfilMentorData) {
-      console.log('📝 Datos de PerfilMentor recibidos:', {
+      logger.debug('📝 Datos de PerfilMentor recibidos:', {
         enlaceVideoLlamada: perfilMentorData.enlaceVideoLlamada,
         tipoVideoLlamada: perfilMentorData.tipoVideoLlamada
       });
@@ -161,7 +162,7 @@ export async function PUT(request: Request) {
           }
         });
         
-        console.log('✅ PerfilMentor actualizado con enlace:', perfilMentorData.enlaceVideoLlamada);
+        logger.debug('✅ PerfilMentor actualizado con enlace:', perfilMentorData.enlaceVideoLlamada);
 
         // Si se actualizó el precio base, actualizar también el servicio
         if (perfilMentorData.precioBase !== undefined) {
@@ -181,7 +182,7 @@ export async function PUT(request: Request) {
               where: { id: servicioPrincipal.id },
               data: { precioTotal: nuevoPrecio }
             });
-            console.log(`✅ Precio del servicio actualizado automáticamente: $${nuevoPrecio}`);
+            logger.debug(`✅ Precio del servicio actualizado automáticamente: $${nuevoPrecio}`);
           } else {
             // Si no existe servicio, crear uno
             await prisma.servicioMentoria.create({
@@ -195,7 +196,7 @@ export async function PUT(request: Request) {
                 activo: true
               }
             });
-            console.log(`✅ Servicio creado automáticamente con precio: $${nuevoPrecio}`);
+            logger.debug(`✅ Servicio creado automáticamente con precio: $${nuevoPrecio}`);
           }
         }
       } else {
@@ -238,13 +239,13 @@ export async function PUT(request: Request) {
             activo: true
           }
         });
-        console.log(`✅ Servicio creado automáticamente para nuevo mentor con precio: $${precioInicial}`);
+        logger.debug(`✅ Servicio creado automáticamente para nuevo mentor con precio: $${precioInicial}`);
       }
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error guardando perfil:', error);
+    logger.error('Error guardando perfil:', error);
     return NextResponse.json({ error: 'Error al guardar perfil' }, { status: 500 });
   } finally {
     await prisma.$disconnect();

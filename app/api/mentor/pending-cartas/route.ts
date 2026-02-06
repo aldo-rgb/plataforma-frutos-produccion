@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/mentor/pending-cartas
@@ -26,7 +27,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Acceso denegado. Solo mentores y líderes.' }, { status: 403 });
     }
 
-    console.log('🔍 Buscando cartas para mentor ID:', mentorId);
+    logger.debug('🔍 Buscando cartas para mentor ID:', mentorId);
 
     // Obtener cartas pendientes asignadas a este mentor
     const pendingCartas = await prisma.cartaFrutos.findMany({
@@ -68,8 +69,8 @@ export async function GET(req: Request) {
       }
     });
 
-    console.log('📊 Cartas encontradas:', pendingCartas.length);
-    console.log('📋 Cartas:', pendingCartas.map(c => ({
+    logger.debug('📊 Cartas encontradas:', pendingCartas.length);
+    logger.debug('📋 Cartas:', pendingCartas.map(c => ({
       id: c.id,
       usuarioId: c.usuarioId,
       estado: c.estado
@@ -115,7 +116,7 @@ export async function GET(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error obteniendo cartas pendientes:', error);
+    logger.error('❌ Error obteniendo cartas pendientes:', error);
     return NextResponse.json(
       { error: 'Error al obtener cartas', details: error.message },
       { status: 500 }

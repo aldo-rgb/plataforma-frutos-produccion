@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 // GET /api/director/training-stats
 // Obtiene estadísticas de declarados e inscritos para el director
@@ -137,7 +138,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('[director/training-stats] Error:', error);
+    logger.error('[director/training-stats] Error:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener estadísticas' },
       { status: 500 }

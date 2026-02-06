@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 type CodigoTipo = 'MEMBRESIA_MENTOR' | 'MEMBRESIA_STANDARD' | 'MEMBRESIA_PREMIUM' | 'MENTORIA_1_1' | 'LICENCIAS_INSTITUCIONAL';
 
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error generando códigos:', error);
+    logger.error('Error generando códigos:', error);
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Tipos de quiebre predefinidos
 const BREACH_TYPES = {
@@ -173,7 +174,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error("Error en GET /api/context-guardian/reports:", error);
+    logger.error("Error en GET /api/context-guardian/reports:", error);
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }
@@ -327,7 +328,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error("Error en POST /api/context-guardian/reports:", error);
+    logger.error("Error en POST /api/context-guardian/reports:", error);
     return NextResponse.json(
       { error: "Error interno del servidor", details: String(error) },
       { status: 500 }
@@ -435,7 +436,7 @@ export async function PATCH(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error("Error en PATCH /api/context-guardian/reports:", error);
+    logger.error("Error en PATCH /api/context-guardian/reports:", error);
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }

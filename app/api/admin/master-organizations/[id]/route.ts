@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // PUT: Actualizar organización master
 export async function PUT(
@@ -45,7 +46,7 @@ export async function PUT(
 
     return NextResponse.json(masterOrg);
   } catch (error: any) {
-    console.error('Error actualizando master organization:', error);
+    logger.error('Error actualizando master organization:', error);
     return NextResponse.json(
       { error: 'Error al actualizar organización master' },
       { status: 500 }
@@ -97,7 +98,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('Error eliminando master organization:', error);
+    logger.error('Error eliminando master organization:', error);
     return NextResponse.json(
       { error: 'Error al eliminar organización master' },
       { status: 500 }

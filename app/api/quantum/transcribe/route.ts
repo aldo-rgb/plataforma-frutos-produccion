@@ -1,6 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 
 // OpenAI se inicializa solo si hay API key
 let openai: any = null;
@@ -15,8 +17,15 @@ export const dynamic = 'force-dynamic';
  * POST /api/quantum/transcribe
  * Transcribe audio a texto usando Whisper
  */
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    // Rate limiting - Whisper API es costosa
+    const { response } = rateLimit(req, RateLimitPresets.ai);
+    if (response) {
+      logger.warn('Rate limit exceeded on quantum/transcribe');
+      return response;
+    }
+
     if (!openai) {
       return NextResponse.json({ error: 'Servicio de IA no configurado' }, { status: 503 });
     }
@@ -33,7 +42,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No se proporcionó archivo de audio' }, { status: 400 });
     }
 
-    console.log('🎙️ Transcribiendo audio:', {
+    logger.debug('🎙️ Transcribiendo audio:', {
       name: audioFile.name,
       type: audioFile.type,
       size: audioFile.size
@@ -50,7 +59,7 @@ export async function POST(req: Request) {
       response_format: 'json'
     });
 
-    console.log('✅ Transcripción exitosa:', transcription.text);
+    logger.debug('✅ Transcripción exitosa:', transcription.text);
 
     return NextResponse.json({
       success: true,
@@ -58,7 +67,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error) {
-    console.error('❌ Error transcribiendo audio:', error);
+    logger.error('❌ Error transcribiendo audio:', error);
     return NextResponse.json(
       { error: 'Error al transcribir audio' },
       { status: 500 }

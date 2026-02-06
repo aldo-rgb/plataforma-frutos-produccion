@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener tareas personales para una fecha específica
 export async function GET(request: NextRequest) {
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
     // PostgreSQL DATE type solo tiene año-mes-día
     const targetDate = new Date(dateParam + 'T00:00:00.000Z');
 
-    console.log('📝 GET personal-tasks:', {
+    logger.debug('📝 GET personal-tasks:', {
       userId: user.id,
       dateParam,
       targetDate: targetDate.toISOString()
@@ -51,12 +52,12 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    console.log('📝 Tareas encontradas:', personalTasks.length);
+    logger.debug('📝 Tareas encontradas:', personalTasks.length);
 
     return NextResponse.json({ personalTasks });
 
   } catch (error) {
-    console.error('❌ Error obteniendo tareas personales:', error);
+    logger.error('❌ Error obteniendo tareas personales:', error);
     return NextResponse.json(
       { error: 'Error obteniendo tareas personales' },
       { status: 500 }
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ task: newTask }, { status: 201 });
 
   } catch (error) {
-    console.error('❌ Error creando tarea personal:', error);
+    logger.error('❌ Error creando tarea personal:', error);
     return NextResponse.json(
       { error: 'Error creando tarea personal' },
       { status: 500 }

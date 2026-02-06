@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import QRCode from 'qrcode';
+import logger from '@/lib/logger';
 
 export async function POST(
   request: NextRequest,
@@ -37,7 +38,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('Error generating QR:', error);
+    logger.error('Error generating QR:', error);
     return NextResponse.json(
       { error: 'Error al generar código QR' },
       { status: 500 }

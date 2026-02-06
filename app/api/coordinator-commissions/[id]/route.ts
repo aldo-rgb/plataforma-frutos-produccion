@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // PUT - Actualizar estado de una comisión
 export async function PUT(
@@ -95,7 +96,7 @@ export async function PUT(
     });
 
   } catch (error: any) {
-    console.error('Error actualizando comisión:', error);
+    logger.error('Error actualizando comisión:', error);
     return NextResponse.json(
       { error: 'Error al actualizar comisión', details: error.message },
       { status: 500 }
@@ -147,7 +148,7 @@ export async function DELETE(
     });
 
   } catch (error: any) {
-    console.error('Error eliminando comisión:', error);
+    logger.error('Error eliminando comisión:', error);
     return NextResponse.json(
       { error: 'Error al eliminar comisión', details: error.message },
       { status: 500 }

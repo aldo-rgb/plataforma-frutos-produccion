@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import Replicate from 'replicate';
 import { createClient } from '@supabase/supabase-js';
+import logger from '@/lib/logger';
 
 // Inicialización lazy de Replicate - solo si hay API token
 let replicate: Replicate | null = null;
@@ -34,12 +35,12 @@ function getSupabase() {
 async function uploadImageToSupabase(imageUrl: string, userId: number): Promise<string> {
   const supabaseClient = getSupabase();
   if (!supabaseClient) {
-    console.warn('⚠️ Supabase no configurado, usando URL temporal');
+    logger.warn('⚠️ Supabase no configurado, usando URL temporal');
     return imageUrl;
   }
 
   try {
-    console.log('📥 Descargando imagen de Replicate...');
+    logger.debug('📥 Descargando imagen de Replicate...');
     const response = await fetch(imageUrl);
     if (!response.ok) {
       throw new Error(`Error descargando imagen: ${response.status}`);
@@ -48,7 +49,7 @@ async function uploadImageToSupabase(imageUrl: string, userId: number): Promise<
     const imageBuffer = await response.arrayBuffer();
     const fileName = `avatars/mentor-${userId}-${Date.now()}.png`;
     
-    console.log('📤 Subiendo a Supabase Storage:', fileName);
+    logger.debug('📤 Subiendo a Supabase Storage:', fileName);
     const { data, error } = await supabaseClient.storage
       .from('mentor-assets')
       .upload(fileName, imageBuffer, {
@@ -57,7 +58,7 @@ async function uploadImageToSupabase(imageUrl: string, userId: number): Promise<
       });
 
     if (error) {
-      console.error('❌ Error subiendo a Supabase:', error);
+      logger.error('❌ Error subiendo a Supabase:', error);
       throw error;
     }
 
@@ -66,10 +67,10 @@ async function uploadImageToSupabase(imageUrl: string, userId: number): Promise<
       .from('mentor-assets')
       .getPublicUrl(fileName);
 
-    console.log('✅ Imagen guardada permanentemente:', publicUrl);
+    logger.debug('✅ Imagen guardada permanentemente:', publicUrl);
     return publicUrl;
   } catch (error) {
-    console.error('❌ Error en uploadImageToSupabase:', error);
+    logger.error('❌ Error en uploadImageToSupabase:', error);
     return imageUrl;
   }
 }
@@ -80,16 +81,16 @@ async function uploadImageToSupabase(imageUrl: string, userId: number): Promise<
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log('🚀 POST /api/mentor/generate-avatar-from-selfie - Iniciando');
+    logger.debug('🚀 POST /api/mentor/generate-avatar-from-selfie - Iniciando');
     
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
-      console.log('❌ No hay sesión de usuario');
+      logger.debug('❌ No hay sesión de usuario');
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    console.log('✅ Usuario autenticado:', session.user.email);
+    logger.debug('✅ Usuario autenticado:', session.user.email);
 
     // Verificar que sea MENTOR o LIDER
     const usuario = await prisma.usuario.findUnique({
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     // Verificar que Replicate esté configurado
     if (!process.env.REPLICATE_API_TOKEN || process.env.REPLICATE_API_TOKEN === 'tu_api_key_aqui') {
-      console.error('❌ REPLICATE_API_TOKEN no configurado');
+      logger.error('❌ REPLICATE_API_TOKEN no configurado');
       return NextResponse.json({
         error: 'Servicio de generación de avatares no configurado. Contacta al administrador.',
         hint: 'REPLICATE_API_TOKEN no está configurado en las variables de entorno'
@@ -130,9 +131,9 @@ export async function POST(request: NextRequest) {
     // Determinar clase word según género (man/woman)
     const genderWord = gender === 'woman' ? 'woman' : 'man';
 
-    console.log('✅ Usuario encontrado:', usuario.id, usuario.nombre, usuario.rol);
-    console.log('📸 Número de imágenes recibidas:', inputImages.length);
-    console.log('👤 Género seleccionado:', genderWord);
+    logger.debug('✅ Usuario encontrado:', usuario.id, usuario.nombre, usuario.rol);
+    logger.debug('📸 Número de imágenes recibidas:', inputImages.length);
+    logger.debug('👤 Género seleccionado:', genderWord);
 
     // PROMPT MAESTRO: EL MENTOR CUÁNTICO
     // Estilo: Premium 3D semi-realista anime (como RPG de alta gama, Valorant/Overwatch cinematics)
@@ -142,13 +143,13 @@ export async function POST(request: NextRequest) {
 
     const negativePrompt = 'ugly, deformed, disfigured, bad anatomy, extra limbs, watermark, text, logo, low quality, blurry, full body, legs, feet, amateur, realistic photo, photograph, plain background, simple, casual clothes, t-shirt';
 
-    console.log('🎨 Generando avatar MENTOR CUÁNTICO con Replicate...');
-    console.log('📝 Prompt:', mentorPrompt);
+    logger.debug('🎨 Generando avatar MENTOR CUÁNTICO con Replicate...');
+    logger.debug('📝 Prompt:', mentorPrompt);
 
     // Obtener instancia de Replicate
     const replicateClient = getReplicate();
     if (!replicateClient) {
-      console.error('❌ Replicate client no disponible');
+      logger.error('❌ Replicate client no disponible');
       return NextResponse.json({
         error: 'Servicio de generación de avatares no disponible.',
         hint: 'REPLICATE_API_TOKEN no está configurado'
@@ -172,18 +173,18 @@ export async function POST(request: NextRequest) {
     // Agregar imágenes adicionales si están disponibles (mejora MUCHO la fidelidad facial)
     if (inputImages.length > 1 && inputImages[1]) {
       inputParams.input_image2 = inputImages[1];
-      console.log('📸 Agregando imagen secundaria para mejor fidelidad');
+      logger.debug('📸 Agregando imagen secundaria para mejor fidelidad');
     }
     if (inputImages.length > 2 && inputImages[2]) {
       inputParams.input_image3 = inputImages[2];
-      console.log('📸 Agregando tercera imagen');
+      logger.debug('📸 Agregando tercera imagen');
     }
     if (inputImages.length > 3 && inputImages[3]) {
       inputParams.input_image4 = inputImages[3];
-      console.log('📸 Agregando cuarta imagen');
+      logger.debug('📸 Agregando cuarta imagen');
     }
 
-    console.log('⚙️ Parámetros PhotoMaker:', {
+    logger.debug('⚙️ Parámetros PhotoMaker:', {
       num_images: inputImages.length,
       style_strength_ratio: inputParams.style_strength_ratio
     });
@@ -194,33 +195,33 @@ export async function POST(request: NextRequest) {
       input: inputParams
     });
 
-    console.log('🔄 Predicción creada:', prediction.id);
+    logger.debug('🔄 Predicción creada:', prediction.id);
 
     // Polling: Esperar a que termine la generación
     let result = prediction;
     while (result.status !== 'succeeded' && result.status !== 'failed') {
-      console.log('⏳ Estado:', result.status);
+      logger.debug('⏳ Estado:', result.status);
       await new Promise(resolve => setTimeout(resolve, 1000));
       result = await replicateClient.predictions.get(prediction.id);
     }
 
     if (result.status === 'failed') {
-      console.error('❌ Predicción falló:', result.error);
+      logger.error('❌ Predicción falló:', result.error);
       return NextResponse.json({
         success: false,
         error: 'La generación falló: ' + result.error
       }, { status: 500 });
     }
 
-    console.log('✅ Imagen generada por IA');
-    console.log('Output:', result.output);
+    logger.debug('✅ Imagen generada por IA');
+    logger.debug('Output:', result.output);
 
     let replicateUrl = Array.isArray(result.output) ? result.output[0] : result.output;
 
     // Subir imagen a Supabase Storage para URL permanente
-    console.log('🔄 Guardando imagen permanentemente en Supabase...');
+    logger.debug('🔄 Guardando imagen permanentemente en Supabase...');
     let avatarUrl = await uploadImageToSupabase(replicateUrl, usuario.id);
-    console.log('✅ URL permanente:', avatarUrl);
+    logger.debug('✅ URL permanente:', avatarUrl);
 
     // Actualizar profileImage del usuario
     await prisma.usuario.update({
@@ -231,7 +232,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log('✅ Avatar de maestro actualizado en perfil del usuario');
+    logger.debug('✅ Avatar de maestro actualizado en perfil del usuario');
 
     return NextResponse.json({
       success: true,
@@ -240,7 +241,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error generando avatar de maestro:', error);
+    logger.error('❌ Error generando avatar de maestro:', error);
     return NextResponse.json(
       { 
         error: 'Error al generar el avatar',

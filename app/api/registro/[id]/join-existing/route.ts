@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * API para que usuarios EXISTENTES se unan a un liderato específico
@@ -148,7 +149,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('Error al unirse a liderato:', error);
+    logger.error('Error al unirse a liderato:', error);
     return NextResponse.json(
       { success: false, error: 'Error al procesar la solicitud' },
       { status: 500 }

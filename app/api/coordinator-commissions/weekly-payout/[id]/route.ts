@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // PUT - Actualizar estado del resumen semanal
 export async function PUT(
@@ -127,7 +128,7 @@ export async function PUT(
     });
 
   } catch (error: any) {
-    console.error('Error actualizando resumen:', error);
+    logger.error('Error actualizando resumen:', error);
     return NextResponse.json(
       { error: 'Error al actualizar resumen', details: error.message },
       { status: 500 }
@@ -196,7 +197,7 @@ export async function GET(
     });
 
   } catch (error: any) {
-    console.error('Error obteniendo detalle del resumen:', error);
+    logger.error('Error obteniendo detalle del resumen:', error);
     return NextResponse.json(
       { error: 'Error al obtener detalle', details: error.message },
       { status: 500 }

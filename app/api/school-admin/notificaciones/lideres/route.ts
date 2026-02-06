@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/school-admin/notificaciones/lideres
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest) {
     const esSchoolAdmin = admin.rol === 'SCHOOL_ADMIN';
     const esDirector = admin.Organization_Usuario_organizationIdToOrganization?.schoolAdminId === userId;
 
-    console.log(`📊 Usuario ${userId} (${admin.rol}) - esSchoolAdmin: ${esSchoolAdmin}, esDirector: ${esDirector}`);
+    logger.debug(`📊 Usuario ${userId} (${admin.rol}) - esSchoolAdmin: ${esSchoolAdmin}, esDirector: ${esDirector}`);
 
     if (!esSchoolAdmin && !esDirector) {
       return NextResponse.json(
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Obtener notificaciones de líderes
-    console.log(`🔍 Buscando notificaciones para mentorId: ${userId}`);
+    logger.debug(`🔍 Buscando notificaciones para mentorId: ${userId}`);
     
     const notificaciones = await prisma.mentorAlert.findMany({
       where: {
@@ -74,7 +75,7 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    console.log(`✅ Notificaciones encontradas: ${notificaciones.length}`);
+    logger.debug(`✅ Notificaciones encontradas: ${notificaciones.length}`);
 
     // Enriquecer con datos del líder
     const notificacionesEnriquecidas = await Promise.all(
@@ -132,7 +133,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error al obtener notificaciones de líderes:', error);
+    logger.error('Error al obtener notificaciones de líderes:', error);
     return NextResponse.json(
       { error: 'Error al cargar las notificaciones' },
       { status: 500 }
@@ -196,7 +197,7 @@ export async function PATCH(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error al marcar notificación:', error);
+    logger.error('Error al marcar notificación:', error);
     return NextResponse.json(
       { error: 'Error al actualizar la notificación' },
       { status: 500 }

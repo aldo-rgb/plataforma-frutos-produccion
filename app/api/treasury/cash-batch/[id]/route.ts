@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/treasury/cash-batch/[id]
@@ -121,7 +122,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Error fetching cash batch:', error);
+    logger.error('Error fetching cash batch:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener corte de caja' },
       { status: 500 }
@@ -211,7 +212,7 @@ export async function PATCH(
       },
     });
   } catch (error) {
-    console.error('Error updating cash batch:', error);
+    logger.error('Error updating cash batch:', error);
     return NextResponse.json(
       { success: false, error: 'Error al actualizar corte' },
       { status: 500 }

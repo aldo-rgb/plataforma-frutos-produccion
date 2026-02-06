@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { PrismaClient } from '@prisma/client';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -56,7 +57,7 @@ export async function GET() {
 
     return NextResponse.json(preciosFormateados);
   } catch (error) {
-    console.error('Error obteniendo precios:', error);
+    logger.error('Error obteniendo precios:', error);
     return NextResponse.json({ error: 'Error al obtener precios' }, { status: 500 });
   }
 }
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No se proporcionaron precios' }, { status: 400 });
     }
 
-    console.log('💰 Guardando precios:', JSON.stringify(precios, null, 2));
+    logger.debug('💰 Guardando precios:', JSON.stringify(precios, null, 2));
 
     // Función helper para upsert que maneja búsqueda manual
     const upsertPrice = async (plan: string, currency: string, period: string | null, price: number) => {
@@ -105,7 +106,7 @@ export async function POST(req: NextRequest) {
           });
         }
       } catch (error) {
-        console.error(`Error upserting price for ${plan}-${currency}-${period}:`, error);
+        logger.error(`Error upserting price for ${plan}-${currency}-${period}:`, error);
         throw error;
       }
     };
@@ -136,9 +137,9 @@ export async function POST(req: NextRequest) {
       updates.push(await upsertPrice('free', 'MXN', null, 0));
       updates.push(await upsertPrice('free', 'USD', null, 0));
       
-      console.log('✅ Precios guardados exitosamente:', updates.length);
+      logger.debug('✅ Precios guardados exitosamente:', updates.length);
     } catch (error) {
-      console.error('❌ Error ejecutando updates:', error);
+      logger.error('❌ Error ejecutando updates:', error);
       throw error;
     }
 
@@ -149,7 +150,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error guardando precios:', error);
+    logger.error('Error guardando precios:', error);
     return NextResponse.json({ 
       error: 'Error al guardar precios',
       details: error instanceof Error ? error.message : 'Unknown error'

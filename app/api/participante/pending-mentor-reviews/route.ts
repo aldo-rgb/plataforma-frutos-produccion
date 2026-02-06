@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/participante/pending-mentor-reviews
@@ -111,7 +112,7 @@ export async function GET(request: NextRequest) {
       return prioridadOrder[a.prioridad as keyof typeof prioridadOrder] - prioridadOrder[b.prioridad as keyof typeof prioridadOrder];
     });
 
-    console.log(`✅ Usuario ${userId} tiene ${notificacionesOrdenadas.length} mentores pendientes de calificar`);
+    logger.debug(`✅ Usuario ${userId} tiene ${notificacionesOrdenadas.length} mentores pendientes de calificar`);
 
     return NextResponse.json({
       success: true,
@@ -120,7 +121,7 @@ export async function GET(request: NextRequest) {
       mentoresPendientes: notificacionesOrdenadas.length,
     });
   } catch (error: any) {
-    console.error('Error al obtener reviews pendientes:', error);
+    logger.error('Error al obtener reviews pendientes:', error);
     return NextResponse.json(
       { 
         error: 'Error al obtener notificaciones',

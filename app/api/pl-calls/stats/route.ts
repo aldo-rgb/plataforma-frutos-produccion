@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET: Obtener estadísticas de llamadas PL
 export async function GET(request: NextRequest) {
@@ -211,7 +212,7 @@ export async function GET(request: NextRequest) {
       atRiskParticipants
     });
   } catch (error) {
-    console.error('Error fetching PL call stats:', error);
+    logger.error('Error fetching PL call stats:', error);
     return NextResponse.json({ error: 'Error al obtener estadísticas' }, { status: 500 });
   }
 }

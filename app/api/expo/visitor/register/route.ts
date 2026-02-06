@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Generar UUID sin dependencia externa
 function generateUUID(): string {
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error registrando visitante:', error);
+    logger.error('Error registrando visitante:', error);
     // Agregar más detalle del error
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     return NextResponse.json(

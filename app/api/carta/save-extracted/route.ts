@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/carta/save-extracted
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
 
     const { cartaData, areasDisponibles } = await req.json();
 
-    console.log('📥 Guardando carta extraída:', {
+    logger.debug('📥 Guardando carta extraída:', {
       areas: Object.keys(cartaData || {}),
       areasDisponibles
     });
@@ -63,9 +64,9 @@ export async function POST(req: Request) {
           }
         }
       });
-      console.log('✅ Carta creada ID:', carta.id);
+      logger.debug('✅ Carta creada ID:', carta.id);
     } else {
-      console.log('📋 Carta existente ID:', carta.id);
+      logger.debug('📋 Carta existente ID:', carta.id);
     }
 
     // Mapeo de áreas a categorías de BD
@@ -87,7 +88,7 @@ export async function POST(req: Request) {
     for (const [areaKey, areaData] of Object.entries(cartaData)) {
       const categoria = areaMapping[areaKey];
       if (!categoria) {
-        console.warn(`⚠️ Área no reconocida: ${areaKey}`);
+        logger.warn(`⚠️ Área no reconocida: ${areaKey}`);
         continue;
       }
 
@@ -107,7 +108,7 @@ export async function POST(req: Request) {
             updatedAt: new Date()
           }
         });
-        console.log(`✅ Meta actualizada: ${categoria}`);
+        logger.debug(`✅ Meta actualizada: ${categoria}`);
       } else {
         // Crear nueva meta
         meta = await prisma.meta.create({
@@ -123,7 +124,7 @@ export async function POST(req: Request) {
           }
         });
         metasCreadas++;
-        console.log(`✅ Meta creada: ${categoria} (ID: ${meta.id})`);
+        logger.debug(`✅ Meta creada: ${categoria} (ID: ${meta.id})`);
       }
 
       // Procesar acciones
@@ -178,7 +179,7 @@ export async function POST(req: Request) {
             }
           });
           accionesCreadas++;
-          console.log(`  ✅ Acción creada: ${textoAccion.substring(0, 40)}...`);
+          logger.debug(`  ✅ Acción creada: ${textoAccion.substring(0, 40)}...`);
         }
       }
     }
@@ -192,7 +193,7 @@ export async function POST(req: Request) {
       }
     });
 
-    console.log(`🎉 Guardado completo: ${metasCreadas} metas nuevas, ${accionesCreadas} acciones creadas`);
+    logger.debug(`🎉 Guardado completo: ${metasCreadas} metas nuevas, ${accionesCreadas} acciones creadas`);
 
     return NextResponse.json({
       success: true,
@@ -203,7 +204,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error guardando carta extraída:', error);
+    logger.error('❌ Error guardando carta extraída:', error);
     return NextResponse.json(
       { error: 'Error al guardar la carta', details: error.message },
       { status: 500 }

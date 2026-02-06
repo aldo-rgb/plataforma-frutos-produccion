@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getTaskStats } from '@/lib/taskGenerator';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/carta/[id]/stats
@@ -27,7 +28,7 @@ export async function GET(
     return NextResponse.json(stats);
 
   } catch (error: any) {
-    console.error('Error getting carta stats:', error);
+    logger.error('Error getting carta stats:', error);
     return NextResponse.json(
       { error: 'Error al obtener estadísticas', details: error.message },
       { status: 500 }

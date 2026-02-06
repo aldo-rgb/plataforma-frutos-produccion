@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,7 +70,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ Error obteniendo sesiones:', error);
+    logger.error('❌ Error obteniendo sesiones:', error);
     return NextResponse.json(
       { error: 'Error al cargar sesiones' },
       { status: 500 }

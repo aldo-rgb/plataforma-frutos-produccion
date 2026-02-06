@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // POST - Crear una nueva solicitud de entrenador
 export async function POST(request: Request) {
@@ -115,7 +116,7 @@ export async function POST(request: Request) {
       application,
     });
   } catch (error) {
-    console.error('Error creating trainer application:', error);
+    logger.error('Error creating trainer application:', error);
     return NextResponse.json(
       { error: 'Error al crear la solicitud' },
       { status: 500 }

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { checkAndAwardBadges } from '@/lib/badgeSystem';
 import { onMentorshipSessionCompleted, onDisciplineCallCompleted } from '@/lib/commissionCalculator';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,7 +66,7 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    console.log(`📋 Completando sesión ${bookingId} del mentor ${session.user.id}`);
+    logger.debug(`📋 Completando sesión ${bookingId} del mentor ${session.user.id}`);
 
     // TRANSACCIÓN ATÓMICA: Todo o nada
     const result = await prisma.$transaction(async (tx) => {
@@ -100,7 +101,7 @@ export async function POST(request: Request) {
         paymentReleased = true;
         amountReleased = updatedBooking.Transaction.mentorEarnings;
         
-        console.log(`💰 Pago liberado: $${amountReleased} para mentor ${session.user.id}`);
+        logger.debug(`💰 Pago liberado: $${amountReleased} para mentor ${session.user.id}`);
       }
 
       return {
@@ -121,7 +122,7 @@ export async function POST(request: Request) {
         Number(result.booking.Transaction?.totalAmount || result.amountReleased),
         result.booking.scheduledAt
       ).catch((error) => {
-        console.error('❌ Error registrando en Commission Ledger:', error);
+        logger.error('❌ Error registrando en Commission Ledger:', error);
       });
     } else if (result.booking.type === 'DISCIPLINE') {
       // Registrar llamada de disciplina
@@ -132,7 +133,7 @@ export async function POST(request: Request) {
         90, // Precio fijo por llamada de disciplina
         result.booking.scheduledAt
       ).catch((error) => {
-        console.error('❌ Error registrando llamada en Commission Ledger:', error);
+        logger.error('❌ Error registrando llamada en Commission Ledger:', error);
       });
     }
     
@@ -140,11 +141,11 @@ export async function POST(request: Request) {
     checkAndAwardBadges(session.user.id)
       .then((badges) => {
         if (badges && badges.length > 0) {
-          console.log(`🏅 Insignias actualizadas para mentor ${session.user.id}:`, badges);
+          logger.debug(`🏅 Insignias actualizadas para mentor ${session.user.id}:`, badges);
         }
       })
       .catch((error) => {
-        console.error('❌ Error actualizando insignias:', error);
+        logger.error('❌ Error actualizando insignias:', error);
       });
 
     // Respuesta exitosa
@@ -171,7 +172,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error completando sesión:', error);
+    logger.error('❌ Error completando sesión:', error);
     
     return NextResponse.json(
       { 

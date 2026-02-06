@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { generarFlyerBasico } from '@/lib/flyer-generator';
+import logger from '@/lib/logger';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -90,7 +91,7 @@ export async function GET(request: NextRequest) {
       }
     }
   } catch (e) {
-    console.error('Error fetching data:', e);
+    logger.error('Error fetching data:', e);
   }
 
   try {
@@ -103,7 +104,7 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('Error generating flyer:', error);
+    logger.error('Error generating flyer:', error);
     return NextResponse.json({ error: 'Error generating flyer' }, { status: 500 });
   }
 }

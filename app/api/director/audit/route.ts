@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // POST - Guardar auditoría del Director
 export async function POST(request: NextRequest) {
@@ -158,7 +159,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    console.log(`✅ Auditoría certificada: ${director.nombre} para "${product.name}"`);
+    logger.debug(`✅ Auditoría certificada: ${director.nombre} para "${product.name}"`);
 
     return NextResponse.json({
       success: true,
@@ -167,7 +168,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error guardando auditoría:', error);
+    logger.error('❌ Error guardando auditoría:', error);
     return NextResponse.json(
       { error: 'Error al guardar auditoría', message: error?.message },
       { status: 500 }
@@ -203,7 +204,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ audit });
 
   } catch (error: any) {
-    console.error('❌ Error obteniendo auditoría:', error);
+    logger.error('❌ Error obteniendo auditoría:', error);
     return NextResponse.json(
       { error: 'Error al obtener auditoría', message: error?.message },
       { status: 500 }

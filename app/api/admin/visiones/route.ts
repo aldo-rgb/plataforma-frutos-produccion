@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -92,7 +93,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: true, visiones: visionesTransformed });
 
   } catch (error) {
-    console.error('Error loading visiones:', error);
+    logger.error('Error loading visiones:', error);
     return NextResponse.json({ error: 'Error al cargar visiones' }, { status: 500 });
   }
 }
@@ -189,7 +190,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error creating vision:', error);
+    logger.error('Error creating vision:', error);
     return NextResponse.json({ error: 'Error al crear visión' }, { status: 500 });
   }
 }

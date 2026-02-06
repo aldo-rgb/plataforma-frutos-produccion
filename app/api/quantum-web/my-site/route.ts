@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -73,7 +74,7 @@ export async function GET() {
     });
 
   } catch (error: any) {
-    console.error('Error obteniendo sitio:', error);
+    logger.error('Error obteniendo sitio:', error);
     return NextResponse.json({ hasSite: false, error: error.message });
   }
 }

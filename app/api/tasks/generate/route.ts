@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { addDays, addMonths, getDay } from 'date-fns';
+import logger from '@/lib/logger';
 
 // Generar instancias de tareas para los próximos 3 meses
 export async function POST(req: NextRequest) {
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error generando instancias:', error);
+    logger.error('Error generando instancias:', error);
     return NextResponse.json(
       { error: 'Error al generar instancias de tareas' },
       { status: 500 }
@@ -195,7 +196,7 @@ export async function PUT(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error regenerando tareas:', error);
+    logger.error('Error regenerando tareas:', error);
     return NextResponse.json(
       { error: 'Error al regenerar tareas' },
       { status: 500 }

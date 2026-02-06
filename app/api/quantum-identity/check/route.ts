@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/quantum-identity/check
@@ -53,7 +54,7 @@ export async function GET() {
 
     const requiresIdentity = !hasProfileImage;
 
-    console.log('🔍 Quantum Identity Check:', {
+    logger.debug('🔍 Quantum Identity Check:', {
       userId: usuario.nombre,
       hasProfileImage,
       requiresIdentity,
@@ -79,7 +80,7 @@ export async function GET() {
     );
 
   } catch (error) {
-    console.error('Error checking quantum identity:', error);
+    logger.error('Error checking quantum identity:', error);
     return NextResponse.json(
       { requiresIdentity: false },
       {

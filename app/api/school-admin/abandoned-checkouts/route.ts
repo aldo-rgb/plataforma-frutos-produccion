@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { sendAnticipoEmail } from '@/lib/email';
+import logger from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -201,7 +202,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching abandoned checkouts:', error);
+    logger.error('Error fetching abandoned checkouts:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }
@@ -275,7 +276,7 @@ export async function POST(request: NextRequest) {
       });
 
       if (!emailResult.success) {
-        console.error('Error enviando email de anticipo:', emailResult.error);
+        logger.error('Error enviando email de anticipo:', emailResult.error);
         return NextResponse.json({ 
           error: `Error enviando email: ${emailResult.error}` 
         }, { status: 500 });
@@ -314,7 +315,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Acción no válida' }, { status: 400 });
 
   } catch (error) {
-    console.error('Error processing abandoned checkout action:', error);
+    logger.error('Error processing abandoned checkout action:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { startOfDay, endOfDay, format, parseISO } from 'date-fns';
+import logger from '@/lib/logger';
 
 export async function GET(req: NextRequest) {
   try {
@@ -120,7 +121,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching tasks:', error);
+    logger.error('Error fetching tasks:', error);
     return NextResponse.json(
       { error: 'Error al obtener tareas' },
       { status: 500 }
@@ -255,7 +256,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error completing task:', error);
+    logger.error('Error completing task:', error);
     return NextResponse.json(
       { error: 'Error al completar la tarea' },
       { status: 500 }

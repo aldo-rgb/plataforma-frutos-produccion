@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/treasury/cash-batch/[id]/confirm
@@ -88,7 +89,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('Error confirming cash batch:', error);
+    logger.error('Error confirming cash batch:', error);
     return NextResponse.json(
       { success: false, error: 'Error al confirmar corte' },
       { status: 500 }

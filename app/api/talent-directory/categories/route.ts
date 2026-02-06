@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener todas las categorías activas
 export async function GET() {
@@ -27,7 +28,7 @@ export async function GET() {
 
     return NextResponse.json({ categories });
   } catch (error) {
-    console.error('Error fetching categories:', error);
+    logger.error('Error fetching categories:', error);
     return NextResponse.json({ error: 'Error al obtener categorías' }, { status: 500 });
   }
 }
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ category }, { status: 201 });
   } catch (error) {
-    console.error('Error creating category:', error);
+    logger.error('Error creating category:', error);
     return NextResponse.json({ error: 'Error al crear categoría' }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener branding público de una organización por slug
 export async function GET(
@@ -48,7 +49,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('Error fetching org branding:', error);
+    logger.error('Error fetching org branding:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener la configuración' },
       { status: 500 }

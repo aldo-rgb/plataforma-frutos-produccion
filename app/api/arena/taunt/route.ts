@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { TauntType } from '@prisma/client';
+import logger from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest) {
       taunt,
     });
   } catch (error) {
-    console.error('[ARENA API] Error en taunt:', error);
+    logger.error('[ARENA API] Error en taunt:', error);
     return NextResponse.json(
       { error: 'Error al enviar provocación' },
       { status: 500 }

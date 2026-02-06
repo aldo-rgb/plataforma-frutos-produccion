@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener mis solicitudes de gasto
 export async function GET(request: NextRequest) {
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ expenses });
 
   } catch (error) {
-    console.error('Error fetching expenses:', error);
+    logger.error('Error fetching expenses:', error);
     return NextResponse.json(
       { error: 'Error obteniendo gastos' },
       { status: 500 }
@@ -165,7 +166,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error creating expense:', error);
+    logger.error('Error creating expense:', error);
     return NextResponse.json(
       { error: 'Error creando solicitud de gasto' },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 const ALLOWED_ROLES = ['SCHOOL_ADMIN', 'COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
 
@@ -140,7 +141,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Error creating cash batch:', error);
+    logger.error('Error creating cash batch:', error);
     return NextResponse.json(
       { success: false, error: 'Error al crear corte de caja' },
       { status: 500 }
@@ -259,7 +260,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Error fetching cash batches:', error);
+    logger.error('Error fetching cash batches:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener cortes de caja' },
       { status: 500 }

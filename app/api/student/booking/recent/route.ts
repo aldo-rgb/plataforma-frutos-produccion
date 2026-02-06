@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET(req: NextRequest) {
   try {
@@ -51,7 +52,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error obteniendo reservas recientes:', error);
+    logger.error('Error obteniendo reservas recientes:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/social/react
@@ -102,7 +103,7 @@ export async function POST(req: Request) {
     }
 
   } catch (error: any) {
-    console.error('Error handling reaction:', error);
+    logger.error('Error handling reaction:', error);
     return NextResponse.json(
       { error: 'Error al procesar reacción', details: error.message },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // PUT: Rechazar una carta con feedback
 export async function PUT(
@@ -77,8 +78,8 @@ export async function PUT(
       }
     });
 
-    console.log(`🔴 Carta ${cartaId} RECHAZADA por ${mentor.nombre} para ${carta.Usuario.nombre}`);
-    console.log(`   Feedback: "${feedback}"`);
+    logger.debug(`🔴 Carta ${cartaId} RECHAZADA por ${mentor.nombre} para ${carta.Usuario.nombre}`);
+    logger.debug(`   Feedback: "${feedback}"`);
 
     // TODO: Aquí puedes agregar notificación al usuario
     // - Email con el feedback
@@ -93,7 +94,7 @@ export async function PUT(
     }, { status: 200 });
 
   } catch (error) {
-    console.error('❌ Error al rechazar carta:', error);
+    logger.error('❌ Error al rechazar carta:', error);
     return NextResponse.json({ error: 'Error al rechazar carta' }, { status: 500 });
   }
 }

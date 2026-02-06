@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/social/share
@@ -82,7 +83,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('Error tracking share:', error);
+    logger.error('Error tracking share:', error);
     return NextResponse.json(
       { error: 'Error al registrar compartido', details: error.message },
       { status: 500 }

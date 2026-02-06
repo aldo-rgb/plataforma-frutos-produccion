@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import logger from '@/lib/logger';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     });
     
   } catch (error: any) {
-    console.error('Error generating PDF:', error);
+    logger.error('Error generating PDF:', error);
     return NextResponse.json({ 
       error: error.message || 'Error al generar PDF' 
     }, { status: 500 });

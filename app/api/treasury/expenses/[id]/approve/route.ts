@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/treasury/expenses/[id]/approve
@@ -105,7 +106,7 @@ export async function POST(
       });
     }
   } catch (error) {
-    console.error('Error processing expense:', error);
+    logger.error('Error processing expense:', error);
     return NextResponse.json(
       { success: false, error: 'Error al procesar gasto' },
       { status: 500 }

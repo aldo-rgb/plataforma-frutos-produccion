@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Este endpoint es solo para pruebas - protegido para producción
 export async function GET(request: Request) {
@@ -197,7 +198,7 @@ export async function GET(request: Request) {
       }, { status: 500 });
     }
   } catch (error) {
-    console.error('Error enviando email de prueba:', error);
+    logger.error('Error enviando email de prueba:', error);
     return NextResponse.json({ 
       success: false, 
       error: 'Error al enviar correo' 

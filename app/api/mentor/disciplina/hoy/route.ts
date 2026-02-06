@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { startOfDay, endOfDay } from 'date-fns';
+import logger from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -86,7 +87,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('Error obteniendo llamadas de disciplina:', error);
+    logger.error('Error obteniendo llamadas de disciplina:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

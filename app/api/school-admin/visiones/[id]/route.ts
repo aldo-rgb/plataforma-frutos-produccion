@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * Convierte una fecha string a Date de forma segura, evitando problemas de timezone.
@@ -169,7 +170,7 @@ export async function GET(
       }
     }
 
-    console.log('📊 Nivel activo de la visión:', activeLevel);
+    logger.debug('📊 Nivel activo de la visión:', activeLevel);
 
     // Obtener participantes de VisionParticipante (legacy)
     const visionParticipantes = await prisma.visionParticipante.findMany({
@@ -349,11 +350,11 @@ export async function GET(
         };
       });
 
-      console.log(`📋 Usando ${participantes.length} participantes de vision_enrollments (nivel: ${activeLevel})`);
+      logger.debug(`📋 Usando ${participantes.length} participantes de vision_enrollments (nivel: ${activeLevel})`);
     } else {
       // FALLBACK: Si NO hay vision_enrollments, usar VisionParticipante (sistema legacy)
       participantes = visionParticipantes;
-      console.log(`📋 Usando ${participantes.length} participantes de VisionParticipante (legacy)`);
+      logger.debug(`📋 Usando ${participantes.length} participantes de VisionParticipante (legacy)`);
     }
 
     // Obtener game changers de la visión filtrados por el nivel activo
@@ -490,8 +491,8 @@ export async function GET(
 
     const mentoresConPaquete = new Set(paquetesContratados.map(p => p.mentorId));
 
-    console.log('👥 Mentores asignados a la visión:', mentoresAsignados.length);
-    console.log('📦 Mentores con paquetes contratados:', mentoresConPaquete.size);
+    logger.debug('👥 Mentores asignados a la visión:', mentoresAsignados.length);
+    logger.debug('📦 Mentores con paquetes contratados:', mentoresConPaquete.size);
 
     // Calcular semanas y costos del ciclo
     let cicloInfo = null;
@@ -582,7 +583,7 @@ export async function GET(
       }))
     });
   } catch (error) {
-    console.error('Error fetching vision details:', error);
+    logger.error('Error fetching vision details:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener detalles de la visión' },
       { status: 500 }
@@ -616,7 +617,7 @@ export async function PUT(
 
     const body = await request.json();
     
-    console.log('📥 PUT Request Body:', body);
+    logger.debug('📥 PUT Request Body:', body);
 
     // Actualizar fechas de la visión principal
     const visionUpdateData: any = {
@@ -663,7 +664,7 @@ export async function PUT(
       visionUpdateData.plWeekend3EndDate = toSafeDate(body.plWeekend3EndDate);
     }
 
-    console.log('📅 Vision Update Data:', visionUpdateData);
+    logger.debug('📅 Vision Update Data:', visionUpdateData);
 
     await prisma.vision.update({
       where: { id: visionId },
@@ -678,8 +679,8 @@ export async function PUT(
       },
     });
     
-    console.log('📦 Productos encontrados:', productos.length);
-    productos.forEach(p => console.log(`  - ${p.levelType} (ID: ${p.id})`));
+    logger.debug('📦 Productos encontrados:', productos.length);
+    productos.forEach(p => logger.debug(`  - ${p.levelType} (ID: ${p.id})`));
 
     // Actualizar Producto Básico
     const basicProduct = productos.find(p => p.levelType === 'BASIC');
@@ -716,7 +717,7 @@ export async function PUT(
     // Actualizar Programa Liderato (PL) con las 3 fechas de fines de semana
     const plProduct = productos.find(p => p.levelType === 'PL');
     if (plProduct) {
-      console.log('👑 Producto PL encontrado, ID:', plProduct.id);
+      logger.debug('👑 Producto PL encontrado, ID:', plProduct.id);
       
       const plUpdateData: any = { updatedAt: new Date() };
       
@@ -739,16 +740,16 @@ export async function PUT(
       if (body.plStartTime !== undefined) plUpdateData.trainingStartTime = body.plStartTime;
       if (body.plRegistrationOpenDate !== undefined) plUpdateData.registrationOpenDate = toSafeDate(body.plRegistrationOpenDate);
       
-      console.log('💾 Datos a actualizar en PL:', plUpdateData);
+      logger.debug('💾 Datos a actualizar en PL:', plUpdateData);
       
       const updatedPL = await prisma.schoolProduct.update({
         where: { id: plProduct.id },
         data: plUpdateData,
       });
       
-      console.log('✅ PL actualizado:', updatedPL);
+      logger.debug('✅ PL actualizado:', updatedPL);
     } else {
-      console.log('⚠️ NO se encontró producto PL');
+      logger.debug('⚠️ NO se encontró producto PL');
     }
 
     return NextResponse.json({
@@ -757,7 +758,7 @@ export async function PUT(
     });
 
   } catch (error) {
-    console.error('Error updating vision dates:', error);
+    logger.error('Error updating vision dates:', error);
     return NextResponse.json(
       { success: false, error: 'Error al actualizar las fechas' },
       { status: 500 }
@@ -914,7 +915,7 @@ export async function DELETE(
     });
 
   } catch (error) {
-    console.error('Error eliminando visión:', error);
+    logger.error('Error eliminando visión:', error);
     return NextResponse.json(
       { success: false, error: 'Error al eliminar la visión' },
       { status: 500 }

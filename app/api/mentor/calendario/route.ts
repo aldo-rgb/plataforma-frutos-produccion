@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/mentor/calendario
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0, 23, 59, 59);
 
-    console.log('📅 Buscando llamadas para:', { mentorId: usuario.id, startDate, endDate });
+    logger.debug('📅 Buscando llamadas para:', { mentorId: usuario.id, startDate, endDate });
 
     let mentoriaCalls: any[] = [];
     let disciplinaCalls: any[] = [];
@@ -63,9 +64,9 @@ export async function GET(request: NextRequest) {
           scheduledAt: 'asc'
         }
       });
-      console.log('✅ Llamadas de mentoría encontradas:', mentoriaCalls.length);
+      logger.debug('✅ Llamadas de mentoría encontradas:', mentoriaCalls.length);
     } catch (error) {
-      console.log('⚠️ Error obteniendo CallBooking:', error);
+      logger.debug('⚠️ Error obteniendo CallBooking:', error);
       mentoriaCalls = [];
     }
 
@@ -91,9 +92,9 @@ export async function GET(request: NextRequest) {
           callDate: 'asc'
         }
       });
-      console.log('✅ Llamadas de disciplina encontradas:', disciplinaCalls.length);
+      logger.debug('✅ Llamadas de disciplina encontradas:', disciplinaCalls.length);
     } catch (error) {
-      console.log('⚠️ Error obteniendo CallLog (puede que la tabla no exista):', error);
+      logger.debug('⚠️ Error obteniendo CallLog (puede que la tabla no exista):', error);
       disciplinaCalls = [];
     }
 
@@ -152,7 +153,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error obteniendo calendario:', error);
+    logger.error('Error obteniendo calendario:', error);
     return NextResponse.json(
       { error: 'Error al obtener calendario' },
       { status: 500 }

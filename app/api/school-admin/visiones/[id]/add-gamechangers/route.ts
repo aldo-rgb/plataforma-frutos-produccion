@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { generateMagicLinkToken, sendVisionMagicLinkMessage } from '@/lib/whatsapp';
 import { sendVisionMagicLinkEmail } from '@/lib/email';
+import logger from '@/lib/logger';
 
 const DEFAULT_PASSWORD = 'Quantum123';
 
@@ -17,7 +18,7 @@ export async function POST(
     const allowedRoles = ['SCHOOL_ADMIN', 'ADMINISTRADOR', 'COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
     
     if (!session?.user || !allowedRoles.includes(session.user.rol as string)) {
-      console.log('🚫 [add-gamechangers] Unauthorized - rol:', session?.user?.rol);
+      logger.debug('🚫 [add-gamechangers] Unauthorized - rol:', session?.user?.rol);
       return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
     }
 
@@ -220,11 +221,11 @@ export async function POST(
               if (existingExpiry > newExpiry) {
                 // La licencia existente tiene mayor vigencia, usar esa fecha
                 finalExpiryDate = existingLicense.expiresAt;
-                console.log(`📅 Usuario ${user.nombre} tiene licencia con mayor vigencia (${existingExpiry.toISOString()}), se respeta`);
+                logger.debug(`📅 Usuario ${user.nombre} tiene licencia con mayor vigencia (${existingExpiry.toISOString()}), se respeta`);
               }
             }
             shouldCreateLicense = true;
-            console.log(`🎓 Game Changer ${user.nombre} asignado a PL - Creando nueva licencia de Liderato`);
+            logger.debug(`🎓 Game Changer ${user.nombre} asignado a PL - Creando nueva licencia de Liderato`);
           } else {
             // Para BASIC/ADVANCED: solo crear si no tiene licencia activa O si la nueva tiene mayor vigencia
             if (!existingLicense) {
@@ -242,12 +243,12 @@ export async function POST(
                     notes: `${existingLicense.notes || ''} | Extendida a ${level} el ${new Date().toISOString()}`
                   }
                 });
-                console.log(`📅 Licencia de ${user.nombre} extendida de ${existingExpiry.toISOString()} a ${newExpiry.toISOString()}`);
+                logger.debug(`📅 Licencia de ${user.nombre} extendida de ${existingExpiry.toISOString()} a ${newExpiry.toISOString()}`);
                 // No crear nueva, ya se actualizó
                 shouldCreateLicense = false;
               } else {
                 // La existente tiene mayor vigencia, no hacer nada
-                console.log(`📅 Usuario ${user.nombre} ya tiene licencia con mayor vigencia (${existingExpiry.toISOString()}), se conserva`);
+                logger.debug(`📅 Usuario ${user.nombre} ya tiene licencia con mayor vigencia (${existingExpiry.toISOString()}), se conserva`);
                 shouldCreateLicense = false;
               }
             }
@@ -274,7 +275,7 @@ export async function POST(
             });
 
             licensesCreated.push(licenseCode);
-            console.log(`✅ Licencia ${level} creada para Game Changer ${user.nombre} (${user.email}): ${licenseCode} - Expira: ${finalExpiryDate}`);
+            logger.debug(`✅ Licencia ${level} creada para Game Changer ${user.nombre} (${user.email}): ${licenseCode} - Expira: ${finalExpiryDate}`);
           }
 
           addedGameChangers.push(user);
@@ -406,9 +407,9 @@ export async function POST(
             visionData?.nombre || 'Quantum',
             magicToken
           );
-          console.log(`📱 Magic Link enviado a ${user.nombre} (${user.telefono})`);
+          logger.debug(`📱 Magic Link enviado a ${user.nombre} (${user.telefono})`);
         } catch (error) {
-          console.warn('⚠️ No se pudo enviar WhatsApp:', error);
+          logger.warn('⚠️ No se pudo enviar WhatsApp:', error);
         }
       }
 
@@ -425,9 +426,9 @@ export async function POST(
           visionData?.nombre || 'Quantum',
           magicToken
         );
-        console.log(`📧 Magic Link email enviado a ${user.nombre} (${user.email})`);
+        logger.debug(`📧 Magic Link email enviado a ${user.nombre} (${user.email})`);
       } catch (error) {
-        console.warn('⚠️ No se pudo enviar email:', error);
+        logger.warn('⚠️ No se pudo enviar email:', error);
       }
     }
 
@@ -549,9 +550,9 @@ export async function POST(
                 }
               });
 
-              console.log(`🎫 Nueva licencia creada para usuario existente ${user.email} en nueva visión`);
+              logger.debug(`🎫 Nueva licencia creada para usuario existente ${user.email} en nueva visión`);
             } else {
-              console.warn(`⚠️ Sin créditos disponibles para crear licencia de usuario existente ${user.email}`);
+              logger.warn(`⚠️ Sin créditos disponibles para crear licencia de usuario existente ${user.email}`);
             }
           }
         }
@@ -607,7 +608,7 @@ export async function POST(
       total: results.length
     });
   } catch (error) {
-    console.error('Error alta masiva game changers:', error);
+    logger.error('Error alta masiva game changers:', error);
     return NextResponse.json({ success: false, error: 'Error al agregar game changers' }, { status: 500 });
   }
 }

@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
+import logger from '@/lib/logger';
 
 export async function POST(req: Request) {
   try {
@@ -27,10 +28,10 @@ export async function POST(req: Request) {
     const descripcion = formData.get('descripcion') as string;
     const taskInstanceId = parseInt(formData.get('taskInstanceId') as string);
 
-    console.log('📥 Datos recibidos:', { userId, metaId, accionId, taskInstanceId, descripcion, fileSize: file?.size });
+    logger.debug('📥 Datos recibidos:', { userId, metaId, accionId, taskInstanceId, descripcion, fileSize: file?.size });
 
     if (!file || !metaId || !accionId || !taskInstanceId) {
-      console.error('❌ Faltan datos:', { file: !!file, metaId, accionId, taskInstanceId });
+      logger.error('❌ Faltan datos:', { file: !!file, metaId, accionId, taskInstanceId });
       return NextResponse.json({ error: 'Faltan datos requeridos' }, { status: 400 });
     }
 
@@ -46,15 +47,15 @@ export async function POST(req: Request) {
     // Asegurar que el directorio existe (en producción esto ya estaría creado)
     try {
       await writeFile(filePath, buffer);
-      console.log('💾 Archivo guardado:', fileName);
+      logger.debug('💾 Archivo guardado:', fileName);
     } catch (error) {
-      console.error('Error guardando archivo:', error);
+      logger.error('Error guardando archivo:', error);
       // Continuar con URL simulada si falla el guardado
     }
 
     const fotoUrl = `/evidencias/${fileName}`;
     
-    console.log('📸 URL generada:', fotoUrl);
+    logger.debug('📸 URL generada:', fotoUrl);
 
     // 4. Crear registro de evidencia
     const nuevaEvidencia = await prisma.evidenciaAccion.create({
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
       },
     });
     
-    console.log('✅ Evidencia creada:', nuevaEvidencia.id);
+    logger.debug('✅ Evidencia creada:', nuevaEvidencia.id);
 
     // 5. Actualizar TaskInstance con la evidencia y cambiar estado
     await prisma.taskInstance.update({
@@ -83,7 +84,7 @@ export async function POST(req: Request) {
       },
     });
 
-    console.log('✅ TaskInstance actualizada con evidencia');
+    logger.debug('✅ TaskInstance actualizada con evidencia');
     
     return NextResponse.json({ 
         success: true,
@@ -92,7 +93,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error) {
-    console.error('Error en API Evidencia:', error);
+    logger.error('Error en API Evidencia:', error);
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
     return NextResponse.json({ 
       error: 'Fallo al completar la tarea.', 

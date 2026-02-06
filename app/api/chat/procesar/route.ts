@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/prisma';
 import { extraerJSONDeRespuestaIA } from '../../../../utils/extraer-json';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/chat/procesar
@@ -35,11 +36,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Respuesta inválida' }, { status: 400 });
     }
 
-    console.log('📥 Procesando respuesta de IA...');
-    console.log('📝 Longitud de respuesta:', respuestaCompleta.length, 'caracteres');
-    console.log('📄 Primeros 300 caracteres:', respuestaCompleta.substring(0, 300));
-    console.log('🔍 ¿Contiene ```json?', respuestaCompleta.includes('```json'));
-    console.log('🔍 ¿Contiene carta_de_frutos?', respuestaCompleta.includes('carta_de_frutos'));
+    logger.debug('📥 Procesando respuesta de IA...');
+    logger.debug('📝 Longitud de respuesta:', respuestaCompleta.length, 'caracteres');
+    logger.debug('📄 Primeros 300 caracteres:', respuestaCompleta.substring(0, 300));
+    logger.debug('🔍 ¿Contiene ```json?', respuestaCompleta.includes('```json'));
+    logger.debug('🔍 ¿Contiene carta_de_frutos?', respuestaCompleta.includes('carta_de_frutos'));
 
     // 4. Guardar el mensaje de la IA en el historial
     await prisma.mensajeChat.create({
@@ -50,19 +51,19 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    console.log('✅ Mensaje guardado en historial');
+    logger.debug('✅ Mensaje guardado en historial');
 
     // 5. Extraer y procesar JSON de carta de frutos
     const resultado = extraerJSONDeRespuestaIA(respuestaCompleta);
 
     if (resultado.status === 'exito' && resultado.data?.carta_de_frutos) {
-      console.log('✅ JSON de Carta detectado, procesando...');
-      console.log('📊 Datos recibidos:', JSON.stringify(resultado.data, null, 2));
+      logger.debug('✅ JSON de Carta detectado, procesando...');
+      logger.debug('📊 Datos recibidos:', JSON.stringify(resultado.data, null, 2));
 
       const cartaData = resultado.data.carta_de_frutos;
       const metas = cartaData.metas || [];
 
-      console.log(`📝 Procesando ${metas.length} metas...`);
+      logger.debug(`📝 Procesando ${metas.length} metas...`);
 
       // Mapear las metas al formato de la BD
       const metasFormateadas: any = {};
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest) {
         // Extraer acciones de tareas_acciones o acciones_concretas
         const acciones = meta.tareas_acciones || meta.acciones_concretas || [];
 
-        console.log(`  📌 ${area}: "${metaTexto}" (${acciones.length} acciones)`);
+        logger.debug(`  📌 ${area}: "${metaTexto}" (${acciones.length} acciones)`);
 
         // Mapeo de áreas a campos de BD
         const campoMapping: { [key: string]: string } = {
@@ -98,7 +99,7 @@ export async function POST(req: NextRequest) {
           metasFormateadas[`${campoBD}Meta`] = metaTexto;
           accionesSemanales[area] = acciones; // Guardamos las acciones para crear tareas después
         } else {
-          console.warn(`⚠️ Área desconocida: ${area}`);
+          logger.warn(`⚠️ Área desconocida: ${area}`);
         }
       });
 
@@ -111,7 +112,7 @@ export async function POST(req: NextRequest) {
       let cartaFrutos;
 
       if (cartaExistente) {
-        console.log('🔄 Actualizando carta existente...');
+        logger.debug('🔄 Actualizando carta existente...');
         // Eliminar tareas antiguas
         await prisma.tarea.deleteMany({
           where: { cartaId: cartaExistente.id }
@@ -126,7 +127,7 @@ export async function POST(req: NextRequest) {
           }
         });
       } else {
-        console.log('🆕 Creando nueva carta...');
+        logger.debug('🆕 Creando nueva carta...');
         cartaFrutos = await prisma.cartaFrutos.create({
           data: {
             usuarioId: usuario.id,
@@ -137,7 +138,7 @@ export async function POST(req: NextRequest) {
       }
 
       // 7. Crear tareas para cada área
-      console.log('📋 Creando tareas...');
+      logger.debug('📋 Creando tareas...');
       let tareasCreadas = 0;
 
       for (const [area, acciones] of Object.entries(accionesSemanales)) {
@@ -168,7 +169,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      console.log(`✅ Carta guardada exitosamente con ${tareasCreadas} tareas`);
+      logger.debug(`✅ Carta guardada exitosamente con ${tareasCreadas} tareas`);
 
       return NextResponse.json({
         success: true,
@@ -177,14 +178,14 @@ export async function POST(req: NextRequest) {
         tareasCreadas
       });
     } else {
-      console.log('ℹ️ No se detectó JSON de carta_de_frutos en la respuesta');
+      logger.debug('ℹ️ No se detectó JSON de carta_de_frutos en la respuesta');
       return NextResponse.json({
         success: true,
         mensaje: 'Mensaje guardado (sin carta de frutos)'
       });
     }
   } catch (error) {
-    console.error('❌ Error al procesar respuesta:', error);
+    logger.error('❌ Error al procesar respuesta:', error);
     return NextResponse.json(
       { error: 'Error al procesar la respuesta', detalles: (error as Error).message },
       { status: 500 }

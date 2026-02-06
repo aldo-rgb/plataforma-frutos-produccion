@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
+import logger from '@/lib/logger';
 
 // GET - Obtener cola de auditoría (para Admin/Staff)
 export async function GET(request: NextRequest) {
@@ -113,7 +114,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching audit queue:', error);
+    logger.error('Error fetching audit queue:', error);
     return NextResponse.json(
       { error: 'Error obteniendo cola de auditoría' },
       { status: 500 }
@@ -290,7 +291,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error processing audit action:', error);
+    logger.error('Error processing audit action:', error);
     return NextResponse.json(
       { error: 'Error procesando acción de auditoría' },
       { status: 500 }

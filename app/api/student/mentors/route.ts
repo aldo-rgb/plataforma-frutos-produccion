@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -146,7 +147,7 @@ export async function GET() {
     // 3. ORDENAR LA LISTA (Mayor Score primero)
     processedMentors.sort((a, b) => b.score - a.score);
 
-    console.log(`📋 Catálogo de mentores generado: ${processedMentors.length} mentores ordenados por algoritmo`);
+    logger.debug(`📋 Catálogo de mentores generado: ${processedMentors.length} mentores ordenados por algoritmo`);
 
     return NextResponse.json({
       success: true,
@@ -155,7 +156,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('❌ Error cargando catálogo de mentores:', error);
+    logger.error('❌ Error cargando catálogo de mentores:', error);
     return NextResponse.json(
       { 
         success: false,

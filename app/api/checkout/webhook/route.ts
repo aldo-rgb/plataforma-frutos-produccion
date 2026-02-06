@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 import type Stripe from 'stripe';
 
 // Stripe se inicializa solo si hay API key
@@ -44,10 +45,10 @@ export async function POST(request: Request) {
 
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-    } catch (err: any) {
-      console.error('Webhook signature verification failed:', err.message);
+    } catch (err) {
+      logger.warn('Webhook signature verification failed');
       return NextResponse.json(
-        { error: `Webhook Error: ${err.message}` },
+        { error: 'Webhook signature failed' },
         { status: 400 }
       );
     }
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
       // Extraer metadata
       const metadata = session.metadata;
       if (!metadata) {
-        console.error('No metadata in session');
+        logger.warn('No metadata in Stripe session');
         return NextResponse.json({ received: true });
       }
 
@@ -71,7 +72,7 @@ export async function POST(request: Request) {
       });
 
       if (!user) {
-        console.error('User not found:', userId);
+        logger.warn('User not found in webhook', { userId });
         return NextResponse.json({ received: true });
       }
 
@@ -81,7 +82,7 @@ export async function POST(request: Request) {
       });
 
       if (!vision) {
-        console.error('Vision not found:', visionId);
+        logger.warn('Vision not found in webhook', { visionId });
         return NextResponse.json({ received: true });
       }
 
@@ -113,14 +114,14 @@ export async function POST(request: Request) {
         },
       });
 
-      console.log('Ticket created:', ticket.id);
+      logger.info('Ticket created from Stripe webhook', { ticketId: ticket.id });
 
       // TODO: Enviar email de confirmación al usuario
     }
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error('Webhook error:', error);
+    logger.error('Webhook error', error);
     return NextResponse.json(
       { error: 'Webhook handler failed' },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -94,7 +95,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error al obtener mentores disponibles:', error);
+    logger.error('Error al obtener mentores disponibles:', error);
     return NextResponse.json(
       { error: 'Error al obtener mentores disponibles' },
       { status: 500 }

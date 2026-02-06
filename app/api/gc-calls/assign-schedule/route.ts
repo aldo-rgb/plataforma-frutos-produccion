@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/gc-calls/assign-schedule
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    console.log('📞 Asignando horario:', { participantId, time: normalizedTime, gcId });
+    logger.debug('📞 Asignando horario:', { participantId, time: normalizedTime, gcId });
 
     // Verificar que el participante pertenece a un squad del GC
     const membership = await prisma.smallGroupMember.findFirst({
@@ -105,7 +106,7 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    console.log('📅 Configuración de entrenamiento:', { 
+    logger.debug('📅 Configuración de entrenamiento:', { 
       level, 
       trainingStartDate: trainingStartDate.toISOString(), 
       numCallDays 
@@ -135,7 +136,7 @@ export async function POST(request: Request) {
           isActive: true,
         }
       });
-      console.log('📅 GCAvailability de staff creado automáticamente para GC:', gcId);
+      logger.debug('📅 GCAvailability de staff creado automáticamente para GC:', gcId);
     }
 
     // Verificar que el horario está disponible (no ocupado por otro participante)
@@ -181,7 +182,7 @@ export async function POST(request: Request) {
       callDates.push(callDate);
     }
 
-    console.log('📅 Fechas de llamadas a crear:', callDates.map(d => d.toISOString()));
+    logger.debug('📅 Fechas de llamadas a crear:', callDates.map(d => d.toISOString()));
 
     // Crear un slot para cada día de llamadas
     const createdSlots = [];
@@ -200,7 +201,7 @@ export async function POST(request: Request) {
         }
       });
       createdSlots.push(slot);
-      console.log(`✅ Slot creado para ${callDate.toISOString().split('T')[0]} a las ${normalizedTime}`);
+      logger.debug(`✅ Slot creado para ${callDate.toISOString().split('T')[0]} a las ${normalizedTime}`);
     }
 
     return NextResponse.json({
@@ -211,7 +212,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error assigning schedule:', error);
+    logger.error('Error assigning schedule:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Error al asignar horario',

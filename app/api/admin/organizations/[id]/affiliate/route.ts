@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { PrismaClient } from '@prisma/client';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -84,7 +85,7 @@ export async function PUT(
     });
 
   } catch (error) {
-    console.error('Error updating organization affiliation:', error);
+    logger.error('Error updating organization affiliation:', error);
     return NextResponse.json(
       { error: 'Error al actualizar la afiliación' },
       { status: 500 }

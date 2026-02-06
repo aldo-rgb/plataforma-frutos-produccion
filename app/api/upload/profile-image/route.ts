@@ -2,15 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { createClient } from '@supabase/supabase-js';
+import logger from '@/lib/logger';
 
 // Función para obtener cliente de Supabase (lazy initialization)
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   
-  console.log('🔧 Supabase Config Check:');
-  console.log('  - NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✅ Configurado' : '❌ FALTA');
-  console.log('  - SUPABASE_SERVICE_ROLE_KEY:', supabaseKey ? '✅ Configurado' : '❌ FALTA');
+  logger.debug('🔧 Supabase Config Check:');
+  logger.debug('  - NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✅ Configurado' : '❌ FALTA');
+  logger.debug('  - SUPABASE_SERVICE_ROLE_KEY:', supabaseKey ? '✅ Configurado' : '❌ FALTA');
   
   if (!supabaseUrl || !supabaseKey) {
     const missing = [];
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
       });
 
     if (error) {
-      console.error('Error subiendo a Supabase:', error);
+      logger.error('Error subiendo a Supabase:', error);
       return NextResponse.json({ error: 'Error al subir la imagen' }, { status: 500 });
     }
 
@@ -96,9 +97,9 @@ export async function POST(req: NextRequest) {
             sourceImage: 'previous-profile'
           }
         });
-        console.log('📸 Foto anterior guardada en The Vault');
+        logger.debug('📸 Foto anterior guardada en The Vault');
       } catch (vaultError) {
-        console.error('⚠️ Error guardando en vault (continuando):', vaultError);
+        logger.error('⚠️ Error guardando en vault (continuando):', vaultError);
       }
     }
 
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error en upload:', error);
+    logger.error('Error en upload:', error);
     
     // Mensajes de error más específicos
     let errorMessage = 'Error interno del servidor';

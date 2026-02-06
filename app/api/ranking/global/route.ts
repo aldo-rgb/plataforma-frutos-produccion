@@ -1,6 +1,7 @@
 // app/api/ranking/global/route.ts
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -93,7 +94,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(filteredRanking);
   } catch (error) {
-    console.error('Error al obtener ranking:', error);
+    logger.error('Error al obtener ranking:', error);
     return NextResponse.json({ error: 'Error al cargar el ranking' }, { status: 500 });
   }
 }

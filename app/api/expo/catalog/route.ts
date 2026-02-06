@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -104,7 +105,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error obteniendo catálogo:', error);
+    logger.error('Error obteniendo catálogo:', error);
     return NextResponse.json(
       { error: 'Error al obtener catálogo', exhibitors: [], categories: [] },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // POST - Validar participante por QR o identifier (usado por la página)
 export async function POST(request: NextRequest) {
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { identifier, productId } = body;
 
-    console.log('🔍 Check-in validate request:', { identifier, productId });
+    logger.debug('🔍 Check-in validate request:', { identifier, productId });
 
     if (!productId) {
       return NextResponse.json({ 
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
       });
       if (user) {
         participantId = user.id;
-        console.log(`✅ Usuario encontrado por referralCode: ${user.nombre} (ID: ${user.id})`);
+        logger.debug(`✅ Usuario encontrado por referralCode: ${user.nombre} (ID: ${user.id})`);
       }
     }
 
@@ -376,7 +377,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error validando participante:', error);
+    logger.error('Error validando participante:', error);
     return NextResponse.json({ 
       valid: false,
       errors: [{ type: 'general', message: 'Error del servidor', blocking: true }],
@@ -539,7 +540,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error validando participante:', error);
+    logger.error('Error validando participante:', error);
     return NextResponse.json({ 
       valid: false,
       alertType: 'red',

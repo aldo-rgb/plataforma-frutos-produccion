@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import crypto from 'crypto';
+import logger from '@/lib/logger';
 
 // Generar fingerprint simple del dispositivo
 function generateFingerprint(req: NextRequest): string {
@@ -176,7 +177,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error creating expo review:', error);
+    logger.error('Error creating expo review:', error);
     return NextResponse.json({ 
       error: 'Error al guardar la evaluación' 
     }, { status: 500 });
@@ -245,7 +246,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error checking expo vote:', error);
+    logger.error('Error checking expo vote:', error);
     return NextResponse.json({ 
       error: 'Error al verificar voto' 
     }, { status: 500 });

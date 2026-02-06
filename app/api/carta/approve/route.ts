@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { generateTasksForLetter, validateCartaForGeneration } from '@/lib/taskGenerator';
 import { notifyCartaApproved } from '@/lib/notifications';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/carta/approve
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
     });
 
     // 🚀 EXPLOSIÓN DE TAREAS - Generar los 100 días
-    console.log(`🚀 Iniciando generación automática de tareas para Carta #${cartaId}`);
+    logger.debug(`🚀 Iniciando generación automática de tareas para Carta #${cartaId}`);
     const result = await generateTasksForLetter(cartaId);
 
     if (!result.success) {
@@ -69,8 +70,8 @@ export async function POST(req: Request) {
 
     if (carta) {
       await notifyCartaApproved(carta.usuarioId, result.tasksCreated);
-      console.log(`📧 Notificación: Carta #${cartaId} APROBADA - ${result.tasksCreated} tareas generadas`);
-      console.log(`   Usuario: ${carta.Usuario.nombre} (${carta.Usuario.email})`);
+      logger.debug(`📧 Notificación: Carta #${cartaId} APROBADA - ${result.tasksCreated} tareas generadas`);
+      logger.debug(`   Usuario: ${carta.Usuario.nombre} (${carta.Usuario.email})`);
     }
 
     return NextResponse.json({
@@ -81,7 +82,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('Error approving carta:', error);
+    logger.error('Error approving carta:', error);
     return NextResponse.json(
       { error: 'Error al aprobar la carta', details: error.message },
       { status: 500 }

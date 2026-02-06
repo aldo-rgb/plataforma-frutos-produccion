@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET(
   req: NextRequest,
@@ -52,7 +53,7 @@ export async function GET(
       organization
     });
   } catch (error) {
-    console.error('Error fetching organization:', error);
+    logger.error('Error fetching organization:', error);
     return NextResponse.json(
       { error: 'Error al obtener organización' },
       { status: 500 }
@@ -181,7 +182,7 @@ export async function PATCH(
           }
         });
 
-        console.log(`✅ School Admin creado con licencia administrativa: ${adminLicenseCode}`);
+        logger.debug(`✅ School Admin creado con licencia administrativa: ${adminLicenseCode}`);
 
         await prisma.organization.update({
           where: { id: organizationId },
@@ -196,7 +197,7 @@ export async function PATCH(
       message: 'Organización actualizada correctamente'
     });
   } catch (error) {
-    console.error('Error updating organization:', error);
+    logger.error('Error updating organization:', error);
     return NextResponse.json(
       { error: 'Error al actualizar organización' },
       { status: 500 }
@@ -252,7 +253,7 @@ export async function DELETE(
       message: 'Organización eliminada correctamente'
     });
   } catch (error) {
-    console.error('Error deleting organization:', error);
+    logger.error('Error deleting organization:', error);
     return NextResponse.json(
       { error: 'Error al eliminar organización' },
       { status: 500 }

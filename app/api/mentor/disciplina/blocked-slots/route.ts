@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener slots bloqueados del mentor
 export async function GET() {
@@ -27,7 +28,7 @@ export async function GET() {
       blockedSlots,
     });
   } catch (error) {
-    console.error('Error obteniendo slots bloqueados:', error);
+    logger.error('Error obteniendo slots bloqueados:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener slots bloqueados' },
       { status: 500 }
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
       blockedSlots: updatedSlots,
     });
   } catch (error) {
-    console.error('Error guardando slots bloqueados:', error);
+    logger.error('Error guardando slots bloqueados:', error);
     return NextResponse.json(
       { success: false, error: 'Error al guardar slots bloqueados' },
       { status: 500 }

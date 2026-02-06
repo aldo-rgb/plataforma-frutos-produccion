@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { addDays } from 'date-fns';
+import logger from '@/lib/logger';
 
 // GET: Obtener suscripción activa del estudiante
 export async function GET(request: Request) {
@@ -95,7 +96,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error al obtener suscripción:', error);
+    logger.error('Error al obtener suscripción:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }
@@ -198,9 +199,9 @@ export async function POST(request: Request) {
       }
     });
 
-    console.log(`🔥 Suscripción de disciplina creada para estudiante ${studentId} con mentor ${mentorId}`);
-    console.log(`📅 Horario: Día ${day1} a las ${time1} y Día ${day2} a las ${time2}`);
-    console.log(`📆 Duración: ${startDate.toISOString()} hasta ${endDate.toISOString()}`);
+    logger.debug(`🔥 Suscripción de disciplina creada para estudiante ${studentId} con mentor ${mentorId}`);
+    logger.debug(`📅 Horario: Día ${day1} a las ${time1} y Día ${day2} a las ${time2}`);
+    logger.debug(`📆 Duración: ${startDate.toISOString()} hasta ${endDate.toISOString()}`);
 
     return NextResponse.json({
       success: true,
@@ -209,7 +210,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error al crear suscripción:', error);
+    logger.error('Error al crear suscripción:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }
@@ -233,7 +234,7 @@ export async function DELETE(request: Request) {
       }
     });
 
-    console.log(`🗑️ Suscripción cancelada para estudiante ${studentId}`);
+    logger.debug(`🗑️ Suscripción cancelada para estudiante ${studentId}`);
 
     return NextResponse.json({
       success: true,
@@ -247,7 +248,7 @@ export async function DELETE(request: Request) {
       }, { status: 404 });
     }
     
-    console.error('Error al cancelar suscripción:', error);
+    logger.error('Error al cancelar suscripción:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }

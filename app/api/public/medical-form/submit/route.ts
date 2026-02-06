@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 
 // API pública para guardar formulario médico sin autenticación
 export async function POST(req: NextRequest) {
   try {
+    // Rate limiting muy estricto - datos médicos sensibles
+    const { response } = rateLimit(req, RateLimitPresets.auth);
+    if (response) {
+      logger.warn('Rate limit exceeded on public/medical-form/submit');
+      return response;
+    }
+
     const body = await req.json();
     
     const {
@@ -136,7 +145,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error saving public medical form:', error);
+    logger.error('Error saving public medical form:', error);
     return NextResponse.json({ error: 'Error al guardar el formulario' }, { status: 500 });
   }
 }

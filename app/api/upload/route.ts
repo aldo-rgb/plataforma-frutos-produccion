@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { createClient } from '@supabase/supabase-js';
+import logger from '@/lib/logger';
 
 // Función para obtener cliente de Supabase (lazy initialization)
 function getSupabaseClient() {
@@ -9,46 +10,31 @@ function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   
-  console.log('🔍 Checking Supabase env vars:');
-  console.log('  NEXT_PUBLIC_SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing');
-  console.log('  SUPABASE_URL:', process.env.SUPABASE_URL ? '✅ Set' : '❌ Missing');
-  console.log('  SUPABASE_SERVICE_ROLE_KEY:', supabaseKey ? '✅ Set' : '❌ Missing');
-  console.log('  Using URL:', supabaseUrl ? '✅ Set' : '❌ Missing');
-  
   if (!supabaseUrl || !supabaseKey) {
     const missingVars = [];
-    if (!supabaseUrl) missingVars.push('SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL');
+    if (!supabaseUrl) missingVars.push('SUPABASE_URL');
     if (!supabaseKey) missingVars.push('SUPABASE_SERVICE_ROLE_KEY');
-    throw new Error(`Missing Supabase environment variables: ${missingVars.join(', ')}`);
+    throw new Error(`Missing Supabase configuration`);
   }
   return createClient(supabaseUrl, supabaseKey);
 }
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('📤 Upload API called');
-    
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
-      console.log('❌ Unauthorized: No session');
       return NextResponse.json(
         { success: false, error: 'No autorizado' },
         { status: 401 }
       );
     }
 
-    console.log('✅ User authenticated:', session.user.email);
-
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const folder = formData.get('folder') as string || 'uploads';
 
-    console.log('📁 Folder:', folder);
-    console.log('📄 File:', file?.name, file?.type, file?.size);
-
     if (!file) {
-      console.log('❌ No file provided');
       return NextResponse.json(
         { success: false, error: 'No se proporcionó ningún archivo' },
         { status: 400 }
@@ -91,14 +77,14 @@ export async function POST(request: NextRequest) {
     const filePath = `${folder}/${filename}`;
 
     // Subir a Supabase Storage
-    console.log('🔄 Uploading to Supabase:', filePath);
+    logger.debug('🔄 Uploading to Supabase:', filePath);
     
     let supabase;
     try {
       supabase = getSupabaseClient();
-      console.log('✅ Supabase client created');
+      logger.debug('✅ Supabase client created');
     } catch (error: any) {
-      console.error('❌ Failed to create Supabase client:', error.message);
+      logger.error('❌ Failed to create Supabase client:', error.message);
       return NextResponse.json(
         { success: false, error: `Error de configuración: ${error.message}` },
         { status: 500 }
@@ -113,21 +99,21 @@ export async function POST(request: NextRequest) {
       });
 
     if (uploadError) {
-      console.error('❌ Error subiendo a Supabase:', uploadError);
+      logger.error('❌ Error subiendo a Supabase:', uploadError);
       return NextResponse.json(
         { success: false, error: `Error al subir el archivo: ${uploadError.message}` },
         { status: 500 }
       );
     }
 
-    console.log('✅ File uploaded successfully to Supabase');
+    logger.debug('✅ File uploaded successfully to Supabase');
 
     // Obtener URL pública
     const { data: urlData } = supabase.storage
       .from('mentor-assets')
       .getPublicUrl(filePath);
 
-    console.log('✅ Public URL generated:', urlData.publicUrl);
+    logger.debug('✅ Public URL generated:', urlData.publicUrl);
 
     return NextResponse.json({
       success: true,
@@ -136,8 +122,8 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error uploading file:', error);
-    console.error('Error stack:', error.stack);
+    logger.error('❌ Error uploading file:', error);
+    logger.error('Error stack:', error.stack);
     return NextResponse.json(
       { success: false, error: error.message || 'Error al subir el archivo' },
       { status: 500 }

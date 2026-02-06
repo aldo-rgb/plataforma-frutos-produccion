@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/admin/trainer-applications/[id]/reject
@@ -93,7 +94,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('Error rejecting trainer application:', error);
+    logger.error('Error rejecting trainer application:', error);
     return NextResponse.json(
       { error: 'Error al rechazar aplicación' },
       { status: 500 }

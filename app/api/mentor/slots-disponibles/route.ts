@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -102,7 +103,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ Error al obtener slots disponibles:', error);
+    logger.error('❌ Error al obtener slots disponibles:', error);
     return NextResponse.json({ 
       error: 'Error al cargar slots disponibles' 
     }, { status: 500 });

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/admin/tareas/[id]
@@ -48,7 +49,7 @@ export async function GET(
     return NextResponse.json(tarea);
 
   } catch (error: any) {
-    console.error('❌ Error obteniendo tarea admin:', error);
+    logger.error('❌ Error obteniendo tarea admin:', error);
     return NextResponse.json(
       { error: 'Error al obtener tarea', details: error.message },
       { status: 500 }
@@ -197,12 +198,12 @@ export async function PATCH(
     revalidatePath('/dashboard');
     revalidatePath('/api/tareas/zona-ejecucion');
 
-    console.log(`✅ Tarea ${tareaId} actualizada por usuario ${session.user.id}`);
+    logger.debug(`✅ Tarea ${tareaId} actualizada por usuario ${session.user.id}`);
 
     return NextResponse.json(tarea);
 
   } catch (error: any) {
-    console.error('❌ Error actualizando tarea admin:', error);
+    logger.error('❌ Error actualizando tarea admin:', error);
     return NextResponse.json(
       { error: 'Error al actualizar tarea', details: error.message },
       { status: 500 }
@@ -251,12 +252,12 @@ export async function DELETE(
       where: { id: tareaId }
     });
 
-    console.log(`✅ Tarea ${tareaId} eliminada por ${usuario.nombre}`);
+    logger.debug(`✅ Tarea ${tareaId} eliminada por ${usuario.nombre}`);
 
     return NextResponse.json({ success: true });
 
   } catch (error: any) {
-    console.error('❌ Error eliminando tarea admin:', error);
+    logger.error('❌ Error eliminando tarea admin:', error);
     return NextResponse.json(
       { error: 'Error al eliminar tarea', details: error.message },
       { status: 500 }

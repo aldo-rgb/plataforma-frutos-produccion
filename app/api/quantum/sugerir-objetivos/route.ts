@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 
 // OpenAI se inicializa solo si hay API key
 let openai: any = null;
@@ -33,6 +35,13 @@ const AREA_NAMES: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limiting
+    const { response } = rateLimit(req, RateLimitPresets.ai);
+    if (response) {
+      logger.warn('Rate limit exceeded on quantum/sugerir-objetivos');
+      return response;
+    }
+
     if (!openai) {
       return NextResponse.json({ error: 'Servicio de IA no configurado' }, { status: 503 });
     }
@@ -137,7 +146,7 @@ NO incluyas explicaciones adicionales. SOLO el JSON.`;
     });
 
   } catch (error: any) {
-    console.error('❌ Error generando sugerencias QUANTUM:', error);
+    logger.error('❌ Error generando sugerencias QUANTUM:', error);
     return NextResponse.json(
       { error: 'Error generando sugerencias', details: error.message },
       { status: 500 }

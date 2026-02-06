@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Función para generar código de licencia único
 function generateLicenseCode(): string {
@@ -217,7 +218,7 @@ export async function POST(
 
         return updatedParticipante;
       } catch (txError) {
-        console.error('Error en transacción de asignación:', txError);
+        logger.error('Error en transacción de asignación:', txError);
         throw txError;
       }
     });
@@ -229,7 +230,7 @@ export async function POST(
       participante: result,
     });
   } catch (error) {
-    console.error('Error assigning license:', error);
+    logger.error('Error assigning license:', error);
     
     // Proveer más detalles del error
     const errorMessage = error instanceof Error ? error.message : 'Error al asignar licencia';

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { generatePayoutReport } from '@/lib/commissionCalculator';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,7 +46,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error exporting CSV:', error);
+    logger.error('❌ Error exporting CSV:', error);
     return NextResponse.json(
       { error: 'Error exportando CSV', details: error.message },
       { status: 500 }

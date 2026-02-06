@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 const COORDINATOR_ROLES = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER'];
 
@@ -87,7 +88,7 @@ export async function POST(
     });
 
   } catch (error: any) {
-    console.error('Error confirming batch:', error);
+    logger.error('Error confirming batch:', error);
     return NextResponse.json(
       { error: error?.message || 'Error al confirmar corte' },
       { status: 500 }

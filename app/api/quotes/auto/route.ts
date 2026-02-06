@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 import { nanoid } from 'nanoid';
+import logger from '@/lib/logger';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error: any) {
-    console.error('Error creating auto quote:', error);
+    logger.error('Error creating auto quote:', error);
     return NextResponse.json({ 
       error: error.message || 'Error al crear cotización' 
     }, { status: 500 });
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
 
 // Notificar al proveedor de nuevo lead
 async function notifyProviderNewLead(quote: any, client: any, total: number) {
-  console.log('🔥 HOT LEAD!', {
+  logger.debug('🔥 HOT LEAD!', {
     provider: quote.user_id,
     client: client.name,
     total,
@@ -116,7 +117,7 @@ async function notifyProviderNewLead(quote: any, client: any, total: number) {
 async function sendQuoteToClient(quote: any, client: any) {
   const quoteUrl = `${process.env.NEXT_PUBLIC_APP_URL}/propuesta/${quote.short_code}`;
   
-  console.log('📧 Enviando cotización a cliente:', {
+  logger.debug('📧 Enviando cotización a cliente:', {
     phone: client.phone || client.whatsapp,
     url: quoteUrl
   });

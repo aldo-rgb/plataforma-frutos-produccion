@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET: Obtener todos los participantes asignados a un mentor
 export async function GET() {
@@ -126,7 +127,7 @@ export async function GET() {
       };
     });
 
-    console.log(`✅ Mentor ${mentor.nombre}: ${participantesConMetricas.length} participantes`);
+    logger.debug(`✅ Mentor ${mentor.nombre}: ${participantesConMetricas.length} participantes`);
 
     return NextResponse.json({
       success: true,
@@ -138,7 +139,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('❌ Error al obtener participantes:', error);
+    logger.error('❌ Error al obtener participantes:', error);
     return NextResponse.json(
       { error: 'Error al obtener participantes' }, 
       { status: 500 }

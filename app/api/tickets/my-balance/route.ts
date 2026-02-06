@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET(req: NextRequest) {
   try {
@@ -64,7 +65,7 @@ export async function GET(req: NextRequest) {
       hasUnpaidTickets: tickets.some(t => t.paymentStatus === 'UNPAID'),
     });
   } catch (error) {
-    console.error('Error fetching ticket balances:', error);
+    logger.error('Error fetching ticket balances:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener balances' },
       { status: 500 }

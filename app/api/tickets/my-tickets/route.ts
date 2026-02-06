@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Mapear VisionLevel a ProductLevelType
 const levelToProductLevel: Record<string, string> = {
@@ -150,7 +151,7 @@ export async function GET() {
       tickets: ticketsWithProducts,
     });
   } catch (error) {
-    console.error('Error fetching tickets:', error);
+    logger.error('Error fetching tickets:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener tickets' },
       { status: 500 }

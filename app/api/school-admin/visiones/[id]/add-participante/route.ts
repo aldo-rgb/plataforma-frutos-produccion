@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function POST(
   request: NextRequest,
@@ -113,10 +114,10 @@ export async function POST(
             expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000) // 10 días para activar
           }
         });
-        console.log(`🎫 Licencia pendiente asignada automáticamente`);
+        logger.debug(`🎫 Licencia pendiente asignada automáticamente`);
       }
     } catch (error) {
-      console.error('Error asignando licencia automática:', error);
+      logger.error('Error asignando licencia automática:', error);
     }
 
     return NextResponse.json({
@@ -125,7 +126,7 @@ export async function POST(
       relation,
     });
   } catch (error) {
-    console.error('Error adding participante to vision:', error);
+    logger.error('Error adding participante to vision:', error);
     return NextResponse.json(
       { success: false, error: 'Error al agregar participante' },
       { status: 500 }

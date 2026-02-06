@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +15,7 @@ export async function GET(req: Request) {
     //   return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     // }
 
-    console.log('🔍 Iniciando chequeo de tareas retrasadas...');
+    logger.debug('🔍 Iniciando chequeo de tareas retrasadas...');
 
     const now = new Date();
     const threeDaysAgo = new Date(now);
@@ -58,7 +59,7 @@ export async function GET(req: Request) {
       }
     });
 
-    console.log(`📊 Tareas retrasadas encontradas: ${overdueTasks.length}`);
+    logger.debug(`📊 Tareas retrasadas encontradas: ${overdueTasks.length}`);
 
     let alertsCreated = 0;
     let alertsSkipped = 0;
@@ -118,7 +119,7 @@ export async function GET(req: Request) {
     });
 
   } catch (error) {
-    console.error('Error checking overdue tasks:', error);
+    logger.error('Error checking overdue tasks:', error);
     return NextResponse.json(
       { error: 'Error al verificar tareas retrasadas' },
       { status: 500 }

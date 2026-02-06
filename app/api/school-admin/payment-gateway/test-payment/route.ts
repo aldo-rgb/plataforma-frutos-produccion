@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +15,7 @@ export async function POST() {
   try {
     const session = await getServerSession(authOptions);
 
-    console.log('🧪 Test payment - Session:', session?.user?.id, session?.user?.email);
+    logger.debug('🧪 Test payment - Session:', session?.user?.id, session?.user?.email);
 
     if (!session?.user?.id) {
       return NextResponse.json({ success: false, error: 'No autenticado' }, { status: 401 });
@@ -26,7 +27,7 @@ export async function POST() {
       select: { organizationId: true, email: true, nombre: true },
     });
 
-    console.log('🧪 Test payment - User:', user?.email, 'OrgId:', user?.organizationId);
+    logger.debug('🧪 Test payment - User:', user?.email, 'OrgId:', user?.organizationId);
 
     if (!user?.organizationId) {
       return NextResponse.json({ success: false, error: 'Usuario sin organización' }, { status: 400 });
@@ -38,7 +39,7 @@ export async function POST() {
       include: { organization: { select: { name: true } } },
     });
 
-    console.log('🧪 Test payment - Config:', config?.provider, 'Active:', config?.isActive, 'HasSecret:', !!config?.secretKey);
+    logger.debug('🧪 Test payment - Config:', config?.provider, 'Active:', config?.isActive, 'HasSecret:', !!config?.secretKey);
 
     if (!config || !config.secretKey) {
       return NextResponse.json({ 
@@ -62,7 +63,7 @@ export async function POST() {
       baseUrl = `https://${process.env.VERCEL_URL}`;
     }
     
-    console.log('🧪 Test payment - Base URL:', baseUrl);
+    logger.debug('🧪 Test payment - Base URL:', baseUrl);
     
     const orgName = config.organization?.name || 'Organización';
 
@@ -98,7 +99,7 @@ export async function POST() {
         statement_descriptor: orgName.substring(0, 22),
       };
 
-      console.log('🧪 Creating test payment preference for MercadoPago...');
+      logger.debug('🧪 Creating test payment preference for MercadoPago...');
 
       const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
         method: 'POST',
@@ -110,11 +111,11 @@ export async function POST() {
       });
 
       const responseText = await response.text();
-      console.log('   MercadoPago response status:', response.status);
-      console.log('   MercadoPago response:', responseText);
+      logger.debug('   MercadoPago response status:', response.status);
+      logger.debug('   MercadoPago response:', responseText);
 
       if (!response.ok) {
-        console.error('❌ MercadoPago error:', responseText);
+        logger.error('❌ MercadoPago error:', responseText);
         let errorMsg = `Error de MercadoPago: ${response.status}`;
         try {
           const errorData = JSON.parse(responseText);
@@ -142,9 +143,9 @@ export async function POST() {
         }, { status: 400 });
       }
 
-      console.log('✅ Test payment created:', preferenceData.id);
-      console.log('   Using:', isTestCredentials ? 'sandbox_init_point' : 'init_point');
-      console.log('   URL:', paymentUrl);
+      logger.debug('✅ Test payment created:', preferenceData.id);
+      logger.debug('   Using:', isTestCredentials ? 'sandbox_init_point' : 'init_point');
+      logger.debug('   URL:', paymentUrl);
 
       return NextResponse.json({
         success: true,
@@ -195,7 +196,7 @@ export async function POST() {
     }
 
   } catch (error: any) {
-    console.error('Error creating test payment:', error);
+    logger.error('Error creating test payment:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Error al crear pago de prueba' },
       { status: 500 }

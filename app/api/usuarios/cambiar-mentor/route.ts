@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/usuarios/cambiar-mentor
@@ -140,10 +141,10 @@ export async function POST(request: Request) {
         }
       });
     } catch (notifError) {
-      console.warn('No se pudo crear notificación (tabla puede no existir):', notifError);
+      logger.warn('No se pudo crear notificación (tabla puede no existir):', notifError);
     }
 
-    console.log(`
+    logger.debug(`
 🔄 CAMBIO DE MENTOR EJECUTADO
 Usuario: ${usuario.nombre} (ID: ${usuario.id})
 Nuevo Mentor: ${nuevoMentor.nombre} (ID: ${nuevoMentor.id})
@@ -167,7 +168,7 @@ Sesiones por re-agendar: ${sesionesCanceladas}
     });
 
   } catch (error) {
-    console.error('Error al cambiar mentor:', error);
+    logger.error('Error al cambiar mentor:', error);
     return NextResponse.json(
       { error: 'Error interno al procesar el cambio' },
       { status: 500 }

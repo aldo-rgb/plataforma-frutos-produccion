@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/cron/detector-diario
@@ -16,7 +17,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    console.log('🔍 Iniciando detección diaria de tareas retrasadas...');
+    logger.debug('🔍 Iniciando detección diaria de tareas retrasadas...');
 
     // Calcular fecha límite (HOY - 3 días)
     const tresDiasAtras = new Date();
@@ -51,7 +52,7 @@ export async function GET(req: Request) {
       }
     });
 
-    console.log(`📊 Tareas retrasadas encontradas: ${tareasRetrasadas.length}`);
+    logger.debug(`📊 Tareas retrasadas encontradas: ${tareasRetrasadas.length}`);
 
     // Agrupar por usuario
     const usuariosAfectados = new Map<number, any[]>();
@@ -70,7 +71,7 @@ export async function GET(req: Request) {
       });
     });
 
-    console.log(`👥 Usuarios afectados: ${usuariosAfectados.size}`);
+    logger.debug(`👥 Usuarios afectados: ${usuariosAfectados.size}`);
 
     // Marcar usuarios para intervención y crear notificaciones
     const resultados = [];
@@ -101,10 +102,10 @@ export async function GET(req: Request) {
           notificacionId: notificacion.id
         });
 
-        console.log(`✅ Usuario ${usuarioId}: ${tareas.length} tareas retrasadas → Notificación creada`);
+        logger.debug(`✅ Usuario ${usuarioId}: ${tareas.length} tareas retrasadas → Notificación creada`);
 
       } catch (error) {
-        console.error(`❌ Error procesando usuario ${usuarioId}:`, error);
+        logger.error(`❌ Error procesando usuario ${usuarioId}:`, error);
       }
     }
 
@@ -117,7 +118,7 @@ export async function GET(req: Request) {
       resultados
     };
 
-    console.log('✅ Detección diaria completada:', resumen);
+    logger.debug('✅ Detección diaria completada:', resumen);
 
     return NextResponse.json({
       success: true,
@@ -126,7 +127,7 @@ export async function GET(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error en cron detector:', error);
+    logger.error('❌ Error en cron detector:', error);
     return NextResponse.json(
       { error: 'Error ejecutando cron', details: error.message },
       { status: 500 }

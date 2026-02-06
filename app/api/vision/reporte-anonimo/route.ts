@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * 🛡️ API: Buzón Anónimo para Reportes de Participantes de Visión
@@ -119,7 +120,7 @@ export async function POST(request: Request) {
     });
 
     // Log para respaldo
-    console.log(`
+    logger.debug(`
       ⚠️ =============================================
       🛡️ REPORTE ANÓNIMO DE VISIÓN RECIBIDO
       ⚠️ =============================================
@@ -147,7 +148,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ Error al procesar reporte anónimo de visión:', error);
+    logger.error('❌ Error al procesar reporte anónimo de visión:', error);
     return NextResponse.json(
       { error: 'Error al enviar el reporte' },
       { status: 500 }
@@ -273,7 +274,7 @@ export async function GET(request: Request) {
     return NextResponse.json(reportesFormateados);
 
   } catch (error) {
-    console.error('❌ Error al obtener reportes de visión:', error);
+    logger.error('❌ Error al obtener reportes de visión:', error);
     return NextResponse.json(
       { error: 'Error al cargar reportes' },
       { status: 500 }
@@ -367,7 +368,7 @@ export async function PATCH(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ Error al actualizar reporte:', error);
+    logger.error('❌ Error al actualizar reporte:', error);
     return NextResponse.json(
       { error: 'Error al actualizar el reporte' },
       { status: 500 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -125,7 +126,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error validando código:', error);
+    logger.error('Error validando código:', error);
     return NextResponse.json({ 
       error: 'Error interno del servidor',
       message: 'Hubo un error al validar el código'

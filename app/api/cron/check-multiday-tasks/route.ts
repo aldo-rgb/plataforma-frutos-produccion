@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/cron/check-multiday-tasks
@@ -14,7 +15,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    console.log('🔍 Verificando misiones multi-día...');
+    logger.debug('🔍 Verificando misiones multi-día...');
 
     const ahora = new Date();
 
@@ -57,7 +58,7 @@ export async function GET(req: Request) {
       }
     });
 
-    console.log(`📊 Encontradas ${tareasDiariasVencidas.length} tareas diarias vencidas`);
+    logger.debug(`📊 Encontradas ${tareasDiariasVencidas.length} tareas diarias vencidas`);
 
     let usuariosAfectados = 0;
     let misionesCompletas = new Set<number>();
@@ -70,7 +71,7 @@ export async function GET(req: Request) {
 
       // Para cada submission pendiente de esta tarea vencida
       for (const submission of tareaVencida.Submissions) {
-        console.log(`❌ Usuario ${submission.usuarioId} falló día ${tareaVencida.diaNumero} de la misión "${tareaVencida.ParentTask.titulo}"`);
+        logger.debug(`❌ Usuario ${submission.usuarioId} falló día ${tareaVencida.diaNumero} de la misión "${tareaVencida.ParentTask.titulo}"`);
 
         // Marcar TODAS las submissions de este usuario para TODA la misión multi-día como EXPIRED
         for (const tareaHermana of todasLasTareasDiarias) {
@@ -93,7 +94,7 @@ export async function GET(req: Request) {
       }
     }
 
-    console.log(`✅ Proceso completado: ${usuariosAfectados} usuarios perdieron ${misionesCompletas.size} misiones multi-día`);
+    logger.debug(`✅ Proceso completado: ${usuariosAfectados} usuarios perdieron ${misionesCompletas.size} misiones multi-día`);
 
     return NextResponse.json({
       success: true,
@@ -103,7 +104,7 @@ export async function GET(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error verificando misiones multi-día:', error);
+    logger.error('❌ Error verificando misiones multi-día:', error);
     return NextResponse.json(
       { error: 'Error verificando misiones', details: error.message },
       { status: 500 }

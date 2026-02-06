@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener auditorías pendientes del Coordinador asignado al nivel
 export async function GET(request: NextRequest) {
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error obteniendo auditorías pendientes:', error);
+    logger.error('❌ Error obteniendo auditorías pendientes:', error);
     return NextResponse.json(
       { error: 'Error al obtener auditorías pendientes' },
       { status: 500 }

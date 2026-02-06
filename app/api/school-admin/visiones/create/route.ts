@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
@@ -150,9 +151,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log(`✅ Visión "${vision.nombre}" creada exitosamente`);
-    console.log(`   Coordinador asignado: ${coordinador.nombre} (ID: ${coordinador.id})`);
-    console.log(`   Organización: ${user.organizationId}`);
+    logger.debug(`✅ Visión "${vision.nombre}" creada exitosamente`);
+    logger.debug(`   Coordinador asignado: ${coordinador.nombre} (ID: ${coordinador.id})`);
+    logger.debug(`   Organización: ${user.organizationId}`);
 
     return NextResponse.json({
       success: true,
@@ -160,7 +161,7 @@ export async function POST(req: NextRequest) {
       message: `Visión creada exitosamente y asignada a ${coordinador.nombre}`,
     });
   } catch (error) {
-    console.error('Error creating vision:', error);
+    logger.error('Error creating vision:', error);
     return NextResponse.json(
       { success: false, error: 'Error al crear la visión' },
       { status: 500 }

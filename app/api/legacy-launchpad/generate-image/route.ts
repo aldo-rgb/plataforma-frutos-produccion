@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import OpenAI from 'openai';
 import sharp from 'sharp';
+import logger from '@/lib/logger';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
         finalImageUrl = `data:image/jpeg;base64,${base64Image}`;
 
       } catch (logoError) {
-        console.error('Error processing logo:', logoError);
+        logger.error('Error processing logo:', logoError);
         // Si falla, usar la imagen original sin logo
       }
     }
@@ -102,7 +103,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error in generate-image API:', error);
+    logger.error('Error in generate-image API:', error);
     
     // Manejar errores específicos de OpenAI
     if (error instanceof OpenAI.APIError) {

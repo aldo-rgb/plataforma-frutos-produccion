@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/video/generate-time-capsule
@@ -46,8 +47,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log(`🎬 Generando Time Capsule para ${usuario.nombre}...`);
-    console.log(`   Evidencias totales: ${evidencias.length}`);
+    logger.debug(`🎬 Generando Time Capsule para ${usuario.nombre}...`);
+    logger.debug(`   Evidencias totales: ${evidencias.length}`);
 
     // ========== PASO 1: Seleccionar mejores evidencias ==========
     
@@ -89,9 +90,9 @@ export async function POST(req: NextRequest) {
       .filter((ev, index, self) => self.findIndex(e => e.id === ev.id) === index) // Eliminar duplicados
       .slice(0, 20);
 
-    console.log(`   Seleccionadas: ${seleccionadas.length}`);
-    console.log(`   - Legendarias: ${legendary.length}`);
-    console.log(`   - Alta calidad: ${highQuality.length}`);
+    logger.debug(`   Seleccionadas: ${seleccionadas.length}`);
+    logger.debug(`   - Legendarias: ${legendary.length}`);
+    logger.debug(`   - Alta calidad: ${highQuality.length}`);
 
     // ========== PASO 2: Generar texto motivacional con IA ==========
     
@@ -118,7 +119,7 @@ export async function POST(req: NextRequest) {
     // En producción, esto sería la URL real del video generado
     const videoUrl = await simularGeneracionVideo(seleccionadas, textoMotivacional);
 
-    console.log(`✅ Time Capsule generada exitosamente`);
+    logger.debug(`✅ Time Capsule generada exitosamente`);
 
     return NextResponse.json({
       success: true,
@@ -132,7 +133,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error generando Time Capsule:', error);
+    logger.error('Error generando Time Capsule:', error);
     return NextResponse.json(
       { error: 'Error al generar video' },
       { status: 500 }
@@ -192,7 +193,7 @@ Responde SOLO con el texto, sin comillas ni formato adicional.`;
       `${nombre}, cada momento capturado en este video es prueba de tu transformación. No son solo fotos, son artefactos de verdad que muestran quién ERES. Tu viaje continúa, y cada día es una nueva oportunidad para preservar momentos épicos en The Quantum Archive. ¡Sigue capturando tu grandeza! 🚀`;
 
   } catch (error) {
-    console.error('Error generando texto motivacional:', error);
+    logger.error('Error generando texto motivacional:', error);
     // Fallback
     return `${nombre}, este video captura tu increíble viaje de transformación. Cada imagen representa un momento de esfuerzo, disciplina y crecimiento. Eres prueba viviente de que el cambio es posible cuando capturas la verdad de tus acciones. ¡Continúa este camino extraordinario! ✨`;
   }

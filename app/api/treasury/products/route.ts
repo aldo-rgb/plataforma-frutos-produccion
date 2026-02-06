@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/treasury/products
@@ -141,7 +142,7 @@ export async function GET() {
     });
 
   } catch (error: any) {
-    console.error('Error fetching treasury products:', error);
+    logger.error('Error fetching treasury products:', error);
     return NextResponse.json(
       { error: error?.message || 'Error al obtener productos' },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // POST - Crear una transformación del sistema
 export async function POST(request: Request) {
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(transform);
   } catch (error) {
-    console.error('Error al crear transformación:', error);
+    logger.error('Error al crear transformación:', error);
     return NextResponse.json({ error: 'Error al crear transformación' }, { status: 500 });
   }
 }

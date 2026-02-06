@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { notifyLiderSolicitaAprobacion } from '@/lib/notifications';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/lider/perfil/solicitar-aprobacion
@@ -134,7 +135,7 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    console.log(`✅ Perfil actualizado a PENDING para líder ${liderId}`);
+    logger.debug(`✅ Perfil actualizado a PENDING para líder ${liderId}`);
 
     // Crear notificación para el director
     await prisma.mentorAlert.create({
@@ -147,7 +148,7 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    console.log(`✅ Notificación creada para director ${directorId}`);
+    logger.debug(`✅ Notificación creada para director ${directorId}`);
 
     // Enviar notificaciones por email y push (no bloqueante)
     try {
@@ -156,13 +157,13 @@ export async function POST(req: NextRequest) {
         directorId,
         organization.name
       );
-      console.log(`✅ Notificaciones enviadas por email/push`);
+      logger.debug(`✅ Notificaciones enviadas por email/push`);
     } catch (notifyError) {
-      console.error('⚠️ Error al enviar notificaciones email/push:', notifyError);
+      logger.error('⚠️ Error al enviar notificaciones email/push:', notifyError);
       // No bloqueamos la respuesta si falla el envío de notificaciones
     }
 
-    console.log(`✅ Solicitud de aprobación completada: Líder ${lider.nombre} → Director ${director.nombre}`);
+    logger.debug(`✅ Solicitud de aprobación completada: Líder ${lider.nombre} → Director ${director.nombre}`);
 
     return NextResponse.json({
       success: true,
@@ -175,7 +176,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Error al solicitar aprobación de perfil:', error);
+    logger.error('❌ Error al solicitar aprobación de perfil:', error);
     return NextResponse.json(
       { 
         error: 'Error al procesar la solicitud',

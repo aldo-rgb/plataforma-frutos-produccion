@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/mentor/solicitudes/cancelar
@@ -98,8 +99,8 @@ export async function POST(request: Request) {
       }
     });
 
-    console.log(`✅ Sesión ${solicitudId} cancelada por mentor ${session.user.id}`);
-    console.log(`📧 Notificar a estudiante ${solicitud.Usuario.email}: Sesión cancelada`);
+    logger.debug(`✅ Sesión ${solicitudId} cancelada por mentor ${session.user.id}`);
+    logger.debug(`📧 Notificar a estudiante ${solicitud.Usuario.email}: Sesión cancelada`);
 
     // TODO: Enviar notificación al estudiante
     // await enviarEmailCancelacion({
@@ -115,7 +116,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ Error al cancelar sesión:', error);
+    logger.error('❌ Error al cancelar sesión:', error);
     return NextResponse.json({ 
       error: 'Error interno del servidor' 
     }, { status: 500 });

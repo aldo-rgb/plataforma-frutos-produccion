@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // POST - Mover un usuario a otra visión
 export async function POST(
@@ -173,7 +174,7 @@ export async function POST(
       };
     });
 
-    console.log(`[MOVE USER] Usuario ${user.nombre} (ID: ${user.id}) movido de Vision ${sourceVisionId} a Vision ${targetVisionIdInt}. Niveles: ${result.levelsMoved.join(', ')}`);
+    logger.debug(`[MOVE USER] Usuario ${user.nombre} (ID: ${user.id}) movido de Vision ${sourceVisionId} a Vision ${targetVisionIdInt}. Niveles: ${result.levelsMoved.join(', ')}`);
 
     return NextResponse.json({
       success: true,
@@ -182,7 +183,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('[MOVE USER] Error:', error);
+    logger.error('[MOVE USER] Error:', error);
     return NextResponse.json(
       { error: 'Error al mover el usuario' },
       { status: 500 }
@@ -247,7 +248,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('[GET VISIONES] Error:', error);
+    logger.error('[GET VISIONES] Error:', error);
     return NextResponse.json(
       { error: 'Error al obtener visiones' },
       { status: 500 }

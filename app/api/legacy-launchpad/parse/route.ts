@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import OpenAI from 'openai';
+import logger from '@/lib/logger';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -69,7 +70,7 @@ Para el imagePrompt, crea un prompt detallado en inglés que genere una imagen f
     try {
       parsedData = JSON.parse(cleanedResponse);
     } catch (parseError) {
-      console.error('Error parsing GPT response:', cleanedResponse);
+      logger.error('Error parsing GPT response:', cleanedResponse);
       return NextResponse.json({ 
         error: 'Error al procesar la respuesta de IA',
         raw: cleanedResponse 
@@ -82,7 +83,7 @@ Para el imagePrompt, crea un prompt detallado en inglés que genere una imagen f
     });
 
   } catch (error) {
-    console.error('Error in parse API:', error);
+    logger.error('Error in parse API:', error);
     return NextResponse.json({ 
       error: 'Error interno del servidor',
       details: error instanceof Error ? error.message : 'Unknown error'

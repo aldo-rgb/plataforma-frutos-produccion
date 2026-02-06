@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { startOfMonth, endOfMonth } from 'date-fns';
+import logger from '@/lib/logger';
 
 export async function GET(req: Request) {
   try {
@@ -70,7 +71,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json(calendarMap);
   } catch (error) {
-    console.error('Error getting calendar summary:', error);
+    logger.error('Error getting calendar summary:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

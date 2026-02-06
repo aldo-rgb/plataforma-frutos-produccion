@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { obtenerProgresoColecciones } from '@/lib/collectionVerifier';
 import { COLECCIONES } from '@/lib/rewardSystem';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/collections/progress
@@ -47,7 +48,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error al obtener progreso de colecciones:', error);
+    logger.error('Error al obtener progreso de colecciones:', error);
     return NextResponse.json(
       { error: 'Error al obtener progreso' },
       { status: 500 }

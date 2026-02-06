@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener reseñas de un perfil
 export async function GET(request: NextRequest) {
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ reviews, ratingDistribution });
   } catch (error) {
-    console.error('Error fetching reviews:', error);
+    logger.error('Error fetching reviews:', error);
     return NextResponse.json({ error: 'Error al obtener reseñas' }, { status: 500 });
   }
 }
@@ -170,7 +171,7 @@ export async function POST(request: NextRequest) {
 
     // Si se baneó, enviar notificación (aquí podrías enviar un email)
     if (shouldBan) {
-      console.log(`[AUTO-BAN] Usuario ${profile.user.nombre} (${profile.user.email}) ha sido baneado del directorio por reseñas negativas`);
+      logger.debug(`[AUTO-BAN] Usuario ${profile.user.nombre} (${profile.user.email}) ha sido baneado del directorio por reseñas negativas`);
       
       // Crear notificación para el usuario
       await prisma.notification.create({
@@ -206,7 +207,7 @@ export async function POST(request: NextRequest) {
       }
     }, { status: 201 });
   } catch (error) {
-    console.error('Error creating review:', error);
+    logger.error('Error creating review:', error);
     return NextResponse.json({ error: 'Error al crear reseña' }, { status: 500 });
   }
 }
@@ -275,7 +276,7 @@ export async function DELETE(request: NextRequest) {
       message: 'Reseña eliminada correctamente'
     });
   } catch (error) {
-    console.error('Error deleting review:', error);
+    logger.error('Error deleting review:', error);
     return NextResponse.json({ error: 'Error al eliminar reseña' }, { status: 500 });
   }
 }

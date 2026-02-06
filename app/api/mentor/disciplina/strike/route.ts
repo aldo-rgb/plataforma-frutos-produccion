@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { sendStrikeMessage } from '@/lib/strikeMessaging';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
       if (extraLifeUsed) {
         // STRIKE 4: DROP definitivo
         isDrop = true;
-        console.log(`💔 DROP para usuario ${student.id} - Ya usó vida extra y llegó a ${totalStrikes} faltas`);
+        logger.debug(`💔 DROP para usuario ${student.id} - Ya usó vida extra y llegó a ${totalStrikes} faltas`);
 
         // Cancelar todas las sesiones futuras
         await prisma.callBooking.updateMany({
@@ -139,7 +140,7 @@ export async function POST(request: NextRequest) {
       } else {
         // STRIKE 3: Suspensión con opción de vida extra
         suspended = true;
-        console.log(`⏸️ Suspendiendo usuario ${student.id} - ${totalStrikes} faltas`);
+        logger.debug(`⏸️ Suspendiendo usuario ${student.id} - ${totalStrikes} faltas`);
 
         // Cancelar sesiones futuras
         await prisma.callBooking.updateMany({
@@ -190,7 +191,7 @@ export async function POST(request: NextRequest) {
 
     // Log del resultado del mensaje
     if (messageResult) {
-      console.log(`📨 Mensaje de strike ${totalStrikes} para ${student.nombre}:`, messageResult);
+      logger.debug(`📨 Mensaje de strike ${totalStrikes} para ${student.nombre}:`, messageResult);
     }
 
     return NextResponse.json({
@@ -210,7 +211,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error registrando strike:', error);
+    logger.error('Error registrando strike:', error);
     return NextResponse.json({ 
       success: false,
       error: 'Error registrando strike' 

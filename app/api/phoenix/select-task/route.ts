@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { PrismaClient, MicroTaskType } from '@prisma/client';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -110,7 +111,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error selecting Phoenix task:', error);
+    logger.error('Error selecting Phoenix task:', error);
     return NextResponse.json(
       { error: 'Error al seleccionar tarea' },
       { status: 500 }

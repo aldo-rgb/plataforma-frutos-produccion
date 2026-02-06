@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
+import logger from '@/lib/logger';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
     });
     
   } catch (error: any) {
-    console.error('Error fetching catalog:', error);
+    logger.error('Error fetching catalog:', error);
     return NextResponse.json({ 
       error: error.message || 'Error al obtener catálogo' 
     }, { status: 500 });
@@ -133,7 +134,7 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error: any) {
-    console.error('Error creating catalog item:', error);
+    logger.error('Error creating catalog item:', error);
     return NextResponse.json({ 
       error: error.message || 'Error al crear item' 
     }, { status: 500 });
@@ -215,7 +216,7 @@ export async function PUT(request: NextRequest) {
     });
     
   } catch (error: any) {
-    console.error('Error updating catalog item:', error);
+    logger.error('Error updating catalog item:', error);
     return NextResponse.json({ 
       error: error.message || 'Error al actualizar item' 
     }, { status: 500 });
@@ -252,7 +253,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
     
   } catch (error: any) {
-    console.error('Error deleting catalog item:', error);
+    logger.error('Error deleting catalog item:', error);
     return NextResponse.json({ 
       error: error.message || 'Error al eliminar item' 
     }, { status: 500 });

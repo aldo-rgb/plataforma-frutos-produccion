@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/buddy
@@ -152,7 +153,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('Error getting buddy:', error);
+    logger.error('Error getting buddy:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }
@@ -380,7 +381,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Acción no válida' }, { status: 400 });
 
   } catch (error) {
-    console.error('Error in buddy action:', error);
+    logger.error('Error in buddy action:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }

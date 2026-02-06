@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * PUT /api/social/privacy
@@ -45,7 +46,7 @@ export async function PUT(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('Error updating privacy:', error);
+    logger.error('Error updating privacy:', error);
     return NextResponse.json(
       { error: 'Error al actualizar privacidad', details: error.message },
       { status: 500 }
@@ -77,7 +78,7 @@ export async function GET() {
     });
 
   } catch (error: any) {
-    console.error('Error getting privacy:', error);
+    logger.error('Error getting privacy:', error);
     return NextResponse.json(
       { error: 'Error al obtener configuración', details: error.message },
       { status: 500 }

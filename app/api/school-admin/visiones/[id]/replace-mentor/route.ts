@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { PrismaClient } from '@prisma/client';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -235,7 +236,7 @@ export async function POST(
       };
     });
 
-    console.log('✅ Mentor reemplazado exitosamente:', {
+    logger.debug('✅ Mentor reemplazado exitosamente:', {
       visionId,
       oldMentorId,
       newMentorId,
@@ -254,7 +255,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('❌ Error reemplazando mentor:', error);
+    logger.error('❌ Error reemplazando mentor:', error);
     return NextResponse.json(
       { error: 'Error al reemplazar mentor' },
       { status: 500 }

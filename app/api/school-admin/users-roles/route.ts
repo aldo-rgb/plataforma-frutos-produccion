@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener usuarios con sus roles adicionales
 export async function GET(request: NextRequest) {
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, users });
   } catch (error) {
-    console.error('Error al obtener usuarios:', error);
+    logger.error('Error al obtener usuarios:', error);
     return NextResponse.json({ success: false, error: 'Error del servidor' }, { status: 500 });
   }
 }
@@ -121,7 +122,7 @@ export async function PUT(request: NextRequest) {
       user: updated 
     });
   } catch (error) {
-    console.error('Error al actualizar roles:', error);
+    logger.error('Error al actualizar roles:', error);
     return NextResponse.json({ success: false, error: 'Error del servidor' }, { status: 500 });
   }
 }

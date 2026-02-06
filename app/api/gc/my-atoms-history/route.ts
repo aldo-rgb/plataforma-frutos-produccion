@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/gc/my-atoms-history
@@ -87,7 +88,7 @@ export async function GET() {
             ? ratingsWithValue.reduce((sum: number, a: any) => sum + (a.potentialRating || 0), 0) / ratingsWithValue.length
             : 0;
         } catch (e) {
-          console.error('Error fetching call attempts for squad:', squad.id, e);
+          logger.error('Error fetching call attempts for squad:', squad.id, e);
         }
 
         return {
@@ -128,7 +129,7 @@ export async function GET() {
       atoms: atomsWithStats,
     });
   } catch (error) {
-    console.error('Error fetching atoms history:', error);
+    logger.error('Error fetching atoms history:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener historial' },
       { status: 500 }

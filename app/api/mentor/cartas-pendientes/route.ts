@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET: Obtener todas las cartas pendientes de revisión
 export async function GET(request: NextRequest) {
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
     }, { status: 200 });
 
   } catch (error) {
-    console.error('❌ Error al obtener cartas pendientes:', error);
+    logger.error('❌ Error al obtener cartas pendientes:', error);
     return NextResponse.json({ error: 'Error al cargar cartas' }, { status: 500 });
   }
 }

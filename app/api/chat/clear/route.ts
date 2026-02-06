@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/chat/clear
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error limpiando conversación:', error);
+    logger.error('Error limpiando conversación:', error);
     return NextResponse.json(
       { error: 'Error al limpiar conversación', details: error.message },
       { status: 500 }

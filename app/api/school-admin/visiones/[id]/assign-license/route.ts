@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Función para generar código de licencia único
 function generateLicenseCode(): string {
@@ -219,7 +220,7 @@ export async function POST(
       participante: result,
     });
   } catch (error) {
-    console.error('Error assigning license:', error);
+    logger.error('Error assigning license:', error);
     return NextResponse.json(
       { success: false, error: 'Error al asignar licencia' },
       { status: 500 }

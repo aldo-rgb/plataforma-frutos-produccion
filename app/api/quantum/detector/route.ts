@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/quantum/detector
@@ -30,8 +31,8 @@ export async function GET(req: Request) {
     tresDiasAtras.setDate(tresDiasAtras.getDate() - 3);
     tresDiasAtras.setHours(0, 0, 0, 0);
 
-    console.log('🔍 Buscando tareas retrasadas para:', usuario.nombre);
-    console.log('📅 Fecha límite:', tresDiasAtras.toISOString());
+    logger.debug('🔍 Buscando tareas retrasadas para:', usuario.nombre);
+    logger.debug('📅 Fecha límite:', tresDiasAtras.toISOString());
 
     // Query estricto: PENDING + overdue > 3 días + STANDARD only
     const tareasRetrasadas = await prisma.taskInstance.findMany({
@@ -62,7 +63,7 @@ export async function GET(req: Request) {
       }
     });
 
-    console.log(`📊 Tareas retrasadas encontradas: ${tareasRetrasadas.length}`);
+    logger.debug(`📊 Tareas retrasadas encontradas: ${tareasRetrasadas.length}`);
 
     // Agrupar por categoría para mejor contexto
     const tareasPorCategoria = tareasRetrasadas.reduce((acc, tarea) => {
@@ -117,7 +118,7 @@ export async function GET(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error en detector:', error);
+    logger.error('❌ Error en detector:', error);
     return NextResponse.json(
       { error: 'Error al detectar tareas', details: error.message },
       { status: 500 }

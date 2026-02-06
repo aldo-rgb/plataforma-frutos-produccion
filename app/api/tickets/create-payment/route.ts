@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Forzar que esta ruta sea dinámica (sin caché)
 export const dynamic = 'force-dynamic';
@@ -163,10 +164,10 @@ export async function POST(request: NextRequest) {
       throw new Error('No se pudo generar la URL de pago');
     }
 
-    console.log(`✅ Pago de ticket creado`);
-    console.log(`   Pasarela: ${gatewayConfig.provider}`);
-    console.log(`   Ticket: ${ticketId}`);
-    console.log(`   Monto: $${amount} MXN`);
+    logger.debug(`✅ Pago de ticket creado`);
+    logger.debug(`   Pasarela: ${gatewayConfig.provider}`);
+    logger.debug(`   Ticket: ${ticketId}`);
+    logger.debug(`   Monto: $${amount} MXN`);
 
     return NextResponse.json({
       success: true,
@@ -175,7 +176,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error al crear pago de ticket:', error);
+    logger.error('❌ Error al crear pago de ticket:', error);
     return NextResponse.json(
       {
         error: 'Error al crear el pago',
@@ -234,7 +235,7 @@ async function createMercadoPagoPreference(
 
   if (!preferenceRes.ok) {
     const errorData = await preferenceRes.json();
-    console.error('Error de Mercado Pago:', errorData);
+    logger.error('Error de Mercado Pago:', errorData);
     throw new Error('Error al crear preferencia en Mercado Pago');
   }
 
@@ -352,7 +353,7 @@ async function createPayPalOrder(
 
   if (!orderRes.ok) {
     const errorData = await orderRes.json();
-    console.error('Error de PayPal:', errorData);
+    logger.error('Error de PayPal:', errorData);
     throw new Error('Error al crear orden en PayPal');
   }
 

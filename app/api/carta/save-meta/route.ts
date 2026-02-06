@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/carta/save-meta
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
 
     const { cartaId, categoria, orden, metaPrincipal, declaracionPoder } = await req.json();
 
-    console.log('📥 Datos recibidos para guardar meta:', {
+    logger.debug('📥 Datos recibidos para guardar meta:', {
       cartaId,
       categoria,
       orden,
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
     });
 
     if (!cartaId || !categoria || !metaPrincipal) {
-      console.error('❌ Datos incompletos:', { cartaId, categoria, metaPrincipal: !!metaPrincipal });
+      logger.error('❌ Datos incompletos:', { cartaId, categoria, metaPrincipal: !!metaPrincipal });
       return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 });
     }
 
@@ -61,7 +62,7 @@ export async function POST(req: Request) {
           updatedAt: new Date()
         }
       });
-      console.log('✅ Meta actualizada ID:', meta.id);
+      logger.debug('✅ Meta actualizada ID:', meta.id);
     } else {
       // Crear nueva meta
       meta = await prisma.meta.create({
@@ -77,7 +78,7 @@ export async function POST(req: Request) {
           updatedAt: new Date()
         }
       });
-      console.log('✅ Meta creada ID:', meta.id);
+      logger.debug('✅ Meta creada ID:', meta.id);
     }
 
     return NextResponse.json({ 
@@ -86,7 +87,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('Error saving meta:', error);
+    logger.error('Error saving meta:', error);
     return NextResponse.json(
       { error: 'Error al guardar la meta', details: error.message },
       { status: 500 }

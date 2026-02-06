@@ -1,11 +1,20 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ code: string }> }
 ) {
   try {
+    // Rate limiting para APIs públicas
+    const { response } = rateLimit(request, RateLimitPresets.public);
+    if (response) {
+      logger.warn('Rate limit exceeded on public/referral');
+      return response;
+    }
+
     const { code } = await params;
 
     if (!code) {
@@ -23,8 +32,8 @@ export async function GET(
       .replace(/[^\w]/g, '')  // Remover cualquier carácter no alfanumérico
       .toUpperCase();
 
-    console.log('🔍 Original code:', code);
-    console.log('🧹 Cleaned code:', cleanCode);
+    logger.debug('🔍 Original code:', code);
+    logger.debug('🧹 Cleaned code:', cleanCode);
 
     if (!cleanCode || cleanCode.length < 5) {
       return NextResponse.json(
@@ -61,7 +70,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Error validating referral code:', error);
+    logger.error('Error validating referral code:', error);
     return NextResponse.json(
       { success: false, error: 'Error al validar código de referido' },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener configuración de transferencias
 export async function GET() {
@@ -59,7 +60,7 @@ export async function GET() {
       bankReference: org?.bankReference || '',
     });
   } catch (error) {
-    console.error('Error getting transfers config:', error);
+    logger.error('Error getting transfers config:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener configuración' },
       { status: 500 }
@@ -136,7 +137,7 @@ export async function PUT(request: Request) {
       message: 'Configuración de transferencias actualizada',
     });
   } catch (error) {
-    console.error('Error updating transfers config:', error);
+    logger.error('Error updating transfers config:', error);
     return NextResponse.json(
       { success: false, error: 'Error al actualizar configuración' },
       { status: 500 }

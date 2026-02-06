@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { validateSessionCredits, getUserActivePackages } from '@/lib/packageSessionManager';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/participante/package-credits
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error: any) {
-    console.error('❌ Error obteniendo créditos de paquetes:', error);
+    logger.error('❌ Error obteniendo créditos de paquetes:', error);
     return NextResponse.json(
       { error: 'Error al obtener créditos', details: error.message },
       { status: 500 }

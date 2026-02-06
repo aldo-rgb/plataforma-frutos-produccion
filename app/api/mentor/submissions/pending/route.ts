@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/mentor/submissions/pending
@@ -84,12 +85,12 @@ export async function GET(req: Request) {
       }
     });
 
-    console.log(`✅ Mentor ${mentorId} consultó ${submissions.length} submissions pendientes`);
+    logger.debug(`✅ Mentor ${mentorId} consultó ${submissions.length} submissions pendientes`);
 
     return NextResponse.json(submissions);
 
   } catch (error: any) {
-    console.error('❌ Error obteniendo submissions pendientes:', error);
+    logger.error('❌ Error obteniendo submissions pendientes:', error);
     return NextResponse.json(
       { error: 'Error al obtener submissions', details: error.message },
       { status: 500 }

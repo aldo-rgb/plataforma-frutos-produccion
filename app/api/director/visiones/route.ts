@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -15,7 +16,7 @@ export async function GET() {
       where: { email: session.user.email }
     });
 
-    console.log('👤 Usuario encontrado:', {
+    logger.debug('👤 Usuario encontrado:', {
       id: usuario?.id,
       nombre: usuario?.nombre,
       rol: usuario?.rol,
@@ -27,11 +28,11 @@ export async function GET() {
     }
 
     if (!usuario.organizationId) {
-      console.log('⚠️ Director sin organizationId asignado');
+      logger.debug('⚠️ Director sin organizationId asignado');
       return NextResponse.json({ error: 'Director sin organización asignada' }, { status: 400 });
     }
 
-    console.log('🔍 Director', usuario.id, 'cargando visiones de organización', usuario.organizationId);
+    logger.debug('🔍 Director', usuario.id, 'cargando visiones de organización', usuario.organizationId);
 
     // Obtener todas las visiones de la organización del director
     const visiones = await prisma.vision.findMany({
@@ -59,8 +60,8 @@ export async function GET() {
       }
     });
 
-    console.log('✅ Visiones encontradas:', visiones.length);
-    console.log('📋 Detalle de visiones:', visiones.map(v => ({
+    logger.debug('✅ Visiones encontradas:', visiones.length);
+    logger.debug('📋 Detalle de visiones:', visiones.map(v => ({
       id: v.id,
       nombre: v.nombre,
       isActive: v.isActive,
@@ -76,7 +77,7 @@ export async function GET() {
       visiones
     });
   } catch (error) {
-    console.error('❌ Error fetching director visiones:', error);
+    logger.error('❌ Error fetching director visiones:', error);
     return NextResponse.json(
       { error: 'Error al obtener visiones' },
       { status: 500 }

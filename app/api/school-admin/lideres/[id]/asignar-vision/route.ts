@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/school-admin/lideres/[id]/asignar-vision
@@ -151,8 +152,8 @@ export async function POST(
       }
     });
 
-    console.log(`✅ Líder ${liderId} asignado a visión ${visionId} con licencia ${licenseCode}`);
-    console.log(`📊 Licencias disponibles: ${availableCredits - 1} de ${schoolCredit.totalPurchased}`);
+    logger.debug(`✅ Líder ${liderId} asignado a visión ${visionId} con licencia ${licenseCode}`);
+    logger.debug(`📊 Licencias disponibles: ${availableCredits - 1} de ${schoolCredit.totalPurchased}`);
 
     return NextResponse.json({
       success: true,
@@ -160,7 +161,7 @@ export async function POST(
     });
 
   } catch (error: any) {
-    console.error('Error asignando líder a visión:', error);
+    logger.error('Error asignando líder a visión:', error);
     return NextResponse.json(
       { error: 'Error al asignar líder', details: error.message },
       { status: 500 }

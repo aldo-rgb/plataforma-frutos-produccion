@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/admin/trainer-applications/[id]/approve
@@ -107,7 +108,7 @@ export async function POST(
             esEntrenador: true
           }
         });
-        console.log(`✅ Usuario ${usuarioActual.nombre} mantiene rol ${usuarioActual.rol}, activado esEntrenador`);
+        logger.debug(`✅ Usuario ${usuarioActual.nombre} mantiene rol ${usuarioActual.rol}, activado esEntrenador`);
       } else {
         // Cambiar rol a TRAINER y activar flag
         await tx.usuario.update({
@@ -117,7 +118,7 @@ export async function POST(
             esEntrenador: true
           }
         });
-        console.log(`✅ Usuario ${usuarioActual.nombre} cambió a rol TRAINER`);
+        logger.debug(`✅ Usuario ${usuarioActual.nombre} cambió a rol TRAINER`);
       }
 
       // 3. Actualizar aplicación
@@ -143,7 +144,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('Error approving trainer application:', error);
+    logger.error('Error approving trainer application:', error);
     
     let errorMessage = 'Error al aprobar aplicación de trainer';
     if (error instanceof Error) {

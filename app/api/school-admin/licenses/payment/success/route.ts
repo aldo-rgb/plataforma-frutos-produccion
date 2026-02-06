@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -105,7 +106,7 @@ export async function GET(req: NextRequest) {
       );
     }
   } catch (error: any) {
-    console.error('❌ Error processing payment success:', error);
+    logger.error('❌ Error processing payment success:', error);
     return NextResponse.redirect(new URL('/dashboard/school-admin?error=processing_failed', req.url));
   }
 }
@@ -119,7 +120,7 @@ async function generateMentorAssignmentsForOrder(order: any) {
     const visionId = paymentData.visionId;
     const mentorAssignments = paymentData.mentorAssignments || [];
 
-    console.log(`🎯 Generando asignaciones de mentores para visión ${visionId}...`);
+    logger.debug(`🎯 Generando asignaciones de mentores para visión ${visionId}...`);
 
     for (const assignment of mentorAssignments) {
       const { mentorId, studentCount, ratePerCall } = assignment;
@@ -144,7 +145,7 @@ async function generateMentorAssignmentsForOrder(order: any) {
         },
       });
 
-      console.log(`📦 MentorPackageOrder creado: ${packageOrder.id} para mentor ${mentorId}`);
+      logger.debug(`📦 MentorPackageOrder creado: ${packageOrder.id} para mentor ${mentorId}`);
 
       // Verificar si ya existe VisionMentor
       const existingVisionMentor = await prisma.visionMentor.findFirst({
@@ -163,15 +164,15 @@ async function generateMentorAssignmentsForOrder(order: any) {
           },
         });
 
-        console.log(`✅ VisionMentor creado para mentor ${mentorId} en visión ${visionId}`);
+        logger.debug(`✅ VisionMentor creado para mentor ${mentorId} en visión ${visionId}`);
       } else {
-        console.log(`ℹ️  VisionMentor ya existe para mentor ${mentorId} en visión ${visionId}`);
+        logger.debug(`ℹ️  VisionMentor ya existe para mentor ${mentorId} en visión ${visionId}`);
       }
     }
 
-    console.log(`✅ Asignaciones completadas para ${mentorAssignments.length} mentores`);
+    logger.debug(`✅ Asignaciones completadas para ${mentorAssignments.length} mentores`);
   } catch (error) {
-    console.error('❌ Error generando asignaciones de mentores:', error);
+    logger.error('❌ Error generando asignaciones de mentores:', error);
     throw error;
   }
 }
@@ -196,9 +197,9 @@ async function generateCreditsForOrder(order: any) {
       },
     });
 
-    console.log(`✅ Créditos generados: ${order.quantity} licencias ${order.tier} para organización ${order.organizationId}`);
+    logger.debug(`✅ Créditos generados: ${order.quantity} licencias ${order.tier} para organización ${order.organizationId}`);
   } catch (error) {
-    console.error('❌ Error generando créditos:', error);
+    logger.error('❌ Error generando créditos:', error);
     throw error;
   }
 }
@@ -244,7 +245,7 @@ async function verifyPayPalPayment(orderId: string, payerId: string | null): Pro
     const captureData = await captureRes.json();
     return captureData.status === 'COMPLETED';
   } catch (error) {
-    console.error('PayPal verification error:', error);
+    logger.error('PayPal verification error:', error);
     return false;
   }
 }
@@ -262,7 +263,7 @@ async function verifyStripePayment(sessionId: string): Promise<boolean> {
 
     return session.payment_status === 'paid';
   } catch (error) {
-    console.error('Stripe verification error:', error);
+    logger.error('Stripe verification error:', error);
     return false;
   }
 }
@@ -284,7 +285,7 @@ async function verifyMercadoPagoPayment(paymentId: string): Promise<boolean> {
     const paymentData = await paymentRes.json();
     return paymentData.status === 'approved';
   } catch (error) {
-    console.error('Mercado Pago verification error:', error);
+    logger.error('Mercado Pago verification error:', error);
     return false;
   }
 }

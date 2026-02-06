@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/cron/avatar-reminder
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('🤖 [CRON] Iniciando verificación de recordatorios de avatar...');
+    logger.debug('🤖 [CRON] Iniciando verificación de recordatorios de avatar...');
 
     // Calcular fecha hace 30 días
     const thirtyDaysAgo = new Date();
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
       } as any
     });
 
-    console.log(`📊 [CRON] Encontrados ${usuarios.length} usuarios elegibles para recordatorio`);
+    logger.debug(`📊 [CRON] Encontrados ${usuarios.length} usuarios elegibles para recordatorio`);
 
     let notificacionesCreadas = 0;
 
@@ -61,7 +62,7 @@ export async function GET(req: NextRequest) {
       });
 
       if (notificacionExistente) {
-        console.log(`⏭️ [CRON] Usuario ${usuario.id} ya tiene notificación activa, omitiendo...`);
+        logger.debug(`⏭️ [CRON] Usuario ${usuario.id} ya tiene notificación activa, omitiendo...`);
         continue;
       }
 
@@ -77,10 +78,10 @@ export async function GET(req: NextRequest) {
       });
 
       notificacionesCreadas++;
-      console.log(`✅ [CRON] Notificación creada para usuario ${usuario.id} (${usuario.nombre})`);
+      logger.debug(`✅ [CRON] Notificación creada para usuario ${usuario.id} (${usuario.nombre})`);
     }
 
-    console.log(`✅ [CRON] Proceso completado: ${notificacionesCreadas} notificaciones creadas`);
+    logger.debug(`✅ [CRON] Proceso completado: ${notificacionesCreadas} notificaciones creadas`);
 
     return NextResponse.json({
       success: true,
@@ -90,7 +91,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ [CRON] Error en recordatorio de avatares:', error);
+    logger.error('❌ [CRON] Error en recordatorio de avatares:', error);
     return NextResponse.json(
       { 
         success: false,

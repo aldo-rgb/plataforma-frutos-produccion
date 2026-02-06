@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/admin/license-orders/[orderId]/mark-paid
@@ -69,11 +70,11 @@ export async function POST(
       );
     }
 
-    console.log(`💰 Admin ${session.user.nombre} confirmando pago manual de orden ${orderId}`);
-    console.log(`   📦 Organización: ${order.Organization.name}`);
-    console.log(`   🎟️  Licencias: ${order.quantity} (${order.tier})`);
-    console.log(`   💵 Monto: $${order.amount} MXN`);
-    console.log(`   📋 Método: ${order.paymentMethod}`);
+    logger.debug(`💰 Admin ${session.user.nombre} confirmando pago manual de orden ${orderId}`);
+    logger.debug(`   📦 Organización: ${order.Organization.name}`);
+    logger.debug(`   🎟️  Licencias: ${order.quantity} (${order.tier})`);
+    logger.debug(`   💵 Monto: $${order.amount} MXN`);
+    logger.debug(`   📋 Método: ${order.paymentMethod}`);
 
     // Realizar la actualización en una transacción
     const result = await prisma.$transaction(async (tx) => {
@@ -142,9 +143,9 @@ export async function POST(
       };
     });
 
-    console.log(`✅ Pago confirmado exitosamente`);
-    console.log(`   📊 Créditos comprados ahora: ${result.credit.totalPurchased}`);
-    console.log(`   💳 Los códigos de licencia serán generados por el coordinador cuando los necesite`);
+    logger.debug(`✅ Pago confirmado exitosamente`);
+    logger.debug(`   📊 Créditos comprados ahora: ${result.credit.totalPurchased}`);
+    logger.debug(`   💳 Los códigos de licencia serán generados por el coordinador cuando los necesite`);
 
     return NextResponse.json({
       success: true,
@@ -153,7 +154,7 @@ export async function POST(
       creditsAdded: order.quantity,
     });
   } catch (error) {
-    console.error('❌ Error al confirmar pago:', error);
+    logger.error('❌ Error al confirmar pago:', error);
     return NextResponse.json(
       {
         success: false,

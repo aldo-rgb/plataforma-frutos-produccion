@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Roles permitidos para acceder a esta API
 const ALLOWED_ROLES = [
@@ -71,14 +72,14 @@ export async function GET() {
       }
     });
 
-    console.log(`✅ Coordinadores encontrados para organización ${user.organizationId}:`, coordinadores.length);
+    logger.debug(`✅ Coordinadores encontrados para organización ${user.organizationId}:`, coordinadores.length);
 
     return NextResponse.json({
       success: true,
       coordinadores
     });
   } catch (error) {
-    console.error('Error obteniendo coordinadores:', error);
+    logger.error('Error obteniendo coordinadores:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener coordinadores' },
       { status: 500 }
@@ -196,7 +197,7 @@ export async function PATCH(request: Request) {
       }
     });
 
-    console.log(`✅ Rol actualizado: ${targetUser.nombre} (${targetUser.email}) - ${previousRole} → ${newRole} por ${user.nombre}`);
+    logger.debug(`✅ Rol actualizado: ${targetUser.nombre} (${targetUser.email}) - ${previousRole} → ${newRole} por ${user.nombre}`);
 
     return NextResponse.json({
       success: true,
@@ -206,7 +207,7 @@ export async function PATCH(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error actualizando rol:', error);
+    logger.error('Error actualizando rol:', error);
     return NextResponse.json(
       { success: false, error: 'Error al actualizar el rol' },
       { status: 500 }

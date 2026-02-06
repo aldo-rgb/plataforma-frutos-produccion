@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * PATCH /api/mentor/acciones/[id]/toggle-evidence
@@ -50,7 +51,7 @@ export async function PATCH(
       }
     });
 
-    console.log(`✅ Evidencia ${requiereEvidencia ? 'requerida' : 'opcional'} para acción ${accionId}`);
+    logger.debug(`✅ Evidencia ${requiereEvidencia ? 'requerida' : 'opcional'} para acción ${accionId}`);
 
     return NextResponse.json({ 
       success: true, 
@@ -61,7 +62,7 @@ export async function PATCH(
     });
 
   } catch (error: any) {
-    console.error('❌ Error toggle evidence:', error);
+    logger.error('❌ Error toggle evidence:', error);
     return NextResponse.json(
       { error: 'Error al actualizar configuración de evidencia', details: error.message },
       { status: 500 }

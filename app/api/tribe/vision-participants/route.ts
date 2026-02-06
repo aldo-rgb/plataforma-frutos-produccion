@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener conteo de participantes PL (Liderato) de una visión
 export async function GET(request: NextRequest) {
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching vision participants:', error);
+    logger.error('Error fetching vision participants:', error);
     return NextResponse.json({ 
       error: 'Error interno del servidor' 
     }, { status: 500 });

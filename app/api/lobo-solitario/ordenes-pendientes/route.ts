@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -14,7 +15,7 @@ export async function GET() {
       );
     }
 
-    console.log(`🔍 Buscando órdenes pendientes para usuario ${session.user.id}...`);
+    logger.debug(`🔍 Buscando órdenes pendientes para usuario ${session.user.id}...`);
 
     // Buscar órdenes pendientes del usuario (últimos 30 minutos)
     const ordenesPendientes = await prisma.mentorPackageOrder.findMany({
@@ -38,7 +39,7 @@ export async function GET() {
       }
     });
 
-    console.log(`📊 Encontradas ${ordenesPendientes.length} órdenes pendientes`);
+    logger.debug(`📊 Encontradas ${ordenesPendientes.length} órdenes pendientes`);
 
     const ordenes = ordenesPendientes.map(orden => ({
       id: orden.id,
@@ -56,7 +57,7 @@ export async function GET() {
       ordenes
     });
   } catch (error: any) {
-    console.error('❌ Error al obtener órdenes pendientes:', error);
+    logger.error('❌ Error al obtener órdenes pendientes:', error);
     return NextResponse.json(
       { 
         error: 'Error al obtener órdenes pendientes',

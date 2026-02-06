@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -123,7 +124,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('Error asignando participante:', error);
+    logger.error('Error asignando participante:', error);
     return NextResponse.json({ error: 'Error al asignar participante' }, { status: 500 });
   }
 }
@@ -223,7 +224,7 @@ export async function GET(
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
 
   } catch (error) {
-    console.error('Error loading participantes:', error);
+    logger.error('Error loading participantes:', error);
     return NextResponse.json({ error: 'Error al cargar participantes' }, { status: 500 });
   }
 }
@@ -321,7 +322,7 @@ export async function PATCH(
     });
 
   } catch (error) {
-    console.error('Error reasignando participante:', error);
+    logger.error('Error reasignando participante:', error);
     return NextResponse.json({ error: 'Error al reasignar participante' }, { status: 500 });
   }
 }
@@ -388,7 +389,7 @@ export async function DELETE(
     });
 
   } catch (error) {
-    console.error('Error removing participante:', error);
+    logger.error('Error removing participante:', error);
     return NextResponse.json({ error: 'Error al remover participante' }, { status: 500 });
   }
 }

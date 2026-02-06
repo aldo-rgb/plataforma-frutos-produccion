@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // POST - Reiniciar declaraciones del usuario (wizard completo)
 export async function POST(request: NextRequest) {
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('Error al reiniciar declaraciones:', error);
+    logger.error('Error al reiniciar declaraciones:', error);
     return NextResponse.json({
       success: false,
       error: 'Error interno al reiniciar declaraciones'
@@ -182,7 +183,7 @@ export async function GET(request: NextRequest) {
       } : null
     });
   } catch (error) {
-    console.error('Error al verificar reinicio:', error);
+    logger.error('Error al verificar reinicio:', error);
     return NextResponse.json({
       success: false,
       error: 'Error interno'

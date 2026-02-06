@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { generateTasksForLetter } from '@/lib/taskGenerator';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/carta/regenerate
@@ -59,10 +60,10 @@ export async function POST(req: Request) {
       }
     });
 
-    console.log(`🗑️  Eliminadas ${deletedTasks.count} tareas antiguas`);
+    logger.debug(`🗑️  Eliminadas ${deletedTasks.count} tareas antiguas`);
 
     // Regenerar tareas
-    console.log(`🚀 Regenerando tareas para Carta #${cartaId}`);
+    logger.debug(`🚀 Regenerando tareas para Carta #${cartaId}`);
     const result = await generateTasksForLetter(cartaId);
 
     if (!result.success) {
@@ -80,7 +81,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('Error regenerating tasks:', error);
+    logger.error('Error regenerating tasks:', error);
     return NextResponse.json(
       { error: 'Error al regenerar tareas', details: error.message },
       { status: 500 }

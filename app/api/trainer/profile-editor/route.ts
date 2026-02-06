@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -73,7 +74,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(perfilCompleto);
   } catch (error) {
-    console.error('Error obteniendo perfil de trainer:', error);
+    logger.error('Error obteniendo perfil de trainer:', error);
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
   } finally {
     await prisma.$disconnect();
@@ -204,7 +205,7 @@ export async function PUT(request: Request) {
       message: 'Perfil de entrenador actualizado correctamente' 
     });
   } catch (error) {
-    console.error('Error actualizando perfil de trainer:', error);
+    logger.error('Error actualizando perfil de trainer:', error);
     return NextResponse.json({ error: 'Error del servidor' }, { status: 500 });
   } finally {
     await prisma.$disconnect();

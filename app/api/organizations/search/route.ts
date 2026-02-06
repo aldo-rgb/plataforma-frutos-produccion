@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET: Búsqueda de organizaciones para autocompletado (público)
 export async function GET(req: NextRequest) {
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error buscando organizaciones:', error);
+    logger.error('Error buscando organizaciones:', error);
     return NextResponse.json(
       { success: false, error: 'Error al buscar organizaciones' },
       { status: 500 }

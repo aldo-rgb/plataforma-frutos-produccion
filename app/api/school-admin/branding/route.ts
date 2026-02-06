@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener configuración de branding de la organización del school admin
 export async function GET(request: NextRequest) {
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching branding:', error);
+    logger.error('Error fetching branding:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener la configuración' },
       { status: 500 }
@@ -187,7 +188,7 @@ export async function PUT(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error updating branding:', error);
+    logger.error('Error updating branding:', error);
     return NextResponse.json(
       { success: false, error: 'Error al actualizar la configuración' },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // POST - Asignación aleatoria de mentores y game changers
 export async function POST(
@@ -165,7 +166,7 @@ export async function POST(
         }
       } catch (error: any) {
         const usuario = participante.Usuario_VisionParticipante_participanteIdToUsuario;
-        console.error(`Error asignando a ${usuario.nombre}:`, error);
+        logger.error(`Error asignando a ${usuario.nombre}:`, error);
         errors.push(`${usuario.nombre}: ${error.message}`);
       }
     }
@@ -183,7 +184,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('Error in random assignment:', error);
+    logger.error('Error in random assignment:', error);
     return NextResponse.json(
       { success: false, error: 'Error en la asignación aleatoria' },
       { status: 500 }

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getProgresoNivel } from '@/lib/rewardSystem';
+import logger from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -55,7 +56,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('❌ Error al obtener nivel de usuario:', error);
+    logger.error('❌ Error al obtener nivel de usuario:', error);
     return NextResponse.json({ error: 'Error al cargar datos' }, { status: 500 });
   }
 }

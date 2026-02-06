@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(metas);
 
   } catch (error) {
-    console.error('Error al obtener metas del usuario:', error);
+    logger.error('Error al obtener metas del usuario:', error);
     return NextResponse.json(
       { error: 'Error al obtener metas' },
       { status: 500 }

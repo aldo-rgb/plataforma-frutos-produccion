@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import Stripe from 'stripe';
+import logger from '@/lib/logger';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16'
@@ -146,7 +147,7 @@ export async function POST(request: NextRequest) {
     }, { status: 400 });
 
   } catch (error) {
-    console.error('Error processing donation:', error);
+    logger.error('Error processing donation:', error);
     return NextResponse.json(
       { error: 'Error procesando la donación' },
       { status: 500 }
@@ -212,7 +213,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching donations:', error);
+    logger.error('Error fetching donations:', error);
     return NextResponse.json(
       { error: 'Error obteniendo donaciones' },
       { status: 500 }

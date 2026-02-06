@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener formularios médicos con alertas pendientes para el coordinador
 // Las alertas aparecen 1 día antes del inicio de un producto y desaparecen cuando termina
@@ -264,7 +265,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Error obteniendo alertas médicas:', error);
+    logger.error('❌ Error obteniendo alertas médicas:', error);
     return NextResponse.json(
       { error: 'Error obteniendo alertas médicas' },
       { status: 500 }
@@ -350,7 +351,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Error marcando formulario como enterado:', error);
+    logger.error('❌ Error marcando formulario como enterado:', error);
     return NextResponse.json(
       { error: 'Error procesando solicitud' },
       { status: 500 }

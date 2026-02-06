@@ -6,6 +6,7 @@ import { notifyChangesRequested, notifyCartaApproved } from '@/lib/notifications
 import { calculateCartaStatusAfterReview, type EstadoItem } from '@/lib/carta-approval-logic';
 import { generateTasksForLetter } from '@/lib/taskGenerator';
 import { regenerateModifiedTasks } from '@/lib/taskRegenerator';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/carta/review
@@ -124,13 +125,13 @@ export async function POST(req: Request) {
 
     // Si la carta pasa de CAMBIOS_REQUERIDOS a APROBADA, regenerar tareas modificadas
     if (previousStatus === 'CAMBIOS_REQUERIDOS' && newCartaStatus === 'APROBADA') {
-      console.log('🔄 Carta re-aprobada - Regenerando tareas modificadas');
+      logger.debug('🔄 Carta re-aprobada - Regenerando tareas modificadas');
       const regenResult = await regenerateModifiedTasks(cartaId);
       
       if (regenResult.success) {
-        console.log(`✅ Regeneración exitosa: ${regenResult.actionsRegenerated} acciones, ${regenResult.tasksCreated} tareas creadas`);
+        logger.debug(`✅ Regeneración exitosa: ${regenResult.actionsRegenerated} acciones, ${regenResult.tasksCreated} tareas creadas`);
       } else {
-        console.log('⚠️ Error en regeneración, continuando con aprobación');
+        logger.debug('⚠️ Error en regeneración, continuando con aprobación');
       }
     }
 
@@ -151,7 +152,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error) {
-    console.error('Error in carta review:', error);
+    logger.error('Error in carta review:', error);
     return NextResponse.json(
       { error: 'Error al procesar revisión' },
       { status: 500 }

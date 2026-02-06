@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener notificaciones de capitanías y votaciones pendientes
 export async function GET(request: NextRequest) {
@@ -279,7 +280,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error al obtener notificaciones de tribu:', error);
+    logger.error('Error al obtener notificaciones de tribu:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }
@@ -318,7 +319,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: true });
 
   } catch (error) {
-    console.error('Error al marcar notificación:', error);
+    logger.error('Error al marcar notificación:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

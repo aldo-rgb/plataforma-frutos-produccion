@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
+import logger from '@/lib/logger';
 
 // GET - Obtener todos los códigos de regalo de la organización
 export async function GET() {
@@ -88,7 +89,7 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    console.error('Error fetching gift codes:', error);
+    logger.error('Error fetching gift codes:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener códigos de regalo' },
       { status: 500 }
@@ -217,7 +218,7 @@ export async function POST(request: Request) {
       })),
     });
   } catch (error) {
-    console.error('Error creating gift codes:', error);
+    logger.error('Error creating gift codes:', error);
     return NextResponse.json(
       { success: false, error: 'Error al crear códigos de regalo' },
       { status: 500 }
@@ -294,7 +295,7 @@ export async function DELETE(request: Request) {
       message: 'Código cancelado exitosamente',
     });
   } catch (error) {
-    console.error('Error cancelling gift code:', error);
+    logger.error('Error cancelling gift code:', error);
     return NextResponse.json(
       { success: false, error: 'Error al cancelar código' },
       { status: 500 }

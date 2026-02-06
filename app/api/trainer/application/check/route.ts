@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Verificar si el usuario ya tiene una solicitud de entrenador
 export async function GET() {
@@ -41,7 +42,7 @@ export async function GET() {
       isTrainer: usuario?.esEntrenador || usuario?.rol === 'TRAINER',
     });
   } catch (error) {
-    console.error('Error checking trainer application:', error);
+    logger.error('Error checking trainer application:', error);
     return NextResponse.json(
       { error: 'Error al verificar solicitud' },
       { status: 500 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // POST - Canjear código de regalo o pago en efectivo
 export async function POST(request: Request) {
@@ -7,7 +8,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { code, userId, visionId, isCashPayment } = body;
 
-    console.log('[REDEEM] Recibido:', { code, userId, visionId, isCashPayment });
+    logger.debug('[REDEEM] Recibido:', { code, userId, visionId, isCashPayment });
 
     if (!code || !userId) {
       return NextResponse.json(
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
     
     // Si es un código CASH (pago en efectivo), procesarlo diferente
     const isCashCode = isCashPayment || normalizedCode.startsWith('CASH-');
-    console.log('[REDEEM] Es código CASH:', isCashCode, 'Código normalizado:', normalizedCode);
+    logger.debug('[REDEEM] Es código CASH:', isCashCode, 'Código normalizado:', normalizedCode);
     
     if (isCashCode) {
       // Para códigos CASH no necesitamos visionId
@@ -181,7 +182,7 @@ export async function POST(request: Request) {
                 updatedAt: new Date()
               }
             });
-            console.log(`✅ Enrollment ${level} creado para usuario ${user.id} en visión ${visionId}`);
+            logger.debug(`✅ Enrollment ${level} creado para usuario ${user.id} en visión ${visionId}`);
           }
         }
       }
@@ -205,7 +206,7 @@ export async function POST(request: Request) {
       tickets: result,
     });
   } catch (error) {
-    console.error('Error redeeming gift code:', error);
+    logger.error('Error redeeming gift code:', error);
     return NextResponse.json(
       { success: false, error: 'Error al canjear código' },
       { status: 500 }
@@ -216,7 +217,7 @@ export async function POST(request: Request) {
 // Función para canjear códigos de pago en efectivo (PaymentCode)
 async function redeemPaymentCode(code: string, userId: string | number, visionId: string | number) {
   try {
-    console.log('[REDEEM CASH] Buscando código:', code);
+    logger.debug('[REDEEM CASH] Buscando código:', code);
     
     // Buscar el código de pago
     const paymentCode = await prisma.paymentCode.findUnique({
@@ -227,7 +228,7 @@ async function redeemPaymentCode(code: string, userId: string | number, visionId
       },
     });
 
-    console.log('[REDEEM CASH] Código encontrado:', paymentCode ? { id: paymentCode.id, status: paymentCode.status } : null);
+    logger.debug('[REDEEM CASH] Código encontrado:', paymentCode ? { id: paymentCode.id, status: paymentCode.status } : null);
 
     if (!paymentCode) {
       return NextResponse.json(
@@ -281,7 +282,7 @@ async function redeemPaymentCode(code: string, userId: string | number, visionId
     // Transacción para crear todo junto
     const result = await prisma.$transaction(async (tx) => {
       // 1. Actualizar el código como REDEEMED
-      console.log('[REDEEM CASH] Actualizando código a REDEEMED para usuario:', user.id);
+      logger.debug('[REDEEM CASH] Actualizando código a REDEEMED para usuario:', user.id);
       
       await tx.paymentCode.update({
         where: { id: paymentCode.id },
@@ -305,7 +306,7 @@ async function redeemPaymentCode(code: string, userId: string | number, visionId
 
       // 3. Crear ticket si no existe
       if (!existingTicket) {
-        console.log('[REDEEM CASH] Creando ticket BASIC para usuario:', user.id);
+        logger.debug('[REDEEM CASH] Creando ticket BASIC para usuario:', user.id);
         
         ticket = await tx.ticket.create({
           data: {
@@ -359,12 +360,12 @@ async function redeemPaymentCode(code: string, userId: string | number, visionId
         data: { paymentStatus: 'PAID' }
       });
 
-      console.log('[REDEEM CASH] Ticket y pago creados exitosamente');
+      logger.debug('[REDEEM CASH] Ticket y pago creados exitosamente');
 
       return ticket;
     });
 
-    console.log('[REDEEM CASH] Código canjeado y ticket generado:', result?.id);
+    logger.debug('[REDEEM CASH] Código canjeado y ticket generado:', result?.id);
 
     return NextResponse.json({
       success: true,
@@ -382,7 +383,7 @@ async function redeemPaymentCode(code: string, userId: string | number, visionId
       } : null
     });
   } catch (error) {
-    console.error('[REDEEM CASH] Error:', error);
+    logger.error('[REDEEM CASH] Error:', error);
     return NextResponse.json(
       { success: false, error: 'Error al canjear código de pago' },
       { status: 500 }

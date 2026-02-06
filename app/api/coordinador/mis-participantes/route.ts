@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Roles de coordinador permitidos
 const COORDINATOR_ROLES = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
@@ -22,7 +23,7 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
-    console.log('✅ Coordinador:', coordinador.id, coordinador.nombre, 'OrgId:', coordinador.organizationId);
+    logger.debug('✅ Coordinador:', coordinador.id, coordinador.nombre, 'OrgId:', coordinador.organizationId);
 
     // Obtener visiones de la organización del coordinador
     let visionesWhere: any = {};
@@ -33,7 +34,7 @@ export async function GET() {
       visionesWhere.coordinadorId = coordinador.id;
     }
 
-    console.log('🔍 Buscando visiones con:', visionesWhere);
+    logger.debug('🔍 Buscando visiones con:', visionesWhere);
 
     // Obtener visiones
     const visiones = await prisma.vision.findMany({
@@ -41,7 +42,7 @@ export async function GET() {
       select: { id: true, nombre: true }
     });
 
-    console.log('✅ Visiones encontradas:', visiones.length);
+    logger.debug('✅ Visiones encontradas:', visiones.length);
 
     // Para cada visión, obtener participantes desde vision_enrollments
     const visionesConParticipantes = await Promise.all(
@@ -83,7 +84,7 @@ export async function GET() {
           }
         });
 
-        console.log('  -', vision.nombre, ':', enrollments.length, 'enrollments');
+        logger.debug('  -', vision.nombre, ':', enrollments.length, 'enrollments');
 
         // Filtrar y mapear participantes
         const participantes = enrollments
@@ -126,7 +127,7 @@ export async function GET() {
     });
 
   } catch (error: any) {
-    console.error('❌ Error obteniendo participantes:', error);
+    logger.error('❌ Error obteniendo participantes:', error);
     return NextResponse.json(
       { 
         error: 'Error al obtener participantes',

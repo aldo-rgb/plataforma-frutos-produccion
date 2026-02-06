@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -105,7 +106,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('Error asignando Game Changer:', error);
+    logger.error('Error asignando Game Changer:', error);
     return NextResponse.json({ error: 'Error al asignar Game Changer' }, { status: 500 });
   }
 }
@@ -187,7 +188,7 @@ export async function GET(
     return NextResponse.json({ gameChangers: gameChangersWithCount });
 
   } catch (error) {
-    console.error('Error loading game changers:', error);
+    logger.error('Error loading game changers:', error);
     return NextResponse.json({ error: 'Error al cargar Game Changers' }, { status: 500 });
   }
 }
@@ -262,7 +263,7 @@ export async function DELETE(
     });
 
   } catch (error) {
-    console.error('Error removing game changer:', error);
+    logger.error('Error removing game changer:', error);
     return NextResponse.json({ error: 'Error al remover Game Changer' }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -40,7 +41,7 @@ export async function GET() {
 
     return NextResponse.json(preciosFormateados);
   } catch (error) {
-    console.error('Error obteniendo precios institucionales:', error);
+    logger.error('Error obteniendo precios institucionales:', error);
     return NextResponse.json({ error: 'Error al obtener precios' }, { status: 500 });
   } finally {
     await prisma.$disconnect();

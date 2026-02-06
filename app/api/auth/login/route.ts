@@ -1,20 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
+import logger from '@/lib/logger';
+import { loginSchema, validateData, getValidationErrorMessage } from '@/lib/validations';
 
 const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json();
+    // Rate limiting - muy restrictivo para login
+    const { result, response } = rateLimit(request, RateLimitPresets.auth);
+    if (response) {
+      logger.warn('Rate limit exceeded on login');
+      return response;
+    }
 
-    // Validar datos
-    if (!email || !password) {
+    const body = await request.json();
+
+    // Validar datos con Zod
+    const validation = validateData(loginSchema, body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Email y contraseña son requeridos' },
+        { error: getValidationErrorMessage(validation.details) },
         { status: 400 }
       );
     }
+
+    const { email, password } = validation.data;
 
     // Buscar usuario
     const usuario = await prisma.usuario.findUnique({
@@ -80,7 +93,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error en login:', error);
+    logger.error('Error en login', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener coordinadores de la organización
 export async function GET(request: Request) {
@@ -82,7 +83,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error obteniendo coordinadores:', error);
+    logger.error('❌ Error obteniendo coordinadores:', error);
     return NextResponse.json(
       { 
         error: 'Error al obtener coordinadores',
@@ -195,7 +196,7 @@ export async function POST(request: Request) {
       }
     });
 
-    console.log(`✅ Coordinador creado con licencia administrativa: ${adminLicenseCode}`);
+    logger.debug(`✅ Coordinador creado con licencia administrativa: ${adminLicenseCode}`);
 
     return NextResponse.json({
       success: true,
@@ -204,7 +205,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error creando coordinador:', error);
+    logger.error('❌ Error creando coordinador:', error);
     return NextResponse.json(
       { 
         error: 'Error al crear coordinador',

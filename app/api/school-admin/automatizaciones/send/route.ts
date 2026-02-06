@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
 import { sendWhatsAppTextMessage } from '@/lib/whatsapp';
+import logger from '@/lib/logger';
 
 interface SendRequest {
   users: Array<{
@@ -115,14 +116,14 @@ export async function POST(request: NextRequest) {
 
             if (emailResult.success) {
               emailSent = true;
-              console.log(`📧 Email enviado a ${targetUser.email}`);
+              logger.debug(`📧 Email enviado a ${targetUser.email}`);
             } else {
               emailError = emailResult.error || 'Error desconocido';
-              console.warn(`⚠️ Email fallido a ${targetUser.email}:`, emailResult.error);
+              logger.warn(`⚠️ Email fallido a ${targetUser.email}:`, emailResult.error);
             }
           } catch (err: any) {
             emailError = err.message || 'Error de envío';
-            console.error(`❌ Error email a ${targetUser.email}:`, err);
+            logger.error(`❌ Error email a ${targetUser.email}:`, err);
           }
 
           // Guardar log de email
@@ -152,14 +153,14 @@ export async function POST(request: NextRequest) {
 
             if (whatsappResult.success) {
               whatsappSent = true;
-              console.log(`📱 WhatsApp enviado a ${targetUser.telefono}`);
+              logger.debug(`📱 WhatsApp enviado a ${targetUser.telefono}`);
             } else {
               whatsappError = whatsappResult.error || 'Error desconocido';
-              console.warn(`⚠️ WhatsApp fallido a ${targetUser.telefono}:`, whatsappResult.error);
+              logger.warn(`⚠️ WhatsApp fallido a ${targetUser.telefono}:`, whatsappResult.error);
             }
           } catch (err: any) {
             whatsappError = err.message || 'Error de envío';
-            console.error(`❌ Error WhatsApp a ${targetUser.telefono}:`, err);
+            logger.error(`❌ Error WhatsApp a ${targetUser.telefono}:`, err);
           }
 
           // Guardar log de WhatsApp
@@ -182,14 +183,14 @@ export async function POST(request: NextRequest) {
         // Contar como enviado si al menos un método funcionó
         if (emailSent || whatsappSent) {
           sent++;
-          console.log(`✅ Mensaje enviado a ${targetUser.nombre} - Email: ${emailSent}, WhatsApp: ${whatsappSent}`);
+          logger.debug(`✅ Mensaje enviado a ${targetUser.nombre} - Email: ${emailSent}, WhatsApp: ${whatsappSent}`);
         } else {
           failed++;
           errors.push(`No se pudo contactar a ${targetUser.nombre}`);
         }
 
       } catch (userError) {
-        console.error(`Error procesando usuario ${targetUser.id}:`, userError);
+        logger.error(`Error procesando usuario ${targetUser.id}:`, userError);
         failed++;
         errors.push(`Error con ${targetUser.nombre}`);
       }
@@ -204,7 +205,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error sending messages:', error);
+    logger.error('Error sending messages:', error);
     return NextResponse.json(
       { success: false, error: 'Error interno del servidor' },
       { status: 500 }

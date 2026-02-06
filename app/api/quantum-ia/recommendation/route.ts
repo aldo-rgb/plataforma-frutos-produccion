@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/quantum-ia/recommendation
@@ -134,7 +135,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('❌ Error generando recomendación de IA:', error);
+    logger.error('❌ Error generando recomendación de IA:', error);
     return NextResponse.json(
       { 
         message: 'Habla conmigo para obtener recomendaciones personalizadas 💬',

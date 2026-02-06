@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/admin/gamechangers/performance
@@ -25,7 +26,7 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
-    console.log('📊 Cargando rendimiento de game changers...');
+    logger.debug('📊 Cargando rendimiento de game changers...');
 
     // Obtener todos los game changers activos
     const gameChangers = await prisma.usuario.findMany({
@@ -93,7 +94,7 @@ export async function GET() {
       return porcentajeB - porcentajeA;
     });
 
-    console.log(`✅ ${gameChangersConMetricas.length} game changers cargados con métricas`);
+    logger.debug(`✅ ${gameChangersConMetricas.length} game changers cargados con métricas`);
 
     return NextResponse.json({
       success: true,
@@ -101,7 +102,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('❌ Error obteniendo rendimiento de game changers:', error);
+    logger.error('❌ Error obteniendo rendimiento de game changers:', error);
     return NextResponse.json(
       { 
         error: 'Error obteniendo rendimiento de game changers',

@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
+import logger from '@/lib/logger';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16'
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
     } catch (err: any) {
-      console.error('Webhook signature verification failed:', err.message);
+      logger.error('Webhook signature verification failed:', err.message);
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
@@ -144,13 +145,13 @@ export async function POST(request: NextRequest) {
         `
       );
 
-      console.log(`✅ Donation ${donationId} completed: ${amountFormatted}`);
+      logger.debug(`✅ Donation ${donationId} completed: ${amountFormatted}`);
     }
 
     return NextResponse.json({ received: true });
 
   } catch (error) {
-    console.error('Webhook error:', error);
+    logger.error('Webhook error:', error);
     return NextResponse.json(
       { error: 'Webhook handler failed' },
       { status: 500 }

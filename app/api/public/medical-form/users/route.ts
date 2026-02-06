@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 
 // API pública para buscar usuarios inscritos a una visión (para registro de formulario médico)
 export async function GET(req: NextRequest) {
   try {
+    // Rate limiting estricto - expone emails
+    const { response } = rateLimit(req, RateLimitPresets.auth);
+    if (response) {
+      logger.warn('Rate limit exceeded on public/medical-form/users');
+      return response;
+    }
+
     const { searchParams } = new URL(req.url);
     const visionId = searchParams.get('visionId');
     const search = searchParams.get('search') || '';
@@ -46,7 +55,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ users });
   } catch (error) {
-    console.error('Error fetching users for medical form:', error);
+    logger.error('Error fetching users for medical form:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

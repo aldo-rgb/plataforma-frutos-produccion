@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -117,7 +118,7 @@ export async function GET(
       mentor: mentorFormateado,
     });
   } catch (error) {
-    console.error('Error al obtener mentor:', error);
+    logger.error('Error al obtener mentor:', error);
     return NextResponse.json(
       { error: 'Error al obtener mentor' },
       { status: 500 }

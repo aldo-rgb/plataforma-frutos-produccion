@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener datos del expositor para la página de votación
 export async function GET(
@@ -59,7 +60,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('Error fetching exhibitor:', error);
+    logger.error('Error fetching exhibitor:', error);
     return NextResponse.json({ 
       error: 'Error al obtener datos del expositor' 
     }, { status: 500 });

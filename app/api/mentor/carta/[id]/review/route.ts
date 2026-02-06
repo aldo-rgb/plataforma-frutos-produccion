@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { generateTasksForLetter } from '@/lib/taskGenerator';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/mentor/carta/[id]/review
@@ -41,10 +42,10 @@ export async function POST(
     const body = await request.json();
     const { metasReview } = body;
 
-    console.log('📝 Revisión recibida:', { cartaId, mentorId, metasCount: metasReview?.length });
+    logger.debug('📝 Revisión recibida:', { cartaId, mentorId, metasCount: metasReview?.length });
 
     if (!metasReview || !Array.isArray(metasReview)) {
-      console.error('❌ Datos de revisión inválidos:', { metasReview });
+      logger.error('❌ Datos de revisión inválidos:', { metasReview });
       return NextResponse.json({ error: 'Datos de revisión inválidos' }, { status: 400 });
     }
 
@@ -78,7 +79,7 @@ export async function POST(
       return NextResponse.json({ error: 'Esta carta no está asignada a ti' }, { status: 403 });
     }
 
-    console.log('✅ Validaciones OK, procesando revisión...', { 
+    logger.debug('✅ Validaciones OK, procesando revisión...', { 
       cartaId, 
       usuarioId: usuario.id, 
       metasCount: metasReview.length 
@@ -97,7 +98,7 @@ export async function POST(
 
     await Promise.all(updatePromises);
 
-    console.log('✅ Metas actualizadas correctamente');
+    logger.debug('✅ Metas actualizadas correctamente');
 
     // Determinar el nuevo estado de la carta
     const allApproved = metasReview.every((r: any) => r.status === 'APPROVED');
@@ -120,28 +121,28 @@ export async function POST(
       }
     });
 
-    console.log('✅ Estado de carta actualizado:', { newEstado, allApproved });
+    logger.debug('✅ Estado de carta actualizado:', { newEstado, allApproved });
 
     // 🚀 GENERAR TAREAS SI LA CARTA ES APROBADA
     if (allApproved) {
       try {
-        console.log(`🚀 Carta #${cartaId} aprobada - Generando tareas automáticamente...`);
+        logger.debug(`🚀 Carta #${cartaId} aprobada - Generando tareas automáticamente...`);
         const taskResult = await generateTasksForLetter(cartaId);
         
         if (taskResult.success) {
-          console.log(`✅ ${taskResult.tasksCreated} tareas generadas exitosamente para Usuario #${usuario.id}`);
-          console.log(`📅 Ciclo: ${taskResult.cycleStart} → ${taskResult.cycleEnd}`);
+          logger.debug(`✅ ${taskResult.tasksCreated} tareas generadas exitosamente para Usuario #${usuario.id}`);
+          logger.debug(`📅 Ciclo: ${taskResult.cycleStart} → ${taskResult.cycleEnd}`);
         } else {
-          console.error(`❌ Error generando tareas:`, taskResult.errors);
+          logger.error(`❌ Error generando tareas:`, taskResult.errors);
           // No fallar la revisión si falla la generación de tareas
         }
       } catch (error) {
-        console.error('❌ Error generando tareas:', error);
+        logger.error('❌ Error generando tareas:', error);
         // No fallar la revisión si falla la generación de tareas
       }
     }
 
-    console.log('✅ Revisión completada exitosamente');
+    logger.debug('✅ Revisión completada exitosamente');
 
     return NextResponse.json({
       success: true,
@@ -155,7 +156,7 @@ export async function POST(
     });
 
   } catch (error: any) {
-    console.error('❌ Error guardando revisión:', error);
+    logger.error('❌ Error guardando revisión:', error);
     return NextResponse.json(
       { error: 'Error al guardar revisión', details: error.message },
       { status: 500 }

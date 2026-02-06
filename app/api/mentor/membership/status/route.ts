@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/mentor/membership/status
@@ -72,7 +73,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('Error fetching membership status:', error);
+    logger.error('Error fetching membership status:', error);
     return NextResponse.json(
       { error: 'Error al obtener estado de membresía' },
       { status: 500 }

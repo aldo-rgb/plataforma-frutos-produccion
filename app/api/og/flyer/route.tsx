@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export const runtime = 'nodejs';
 
@@ -131,7 +132,7 @@ export async function GET(request: NextRequest) {
       }
     }
   } catch (e) {
-    console.error('DB Error:', e);
+    logger.error('DB Error:', e);
   }
 
   // Formato horizontal como el ejemplo (1200x630)

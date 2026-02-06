@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET(req: NextRequest) {
   try {
@@ -70,7 +71,7 @@ export async function GET(req: NextRequest) {
       visiones,
     });
   } catch (error) {
-    console.error('Error fetching visiones:', error);
+    logger.error('Error fetching visiones:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener las visiones' },
       { status: 500 }

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { addDays } from 'date-fns';
+import logger from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
@@ -95,7 +96,7 @@ export async function POST(req: NextRequest) {
       });
 
       // También podrías enviar un email o notificación push aquí
-      console.log(`🔔 Alerta enviada al mentor ${mentorName} sobre ${task.Usuario.nombre}`);
+      logger.debug(`🔔 Alerta enviada al mentor ${mentorName} sobre ${task.Usuario.nombre}`);
     }
 
     // Mensaje de respuesta personalizado
@@ -123,7 +124,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error postponing task:', error);
+    logger.error('Error postponing task:', error);
     return NextResponse.json(
       { error: 'Error al posponer la tarea' },
       { status: 500 }
@@ -183,7 +184,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching alerts:', error);
+    logger.error('Error fetching alerts:', error);
     return NextResponse.json(
       { error: 'Error al obtener alertas' },
       { status: 500 }
@@ -243,7 +244,7 @@ export async function PATCH(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error updating alert:', error);
+    logger.error('Error updating alert:', error);
     return NextResponse.json(
       { error: 'Error al actualizar alerta' },
       { status: 500 }

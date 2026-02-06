@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { PrismaClient, MicroTaskType } from '@prisma/client';
 import { sendPhoenixSOSNotifications } from '@/lib/notifications';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -188,7 +189,7 @@ export async function POST(req: NextRequest) {
         }
       });
     } catch (notificationError) {
-      console.error('Error sending SOS notifications:', notificationError);
+      logger.error('Error sending SOS notifications:', notificationError);
       // No bloqueamos la activación del protocolo si fallan las notificaciones
     }
 
@@ -245,7 +246,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error activating Phoenix Protocol:', error);
+    logger.error('Error activating Phoenix Protocol:', error);
     return NextResponse.json(
       { error: 'Error al activar Protocolo Fénix' },
       { status: 500 }

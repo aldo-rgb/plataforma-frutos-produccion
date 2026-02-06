@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { verify } from 'jsonwebtoken';
+import logger from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -110,7 +111,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log(`✅ Contraseña actualizada para usuario: ${updatedUser.email}`);
+    logger.debug(`✅ Contraseña actualizada para usuario: ${updatedUser.email}`);
 
     // Después de cambiar contraseña, siempre ir a completar perfil
     let redirectTo = '/dashboard/perfil-completo?onboarding=true';
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
     return response;
 
   } catch (error) {
-    console.error('Error al cambiar contraseña:', error);
+    logger.error('Error al cambiar contraseña:', error);
     return NextResponse.json({ success: false, error: 'Error interno del servidor' }, { status: 500 });
   }
 }

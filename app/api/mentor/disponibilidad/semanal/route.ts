@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Roles que pueden configurar disponibilidad
 const ROLES_PERMITIDOS = ['MENTOR', 'LIDER', 'COORDINADOR', 'GAMECHANGER', 'TRAINER', 'SCHOOL_ADMIN', 'ADMINISTRADOR'];
@@ -32,7 +33,7 @@ async function obtenerOCrearPerfilMentor(usuarioId: number): Promise<{ id: numbe
   }
 
   // Crear perfil mínimo para el usuario
-  console.log(`📝 Creando PerfilMentor automático para ${usuario.nombre} (${usuario.rol})`);
+  logger.debug(`📝 Creando PerfilMentor automático para ${usuario.nombre} (${usuario.rol})`);
   perfilMentor = await prisma.perfilMentor.create({
     data: {
       usuarioId,
@@ -83,7 +84,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('❌ Error al obtener disponibilidad:', error);
+    logger.error('❌ Error al obtener disponibilidad:', error);
     return NextResponse.json({ 
       error: 'Error interno del servidor' 
     }, { status: 500 });
@@ -103,11 +104,11 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    console.log('📥 Body recibido:', JSON.stringify(body, null, 2));
+    logger.debug('📥 Body recibido:', JSON.stringify(body, null, 2));
     
     // Nuevo formato: { dia: number, bloques: [{horaInicio, horaFin}] }
     if (body.dia !== undefined && body.bloques !== undefined) {
-      console.log('✅ Usando formato de actualización completa del día');
+      logger.debug('✅ Usando formato de actualización completa del día');
       return await actualizarDiaCompleto(session, body);
     }
     
@@ -186,7 +187,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ Error al crear disponibilidad:', error);
+    logger.error('❌ Error al crear disponibilidad:', error);
     return NextResponse.json({ 
       error: 'Error interno del servidor' 
     }, { status: 500 });
@@ -199,18 +200,18 @@ export async function POST(request: Request) {
 async function actualizarDiaCompleto(session: any, body: { dia: number; bloques: Array<{horaInicio: string, horaFin: string}> }) {
   try {
     const { dia, bloques } = body;
-    console.log(`🔄 Actualizando día ${dia} con ${bloques.length} bloques`);
+    logger.debug(`🔄 Actualizando día ${dia} con ${bloques.length} bloques`);
     
     const perfilMentor = await obtenerOCrearPerfilMentor(session.user.id);
 
     if (!perfilMentor) {
-      console.error('❌ No se pudo obtener o crear perfil de mentor');
+      logger.error('❌ No se pudo obtener o crear perfil de mentor');
       return NextResponse.json({ 
         error: 'No tienes permiso para configurar disponibilidad' 
       }, { status: 403 });
     }
 
-    console.log(`🗑️ Eliminando bloques existentes para día ${dia}...`);
+    logger.debug(`🗑️ Eliminando bloques existentes para día ${dia}...`);
     // Eliminar todos los bloques existentes para ese día
     await prisma.disponibilidadSemanal.deleteMany({
       where: {
@@ -221,7 +222,7 @@ async function actualizarDiaCompleto(session: any, body: { dia: number; bloques:
 
     // Crear los nuevos bloques
     if (bloques.length > 0) {
-      console.log(`➕ Creando ${bloques.length} nuevos bloques...`);
+      logger.debug(`➕ Creando ${bloques.length} nuevos bloques...`);
       await prisma.disponibilidadSemanal.createMany({
         data: bloques.map(bloque => ({
           perfilMentorId: perfilMentor.id,
@@ -245,13 +246,13 @@ async function actualizarDiaCompleto(session: any, body: { dia: number; bloques:
       }
     });
 
-    console.log(`✅ Día actualizado exitosamente. Bloques actuales: ${disponibilidadActualizada.length}`);
+    logger.debug(`✅ Día actualizado exitosamente. Bloques actuales: ${disponibilidadActualizada.length}`);
     return NextResponse.json({ 
       success: true, 
       disponibilidad: disponibilidadActualizada 
     });
   } catch (error) {
-    console.error('❌ Error en actualizarDiaCompleto:', error);
+    logger.error('❌ Error en actualizarDiaCompleto:', error);
     throw error;
   }
 }
@@ -349,7 +350,7 @@ export async function DELETE(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ Error al eliminar disponibilidad:', error);
+    logger.error('❌ Error al eliminar disponibilidad:', error);
     return NextResponse.json({ 
       error: 'Error interno del servidor' 
     }, { status: 500 });

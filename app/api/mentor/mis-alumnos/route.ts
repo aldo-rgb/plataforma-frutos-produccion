@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * 📊 API: Obtener alumnos asignados al mentor con métricas
@@ -125,7 +126,7 @@ export async function GET() {
       };
     });
 
-    console.log(`📊 Mentor ${session.user.name || session.user.email} consultó ${alumnosConMetricas.length} alumnos`);
+    logger.debug(`📊 Mentor ${session.user.name || session.user.email} consultó ${alumnosConMetricas.length} alumnos`);
 
     return NextResponse.json({
       success: true,
@@ -139,7 +140,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('❌ Error al obtener alumnos del mentor:', error);
+    logger.error('❌ Error al obtener alumnos del mentor:', error);
     return NextResponse.json({ 
       error: 'Error al cargar alumnos',
       details: error instanceof Error ? error.message : 'Unknown error'

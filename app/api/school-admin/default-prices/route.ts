@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET: Obtener precios predeterminados
 export async function GET(request: NextRequest) {
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, prices });
   } catch (error) {
-    console.error('Error fetching default prices:', error);
+    logger.error('Error fetching default prices:', error);
     return NextResponse.json(
       { success: false, error: 'Error al cargar precios predeterminados' },
       { status: 500 }
@@ -68,8 +69,8 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { levelType, basePrice, promoPrice, promoDeadline, currency } = body;
 
-    console.log('📥 Received data:', { levelType, basePrice, promoPrice, promoDeadline, currency });
-    console.log('📥 Data types:', { 
+    logger.debug('📥 Received data:', { levelType, basePrice, promoPrice, promoDeadline, currency });
+    logger.debug('📥 Data types:', { 
       levelType: typeof levelType, 
       basePrice: typeof basePrice,
       promoPrice: typeof promoPrice,
@@ -95,7 +96,7 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    console.log('💾 Saving price:', { levelType, basePrice: basePriceNum, promoPrice: promoPriceNum, promoDeadline, currency });
+    logger.debug('💾 Saving price:', { levelType, basePrice: basePriceNum, promoPrice: promoPriceNum, promoDeadline, currency });
 
     // Primero buscar si existe el precio
     const existingPrice = await prisma.defaultPrice.findFirst({
@@ -117,7 +118,7 @@ export async function PUT(request: NextRequest) {
           currency: currency || 'MXN',
         },
       });
-      console.log('✅ Price updated:', price);
+      logger.debug('✅ Price updated:', price);
     } else {
       // Crear nuevo
       price = await prisma.defaultPrice.create({
@@ -130,13 +131,13 @@ export async function PUT(request: NextRequest) {
           currency: currency || 'MXN',
         },
       });
-      console.log('✅ Price created:', price);
+      logger.debug('✅ Price created:', price);
     }
 
     return NextResponse.json({ success: true, price });
   } catch (error) {
-    console.error('❌ Error updating default price:', error);
-    console.error('Error details:', JSON.stringify(error, null, 2));
+    logger.error('❌ Error updating default price:', error);
+    logger.error('Error details:', JSON.stringify(error, null, 2));
     return NextResponse.json(
       { success: false, error: 'Error al actualizar precio predeterminado', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

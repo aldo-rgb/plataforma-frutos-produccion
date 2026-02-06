@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 const ALLOWED_ROLES = ['SCHOOL_ADMIN', 'COORDINADOR', 'GAMECHANGER', 'TRAINER', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
 
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { visionId, productId, name, level = 'BASIC', maxSize = 10 } = body;
 
-    console.log('📦 Creating squad request:', { visionId, level, userId: user.id, orgId: user.organizationId });
+    logger.debug('📦 Creating squad request:', { visionId, level, userId: user.id, orgId: user.organizationId });
 
     if (!visionId) {
       return NextResponse.json(
@@ -161,8 +162,8 @@ export async function POST(request: Request) {
       },
     });
   } catch (error: any) {
-    console.error('Error creating squad:', error);
-    console.error('Error details:', error?.message, error?.code);
+    logger.error('Error creating squad:', error);
+    logger.error('Error details:', error?.message, error?.code);
     
     // Devolver mensaje más específico
     let errorMessage = 'Error al crear Átomo';
@@ -364,7 +365,7 @@ export async function GET(request: Request) {
       total: squads.length,
     });
   } catch (error) {
-    console.error('Error fetching squads:', error);
+    logger.error('Error fetching squads:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener Átomos' },
       { status: 500 }

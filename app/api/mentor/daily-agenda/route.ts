@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic'; // No cachear
 
@@ -74,7 +75,7 @@ export async function GET(request: Request) {
     return NextResponse.json(agenda);
 
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return NextResponse.json({ error: 'Error cargando agenda' }, { status: 500 });
   }
 }
@@ -153,7 +154,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true });
 
   } catch (error) {
-    console.error("Error saving attendance:", error);
+    logger.error("Error saving attendance:", error);
     return NextResponse.json({ error: 'Error al guardar' }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -103,7 +104,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ usuarios });
 
   } catch (error) {
-    console.error('Error al obtener usuarios:', error);
+    logger.error('Error al obtener usuarios:', error);
     return NextResponse.json(
       { error: 'Error al obtener usuarios' },
       { status: 500 }
@@ -157,7 +158,7 @@ export async function PUT(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error al actualizar contraseña:', error);
+    logger.error('Error al actualizar contraseña:', error);
     return NextResponse.json(
       { error: 'Error al actualizar contraseña' },
       { status: 500 }

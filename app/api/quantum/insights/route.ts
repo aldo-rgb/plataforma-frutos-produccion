@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getActiveInsights } from '@/lib/quantum-engine';
+import logger from '@/lib/logger';
 
 export async function GET(req: NextRequest) {
   try {
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error('[QUANTUM API] Error:', error);
+    logger.error('[QUANTUM API] Error:', error);
     return NextResponse.json({ error: 'Error al obtener insights' }, { status: 500 });
   }
 }

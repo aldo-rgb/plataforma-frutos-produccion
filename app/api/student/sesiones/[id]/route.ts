@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * DELETE /api/student/sesiones/[id]
@@ -81,7 +82,7 @@ export async function DELETE(
       where: { id: sesionId }
     });
 
-    console.log(`✅ Sesión ${sesionId} cancelada por estudiante ${session.user.id}`);
+    logger.debug(`✅ Sesión ${sesionId} cancelada por estudiante ${session.user.id}`);
 
     return NextResponse.json({ 
       success: true, 
@@ -89,7 +90,7 @@ export async function DELETE(
     });
 
   } catch (error) {
-    console.error('❌ Error al cancelar sesión:', error);
+    logger.error('❌ Error al cancelar sesión:', error);
     return NextResponse.json({ 
       error: 'Error interno del servidor' 
     }, { status: 500 });

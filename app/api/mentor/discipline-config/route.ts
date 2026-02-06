@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
 
 // GET: Obtener configuración de disciplina del mentor
 export async function GET(request: Request) {
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
     return NextResponse.json(config);
 
   } catch (error) {
-    console.error('Error al obtener configuración de disciplina:', error);
+    logger.error('Error al obtener configuración de disciplina:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }
@@ -106,7 +107,7 @@ export async function POST(request: Request) {
       }
     });
 
-    console.log(`✅ Configuración de disciplina guardada para mentor ${mentorId}:`, config);
+    logger.debug(`✅ Configuración de disciplina guardada para mentor ${mentorId}:`, config);
 
     return NextResponse.json({ 
       success: true,
@@ -115,7 +116,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Error al guardar configuración de disciplina:', error);
+    logger.error('Error al guardar configuración de disciplina:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }
@@ -135,7 +136,7 @@ export async function DELETE(request: Request) {
       where: { mentorId }
     });
 
-    console.log(`🗑️ Configuración de disciplina eliminada para mentor ${mentorId}`);
+    logger.debug(`🗑️ Configuración de disciplina eliminada para mentor ${mentorId}`);
 
     return NextResponse.json({ 
       success: true,
@@ -149,7 +150,7 @@ export async function DELETE(request: Request) {
       }, { status: 404 });
     }
     
-    console.error('Error al eliminar configuración de disciplina:', error);
+    logger.error('Error al eliminar configuración de disciplina:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
   }
 }

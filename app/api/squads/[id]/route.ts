@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 const ALLOWED_ROLES = ['SCHOOL_ADMIN', 'COORDINADOR', 'GAMECHANGER', 'STAFF', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
 
@@ -106,7 +107,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Error fetching squad:', error);
+    logger.error('Error fetching squad:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener escuadrón' },
       { status: 500 }
@@ -162,7 +163,7 @@ export async function PATCH(
     const isLeader = squad.leaderId === user.id;
     const isAdmin = ['SCHOOL_ADMIN', 'COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'ADMINISTRADOR', 'SUPER_ADMIN'].includes(user.rol);
     
-    console.log('🔧 PATCH Squad - Permisos:', {
+    logger.debug('🔧 PATCH Squad - Permisos:', {
       squadId: id,
       squadLeaderId: squad.leaderId,
       userId: user.id,
@@ -198,7 +199,7 @@ export async function PATCH(
       squad: updatedSquad,
     });
   } catch (error) {
-    console.error('Error updating squad:', error);
+    logger.error('Error updating squad:', error);
     return NextResponse.json(
       { success: false, error: 'Error al actualizar escuadrón' },
       { status: 500 }
@@ -261,7 +262,7 @@ export async function DELETE(
       message: 'Escuadrón eliminado',
     });
   } catch (error) {
-    console.error('Error deleting squad:', error);
+    logger.error('Error deleting squad:', error);
     return NextResponse.json(
       { success: false, error: 'Error al eliminar escuadrón' },
       { status: 500 }

@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { generateMagicLinkToken, sendVisionMagicLinkMessage } from '@/lib/whatsapp';
 import { sendVisionMagicLinkEmail } from '@/lib/email';
+import logger from '@/lib/logger';
 
 const DEFAULT_PASSWORD = 'Quantum123';
 
@@ -94,9 +95,9 @@ export async function POST(
             notes: 'Licencia STANDARD automática - Participante por email - Pendiente'
           }
         });
-        console.log(`🎫 Licencia pendiente asignada a ${user.email}: ${licenseCode}`);
+        logger.debug(`🎫 Licencia pendiente asignada a ${user.email}: ${licenseCode}`);
       } catch (error) {
-        console.error('Error asignando licencia automática:', error);
+        logger.error('Error asignando licencia automática:', error);
       }
       
       // Enviar WhatsApp con Magic Link si tiene teléfono
@@ -113,9 +114,9 @@ export async function POST(
             visionData?.nombre || 'Quantum',
             magicToken
           );
-          console.log(`📱 Magic Link enviado a ${user.nombre} (${user.telefono})`);
+          logger.debug(`📱 Magic Link enviado a ${user.nombre} (${user.telefono})`);
         } catch (error) {
-          console.warn('⚠️ No se pudo enviar WhatsApp:', error);
+          logger.warn('⚠️ No se pudo enviar WhatsApp:', error);
         }
       }
 
@@ -132,9 +133,9 @@ export async function POST(
           visionData?.nombre || 'Quantum',
           magicToken
         );
-        console.log(`📧 Magic Link email enviado a ${user.nombre} (${user.email})`);
+        logger.debug(`📧 Magic Link email enviado a ${user.nombre} (${user.email})`);
       } catch (error) {
-        console.warn('⚠️ No se pudo enviar email:', error);
+        logger.warn('⚠️ No se pudo enviar email:', error);
       }
     }
     // Marcar usuarios de OTRA organización como cambio pendiente
@@ -200,9 +201,9 @@ export async function POST(
                 expiresAt: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
               }
             });
-            console.log(`🎫 Licencia pendiente asignada a usuario existente ${user.email}`);
+            logger.debug(`🎫 Licencia pendiente asignada a usuario existente ${user.email}`);
           } catch (error) {
-            console.error('Error asignando licencia a usuario existente:', error);
+            logger.error('Error asignando licencia a usuario existente:', error);
           }
         }
 
@@ -259,7 +260,7 @@ export async function POST(
       total: results.length
     });
   } catch (error) {
-    console.error('Error alta masiva participantes:', error);
+    logger.error('Error alta masiva participantes:', error);
     return NextResponse.json({ success: false, error: 'Error al agregar participantes' }, { status: 500 });
   }
 }

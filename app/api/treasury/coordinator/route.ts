@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 const ALLOWED_ROLES = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER'];
 
@@ -180,7 +181,7 @@ export async function GET() {
     });
 
   } catch (error: any) {
-    console.error('Error fetching coordinator treasury:', error);
+    logger.error('Error fetching coordinator treasury:', error);
     return NextResponse.json(
       { error: error?.message || 'Error al obtener tesorería' },
       { status: 500 }

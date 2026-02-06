@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener mi perfil de negocio
 export async function GET() {
@@ -53,7 +54,7 @@ export async function GET() {
       hasProfile: !!profile 
     });
   } catch (error) {
-    console.error('Error fetching my profile:', error);
+    logger.error('Error fetching my profile:', error);
     return NextResponse.json({ error: 'Error al obtener perfil' }, { status: 500 });
   }
 }
@@ -217,7 +218,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ profile }, { status: 201 });
   } catch (error) {
-    console.error('Error creating profile:', error);
+    logger.error('Error creating profile:', error);
     return NextResponse.json({ error: 'Error al crear perfil' }, { status: 500 });
   }
 }
@@ -305,7 +306,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ profile });
   } catch (error) {
-    console.error('Error updating profile:', error);
+    logger.error('Error updating profile:', error);
     return NextResponse.json({ error: 'Error al actualizar perfil' }, { status: 500 });
   }
 }

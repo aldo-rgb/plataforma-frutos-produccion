@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Forzar que esta ruta sea dinámica (sin caché)
 export const dynamic = 'force-dynamic';
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
     
     return response;
   } catch (error) {
-    console.error('Error fetching payment gateway config:', error);
+    logger.error('Error fetching payment gateway config:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
     const { provider, publicKey, secretKey, webhookSecret, isActive } = body;
 
     // Log detallado para debug
-    console.log('🔵 [payment-gateway] POST body recibido:', JSON.stringify({
+    logger.debug('🔵 [payment-gateway] POST body recibido:', JSON.stringify({
       provider: provider || 'undefined',
       publicKeyLen: publicKey?.length || 0,
       secretKeyLen: secretKey?.length || 0,
@@ -150,9 +151,9 @@ export async function POST(request: NextRequest) {
       // Solo actualizar secretKey si no está enmascarada (contiene asteriscos)
       if (secretKey && !secretKey.includes('*')) {
         updateData.secretKey = secretKey;
-        console.log('🟢 [payment-gateway] Actualizando secretKey (nueva credencial)');
+        logger.debug('🟢 [payment-gateway] Actualizando secretKey (nueva credencial)');
       } else {
-        console.log('🟡 [payment-gateway] Manteniendo secretKey existente (valor enmascarado)');
+        logger.debug('🟡 [payment-gateway] Manteniendo secretKey existente (valor enmascarado)');
       }
 
       // Solo actualizar webhookSecret si no está enmascarado
@@ -160,14 +161,14 @@ export async function POST(request: NextRequest) {
         updateData.webhookSecret = webhookSecret;
       }
 
-      console.log('🔵 [payment-gateway] updateData keys:', Object.keys(updateData));
+      logger.debug('🔵 [payment-gateway] updateData keys:', Object.keys(updateData));
 
       config = await prisma.paymentGatewayConfig.update({
         where: { id: existingConfig.id },
         data: updateData,
       });
       
-      console.log('🟢 [payment-gateway] Config actualizada, id:', config.id);
+      logger.debug('🟢 [payment-gateway] Config actualizada, id:', config.id);
     } else {
       // Crear nueva configuración
       config = await prisma.paymentGatewayConfig.create({
@@ -195,7 +196,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error saving payment gateway config:', error);
+    logger.error('Error saving payment gateway config:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
@@ -243,7 +244,7 @@ export async function DELETE(request: NextRequest) {
       message: 'Configuración eliminada',
     });
   } catch (error) {
-    console.error('Error deleting payment gateway config:', error);
+    logger.error('Error deleting payment gateway config:', error);
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }

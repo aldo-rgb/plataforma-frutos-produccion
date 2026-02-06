@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/carta/my-carta
@@ -88,7 +89,7 @@ export async function GET(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('Error getting carta:', error);
+    logger.error('Error getting carta:', error);
     return NextResponse.json(
       { error: 'Error al obtener la carta', details: error.message },
       { status: 500 }
@@ -169,7 +170,7 @@ export async function PUT(req: Request) {
     return NextResponse.json({ carta: updatedCarta });
 
   } catch (error: any) {
-    console.error('Error updating carta:', error);
+    logger.error('Error updating carta:', error);
     return NextResponse.json(
       { error: 'Error al actualizar la carta', details: error.message },
       { status: 500 }

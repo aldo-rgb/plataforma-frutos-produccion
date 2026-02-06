@@ -1,6 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import logger from '@/lib/logger';
+import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 
 // OpenAI se inicializa solo si hay API key
 let openai: any = null;
@@ -17,8 +19,15 @@ interface MisionGenerada {
   vibe: string;
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    // Rate limiting
+    const { response } = rateLimit(req, RateLimitPresets.ai);
+    if (response) {
+      logger.warn('Rate limit exceeded on quantum/generar-misiones');
+      return response;
+    }
+
     if (!openai) {
       return NextResponse.json({ error: 'Servicio de IA no configurado' }, { status: 503 });
     }
@@ -67,7 +76,7 @@ Responde ÚNICAMENTE con un JSON array válido (sin markdown, sin explicaciones)
   }
 ]`;
 
-    console.log('🧠 Generando misiones con QUANTUM...');
+    logger.debug('🧠 Generando misiones con QUANTUM...');
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
@@ -86,7 +95,7 @@ Responde ÚNICAMENTE con un JSON array válido (sin markdown, sin explicaciones)
     });
 
     const responseText = completion.choices[0]?.message?.content || '[]';
-    console.log('📝 Respuesta de OpenAI:', responseText);
+    logger.debug('📝 Respuesta de OpenAI:', responseText);
 
     // Limpiar la respuesta (remover markdown si existe)
     let cleanedResponse = responseText.trim();
@@ -110,7 +119,7 @@ Responde ÚNICAMENTE con un JSON array válido (sin markdown, sin explicaciones)
       }
     });
 
-    console.log('✅ Misiones generadas exitosamente:', misiones.length);
+    logger.debug('✅ Misiones generadas exitosamente:', misiones.length);
 
     return NextResponse.json({ 
       misiones,
@@ -119,7 +128,7 @@ Responde ÚNICAMENTE con un JSON array válido (sin markdown, sin explicaciones)
     });
 
   } catch (error: any) {
-    console.error('❌ Error generando misiones:', error);
+    logger.error('❌ Error generando misiones:', error);
     
     // Fallback: Misiones predefinidas
     const fallbackMisiones = {

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import logger from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error en POST /api/configuracion/upload:', error);
+    logger.error('❌ Error en POST /api/configuracion/upload:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Error al subir archivo' },
       { status: 500 }

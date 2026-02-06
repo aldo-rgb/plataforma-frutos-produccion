@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import logger from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -168,7 +169,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error processing payment:', error);
+    logger.error('Error processing payment:', error);
     return NextResponse.json(
       { success: false, error: 'Error al procesar el pago' },
       { status: 500 }
@@ -217,10 +218,10 @@ async function sendCoordinadorWelcomeEmail(email: string, tempPassword: string, 
     });
 
     if (!response.ok) {
-      console.error('Error sending coordinator email');
+      logger.error('Error sending coordinator email');
     }
   } catch (error) {
-    console.error('Error sending email:', error);
+    logger.error('Error sending email:', error);
   }
 }
 
@@ -243,9 +244,9 @@ async function sendDirectorConfirmationEmail(email: string, organizationName: st
     });
 
     if (!response.ok) {
-      console.error('Error sending director email');
+      logger.error('Error sending director email');
     }
   } catch (error) {
-    console.error('Error sending email:', error);
+    logger.error('Error sending email:', error);
   }
 }

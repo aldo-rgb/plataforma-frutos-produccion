@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
+import logger from '@/lib/logger';
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     })
 
   } catch (error) {
-    console.error("Error al obtener plantilla:", error)
+    logger.error("Error al obtener plantilla:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }
@@ -147,7 +148,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     })
 
   } catch (error) {
-    console.error("Error al actualizar plantilla:", error)
+    logger.error("Error al actualizar plantilla:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }
@@ -185,7 +186,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     })
 
   } catch (error) {
-    console.error("Error al eliminar plantilla:", error)
+    logger.error("Error al eliminar plantilla:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }

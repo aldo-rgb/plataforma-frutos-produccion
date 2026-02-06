@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Roles permitidos para acceder a esta API
 const ALLOWED_ROLES = [
@@ -50,8 +51,8 @@ export async function GET(
       },
     });
 
-    console.log(`🔍 STAFF RECORDS FOUND for vision ${visionId}:`, staff.length);
-    console.log('📋 Staff records:', staff.map(s => ({ userId: s.userId, role: s.role, plWeekendNumber: s.plWeekendNumber })));
+    logger.debug(`🔍 STAFF RECORDS FOUND for vision ${visionId}:`, staff.length);
+    logger.debug('📋 Staff records:', staff.map(s => ({ userId: s.userId, role: s.role, plWeekendNumber: s.plWeekendNumber })));
 
     // Mapear los registros a la estructura esperada por el frontend
     const staffData = {
@@ -90,7 +91,7 @@ export async function GET(
       }
     });
 
-    console.log('📦 Final staffData to be returned:', staffData);
+    logger.debug('📦 Final staffData to be returned:', staffData);
 
     return NextResponse.json({
       success: true,
@@ -98,7 +99,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('Error fetching staff:', error);
+    logger.error('Error fetching staff:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener el staff' },
       { status: 500 }
@@ -300,7 +301,7 @@ export async function PUT(
       });
     }
 
-    console.log('✅ Staff guardado y SchoolProduct sincronizado');
+    logger.debug('✅ Staff guardado y SchoolProduct sincronizado');
 
     return NextResponse.json({
       success: true,
@@ -317,7 +318,7 @@ export async function PUT(
     });
 
   } catch (error) {
-    console.error('Error updating staff:', error);
+    logger.error('Error updating staff:', error);
     return NextResponse.json(
       { success: false, error: 'Error al actualizar el staff' },
       { status: 500 }

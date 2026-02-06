@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic'; // No cachear
 
@@ -94,7 +95,7 @@ export async function GET(req: NextRequest) {
       // Priorizar precio del servicio, sino usar precioBase del perfil
       const precioBase = mentor.ServicioMentoria[0]?.precioTotal || mentor.precioBase || 0;
       
-      console.log(`   📊 Mentor ${mentor.Usuario.nombre}: disponible=${mentor.disponible}, destacado=${mentor.destacado}, precio=${precioBase}`);
+      logger.debug(`   📊 Mentor ${mentor.Usuario.nombre}: disponible=${mentor.disponible}, destacado=${mentor.destacado}, precio=${precioBase}`);
       
       return {
         id: mentor.id,
@@ -193,8 +194,8 @@ export async function GET(req: NextRequest) {
       ...mentoresFormateados
     ];
 
-    console.log(`📋 [ADMIN] Mentores activos: ${mentoresFormateados.length}, Solicitudes con pago: ${aplicacionesFormateadas.length}, Mentores pendientes directos: ${mentoresPendientesFormateados.length}`);
-    console.log(`📋 [ADMIN] Estados: ${mentoresFormateados.map(m => `${m.usuario.nombre}:${m.disponible}`).join(', ')}`);
+    logger.debug(`📋 [ADMIN] Mentores activos: ${mentoresFormateados.length}, Solicitudes con pago: ${aplicacionesFormateadas.length}, Mentores pendientes directos: ${mentoresPendientesFormateados.length}`);
+    logger.debug(`📋 [ADMIN] Estados: ${mentoresFormateados.map(m => `${m.usuario.nombre}:${m.disponible}`).join(', ')}`);
 
     const totalPendientes = aplicacionesFormateadas.length + mentoresPendientesFormateados.length;
 
@@ -208,7 +209,7 @@ export async function GET(req: NextRequest) {
       }
     });
   } catch (error: any) {
-    console.error('❌ Error al obtener mentores (admin):', error);
+    logger.error('❌ Error al obtener mentores (admin):', error);
     return NextResponse.json(
       { error: 'Error al obtener lista de mentores', details: error.message },
       { status: 500 }
@@ -314,7 +315,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log(`✅ [ADMIN] Mentor creado: ${usuario.nombre} (ID: ${nuevoMentor.id})`);
+    logger.debug(`✅ [ADMIN] Mentor creado: ${usuario.nombre} (ID: ${nuevoMentor.id})`);
 
     return NextResponse.json({
       success: true,
@@ -322,7 +323,7 @@ export async function POST(req: NextRequest) {
       mentor: nuevoMentor,
     });
   } catch (error: any) {
-    console.error('❌ Error al crear mentor:', error);
+    logger.error('❌ Error al crear mentor:', error);
     return NextResponse.json(
       { error: 'Error al crear mentor', details: error.message },
       { status: 500 }

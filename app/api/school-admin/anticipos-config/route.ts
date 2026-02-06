@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener configuración de anticipos
 export async function GET() {
@@ -59,7 +60,7 @@ export async function GET() {
       anticipoDeadlineHours: (organization as any).anticipoDeadlineHours || 13,
     });
   } catch (error) {
-    console.error('Error fetching anticipos config:', error);
+    logger.error('Error fetching anticipos config:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener la configuración' },
       { status: 500 }
@@ -138,7 +139,7 @@ export async function PUT(request: Request) {
       anticipoAmount: (updatedOrganization as any).anticipoAmount ? Number((updatedOrganization as any).anticipoAmount) : null,
     });
   } catch (error) {
-    console.error('Error updating anticipos config:', error);
+    logger.error('Error updating anticipos config:', error);
     return NextResponse.json(
       { success: false, error: 'Error al actualizar la configuración' },
       { status: 500 }

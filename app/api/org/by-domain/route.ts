@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET /api/org/by-domain?domain=impactocuantico.net
 // Retorna la organización que tiene ese dominio personalizado
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching organization by domain:', error);
+    logger.error('Error fetching organization by domain:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

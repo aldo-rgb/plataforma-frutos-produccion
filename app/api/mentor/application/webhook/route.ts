@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import type Stripe from 'stripe';
+import logger from '@/lib/logger';
 
 // Stripe se inicializa solo si hay API key
 let stripe: any = null;
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
     } catch (err: any) {
-      console.error('Webhook signature verification failed:', err.message);
+      logger.error('Webhook signature verification failed:', err.message);
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
@@ -49,7 +50,7 @@ export async function POST(req: Request) {
       const userId = session.metadata?.userId;
 
       if (!applicationId || !userId) {
-        console.error('Missing metadata in checkout session');
+        logger.error('Missing metadata in checkout session');
         return NextResponse.json({ error: 'Missing metadata' }, { status: 400 });
       }
 
@@ -76,8 +77,8 @@ export async function POST(req: Request) {
       });
 
       // Notificar a cada admin (podrías usar un sistema de notificaciones)
-      console.log(`✅ Nueva solicitud de mentor pagada: Application ID ${applicationId}`);
-      console.log(`📧 Notificar a ${admins.length} administradores`);
+      logger.debug(`✅ Nueva solicitud de mentor pagada: Application ID ${applicationId}`);
+      logger.debug(`📧 Notificar a ${admins.length} administradores`);
 
       return NextResponse.json({ received: true });
     }
@@ -85,7 +86,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ received: true });
 
   } catch (error) {
-    console.error('Webhook error:', error);
+    logger.error('Webhook error:', error);
     return NextResponse.json(
       { error: 'Webhook error' },
       { status: 500 }

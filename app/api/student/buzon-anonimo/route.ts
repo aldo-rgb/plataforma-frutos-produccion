@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * 🛡️ API: Buzón Anónimo para Reportes Confidenciales
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
     });
 
     // También lo guardamos en logs para respaldo
-    console.log(`
+    logger.debug(`
       ⚠️ =============================================
       🛡️ REPORTE ANÓNIMO RECIBIDO
       ⚠️ =============================================
@@ -97,7 +98,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ Error al procesar reporte anónimo:', error);
+    logger.error('❌ Error al procesar reporte anónimo:', error);
     return NextResponse.json(
       { error: 'Error al enviar el reporte' },
       { status: 500 }
@@ -170,7 +171,7 @@ export async function GET() {
     return NextResponse.json(reportesFormateados);
 
   } catch (error) {
-    console.error('❌ Error al obtener reportes:', error);
+    logger.error('❌ Error al obtener reportes:', error);
     return NextResponse.json(
       { error: 'Error al cargar reportes' },
       { status: 500 }

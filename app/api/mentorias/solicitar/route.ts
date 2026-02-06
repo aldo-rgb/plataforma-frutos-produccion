@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function POST(request: Request) {
   try {
@@ -182,7 +183,7 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log(`✅ Solicitud de mentoría creada:
+    logger.debug(`✅ Solicitud de mentoría creada:
       - Cliente: ${session.user.email}
       - Mentor: ${solicitud.PerfilMentor.Usuario.nombre}
       - Servicio: ${solicitud.ServicioMentoria.nombre}
@@ -204,7 +205,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ Error al crear solicitud de mentoría:', error);
+    logger.error('❌ Error al crear solicitud de mentoría:', error);
     return NextResponse.json(
       { error: 'Error al procesar solicitud' },
       { status: 500 }
@@ -268,7 +269,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('❌ Error al obtener solicitudes:', error);
+    logger.error('❌ Error al obtener solicitudes:', error);
     return NextResponse.json(
       { error: 'Error al cargar solicitudes' },
       { status: 500 }

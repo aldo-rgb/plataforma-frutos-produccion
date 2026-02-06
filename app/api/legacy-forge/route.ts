@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import OpenAI from 'openai';
+import logger from '@/lib/logger';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -161,7 +162,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error en Legacy Forge GET:', error);
+    logger.error('Error en Legacy Forge GET:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }
@@ -302,7 +303,7 @@ Responde SOLO con un JSON array con este formato exacto:
           try {
             ideas = JSON.parse(jsonMatch[0]);
           } catch (e) {
-            console.error('Error parsing AI response:', e);
+            logger.error('Error parsing AI response:', e);
           }
         }
 
@@ -681,7 +682,7 @@ Responde SOLO con un JSON array con este formato exacto:
               });
 
               budgetCreated = true;
-              console.log(`✅ Presupuesto creado automáticamente: ${newBudget.name} - $${totalBudget} / ${memberCount} miembros = $${perPersonAmount} c/u`);
+              logger.debug(`✅ Presupuesto creado automáticamente: ${newBudget.name} - $${totalBudget} / ${memberCount} miembros = $${perPersonAmount} c/u`);
             }
           }
         }
@@ -864,7 +865,7 @@ Responde SOLO con un JSON array con este formato exacto:
     }
 
   } catch (error) {
-    console.error('Error en Legacy Forge POST:', error);
+    logger.error('Error en Legacy Forge POST:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

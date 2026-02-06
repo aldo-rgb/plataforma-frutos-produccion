@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import OpenAI from 'openai';
+import logger from '@/lib/logger';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -72,7 +73,7 @@ Make it memorable and unique.`;
       return NextResponse.json({ logos });
 
     } catch (dalleError: any) {
-      console.error('DALL-E error:', dalleError);
+      logger.error('DALL-E error:', dalleError);
       
       // Si DALL-E falla, devolver logos placeholder
       // En producción, podrías usar un servicio alternativo o logos prediseñados
@@ -88,7 +89,7 @@ Make it memorable and unique.`;
     }
 
   } catch (error) {
-    console.error('❌ Error generando logos:', error);
+    logger.error('❌ Error generando logos:', error);
     return NextResponse.json(
       { error: 'Error al generar logos' },
       { status: 500 }

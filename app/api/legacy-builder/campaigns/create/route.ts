@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 function generateSlug(title: string): string {
   return title
@@ -217,7 +218,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error creating legacy campaign:', error);
+    logger.error('Error creating legacy campaign:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }
@@ -315,7 +316,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching captain campaign:', error);
+    logger.error('Error fetching captain campaign:', error);
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

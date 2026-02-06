@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { processBacklogForAllPaidLevels, createBacklogTickets } from '@/lib/backlog-ticket';
 import { triggerEnrollmentTaskCompletion } from '@/lib/enrollment-task-trigger';
+import logger from '@/lib/logger';
 
 // Roles permitidos para actualizar asistencia
 const ALLOWED_ROLES = [
@@ -106,7 +107,7 @@ export async function POST(
       
       if (updatedOrg.licensesAvailable < 0) {
         licensesWentNegative = true;
-        console.log(`⚠️ ALERTA: Organización ${organizationId} tiene ${updatedOrg.licensesAvailable} licencias (NEGATIVO)`);
+        logger.debug(`⚠️ ALERTA: Organización ${organizationId} tiene ${updatedOrg.licensesAvailable} licencias (NEGATIVO)`);
       }
 
       // Crear LicenseAssignment si no existe
@@ -139,11 +140,11 @@ export async function POST(
             }
           });
           
-          console.log(`✅ LicenseAssignment creado para usuario ${user.nombre} (ID: ${user.id})`);
+          logger.debug(`✅ LicenseAssignment creado para usuario ${user.nombre} (ID: ${user.id})`);
         }
       }
 
-      console.log(`🎫 Licencia consumida para usuario ${enrollment.userId} en nivel BASIC`);
+      logger.debug(`🎫 Licencia consumida para usuario ${enrollment.userId} en nivel BASIC`);
     }
 
     // ========================================
@@ -185,7 +186,7 @@ export async function POST(
           }
         });
         checkInRecordCreated = true;
-        console.log(`✅ CheckInRecord creado para usuario ${enrollment.userId} en visión ${visionId}`);
+        logger.debug(`✅ CheckInRecord creado para usuario ${enrollment.userId} en visión ${visionId}`);
       }
     }
 
@@ -231,12 +232,12 @@ export async function POST(
         enrollmentTaskCompleted = triggerResult.success;
         
         if (triggerResult.success) {
-          console.log(`✅ Tarea de enrolamiento completada automáticamente para quien invitó a ${participanteName}`);
+          logger.debug(`✅ Tarea de enrolamiento completada automáticamente para quien invitó a ${participanteName}`);
         } else {
-          console.log(`ℹ️ No se completó tarea de enrolamiento: ${triggerResult.message}`);
+          logger.debug(`ℹ️ No se completó tarea de enrolamiento: ${triggerResult.message}`);
         }
       } catch (triggerError) {
-        console.error('⚠️ Error en trigger de enrollment task:', triggerError);
+        logger.error('⚠️ Error en trigger de enrollment task:', triggerError);
       }
     }
 
@@ -260,7 +261,7 @@ export async function POST(
     // ========================================
     let courtesyTicketResult = null;
     if ((attendanceStatus === 'BACKLOG' || attendanceStatus === 'DROP') && organizationId) {
-      console.log(`🎫 Procesando tickets ${attendanceStatus} para usuario ${updatedEnrollment.userId} desde nivel ${updatedEnrollment.level}...`);
+      logger.debug(`🎫 Procesando tickets ${attendanceStatus} para usuario ${updatedEnrollment.userId} desde nivel ${updatedEnrollment.level}...`);
       
       // Procesar desde el nivel donde cayó hacia los niveles superiores
       courtesyTicketResult = await processBacklogForAllPaidLevels(
@@ -272,25 +273,25 @@ export async function POST(
       );
       
       if (courtesyTicketResult.success) {
-        console.log(`✅ ${courtesyTicketResult.totalTickets} ticket(s) creados para niveles: ${courtesyTicketResult.levelsProcessed.join(', ')}`);
+        logger.debug(`✅ ${courtesyTicketResult.totalTickets} ticket(s) creados para niveles: ${courtesyTicketResult.levelsProcessed.join(', ')}`);
         if (courtesyTicketResult.ticketsCancelled.length > 0) {
-          console.log(`🔄 ${courtesyTicketResult.ticketsCancelled.length} ticket(s) cancelados y movidos a siguiente visión`);
+          logger.debug(`🔄 ${courtesyTicketResult.ticketsCancelled.length} ticket(s) cancelados y movidos a siguiente visión`);
         }
       } else {
-        console.log(`⚠️ No se pudieron crear tickets: ${courtesyTicketResult.error}`);
+        logger.debug(`⚠️ No se pudieron crear tickets: ${courtesyTicketResult.error}`);
       }
     }
 
-    console.log(`✅ Asistencia actualizada: Enrollment ${enrollmentId} -> ${attendanceStatus} (antes: ${previousStatus})`);
-    console.log(`📝 Historial guardado por usuario ${usuario.id}`);
+    logger.debug(`✅ Asistencia actualizada: Enrollment ${enrollmentId} -> ${attendanceStatus} (antes: ${previousStatus})`);
+    logger.debug(`📝 Historial guardado por usuario ${usuario.id}`);
     if (licenseConsumed) {
-      console.log(`🎫 Licencia consumida para nivel BASIC`);
+      logger.debug(`🎫 Licencia consumida para nivel BASIC`);
     }
     if (checkInRecordCreated) {
-      console.log(`📋 CheckInRecord creado para asistencia manual`);
+      logger.debug(`📋 CheckInRecord creado para asistencia manual`);
     }
     if (enrollmentTaskCompleted) {
-      console.log(`🎯 Tarea de enrolamiento completada automáticamente`);
+      logger.debug(`🎯 Tarea de enrolamiento completada automáticamente`);
     }
 
     return NextResponse.json({
@@ -315,7 +316,7 @@ export async function POST(
     });
 
   } catch (error: any) {
-    console.error('❌ Error actualizando asistencia:', error);
+    logger.error('❌ Error actualizando asistencia:', error);
     return NextResponse.json(
       { error: 'Error al actualizar asistencia', message: error?.message },
       { status: 500 }

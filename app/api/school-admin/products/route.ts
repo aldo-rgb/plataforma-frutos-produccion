@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener todos los productos de la organización
 export async function GET() {
@@ -61,7 +62,7 @@ export async function GET() {
       products,
     });
   } catch (error) {
-    console.error('Error fetching products:', error);
+    logger.error('Error fetching products:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener los productos' },
       { status: 500 }
@@ -158,7 +159,7 @@ export async function POST(request: Request) {
       product,
     });
   } catch (error) {
-    console.error('Error creating product:', error);
+    logger.error('Error creating product:', error);
     return NextResponse.json(
       { success: false, error: 'Error al crear el producto' },
       { status: 500 }
@@ -260,7 +261,7 @@ export async function PUT(request: Request) {
       product: updatedProduct,
     });
   } catch (error) {
-    console.error('Error updating product:', error);
+    logger.error('Error updating product:', error);
     return NextResponse.json(
       { success: false, error: 'Error al actualizar el producto' },
       { status: 500 }
@@ -413,7 +414,7 @@ export async function DELETE(request: Request) {
       message: 'Producto eliminado correctamente',
     });
   } catch (error) {
-    console.error('Error deleting product:', error);
+    logger.error('Error deleting product:', error);
     return NextResponse.json(
       { success: false, error: 'Error al eliminar el producto' },
       { status: 500 }

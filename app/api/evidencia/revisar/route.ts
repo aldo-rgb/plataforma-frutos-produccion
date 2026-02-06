@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -48,7 +49,7 @@ export async function GET() {
 
     return NextResponse.json({ evidencias });
   } catch (error) {
-    console.error('Error al obtener evidencias:', error);
+    logger.error('Error al obtener evidencias:', error);
     return NextResponse.json({ error: 'Error al cargar evidencias' }, { status: 500 });
   }
 }
@@ -249,7 +250,7 @@ export async function POST(req: Request) {
     }
 
   } catch (error) {
-    console.error('Error en API Revisar Evidencia:', error);
+    logger.error('Error en API Revisar Evidencia:', error);
     return NextResponse.json({ 
       error: 'Fallo al procesar la revisión',
       details: error instanceof Error ? error.message : 'Error desconocido'

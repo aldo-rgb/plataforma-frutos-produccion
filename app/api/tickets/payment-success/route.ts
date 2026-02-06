@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/tickets/payment-success
@@ -15,9 +16,9 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const collectionStatus = searchParams.get('collection_status');
 
-    console.log('📨 Payment success callback (ticket) received');
-    console.log('   Payment ID:', paymentId);
-    console.log('   Status:', status);
+    logger.debug('📨 Payment success callback (ticket) received');
+    logger.debug('   Payment ID:', paymentId);
+    logger.debug('   Status:', status);
 
     // Parse order data
     let orderData: any = null;
@@ -26,12 +27,12 @@ export async function GET(request: NextRequest) {
       try {
         orderData = JSON.parse(decodeURIComponent(dataParam));
       } catch (e) {
-        console.error('Error parsing data param:', e);
+        logger.error('Error parsing data param:', e);
       }
     }
 
     if (!orderData || !orderData.ticketId || !orderData.userId) {
-      console.error('Missing order data');
+      logger.error('Missing order data');
       return NextResponse.redirect(
         new URL('/dashboard/my-tickets?payment=error&reason=datos-incompletos', request.url)
       );
@@ -41,16 +42,16 @@ export async function GET(request: NextRequest) {
 
     // Verify payment status
     if (status !== 'approved' && collectionStatus !== 'approved') {
-      console.log('Payment not approved:', status, collectionStatus);
+      logger.debug('Payment not approved:', status, collectionStatus);
       return NextResponse.redirect(
         new URL(`/dashboard/checkout-ticket?ticketId=${ticketId}&payment=failed&status=${status || collectionStatus}`, request.url)
       );
     }
 
-    console.log(`✅ Pago de ticket aprobado`);
-    console.log(`   Ticket: ${ticketId}`);
-    console.log(`   Usuario: ${userId}`);
-    console.log(`   Monto: $${amount} MXN`);
+    logger.debug(`✅ Pago de ticket aprobado`);
+    logger.debug(`   Ticket: ${ticketId}`);
+    logger.debug(`   Usuario: ${userId}`);
+    logger.debug(`   Monto: $${amount} MXN`);
 
     // Get ticket
     const ticket = await prisma.ticket.findUnique({
@@ -87,11 +88,11 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    console.log(`✅ Ticket actualizado: ${ticketId}`);
-    console.log(`   Monto anterior: $${currentAmountPaid}`);
-    console.log(`   Monto agregado: $${amount}`);
-    console.log(`   Monto total: $${newAmountPaid}`);
-    console.log(`   Pagado completo: ${isFullyPaid}`);
+    logger.debug(`✅ Ticket actualizado: ${ticketId}`);
+    logger.debug(`   Monto anterior: $${currentAmountPaid}`);
+    logger.debug(`   Monto agregado: $${amount}`);
+    logger.debug(`   Monto total: $${newAmountPaid}`);
+    logger.debug(`   Pagado completo: ${isFullyPaid}`);
 
     // If ticket is for PL and now fully paid, also update the enrollment
     if (isFullyPaid && ticket.level === 'PL' && visionId) {
@@ -108,7 +109,7 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      console.log(`✅ Enrollment PL actualizado a ACTIVE`);
+      logger.debug(`✅ Enrollment PL actualizado a ACTIVE`);
     }
 
     // Redirect to success
@@ -117,7 +118,7 @@ export async function GET(request: NextRequest) {
     );
 
   } catch (error: any) {
-    console.error('❌ Error processing ticket payment:', error);
+    logger.error('❌ Error processing ticket payment:', error);
     return NextResponse.redirect(
       new URL(`/dashboard/my-tickets?payment=error&reason=${encodeURIComponent(error.message)}`, request.url)
     );

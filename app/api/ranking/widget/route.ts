@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/ranking/widget
@@ -168,7 +169,7 @@ export async function GET() {
     });
 
   } catch (error) {
-    console.error('❌ Error obteniendo datos de ranking:', error);
+    logger.error('❌ Error obteniendo datos de ranking:', error);
     return NextResponse.json(
       { error: 'Error obteniendo datos de ranking' },
       { status: 500 }

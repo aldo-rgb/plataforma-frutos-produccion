@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
+import logger from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -67,7 +68,7 @@ export async function GET() {
       totalPending: formattedTickets.reduce((sum, t) => sum + ((t.costAtPurchase || 0) - (t.amountPaid || 0)), 0),
     });
   } catch (error) {
-    console.error('Error fetching pending tickets:', error);
+    logger.error('Error fetching pending tickets:', error);
     return NextResponse.json(
       { success: false, error: 'Error interno del servidor' },
       { status: 500 }

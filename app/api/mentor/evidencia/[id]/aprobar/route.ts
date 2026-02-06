@@ -6,6 +6,7 @@ import { emitToUser } from '@/lib/socket';
 import { otorgarRecompensaPorEvidencia, verificarYOtorgarBonusDiaPerfecto } from '@/lib/rewardEngine';
 import { evaluarCalidadEvidencia, aplicarBonusRareza } from '@/lib/quantumCurator';
 import { verificarColecciones } from '@/lib/collectionVerifier';
+import logger from '@/lib/logger';
 
 // PUT: Aprobar evidencia y otorgar puntos
 export async function PUT(
@@ -71,7 +72,7 @@ export async function PUT(
     }
 
     // ========== QUANTUM CURATOR: EVALUACIÓN DE CALIDAD ==========
-    console.log('🤖 QUANTUM Curator evaluando calidad de evidencia...');
+    logger.debug('🤖 QUANTUM Curator evaluando calidad de evidencia...');
     
     const evaluacionCalidad = await evaluarCalidadEvidencia(
       evidencia.fotoUrl,
@@ -80,9 +81,9 @@ export async function PUT(
       evidencia.Accion.frequency || 'DAILY'
     );
 
-    console.log(`   Score: ${evaluacionCalidad.qualityScore}/100`);
-    console.log(`   High Quality: ${evaluacionCalidad.isHighQuality ? '✅' : '❌'}`);
-    console.log(`   Rarity Bonus: ${evaluacionCalidad.rarityBonus ? '🔥' : '➖'}`);
+    logger.debug(`   Score: ${evaluacionCalidad.qualityScore}/100`);
+    logger.debug(`   High Quality: ${evaluacionCalidad.isHighQuality ? '✅' : '❌'}`);
+    logger.debug(`   Rarity Bonus: ${evaluacionCalidad.rarityBonus ? '🔥' : '➖'}`);
 
     // ========== NUEVO SISTEMA DE RECOMPENSAS ==========
     
@@ -136,7 +137,7 @@ export async function PUT(
           }
         });
 
-        console.log(`   🔥 BONUS DE RAREZA: ${recompensa.rarezaTarea} → ${rarezaFinal} (+${pcBonus} PC)`);
+        logger.debug(`   🔥 BONUS DE RAREZA: ${recompensa.rarezaTarea} → ${rarezaFinal} (+${pcBonus} PC)`);
       }
     }
 
@@ -151,8 +152,8 @@ export async function PUT(
 
     const pcTotalColecciones = coleccionesNuevas.reduce((sum, col) => sum + col.recompensaPC, 0);
 
-    console.log(`✅ Evidencia ${evidenciaId} APROBADA por ${mentor.nombre}`);
-    console.log(`   ${evidencia.Usuario.nombre} ganó:
+    logger.debug(`✅ Evidencia ${evidenciaId} APROBADA por ${mentor.nombre}`);
+    logger.debug(`   ${evidencia.Usuario.nombre} ganó:
       +${recompensa.xpGanado} XP (${rarezaFinal}${evaluacionCalidad.rarityBonus ? ' ⬆️' : ''})
       +${recompensa.pcGanado + pcBonus} PC${pcBonus > 0 ? ` (bonus calidad: +${pcBonus})` : ''}
       ${bonusDiario.otorgado ? `+ BONUS DÍA PERFECTO: +${bonusDiario.pcGanados} PC 🎉` : ''}
@@ -194,7 +195,7 @@ export async function PUT(
 
       emitToUser(evidencia.usuarioId.toString(), 'evidencia_aprobada', notificacion);
     } catch (socketError) {
-      console.error('Error al enviar notificación Socket.IO:', socketError);
+      logger.error('Error al enviar notificación Socket.IO:', socketError);
     }
 
     return NextResponse.json({ 
@@ -219,7 +220,7 @@ export async function PUT(
     }, { status: 200 });
 
   } catch (error) {
-    console.error('❌ Error al aprobar evidencia:', error);
+    logger.error('❌ Error al aprobar evidencia:', error);
     return NextResponse.json({ error: 'Error al aprobar evidencia' }, { status: 500 });
   }
 }

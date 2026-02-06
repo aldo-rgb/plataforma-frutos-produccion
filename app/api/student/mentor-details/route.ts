@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getDynamicPrice } from '@/lib/dynamicPricing';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/student/mentor-details?mentorId=123
@@ -156,7 +157,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error al obtener detalles del mentor:', error);
+    logger.error('❌ Error al obtener detalles del mentor:', error);
     return NextResponse.json({ 
       error: 'Error interno del servidor',
       details: error.message 

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/squads/vision/[visionId]/stats
@@ -191,7 +192,7 @@ export async function GET(
       })),
     });
   } catch (error) {
-    console.error('Error fetching vision squad stats:', error);
+    logger.error('Error fetching vision squad stats:', error);
     return NextResponse.json(
       { success: false, error: 'Error al obtener estadísticas' },
       { status: 500 }

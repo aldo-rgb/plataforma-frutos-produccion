@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -23,7 +24,7 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
-    console.log('🔍 Buscando visiones para coordinador:', {
+    logger.debug('🔍 Buscando visiones para coordinador:', {
       usuarioId: usuario.id,
       coordinadorId: usuario.id,
       email: usuario.email,
@@ -47,7 +48,7 @@ export async function GET() {
 
     const visionIds = visionStaff.map(vs => vs.visionId);
 
-    console.log('📋 Visiones asignadas en VisionStaff:', visionIds);
+    logger.debug('📋 Visiones asignadas en VisionStaff:', visionIds);
 
     // Construir condiciones de búsqueda
     const orConditions: any[] = [
@@ -58,7 +59,7 @@ export async function GET() {
     // Para rol COORDINADOR, también incluir visiones de su organización
     if (usuario.rol === 'COORDINADOR' && usuario.organizationId) {
       orConditions.push({ organizationId: usuario.organizationId });
-      console.log('📋 Incluyendo visiones de organización:', usuario.organizationId);
+      logger.debug('📋 Incluyendo visiones de organización:', usuario.organizationId);
     }
 
     // Obtener visiones donde el coordinador es el coordinador asignado
@@ -96,9 +97,9 @@ export async function GET() {
       }
     }));
 
-    console.log('✅ Visiones encontradas:', visionesConConteo.length);
+    logger.debug('✅ Visiones encontradas:', visionesConConteo.length);
     if (visionesConConteo.length > 0) {
-      console.log('📋 Lista de visiones:', visionesConConteo.map(v => ({
+      logger.debug('📋 Lista de visiones:', visionesConConteo.map(v => ({
         id: v.id,
         nombre: v.nombre,
         coordinadorId: v.coordinadorId,
@@ -112,7 +113,7 @@ export async function GET() {
     });
 
   } catch (error: any) {
-    console.error('❌ Error obteniendo visiones del coordinador:', error);
+    logger.error('❌ Error obteniendo visiones del coordinador:', error);
     return NextResponse.json(
       { 
         error: 'Error al obtener visiones',

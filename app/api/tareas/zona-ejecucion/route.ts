@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/tareas/zona-ejecucion
@@ -18,7 +19,7 @@ export async function GET(req: Request) {
     }
 
     const userId = session.user.id;
-    console.log('🔍 Cargando tareas para usuario:', userId);
+    logger.debug('🔍 Cargando tareas para usuario:', userId);
 
     // Verificar si el usuario está marcado como DROP
     const visionEnrollment = await prisma.vision_enrollments.findFirst({
@@ -27,7 +28,7 @@ export async function GET(req: Request) {
     });
 
     if (visionEnrollment?.attendanceStatus === 'DROP') {
-      console.log('⚠️ Usuario marcado como DROP - retornando vacío');
+      logger.debug('⚠️ Usuario marcado como DROP - retornando vacío');
       return NextResponse.json({
         tareasHoy: [],
         tareasRetrasadas: [],
@@ -56,12 +57,12 @@ export async function GET(req: Request) {
       const year = now.getFullYear();
       const month = now.getMonth();
       const day = now.getDate();
-      console.log('🕐 Componentes de fecha LOCAL:', { year, month, day });
+      logger.debug('🕐 Componentes de fecha LOCAL:', { year, month, day });
       today = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
       tomorrow = new Date(Date.UTC(year, month, day + 1, 0, 0, 0, 0));
     }
     
-    console.log('📅 Rango de fechas UTC:', {
+    logger.debug('📅 Rango de fechas UTC:', {
       today: today.toISOString(),
       tomorrow: tomorrow.toISOString()
     });
@@ -81,7 +82,7 @@ export async function GET(req: Request) {
       },
       take: 20
     });
-    console.log(`🔍 DEBUG: Usuario ${userId} tiene ${allUserTasks.length} tareas totales (sample 20):`, 
+    logger.debug(`🔍 DEBUG: Usuario ${userId} tiene ${allUserTasks.length} tareas totales (sample 20):`, 
       allUserTasks.map(t => ({
         id: t.id,
         dueDate: t.dueDate.toISOString(),
@@ -138,8 +139,8 @@ export async function GET(req: Request) {
       }
     });
 
-    console.log(`📦 Total tareas carta encontradas: ${tareasCartaHoy.length}`);
-    console.log('  - Tareas de hoy:', tareasCartaHoy.map(t => ({ 
+    logger.debug(`📦 Total tareas carta encontradas: ${tareasCartaHoy.length}`);
+    logger.debug('  - Tareas de hoy:', tareasCartaHoy.map(t => ({ 
       id: t.id, 
       accion: t.Accion?.texto, 
       dueDate: t.dueDate,
@@ -224,7 +225,7 @@ export async function GET(req: Request) {
         }
       }
     });
-    console.log(`📦 Misiones de trainer encontradas: ${misionesTrainer.length}`);
+    logger.debug(`📦 Misiones de trainer encontradas: ${misionesTrainer.length}`);
 
     const ahora = new Date();
     
@@ -250,7 +251,7 @@ export async function GET(req: Request) {
       const esHoy = fechaEvento.toDateString() === today.toDateString();
       const dentroVentana72h = horasHastaEvento > 0 && horasHastaEvento <= 72;
       
-      console.log(`📅 Evento "${t.AdminTask.titulo}":`, {
+      logger.debug(`📅 Evento "${t.AdminTask.titulo}":`, {
         fechaEvento: fechaEvento.toLocaleString('es-MX'),
         esHoy,
         horasHasta: horasHastaEvento.toFixed(1),
@@ -260,12 +261,12 @@ export async function GET(req: Request) {
       
       return esHoy || dentroVentana72h;
     });
-    console.log('⏰ Hora actual del servidor:', ahora.toLocaleString('es-MX'));
-    console.log('📅 Today (medianoche):', today);
-    console.log('📅 Today toString:', today.toString());
-    console.log('📦 Total tareas admin encontradas:', tareasAdmin.length);
+    logger.debug('⏰ Hora actual del servidor:', ahora.toLocaleString('es-MX'));
+    logger.debug('📅 Today (medianoche):', today);
+    logger.debug('📅 Today toString:', today.toString());
+    logger.debug('📦 Total tareas admin encontradas:', tareasAdmin.length);
     tareasAdmin.forEach(t => {
-      console.log(`  - Tarea: "${t.AdminTask.titulo}" | Tipo: ${t.AdminTask.type} | Status: ${t.status} | FechaLimite: ${t.AdminTask.fechaLimite} | Hora: ${t.AdminTask.horaEvento}`);
+      logger.debug(`  - Tarea: "${t.AdminTask.titulo}" | Tipo: ${t.AdminTask.type} | Status: ${t.status} | FechaLimite: ${t.AdminTask.fechaLimite} | Hora: ${t.AdminTask.horaEvento}`);
     });
 
     // Función helper para calcular deadline completo (fecha + hora)
@@ -317,7 +318,7 @@ export async function GET(req: Request) {
       const dentroVentana72h = horasHastaDeadline > 0 && horasHastaDeadline <= 72;
       const incluir = (esHoy && deadline >= ahora) || dentroVentana72h;
       
-      console.log(`📋 Tarea "${t.AdminTask.titulo}":`, {
+      logger.debug(`📋 Tarea "${t.AdminTask.titulo}":`, {
         fechaLimite: t.AdminTask.fechaLimite,
         deadline: deadline.toLocaleString('es-MX'),
         ahora: ahora.toLocaleString('es-MX'),
@@ -339,7 +340,7 @@ export async function GET(req: Request) {
       const deadline = getDeadlineCompleto(t.AdminTask);
       if (!deadline) return false; // Sin deadline no puede estar retrasada
       
-      console.log(`🔎 Evaluando si está retrasada "${t.AdminTask.titulo}":`, {
+      logger.debug(`🔎 Evaluando si está retrasada "${t.AdminTask.titulo}":`, {
         deadline: deadline,
         deadlineToString: deadline.toString(),
         ahora: ahora,
@@ -355,11 +356,11 @@ export async function GET(req: Request) {
       // Excluir tareas que expiraron hace más de 48 horas
       const horasPasadas = (ahora.getTime() - deadline.getTime()) / (1000 * 60 * 60);
       if (horasPasadas > 48) {
-        console.log(`  ❌ Excluida por más de 48h: ${horasPasadas.toFixed(1)}h`);
+        logger.debug(`  ❌ Excluida por más de 48h: ${horasPasadas.toFixed(1)}h`);
         return false; // No mostrar en retrasadas (desaparecer del dashboard)
       }
       
-      console.log(`  ✅ Incluida en retrasadas: ${horasPasadas.toFixed(1)}h pasadas`);
+      logger.debug(`  ✅ Incluida en retrasadas: ${horasPasadas.toFixed(1)}h pasadas`);
       return true; // Está retrasada y dentro de la ventana de 48h
     });
 
@@ -376,7 +377,7 @@ export async function GET(req: Request) {
           status: 'EXPIRED'
         }
       });
-      console.log(`⏰ Marcadas ${tareasToExpire.length} tareas como EXPIRED automáticamente`);
+      logger.debug(`⏰ Marcadas ${tareasToExpire.length} tareas como EXPIRED automáticamente`);
       
       // Actualizar el status en memoria para que se refleje en la respuesta
       tareasToExpire.forEach(t => {
@@ -507,7 +508,7 @@ export async function GET(req: Request) {
       return horasHastaDeadline > 0 && horasHastaDeadline <= 72;
     });
 
-    console.log(`📦 Misiones trainer para mostrar hoy: ${misionesTrainerHoy.length}`);
+    logger.debug(`📦 Misiones trainer para mostrar hoy: ${misionesTrainerHoy.length}`);
 
     // ========== FILTRAR TAREAS DE ARQUETIPOS ==========
     const tareasArquetipos = tareasAdmin.filter(t => {
@@ -515,7 +516,7 @@ export async function GET(req: Request) {
       // Solo mostrar si está pendiente
       return t.status === 'PENDING';
     });
-    console.log(`🎭 Tareas de arquetipos pendientes: ${tareasArquetipos.length}`);
+    logger.debug(`🎭 Tareas de arquetipos pendientes: ${tareasArquetipos.length}`);
 
     // ========== FILTRAR TAREAS DE METAMORFOSIS ==========
     const tareasMetamorfosis = tareasAdmin.filter(t => {
@@ -523,7 +524,7 @@ export async function GET(req: Request) {
       // Solo mostrar si está pendiente
       return t.status === 'PENDING';
     });
-    console.log(`⚡ Tareas de metamorfosis pendientes: ${tareasMetamorfosis.length}`);
+    logger.debug(`⚡ Tareas de metamorfosis pendientes: ${tareasMetamorfosis.length}`);
 
     // ========== COMBINAR Y ORDENAR POR PRIORIDAD ==========
     const tareasHoy = [
@@ -542,14 +543,14 @@ export async function GET(req: Request) {
 
     // Debug: Log de tareas con evidencia PENDING
     const tareasConEvidencia = tareasHoy.filter(t => t.evidenceStatus === 'PENDING');
-    console.log('🔍 DEBUG Tareas con evidencia PENDING:', tareasConEvidencia.map(t => ({
+    logger.debug('🔍 DEBUG Tareas con evidencia PENDING:', tareasConEvidencia.map(t => ({
       id: t.id,
       texto: t.texto.substring(0, 50),
       evidenceStatus: t.evidenceStatus,
       evidenciaUrl: t.evidenciaUrl
     })));
 
-    console.log('✅ Tareas procesadas:', {
+    logger.debug('✅ Tareas procesadas:', {
       arquetipos: tareasArquetipos.length,
       eventosHoy: eventosHoy.length,
       misionesTrainer: misionesTrainerHoy.length,
@@ -578,7 +579,7 @@ export async function GET(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error obteniendo tareas de zona de ejecución:', error);
+    logger.error('❌ Error obteniendo tareas de zona de ejecución:', error);
     return NextResponse.json(
       { error: 'Error al obtener tareas', details: error.message },
       { status: 500 }

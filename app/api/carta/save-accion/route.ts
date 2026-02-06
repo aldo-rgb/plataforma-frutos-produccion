@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/carta/save-accion
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
 
     const { metaId, texto, frequency, assignedDays, requiereEvidencia, specificDate } = await req.json();
 
-    console.log('📅 API save-accion - Datos recibidos:', {
+    logger.debug('📅 API save-accion - Datos recibidos:', {
       metaId,
       texto: texto?.substring(0, 50),
       frequency,
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
           updatedAt: new Date()
         }
       });
-      console.log('✅ Acción actualizada (evitando duplicado) ID:', accion.id);
+      logger.debug('✅ Acción actualizada (evitando duplicado) ID:', accion.id);
     } else {
       // CREAR nueva acción
       accion = await prisma.accion.create({
@@ -78,7 +79,7 @@ export async function POST(req: Request) {
           updatedAt: new Date()
         }
       });
-      console.log('✅ Acción creada ID:', accion.id);
+      logger.debug('✅ Acción creada ID:', accion.id);
     }
 
     return NextResponse.json({ 
@@ -87,7 +88,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('Error saving accion:', error);
+    logger.error('Error saving accion:', error);
     return NextResponse.json(
       { error: 'Error al guardar la acción', details: error.message },
       { status: 500 }

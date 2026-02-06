@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Stripe se inicializa solo si hay API key
 let stripe: any = null;
@@ -137,7 +138,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error) {
-    console.error('Error creating renewal session:', error);
+    logger.error('Error creating renewal session:', error);
     return NextResponse.json(
       { error: 'Error al crear sesión de renovación' },
       { status: 500 }

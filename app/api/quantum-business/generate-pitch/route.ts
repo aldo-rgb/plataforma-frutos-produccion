@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import OpenAI from 'openai';
+import logger from '@/lib/logger';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -75,7 +76,7 @@ Responde SOLO con un JSON válido en este formato exacto:
       const parsed = JSON.parse(cleanedResponse);
       return NextResponse.json(parsed);
     } catch (parseError) {
-      console.error('Error parsing AI response:', cleanedResponse);
+      logger.error('Error parsing AI response:', cleanedResponse);
       
       return NextResponse.json({
         descripcion: `${nombre} transforma la manera en que ${audiencia || 'las personas'} experimentan ${concepto || 'nuestros servicios'}. Con un enfoque personalizado y resultados comprobados, estamos aquí para llevarte al siguiente nivel.`,
@@ -84,7 +85,7 @@ Responde SOLO con un JSON válido en este formato exacto:
     }
 
   } catch (error) {
-    console.error('❌ Error generando pitch:', error);
+    logger.error('❌ Error generando pitch:', error);
     return NextResponse.json(
       { error: 'Error al generar descripción' },
       { status: 500 }

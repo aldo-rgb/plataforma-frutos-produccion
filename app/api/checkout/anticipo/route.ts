@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener datos de un checkout abandonado para pagar anticipo
 export async function GET(request: Request) {
@@ -96,7 +97,7 @@ export async function GET(request: Request) {
       },
     });
   } catch (error: any) {
-    console.error('Error fetching checkout data:', error);
+    logger.error('Error fetching checkout data:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Error interno' },
       { status: 500 }

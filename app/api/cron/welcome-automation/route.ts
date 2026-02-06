@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/email';
 import { sendWhatsAppTextMessage } from '@/lib/whatsapp';
+import logger from '@/lib/logger';
 
 /**
  * Cron Job: Automatizaciones de Bienvenida para Básico
@@ -34,11 +35,11 @@ export async function GET(request: Request) {
       errors: [] as string[],
     };
 
-    console.log(`🤖 Ejecutando automatización de bienvenida - Día: ${todayDayOfWeek} (${['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][todayDayOfWeek]})`);
+    logger.debug(`🤖 Ejecutando automatización de bienvenida - Día: ${todayDayOfWeek} (${['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][todayDayOfWeek]})`);
 
     // VIERNES (día 5): Enviar "Bienvenida Básico" para visiones que empiezan el LUNES siguiente
     if (todayDayOfWeek === 5) {
-      console.log('📅 Es VIERNES - Buscando visiones que empiezan el lunes...');
+      logger.debug('📅 Es VIERNES - Buscando visiones que empiezan el lunes...');
       
       // Calcular el próximo lunes (3 días después del viernes)
       const nextMonday = new Date(now);
@@ -59,7 +60,7 @@ export async function GET(request: Request) {
         },
       });
 
-      console.log(`📋 Encontradas ${visions.length} visiones que empiezan el lunes ${nextMonday.toDateString()}`);
+      logger.debug(`📋 Encontradas ${visions.length} visiones que empiezan el lunes ${nextMonday.toDateString()}`);
 
       for (const vision of visions) {
         // Obtener la organización por separado
@@ -78,7 +79,7 @@ export async function GET(request: Request) {
         });
 
         if (!organization?.videoBienvenidaLideres1Url) {
-          console.log(`⚠️ Vision ${vision.nombre} no tiene video de Bienvenida Básico configurado`);
+          logger.debug(`⚠️ Vision ${vision.nombre} no tiene video de Bienvenida Básico configurado`);
           continue;
         }
 
@@ -95,7 +96,7 @@ export async function GET(request: Request) {
 
     // LUNES (día 1): Enviar "Bienvenida Básico 2" para visiones que empiezan HOY
     if (todayDayOfWeek === 1) {
-      console.log('📅 Es LUNES - Buscando visiones que empiezan hoy...');
+      logger.debug('📅 Es LUNES - Buscando visiones que empiezan hoy...');
       
       const todayStart = new Date(now);
       todayStart.setHours(0, 0, 0, 0);
@@ -114,7 +115,7 @@ export async function GET(request: Request) {
         },
       });
 
-      console.log(`📋 Encontradas ${visions.length} visiones que empiezan hoy`);
+      logger.debug(`📋 Encontradas ${visions.length} visiones que empiezan hoy`);
 
       for (const vision of visions) {
         if (!vision.organizationId) continue;
@@ -132,7 +133,7 @@ export async function GET(request: Request) {
         });
 
         if (!organization?.videoBienvenidaLideres2Url) {
-          console.log(`⚠️ Vision ${vision.nombre} no tiene video de Bienvenida Básico 2 configurado`);
+          logger.debug(`⚠️ Vision ${vision.nombre} no tiene video de Bienvenida Básico 2 configurado`);
           continue;
         }
 
@@ -147,7 +148,7 @@ export async function GET(request: Request) {
       }
     }
 
-    console.log('📊 Resultados:', results);
+    logger.debug('📊 Resultados:', results);
 
     return NextResponse.json({
       success: true,
@@ -157,7 +158,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error en automatización de bienvenida:', error);
+    logger.error('❌ Error en automatización de bienvenida:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Error interno' },
       { status: 500 }
@@ -173,7 +174,7 @@ async function sendWelcomeMessages(
   videoUrl: string,
   results: { processed: number; emailsSent: number; whatsappSent: number; errors: string[] }
 ) {
-  console.log(`\n🎬 Procesando ${videoLabel} para Vision: ${vision.nombre}`);
+  logger.debug(`\n🎬 Procesando ${videoLabel} para Vision: ${vision.nombre}`);
 
   // Obtener todos los participantes de nivel BASIC de esta visión
   const enrollments = await prisma.vision_enrollments.findMany({
@@ -188,7 +189,7 @@ async function sendWelcomeMessages(
     }
   });
 
-  console.log(`👥 Encontrados ${enrollments.length} participantes BASIC en ${vision.nombre}`);
+  logger.debug(`👥 Encontrados ${enrollments.length} participantes BASIC en ${vision.nombre}`);
 
   const senderName = organization?.MasterOrganization?.name || organization?.name || 'Tu Equipo';
   const orgName = organization?.name || 'Tu Equipo';
@@ -231,10 +232,10 @@ ${orgName}`;
 
         if (emailResult.success) {
           results.emailsSent++;
-          console.log(`📧 Email enviado a ${user.email}`);
+          logger.debug(`📧 Email enviado a ${user.email}`);
         }
       } catch (err) {
-        console.error(`❌ Error email a ${user.email}:`, err);
+        logger.error(`❌ Error email a ${user.email}:`, err);
         results.errors.push(`Email fallido: ${user.email}`);
       }
     }
@@ -246,10 +247,10 @@ ${orgName}`;
         
         if (whatsappResult.success) {
           results.whatsappSent++;
-          console.log(`📱 WhatsApp enviado a ${user.telefono}`);
+          logger.debug(`📱 WhatsApp enviado a ${user.telefono}`);
         }
       } catch (err) {
-        console.error(`❌ Error WhatsApp a ${user.telefono}:`, err);
+        logger.error(`❌ Error WhatsApp a ${user.telefono}:`, err);
         results.errors.push(`WhatsApp fallido: ${user.telefono}`);
       }
     }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { obtenerEstadisticasMentor } from '@/lib/mentor-rating-service';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/mentorias/estadisticas/[id]
@@ -27,7 +28,7 @@ export async function GET(
     });
 
   } catch (error: any) {
-    console.error('❌ Error al obtener estadísticas:', error);
+    logger.error('❌ Error al obtener estadísticas:', error);
     
     return NextResponse.json(
       { 

@@ -6,6 +6,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { TribeCaptaincyRole, CaptainAssignmentStatus } from "@prisma/client";
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -426,7 +427,7 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error("Error en GET /api/legacy-vision-builder:", error);
+    logger.error("Error en GET /api/legacy-vision-builder:", error);
     return NextResponse.json(
       { error: "Error interno del servidor", details: String(error) },
       { status: 500 }
@@ -898,7 +899,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: "Acción no válida" }, { status: 400 });
   } catch (error) {
-    console.error("Error en POST /api/legacy-vision-builder:", error);
+    logger.error("Error en POST /api/legacy-vision-builder:", error);
     return NextResponse.json(
       { error: "Error interno del servidor", details: String(error) },
       { status: 500 }
@@ -972,7 +973,7 @@ export async function DELETE(request: NextRequest) {
       message: `Capitán removido del rol de ${roleDef.name}`,
     });
   } catch (error) {
-    console.error("Error en DELETE /api/legacy-vision-builder:", error);
+    logger.error("Error en DELETE /api/legacy-vision-builder:", error);
     return NextResponse.json(
       { error: "Error interno del servidor", details: String(error) },
       { status: 500 }

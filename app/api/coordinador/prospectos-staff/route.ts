@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET(req: NextRequest) {
   try {
@@ -87,7 +88,7 @@ export async function GET(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error en GET /api/coordinador/prospectos-staff:', error);
+    logger.error('❌ Error en GET /api/coordinador/prospectos-staff:', error);
     return NextResponse.json(
       { success: false, error: error.message || 'Error al cargar prospectos' },
       { status: 500 }

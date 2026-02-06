@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import logger from '@/lib/logger';
 
 const prisma = new PrismaClient();
 
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ Error al obtener disponibilidad del mentor:', error);
+    logger.error('❌ Error al obtener disponibilidad del mentor:', error);
     return NextResponse.json(
       { error: 'Error al obtener disponibilidad' },
       { status: 500 }

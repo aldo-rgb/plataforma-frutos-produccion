@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener encuestas pendientes del Game Changer
 export async function GET(request: NextRequest) {
@@ -184,7 +185,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error obteniendo encuestas pendientes:', error);
+    logger.error('❌ Error obteniendo encuestas pendientes:', error);
     return NextResponse.json(
       { error: 'Error al obtener encuestas pendientes' },
       { status: 500 }

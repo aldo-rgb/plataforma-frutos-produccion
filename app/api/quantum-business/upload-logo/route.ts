@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { createClient } from '@supabase/supabase-js';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://fteqhmntkmmppxufjrwt.supabase.co';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
     }
 
     // Descargar la imagen desde la URL temporal de DALL-E
-    console.log('📥 Descargando imagen desde:', logoUrl.substring(0, 50) + '...');
+    logger.debug('📥 Descargando imagen desde:', logoUrl.substring(0, 50) + '...');
     
     const imageResponse = await fetch(logoUrl);
     if (!imageResponse.ok) {
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
       : 'logo';
     const fileName = `business-logos/${session.user.id}/${sanitizedName}-${timestamp}.png`;
 
-    console.log('📤 Subiendo a Supabase Storage:', fileName);
+    logger.debug('📤 Subiendo a Supabase Storage:', fileName);
 
     // Subir a Supabase Storage
     const { data, error } = await supabase.storage
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
       });
 
     if (error) {
-      console.error('❌ Error subiendo a Supabase:', error);
+      logger.error('❌ Error subiendo a Supabase:', error);
       return NextResponse.json(
         { error: 'Error al subir el logo: ' + error.message },
         { status: 500 }
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
       .from('mentor-assets')
       .getPublicUrl(fileName);
 
-    console.log('✅ Logo subido exitosamente:', publicUrl);
+    logger.debug('✅ Logo subido exitosamente:', publicUrl);
 
     // Guardar en The Vault como Artefacto
     try {
@@ -93,10 +94,10 @@ export async function POST(request: Request) {
           gender: 'neutro'
         }
       });
-      console.log(`🎨 Logo guardado en The Vault (Artefactos) para usuario ${userId}: ${logoLabel}`);
+      logger.debug(`🎨 Logo guardado en The Vault (Artefactos) para usuario ${userId}: ${logoLabel}`);
     } catch (vaultError) {
       // No fallar si no se puede guardar en vault
-      console.error('Error guardando logo en vault:', vaultError);
+      logger.error('Error guardando logo en vault:', vaultError);
     }
 
     return NextResponse.json({ 
@@ -106,7 +107,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('❌ Error en upload-logo:', error);
+    logger.error('❌ Error en upload-logo:', error);
     return NextResponse.json(
       { error: 'Error al procesar el logo' },
       { status: 500 }

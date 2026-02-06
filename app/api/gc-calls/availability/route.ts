@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { ensureDefaultAvailability } from '@/lib/gcDefaultAvailability';
+import logger from '@/lib/logger';
 
 const GC_ROLES = ['GAMECHANGER', 'TRAINER', 'SCHOOL_ADMIN', 'COORDINADOR'];
 
@@ -76,7 +77,7 @@ export async function GET(request: Request) {
       })),
     });
   } catch (error) {
-    console.error('Error fetching GC availability:', error);
+    logger.error('Error fetching GC availability:', error);
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }
@@ -170,7 +171,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error('Error creating GC availability:', error);
+    logger.error('Error creating GC availability:', error);
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }
@@ -226,7 +227,7 @@ export async function DELETE(request: Request) {
       message: 'Disponibilidad eliminada',
     });
   } catch (error) {
-    console.error('Error deleting availability:', error);
+    logger.error('Error deleting availability:', error);
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }

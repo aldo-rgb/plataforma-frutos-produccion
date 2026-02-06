@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 const ALLOWED_ROLES = ['SCHOOL_ADMIN', 'COORDINADOR', 'GAMECHANGER', 'TRAINER', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
 
@@ -112,7 +113,7 @@ export async function POST(
       },
     });
 
-    console.log('📋 Enrollment check:', { 
+    logger.debug('📋 Enrollment check:', { 
       userId: targetUser.id, 
       visionId: squad.visionId, 
       squadLevel: squad.level,
@@ -123,7 +124,7 @@ export async function POST(
     // Permitir agregar aunque no tenga enrollment exacto (el GC puede agregar participantes pendientes)
     // Solo advertir si no hay ningún enrollment
     if (!enrollment) {
-      console.log('⚠️ No enrollment found, but allowing add');
+      logger.debug('⚠️ No enrollment found, but allowing add');
     }
 
     // Verificar si ya está en ESTE grupo
@@ -241,8 +242,8 @@ export async function POST(
       },
     });
   } catch (error: any) {
-    console.error('Error adding member to squad:', error);
-    console.error('Error details:', error?.message, error?.code);
+    logger.error('Error adding member to squad:', error);
+    logger.error('Error details:', error?.message, error?.code);
     
     let errorMessage = 'Error al agregar miembro';
     if (error?.code === 'P2002') {

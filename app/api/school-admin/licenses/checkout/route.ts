@@ -2,22 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
-    console.log('🛒 Iniciando proceso de checkout...');
+    logger.debug('🛒 Iniciando proceso de checkout...');
     
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      console.error('❌ No hay sesión activa o falta user.id');
+      logger.error('❌ No hay sesión activa o falta user.id');
       return NextResponse.json(
         { success: false, error: 'No autenticado' },
         { status: 401 }
       );
     }
 
-    console.log('✅ Usuario autenticado:', session.user.email);
+    logger.debug('✅ Usuario autenticado:', session.user.email);
 
     // Verificar que el usuario es director
     const user = await prisma.usuario.findUnique({
@@ -28,29 +29,29 @@ export async function POST(req: NextRequest) {
     });
 
     if (!user || user.rol !== 'SCHOOL_ADMIN') {
-      console.error('❌ Usuario no es SCHOOL_ADMIN:', user?.rol);
+      logger.error('❌ Usuario no es SCHOOL_ADMIN:', user?.rol);
       return NextResponse.json(
         { success: false, error: 'No autorizado' },
         { status: 403 }
       );
     }
 
-    console.log('✅ Usuario verificado como SCHOOL_ADMIN');
+    logger.debug('✅ Usuario verificado como SCHOOL_ADMIN');
 
     const body = await req.json();
     const { orderId, paymentMethod, proofUrl } = body;
 
-    console.log('📦 Datos recibidos:', { orderId, paymentMethod, proofUrl: proofUrl ? '✅' : '❌' });
+    logger.debug('📦 Datos recibidos:', { orderId, paymentMethod, proofUrl: proofUrl ? '✅' : '❌' });
 
     if (!orderId || !paymentMethod) {
-      console.error('❌ Datos incompletos');
+      logger.error('❌ Datos incompletos');
       return NextResponse.json(
         { success: false, error: 'Datos incompletos' },
         { status: 400 }
       );
     }
 
-    console.log('🔍 Buscando orden:', orderId);
+    logger.debug('🔍 Buscando orden:', orderId);
 
     // Buscar la orden
     const order = await prisma.licenseOrder.findUnique({
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log('📋 Orden encontrada:', order ? '✅' : '❌');
+    logger.debug('📋 Orden encontrada:', order ? '✅' : '❌');
 
     if (!order) {
       return NextResponse.json(
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Procesar según el método de pago
-    console.log('💳 Método de pago seleccionado:', paymentMethod);
+    logger.debug('💳 Método de pago seleccionado:', paymentMethod);
     
     // Preservar paymentData original (funciona tanto para string como objeto)
     let existingPaymentData: any = {};
@@ -98,14 +99,14 @@ export async function POST(req: NextRequest) {
           existingPaymentData = order.paymentData;
         }
       }
-      console.log('📦 PaymentData existente:', existingPaymentData);
+      logger.debug('📦 PaymentData existente:', existingPaymentData);
     } catch (error) {
-      console.error('⚠️ Error parseando paymentData, usando objeto vacío:', error);
+      logger.error('⚠️ Error parseando paymentData, usando objeto vacío:', error);
       existingPaymentData = {};
     }
     
     if (paymentMethod === 'transfer') {
-      console.log('💸 Procesando pago por transferencia...');
+      logger.debug('💸 Procesando pago por transferencia...');
       
       // Para transferencia, solo actualizamos el método de pago y guardamos el comprobante
       // El director recibirá instrucciones por correo/pantalla
@@ -130,7 +131,7 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      console.log('✅ Orden actualizada a PROCESSING');
+      logger.debug('✅ Orden actualizada a PROCESSING');
 
       return NextResponse.json({
         success: true,
@@ -146,7 +147,7 @@ export async function POST(req: NextRequest) {
         },
       });
     } else if (paymentMethod === 'stripe') {
-      console.log('💳 Procesando pago con Stripe (simulación)...');
+      logger.debug('💳 Procesando pago con Stripe (simulación)...');
       
       // Para Stripe simulado, marcamos como COMPLETED y generamos créditos
       const updatedOrder = await prisma.licenseOrder.update({
@@ -165,13 +166,13 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      console.log('✅ Orden marcada como COMPLETED con Stripe');
+      logger.debug('✅ Orden marcada como COMPLETED con Stripe');
 
       // Verificar si es un pago de visión (mentorías) o de licencias
       const isVisionPayment = existingPaymentData?.type === 'VISION_MENTOR_PAYMENT';
       
       if (isVisionPayment) {
-        console.log('🎯 Pago de VISIÓN detectado - Creando MentorPackageOrder y VisionMentor');
+        logger.debug('🎯 Pago de VISIÓN detectado - Creando MentorPackageOrder y VisionMentor');
         
         const visionId = existingPaymentData.visionId;
         const mentorAssignments = existingPaymentData.mentorAssignments || [];
@@ -200,7 +201,7 @@ export async function POST(req: NextRequest) {
             },
           });
           
-          console.log(`📦 MentorPackageOrder creado: ${packageOrder.id} para mentor ${mentorId}`);
+          logger.debug(`📦 MentorPackageOrder creado: ${packageOrder.id} para mentor ${mentorId}`);
           
           // Verificar si ya existe VisionMentor para evitar duplicados
           const existingVisionMentor = await prisma.visionMentor.findFirst({
@@ -220,9 +221,9 @@ export async function POST(req: NextRequest) {
               },
             });
             
-            console.log(`✅ VisionMentor creado para mentor ${mentorId} en visión ${visionId}`);
+            logger.debug(`✅ VisionMentor creado para mentor ${mentorId} en visión ${visionId}`);
           } else {
-            console.log(`ℹ️  VisionMentor ya existe para mentor ${mentorId} en visión ${visionId}`);
+            logger.debug(`ℹ️  VisionMentor ya existe para mentor ${mentorId} en visión ${visionId}`);
           }
         }
         
@@ -236,7 +237,7 @@ export async function POST(req: NextRequest) {
 
       // Si NO es pago de visión, generar créditos de licencias
       // Actualizar o crear los créditos de licencia
-      console.log(`🎫 Agregando ${order.quantity} créditos para organización ${order.organizationId}...`);
+      logger.debug(`🎫 Agregando ${order.quantity} créditos para organización ${order.organizationId}...`);
       
       // Buscar crédito existente o crear uno nuevo
       const existingCredit = await prisma.schoolCredit.findFirst({
@@ -274,7 +275,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      console.log(`✅ Créditos actualizados: ${creditRecord.totalPurchased} total`);
+      logger.debug(`✅ Créditos actualizados: ${creditRecord.totalPurchased} total`);
 
       return NextResponse.json({
         success: true,
@@ -284,7 +285,7 @@ export async function POST(req: NextRequest) {
         message: 'Pago procesado exitosamente con Stripe',
       });
     } else if (paymentMethod === 'paypal') {
-      console.log('💳 Procesando pago con PayPal (simulación)...');
+      logger.debug('💳 Procesando pago con PayPal (simulación)...');
       
       try {
         // Para PayPal simulado, marcamos como COMPLETED y generamos créditos
@@ -311,13 +312,13 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        console.log('✅ Orden marcada como COMPLETED con PayPal');
+        logger.debug('✅ Orden marcada como COMPLETED con PayPal');
 
         // Verificar si es un pago de visión (mentorías) o de licencias
         const isVisionPaymentPaypal = existingPaymentData?.type === 'VISION_MENTOR_PAYMENT';
         
         if (isVisionPaymentPaypal) {
-          console.log('🎯 Pago de VISIÓN detectado - Creando MentorPackageOrder y VisionMentor');
+          logger.debug('🎯 Pago de VISIÓN detectado - Creando MentorPackageOrder y VisionMentor');
           
           const visionId = existingPaymentData.visionId;
           const mentorAssignments = existingPaymentData.mentorAssignments || [];
@@ -346,7 +347,7 @@ export async function POST(req: NextRequest) {
               },
             });
             
-            console.log(`📦 MentorPackageOrder creado: ${packageOrder.id} para mentor ${mentorId}`);
+            logger.debug(`📦 MentorPackageOrder creado: ${packageOrder.id} para mentor ${mentorId}`);
             
             // Verificar si ya existe VisionMentor
             const existingVisionMentor = await prisma.visionMentor.findFirst({
@@ -361,7 +362,7 @@ export async function POST(req: NextRequest) {
                   assignedById: updatedOrder.requestedBy,
                 },
               });
-              console.log(`✅ VisionMentor creado para mentor ${mentorId}`);
+              logger.debug(`✅ VisionMentor creado para mentor ${mentorId}`);
             }
           }
           
@@ -375,7 +376,7 @@ export async function POST(req: NextRequest) {
 
         // Si NO es pago de visión, generar créditos de licencias
         // Actualizar o crear los créditos de licencia
-        console.log(`🎫 Agregando ${order.quantity} créditos para organización ${order.organizationId}...`);
+        logger.debug(`🎫 Agregando ${order.quantity} créditos para organización ${order.organizationId}...`);
         
         // Buscar crédito existente o crear uno nuevo
         const existingCredit = await prisma.schoolCredit.findFirst({
@@ -413,7 +414,7 @@ export async function POST(req: NextRequest) {
           });
         }
 
-        console.log(`✅ Créditos actualizados: ${creditRecord.totalPurchased} total`);
+        logger.debug(`✅ Créditos actualizados: ${creditRecord.totalPurchased} total`);
 
         return NextResponse.json({
           success: true,
@@ -423,7 +424,7 @@ export async function POST(req: NextRequest) {
           message: 'Pago procesado exitosamente con PayPal',
         });
       } catch (error: any) {
-        console.error('❌ Error en PayPal:', error);
+        logger.error('❌ Error en PayPal:', error);
         return NextResponse.json({
           success: false,
           error: 'Error al procesar pago con PayPal',
@@ -431,7 +432,7 @@ export async function POST(req: NextRequest) {
         }, { status: 500 });
       }
     } else if (paymentMethod === 'mercadopago') {
-      console.log('💳 Procesando pago con Mercado Pago (simulación)...');
+      logger.debug('💳 Procesando pago con Mercado Pago (simulación)...');
       
       // Para Mercado Pago simulado, marcamos como COMPLETED y generamos créditos
       const updatedOrder = await prisma.licenseOrder.update({
@@ -450,13 +451,13 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      console.log('✅ Orden marcada como COMPLETED con Mercado Pago');
+      logger.debug('✅ Orden marcada como COMPLETED con Mercado Pago');
 
       // Verificar si es un pago de visión (mentorías) o de licencias
       const isVisionPaymentMP = existingPaymentData?.type === 'VISION_MENTOR_PAYMENT';
       
       if (isVisionPaymentMP) {
-        console.log('🎯 Pago de VISIÓN detectado - Creando MentorPackageOrder y VisionMentor');
+        logger.debug('🎯 Pago de VISIÓN detectado - Creando MentorPackageOrder y VisionMentor');
         
         const visionId = existingPaymentData.visionId;
         const mentorAssignments = existingPaymentData.mentorAssignments || [];
@@ -485,7 +486,7 @@ export async function POST(req: NextRequest) {
             },
           });
           
-          console.log(`📦 MentorPackageOrder creado: ${packageOrder.id} para mentor ${mentorId}`);
+          logger.debug(`📦 MentorPackageOrder creado: ${packageOrder.id} para mentor ${mentorId}`);
           
           // Verificar si ya existe VisionMentor
           const existingVisionMentor = await prisma.visionMentor.findFirst({
@@ -500,7 +501,7 @@ export async function POST(req: NextRequest) {
                 assignedById: updatedOrder.requestedBy,
               },
             });
-            console.log(`✅ VisionMentor creado para mentor ${mentorId}`);
+            logger.debug(`✅ VisionMentor creado para mentor ${mentorId}`);
           }
         }
         
@@ -514,7 +515,7 @@ export async function POST(req: NextRequest) {
 
       // Si NO es pago de visión, generar créditos de licencias
       // Actualizar o crear los créditos de licencia
-      console.log(`🎫 Agregando ${order.quantity} créditos para organización ${order.organizationId}...`);
+      logger.debug(`🎫 Agregando ${order.quantity} créditos para organización ${order.organizationId}...`);
       
       // Buscar crédito existente o crear uno nuevo
       const existingCredit = await prisma.schoolCredit.findFirst({
@@ -552,7 +553,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      console.log(`✅ Créditos actualizados: ${creditRecord.totalPurchased} total`);
+      logger.debug(`✅ Créditos actualizados: ${creditRecord.totalPurchased} total`);
 
       return NextResponse.json({
         success: true,
@@ -568,8 +569,8 @@ export async function POST(req: NextRequest) {
       );
     }
   } catch (error: any) {
-    console.error('❌ Error en checkout:', error);
-    console.error('Stack trace:', error.stack);
+    logger.error('❌ Error en checkout:', error);
+    logger.error('Stack trace:', error.stack);
     return NextResponse.json(
       {
         success: false,

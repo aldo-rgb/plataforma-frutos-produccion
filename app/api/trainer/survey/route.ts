@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // POST - Guardar encuesta del Trainer
 export async function POST(request: NextRequest) {
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log(`✅ Encuesta Trainer completada: ${trainer.nombre} para "${product.name}"`);
+    logger.debug(`✅ Encuesta Trainer completada: ${trainer.nombre} para "${product.name}"`);
 
     return NextResponse.json({
       success: true,
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error guardando encuesta trainer:', error);
+    logger.error('❌ Error guardando encuesta trainer:', error);
     return NextResponse.json(
       { error: 'Error al guardar encuesta', message: error?.message },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
       message: 'Código de acceso generado exitosamente',
     });
   } catch (error) {
-    console.error('Error generando código de acceso:', error);
+    logger.error('Error generando código de acceso:', error);
     return NextResponse.json(
       { error: 'Error al generar código' },
       { status: 500 }
@@ -127,7 +128,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ codes });
   } catch (error) {
-    console.error('Error obteniendo códigos:', error);
+    logger.error('Error obteniendo códigos:', error);
     return NextResponse.json(
       { error: 'Error al obtener códigos' },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function GET(request: Request) {
   try {
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
 
       const visionIds = visiones.map(v => v.id);
 
-      console.log('🔍 Coordinador - Visiones encontradas:', visionIds);
+      logger.debug('🔍 Coordinador - Visiones encontradas:', visionIds);
 
       whereClause = {
         rol: {
@@ -65,7 +66,7 @@ export async function GET(request: Request) {
       };
     } else {
       // Director ve toda su organización
-      console.log('🔍 Director/School Admin - Organization ID:', usuario.organizationId);
+      logger.debug('🔍 Director/School Admin - Organization ID:', usuario.organizationId);
       whereClause = {
         organizationId: usuario.organizationId,
         rol: {
@@ -74,7 +75,7 @@ export async function GET(request: Request) {
       };
     }
 
-    console.log('🔍 Where clause:', JSON.stringify(whereClause, null, 2));
+    logger.debug('🔍 Where clause:', JSON.stringify(whereClause, null, 2));
 
     // Obtener todos los participantes con información de llamadas
     const participantes = await prisma.usuario.findMany({
@@ -173,7 +174,7 @@ export async function GET(request: Request) {
       };
     });
 
-    console.log('✅ Participantes encontrados:', participantesConInfo.length);
+    logger.debug('✅ Participantes encontrados:', participantesConInfo.length);
 
     return NextResponse.json({
       success: true,
@@ -181,7 +182,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error obteniendo strikes:', error);
+    logger.error('❌ Error obteniendo strikes:', error);
     return NextResponse.json(
       { 
         error: 'Error al obtener información de strikes',

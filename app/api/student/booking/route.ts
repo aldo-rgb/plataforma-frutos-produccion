@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { Prisma } from '@prisma/client';
 import { validateSessionCredits, consumeSessionCredit } from '@/lib/packageSessionManager';
+import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,8 +35,8 @@ export async function POST(request: Request) {
     // Combinar date (YYYY-MM-DD) + time (HH:mm) en un DateTime
     const scheduledAt = new Date(`${date}T${time}:00`);
 
-    console.log(`📞 Intento de reserva: Estudiante ${studentId}, Mentor ${mentorId}, Fecha: ${scheduledAt}`);
-    console.log(`💳 Usar crédito de paquete: ${usePackageCredit ? 'Sí' : 'No'}`);
+    logger.debug(`📞 Intento de reserva: Estudiante ${studentId}, Mentor ${mentorId}, Fecha: ${scheduledAt}`);
+    logger.debug(`💳 Usar crédito de paquete: ${usePackageCredit ? 'Sí' : 'No'}`);
 
     // 💳 VALIDAR CRÉDITOS DE PAQUETE SI SE REQUIERE
     let packageOrderId: string | undefined;
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
       }
 
       packageOrderId = validation.packageOrderId;
-      console.log(`💳 Créditos validados. Paquete: ${packageOrderId}, Restantes: ${validation.remainingSessions}`);
+      logger.debug(`💳 Créditos validados. Paquete: ${packageOrderId}, Restantes: ${validation.remainingSessions}`);
     }
     
     // 🎯 VALIDACIÓN CRÍTICA: Para DISCIPLINE, verificar que el mentor esté asignado a la visión
@@ -113,7 +114,7 @@ export async function POST(request: Request) {
 
       const weeklyCalls = existingWeeklyCalls.length;
 
-      console.log(`📊 Llamadas esta semana: ${weeklyCalls}/2`);
+      logger.debug(`📊 Llamadas esta semana: ${weeklyCalls}/2`);
 
       if (weeklyCalls >= 2) {
         throw new Error("LIMIT_REACHED"); // "Disparo" el error para cancelar todo
@@ -125,7 +126,7 @@ export async function POST(request: Request) {
         const existingDay = new Date(existingCall.scheduledAt).getDay();
         const newDay = scheduledAt.getDay();
         
-        console.log(`🔍 Validando días: Llamada existente día ${existingDay}, Nueva llamada día ${newDay}`);
+        logger.debug(`🔍 Validando días: Llamada existente día ${existingDay}, Nueva llamada día ${newDay}`);
         
         if (existingDay === newDay) {
           throw new Error("SAME_DAY_ERROR");
@@ -155,7 +156,7 @@ export async function POST(request: Request) {
         platformShare = (price * commission) / 100;
         mentorShare = price - platformShare;
 
-        console.log(`💰 Precio: $${price} | Comisión: ${commission}% | Plataforma: $${platformShare} | Mentor: $${mentorShare}`);
+        logger.debug(`💰 Precio: $${price} | Comisión: ${commission}% | Plataforma: $${platformShare} | Mentor: $${mentorShare}`);
       }
 
       // C. INTENTO DE RESERVA con tipo de llamada
@@ -184,16 +185,16 @@ export async function POST(request: Request) {
           }
         });
 
-        console.log(`💳 Transacción registrada: Booking ID ${newBooking.id}, Total: $${price}`);
+        logger.debug(`💳 Transacción registrada: Booking ID ${newBooking.id}, Total: $${price}`);
       }
 
       // E. CONSUMIR CRÉDITO DE PAQUETE SI APLICA
       if (packageOrderId) {
         await consumeSessionCredit(packageOrderId);
-        console.log(`📦 Crédito consumido del paquete ${packageOrderId}`);
+        logger.debug(`📦 Crédito consumido del paquete ${packageOrderId}`);
       }
 
-      console.log(`✅ Reserva creada exitosamente: ID ${newBooking.id}`);
+      logger.debug(`✅ Reserva creada exitosamente: ID ${newBooking.id}`);
 
       return newBooking;
     });
@@ -205,7 +206,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error("❌ Error en reserva:", error);
+    logger.error("❌ Error en reserva:", error);
 
     // 3. MANEJO DE ERRORES ESPECÍFICOS
     

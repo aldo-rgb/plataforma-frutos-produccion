@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { completarSesion } from '@/lib/mentor-rating-service';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/mentorias/sesiones/completar
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error al completar sesión:', error);
+    logger.error('❌ Error al completar sesión:', error);
     
     return NextResponse.json(
       { 

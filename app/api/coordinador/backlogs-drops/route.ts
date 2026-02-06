@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // Roles permitidos
 const ALLOWED_ROLES = [
@@ -146,7 +147,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error obteniendo lista de backlogs/drops:', error);
+    logger.error('Error obteniendo lista de backlogs/drops:', error);
     return NextResponse.json(
       { error: 'Error al obtener datos', message: error?.message },
       { status: 500 }

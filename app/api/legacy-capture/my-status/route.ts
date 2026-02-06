@@ -7,6 +7,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { VisionLevel } from "@prisma/client";
+import logger from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest) {
         : null,
     });
   } catch (error) {
-    console.error("Error en GET /api/legacy-capture/my-status:", error);
+    logger.error("Error en GET /api/legacy-capture/my-status:", error);
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }

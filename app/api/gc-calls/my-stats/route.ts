@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 /**
  * GET /api/gc-calls/my-stats
@@ -556,7 +557,7 @@ export async function GET() {
       targetVisionId,
     });
   } catch (error) {
-    console.error('Error fetching GC stats:', error);
+    logger.error('Error fetching GC stats:', error);
     return NextResponse.json({ success: false, error: 'Error interno' }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function POST(request: Request) {
   try {
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
         // Usar la visión donde tiene ADVANCED
         effectiveVisionId = advancedEnrollmentAnyVision.visionId;
         existingAdvancedEnrollment = advancedEnrollmentAnyVision;
-        console.log(`🔄 PL-only: Usuario ${userId} no tiene ADVANCED en visión ${visionId}, usando visión ${effectiveVisionId} donde sí tiene ADVANCED`);
+        logger.debug(`🔄 PL-only: Usuario ${userId} no tiene ADVANCED en visión ${visionId}, usando visión ${effectiveVisionId} donde sí tiene ADVANCED`);
       } else {
         return NextResponse.json(
           { success: false, error: 'Debes tener una inscripción activa en Avanzado para comprar solo PL' },
@@ -217,7 +218,7 @@ export async function POST(request: Request) {
               updatedAt: new Date(),
             },
           });
-          console.log(`✅ Actualizando enrollment PL pendiente (ID: ${existingPendingPL.id}) a PAID`);
+          logger.debug(`✅ Actualizando enrollment PL pendiente (ID: ${existingPendingPL.id}) a PAID`);
         } else {
           // Create new PL enrollment in the same vision as ADVANCED
           plEnrollment = await tx.vision_enrollments.create({
@@ -451,7 +452,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error: any) {
-    console.error('Error enrolling in advanced:', error);
+    logger.error('Error enrolling in advanced:', error);
     
     // Return specific error message if it's a known validation error
     const errorMessage = error?.message || 'Error interno del servidor';

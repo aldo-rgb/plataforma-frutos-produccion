@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function POST(
   request: Request,
@@ -93,7 +94,7 @@ export async function POST(
       });
     }
 
-    console.log(`[PAY TICKET] Ticket ${ticketId} actualizado:`, {
+    logger.debug(`[PAY TICKET] Ticket ${ticketId} actualizado:`, {
       previousAmount: currentAmountPaid,
       addedAmount: amountPaid,
       newAmount: newAmountPaid,
@@ -113,7 +114,7 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error('Error processing payment:', error);
+    logger.error('Error processing payment:', error);
     return NextResponse.json(
       { success: false, error: 'Error interno del servidor' },
       { status: 500 }

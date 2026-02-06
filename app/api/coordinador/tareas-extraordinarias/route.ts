@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 // GET - Obtener tareas extraordinarias
 export async function GET(request: Request) {
@@ -68,7 +69,7 @@ export async function GET(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error obteniendo tareas extraordinarias:', error);
+    logger.error('❌ Error obteniendo tareas extraordinarias:', error);
     return NextResponse.json(
       { 
         error: 'Error al obtener tareas',
@@ -149,7 +150,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error creando tarea extraordinaria:', error);
+    logger.error('❌ Error creando tarea extraordinaria:', error);
     return NextResponse.json(
       { 
         error: 'Error al crear tarea',

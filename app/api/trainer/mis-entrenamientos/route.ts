@@ -3,18 +3,19 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import prisma from "@/lib/prisma"
+import logger from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    console.log('🔍 Session user:', session?.user)
+    logger.debug('🔍 Session user:', session?.user)
     
     if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }
 
     const userId = Number(session.user.id)
-    console.log('🔍 User ID from session:', userId)
+    logger.debug('🔍 User ID from session:', userId)
 
     // Verificar que es TRAINER
     const usuario = await prisma.usuario.findUnique({
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
       select: { id: true, rol: true, nombre: true, email: true }
     })
 
-    console.log('🔍 Usuario encontrado:', usuario)
+    logger.debug('🔍 Usuario encontrado:', usuario)
 
     if (!usuario || usuario.rol !== 'TRAINER') {
       return NextResponse.json({ error: "Solo trainers pueden acceder" }, { status: 403 })
@@ -119,9 +120,9 @@ export async function GET(request: NextRequest) {
     })
     const productos = Array.from(productosMap.values())
 
-    console.log('🔍 Productos directos:', productosDirectos.length)
-    console.log('🔍 Productos via staff:', productosViaStaff.length)
-    console.log('🔍 Total productos:', productos.length)
+    logger.debug('🔍 Productos directos:', productosDirectos.length)
+    logger.debug('🔍 Productos via staff:', productosViaStaff.length)
+    logger.debug('🔍 Total productos:', productos.length)
 
     // Clasificar productos por estado
     const now = new Date()
@@ -462,7 +463,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error("Error al obtener entrenamientos del trainer:", error)
+    logger.error("Error al obtener entrenamientos del trainer:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }

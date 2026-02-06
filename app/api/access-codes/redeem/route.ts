@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import logger from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
@@ -132,7 +133,7 @@ export async function POST(req: NextRequest) {
       message: 'Código canjeado exitosamente',
     });
   } catch (error) {
-    console.error('Error canjeando código:', error);
+    logger.error('Error canjeando código:', error);
     return NextResponse.json(
       { error: 'Error al canjear código' },
       { status: 500 }

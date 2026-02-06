@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { validateExtensionDate, getLastTaskDate } from '@/lib/dateCalculator';
 import { generateAdditionalTasks } from '@/lib/taskGenerator';
 import { addDays } from 'date-fns';
+import logger from '@/lib/logger';
 
 /**
  * POST /api/admin/vision/extend
@@ -36,9 +37,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'visionId y newEndDate son requeridos' }, { status: 400 });
     }
 
-    console.log(`🔄 EXTENSIÓN DE VISIÓN iniciada por Admin #${adminId}`);
-    console.log(`   Vision ID: ${visionId}`);
-    console.log(`   Nueva fecha fin: ${newEndDate}`);
+    logger.debug(`🔄 EXTENSIÓN DE VISIÓN iniciada por Admin #${adminId}`);
+    logger.debug(`   Vision ID: ${visionId}`);
+    logger.debug(`   Nueva fecha fin: ${newEndDate}`);
 
     // Obtener visión actual
     const vision = await prisma.vision.findUnique({
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: validation.reason }, { status: 400 });
     }
 
-    console.log(`   Días adicionales: ${validation.additionalDays}`);
+    logger.debug(`   Días adicionales: ${validation.additionalDays}`);
 
     // Obtener todos los usuarios activos de esta visión
     const users = await prisma.usuario.findMany({
@@ -72,7 +73,7 @@ export async function POST(req: Request) {
       select: { id: true, nombre: true, email: true }
     });
 
-    console.log(`   👥 ${users.length} usuarios activos en la visión "${vision.name}"`);
+    logger.debug(`   👥 ${users.length} usuarios activos en la visión "${vision.name}"`);
 
     if (users.length === 0) {
       return NextResponse.json({ 
@@ -90,7 +91,7 @@ export async function POST(req: Request) {
         const lastTaskDate = await getLastTaskDate(user.id);
         
         if (!lastTaskDate) {
-          console.log(`   ⚠️ Usuario ${user.nombre}: Sin tareas previas, saltando`);
+          logger.debug(`   ⚠️ Usuario ${user.nombre}: Sin tareas previas, saltando`);
           continue;
         }
 
@@ -98,7 +99,7 @@ export async function POST(req: Request) {
         const fromDate = addDays(lastTaskDate, 1);
         const toDate = new Date(newEndDate);
 
-        console.log(`   📋 Generando tareas para ${user.nombre} desde ${fromDate.toISOString().split('T')[0]}`);
+        logger.debug(`   📋 Generando tareas para ${user.nombre} desde ${fromDate.toISOString().split('T')[0]}`);
 
         const result = await generateAdditionalTasks(user.id, fromDate, toDate);
 
@@ -110,7 +111,7 @@ export async function POST(req: Request) {
         });
 
       } catch (error: any) {
-        console.error(`   ❌ Error con usuario ${user.nombre}:`, error.message);
+        logger.error(`   ❌ Error con usuario ${user.nombre}:`, error.message);
         results.push({
           userId: user.id,
           userName: user.nombre,
@@ -161,7 +162,7 @@ export async function POST(req: Request) {
 
     const totalTasksCreated = results.reduce((sum, r) => sum + r.tasksCreated, 0);
 
-    console.log(`✅ Visión extendida: ${totalTasksCreated} tareas adicionales generadas`);
+    logger.debug(`✅ Visión extendida: ${totalTasksCreated} tareas adicionales generadas`);
 
     return NextResponse.json({
       success: true,
@@ -177,7 +178,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error('❌ Error extendiendo visión:', error);
+    logger.error('❌ Error extendiendo visión:', error);
     return NextResponse.json(
       { error: 'Error al extender visión', details: error.message },
       { status: 500 }
