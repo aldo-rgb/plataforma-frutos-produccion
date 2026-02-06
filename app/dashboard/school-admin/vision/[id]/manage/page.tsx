@@ -333,7 +333,8 @@ export default function VisionManagePage() {
 
   const fetchCoordinadores = async () => {
     try {
-      const res = await fetch('/api/school-admin/coordinadores');
+      // Pasar visionId para que ADMINISTRADOR global pueda ver coordinadores de la organización correcta
+      const res = await fetch(`/api/school-admin/coordinadores?visionId=${visionId}`);
       const data = await res.json();
       
       if (data.success) {

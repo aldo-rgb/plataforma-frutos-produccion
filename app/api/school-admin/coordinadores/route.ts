@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -16,8 +16,10 @@ const ALLOWED_ROLES = [
 /**
  * GET /api/school-admin/coordinadores
  * Obtiene la lista de coordinadores de la organización del director
+ * Query params:
+ *   - visionId: (opcional) ID de la visión para obtener coordinadores de su organización
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -45,9 +47,25 @@ export async function GET() {
       );
     }
 
-    if (!user.organizationId) {
+    // Determinar qué organización usar
+    let targetOrganizationId = user.organizationId;
+
+    // Si es ADMINISTRADOR global sin organización, obtener de la visión
+    if (!targetOrganizationId && user.rol === 'ADMINISTRADOR') {
+      const visionId = request.nextUrl.searchParams.get('visionId');
+      
+      if (visionId) {
+        const vision = await prisma.vision.findUnique({
+          where: { id: parseInt(visionId) },
+          select: { organizationId: true }
+        });
+        targetOrganizationId = vision?.organizationId || null;
+      }
+    }
+
+    if (!targetOrganizationId) {
       return NextResponse.json(
-        { success: false, error: 'No tienes una organización asignada' },
+        { success: false, error: 'No tienes una organización asignada. Agrega ?visionId=X para especificar la visión.' },
         { status: 400 }
       );
     }
@@ -56,7 +74,7 @@ export async function GET() {
     // Incluir COORDINATOR_BASIC, COORDINATOR_ADVANCED, TRAINER, COORDINADOR, y SCHOOL_ADMIN
     const coordinadores = await prisma.usuario.findMany({
       where: {
-        organizationId: user.organizationId,
+        organizationId: targetOrganizationId,
         rol: {
           in: ['COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER', 'COORDINADOR', 'SCHOOL_ADMIN']
         }
@@ -72,7 +90,7 @@ export async function GET() {
       }
     });
 
-    logger.debug(`✅ Coordinadores encontrados para organización ${user.organizationId}:`, coordinadores.length);
+    logger.debug(`✅ Coordinadores encontrados para organización ${targetOrganizationId}:`, coordinadores.length);
 
     return NextResponse.json({
       success: true,
