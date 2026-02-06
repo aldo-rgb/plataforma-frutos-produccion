@@ -22,10 +22,10 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   try {
     // Rate limiting - Chat voice es costoso
-    const { response } = rateLimit(req, RateLimitPresets.ai);
-    if (response) {
+    const rateLimitResult = rateLimit(req, RateLimitPresets.ai);
+    if (rateLimitResult.response) {
       logger.warn('Rate limit exceeded on quantum/chat-voice');
-      return response;
+      return rateLimitResult.response;
     }
 
     if (!openai) {
@@ -110,13 +110,13 @@ Ahora responde al usuario con estas reglas.`;
       max_tokens: 150, // Limitar longitud para voz
     });
 
-    const response = completion.choices[0].message.content;
+    const aiResponse = completion.choices[0]?.message?.content || 'No pude generar una respuesta';
 
-    logger.debug('🤖 Respuesta de voz generada:', response);
+    logger.debug('🤖 Respuesta de voz generada:', aiResponse);
 
     return NextResponse.json({
       success: true,
-      response
+      response: aiResponse
     });
 
   } catch (error) {
