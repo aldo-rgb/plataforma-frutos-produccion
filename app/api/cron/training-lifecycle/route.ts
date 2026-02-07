@@ -119,6 +119,44 @@ export async function POST(request: NextRequest) {
     }
 
     // ========================================
+    // 2.5 INICIAR ENTRENAMIENTOS SIN registrationOpenDate
+    // Si registrationOpenDate es NULL y ya pasó startDate + 10:00 AM
+    // Cambiar directamente de PENDING a IN_PROGRESS
+    // ========================================
+    const productsWithoutRegistrationDate = await prisma.schoolProduct.findMany({
+      where: {
+        trainingStatus: 'PENDING',
+        registrationOpenDate: null,
+        startDate: {
+          lte: now
+        },
+        isActive: true
+      }
+    });
+
+    for (const product of productsWithoutRegistrationDate) {
+      try {
+        // Para productos sin registrationOpenDate, iniciar a las 10:00 AM del startDate
+        const productStartDateTime = new Date(product.startDate!);
+        productStartDateTime.setHours(10, 0, 0, 0);
+
+        if (now >= productStartDateTime) {
+          await prisma.schoolProduct.update({
+            where: { id: product.id },
+            data: {
+              trainingStatus: 'IN_PROGRESS',
+              updatedAt: now
+            }
+          });
+          results.trainingStarted++;
+          logger.debug(`🏃 Entrenamiento iniciado (sin registrationOpenDate): ${product.name}`);
+        }
+      } catch (error: any) {
+        results.errors.push(`Error iniciando entrenamiento ${product.id}: ${error.message}`);
+      }
+    }
+
+    // ========================================
     // 3. AUTO-FINALIZAR A LAS 11 PM
     // Solo si el TRAINER no lo ha hecho manualmente
     // ========================================
