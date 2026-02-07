@@ -75,7 +75,15 @@ export const checkoutCreatePaymentSchema = z.object({
     email: emailSchema,
     apodo: z.string().max(50).optional(),
     telefono: z.string().max(20).optional(),
-  }),
+    password: z.string().min(6).max(100).optional(),
+    horarioLlamada: z.string().max(50).optional(),
+    profession: z.string().max(200).optional(),
+    birthdate: z.string().max(20).optional(),
+    children: z.string().max(20).optional(),
+    goals: z.string().max(1000).optional(),
+    expectations: z.string().max(1000).optional(),
+    referralCode: z.string().max(50).optional(),
+  }).passthrough(), // Permite campos adicionales del registro
   appliedCodes: z.array(z.string().max(50)).optional(),
 });
 
