@@ -142,7 +142,7 @@ export async function GET() {
                     }
                   },
                   // Capitanías asignadas
-                  TribeCaptainAssignment_UserCaptainAssignments: {
+                  CaptainAssignments: {
                     where: {
                       status: 'ACTIVE'
                     },
@@ -206,11 +206,11 @@ export async function GET() {
               mentorNombre: p.Usuario_Usuario_assignedMentorIdToUsuario?.nombre || null,
               tieneMentor: !!(p.assignedMentorId),
               // Capitanías asignadas
-              capitanias: (p.TribeCaptainAssignment_UserCaptainAssignments || []).map((c: any) => ({
+              capitanias: (p.CaptainAssignments || []).map((c: any) => ({
                 roleType: c.captaincy?.roleType,
                 status: c.status,
               })),
-              tieneCapitanias: (p.TribeCaptainAssignment_UserCaptainAssignments || []).length > 0,
+              tieneCapitanias: (p.CaptainAssignments || []).length > 0,
             }));
 
           return {
