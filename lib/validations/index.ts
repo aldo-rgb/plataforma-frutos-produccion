@@ -67,7 +67,7 @@ export const createPaymentSchema = z.object({
 // Schema para checkout de registro básico
 export const checkoutCreatePaymentSchema = z.object({
   organizationId: idSchema,
-  visionId: idSchema.optional(),
+  visionId: idSchema.optional().nullable(),
   amount: z.number().positive('Monto debe ser positivo'),
   ticketSelection: z.enum(['BASIC_ONLY', 'FULL_VISION']).optional(),
   userData: z.object({
@@ -79,10 +79,10 @@ export const checkoutCreatePaymentSchema = z.object({
     horarioLlamada: z.string().max(50).optional(),
     profession: z.string().max(200).optional(),
     birthdate: z.string().max(20).optional(),
-    children: z.string().max(20).optional(),
-    goals: z.string().max(1000).optional(),
+    children: z.union([z.string(), z.number()]).optional(),
+    goals: z.union([z.string().max(2000), z.array(z.string())]).optional(),
     expectations: z.string().max(1000).optional(),
-    referralCode: z.string().max(50).optional(),
+    referralCode: z.string().max(50).optional().nullable(),
   }).passthrough(), // Permite campos adicionales del registro
   appliedCodes: z.array(z.string().max(50)).optional(),
 });

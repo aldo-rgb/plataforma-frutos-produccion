@@ -28,9 +28,10 @@ export async function POST(request: NextRequest) {
     // Validar datos con Zod
     const validation = validateData(checkoutCreatePaymentSchema, body);
     if (!validation.success) {
-      logger.debug('❌ [create-payment] Validación fallida:', { errors: validation.details });
+      const errorDetails = getValidationErrorMessage(validation.details);
+      logger.debug('❌ [create-payment] Validación fallida:', { errors: errorDetails, body: JSON.stringify(body).substring(0, 500) });
       return NextResponse.json(
-        { error: 'Datos inválidos', details: getValidationErrorMessage(validation.details) },
+        { error: `Datos inválidos: ${errorDetails}`, details: errorDetails },
         { status: 400 }
       );
     }
