@@ -2,31 +2,14 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
-
-// Stripe se inicializa solo si hay API key
-let stripe: any = null;
-if (process.env.STRIPE_SECRET_KEY) {
-  const Stripe = require('stripe');
-  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2023-10-16',
-  });
-}
+import { getPaymentGateway } from '@/lib/payment-gateway';
 
 /**
  * POST /api/checkout/create-session
- * Crea una sesión de checkout de Stripe
- * NOTA: Actualmente deshabilitado - usar códigos de regalo en su lugar
+ * Crea una sesión de checkout de Stripe o MercadoPago
  */
 export async function POST(request: Request) {
   try {
-    // Stripe deshabilitado temporalmente
-    if (!stripe) {
-      return NextResponse.json(
-        { success: false, error: 'Pasarela de pago no configurada. Por favor usa un código de regalo.' },
-        { status: 503 }
-      );
-    }
-
     const session = await getServerSession();
 
     if (!session?.user?.email) {
@@ -126,7 +109,30 @@ export async function POST(request: Request) {
         : Number(priceConfig.regularPrice);
     }
 
+    // Obtener pasarela de pago para la organización
+    const gateway = await getPaymentGateway(
+      vision.organizationId, 
+      provider as 'stripe' | 'mercadopago' | 'paypal'
+    );
+
+    if (!gateway) {
+      return NextResponse.json(
+        { success: false, error: 'No hay pasarela de pago configurada. Por favor contacta al administrador.' },
+        { status: 503 }
+      );
+    }
+
     if (provider === 'stripe') {
+      if (gateway.provider !== 'stripe') {
+        return NextResponse.json(
+          { success: false, error: `Esta organización usa ${gateway.provider.toUpperCase()}, no Stripe` },
+          { status: 400 }
+        );
+      }
+
+      const Stripe = require('stripe');
+      const stripe = new Stripe(gateway.secretKey, { apiVersion: '2023-10-16' });
+
       // Crear sesión de Stripe
       const stripeSession = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
@@ -162,11 +168,60 @@ export async function POST(request: Request) {
         provider: 'stripe',
       });
     } else if (provider === 'mercadopago') {
-      // TODO: Implementar MercadoPago
+      if (gateway.provider !== 'mercadopago') {
+        return NextResponse.json(
+          { success: false, error: `Esta organización usa ${gateway.provider.toUpperCase()}, no MercadoPago` },
+          { status: 400 }
+        );
+      }
+
+      const { MercadoPagoConfig, Preference } = require('mercadopago');
+      const client = new MercadoPagoConfig({ accessToken: gateway.secretKey });
+      const preference = new Preference(client);
+
+      const preferenceData = await preference.create({
+        body: {
+          items: [
+            {
+              id: `ticket-${vision.id}-${level}`,
+              title: `Ticket ${level} - ${vision.nombre}`,
+              description: `Acceso a ${vision.nombre}`,
+              quantity: 1,
+              unit_price: amount,
+              currency_id: 'MXN',
+            },
+          ],
+          payer: {
+            email: user.email,
+            name: user.nombre,
+          },
+          back_urls: {
+            success: `${process.env.NEXTAUTH_URL}/checkout/success`,
+            failure: `${process.env.NEXTAUTH_URL}/checkout/tickets?visionId=${visionId}`,
+            pending: `${process.env.NEXTAUTH_URL}/checkout/pending`,
+          },
+          auto_return: 'approved',
+          metadata: {
+            userId: user.id.toString(),
+            visionId: vision.id.toString(),
+            level,
+            type,
+            paymentMethod: paymentMethod || 'full',
+          },
+        },
+      });
+
+      const isTest = gateway.secretKey.startsWith('TEST-');
+      const paymentUrl = isTest 
+        ? (preferenceData.sandbox_init_point || preferenceData.init_point)
+        : preferenceData.init_point;
+
       return NextResponse.json({
-        success: false,
-        error: 'MercadoPago aún no implementado',
-      }, { status: 501 });
+        success: true,
+        preferenceId: preferenceData.id,
+        url: paymentUrl,
+        provider: 'mercadopago',
+      });
     }
 
     return NextResponse.json({

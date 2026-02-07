@@ -4,10 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import Stripe from 'stripe';
 import logger from '@/lib/logger';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
-});
+import { getPaymentGateway } from '@/lib/payment-gateway';
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,13 +34,34 @@ export async function POST(req: NextRequest) {
       }),
       prisma.vision.findUnique({
         where: { id: visionId },
-        select: { id: true, nombre: true }
+        select: { id: true, nombre: true, organizationId: true }
       })
     ]);
 
     if (!mentor || !vision) {
       return NextResponse.json({ error: 'Mentor o visión no encontrada' }, { status: 404 });
     }
+
+    // Obtener configuración de pasarela de pago
+    const gateway = await getPaymentGateway(vision.organizationId, 'stripe');
+    
+    if (!gateway) {
+      return NextResponse.json(
+        { error: 'No hay pasarela de pago configurada. Contacta al administrador.' },
+        { status: 503 }
+      );
+    }
+
+    if (gateway.provider !== 'stripe') {
+      return NextResponse.json(
+        { error: `La organización usa ${gateway.provider.toUpperCase()}, no Stripe` },
+        { status: 400 }
+      );
+    }
+
+    const stripe = new Stripe(gateway.secretKey, {
+      apiVersion: '2024-06-20',
+    });
 
     const pricePerCall = mentor.PerfilMentor?.precioDisciplina || 90;
 

@@ -4,11 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import Stripe from 'stripe';
 import logger from '@/lib/logger';
-
-// Inicializar Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-06-20',
-});
+import { getPaymentGateway } from '@/lib/payment-gateway';
 
 export async function POST(req: NextRequest) {
   try {
@@ -211,10 +207,31 @@ export async function POST(req: NextRequest) {
     }
 
     // 🔵 SI ES STRIPE, CREAR SESIÓN DE CHECKOUT REAL
-    if (paymentMethod === 'stripe' && process.env.STRIPE_SECRET_KEY) {
+    if (paymentMethod === 'stripe') {
+      logger.debug('🔵 [CHECKOUT] Verificando pasarela de pago para la organización...');
+      
+      // Obtener pasarela de pago de la organización
+      const gateway = await getPaymentGateway(user.organizationId, 'stripe');
+      
+      if (!gateway) {
+        logger.debug('❌ [CHECKOUT] No hay pasarela configurada');
+        return NextResponse.json({
+          error: 'No hay pasarela de pago configurada. Contacta al administrador.',
+        }, { status: 503 });
+      }
+
+      if (gateway.provider !== 'stripe') {
+        logger.debug('❌ [CHECKOUT] La organización usa ' + gateway.provider + ', no Stripe');
+        return NextResponse.json({
+          error: `Esta organización usa ${gateway.provider.toUpperCase()}, no Stripe`,
+        }, { status: 400 });
+      }
+
       logger.debug('🔵 [CHECKOUT] Creando sesión de Stripe Checkout...');
       
       try {
+        const stripe = new Stripe(gateway.secretKey, { apiVersion: '2024-06-20' });
+
         const checkoutSession = await stripe.checkout.sessions.create({
           payment_method_types: ['card'],
           line_items: [

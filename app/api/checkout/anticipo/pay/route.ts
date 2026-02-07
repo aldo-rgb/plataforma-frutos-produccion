@@ -3,8 +3,7 @@ import { prisma } from '@/lib/prisma';
 import Stripe from 'stripe';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 import logger from '@/lib/logger';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+import { getPaymentGateway } from '@/lib/payment-gateway';
 
 // POST - Crear sesión de pago para anticipo
 export async function POST(request: Request) {
@@ -43,7 +42,29 @@ export async function POST(request: Request) {
     const successUrl = `${baseUrl}/checkout/success?type=anticipo&checkoutId=${checkoutId}`;
     const cancelUrl = `${baseUrl}/checkout/anticipo?id=${checkoutId}`;
 
+    // Obtener pasarela de pago para la organización
+    const gateway = await getPaymentGateway(
+      checkout.organizationId, 
+      provider as 'stripe' | 'mercadopago' | 'paypal'
+    );
+
+    if (!gateway) {
+      return NextResponse.json(
+        { success: false, error: 'No hay pasarela de pago configurada para esta organización' },
+        { status: 503 }
+      );
+    }
+
     if (provider === 'stripe') {
+      if (gateway.provider !== 'stripe') {
+        return NextResponse.json(
+          { success: false, error: `Esta organización usa ${gateway.provider.toUpperCase()}, no Stripe` },
+          { status: 400 }
+        );
+      }
+
+      const stripe = new Stripe(gateway.secretKey);
+
       // Crear sesión de Stripe
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
@@ -80,16 +101,14 @@ export async function POST(request: Request) {
         sessionId: session.id,
       });
     } else if (provider === 'mercadopago') {
-      // Usar token de la organización o el default
-      const mpToken = (checkout.organization as any).mpAccessToken || process.env.MERCADOPAGO_ACCESS_TOKEN;
-      
-      if (!mpToken) {
+      if (gateway.provider !== 'mercadopago') {
         return NextResponse.json(
-          { success: false, error: 'MercadoPago no configurado' },
+          { success: false, error: `Esta organización usa ${gateway.provider.toUpperCase()}, no MercadoPago` },
           { status: 400 }
         );
       }
 
+      const mpToken = gateway.secretKey;
       const client = new MercadoPagoConfig({ accessToken: mpToken });
       const preference = new Preference(client);
 
