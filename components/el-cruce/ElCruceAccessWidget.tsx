@@ -364,14 +364,18 @@ export default function ElCruceAccessWidget({
   // Productos para crear sesión - solo los que están EN CURSO (IN_PROGRESS)
   // Un trainer solo puede tener un entrenamiento activo a la vez
   
-  // Filtrar productos que están IN_PROGRESS (sin importar el nivel)
-  // El trainer solo puede tener El Atravesar para entrenamientos activos
-  const productsInProgress = products.filter(p => p.trainingStatus === 'IN_PROGRESS')
+  // Filtrar productos que están IN_PROGRESS - SOLO BASIC y ADVANCED (no PL)
+  // El Atravesar es para promover de BASIC a ADVANCED, o de ADVANCED a PL
+  // Los trainers de PL no necesitan El Atravesar
+  const productsInProgress = products.filter(p => 
+    p.trainingStatus === 'IN_PROGRESS' && 
+    (p.levelType === 'BASIC' || p.levelType === 'ADVANCED')
+  )
   
   // Productos por nivel (todos IN_PROGRESS)
   const basicProducts = productsInProgress.filter(p => p.levelType === 'BASIC')
   const advancedProducts = productsInProgress.filter(p => p.levelType === 'ADVANCED')
-  const plProducts = productsInProgress.filter(p => p.levelType === 'PL')
+  const plProducts = products.filter(p => p.levelType === 'PL') // Para destino
 
   // Auto-detectar el producto en curso del trainer
   // Un trainer típicamente tiene UN producto asignado activo
