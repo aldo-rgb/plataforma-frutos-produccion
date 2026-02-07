@@ -176,11 +176,13 @@ export async function POST(request: NextRequest) {
       provider: gatewayConfig.provider,
     });
 
-  } catch (error) {
-    logger.error('Error al crear pago de registro', error);
+  } catch (error: any) {
+    const errorMessage = error?.message || 'Error desconocido';
+    logger.error('Error al crear pago de registro', { error: errorMessage, stack: error?.stack });
     return NextResponse.json(
       {
-        error: 'Error al crear el pago',
+        error: `Error al crear el pago: ${errorMessage}`,
+        details: errorMessage
       },
       { status: 500 }
     );
@@ -222,7 +224,7 @@ async function createMercadoPagoPreference(
       email: userData.email || '',
     },
     back_urls: {
-      success: `${baseUrl}/api/checkout/payment-success?provider=mercadopago&data=${encodeURIComponent(JSON.stringify(orderData))}`,
+      success: `${baseUrl}/api/checkout/payment-success?provider=mercadopago`,
       failure: `${baseUrl}/checkout?payment=failed`,
       pending: `${baseUrl}/checkout?payment=pending`,
     },
@@ -234,6 +236,12 @@ async function createMercadoPagoPreference(
       ticketSelection: orderData.ticketSelection,
       amount: orderData.amount,
       email: userData.email,
+      nombre: userData.nombre,
+      apodo: userData.apodo || '',
+      telefono: userData.telefono || '',
+      password: userData.password || '',
+      referralCode: userData.referralCode || '',
+      appliedCodes: orderData.appliedCodes || [],
     }),
     statement_descriptor: organizationName.substring(0, 22),
   };
