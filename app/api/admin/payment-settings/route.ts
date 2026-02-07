@@ -87,6 +87,7 @@ export async function POST(req: NextRequest) {
       create: {
         id: 1,
         settings,
+        updatedAt: new Date(),
       },
     });
 
