@@ -228,6 +228,19 @@ export default function VisionManagePage() {
   const [movingUsers, setMovingUsers] = useState(false);
   const [moveLevel, setMoveLevel] = useState<'BASIC' | 'ADVANCED' | 'PL'>('BASIC');
   
+  // Estados para modal de asignar GC a participante
+  const [assignGcModal, setAssignGcModal] = useState<{
+    show: boolean;
+    enrollment: any;
+    level: string;
+    loading: boolean;
+  }>({
+    show: false,
+    enrollment: null,
+    level: 'BASIC',
+    loading: false
+  });
+  
   // Estados para carga masiva desde Excel
   const [uploadingExcel, setUploadingExcel] = useState(false);
   const [excelResults, setExcelResults] = useState<{success: number; errors: string[]} | null>(null);
@@ -1192,6 +1205,64 @@ export default function VisionManagePage() {
     }
   };
 
+  // Función para abrir modal de asignar GC a participante
+  const openAssignGcModal = (enrollment: any, level: string) => {
+    setAssignGcModal({
+      show: true,
+      enrollment,
+      level,
+      loading: false
+    });
+  };
+
+  // Función para asignar GC a participante
+  const handleAssignGcToParticipant = async (gameChangerId: number) => {
+    if (!assignGcModal.enrollment) return;
+    
+    try {
+      setAssignGcModal(prev => ({ ...prev, loading: true }));
+      
+      const res = await fetch(`/api/school-admin/visiones/${visionId}/assign-gc-to-participant`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enrollmentId: assignGcModal.enrollment.id,
+          gameChangerId,
+          level: assignGcModal.level
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setToast({ 
+          show: true, 
+          message: data.message, 
+          type: 'success' 
+        });
+        
+        // Refrescar los enrollments según el nivel
+        if (assignGcModal.level === 'BASIC') {
+          fetchBasicEnrollments();
+        } else if (assignGcModal.level === 'ADVANCED') {
+          fetchAdvancedEnrollments();
+        } else {
+          fetchPlEnrollments();
+        }
+        
+        setAssignGcModal({ show: false, enrollment: null, level: 'BASIC', loading: false });
+        setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
+      } else {
+        throw new Error(data.error || 'Error al asignar Game Changer');
+      }
+    } catch (error: any) {
+      console.error('Error assigning GC:', error);
+      setToast({ show: true, message: error.message || 'Error al asignar Game Changer', type: 'error' });
+      setTimeout(() => setToast({ show: false, message: '', type: 'error' }), 3000);
+      setAssignGcModal(prev => ({ ...prev, loading: false }));
+    }
+  };
+
   // Función para agregar participante (solo ADMINISTRADOR)
   const handleAddParticipant = async () => {
     if (!addParticipantData.nombre.trim() || !addParticipantData.email.trim()) {
@@ -1789,21 +1860,30 @@ export default function VisionManagePage() {
                                 </div>
                               </td>
                               <td className="py-4 px-4">
-                                {enrollment.gameChanger ? (
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                      {enrollment.gameChanger.nombre?.charAt(0).toUpperCase()}
+                                <button
+                                  onClick={() => openAssignGcModal(enrollment, 'BASIC')}
+                                  className="w-full text-left hover:bg-slate-700/50 rounded-lg p-1.5 -m-1.5 transition-colors group"
+                                  title="Click para asignar/cambiar Game Changer"
+                                >
+                                  {enrollment.gameChanger ? (
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-7 h-7 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                                        {enrollment.gameChanger.nombre?.charAt(0).toUpperCase()}
+                                      </div>
+                                      <div className="flex-1">
+                                        <div className="text-yellow-300 text-sm font-semibold">{enrollment.gameChanger.nombre}</div>
+                                        {enrollment.squadName && (
+                                          <div className="text-slate-500 text-xs">{enrollment.squadName}</div>
+                                        )}
+                                      </div>
+                                      <span className="text-slate-500 text-xs opacity-0 group-hover:opacity-100 transition-opacity">✏️</span>
                                     </div>
-                                    <div>
-                                      <div className="text-yellow-300 text-sm font-semibold">{enrollment.gameChanger.nombre}</div>
-                                      {enrollment.squadName && (
-                                        <div className="text-slate-500 text-xs">{enrollment.squadName}</div>
-                                      )}
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <span className="text-slate-500 text-xs italic">Sin asignar</span>
-                                )}
+                                  ) : (
+                                    <span className="text-yellow-500/70 text-xs italic flex items-center gap-1">
+                                      <span className="text-base">➕</span> Asignar GC
+                                    </span>
+                                  )}
+                                </button>
                               </td>
                               <td className="py-4 px-4">
                                 <div className="text-slate-300 text-sm">
@@ -2166,21 +2246,30 @@ export default function VisionManagePage() {
                                 </div>
                               </td>
                               <td className="py-4 px-4">
-                                {enrollment.gameChanger ? (
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                      {enrollment.gameChanger.nombre?.charAt(0).toUpperCase()}
+                                <button
+                                  onClick={() => openAssignGcModal(enrollment, 'ADVANCED')}
+                                  className="w-full text-left hover:bg-slate-700/50 rounded-lg p-1.5 -m-1.5 transition-colors group"
+                                  title="Click para asignar/cambiar Game Changer"
+                                >
+                                  {enrollment.gameChanger ? (
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-7 h-7 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                                        {enrollment.gameChanger.nombre?.charAt(0).toUpperCase()}
+                                      </div>
+                                      <div className="flex-1">
+                                        <div className="text-yellow-300 text-sm font-semibold">{enrollment.gameChanger.nombre}</div>
+                                        {enrollment.squadName && (
+                                          <div className="text-slate-500 text-xs">{enrollment.squadName}</div>
+                                        )}
+                                      </div>
+                                      <span className="text-slate-500 text-xs opacity-0 group-hover:opacity-100 transition-opacity">✏️</span>
                                     </div>
-                                    <div>
-                                      <div className="text-yellow-300 text-sm font-semibold">{enrollment.gameChanger.nombre}</div>
-                                      {enrollment.squadName && (
-                                        <div className="text-slate-500 text-xs">{enrollment.squadName}</div>
-                                      )}
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <span className="text-slate-500 text-xs italic">Sin asignar</span>
-                                )}
+                                  ) : (
+                                    <span className="text-yellow-500/70 text-xs italic flex items-center gap-1">
+                                      <span className="text-base">➕</span> Asignar GC
+                                    </span>
+                                  )}
+                                </button>
                               </td>
                               <td className="py-4 px-4">
                                 <div className="text-slate-300 text-sm">
@@ -2551,21 +2640,30 @@ export default function VisionManagePage() {
                                 </div>
                               </td>
                               <td className="py-4 px-4">
-                                {enrollment.gameChanger ? (
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-7 h-7 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                      {enrollment.gameChanger.nombre?.charAt(0).toUpperCase()}
+                                <button
+                                  onClick={() => openAssignGcModal(enrollment, 'PL')}
+                                  className="w-full text-left hover:bg-slate-700/50 rounded-lg p-1.5 -m-1.5 transition-colors group"
+                                  title="Click para asignar/cambiar Game Changer"
+                                >
+                                  {enrollment.gameChanger ? (
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-7 h-7 bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                                        {enrollment.gameChanger.nombre?.charAt(0).toUpperCase()}
+                                      </div>
+                                      <div className="flex-1">
+                                        <div className="text-yellow-300 text-sm font-semibold">{enrollment.gameChanger.nombre}</div>
+                                        {enrollment.squadName && (
+                                          <div className="text-slate-500 text-xs">{enrollment.squadName}</div>
+                                        )}
+                                      </div>
+                                      <span className="text-slate-500 text-xs opacity-0 group-hover:opacity-100 transition-opacity">✏️</span>
                                     </div>
-                                    <div>
-                                      <div className="text-yellow-300 text-sm font-semibold">{enrollment.gameChanger.nombre}</div>
-                                      {enrollment.squadName && (
-                                        <div className="text-slate-500 text-xs">{enrollment.squadName}</div>
-                                      )}
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <span className="text-slate-500 text-xs italic">Sin asignar</span>
-                                )}
+                                  ) : (
+                                    <span className="text-yellow-500/70 text-xs italic flex items-center gap-1">
+                                      <span className="text-base">➕</span> Asignar GC
+                                    </span>
+                                  )}
+                                </button>
                               </td>
                               <td className="py-4 px-4">
                                 <div className="text-slate-300 text-sm">
@@ -3740,6 +3838,110 @@ export default function VisionManagePage() {
                     Restablecer
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Asignar Game Changer a Participante */}
+      {assignGcModal.show && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl border-2 border-yellow-500/30 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="bg-yellow-900/40 p-6 border-b border-yellow-500/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center text-2xl">
+                    ⭐
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-yellow-300">Asignar Game Changer</h3>
+                    <p className="text-yellow-400/60 text-sm">
+                      {assignGcModal.enrollment?.Usuario?.nombre}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setAssignGcModal({ show: false, enrollment: null, level: 'BASIC', loading: false })}
+                  className="text-slate-400 hover:text-white transition-colors text-xl"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <p className="text-slate-400 text-sm mb-4">
+                Selecciona un Game Changer de nivel <span className="text-yellow-400 font-bold">{assignGcModal.level}</span> para asignar a este participante:
+              </p>
+
+              {/* Lista de Game Changers disponibles */}
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {gameChangers.filter((gc: any) => gc.level === assignGcModal.level).length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="text-4xl mb-2">⭐</div>
+                    <p className="text-slate-400">No hay Game Changers en este nivel</p>
+                    <p className="text-slate-500 text-sm mt-1">Registra Game Changers primero</p>
+                  </div>
+                ) : (
+                  gameChangers
+                    .filter((gc: any) => gc.level === assignGcModal.level)
+                    .map((gc: any) => (
+                      <button
+                        key={gc.id}
+                        onClick={() => handleAssignGcToParticipant(gc.usuario.id)}
+                        disabled={assignGcModal.loading}
+                        className={`w-full p-3 rounded-xl border transition-all flex items-center gap-3 ${
+                          assignGcModal.loading 
+                            ? 'opacity-50 cursor-not-allowed'
+                            : 'hover:bg-yellow-500/10 hover:border-yellow-500/50 cursor-pointer'
+                        } ${
+                          gc.isCaptain 
+                            ? 'border-amber-400/50 bg-amber-900/20' 
+                            : 'border-slate-600 bg-slate-800/50'
+                        }`}
+                      >
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
+                          gc.isCaptain 
+                            ? 'bg-gradient-to-br from-amber-400 to-amber-600' 
+                            : 'bg-gradient-to-br from-yellow-500 to-orange-500'
+                        }`}>
+                          {gc.usuario.nombre.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 text-left">
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-bold">{gc.usuario.nombre}</span>
+                            {gc.isCaptain && (
+                              <span className="bg-amber-500 text-black text-xs px-1.5 py-0.5 rounded font-bold">
+                                👑 CAPITÁN
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-slate-400 text-xs">{gc.usuario.email}</div>
+                        </div>
+                        <span className="text-yellow-400 text-xl">→</span>
+                      </button>
+                    ))
+                )}
+              </div>
+
+              {assignGcModal.loading && (
+                <div className="mt-4 flex items-center justify-center gap-2 text-yellow-400">
+                  <div className="w-5 h-5 border-2 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin" />
+                  Asignando...
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-slate-700">
+              <button
+                onClick={() => setAssignGcModal({ show: false, enrollment: null, level: 'BASIC', loading: false })}
+                disabled={assignGcModal.loading}
+                className="w-full py-3 px-4 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white rounded-xl font-bold transition-all"
+              >
+                Cancelar
               </button>
             </div>
           </div>

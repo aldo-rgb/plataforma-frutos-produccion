@@ -144,7 +144,7 @@ export async function GET() {
                   // Capitanías asignadas
                   CaptainAssignments: {
                     where: {
-                      status: 'ACTIVE'
+                      status: 'ACCEPTED'
                     },
                     select: {
                       id: true,
