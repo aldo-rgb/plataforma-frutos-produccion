@@ -97,19 +97,70 @@ export async function GET() {
       }
     }));
 
-    logger.debug('✅ Visiones encontradas:', visionesConConteo.length);
-    if (visionesConConteo.length > 0) {
-      logger.debug('📋 Lista de visiones:', visionesConConteo.map(v => ({
+    // Obtener productos con check-in activo para cada visión
+    // Incluir productos que están IN_PROGRESS o cuya fecha de inicio es hoy/ayer (ventana de check-in)
+    const visionIdsFound = visionesConConteo.map(v => v.id);
+    const now = new Date();
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(23, 59, 59, 999);
+
+    const activeProducts = await prisma.schoolProduct.findMany({
+      where: {
+        visionId: { in: visionIdsFound },
+        isActive: true,
+        OR: [
+          { trainingStatus: 'IN_PROGRESS' },
+          // También incluir productos cuya fecha de inicio está en la ventana de check-in
+          {
+            startDate: {
+              gte: yesterday,
+              lte: tomorrow
+            },
+            trainingStatus: { not: 'COMPLETED' }
+          }
+        ]
+      },
+      select: {
+        id: true,
+        name: true,
+        visionId: true,
+        levelType: true,
+        trainingStatus: true,
+        startDate: true
+      }
+    });
+
+    // Mapear productos activos por visionId
+    const productsByVision = activeProducts.reduce((acc, p) => {
+      if (!acc[p.visionId!]) acc[p.visionId!] = [];
+      acc[p.visionId!].push(p);
+      return acc;
+    }, {} as Record<number, typeof activeProducts>);
+
+    // Agregar productos a las visiones
+    const visionesConProductos = visionesConConteo.map(v => ({
+      ...v,
+      activeProducts: productsByVision[v.id] || []
+    }));
+
+    logger.debug('✅ Visiones encontradas:', visionesConProductos.length);
+    if (visionesConProductos.length > 0) {
+      logger.debug('📋 Lista de visiones:', visionesConProductos.map(v => ({
         id: v.id,
         nombre: v.nombre,
         coordinadorId: v.coordinadorId,
-        participantes: v._count.VisionParticipante
+        participantes: v._count.VisionParticipante,
+        activeProducts: v.activeProducts.length
       })));
     }
 
     return NextResponse.json({
       success: true,
-      visiones: visionesConConteo
+      visiones: visionesConProductos
     });
 
   } catch (error: any) {

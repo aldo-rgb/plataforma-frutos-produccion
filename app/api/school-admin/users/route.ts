@@ -52,11 +52,30 @@ export async function GET(req: Request) {
             id: true,
             level: true,
             paymentStatus: true,
+            visionId: true,
+            vision: {
+              select: {
+                id: true,
+                nombre: true,
+              }
+            }
           },
           orderBy: {
             createdAt: 'desc',
           },
           take: 3,
+        },
+        // Incluir participación en visiones
+        VisionParticipante_VisionParticipante_participanteIdToUsuario: {
+          select: {
+            visionId: true,
+            Vision: {
+              select: {
+                id: true,
+                nombre: true,
+              }
+            }
+          }
         },
         // Incluir datos de cuestionarios
         MedicalForm: {
@@ -88,7 +107,7 @@ export async function GET(req: Request) {
           }
         },
         // Contar invitados enrollados (usuarios que este usuario invitó)
-        Usuario_vision_enrollments_invitedByToUsuario: {
+        vision_enrollments_vision_enrollments_invitedByToUsuario: {
           where: {
             enrollmentStatus: { in: ['ENROLLED', 'ACTIVE', 'COMPLETED'] }
           },
@@ -174,14 +193,32 @@ export async function GET(req: Request) {
         createdAt: u.createdAt,
         paymentStatus: overallPaymentStatus,
         ticketsCount: tickets.length,
+        // Niveles de tickets (BASIC, ADVANCED, PL)
+        levels: [...new Set(tickets.map((t: any) => t.level))],
+        // Visiones del usuario (de tickets y participaciones)
+        visionIds: [...new Set([
+          ...tickets.map((t: any) => t.visionId),
+          ...((u as any).VisionParticipante_VisionParticipante_participanteIdToUsuario || []).map((vp: any) => vp.visionId)
+        ])].filter(Boolean),
+        visiones: [...new Map([
+          ...tickets.map((t: any) => t.vision ? [t.vision.id, { id: t.vision.id, nombre: t.vision.nombre }] : null).filter(Boolean),
+          ...((u as any).VisionParticipante_VisionParticipante_participanteIdToUsuario || []).map((vp: any) => [vp.Vision.id, { id: vp.Vision.id, nombre: vp.Vision.nombre }])
+        ]).values()],
         // Nuevos campos de cuestionarios
         quizMedico: !!(u as any).MedicalForm?.consentAccepted,
         quizAvanzado: (u as any).AdvancedQuestionnaire?.status === 'COMPLETED',
         cartaFrutos: (u as any).CartaFrutos?.[0]?.estado || null,
         tieneNegocio: !!(u as any).BusinessProfile?.id,
         negocioStatus: (u as any).BusinessProfile?.status || null,
-        invitadosEnrolados: (u as any).Usuario_vision_enrollments_invitedByToUsuario?.length || 0,
+        invitadosEnrolados: (u as any).vision_enrollments_vision_enrollments_invitedByToUsuario?.length || 0,
       };
+    });
+
+    // Obtener todas las visiones de la organización para los filtros
+    const allVisiones = await prisma.vision.findMany({
+      where: { organizationId: fullUser.organizationId },
+      select: { id: true, nombre: true },
+      orderBy: { nombre: 'asc' }
     });
 
     // Ordenar por XP
@@ -190,6 +227,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       success: true,
       users: uniqueUsers,
+      visiones: allVisiones,
       stats: {
         total: uniqueUsers.length,
         participantes: uniqueUsers.filter(u => u.rol === 'PARTICIPANTE').length,

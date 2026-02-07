@@ -12,9 +12,18 @@ import {
   UserPlus,
   Calendar,
   Activity,
-  Package
+  Package,
+  QrCode
 } from 'lucide-react';
 import Link from 'next/link';
+
+interface ActiveProduct {
+  id: number;
+  name: string;
+  visionId: number;
+  levelType: string;
+  trainingStatus: string;
+}
 
 interface Vision {
   id: number;
@@ -25,6 +34,7 @@ interface Vision {
   licensesAllocated: number;
   isActive: boolean;
   createdAt: string;
+  activeProducts: ActiveProduct[];
   _count: {
     Participantes: number;
     GameChangers: number;
@@ -177,6 +187,12 @@ export default function VisionesCoordinadorPage() {
                 key={vision.id}
                 className="bg-slate-900/50 backdrop-blur border border-purple-500/30 rounded-xl p-6 hover:border-purple-500/50 transition-all"
               >
+                {/* Debug: mostrar activeProducts */}
+                {process.env.NODE_ENV === 'development' && (
+                  <div className="text-xs text-yellow-400 mb-2">
+                    Debug: activeProducts = {JSON.stringify(vision.activeProducts?.length ?? 'undefined')}
+                  </div>
+                )}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <h3 className="text-xl font-semibold text-white mb-2">
@@ -228,6 +244,26 @@ export default function VisionesCoordinadorPage() {
                     </span>
                   </div>
                 </div>
+
+                {/* Botones de Check-In para productos activos */}
+                {vision.activeProducts && vision.activeProducts.length > 0 && (
+                  <div className="mb-4 space-y-2">
+                    <p className="text-xs text-amber-400 font-semibold flex items-center gap-1">
+                      <QrCode size={14} />
+                      Check-In Activo
+                    </p>
+                    {vision.activeProducts.map((product) => (
+                      <Link
+                        key={product.id}
+                        href={`/staff/check-in/${product.id}`}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold text-sm transition-colors"
+                      >
+                        <QrCode size={16} />
+                        Check-In {product.levelType === 'BASIC' ? 'Básico' : product.levelType === 'ADVANCED' ? 'Avanzado' : product.levelType === 'PL' ? 'Liderato' : product.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
 
                 <Link
                   href={`/dashboard/coordinador/visiones/${vision.id}`}

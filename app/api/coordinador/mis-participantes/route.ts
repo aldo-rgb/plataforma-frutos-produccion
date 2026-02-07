@@ -47,14 +47,15 @@ export async function GET() {
     // Para cada visión, obtener participantes desde vision_enrollments
     const visionesConParticipantes = await Promise.all(
       visiones.map(async (vision) => {
-        // Obtener enrollments de esta visión (usuarios activos)
-        const enrollments = await prisma.vision_enrollments.findMany({
-          where: {
-            visionId: vision.id,
-            enrollmentStatus: { in: ['ENROLLED', 'ACTIVE', 'COMPLETED'] }
-          },
-          include: {
-            Usuario_vision_enrollments_userIdToUsuario: {
+        try {
+          // Obtener enrollments de esta visión (usuarios activos)
+          const enrollments = await prisma.vision_enrollments.findMany({
+            where: {
+              visionId: vision.id,
+              enrollmentStatus: { in: ['ENROLLED', 'ACTIVE', 'COMPLETED'] }
+            },
+            include: {
+              Usuario_vision_enrollments_userIdToUsuario: {
               select: {
                 id: true,
                 nombre: true,
@@ -72,12 +73,9 @@ export async function GET() {
                     estado: true,
                     autorizadoMentor: true,
                     fechaCreacion: true
-                  }
-                },
-                PerfilCompleto: {
-                  select: {
-                    condecoraciones: true
-                  }
+                  },
+                  orderBy: { fechaCreacion: 'desc' },
+                  take: 1
                 }
               }
             }
@@ -97,7 +95,7 @@ export async function GET() {
             nombre: p.nombre,
             email: p.email,
             profileImageUrl: p.profileImage,
-            condecoraciones: p.PerfilCompleto?.condecoraciones || [],
+            condecoraciones: [],
             puntosCultivo: p.puntosGamificacion || 0,
             puntosQuantum: p.puntosCuanticos || 0,
             xp: p.experienciaXP || 0,
@@ -115,6 +113,14 @@ export async function GET() {
           visionNombre: vision.nombre,
           participantes
         };
+        } catch (visionError: any) {
+          logger.error('Error procesando vision', vision.id, ':', visionError?.message);
+          return {
+            visionId: vision.id,
+            visionNombre: vision.nombre,
+            participantes: []
+          };
+        }
       })
     );
 

@@ -23,13 +23,22 @@ interface User {
   createdAt: string;
   paymentStatus: string;
   ticketsCount: number;
-  // Nuevos campos de cuestionarios
+  // Nuevos campos de filtros
+  levels: string[];
+  visionIds: number[];
+  visiones: { id: number; nombre: string }[];
+  // Campos de cuestionarios
   quizMedico: boolean;
   quizAvanzado: boolean;
   cartaFrutos: string | null;
   tieneNegocio: boolean;
   negocioStatus: string | null;
   invitadosEnrolados: number;
+}
+
+interface VisionOption {
+  id: number;
+  nombre: string;
 }
 
 export default function UsersListPage() {
@@ -41,6 +50,9 @@ export default function UsersListPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
   const [paymentFilter, setPaymentFilter] = useState<string>('ALL');
+  const [visionFilter, setVisionFilter] = useState<string>('ALL');
+  const [levelFilter, setLevelFilter] = useState<string>('ALL');
+  const [visionOptions, setVisionOptions] = useState<VisionOption[]>([]);
   
   // Estado para TOP FILE modal
   const [topFileModal, setTopFileModal] = useState<{ isOpen: boolean; userId: number; userName: string }>({
@@ -77,6 +89,9 @@ export default function UsersListPage() {
             createdAt: u.createdAt,
             paymentStatus: u.paymentStatus || 'NO_TICKET',
             ticketsCount: u.ticketsCount || 0,
+            levels: u.levels || [],
+            visionIds: u.visionIds || [],
+            visiones: u.visiones || [],
             quizMedico: u.quizMedico || false,
             quizAvanzado: u.quizAvanzado || false,
             cartaFrutos: u.cartaFrutos || null,
@@ -87,6 +102,11 @@ export default function UsersListPage() {
           
           setUsers(userList);
           setFilteredUsers(userList);
+          
+          // Guardar opciones de visiones para el filtro
+          if (data.visiones) {
+            setVisionOptions(data.visiones);
+          }
         }
       } catch (error) {
         console.error('Error al cargar usuarios:', error);
@@ -113,6 +133,17 @@ export default function UsersListPage() {
       filtered = filtered.filter(u => u.paymentStatus === paymentFilter);
     }
 
+    // Filtrar por visión
+    if (visionFilter !== 'ALL') {
+      const visionId = parseInt(visionFilter);
+      filtered = filtered.filter(u => u.visionIds.includes(visionId));
+    }
+
+    // Filtrar por nivel
+    if (levelFilter !== 'ALL') {
+      filtered = filtered.filter(u => u.levels.includes(levelFilter));
+    }
+
     // Filtrar por búsqueda
     if (searchTerm) {
       filtered = filtered.filter(u =>
@@ -122,7 +153,7 @@ export default function UsersListPage() {
     }
 
     setFilteredUsers(filtered);
-  }, [searchTerm, roleFilter, paymentFilter, users]);
+  }, [searchTerm, roleFilter, paymentFilter, visionFilter, levelFilter, users]);
 
   if (status === 'loading' || loading) {
     return (
@@ -275,6 +306,41 @@ export default function UsersListPage() {
                 <option value="PARTIAL">⏳ Pago Parcial</option>
                 <option value="UNPAID">⚠️ Sin Pagar</option>
                 <option value="NO_TICKET">📭 Sin Ticket</option>
+              </select>
+            </div>
+          </div>
+          
+          {/* Segunda fila de filtros: Visión y Nivel */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {/* Filtro por Visión */}
+            <div className="relative">
+              <Target className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+              <select
+                value={visionFilter}
+                onChange={(e) => setVisionFilter(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 appearance-none cursor-pointer"
+              >
+                <option value="ALL">🎯 Todas las visiones</option>
+                {visionOptions.map((vision) => (
+                  <option key={vision.id} value={vision.id.toString()}>
+                    {vision.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filtro por Nivel */}
+            <div className="relative">
+              <Award className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
+              <select
+                value={levelFilter}
+                onChange={(e) => setLevelFilter(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 appearance-none cursor-pointer"
+              >
+                <option value="ALL">🏆 Todos los niveles</option>
+                <option value="BASIC">📘 Básico</option>
+                <option value="ADVANCED">📗 Avanzado</option>
+                <option value="PL">📕 Liderato (PL)</option>
               </select>
             </div>
           </div>

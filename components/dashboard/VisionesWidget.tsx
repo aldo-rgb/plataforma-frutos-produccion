@@ -1,6 +1,14 @@
 import React from 'react';
 import Link from 'next/link';
-import { Target, Users, UserCheck, Clock, ChevronRight } from 'lucide-react';
+import { Target, Users, UserCheck, Clock, ChevronRight, QrCode } from 'lucide-react';
+
+interface ActiveProduct {
+  id: number;
+  name: string;
+  visionId: number;
+  levelType: string;
+  trainingStatus: string;
+}
 
 interface Vision {
   id: number;
@@ -10,6 +18,7 @@ interface Vision {
   startDate?: string;
   endDate?: string;
   plWeekend3EndDate?: string; // Fecha real de fin de toda la visión (después de PL)
+  activeProducts?: ActiveProduct[];
   _count: {
     VisionParticipante: number;
     VisionGameChanger: number;
@@ -38,7 +47,8 @@ export default function VisionesWidget({ visiones, userRole, loading }: Visiones
     nombre: v.nombre, 
     isActive: v.isActive,
     participantes: v._count?.VisionParticipante,
-    gamechangers: v._count?.VisionGameChanger
+    gamechangers: v._count?.VisionGameChanger,
+    activeProducts: v.activeProducts || 'NO HAY'
   })));
   
   if (loading) {
@@ -163,6 +173,23 @@ export default function VisionesWidget({ visiones, userRole, loading }: Visiones
                           </span>
                         )}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Botón de Check-In para productos activos */}
+                  {vision.activeProducts && vision.activeProducts.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-amber-500/30">
+                      {vision.activeProducts.map((product) => (
+                        <Link
+                          key={product.id}
+                          href={`/staff/check-in/${product.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-lg font-semibold text-sm transition-all shadow-lg shadow-amber-500/20"
+                        >
+                          <QrCode size={16} />
+                          Check-In {product.levelType === 'BASIC' ? 'Básico' : product.levelType === 'ADVANCED' ? 'Avanzado' : 'Liderato'}
+                        </Link>
+                      ))}
                     </div>
                   )}
                 </div>
