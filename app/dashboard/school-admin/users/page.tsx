@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import {
   Users, Search, Filter, ArrowLeft, Trophy, Flame, Star,
   TrendingUp, Calendar, Award, Shield, Zap, Target,
-  CreditCard, AlertTriangle, CheckCircle, Clock, FileText
+  CreditCard, AlertTriangle, CheckCircle, Clock, FileText,
+  Heart, ClipboardCheck, Briefcase, ScrollText, UserPlus
 } from 'lucide-react';
 import Link from 'next/link';
 import TopFileModal from '@/components/el-cruce/TopFileModal';
@@ -22,6 +23,13 @@ interface User {
   createdAt: string;
   paymentStatus: string;
   ticketsCount: number;
+  // Nuevos campos de cuestionarios
+  quizMedico: boolean;
+  quizAvanzado: boolean;
+  cartaFrutos: string | null;
+  tieneNegocio: boolean;
+  negocioStatus: string | null;
+  invitadosEnrolados: number;
 }
 
 export default function UsersListPage() {
@@ -69,6 +77,12 @@ export default function UsersListPage() {
             createdAt: u.createdAt,
             paymentStatus: u.paymentStatus || 'NO_TICKET',
             ticketsCount: u.ticketsCount || 0,
+            quizMedico: u.quizMedico || false,
+            quizAvanzado: u.quizAvanzado || false,
+            cartaFrutos: u.cartaFrutos || null,
+            tieneNegocio: u.tieneNegocio || false,
+            negocioStatus: u.negocioStatus || null,
+            invitadosEnrolados: u.invitadosEnrolados || 0,
           }));
           
           setUsers(userList);
@@ -300,6 +314,59 @@ export default function UsersListPage() {
                         {getPaymentBadge(user.paymentStatus)}
                       </div>
                       <p className="text-slate-400 text-sm">{user.email}</p>
+                    </div>
+                  </div>
+
+                  {/* Indicadores de Cuestionarios */}
+                  <div className="flex items-center gap-2 mx-4">
+                    {/* Quiz Médico */}
+                    <div className="relative group/tooltip">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${user.quizMedico ? 'bg-green-500/20 text-green-400' : 'bg-slate-700/50 text-slate-500'}`}>
+                        <Heart size={16} />
+                      </div>
+                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-800 text-white rounded whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity">
+                        Quiz Médico {user.quizMedico ? '✓' : '✗'}
+                      </span>
+                    </div>
+                    
+                    {/* Quiz Avanzado */}
+                    <div className="relative group/tooltip">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${user.quizAvanzado ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-700/50 text-slate-500'}`}>
+                        <ClipboardCheck size={16} />
+                      </div>
+                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-800 text-white rounded whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity">
+                        Quiz Avanzado {user.quizAvanzado ? '✓' : '✗'}
+                      </span>
+                    </div>
+                    
+                    {/* Negocio */}
+                    <div className="relative group/tooltip">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${user.tieneNegocio ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700/50 text-slate-500'}`}>
+                        <Briefcase size={16} />
+                      </div>
+                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-800 text-white rounded whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity">
+                        Negocio {user.tieneNegocio ? (user.negocioStatus === 'APPROVED' ? '✓ Aprobado' : `(${user.negocioStatus})`) : '✗'}
+                      </span>
+                    </div>
+                    
+                    {/* Carta de Frutos */}
+                    <div className="relative group/tooltip">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${user.cartaFrutos === 'APROBADA' ? 'bg-emerald-500/20 text-emerald-400' : user.cartaFrutos ? 'bg-yellow-500/20 text-yellow-400' : 'bg-slate-700/50 text-slate-500'}`}>
+                        <ScrollText size={16} />
+                      </div>
+                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-800 text-white rounded whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity">
+                        Carta {user.cartaFrutos || 'Sin carta'}
+                      </span>
+                    </div>
+                    
+                    {/* Invitados Enrolados */}
+                    <div className="relative group/tooltip">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${user.invitadosEnrolados > 0 ? 'bg-cyan-500/20 text-cyan-400' : 'bg-slate-700/50 text-slate-500'}`}>
+                        <UserPlus size={16} />
+                      </div>
+                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-800 text-white rounded whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity">
+                        {user.invitadosEnrolados} Enrolados
+                      </span>
                     </div>
                   </div>
 

@@ -58,6 +58,42 @@ export async function GET(req: Request) {
           },
           take: 3,
         },
+        // Incluir datos de cuestionarios
+        MedicalForm: {
+          select: {
+            id: true,
+            consentAccepted: true,
+          }
+        },
+        AdvancedQuestionnaire: {
+          select: {
+            id: true,
+            status: true,
+            completedAt: true,
+          }
+        },
+        CartaFrutos: {
+          select: {
+            id: true,
+            estado: true,
+            invitadosInscritos: true,
+          },
+          orderBy: { fechaCreacion: 'desc' },
+          take: 1
+        },
+        BusinessProfile: {
+          select: {
+            id: true,
+            status: true,
+          }
+        },
+        // Contar invitados enrollados (usuarios que este usuario invitó)
+        Usuario_vision_enrollments_invitedByToUsuario: {
+          where: {
+            enrollmentStatus: { in: ['ENROLLED', 'ACTIVE', 'COMPLETED'] }
+          },
+          select: { id: true }
+        }
       },
       orderBy: {
         experienciaXP: 'desc'
@@ -138,6 +174,13 @@ export async function GET(req: Request) {
         createdAt: u.createdAt,
         paymentStatus: overallPaymentStatus,
         ticketsCount: tickets.length,
+        // Nuevos campos de cuestionarios
+        quizMedico: !!(u as any).MedicalForm?.consentAccepted,
+        quizAvanzado: (u as any).AdvancedQuestionnaire?.status === 'COMPLETED',
+        cartaFrutos: (u as any).CartaFrutos?.[0]?.estado || null,
+        tieneNegocio: !!(u as any).BusinessProfile?.id,
+        negocioStatus: (u as any).BusinessProfile?.status || null,
+        invitadosEnrolados: (u as any).Usuario_vision_enrollments_invitedByToUsuario?.length || 0,
       };
     });
 
