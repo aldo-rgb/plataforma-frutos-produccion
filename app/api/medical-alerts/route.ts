@@ -38,17 +38,41 @@ export async function GET(request: NextRequest) {
     const oneDayFromNow = new Date(now);
     oneDayFromNow.setDate(oneDayFromNow.getDate() + 1);
 
+    // Para TRAINER: obtener solo las visiones donde está asignado como trainer
+    let trainerVisionIds: number[] = [];
+    if (user.rol === 'TRAINER') {
+      const trainerProducts = await prisma.schoolProduct.findMany({
+        where: {
+          trainerId: user.id,
+          isActive: true,
+          trainingStatus: { not: 'COMPLETED' }
+        },
+        select: { visionId: true }
+      });
+      trainerVisionIds = trainerProducts
+        .filter(p => p.visionId)
+        .map(p => p.visionId!);
+      
+      // Si el trainer no tiene visiones asignadas, retornar vacío
+      if (trainerVisionIds.length === 0) {
+        return NextResponse.json({ pendingAlerts: [] });
+      }
+    }
+
     // Obtener formularios con alertas de participantes que:
     // 1. Tienen alertas médicas
-    // 2. Están en la misma organización
+    // 2. Están en la misma organización (o para TRAINER, en sus visiones asignadas)
     // 3. El coordinador NO ha marcado como "enterado"
     // 4. Tienen un producto activo o que inicia en 1 día
     const medicalFormsWithAlerts = await prisma.medicalForm.findMany({
       where: {
         hasAlerts: true,
-        Usuario: {
-          organizationId: user.organizationId
-        },
+        // Para TRAINER: filtrar por visiones asignadas
+        // Para otros roles: filtrar por organización
+        ...(user.rol === 'TRAINER' 
+          ? { visionId: { in: trainerVisionIds } }
+          : { Usuario: { organizationId: user.organizationId } }
+        ),
         // Excluir los que ya ha visto este coordinador
         NOT: {
           CoordinatorAcknowledgments: {
