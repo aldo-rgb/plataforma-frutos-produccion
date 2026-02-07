@@ -6,7 +6,8 @@ import logger from '@/lib/logger';
 
 /**
  * GET /api/school-admin/payment-methods
- * Retorna los métodos de pago disponibles para la organización del school admin
+ * Retorna los métodos de pago disponibles desde la configuración de la PLATAFORMA
+ * (no de la organización)
  */
 export async function GET(req: NextRequest) {
   try {
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Obtener el usuario y su organización
+    // Obtener el usuario y verificar rol
     const user = await prisma.usuario.findUnique({
       where: { email: session.user.email! },
       select: { id: true, organizationId: true, rol: true },
@@ -32,34 +33,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // 1. Verificar si la organización tiene su propia pasarela configurada
+    // Usar configuración de la PLATAFORMA (PaymentSettings)
     let methods = {
       stripe: false,
       paypal: false,
       mercadopago: false,
     };
 
-    if (user.organizationId) {
-      const orgGateway = await prisma.paymentGatewayConfig.findUnique({
-        where: { organizationId: user.organizationId },
-      });
-
-      if (orgGateway && orgGateway.isActive && orgGateway.secretKey) {
-        // La organización tiene su propia pasarela
-        const provider = orgGateway.provider.toLowerCase();
-        if (provider === 'stripe') methods.stripe = true;
-        if (provider === 'paypal') methods.paypal = true;
-        if (provider === 'mercadopago') methods.mercadopago = true;
-
-        return NextResponse.json({
-          success: true,
-          methods,
-          source: 'organization',
-        });
-      }
-    }
-
-    // 2. Fallback: Usar configuración de la plataforma
     const platformSettings = await prisma.paymentSettings.findFirst({
       orderBy: { updatedAt: 'desc' },
     });
