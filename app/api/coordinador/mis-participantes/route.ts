@@ -7,6 +7,17 @@ import logger from '@/lib/logger';
 // Roles de coordinador permitidos
 const COORDINATOR_ROLES = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
 
+// Función para verificar si es coordinador (por rol o por flags)
+function isCoordinator(user: any): boolean {
+  // Verificar por rol
+  if (COORDINATOR_ROLES.includes(user.rol)) return true;
+  // Verificar por flags booleanos
+  if (user.esCoordinador) return true;
+  if (user.esCoordinadorBasico) return true;
+  if (user.esCoordinadorAvanzado) return true;
+  return false;
+}
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -16,11 +27,21 @@ export async function GET() {
     }
 
     const coordinador = await prisma.usuario.findUnique({
-      where: { email: session.user.email }
+      where: { email: session.user.email },
+      select: {
+        id: true,
+        nombre: true,
+        email: true,
+        rol: true,
+        organizationId: true,
+        esCoordinador: true,
+        esCoordinadorBasico: true,
+        esCoordinadorAvanzado: true,
+      }
     });
 
-    if (!coordinador || !COORDINATOR_ROLES.includes(coordinador.rol)) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
+    if (!coordinador || !isCoordinator(coordinador)) {
+      return NextResponse.json({ error: 'No autorizado - No es coordinador' }, { status: 403 });
     }
 
     logger.debug('✅ Coordinador:', coordinador.id, coordinador.nombre, 'OrgId:', coordinador.organizationId);
