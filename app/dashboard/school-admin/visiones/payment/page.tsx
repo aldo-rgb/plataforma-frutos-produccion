@@ -34,6 +34,13 @@ export default function VisionPaymentPage() {
   const [paypalProcessing, setPaypalProcessing] = useState(false);
   const [paypalStep, setPaypalStep] = useState<'login' | 'confirm' | 'processing' | 'success'>('login');
   
+  // Estados para métodos de pago disponibles
+  const [availableMethods, setAvailableMethods] = useState<{
+    stripe: boolean;
+    paypal: boolean;
+    mercadopago: boolean;
+  }>({ stripe: false, paypal: false, mercadopago: false });
+  
   // Estados para código de descuento
   const [promoCode, setPromoCode] = useState('');
   const [validatingCode, setValidatingCode] = useState(false);
@@ -47,8 +54,30 @@ export default function VisionPaymentPage() {
       router.push('/dashboard');
     } else if (orderId) {
       fetchOrderDetails();
+      fetchPaymentMethods();
     }
   }, [status, session, orderId]);
+
+  const fetchPaymentMethods = async () => {
+    try {
+      const res = await fetch('/api/school-admin/payment-methods');
+      const result = await res.json();
+      
+      if (result.success) {
+        setAvailableMethods(result.methods);
+        // Seleccionar automáticamente el primer método disponible
+        if (result.methods.stripe) {
+          setPaymentMethod('stripe');
+        } else if (result.methods.mercadopago) {
+          setPaymentMethod('mercadopago');
+        } else if (result.methods.paypal) {
+          setPaymentMethod('paypal');
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching payment methods:', error);
+    }
+  };
 
   const fetchOrderDetails = async () => {
     try {
@@ -446,69 +475,149 @@ export default function VisionPaymentPage() {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Stripe - Activo */}
-            <button
-              onClick={() => setPaymentMethod('stripe')}
-              className={`p-6 rounded-xl border-2 transition-all text-left ${
-                paymentMethod === 'stripe'
-                  ? 'border-indigo-500 bg-indigo-500/10'
-                  : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                      paymentMethod === 'stripe'
-                        ? 'border-indigo-500 bg-indigo-500'
-                        : 'border-slate-600'
-                    }`}
-                  >
-                    {paymentMethod === 'stripe' && (
-                      <CheckCircle size={16} className="text-white" />
-                    )}
+            {/* Stripe */}
+            {availableMethods.stripe ? (
+              <button
+                onClick={() => setPaymentMethod('stripe')}
+                className={`p-6 rounded-xl border-2 transition-all text-left ${
+                  paymentMethod === 'stripe'
+                    ? 'border-indigo-500 bg-indigo-500/10'
+                    : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                        paymentMethod === 'stripe'
+                          ? 'border-indigo-500 bg-indigo-500'
+                          : 'border-slate-600'
+                      }`}
+                    >
+                      {paymentMethod === 'stripe' && (
+                        <CheckCircle size={16} className="text-white" />
+                      )}
+                    </div>
+                    <h3 className="text-white font-bold">Tarjeta</h3>
                   </div>
-                  <h3 className="text-white font-bold">Tarjeta</h3>
                 </div>
+                <p className="text-slate-400 text-sm">
+                  Paga con tarjeta de crédito o débito
+                </p>
+              </button>
+            ) : (
+              <div
+                className="p-6 rounded-xl border-2 border-slate-700/50 bg-slate-800/30 text-left opacity-50 cursor-not-allowed relative"
+              >
+                <div className="absolute top-2 right-2 bg-slate-600 text-xs text-slate-300 px-2 py-0.5 rounded">
+                  No configurado
+                </div>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-6 h-6 rounded-full border-2 border-slate-600 flex items-center justify-center">
+                  </div>
+                  <h3 className="text-slate-400 font-bold">Tarjeta</h3>
+                </div>
+                <p className="text-slate-500 text-sm">
+                  Paga con tarjeta de crédito o débito
+                </p>
               </div>
-              <p className="text-slate-400 text-sm">
-                Paga con tarjeta de crédito o débito
-              </p>
-            </button>
+            )}
 
-            {/* PayPal - Deshabilitado */}
-            <div
-              className="p-6 rounded-xl border-2 border-slate-700/50 bg-slate-800/30 text-left opacity-50 cursor-not-allowed relative"
-            >
-              <div className="absolute top-2 right-2 bg-slate-600 text-xs text-slate-300 px-2 py-0.5 rounded">
-                Próximamente
-              </div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-6 h-6 rounded-full border-2 border-slate-600 flex items-center justify-center">
+            {/* PayPal */}
+            {availableMethods.paypal ? (
+              <button
+                onClick={() => setPaymentMethod('paypal')}
+                className={`p-6 rounded-xl border-2 transition-all text-left ${
+                  paymentMethod === 'paypal'
+                    ? 'border-blue-500 bg-blue-500/10'
+                    : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                        paymentMethod === 'paypal'
+                          ? 'border-blue-500 bg-blue-500'
+                          : 'border-slate-600'
+                      }`}
+                    >
+                      {paymentMethod === 'paypal' && (
+                        <CheckCircle size={16} className="text-white" />
+                      )}
+                    </div>
+                    <h3 className="text-white font-bold">PayPal</h3>
+                  </div>
                 </div>
-                <h3 className="text-slate-400 font-bold">PayPal</h3>
+                <p className="text-slate-400 text-sm">
+                  Paga de forma segura con PayPal
+                </p>
+              </button>
+            ) : (
+              <div
+                className="p-6 rounded-xl border-2 border-slate-700/50 bg-slate-800/30 text-left opacity-50 cursor-not-allowed relative"
+              >
+                <div className="absolute top-2 right-2 bg-slate-600 text-xs text-slate-300 px-2 py-0.5 rounded">
+                  No configurado
+                </div>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-6 h-6 rounded-full border-2 border-slate-600 flex items-center justify-center">
+                  </div>
+                  <h3 className="text-slate-400 font-bold">PayPal</h3>
+                </div>
+                <p className="text-slate-500 text-sm">
+                  Paga de forma segura con PayPal
+                </p>
               </div>
-              <p className="text-slate-500 text-sm">
-                Paga de forma segura con PayPal
-              </p>
-            </div>
+            )}
 
-            {/* Mercado Pago - Deshabilitado */}
-            <div
-              className="p-6 rounded-xl border-2 border-slate-700/50 bg-slate-800/30 text-left opacity-50 cursor-not-allowed relative"
-            >
-              <div className="absolute top-2 right-2 bg-slate-600 text-xs text-slate-300 px-2 py-0.5 rounded">
-                Próximamente
-              </div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-6 h-6 rounded-full border-2 border-slate-600 flex items-center justify-center">
+            {/* Mercado Pago */}
+            {availableMethods.mercadopago ? (
+              <button
+                onClick={() => setPaymentMethod('mercadopago')}
+                className={`p-6 rounded-xl border-2 transition-all text-left ${
+                  paymentMethod === 'mercadopago'
+                    ? 'border-cyan-500 bg-cyan-500/10'
+                    : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                        paymentMethod === 'mercadopago'
+                          ? 'border-cyan-500 bg-cyan-500'
+                          : 'border-slate-600'
+                      }`}
+                    >
+                      {paymentMethod === 'mercadopago' && (
+                        <CheckCircle size={16} className="text-white" />
+                      )}
+                    </div>
+                    <h3 className="text-white font-bold">Mercado Pago</h3>
+                  </div>
                 </div>
-                <h3 className="text-slate-400 font-bold">Mercado Pago</h3>
+                <p className="text-slate-400 text-sm">
+                  Paga con tarjeta, débito o efectivo en México
+                </p>
+              </button>
+            ) : (
+              <div
+                className="p-6 rounded-xl border-2 border-slate-700/50 bg-slate-800/30 text-left opacity-50 cursor-not-allowed relative"
+              >
+                <div className="absolute top-2 right-2 bg-slate-600 text-xs text-slate-300 px-2 py-0.5 rounded">
+                  No configurado
+                </div>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-6 h-6 rounded-full border-2 border-slate-600 flex items-center justify-center">
+                  </div>
+                  <h3 className="text-slate-400 font-bold">Mercado Pago</h3>
+                </div>
+                <p className="text-slate-500 text-sm">
+                  Paga con tarjeta, débito o efectivo en México
+                </p>
               </div>
-              <p className="text-slate-500 text-sm">
-                Paga con tarjeta, débito o efectivo en México
-              </p>
-            </div>
+            )}
           </div>
         </div>
         )}
