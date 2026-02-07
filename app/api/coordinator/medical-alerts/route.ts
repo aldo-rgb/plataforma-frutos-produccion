@@ -75,7 +75,33 @@ export async function GET(request: Request) {
           totalAlerts: 0
         });
       }
-    } else if (['COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER'].includes(usuario.rol)) {
+    } else if (usuario.rol === 'TRAINER') {
+      // TRAINER: Solo ve registros de visiones donde está asignado como trainer
+      // Buscar SchoolProducts donde es trainer y el entrenamiento no ha terminado
+      const trainerProducts = await prisma.schoolProduct.findMany({
+        where: {
+          trainerId: parseInt(session.user.id),
+          isActive: true,
+          trainingStatus: { not: 'COMPLETED' }
+        },
+        select: { visionId: true }
+      });
+      
+      const visionIdsTrainer = trainerProducts
+        .filter(p => p.visionId)
+        .map(p => p.visionId!);
+
+      if (visionIdsTrainer.length === 0) {
+        return NextResponse.json({
+          success: true,
+          records: [],
+          totalAlerts: 0,
+          unreviewedAlertsCount: 0
+        });
+      }
+
+      whereClause.visionId = { in: visionIdsTrainer };
+    } else if (['COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'].includes(usuario.rol)) {
       // Estos roles ven registros de visiones donde son coordinadores o de su organización
       // PERO solo si el entrenamiento no ha terminado
       
