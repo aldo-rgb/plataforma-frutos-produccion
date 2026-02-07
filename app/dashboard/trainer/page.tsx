@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import MedicalAlertsWidget from '@/components/dashboard/MedicalAlertsWidget';
 import GCCallsMonitorWidget from '@/components/dashboard/GCCallsMonitorWidget';
 import { ElCruceAccessWidget, TopFileModal } from '@/components/el-cruce';
 import { TrainerSurveyModal } from '@/components/training-closure';
@@ -444,11 +443,6 @@ export default function TrainerDashboard() {
               <ChevronRight className="text-slate-500 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" size={24} />
             </div>
           </Link>
-        </div>
-
-        {/* Widget de Alertas Médicas */}
-        <div className="mt-8">
-          <MedicalAlertsWidget />
         </div>
 
         {/* Widget de Biblioteca y Lanzador de Misiones */}
