@@ -449,7 +449,7 @@ export default function AsignacionMentoresPage() {
                         <Users className="w-6 h-6 text-[#FFD700]" />
                         <div>
                           <p className="text-xs text-slate-400 uppercase tracking-wider">Participantes</p>
-                          <p className="text-2xl font-bold text-white">{vision?._count?.VisionParticipante || 0} <span className="text-sm text-slate-400">en la visión</span></p>
+                          <p className="text-2xl font-bold text-white">{(vision?._count?.VisionParticipante || 0) + (vision?._count?.VisionGameChanger || 0)} <span className="text-sm text-slate-400">en la visión</span></p>
                         </div>
                       </div>
                     </div>
@@ -878,7 +878,7 @@ export default function AsignacionMentoresPage() {
                   <div className="flex items-center gap-6 mt-2 text-sm text-white/90">
                     <span>Visión: <strong>{vision?.nombre || 'Cargando...'}</strong></span>
                     <span>•</span>
-                    <span>{vision?._count?.VisionParticipante || 0} participantes</span>
+                    <span>{(vision?._count?.VisionParticipante || 0) + (vision?._count?.VisionGameChanger || 0)} participantes</span>
                   </div>
                 </div>
                 <button
