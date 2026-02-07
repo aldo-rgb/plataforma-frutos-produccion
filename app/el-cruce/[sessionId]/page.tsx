@@ -344,11 +344,11 @@ export default function ElCrucePage() {
   const [waitingParticipants, setWaitingParticipants] = useState<Participant[]>([])
   const [crossingParticipant, setCrossingParticipant] = useState<Participant | null>(null)
   const [soundEnabled, setSoundEnabled] = useState(true)
-  const [masterOrgStats, setMasterOrgStats] = useState<{
-    masterOrg: { id: number; name: string; logoUrl?: string } | null;
-    totalBasicGraduates: number;
-    totalAdvancedGraduates: number;
-    totalPLGraduates: number;
+  const [visionStats, setVisionStats] = useState<{
+    vision: { id: number; nombre: string; Organization?: { name: string; logoUrl?: string } } | null;
+    totalBasic: number;
+    totalAdvanced: number;
+    totalPL: number;
   } | null>(null)
   
   // Refs para audio
@@ -423,9 +423,9 @@ export default function ElCrucePage() {
         setCrossedParticipants(crossed)
         setWaitingParticipants(waiting)
         
-        // Guardar estadísticas de master org
-        if (data.masterOrgStats) {
-          setMasterOrgStats(data.masterOrgStats)
+        // Guardar estadísticas de la visión actual
+        if (data.visionStats) {
+          setVisionStats(data.visionStats)
         }
       }
     } catch (err) {
@@ -546,7 +546,7 @@ export default function ElCrucePage() {
         >
           <Users className="w-7 h-7 text-slate-500" />
           <div>
-            <h2 className="text-xl font-bold text-slate-500">RAZONABLES</h2>
+            <h2 className="text-xl font-bold text-slate-500">ESPERANDO</h2>
             <p className="text-slate-600 text-xs">{waitingParticipants.length} participantes</p>
           </div>
         </motion.div>
@@ -560,7 +560,7 @@ export default function ElCrucePage() {
           className="flex items-center gap-3 justify-end"
         >
           <div>
-            <h2 className="text-xl font-bold text-amber-400">IRRAZONABLES</h2>
+            <h2 className="text-xl font-bold text-amber-400">COMPROMETIDOS</h2>
             <p className="text-amber-500/60 text-xs">{crossedParticipants.length} eligieron avanzar</p>
           </div>
           <Award className="w-7 h-7 text-amber-400" />
@@ -710,8 +710,8 @@ export default function ElCrucePage() {
         </div>
       </div>
 
-      {/* Estadísticas de Master Organización */}
-      {masterOrgStats && (
+      {/* Estadísticas de la Visión Actual */}
+      {visionStats && (
         <motion.div
           className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20"
           initial={{ opacity: 0, y: 20 }}
@@ -723,11 +723,11 @@ export default function ElCrucePage() {
             <div className="text-center">
               <motion.div 
                 className="text-2xl font-black text-blue-400"
-                key={masterOrgStats.totalBasicGraduates}
+                key={visionStats.totalBasic}
                 initial={{ scale: 1.2 }}
                 animate={{ scale: 1 }}
               >
-                {masterOrgStats.totalBasicGraduates.toLocaleString()}
+                {visionStats.totalBasic.toLocaleString()}
               </motion.div>
               <p className="text-[10px] text-blue-400/60 uppercase tracking-wider font-semibold">Básico</p>
             </div>
@@ -738,11 +738,11 @@ export default function ElCrucePage() {
             <div className="text-center">
               <motion.div 
                 className="text-2xl font-black text-amber-400"
-                key={masterOrgStats.totalAdvancedGraduates}
+                key={visionStats.totalAdvanced}
                 initial={{ scale: 1.2 }}
                 animate={{ scale: 1 }}
               >
-                {masterOrgStats.totalAdvancedGraduates.toLocaleString()}
+                {visionStats.totalAdvanced.toLocaleString()}
               </motion.div>
               <p className="text-[10px] text-amber-400/60 uppercase tracking-wider font-semibold">Avanzado</p>
             </div>
@@ -753,19 +753,19 @@ export default function ElCrucePage() {
             <div className="text-center">
               <motion.div 
                 className="text-2xl font-black text-purple-400"
-                key={masterOrgStats.totalPLGraduates}
+                key={visionStats.totalPL}
                 initial={{ scale: 1.2 }}
                 animate={{ scale: 1 }}
               >
-                {masterOrgStats.totalPLGraduates.toLocaleString()}
+                {visionStats.totalPL.toLocaleString()}
               </motion.div>
               <p className="text-[10px] text-purple-400/60 uppercase tracking-wider font-semibold">Liderato</p>
             </div>
           </div>
           
-          {/* Nombre de la Master Org */}
+          {/* Nombre de la Visión */}
           <p className="text-center text-[10px] text-slate-500 mt-1 uppercase tracking-widest">
-            {masterOrgStats.masterOrg?.name || 'Red de Organizaciones'}
+            {visionStats.vision?.nombre || 'Visión'}
           </p>
         </motion.div>
       )}

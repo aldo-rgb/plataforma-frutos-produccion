@@ -507,67 +507,61 @@ export async function GET(request: NextRequest) {
           }
         })
 
-      // Obtener estadísticas de la Master Organización (optimizado con cache simple)
-      // Estas estadísticas cambian muy poco, podemos hacer queries más ligeras
-      let masterOrgStats = null
-      const orgId = crossingSession.product.organizationId
+      // Obtener estadísticas de la VISIÓN ACTUAL (no de la master org)
+      // Mostrar cuántos inscritos tiene cada nivel de ESTA visión
+      let visionStats = null
+      const visionId = crossingSession.product.visionId
       
-      if (orgId) {
+      if (visionId) {
         try {
-          // Query única para obtener org y master org info
-          const org = await prisma.organization.findUnique({
-            where: { id: orgId },
+          // Obtener info de la visión
+          const vision = await prisma.vision.findUnique({
+            where: { id: visionId },
             select: { 
-              masterOrganizationId: true,
-              MasterOrganization: {
-                select: { id: true, name: true, logoUrl: true }
+              id: true, 
+              nombre: true,
+              Organization: {
+                select: { name: true, logoUrl: true }
               }
             }
           })
 
-          if (org?.masterOrganizationId) {
-            // Obtener todas las organizaciones y productos en UN solo query con conteo
-            const allOrgIds = (await prisma.organization.findMany({
-              where: { masterOrganizationId: org.masterOrganizationId },
-              select: { id: true }
-            })).map(o => o.id)
-
-            // Obtener TODOS los productos de todas las orgs de una vez
-            const allProducts = await prisma.schoolProduct.findMany({
-              where: { organizationId: { in: allOrgIds } },
-              select: { id: true, levelType: true }
+          // Contar tickets pagados por nivel para ESTA visión
+          const [basicCount, advancedCount, plCount] = await Promise.all([
+            prisma.ticket.count({
+              where: { 
+                visionId, 
+                level: 'BASIC',
+                status: 'ACTIVE',
+                paymentStatus: { in: ['PAID', 'PARTIAL'] }
+              }
+            }),
+            prisma.ticket.count({
+              where: { 
+                visionId, 
+                level: 'ADVANCED',
+                status: 'ACTIVE',
+                paymentStatus: { in: ['PAID', 'PARTIAL'] }
+              }
+            }),
+            prisma.ticket.count({
+              where: { 
+                visionId, 
+                level: 'PL',
+                status: 'ACTIVE',
+                paymentStatus: { in: ['PAID', 'PARTIAL'] }
+              }
             })
+          ])
 
-            // Agrupar por nivel (operación en memoria, muy rápida)
-            const basicProductIds = allProducts.filter(p => p.levelType === 'BASIC').map(p => p.id)
-            const advancedProductIds = allProducts.filter(p => p.levelType === 'ADVANCED').map(p => p.id)
-            const plProductIds = allProducts.filter(p => p.levelType === 'PL').map(p => p.id)
-
-            // Contar graduados EN PARALELO (solo si hay productos)
-            const [basicGraduates, advancedGraduates, plGraduates] = await Promise.all([
-              basicProductIds.length > 0 ? prisma.checkInRecord.groupBy({
-                by: ['userId'],
-                where: { productId: { in: basicProductIds } }
-              }) : [],
-              advancedProductIds.length > 0 ? prisma.checkInRecord.groupBy({
-                by: ['userId'],
-                where: { productId: { in: advancedProductIds } }
-              }) : [],
-              plProductIds.length > 0 ? prisma.checkInRecord.groupBy({
-                by: ['userId'],
-                where: { productId: { in: plProductIds } }
-              }) : []
-            ])
-
-            masterOrgStats = {
-              masterOrg: org.MasterOrganization,
-              totalBasicGraduates: basicGraduates.length,
-              totalAdvancedGraduates: advancedGraduates.length,
-              totalPLGraduates: plGraduates.length
-            }
+          visionStats = {
+            vision: vision,
+            totalBasic: basicCount,
+            totalAdvanced: advancedCount,
+            totalPL: plCount
           }
         } catch (err) {
-          logger.error("Error getting master org stats:", err)
+          logger.error("Error getting vision stats:", err)
           // No bloquear la respuesta si falla
         }
       }
@@ -578,7 +572,7 @@ export async function GET(request: NextRequest) {
           crossed: crossedParticipants,
           waiting: waitingParticipants
         },
-        masterOrgStats
+        visionStats
       })
       
       // Deshabilitar cache para tiempo real
