@@ -208,23 +208,17 @@ export async function POST(req: NextRequest) {
 
     // 🔵 SI ES STRIPE, CREAR SESIÓN DE CHECKOUT REAL
     if (paymentMethod === 'stripe') {
-      logger.debug('🔵 [CHECKOUT] Verificando pasarela de pago para la organización...');
+      logger.debug('🔵 [CHECKOUT] Verificando pasarela de pago de la PLATAFORMA...');
       
-      // Obtener pasarela de pago de la organización
-      const gateway = await getPaymentGateway(user.organizationId, 'stripe');
+      // Obtener pasarela de pago de la PLATAFORMA (no de la organización)
+      // porque la organización le paga a la plataforma
+      const gateway = await getPaymentGateway(null, 'stripe');
       
       if (!gateway) {
-        logger.debug('❌ [CHECKOUT] No hay pasarela configurada');
+        logger.debug('❌ [CHECKOUT] No hay pasarela Stripe configurada en la plataforma');
         return NextResponse.json({
-          error: 'No hay pasarela de pago configurada. Contacta al administrador.',
+          error: 'Stripe no está configurado en la plataforma. Contacta al administrador.',
         }, { status: 503 });
-      }
-
-      if (gateway.provider !== 'stripe') {
-        logger.debug('❌ [CHECKOUT] La organización usa ' + gateway.provider + ', no Stripe');
-        return NextResponse.json({
-          error: `Esta organización usa ${gateway.provider.toUpperCase()}, no Stripe`,
-        }, { status: 400 });
       }
 
       logger.debug('🔵 [CHECKOUT] Creando sesión de Stripe Checkout...');
