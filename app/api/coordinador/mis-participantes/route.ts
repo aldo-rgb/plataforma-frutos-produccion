@@ -56,63 +56,147 @@ export async function GET() {
             },
             include: {
               Usuario_vision_enrollments_userIdToUsuario: {
-              select: {
-                id: true,
-                nombre: true,
-                email: true,
-                rol: true,
-                profileImage: true,
-                puntosGamificacion: true,
-                puntosCuanticos: true,
-                experienciaXP: true,
-                completionStreak: true,
-                tier: true,
-                CartaFrutos: {
-                  select: {
-                    id: true,
-                    estado: true,
-                    autorizadoMentor: true,
-                    fechaCreacion: true
+                select: {
+                  id: true,
+                  nombre: true,
+                  email: true,
+                  rol: true,
+                  profileImage: true,
+                  puntosGamificacion: true,
+                  puntosCuanticos: true,
+                  experienciaXP: true,
+                  completionStreak: true,
+                  tier: true,
+                  gameChangerId: true,
+                  assignedMentorId: true,
+                  // Game Changer asignado
+                  Usuario_Usuario_gameChangerIdToUsuario: {
+                    select: {
+                      id: true,
+                      nombre: true,
+                      email: true,
+                    }
                   },
-                  orderBy: { fechaCreacion: 'desc' },
-                  take: 1
+                  // Mentor asignado
+                  Usuario_Usuario_assignedMentorIdToUsuario: {
+                    select: {
+                      id: true,
+                      nombre: true,
+                      email: true,
+                    }
+                  },
+                  // Carta de Frutos
+                  CartaFrutos: {
+                    select: {
+                      id: true,
+                      estado: true,
+                      autorizadoMentor: true,
+                      fechaCreacion: true
+                    },
+                    orderBy: { fechaCreacion: 'desc' },
+                    take: 1
+                  },
+                  // Quiz Médico
+                  MedicalForm: {
+                    select: {
+                      id: true,
+                      consentAccepted: true,
+                      hasAlerts: true,
+                    }
+                  },
+                  // Quiz Avanzado
+                  AdvancedQuestionnaire: {
+                    select: {
+                      id: true,
+                      status: true,
+                      completedAt: true,
+                    }
+                  },
+                  // Negocio (Futuro Imposible)
+                  BusinessProfile: {
+                    select: {
+                      id: true,
+                      status: true,
+                      headline: true,
+                    }
+                  },
+                  // Capitanías asignadas
+                  TribeCaptainAssignment_UserCaptainAssignments: {
+                    where: {
+                      status: 'ACTIVE'
+                    },
+                    select: {
+                      id: true,
+                      status: true,
+                      captaincy: {
+                        select: {
+                          roleType: true,
+                          visionId: true,
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
-          }
-        });
+          });
 
-        logger.debug('  -', vision.nombre, ':', enrollments.length, 'enrollments');
+          logger.debug('  -', vision.nombre, ':', enrollments.length, 'enrollments');
 
-        // Filtrar y mapear participantes
-        const participantes = enrollments
-          .filter(e => e.Usuario_vision_enrollments_userIdToUsuario && 
-                       ['PARTICIPANTE', 'GAMECHANGER', 'STAFF'].includes(e.Usuario_vision_enrollments_userIdToUsuario.rol))
-          .map(e => e.Usuario_vision_enrollments_userIdToUsuario!)
-          .sort((a, b) => (b.puntosGamificacion || 0) - (a.puntosGamificacion || 0))
-          .map((p, index) => ({
-            id: p.id,
-            nombre: p.nombre,
-            email: p.email,
-            profileImageUrl: p.profileImage,
-            condecoraciones: [],
-            puntosCultivo: p.puntosGamificacion || 0,
-            puntosQuantum: p.puntosCuanticos || 0,
-            xp: p.experienciaXP || 0,
-            racha: p.completionStreak || 0,
-            tier: p.tier || 'Bronce',
-            ranking: index + 1,
-            cartaId: p.CartaFrutos[0]?.id,
-            cartaEstado: p.CartaFrutos[0]?.estado,
-            cartaAutorizada: p.CartaFrutos[0]?.autorizadoMentor === true,
-            mentoringStartDate: p.CartaFrutos[0]?.fechaCreacion
-          }));
+          // Filtrar y mapear participantes
+          const participantes = enrollments
+            .filter(e => e.Usuario_vision_enrollments_userIdToUsuario && 
+                         ['PARTICIPANTE', 'GAMECHANGER', 'STAFF'].includes(e.Usuario_vision_enrollments_userIdToUsuario.rol))
+            .map(e => e.Usuario_vision_enrollments_userIdToUsuario!)
+            .sort((a, b) => (b.puntosGamificacion || 0) - (a.puntosGamificacion || 0))
+            .map((p: any, index: number) => ({
+              id: p.id,
+              nombre: p.nombre,
+              email: p.email,
+              profileImageUrl: p.profileImage,
+              condecoraciones: [],
+              puntosCultivo: p.puntosGamificacion || 0,
+              puntosQuantum: p.puntosCuanticos || 0,
+              xp: p.experienciaXP || 0,
+              racha: p.completionStreak || 0,
+              tier: p.tier || 'FREE',
+              ranking: index + 1,
+              // Carta de Objetivos
+              cartaId: p.CartaFrutos?.[0]?.id || null,
+              cartaEstado: p.CartaFrutos?.[0]?.estado || null,
+              cartaAutorizada: p.CartaFrutos?.[0]?.autorizadoMentor === true,
+              tieneCarta: !!(p.CartaFrutos?.[0]?.id),
+              // Quiz Médico
+              quizMedicoCompletado: !!(p.MedicalForm?.consentAccepted),
+              quizMedicoAlerta: p.MedicalForm?.hasAlerts || false,
+              // Quiz Avanzado
+              quizAvanzadoCompletado: p.AdvancedQuestionnaire?.status === 'COMPLETED',
+              quizAvanzadoEstado: p.AdvancedQuestionnaire?.status || null,
+              // Futuro Imposible (Negocio)
+              tieneNegocio: !!(p.BusinessProfile?.id),
+              negocioStatus: p.BusinessProfile?.status || null,
+              negocioNombre: p.BusinessProfile?.headline || null,
+              // Game Changer asignado
+              gameChangerId: p.gameChangerId || null,
+              gameChangerNombre: p.Usuario_Usuario_gameChangerIdToUsuario?.nombre || null,
+              tieneGameChanger: !!(p.gameChangerId),
+              // Mentor asignado
+              mentorId: p.assignedMentorId || null,
+              mentorNombre: p.Usuario_Usuario_assignedMentorIdToUsuario?.nombre || null,
+              tieneMentor: !!(p.assignedMentorId),
+              // Capitanías asignadas
+              capitanias: (p.TribeCaptainAssignment_UserCaptainAssignments || []).map((c: any) => ({
+                roleType: c.captaincy?.roleType,
+                status: c.status,
+              })),
+              tieneCapitanias: (p.TribeCaptainAssignment_UserCaptainAssignments || []).length > 0,
+            }));
 
-        return {
-          visionId: vision.id,
-          visionNombre: vision.nombre,
-          participantes
-        };
+          return {
+            visionId: vision.id,
+            visionNombre: vision.nombre,
+            participantes
+          };
         } catch (visionError: any) {
           logger.error('Error procesando vision', vision.id, ':', visionError?.message);
           return {

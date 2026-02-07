@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { GraduationCap, Users, Eye, ChevronDown, ChevronUp, Trophy, Zap, Target, Star, CheckCircle2, FileText, Award, ScrollText } from 'lucide-react';
+import { GraduationCap, Users, Eye, ChevronDown, ChevronUp, Trophy, Zap, Target, Star, CheckCircle2, XCircle, FileText, Award, ScrollText, Heart, Brain, Briefcase, UserCheck, Shield, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 
 interface Participante {
@@ -17,11 +17,33 @@ interface Participante {
   racha: number;
   tier: string;
   ranking: number;
-  cartaId?: number;
-  cartaEstado?: string;
-  cartaAutorizada?: boolean;
-  mentoringStartDate?: string;
   condecoraciones?: string[];
+  // Carta de objetivos
+  cartaId?: number | null;
+  cartaEstado?: string | null;
+  cartaAutorizada?: boolean;
+  tieneCarta?: boolean;
+  // Quiz Médico
+  quizMedicoCompletado?: boolean;
+  quizMedicoAlerta?: boolean;
+  // Quiz Avanzado
+  quizAvanzadoCompletado?: boolean;
+  quizAvanzadoEstado?: string | null;
+  // Futuro Imposible (Negocio)
+  tieneNegocio?: boolean;
+  negocioStatus?: string | null;
+  negocioNombre?: string | null;
+  // Game Changer
+  gameChangerId?: number | null;
+  gameChangerNombre?: string | null;
+  tieneGameChanger?: boolean;
+  // Mentor
+  mentorId?: number | null;
+  mentorNombre?: string | null;
+  tieneMentor?: boolean;
+  // Capitanías
+  capitanias?: { roleType: string; status: string }[];
+  tieneCapitanias?: boolean;
 }
 
 interface VisionConParticipantes {
@@ -278,6 +300,155 @@ export default function MisParticipantesPage() {
                             </p>
                           </div>
                         </div>
+
+                        {/* Indicadores de Progreso */}
+                        <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                          {/* Quiz Médico */}
+                          <div className={`rounded-lg p-3 border ${participante.quizMedicoCompletado ? 'bg-green-500/10 border-green-500/30' : 'bg-slate-800/50 border-slate-700'}`}>
+                            <div className="flex items-center gap-2 mb-1">
+                              <Heart size={16} className={participante.quizMedicoCompletado ? 'text-green-400' : 'text-slate-500'} />
+                              <span className="text-xs text-slate-400">Quiz Médico</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {participante.quizMedicoCompletado ? (
+                                <>
+                                  <CheckCircle2 size={14} className="text-green-400" />
+                                  <span className="text-sm font-bold text-green-400">Completado</span>
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle size={14} className="text-slate-500" />
+                                  <span className="text-sm font-bold text-slate-500">Pendiente</span>
+                                </>
+                              )}
+                              {participante.quizMedicoAlerta && (
+                                <AlertTriangle size={14} className="text-yellow-400 ml-1" title="Tiene alertas médicas" />
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Quiz Avanzado */}
+                          <div className={`rounded-lg p-3 border ${participante.quizAvanzadoCompletado ? 'bg-purple-500/10 border-purple-500/30' : 'bg-slate-800/50 border-slate-700'}`}>
+                            <div className="flex items-center gap-2 mb-1">
+                              <Brain size={16} className={participante.quizAvanzadoCompletado ? 'text-purple-400' : 'text-slate-500'} />
+                              <span className="text-xs text-slate-400">Quiz Avanzado</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {participante.quizAvanzadoCompletado ? (
+                                <>
+                                  <CheckCircle2 size={14} className="text-purple-400" />
+                                  <span className="text-sm font-bold text-purple-400">Completado</span>
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle size={14} className="text-slate-500" />
+                                  <span className="text-sm font-bold text-slate-500">Pendiente</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Carta de Objetivos */}
+                          <div className={`rounded-lg p-3 border ${participante.tieneCarta ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-slate-800/50 border-slate-700'}`}>
+                            <div className="flex items-center gap-2 mb-1">
+                              <ScrollText size={16} className={participante.tieneCarta ? 'text-cyan-400' : 'text-slate-500'} />
+                              <span className="text-xs text-slate-400">Carta Objetivos</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {participante.tieneCarta ? (
+                                <>
+                                  <CheckCircle2 size={14} className="text-cyan-400" />
+                                  <span className="text-sm font-bold text-cyan-400">{participante.cartaEstado || 'Creada'}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle size={14} className="text-slate-500" />
+                                  <span className="text-sm font-bold text-slate-500">Pendiente</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Futuro Imposible (Negocio) */}
+                          <div className={`rounded-lg p-3 border ${participante.tieneNegocio ? 'bg-amber-500/10 border-amber-500/30' : 'bg-slate-800/50 border-slate-700'}`}>
+                            <div className="flex items-center gap-2 mb-1">
+                              <Briefcase size={16} className={participante.tieneNegocio ? 'text-amber-400' : 'text-slate-500'} />
+                              <span className="text-xs text-slate-400">Futuro Imposible</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {participante.tieneNegocio ? (
+                                <>
+                                  <CheckCircle2 size={14} className="text-amber-400" />
+                                  <span className="text-sm font-bold text-amber-400">{participante.negocioStatus || 'Activo'}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle size={14} className="text-slate-500" />
+                                  <span className="text-sm font-bold text-slate-500">Sin Negocio</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Game Changer Asignado */}
+                          <div className={`rounded-lg p-3 border ${participante.tieneGameChanger ? 'bg-blue-500/10 border-blue-500/30' : 'bg-slate-800/50 border-slate-700'}`}>
+                            <div className="flex items-center gap-2 mb-1">
+                              <UserCheck size={16} className={participante.tieneGameChanger ? 'text-blue-400' : 'text-slate-500'} />
+                              <span className="text-xs text-slate-400">Game Changer</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {participante.tieneGameChanger ? (
+                                <>
+                                  <CheckCircle2 size={14} className="text-blue-400" />
+                                  <span className="text-sm font-bold text-blue-400 truncate" title={participante.gameChangerNombre || ''}>
+                                    {participante.gameChangerNombre?.split(' ')[0] || 'Asignado'}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle size={14} className="text-slate-500" />
+                                  <span className="text-sm font-bold text-slate-500">Sin Asignar</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Mentor Asignado */}
+                          <div className={`rounded-lg p-3 border ${participante.tieneMentor ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-slate-800/50 border-slate-700'}`}>
+                            <div className="flex items-center gap-2 mb-1">
+                              <GraduationCap size={16} className={participante.tieneMentor ? 'text-emerald-400' : 'text-slate-500'} />
+                              <span className="text-xs text-slate-400">Mentor</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {participante.tieneMentor ? (
+                                <>
+                                  <CheckCircle2 size={14} className="text-emerald-400" />
+                                  <span className="text-sm font-bold text-emerald-400 truncate" title={participante.mentorNombre || ''}>
+                                    {participante.mentorNombre?.split(' ')[0] || 'Asignado'}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle size={14} className="text-slate-500" />
+                                  <span className="text-sm font-bold text-slate-500">Sin Asignar</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Capitanías */}
+                        {participante.tieneCapitanias && participante.capitanias && participante.capitanias.length > 0 && (
+                          <div className="mt-3 flex items-center gap-2 flex-wrap">
+                            <Shield size={16} className="text-purple-400" />
+                            <span className="text-xs text-slate-400">Capitanías:</span>
+                            {participante.capitanias.map((cap, idx) => (
+                              <span key={idx} className="px-2 py-1 bg-purple-500/20 border border-purple-500/30 rounded text-xs font-bold text-purple-400">
+                                {cap.roleType}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
