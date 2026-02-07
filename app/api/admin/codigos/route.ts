@@ -41,6 +41,8 @@ export async function GET(req: NextRequest) {
       tipo: c.tipo,
       cantidadLicencias: c.cantidadLicencias,
       licenciasUsadas: c.licenciasUsadas,
+      cantidadLlamadas: c.cantidadLlamadas,
+      llamadasUsadas: c.llamadasUsadas,
       descripcion: c.descripcion,
       estado: c.estado,
       creado: c.createdAt.toISOString(),

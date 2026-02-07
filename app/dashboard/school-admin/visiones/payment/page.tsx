@@ -14,6 +14,9 @@ import {
   Phone,
   DollarSign,
   X,
+  Tag,
+  Gift,
+  Loader2,
 } from 'lucide-react';
 
 export default function VisionPaymentPage() {
@@ -25,11 +28,17 @@ export default function VisionPaymentPage() {
   const [loading, setLoading] = useState(true);
   const [order, setOrder] = useState<any>(null);
   const [organization, setOrganization] = useState<any>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal' | 'mercadopago'>('stripe');
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal' | 'mercadopago' | 'code'>('stripe');
   const [processing, setProcessing] = useState(false);
   const [showPayPalModal, setShowPayPalModal] = useState(false);
   const [paypalProcessing, setPaypalProcessing] = useState(false);
   const [paypalStep, setPaypalStep] = useState<'login' | 'confirm' | 'processing' | 'success'>('login');
+  
+  // Estados para código de descuento
+  const [promoCode, setPromoCode] = useState('');
+  const [validatingCode, setValidatingCode] = useState(false);
+  const [appliedCode, setAppliedCode] = useState<any>(null);
+  const [codeError, setCodeError] = useState('');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -56,6 +65,53 @@ export default function VisionPaymentPage() {
       console.error('Error fetching order details:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Función para validar código de llamadas
+  const handleValidateCode = async () => {
+    if (!promoCode.trim()) return;
+    
+    setValidatingCode(true);
+    setCodeError('');
+    
+    try {
+      const res = await fetch('/api/school-admin/visiones/validate-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: promoCode.trim(),
+          orderId: order?.id,
+        }),
+      });
+      
+      const result = await res.json();
+      
+      if (result.success) {
+        setAppliedCode(result);
+        setCodeError('');
+        // Si el código cubre todo, seleccionar automáticamente el método "code"
+        if (result.fullyCovered) {
+          setPaymentMethod('code');
+        }
+      } else {
+        setCodeError(result.error || 'Código inválido');
+        setAppliedCode(null);
+      }
+    } catch (error) {
+      console.error('Error validating code:', error);
+      setCodeError('Error al validar código');
+    } finally {
+      setValidatingCode(false);
+    }
+  };
+
+  const handleRemoveCode = () => {
+    setAppliedCode(null);
+    setPromoCode('');
+    setCodeError('');
+    if (paymentMethod === 'code') {
+      setPaymentMethod('stripe');
     }
   };
 
@@ -116,6 +172,7 @@ export default function VisionPaymentPage() {
       console.log('🔄 Procesando pago:', {
         orderId: order.id,
         paymentMethod,
+        appliedCode: appliedCode?.code,
       });
 
       const res = await fetch('/api/school-admin/visiones/checkout', {
@@ -123,7 +180,9 @@ export default function VisionPaymentPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orderId: order.id,
-          paymentMethod,
+          paymentMethod: appliedCode?.fullyCovered ? 'code' : paymentMethod,
+          codeId: appliedCode?.codeId,
+          discount: appliedCode?.discount || 0,
         }),
       });
 
@@ -271,17 +330,115 @@ export default function VisionPaymentPage() {
             )}
 
             <div className="border-t border-slate-700 pt-4 mt-4">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400">Total a pagar:</span>
-                <span className="text-3xl font-bold text-white">
-                  ${order.amount.toLocaleString()} MXN
-                </span>
-              </div>
+              {/* Código de descuento aplicado */}
+              {appliedCode && (
+                <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Gift className="w-5 h-5 text-green-400" />
+                      <div>
+                        <p className="text-green-400 font-semibold text-sm">
+                          Código aplicado: {appliedCode.code}
+                        </p>
+                        <p className="text-green-300 text-xs">
+                          {appliedCode.callsToApply} llamadas = -${appliedCode.discount.toLocaleString()} MXN
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleRemoveCode}
+                      className="text-red-400 hover:text-red-300 p-1"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Mostrar subtotal y descuento si hay código */}
+              {appliedCode ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">Subtotal:</span>
+                    <span className="text-slate-400 line-through">
+                      ${order.amount.toLocaleString()} MXN
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-green-400">Descuento:</span>
+                    <span className="text-green-400">
+                      -${appliedCode.discount.toLocaleString()} MXN
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-700">
+                    <span className="text-slate-400">Total a pagar:</span>
+                    <span className="text-3xl font-bold text-white">
+                      ${appliedCode.newTotal.toLocaleString()} MXN
+                    </span>
+                  </div>
+                  {appliedCode.fullyCovered && (
+                    <p className="text-center text-green-400 text-sm mt-2">
+                      ✓ ¡El código cubre el total del pago!
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-400">Total a pagar:</span>
+                  <span className="text-3xl font-bold text-white">
+                    ${order.amount.toLocaleString()} MXN
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Payment Method Selection */}
+        {/* Código de descuento */}
+        <div className="bg-slate-900/50 backdrop-blur border border-purple-500/20 rounded-2xl p-6 mb-6">
+          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <Tag size={24} className="text-purple-400" />
+            ¿Tienes un código de llamadas?
+          </h2>
+          
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+              placeholder="Ingresa tu código (ej: CALLS-ABC123)"
+              className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:border-purple-500 focus:outline-none font-mono"
+              disabled={!!appliedCode}
+            />
+            {!appliedCode ? (
+              <button
+                onClick={handleValidateCode}
+                disabled={validatingCode || !promoCode.trim()}
+                className="px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors flex items-center gap-2"
+              >
+                {validatingCode ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  'Aplicar'
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={handleRemoveCode}
+                className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors"
+              >
+                Quitar
+              </button>
+            )}
+          </div>
+          
+          {codeError && (
+            <p className="mt-2 text-red-400 text-sm">{codeError}</p>
+          )}
+        </div>
+
+        {/* Payment Method Selection - Solo mostrar si hay algo que pagar */}
+        {(!appliedCode || !appliedCode.fullyCovered) && (
         <div className="bg-slate-900/50 backdrop-blur border border-purple-500/20 rounded-2xl p-6 mb-6">
           <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
             <CreditCard size={24} className="text-purple-400" />
@@ -354,6 +511,7 @@ export default function VisionPaymentPage() {
             </div>
           </div>
         </div>
+        )}
 
         {/* Action Button */}
         <button
@@ -366,10 +524,15 @@ export default function VisionPaymentPage() {
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
               Procesando pago...
             </>
+          ) : appliedCode?.fullyCovered ? (
+            <>
+              <Gift size={20} />
+              Canjear Código (Gratis)
+            </>
           ) : (
             <>
               <DollarSign size={20} />
-              Procesar Pago (${order.amount.toLocaleString()} MXN)
+              Procesar Pago (${(appliedCode?.newTotal ?? order.amount).toLocaleString()} MXN)
             </>
           )}
         </button>

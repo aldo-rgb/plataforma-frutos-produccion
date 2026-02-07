@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Gift, Copy, Plus, RefreshCw, CheckCircle2, Ticket, Calendar, Building2, Users, UserCheck, Video, Trash2 } from 'lucide-react';
+import { Gift, Copy, Plus, RefreshCw, CheckCircle2, Ticket, Calendar, Building2, Users, UserCheck, Video, Trash2, Phone } from 'lucide-react';
 
-type CodigoTipo = 'MEMBRESIA_MENTOR' | 'MEMBRESIA_STANDARD' | 'MEMBRESIA_PREMIUM' | 'MENTORIA_1_1' | 'LICENCIAS_INSTITUCIONAL';
+type CodigoTipo = 'MEMBRESIA_MENTOR' | 'MEMBRESIA_STANDARD' | 'MEMBRESIA_PREMIUM' | 'MENTORIA_1_1' | 'LICENCIAS_INSTITUCIONAL' | 'PAQUETE_LLAMADAS';
 type CodigoEstado = 'DISPONIBLE' | 'CANJEADO' | 'EXPIRADO';
 
 interface Codigo {
@@ -15,6 +15,8 @@ interface Codigo {
   usuario?: string;
   cantidadLicencias?: number;
   licenciasUsadas?: number;
+  cantidadLlamadas?: number;
+  llamadasUsadas?: number;
   descripcion?: string;
 }
 
@@ -24,6 +26,7 @@ export default function GeneradorCodigosPage() {
   const [tipoNuevo, setTipoNuevo] = useState<CodigoTipo>('MEMBRESIA_STANDARD');
   const [cantidad, setCantidad] = useState(1);
   const [cantidadLicencias, setCantidadLicencias] = useState(100);
+  const [cantidadLlamadas, setCantidadLlamadas] = useState(18);
   const [descripcion, setDescripcion] = useState('');
   const [generando, setGenerando] = useState(false);
   const [copiado, setCopiado] = useState<string | null>(null);
@@ -62,6 +65,7 @@ export default function GeneradorCodigosPage() {
       case 'MEMBRESIA_PREMIUM': return 'PREMIUM';
       case 'MENTORIA_1_1': return 'M11';
       case 'LICENCIAS_INSTITUCIONAL': return 'INST';
+      case 'PAQUETE_LLAMADAS': return 'CALLS';
       default: return 'CODE';
     }
   };
@@ -79,6 +83,7 @@ export default function GeneradorCodigosPage() {
           codigo,
           tipo: tipoNuevo,
           cantidadLicencias: tipoNuevo === 'LICENCIAS_INSTITUCIONAL' ? cantidadLicencias : undefined,
+          cantidadLlamadas: tipoNuevo === 'PAQUETE_LLAMADAS' ? cantidadLlamadas : undefined,
           descripcion: descripcion.trim() || undefined,
         });
       }
@@ -132,6 +137,7 @@ export default function GeneradorCodigosPage() {
       case 'MEMBRESIA_PREMIUM': return '💎 Membresía Premium';
       case 'MENTORIA_1_1': return '🎯 Mentoría 1:1';
       case 'LICENCIAS_INSTITUCIONAL': return '🏢 Licencias Institucional';
+      case 'PAQUETE_LLAMADAS': return '📞 Paquete Llamadas';
       default: return tipo;
     }
   };
@@ -143,6 +149,7 @@ export default function GeneradorCodigosPage() {
       case 'MEMBRESIA_PREMIUM': return <Gift size={18} className="text-yellow-400" />;
       case 'MENTORIA_1_1': return <Video size={18} className="text-green-400" />;
       case 'LICENCIAS_INSTITUCIONAL': return <Building2 size={18} className="text-cyan-400" />;
+      case 'PAQUETE_LLAMADAS': return <Phone size={18} className="text-pink-400" />;
       default: return <Ticket size={18} />;
     }
   };
@@ -186,6 +193,7 @@ export default function GeneradorCodigosPage() {
                             <option value="MEMBRESIA_MENTOR">👨‍🏫 Membresía Mentor</option>
                             <option value="MENTORIA_1_1">🎯 Mentoría 1:1</option>
                             <option value="LICENCIAS_INSTITUCIONAL">🏢 Licencias Institucional</option>
+                            <option value="PAQUETE_LLAMADAS">📞 Paquete Llamadas</option>
                         </select>
                     </div>
 
@@ -202,6 +210,22 @@ export default function GeneradorCodigosPage() {
                           placeholder="Ej: 50"
                         />
                         <p className="text-xs text-slate-500 mt-1">Mínimo 50 licencias</p>
+                      </div>
+                    )}
+
+                    {tipoNuevo === 'PAQUETE_LLAMADAS' && (
+                      <div>
+                        <label className="block text-xs font-bold text-slate-400 uppercase mb-2">Cantidad de Llamadas</label>
+                        <input 
+                          type="number" 
+                          min="1" 
+                          step="1"
+                          value={cantidadLlamadas}
+                          onChange={(e) => setCantidadLlamadas(Number(e.target.value))}
+                          className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white"
+                          placeholder="Ej: 18"
+                        />
+                        <p className="text-xs text-slate-500 mt-1">Número de llamadas incluidas en el código</p>
                       </div>
                     )}
 
@@ -300,6 +324,14 @@ export default function GeneradorCodigosPage() {
                                           <span>📦 {item.cantidadLicencias} licencias</span>
                                           {item.licenciasUsadas !== undefined && (
                                             <span className="text-yellow-400">✅ {item.licenciasUsadas} usadas</span>
+                                          )}
+                                        </div>
+                                      )}
+                                      {item.tipo === 'PAQUETE_LLAMADAS' && item.cantidadLlamadas && (
+                                        <div className="flex flex-col gap-1">
+                                          <span>📞 {item.cantidadLlamadas} llamadas</span>
+                                          {item.llamadasUsadas !== undefined && item.llamadasUsadas > 0 && (
+                                            <span className="text-yellow-400">✅ {item.llamadasUsadas} usadas</span>
                                           )}
                                         </div>
                                       )}

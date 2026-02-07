@@ -4,12 +4,13 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
 
-type CodigoTipo = 'MEMBRESIA_MENTOR' | 'MEMBRESIA_STANDARD' | 'MEMBRESIA_PREMIUM' | 'MENTORIA_1_1' | 'LICENCIAS_INSTITUCIONAL';
+type CodigoTipo = 'MEMBRESIA_MENTOR' | 'MEMBRESIA_STANDARD' | 'MEMBRESIA_PREMIUM' | 'MENTORIA_1_1' | 'LICENCIAS_INSTITUCIONAL' | 'PAQUETE_LLAMADAS';
 
 interface CodigoInput {
   codigo: string;
   tipo: CodigoTipo;
   cantidadLicencias?: number;
+  cantidadLlamadas?: number;
   descripcion?: string;
 }
 
@@ -47,6 +48,13 @@ export async function POST(req: NextRequest) {
           }, { status: 400 });
         }
       }
+      if (codigo.tipo === 'PAQUETE_LLAMADAS') {
+        if (!codigo.cantidadLlamadas || codigo.cantidadLlamadas < 1) {
+          return NextResponse.json({ 
+            error: 'Paquete de llamadas requiere al menos 1 llamada' 
+          }, { status: 400 });
+        }
+      }
     }
 
     // Crear códigos en la base de datos
@@ -57,7 +65,9 @@ export async function POST(req: NextRequest) {
             codigo: c.codigo,
             tipo: c.tipo,
             cantidadLicencias: c.cantidadLicencias || null,
+            cantidadLlamadas: c.cantidadLlamadas || null,
             licenciasUsadas: c.tipo === 'LICENCIAS_INSTITUCIONAL' ? 0 : null,
+            llamadasUsadas: c.tipo === 'PAQUETE_LLAMADAS' ? 0 : null,
             descripcion: c.descripcion || null,
             estado: 'DISPONIBLE',
             updatedAt: new Date()

@@ -35,8 +35,8 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { orderId, paymentMethod } = body;
-    logger.debug('🔵 [CHECKOUT] Datos recibidos:', { orderId, paymentMethod });
+    const { orderId, paymentMethod, codeId, discount } = body;
+    logger.debug('🔵 [CHECKOUT] Datos recibidos:', { orderId, paymentMethod, codeId, discount });
 
     if (!orderId || !paymentMethod) {
       logger.debug('❌ [CHECKOUT] Datos incompletos');
@@ -74,6 +74,140 @@ export async function POST(req: NextRequest) {
       }
     } catch (error) {
       logger.error('Error parseando paymentData:', error);
+    }
+
+    // 🎫 SI ES PAGO CON CÓDIGO, PROCESAR DIRECTAMENTE
+    if (paymentMethod === 'code' && codeId) {
+      logger.debug('🎫 [CHECKOUT] Procesando pago con código...');
+      
+      // Verificar y marcar el código como usado
+      const codigoAcceso = await prisma.codigoAcceso.findUnique({
+        where: { id: codeId },
+      });
+
+      if (!codigoAcceso || codigoAcceso.estado !== 'DISPONIBLE') {
+        return NextResponse.json({ 
+          error: 'El código ya no está disponible' 
+        }, { status: 400 });
+      }
+
+      // Marcar código como canjeado
+      await prisma.codigoAcceso.update({
+        where: { id: codeId },
+        data: {
+          estado: 'CANJEADO',
+          canjeadoPorId: user.id,
+          canjeadoEn: new Date(),
+          updatedAt: new Date(),
+        },
+      });
+
+      // Completar la orden con descuento aplicado
+      const finalAmount = discount ? Math.max(0, order.amount - discount) : 0;
+      
+      const updatedOrder = await prisma.licenseOrder.update({
+        where: { id: orderId },
+        data: {
+          status: 'COMPLETED',
+          paymentMethod: 'code',
+          paidAt: new Date(),
+          amount: finalAmount,
+          paymentData: {
+            ...(typeof existingPaymentData === 'object' ? existingPaymentData : {}),
+            method: 'code',
+            status: 'completed',
+            paidAt: new Date().toISOString(),
+            codeId: codeId,
+            codeApplied: codigoAcceso.codigo,
+            originalAmount: order.amount,
+            discount: discount || order.amount,
+            callsFromCode: codigoAcceso.cantidadLlamadas,
+          },
+        },
+      });
+
+      logger.debug('✅ Pago con código completado:', {
+        orderId: updatedOrder.id,
+        codeUsed: codigoAcceso.codigo,
+        discount,
+        finalAmount,
+      });
+
+      // Procesar asignación de mentores para pago con código
+      if (existingPaymentData.type === 'VISION_MENTOR_PAYMENT') {
+        const visionId = existingPaymentData.visionId;
+        const mentorAssignments = existingPaymentData.mentorAssignments || [];
+        const totalStudents = existingPaymentData.totalStudents || 0;
+
+        // Asignar mentores
+        for (const assignment of mentorAssignments) {
+          const { mentorId } = assignment;
+          const existingAssignment = await prisma.visionMentor.findFirst({
+            where: { visionId, mentorId },
+          });
+
+          if (!existingAssignment) {
+            await prisma.visionMentor.create({
+              data: {
+                visionId,
+                mentorId,
+                asignadoPorId: user.id,
+              },
+            });
+          }
+        }
+
+        // Acreditar llamadas
+        const callsPerStudent = 18;
+        const totalCalls = totalStudents * callsPerStudent;
+
+        let schoolCredit = await prisma.schoolCredit.findFirst({
+          where: { organizationId: user.organizationId!, isActive: true },
+        });
+
+        if (schoolCredit) {
+          schoolCredit = await prisma.schoolCredit.update({
+            where: { id: schoolCredit.id },
+            data: {
+              totalPurchased: schoolCredit.totalPurchased + totalCalls,
+              totalPaid: schoolCredit.totalPaid + finalAmount,
+              expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+              updatedAt: new Date(),
+            },
+          });
+        } else {
+          schoolCredit = await prisma.schoolCredit.create({
+            data: {
+              organizationId: user.organizationId!,
+              planType: 'STANDARD',
+              totalPurchased: totalCalls,
+              totalAllocated: 0,
+              unitPrice: finalAmount > 0 ? finalAmount / totalCalls : 0,
+              totalPaid: finalAmount,
+              expirationDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+              isActive: true,
+              notes: `Llamadas de mentoría (código ${codigoAcceso.codigo}) - Orden ${orderId}`,
+              updatedAt: new Date(),
+            },
+          });
+        }
+
+        return NextResponse.json({
+          success: true,
+          order: updatedOrder,
+          mentorsAssigned: mentorAssignments.length,
+          callsCredits: totalCalls,
+          codeUsed: codigoAcceso.codigo,
+          message: 'Pago con código procesado, mentores asignados y llamadas acreditadas',
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        order: updatedOrder,
+        codeUsed: codigoAcceso.codigo,
+        message: 'Pago con código procesado exitosamente',
+      });
     }
 
     // 🔵 SI ES STRIPE, CREAR SESIÓN DE CHECKOUT REAL
