@@ -275,79 +275,104 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Para PayPal y MercadoPago, simular pago (por ahora)
-    const updatedOrder = await prisma.licenseOrder.update({
-      where: { id: orderId },
-      data: {
-        status: 'COMPLETED',
-        paymentMethod: paymentMethod,
-        paidAt: new Date(),
-        paymentData: {
-          ...(typeof existingPaymentData === 'object' ? existingPaymentData : {}),
-          method: paymentMethod,
-          status: 'completed',
-          paidAt: new Date().toISOString(),
-          transactionId: `${paymentMethod.toUpperCase()}-${orderId.slice(0, 8)}-${Date.now()}`,
-        },
-      },
-    });
+    // 🟢 SI ES MERCADOPAGO, CREAR PREFERENCIA DE PAGO
+    if (paymentMethod === 'mercadopago') {
+      logger.debug('🟢 [CHECKOUT] Verificando pasarela de MercadoPago...');
+      
+      // Obtener pasarela de pago de la plataforma
+      const gateway = await getPaymentGateway(null, 'mercadopago');
+      
+      if (!gateway) {
+        logger.debug('❌ [CHECKOUT] No hay pasarela de MercadoPago configurada');
+        return NextResponse.json({
+          error: 'MercadoPago no está configurado. Contacta al administrador.',
+        }, { status: 503 });
+      }
 
-    logger.debug('✅ Pago de visión completado:', {
-      orderId: updatedOrder.id,
-      paymentMethod,
-      amount: updatedOrder.amount,
-    });
+      if (gateway.provider !== 'mercadopago') {
+        return NextResponse.json({
+          error: `La pasarela configurada es ${gateway.provider.toUpperCase()}, no MercadoPago`,
+        }, { status: 400 });
+      }
 
-    // 🎯 ASIGNAR MENTORES A LA VISIÓN Y ACREDITAR LLAMADAS
-    if (existingPaymentData.type === 'VISION_MENTOR_PAYMENT') {
-      const visionId = existingPaymentData.visionId;
-      const mentorAssignments = existingPaymentData.mentorAssignments || [];
-      const totalStudents = existingPaymentData.totalStudents || 0;
+      logger.debug('🟢 [CHECKOUT] Creando preferencia de MercadoPago...');
+      
+      try {
+        const { MercadoPagoConfig, Preference } = require('mercadopago');
+        const client = new MercadoPagoConfig({ accessToken: gateway.secretKey });
+        const preference = new Preference(client);
 
-      logger.debug('📋 Procesando asignaciones:', {
-        visionId,
-        mentorAssignments: mentorAssignments.length,
-        totalStudents,
-      });
-
-      // 1. Asignar cada mentor a la visión (si no está ya asignado)
-      for (const assignment of mentorAssignments) {
-        const { mentorId, studentCount } = assignment;
-
-        logger.debug(`🔍 Procesando mentor ID: ${mentorId}`);
-
-        // El mentorId ya es el usuario ID, no el perfil mentor ID
-        // Verificar si ya está asignado
-        const existingAssignment = await prisma.visionMentor.findFirst({
-          where: {
-            visionId: visionId,
-            mentorId: mentorId,
+        const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+        
+        const preferenceData = await preference.create({
+          body: {
+            items: [
+              {
+                id: `mentorias-${orderId.slice(0, 8)}`,
+                title: `Mentorías - ${existingPaymentData.visionName || 'Visión'}`,
+                description: `${existingPaymentData.totalStudents || order.quantity} estudiantes × 18 llamadas`,
+                quantity: 1,
+                unit_price: order.amount,
+                currency_id: 'MXN',
+              },
+            ],
+            back_urls: {
+              success: `${baseUrl}/api/school-admin/visiones/mp-success?orderId=${orderId}`,
+              failure: `${baseUrl}/dashboard/school-admin/visiones/payment?orderId=${orderId}&payment=failed`,
+              pending: `${baseUrl}/dashboard/school-admin/visiones/payment?orderId=${orderId}&payment=pending`,
+            },
+            auto_return: 'approved',
+            external_reference: orderId,
+            metadata: {
+              orderId: orderId,
+              visionId: existingPaymentData.visionId?.toString() || '',
+              userId: user.id.toString(),
+              organizationId: user.organizationId?.toString() || '',
+            },
           },
         });
 
-        if (!existingAssignment) {
-          // Crear asignación
-          await prisma.visionMentor.create({
-            data: {
-              visionId: visionId,
-              mentorId: mentorId,
-              asignadoPorId: user.id,
-            },
-          });
-          logger.debug(`✅ Mentor ${mentorId} asignado a visión ${visionId}`);
-        } else {
-          logger.debug(`ℹ️ Mentor ${mentorId} ya estaba asignado a visión ${visionId}`);
-        }
+        // Determinar si usar sandbox o producción
+        const isTest = gateway.secretKey.startsWith('TEST-');
+        const paymentUrl = isTest 
+          ? (preferenceData.sandbox_init_point || preferenceData.init_point)
+          : preferenceData.init_point;
+
+        logger.debug('✅ [CHECKOUT] Preferencia de MercadoPago creada:', preferenceData.id);
+
+        return NextResponse.json({
+          success: true,
+          requiresRedirect: true,
+          checkoutUrl: paymentUrl,
+          preferenceId: preferenceData.id,
+        });
+      } catch (mpError: any) {
+        logger.error('❌ [CHECKOUT] Error de MercadoPago:', mpError);
+        return NextResponse.json({
+          error: 'Error al crear sesión de pago con MercadoPago',
+          details: mpError.message,
+        }, { status: 500 });
       }
+    }
 
-      // 2. Acreditar llamadas a la organización
-      // Calcular total de llamadas: totalStudents × 18 llamadas por paquete
-      const callsPerStudent = 18; // 18 llamadas por paquete de mentoría
-      const totalCalls = totalStudents * callsPerStudent;
+    // Para PayPal (por implementar)
+    if (paymentMethod === 'paypal') {
+      return NextResponse.json({
+        error: 'PayPal aún no está implementado completamente',
+      }, { status: 501 });
+    }
 
-      logger.debug('💰 Acreditando llamadas:', {
-        totalStudents,
-        callsPerStudent,
+    return NextResponse.json({
+      error: 'Método de pago no válido',
+    }, { status: 400 });
+  } catch (error: any) {
+    logger.error('❌ [CHECKOUT] Error general:', error);
+    return NextResponse.json({
+      error: 'Error al procesar el pago',
+      details: error.message,
+    }, { status: 500 });
+  }
+}
         totalCalls,
         amount: updatedOrder.amount,
       });
