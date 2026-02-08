@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
     // Obtener organizaciones que tienen visiones activas con PL
     const organizations = await prisma.organization.findMany({
       where: {
-        Visions: {
+        Vision: {
           some: {
             isActive: true,
             enabledLevels: {
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
       select: {
         id: true,
         name: true,
-        Visions: {
+        Vision: {
           where: {
             isActive: true,
             enabledLevels: {
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
     const formattedOrgs = organizations.map(org => ({
       id: org.id,
       name: org.name,
-      visions: org.Visions.map(v => ({
+      visions: org.Vision.map(v => ({
         id: v.id,
         nombre: v.nombre
       }))
