@@ -598,32 +598,6 @@ function HeroCard({
               {participant.nombre.charAt(0)}
             </div>
           )}
-          
-          {/* Progress ring overlay */}
-          {tier !== 'QUANTUM' && participant.enrolledCount > 0 && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <svg className="w-16 h-16" viewBox="0 0 36 36">
-                <path
-                  d="M18 2.0845
-                    a 15.9155 15.9155 0 0 1 0 31.831
-                    a 15.9155 15.9155 0 0 1 0 -31.831"
-                  fill="none"
-                  stroke="rgba(255,255,255,0.2)"
-                  strokeWidth="2"
-                />
-                <path
-                  d="M18 2.0845
-                    a 15.9155 15.9155 0 0 1 0 31.831
-                    a 15.9155 15.9155 0 0 1 0 -31.831"
-                  fill="none"
-                  stroke={tier === 'RUNNER' ? '#22d3ee' : '#9ca3af'}
-                  strokeWidth="2"
-                  strokeDasharray={`${(participant.enrolledCount / 4) * 100}, 100`}
-                  strokeLinecap="round"
-                />
-              </svg>
-            </div>
-          )}
         </div>
 
         {/* Info */}
@@ -667,6 +641,72 @@ function HeroCard({
           transition={{ duration: 2, repeat: Infinity }}
         >
           {participant.rank}
+        </motion.div>
+      )}
+
+      {/* Golden Atom Badge for 1st Place - Átomo dorado con diamante en el núcleo */}
+      {participant.rank === 1 && participant.enrolledCount > 0 && (
+        <motion.div
+          className="absolute -top-4 -left-4 w-12 h-12"
+          animate={{ 
+            rotate: 360,
+            scale: [1, 1.1, 1]
+          }}
+          transition={{ 
+            rotate: { duration: 10, repeat: Infinity, ease: 'linear' },
+            scale: { duration: 2, repeat: Infinity }
+          }}
+        >
+          {/* Átomo estilizado con órbitas doradas */}
+          <svg viewBox="0 0 48 48" className="w-full h-full drop-shadow-lg">
+            {/* Glow effect */}
+            <defs>
+              <filter id="atomGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                <feMerge>
+                  <feMergeNode in="coloredBlur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+              <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#FFD700"/>
+                <stop offset="50%" stopColor="#FFA500"/>
+                <stop offset="100%" stopColor="#FFD700"/>
+              </linearGradient>
+              <linearGradient id="diamondGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#E8F4F8"/>
+                <stop offset="25%" stopColor="#B8E0ED"/>
+                <stop offset="50%" stopColor="#87CEEB"/>
+                <stop offset="75%" stopColor="#B8E0ED"/>
+                <stop offset="100%" stopColor="#FFFFFF"/>
+              </linearGradient>
+            </defs>
+            
+            {/* Órbitas elípticas doradas */}
+            <ellipse cx="24" cy="24" rx="20" ry="8" fill="none" stroke="url(#goldGradient)" strokeWidth="1.5" filter="url(#atomGlow)" opacity="0.9"/>
+            <ellipse cx="24" cy="24" rx="20" ry="8" fill="none" stroke="url(#goldGradient)" strokeWidth="1.5" filter="url(#atomGlow)" opacity="0.9" transform="rotate(60 24 24)"/>
+            <ellipse cx="24" cy="24" rx="20" ry="8" fill="none" stroke="url(#goldGradient)" strokeWidth="1.5" filter="url(#atomGlow)" opacity="0.9" transform="rotate(120 24 24)"/>
+            
+            {/* Electrones dorados en las órbitas */}
+            <circle cx="44" cy="24" r="2.5" fill="#FFD700" filter="url(#atomGlow)"/>
+            <circle cx="12" cy="34" r="2.5" fill="#FFD700" filter="url(#atomGlow)"/>
+            <circle cx="12" cy="14" r="2.5" fill="#FFD700" filter="url(#atomGlow)"/>
+            
+            {/* Núcleo - Diamante estilizado */}
+            <polygon 
+              points="24,16 30,24 24,32 18,24" 
+              fill="url(#diamondGradient)" 
+              stroke="#FFD700" 
+              strokeWidth="1"
+              filter="url(#atomGlow)"
+            />
+            {/* Brillo del diamante */}
+            <polygon 
+              points="24,18 27,24 24,26 21,24" 
+              fill="rgba(255,255,255,0.8)"
+            />
+            <line x1="22" y1="20" x2="24" y2="22" stroke="rgba(255,255,255,0.9)" strokeWidth="1"/>
+          </svg>
         </motion.div>
       )}
     </motion.div>

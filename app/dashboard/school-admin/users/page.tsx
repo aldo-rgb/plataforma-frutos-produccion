@@ -233,10 +233,10 @@ export default function UsersListPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <Link
             href="/dashboard/school-admin"
             className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-4"
@@ -245,25 +245,25 @@ export default function UsersListPage() {
             <span>Volver al Dashboard</span>
           </Link>
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-4xl font-black text-white tracking-tight flex items-center gap-3">
-                <Users className="text-cyan-400" />
+              <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight flex items-center gap-2 sm:gap-3">
+                <Users className="text-cyan-400 w-6 h-6 sm:w-auto sm:h-auto" />
                 Mis Participantes
               </h1>
-              <p className="text-slate-400 mt-2">
+              <p className="text-slate-400 mt-1 sm:mt-2 text-sm sm:text-base">
                 Participantes, Game Changers, Coordinadores y Mentores activos
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-3xl font-black text-white">{filteredUsers.length}</p>
-              <p className="text-sm text-slate-400">Total usuarios</p>
+            <div className="text-left sm:text-right">
+              <p className="text-2xl sm:text-3xl font-black text-white">{filteredUsers.length}</p>
+              <p className="text-xs sm:text-sm text-slate-400">Total usuarios</p>
             </div>
           </div>
         </div>
 
         {/* Filtros y Búsqueda */}
-        <div className="bg-slate-900/50 border border-slate-700 rounded-2xl p-6 mb-6">
+        <div className="bg-slate-900/50 border border-slate-700 rounded-2xl p-4 sm:p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Búsqueda */}
             <div className="relative">
@@ -357,98 +357,98 @@ export default function UsersListPage() {
             filteredUsers.map((user, index) => (
               <div
                 key={user.id}
-                className="bg-slate-900/50 border border-slate-700 rounded-2xl p-6 hover:border-cyan-500/50 transition-all group"
+                className="bg-slate-900/50 border border-slate-700 rounded-2xl p-4 sm:p-6 hover:border-cyan-500/50 transition-all group"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                   {/* Información del Usuario */}
-                  <div className="flex items-center gap-4 flex-1">
+                  <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1">
                     {/* Ranking */}
-                    <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 text-white font-bold text-lg">
+                    <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 text-white font-bold text-base sm:text-lg">
                       {index + 1}
                     </div>
 
                     {/* Detalles */}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <h3 className="text-xl font-bold text-white">{user.nombre}</h3>
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getRoleBadgeColor(user.rol)}`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-1 sm:mb-2">
+                        <h3 className="text-base sm:text-xl font-bold text-white truncate">{user.nombre}</h3>
+                        <span className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold border ${getRoleBadgeColor(user.rol)}`}>
                           {getRoleName(user.rol)}
                         </span>
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${getTierBadgeColor(user.tier)}`}>
+                        <span className={`px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold ${getTierBadgeColor(user.tier)}`}>
                           {user.tier}
                         </span>
                         {getPaymentBadge(user.paymentStatus)}
                       </div>
-                      <p className="text-slate-400 text-sm">{user.email}</p>
+                      <p className="text-slate-400 text-xs sm:text-sm truncate">{user.email}</p>
                     </div>
                   </div>
 
-                  {/* Indicadores de Cuestionarios */}
-                  <div className="flex items-center gap-2 mx-4">
+                  {/* Indicadores de Cuestionarios - Grid en móvil */}
+                  <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap">
                     {/* Quiz Médico */}
                     <div className="relative group/tooltip">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${user.quizMedico ? 'bg-green-500/20 text-green-400' : 'bg-slate-700/50 text-slate-500'}`}>
-                        <Heart size={16} />
+                      <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center ${user.quizMedico ? 'bg-green-500/20 text-green-400' : 'bg-slate-700/50 text-slate-500'}`}>
+                        <Heart size={14} className="sm:w-4 sm:h-4" />
                       </div>
-                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-800 text-white rounded whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity">
+                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-800 text-white rounded whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none z-10">
                         Quiz Médico {user.quizMedico ? '✓' : '✗'}
                       </span>
                     </div>
                     
                     {/* Quiz Avanzado */}
                     <div className="relative group/tooltip">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${user.quizAvanzado ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-700/50 text-slate-500'}`}>
-                        <ClipboardCheck size={16} />
+                      <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center ${user.quizAvanzado ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-700/50 text-slate-500'}`}>
+                        <ClipboardCheck size={14} className="sm:w-4 sm:h-4" />
                       </div>
-                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-800 text-white rounded whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity">
+                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-800 text-white rounded whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none z-10">
                         Quiz Avanzado {user.quizAvanzado ? '✓' : '✗'}
                       </span>
                     </div>
                     
                     {/* Negocio */}
                     <div className="relative group/tooltip">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${user.tieneNegocio ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700/50 text-slate-500'}`}>
-                        <Briefcase size={16} />
+                      <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center ${user.tieneNegocio ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700/50 text-slate-500'}`}>
+                        <Briefcase size={14} className="sm:w-4 sm:h-4" />
                       </div>
-                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-800 text-white rounded whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity">
+                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-800 text-white rounded whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none z-10">
                         Negocio {user.tieneNegocio ? (user.negocioStatus === 'APPROVED' ? '✓ Aprobado' : `(${user.negocioStatus})`) : '✗'}
                       </span>
                     </div>
                     
                     {/* Carta de Frutos */}
                     <div className="relative group/tooltip">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${user.cartaFrutos === 'APROBADA' ? 'bg-emerald-500/20 text-emerald-400' : user.cartaFrutos ? 'bg-yellow-500/20 text-yellow-400' : 'bg-slate-700/50 text-slate-500'}`}>
-                        <ScrollText size={16} />
+                      <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center ${user.cartaFrutos === 'APROBADA' ? 'bg-emerald-500/20 text-emerald-400' : user.cartaFrutos ? 'bg-yellow-500/20 text-yellow-400' : 'bg-slate-700/50 text-slate-500'}`}>
+                        <ScrollText size={14} className="sm:w-4 sm:h-4" />
                       </div>
-                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-800 text-white rounded whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity">
+                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-800 text-white rounded whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none z-10">
                         Carta {user.cartaFrutos || 'Sin carta'}
                       </span>
                     </div>
                     
                     {/* Invitados Enrolados */}
                     <div className="relative group/tooltip">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${user.invitadosEnrolados > 0 ? 'bg-cyan-500/20 text-cyan-400' : 'bg-slate-700/50 text-slate-500'}`}>
-                        <UserPlus size={16} />
+                      <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center ${user.invitadosEnrolados > 0 ? 'bg-cyan-500/20 text-cyan-400' : 'bg-slate-700/50 text-slate-500'}`}>
+                        <UserPlus size={14} className="sm:w-4 sm:h-4" />
                       </div>
-                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-800 text-white rounded whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity">
+                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs bg-slate-800 text-white rounded whitespace-nowrap opacity-0 group-hover/tooltip:opacity-100 transition-opacity pointer-events-none z-10">
                         {user.invitadosEnrolados} Enrolados
                       </span>
                     </div>
                   </div>
 
-                  {/* Estadísticas */}
-                  <div className="flex items-center gap-6">
+                  {/* Estadísticas y Acciones */}
+                  <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-6 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-700/50">
                     {/* XP */}
                     <div className="text-center">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Trophy className="text-yellow-400" size={20} />
-                        <p className="text-2xl font-black text-white">{user.experienciaXP}</p>
+                      <div className="flex items-center gap-1 sm:gap-2 mb-0.5 sm:mb-1">
+                        <Trophy className="text-yellow-400 w-4 h-4 sm:w-5 sm:h-5" />
+                        <p className="text-lg sm:text-2xl font-black text-white">{user.experienciaXP}</p>
                       </div>
-                      <p className="text-xs text-slate-400">XP Total</p>
+                      <p className="text-[10px] sm:text-xs text-slate-400">XP Total</p>
                     </div>
 
                     {/* Estado */}
-                    <div className="text-center">
+                    <div className="text-center hidden sm:block">
                       <div className={`w-3 h-3 rounded-full mx-auto mb-2 ${user.isActive ? 'bg-green-500' : 'bg-red-500'}`}></div>
                       <p className="text-xs text-slate-400">{user.isActive ? 'Activo' : 'Inactivo'}</p>
                     </div>
@@ -456,18 +456,20 @@ export default function UsersListPage() {
                     {/* Botón TOP FILE */}
                     <button
                       onClick={() => openTopFile(user.id, user.nombre)}
-                      className="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 rounded-lg font-semibold text-sm transition-colors flex items-center gap-2"
+                      className="px-3 sm:px-4 py-1.5 sm:py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 rounded-lg font-semibold text-xs sm:text-sm transition-colors flex items-center gap-1 sm:gap-2"
                     >
-                      <FileText size={16} />
-                      TOP FILE
+                      <FileText size={14} className="sm:w-4 sm:h-4" />
+                      <span className="hidden sm:inline">TOP FILE</span>
+                      <span className="sm:hidden">TOP</span>
                     </button>
 
                     {/* Ver Detalles */}
                     <Link
                       href={`/dashboard/school-admin/users/${user.id}`}
-                      className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold text-sm transition-colors"
+                      className="px-3 sm:px-4 py-1.5 sm:py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg font-semibold text-xs sm:text-sm transition-colors"
                     >
-                      Ver Detalles
+                      <span className="hidden sm:inline">Ver Detalles</span>
+                      <span className="sm:hidden">Ver</span>
                     </Link>
                   </div>
                 </div>
