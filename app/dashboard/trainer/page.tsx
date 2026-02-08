@@ -7,7 +7,7 @@ import {
   Users, Ticket, AlertTriangle, Building2, GraduationCap, Activity,
   Clock, Calendar, Scan, Heart, Mic, BookOpen, Rocket, ChevronRight,
   X, Loader2, Phone, Mail, CreditCard, FileText, CheckCircle, Flag,
-  CheckCircle2
+  CheckCircle2, Trophy
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -724,6 +724,18 @@ export default function TrainerDashboard() {
                           </div>
                         </div>
                       )}
+
+                      {/* Botón Hall of Fame */}
+                      <div className="mt-3 pt-3 border-t border-slate-700/50">
+                        <Link
+                          href={`/dashboard/trainer/hall-of-fame/${producto.id}`}
+                          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 border border-purple-500/30 hover:border-purple-500/50 rounded-xl text-purple-300 hover:text-white transition-all group"
+                        >
+                          <Trophy className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                          <span className="font-medium text-sm">Ver Resultados</span>
+                          <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        </Link>
+                      </div>
                     </div>
                   );
                 })}
