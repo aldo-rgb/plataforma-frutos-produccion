@@ -262,7 +262,7 @@ export default function QuantumHallOfFamePage() {
           </motion.div>
           
           <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-cyan-400 mb-2">
-            QUANTUM HALL
+            RESULTADOS
           </h1>
           <p className="text-xl text-gray-400 font-light tracking-widest mb-2">
             {data.product.name}
@@ -277,9 +277,9 @@ export default function QuantumHallOfFamePage() {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2 }}
-          className="max-w-4xl mx-auto mb-12"
+          className="max-w-3xl mx-auto mb-12"
         >
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <StatCard
               icon={Users}
               label="Participantes"
@@ -288,15 +288,9 @@ export default function QuantumHallOfFamePage() {
             />
             <StatCard
               icon={TrendingUp}
-              label="Enrolados"
+              label="Confirmados"
               value={data.stats.totalEnrolled}
               color="green"
-            />
-            <StatCard
-              icon={Star}
-              label="Declarados"
-              value={data.stats.totalDeclared}
-              color="amber"
             />
             <StatCard
               icon={Crown}
@@ -464,26 +458,10 @@ export default function QuantumHallOfFamePage() {
                 </h2>
 
                 {/* Score */}
-                <div className="flex items-center justify-center gap-8 mb-8">
-                  <div className="text-center">
-                    <p className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-400">
-                      {spotlightParticipant.enrolledCount}
-                    </p>
-                    <p className="text-sm text-gray-400">Enrolados</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400">
-                      {spotlightParticipant.declaredCount}
-                    </p>
-                    <p className="text-sm text-gray-400">Declarados</p>
-                  </div>
-                </div>
-
-                {/* Total */}
-                <div className="p-4 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-2xl border border-purple-500/30">
-                  <p className="text-sm text-purple-300 mb-1">Total</p>
-                  <p className="text-5xl font-black text-white">
-                    {spotlightParticipant.totalCount}
+                <div className="p-6 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-2xl border border-green-500/30">
+                  <p className="text-sm text-green-300 mb-2">Confirmados</p>
+                  <p className="text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-400">
+                    {spotlightParticipant.enrolledCount}
                   </p>
                 </div>
 
@@ -628,7 +606,7 @@ function HeroCard({
           )}
           
           {/* Progress ring overlay */}
-          {tier !== 'QUANTUM' && participant.totalCount > 0 && (
+          {tier !== 'QUANTUM' && participant.enrolledCount > 0 && (
             <div className="absolute inset-0 flex items-center justify-center">
               <svg className="w-16 h-16" viewBox="0 0 36 36">
                 <path
@@ -646,7 +624,7 @@ function HeroCard({
                   fill="none"
                   stroke={tier === 'RUNNER' ? '#22d3ee' : '#9ca3af'}
                   strokeWidth="2"
-                  strokeDasharray={`${(participant.totalCount / 4) * 100}, 100`}
+                  strokeDasharray={`${(participant.enrolledCount / 4) * 100}, 100`}
                   strokeLinecap="round"
                 />
               </svg>
@@ -665,7 +643,7 @@ function HeroCard({
             animate={tier === 'QUANTUM' ? { scale: [1, 1.1, 1] } : {}}
             transition={{ duration: 2, repeat: Infinity }}
           >
-            {participant.totalCount}
+            {participant.enrolledCount}
           </motion.p>
           
           {/* Name */}
@@ -673,10 +651,10 @@ function HeroCard({
             {participant.nombre.split(' ')[0]}
           </p>
           
-          {/* Breakdown */}
-          {!compact && (
-            <p className="text-xs text-gray-500 mt-1">
-              {participant.enrolledCount}E / {participant.declaredCount}D
+          {/* Confirmados count */}
+          {!compact && participant.enrolledCount > 0 && (
+            <p className="text-xs text-green-400/70 mt-1">
+              ✓ Confirmados
             </p>
           )}
         </div>

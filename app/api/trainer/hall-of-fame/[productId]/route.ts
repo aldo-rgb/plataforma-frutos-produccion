@@ -76,12 +76,12 @@ export async function GET(
     // Obtener el siguiente nivel para contar enrolados
     const nextLevel = level === 'BASIC' ? 'ADVANCED' : level === 'ADVANCED' ? 'PL' : null;
 
-    // Contar cuántas personas ha invitado cada participante al siguiente nivel
+    // Contar cuántas personas ha confirmado cada participante al siguiente nivel
     const participantsWithEnrollments = await Promise.all(
       enrollments.map(async (enrollment) => {
         const user = enrollment.Usuario_vision_enrollments_userIdToUsuario;
         
-        // Contar invitados al siguiente nivel de esta misma visión
+        // Contar invitados confirmados al siguiente nivel de esta misma visión
         let enrolledCount = 0;
         
         if (nextLevel) {
@@ -95,49 +95,36 @@ export async function GET(
           });
         }
 
-        // También contar declarados (pre-registros)
-        let declaredCount = 0;
-        if (level === 'BASIC') {
-          // Contar pre-registros de ADVANCED (donde el currentProductId es este producto)
-          declaredCount = await prisma.advancedPreRegistration.count({
-            where: {
-              currentProductId: productIdNum,
-              scannedByStaffId: user.id,
-              status: { in: ['PENDING', 'PAID'] },
-            }
-          });
-        }
-
         return {
           id: user.id,
           nombre: user.nombre,
           email: user.email,
           imagen: user.imagen,
           enrolledCount,
-          declaredCount,
-          totalCount: enrolledCount + declaredCount,
+          declaredCount: 0, // Ya no se usa, mantenido por compatibilidad
+          totalCount: enrolledCount, // Ahora solo cuenta confirmados
           attendanceStatus: enrollment.attendanceStatus,
         };
       })
     );
 
     // Ordenar por total de enrolados (descendente)
-    const sortedParticipants = participantsWithEnrollments.sort((a, b) => b.totalCount - a.totalCount);
+    const sortedParticipants = participantsWithEnrollments.sort((a, b) => b.enrolledCount - a.enrolledCount);
 
     // Calcular estadísticas
     const stats = {
       totalParticipants: sortedParticipants.length,
       totalEnrolled: sortedParticipants.reduce((acc, p) => acc + p.enrolledCount, 0),
-      totalDeclared: sortedParticipants.reduce((acc, p) => acc + p.declaredCount, 0),
-      participantsWithEnrollments: sortedParticipants.filter(p => p.totalCount > 0).length,
+      totalDeclared: 0, // Ya no se usa
+      participantsWithEnrollments: sortedParticipants.filter(p => p.enrolledCount > 0).length,
       topPerformer: sortedParticipants[0] || null,
     };
 
-    // Determinar niveles de los participantes
+    // Determinar niveles de los participantes basado en enrolledCount
     const rankedParticipants = sortedParticipants.map((p, index) => ({
       ...p,
       rank: index + 1,
-      tier: p.totalCount >= 4 ? 'QUANTUM' : p.totalCount >= 2 ? 'RUNNER' : 'WALKER',
+      tier: p.enrolledCount >= 4 ? 'QUANTUM' : p.enrolledCount >= 2 ? 'RUNNER' : 'WALKER',
     }));
 
     return NextResponse.json({
