@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 // GET: Obtener todos los negocios de participantes de una visión para imprimir QRs de expo
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -15,7 +15,7 @@ export async function GET(
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const { id } = await params;
+    const { id } = await context.params;
     const visionId = parseInt(id);
 
     if (isNaN(visionId)) {
