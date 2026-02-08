@@ -14,6 +14,7 @@ import UserLevelBadge from '@/components/dashboard/UserLevelBadge';
 import UpcomingCallCard from '@/components/dashboard/UpcomingCallCard';
 import ArchetypeTaskCard from '@/components/dashboard/ArchetypeTaskCard';
 import MetamorfosisTaskCard from '@/components/dashboard/MetamorfosisTaskCard';
+import ParticipantSurveyBanner from '@/components/surveys/ParticipantSurveyBanner';
 import { ChevronLeft, ChevronRight, Calendar, Sparkles, TrendingUp, Check, Zap, Phone, Plus, Target, User } from 'lucide-react';
 
 interface Task {
@@ -595,6 +596,11 @@ export default function TodayPage() {
       {/* USER LEVEL BADGE - Sistema de Recompensas */}
       <div className="max-w-4xl mx-auto px-6 pt-6 pb-4">
         <UserLevelBadge mode="full" />
+      </div>
+
+      {/* PARTICIPANT SURVEY BANNER - Encuesta del último día */}
+      <div className="max-w-4xl mx-auto px-6 pb-2">
+        <ParticipantSurveyBanner />
       </div>
 
       {/* UPCOMING CALLS - Llamadas Agendadas con Countdown */}
