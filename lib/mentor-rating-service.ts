@@ -9,12 +9,11 @@
  * 5. Actualización automática de comisiones según nivel
  */
 
-import { PrismaClient, NivelMentor } from '@prisma/client';
+import { NivelMentor } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { evaluateMentorLevel } from './levelUpSystem';
 import { checkAndAwardBadges } from './badgeSystem'; // 🏅 NUEVO: Sistema de medallas
 import { actualizarMetricasMentor } from './mentorMetricsUpdater'; // 📊 NUEVO: Sistema de puntos
-
-const prisma = new PrismaClient();
 
 // =====================================================
 // UMBRALES PARA PROMOCIÓN DE NIVELES

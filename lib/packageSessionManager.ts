@@ -1,7 +1,5 @@
 // 💳 Sistema de Gestión de Créditos de Sesiones de Paquetes
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 
 /**
  * Crea el registro de créditos al completar la compra de un paquete

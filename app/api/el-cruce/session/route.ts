@@ -2,14 +2,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { PrismaClient } from "@prisma/client"
+import { prisma } from "@/lib/prisma"
 import logger from '@/lib/logger';
 
 // Forzar modo dinámico para tiempo real
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
-
-const prisma = new PrismaClient()
 
 // GET: Obtener sesión activa o por ID
 export async function GET(request: NextRequest) {
