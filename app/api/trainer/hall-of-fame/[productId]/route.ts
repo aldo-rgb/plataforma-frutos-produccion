@@ -51,12 +51,13 @@ export async function GET(
       return NextResponse.json({ error: 'Producto sin visión asociada' }, { status: 400 });
     }
 
-    // Obtener todos los participantes de este producto/nivel
+    // Obtener todos los participantes de este producto/nivel que tienen asistencia confirmada
     const enrollments = await prisma.vision_enrollments.findMany({
       where: {
         visionId: visionId,
         level: level as any,
         enrollmentStatus: { not: 'CANCELLED' },
+        attendanceStatus: 'ATTENDED', // Solo mostrar participantes con asistencia confirmada
       },
       select: {
         id: true,

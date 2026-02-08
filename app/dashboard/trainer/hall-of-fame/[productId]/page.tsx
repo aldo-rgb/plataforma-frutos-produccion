@@ -369,7 +369,7 @@ export default function QuantumHallOfFamePage() {
             <div className="flex items-center justify-center gap-3 mb-6">
               <Star className="w-5 h-5 text-gray-500" />
               <h2 className="text-lg font-bold text-gray-500">
-                CAMINANTES
+                PARTICIPANTES
               </h2>
               <Star className="w-5 h-5 text-gray-500" />
             </div>
