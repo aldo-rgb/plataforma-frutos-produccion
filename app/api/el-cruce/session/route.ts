@@ -1,9 +1,6 @@
 // API para gestionar sesiones de "El Cruce"
+// TEMPORALMENTE SUSPENDIDO POR PROBLEMAS DE RENDIMIENTO
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
-import logger from '@/lib/logger';
 
 // Forzar modo dinámico para tiempo real
 export const dynamic = 'force-dynamic'
@@ -11,6 +8,44 @@ export const revalidate = 0
 
 // GET: Obtener sesión activa o por ID
 export async function GET(request: NextRequest) {
+  return NextResponse.json({ 
+    error: "El Cruce está temporalmente en mantenimiento. Por favor intenta más tarde.",
+    maintenance: true 
+  }, { status: 503 })
+}
+
+// POST: Crear nueva sesión
+export async function POST(request: NextRequest) {
+  return NextResponse.json({ 
+    error: "El Cruce está temporalmente en mantenimiento. Por favor intenta más tarde.",
+    maintenance: true 
+  }, { status: 503 })
+}
+
+// PUT: Actualizar sesión
+export async function PUT(request: NextRequest) {
+  return NextResponse.json({ 
+    error: "El Cruce está temporalmente en mantenimiento. Por favor intenta más tarde.",
+    maintenance: true 
+  }, { status: 503 })
+}
+
+// DELETE: Eliminar sesión
+export async function DELETE(request: NextRequest) {
+  return NextResponse.json({ 
+    error: "El Cruce está temporalmente en mantenimiento. Por favor intenta más tarde.",
+    maintenance: true 
+  }, { status: 503 })
+}
+
+/* CÓDIGO ORIGINAL SUSPENDIDO - DESCOMENTAR CUANDO SE OPTIMICE
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+import logger from '@/lib/logger';
+
+// GET: Obtener sesión activa o por ID
+export async function GET_ORIGINAL(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
