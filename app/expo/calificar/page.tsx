@@ -233,11 +233,27 @@ function CalificarContent() {
             console.log('QR escaneado:', decodedText);
             stopScanner();
             
-            // Extraer el ID del expositor de la URL
+            // Extraer información del QR
             // Formatos esperados:
-            // - https://impactocuantico.net/expo/votar/123
+            // - https://impactocuantico.net/expo/votar/123 (expositor individual)
             // - /expo/votar/123
-            // - 123 (solo el ID)
+            // - https://impactocuantico.net/expo/catalogo/5 (catálogo de visión)
+            // - /expo/catalogo/5
+            // - 123 (solo el ID del expositor)
+            
+            // Verificar si es un catálogo de visión
+            if (decodedText.includes('/expo/catalogo/')) {
+              const match = decodedText.match(/\/expo\/catalogo\/(\d+)/);
+              if (match) {
+                const visionId = parseInt(match[1]);
+                setCurrentVisionId(visionId);
+                setMode('catalog');
+                loadCatalog();
+                return;
+              }
+            }
+            
+            // Verificar si es un expositor individual
             let exhibitorId: string | null = null;
             
             if (decodedText.includes('/expo/votar/')) {
@@ -248,7 +264,7 @@ function CalificarContent() {
             }
             
             if (exhibitorId) {
-              loadExhibitor(parseInt(exhibitorId));
+              loadExhibitor(exhibitorId);
             } else {
               setError('Código QR no válido. Intenta de nuevo.');
             }
