@@ -2,6 +2,9 @@ import { prisma } from '@/lib/prisma';
 import { Metadata } from 'next';
 import LegacyCatalogClient from './LegacyCatalogClient';
 
+// Forzar modo dinámico para evitar pre-renderizado durante build
+export const dynamic = 'force-dynamic';
+
 export const metadata: Metadata = {
   title: 'Legados de Impacto | Proyectos Sociales',
   description: 'Explora y apoya proyectos de impacto social en tu comunidad. Donaciones transparentes con seguimiento en tiempo real.',
