@@ -64,8 +64,7 @@ export default function TrainerProfileEditorPage() {
       formData.biografiaCompleta.trim() !== '' &&
       formData.sede.trim() !== '' &&
       formData.especialidad.trim() !== '' &&
-      formData.experienciaAnios > 0 &&
-      formData.enlaceVideoLlamada.trim() !== ''
+      formData.experienciaAnios > 0
     );
   };
 
@@ -83,7 +82,6 @@ export default function TrainerProfileEditorPage() {
     if (!formData.sede?.trim()) campos.push({ key: 'sede', label: 'Sede' });
     if (!formData.especialidad?.trim()) campos.push({ key: 'especialidad', label: 'Especialidad Principal' });
     if (!formData.experienciaAnios || formData.experienciaAnios <= 0) campos.push({ key: 'experienciaAnios', label: 'Años de Experiencia' });
-    if (!formData.enlaceVideoLlamada?.trim()) campos.push({ key: 'enlaceVideoLlamada', label: 'Enlace Videollamada' });
     
     return campos;
   }, [formData]);
@@ -554,32 +552,19 @@ export default function TrainerProfileEditorPage() {
             Experiencia
           </h2>
           
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-slate-400 text-sm mb-2">Años de Experiencia *</label>
-              <input
-                type="number"
-                name="experienciaAnios"
-                value={formData.experienciaAnios}
-                onChange={handleChange}
-                min={0}
-                className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-slate-400 text-sm mb-2">Máximo de Clientes</label>
-              <input
-                type="number"
-                name="maxClients"
-                value={formData.maxClients}
-                onChange={handleChange}
-                min={1}
-                className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
-              />
-            </div>
+          <div>
+            <label className="block text-slate-400 text-sm mb-2">Años de Experiencia *</label>
+            <input
+              type="number"
+              name="experienciaAnios"
+              value={formData.experienciaAnios}
+              onChange={handleChange}
+              min={0}
+              className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
+            />
           </div>
           
-          <div className="mt-4 flex gap-4">
+          <div className="mt-4">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -587,65 +572,8 @@ export default function TrainerProfileEditorPage() {
                 onChange={(e) => setFormData({ ...formData, disponible: e.target.checked })}
                 className="w-5 h-5 rounded bg-slate-900 border-slate-700 text-orange-500 focus:ring-orange-500"
               />
-              <span className="text-slate-300">Disponible</span>
+              <span className="text-slate-300">Disponible para nuevos entrenamientos</span>
             </label>
-            
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.acceptingNewClients}
-                onChange={(e) => setFormData({ ...formData, acceptingNewClients: e.target.checked })}
-                className="w-5 h-5 rounded bg-slate-900 border-slate-700 text-orange-500 focus:ring-orange-500"
-              />
-              <span className="text-slate-300">Aceptando nuevos clientes</span>
-            </label>
-          </div>
-        </div>
-
-        {/* Sección 7: Enlaces */}
-        <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 mb-6">
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <LinkIcon className="w-5 h-5 text-orange-400" />
-            Enlaces de Videollamada
-          </h2>
-          
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-slate-400 text-sm mb-2">Tipo de Plataforma</label>
-              <select
-                name="tipoVideoLlamada"
-                value={formData.tipoVideoLlamada}
-                onChange={handleChange}
-                className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
-              >
-                <option value="zoom">Zoom</option>
-                <option value="meet">Google Meet</option>
-                <option value="teams">Microsoft Teams</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-slate-400 text-sm mb-2">Enlace de Videollamada *</label>
-              <input
-                type="url"
-                name="enlaceVideoLlamada"
-                value={formData.enlaceVideoLlamada}
-                onChange={handleChange}
-                className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
-                placeholder="https://..."
-              />
-            </div>
-          </div>
-          
-          <div className="mt-4">
-            <label className="block text-slate-400 text-sm mb-2">Video de Introducción (opcional)</label>
-            <input
-              type="url"
-              name="videoIntroUrl"
-              value={formData.videoIntroUrl}
-              onChange={handleChange}
-              className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-orange-500 focus:outline-none"
-              placeholder="https://youtube.com/..."
-            />
           </div>
         </div>
 

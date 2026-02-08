@@ -38,20 +38,46 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No tienes permisos para ver esta información' }, { status: 403 });
     }
 
-    // Obtener visiones donde este usuario es trainer de productos ADVANCED
+    // Obtener visiones donde este usuario es trainer de productos ADVANCED o PL
     let visionIdsToQuery: number[] = [];
+    let levelToQuery: 'ADVANCED' | 'PL' = 'ADVANCED';
 
     if (user.rol === 'TRAINER') {
-      // Buscar productos donde es trainer y el levelType es ADVANCED
+      // 1. Buscar productos donde es trainer directo y el levelType es ADVANCED
       const trainerProducts = await prisma.schoolProduct.findMany({
         where: {
           trainerId: userId,
-          levelType: 'ADVANCED',
+          levelType: { in: ['ADVANCED', 'PL'] },
         },
         select: { id: true, visionId: true, levelType: true }
       });
       
-      visionIdsToQuery = trainerProducts.map(p => p.visionId).filter((id): id is number => id !== null);
+      // 2. Buscar visiones donde está asignado como VisionStaff (ADVANCED_TRAINER o PL_TRAINER)
+      const staffAssignments = await prisma.visionStaff.findMany({
+        where: {
+          userId: userId,
+          role: { in: ['ADVANCED_TRAINER', 'PL_TRAINER'] }
+        },
+        select: { visionId: true, role: true, level: true }
+      });
+      
+      // Combinar visiones de productos directos y staff
+      const directVisionIds = trainerProducts.map(p => p.visionId).filter((id): id is number => id !== null);
+      const staffVisionIds = staffAssignments.map(s => s.visionId);
+      visionIdsToQuery = [...new Set([...directVisionIds, ...staffVisionIds])];
+      
+      // Determinar qué nivel buscar según las asignaciones
+      // Si tiene asignaciones PL, buscar PL; si tiene ADVANCED, buscar ADVANCED
+      const hasPLAssignment = staffAssignments.some(s => s.role === 'PL_TRAINER' || s.level === 'PL') ||
+                              trainerProducts.some(p => p.levelType === 'PL');
+      const hasAdvancedAssignment = staffAssignments.some(s => s.role === 'ADVANCED_TRAINER' || s.level === 'ADVANCED') ||
+                                    trainerProducts.some(p => p.levelType === 'ADVANCED');
+      
+      // Si solo tiene PL, buscar participantes de PL
+      if (hasPLAssignment && !hasAdvancedAssignment) {
+        levelToQuery = 'PL';
+      }
+      // Si tiene ambos o solo ADVANCED, mantener ADVANCED (default)
     } else if (user.rol === 'SCHOOL_ADMIN' && user.organizationId) {
       // Para SCHOOL_ADMIN, obtener todas las visiones de su organización
       const visions = await prisma.vision.findMany({
@@ -86,12 +112,15 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Obtener enrollments de ADVANCED en esas visiones
+    // Obtener enrollments del nivel correspondiente en esas visiones
+    // Para PL, también filtrar por asistencia (attendanceStatus = 'ATTENDED')
     const enrollments = await prisma.vision_enrollments.findMany({
       where: {
         visionId: { in: visionIdsToQuery },
-        level: 'ADVANCED',
+        level: levelToQuery,
         paymentStatus: { in: ['FULL', 'PARTIAL', 'GIFT', 'PAID'] },
+        // Para PL, solo mostrar los que asistieron
+        ...(levelToQuery === 'PL' ? { attendanceStatus: 'ATTENDED' } : {}),
       },
       select: {
         userId: true,
@@ -170,6 +199,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       participants,
       stats,
+      level: levelToQuery, // Indicar qué nivel se está mostrando
     });
 
   } catch (error) {

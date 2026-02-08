@@ -88,7 +88,8 @@ export async function GET(request: NextRequest) {
           where: {
             visionId: { in: visionIds },
             isActive: true,
-            trainerId: null, // Solo productos sin trainer directo asignado
+            // NO filtrar por trainerId: null - los VisionStaff son trainers adicionales
+            // aunque el producto tenga un trainer principal
             trainingStatus: { not: 'COMPLETED' }, // No mostrar terminados
             OR: levelConditions
           },

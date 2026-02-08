@@ -57,10 +57,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validar tamaño (5MB máximo)
-    if (file.size > 5 * 1024 * 1024) {
+    // Validar tamaño: 5MB para imágenes, 10MB para PDFs
+    const maxSize = file.type === 'application/pdf' ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+    const maxSizeLabel = file.type === 'application/pdf' ? '10MB' : '5MB';
+    if (file.size > maxSize) {
       return NextResponse.json(
-        { success: false, error: 'El archivo no debe superar los 5MB' },
+        { success: false, error: `El archivo no debe superar los ${maxSizeLabel}` },
         { status: 400 }
       );
     }

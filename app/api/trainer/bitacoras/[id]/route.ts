@@ -43,8 +43,10 @@ export async function GET(
 
     // Si es TRAINER, verificar que sea el trainer asignado del participante
     if (currentUser.rol === 'TRAINER') {
-      // Buscar si el participante está en algún producto donde este usuario es trainer
-      const enrollment = await prisma.vision_enrollments.findFirst({
+      let hasAccess = false;
+
+      // Opción 1: Verificar acceso como trainer de ADVANCED (via trainerId)
+      const advancedEnrollment = await prisma.vision_enrollments.findFirst({
         where: {
           userId: participantId,
           level: 'ADVANCED',
@@ -54,23 +56,51 @@ export async function GET(
         }
       });
 
-      if (enrollment) {
-        const isTrainerForThisVision = await prisma.schoolProduct.findFirst({
+      if (advancedEnrollment) {
+        const isAdvancedTrainer = await prisma.schoolProduct.findFirst({
           where: {
-            visionId: enrollment.visionId,
+            visionId: advancedEnrollment.visionId,
             trainerId: currentUserId,
             levelType: 'ADVANCED',
           }
         });
 
-        if (!isTrainerForThisVision) {
-          return NextResponse.json({ 
-            error: 'No tienes acceso a la bitácora de este participante' 
-          }, { status: 403 });
+        if (isAdvancedTrainer) {
+          hasAccess = true;
         }
-      } else {
+      }
+
+      // Opción 2: Verificar acceso como trainer de PL (via VisionStaff)
+      if (!hasAccess) {
+        const plEnrollment = await prisma.vision_enrollments.findFirst({
+          where: {
+            userId: participantId,
+            level: 'PL',
+            attendanceStatus: 'ATTENDED', // Solo PL que asistieron
+          },
+          select: {
+            visionId: true,
+          }
+        });
+
+        if (plEnrollment) {
+          const isPLTrainer = await prisma.visionStaff.findFirst({
+            where: {
+              visionId: plEnrollment.visionId,
+              userId: currentUserId,
+              role: 'PL_TRAINER',
+            }
+          });
+
+          if (isPLTrainer) {
+            hasAccess = true;
+          }
+        }
+      }
+
+      if (!hasAccess) {
         return NextResponse.json({ 
-          error: 'Este participante no está inscrito en ADVANCED' 
+          error: 'No tienes acceso a la bitácora de este participante' 
         }, { status: 403 });
       }
     }
@@ -101,6 +131,14 @@ export async function GET(
       }
     });
 
+    // Obtener perfil completo para ocupación
+    const perfilCompleto = await prisma.perfilCompleto.findUnique({
+      where: { usuarioId: participantId },
+      select: {
+        ocupacion: true,
+      }
+    });
+
     // Obtener visión si existe
     const vision = questionnaire.visionId 
       ? await prisma.vision.findUnique({
@@ -112,6 +150,45 @@ export async function GET(
           }
         })
       : null;
+
+    // Obtener LegacyCapture del participante (contrato y fotos del cierre)
+    const legacyCapture = await prisma.legacyCaptureSession.findFirst({
+      where: {
+        participantId: participantId,
+        visionId: questionnaire.visionId || undefined,
+        level: 'ADVANCED',
+      },
+      select: {
+        contractPhotoUrl: true,
+        contractDeclaration: true,
+        photoWithGCUrl: true,
+        photoWithSquadUrl: true,
+        photoBlueWallUrl: true,
+        lullabyTitle: true,
+        lullabyArtist: true,
+        status: true,
+        completedAt: true,
+      }
+    });
+
+    // Obtener BusinessProfile del participante (Futuro Imposible)
+    const businessProfile = await prisma.businessProfile.findUnique({
+      where: { userId: participantId },
+      select: {
+        id: true,
+        headline: true,
+        website: true,
+        status: true,
+        isVerified: true,
+        isPLGraduate: true,
+        category: {
+          select: {
+            id: true,
+            name: true,
+          }
+        }
+      }
+    });
 
     // Obtener quién revisó el flag
     const reviewedBy = questionnaire.flagReviewedBy
@@ -145,7 +222,8 @@ export async function GET(
         imagen: participant?.imagen || null,
         telefono: participant?.telefono || null,
         edad: age,
-        profesion: participant?.profession || null,
+        profesion: participant?.profession || perfilCompleto?.ocupacion || null,
+        ocupacion: perfilCompleto?.ocupacion || null,
       },
       vision: vision,
       status: questionnaire.status,
@@ -230,6 +308,30 @@ export async function GET(
           proposito: questionnaire.lifePurpose,
         }
       },
+
+      // LEGACY CAPTURE (Contrato y fotos del cierre)
+      legacyCapture: legacyCapture ? {
+        contractPhotoUrl: legacyCapture.contractPhotoUrl,
+        contractDeclaration: legacyCapture.contractDeclaration,
+        photoWithGCUrl: legacyCapture.photoWithGCUrl,
+        photoWithSquadUrl: legacyCapture.photoWithSquadUrl,
+        photoBlueWallUrl: legacyCapture.photoBlueWallUrl,
+        lullabyTitle: legacyCapture.lullabyTitle,
+        lullabyArtist: legacyCapture.lullabyArtist,
+        status: legacyCapture.status,
+        completedAt: legacyCapture.completedAt,
+      } : null,
+
+      // FUTURO IMPOSIBLE (BusinessProfile)
+      businessProfile: businessProfile ? {
+        id: businessProfile.id,
+        headline: businessProfile.headline,
+        website: businessProfile.website,
+        status: businessProfile.status,
+        isVerified: businessProfile.isVerified,
+        isPLGraduate: businessProfile.isPLGraduate,
+        category: businessProfile.category,
+      } : null,
     };
 
     return NextResponse.json(response);

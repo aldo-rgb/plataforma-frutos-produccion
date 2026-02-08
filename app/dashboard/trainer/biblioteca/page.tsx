@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   BookOpen, Plus, Search, Filter, Edit2, Trash2, Copy,
   FileQuestion, Film, Zap, Heart, Clock, Award, Tag,
-  ChevronDown, ChevronUp, X, Save, AlertCircle, Drama, Theater
+  ChevronDown, ChevronUp, X, Save, AlertCircle, Drama, Theater,
+  Upload, FileText, Loader2, Image as ImageIcon
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -56,6 +57,7 @@ export default function BibliotecaPage() {
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null)
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [hasActiveAdvanced, setHasActiveAdvanced] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ show: boolean; id: number | null; title: string }>({ show: false, id: null, title: '' })
 
   useEffect(() => {
     fetchTemplates()
@@ -110,16 +112,22 @@ export default function BibliotecaPage() {
     }
   }
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('¿Eliminar esta plantilla?')) return
+  const handleDeleteClick = (id: number, title: string) => {
+    setDeleteConfirm({ show: true, id, title })
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm.id) return
 
     try {
-      const res = await fetch(`/api/trainer/biblioteca/${id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/trainer/biblioteca/${deleteConfirm.id}`, { method: 'DELETE' })
       if (res.ok) {
         fetchTemplates()
       }
     } catch (error) {
       console.error('Error deleting template:', error)
+    } finally {
+      setDeleteConfirm({ show: false, id: null, title: '' })
     }
   }
 
@@ -409,7 +417,7 @@ export default function BibliotecaPage() {
                               Duplicar
                             </button>
                             <button
-                              onClick={() => handleDelete(template.id)}
+                              onClick={() => handleDeleteClick(template.id, template.title)}
                               className="flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -444,6 +452,57 @@ export default function BibliotecaPage() {
           />
         )}
       </AnimatePresence>
+
+      {/* Modal de confirmación de eliminación */}
+      <AnimatePresence>
+        {deleteConfirm.show && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+            onClick={() => setDeleteConfirm({ show: false, id: null, title: '' })}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-red-500/20 rounded-xl">
+                  <Trash2 className="w-6 h-6 text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Eliminar Plantilla</h3>
+                  <p className="text-sm text-slate-400">Esta acción no se puede deshacer</p>
+                </div>
+              </div>
+
+              <p className="text-slate-300 mb-6">
+                ¿Estás seguro de que deseas eliminar la plantilla <span className="font-semibold text-white">"{deleteConfirm.title}"</span>?
+              </p>
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setDeleteConfirm({ show: false, id: null, title: '' })}
+                  className="px-4 py-2 bg-slate-700 text-white rounded-xl hover:bg-slate-600 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  className="px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Eliminar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -474,6 +533,13 @@ function TemplateModal({
   const [newTag, setNewTag] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [pdfUrl, setPdfUrl] = useState(template?.contentUrl || '')
+  const [uploadingPdf, setUploadingPdf] = useState(false)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imageUrl, setImageUrl] = useState(template?.type === 'CONTENT' ? template?.contentUrl || '' : '')
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   const handleAddQuestion = () => {
     setQuestions([...questions, {
@@ -520,15 +586,78 @@ function TemplateModal({
     setError('')
 
     try {
+      let finalPdfUrl = pdfUrl
+      let finalImageUrl = imageUrl || formData.contentUrl
+
+      // Si hay un archivo PDF nuevo, subirlo primero (para REFLECTION)
+      if (pdfFile && formData.type === 'REFLECTION') {
+        setUploadingPdf(true)
+        const pdfFormData = new FormData()
+        pdfFormData.append('file', pdfFile)
+        pdfFormData.append('folder', 'templates')
+
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: pdfFormData
+        })
+
+        const uploadData = await uploadRes.json()
+        
+        if (uploadData.url) {
+          finalPdfUrl = uploadData.url
+        } else {
+          setError('Error al subir el PDF')
+          setUploadingPdf(false)
+          setSaving(false)
+          return
+        }
+        setUploadingPdf(false)
+      }
+
+      // Si hay una imagen nueva, subirla (para CONTENT)
+      if (imageFile && formData.type === 'CONTENT') {
+        setUploadingImage(true)
+        const imgFormData = new FormData()
+        imgFormData.append('file', imageFile)
+        imgFormData.append('folder', 'templates')
+
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: imgFormData
+        })
+
+        const uploadData = await uploadRes.json()
+        
+        if (uploadData.url) {
+          finalImageUrl = uploadData.url
+        } else {
+          setError('Error al subir la imagen')
+          setUploadingImage(false)
+          setSaving(false)
+          return
+        }
+        setUploadingImage(false)
+      }
+
       const url = template
         ? `/api/trainer/biblioteca/${template.id}`
         : '/api/trainer/biblioteca'
+
+      // Determinar el contentUrl final según el tipo
+      let finalContentUrl = formData.contentUrl
+      if (formData.type === 'REFLECTION') {
+        finalContentUrl = finalPdfUrl
+      } else if (formData.type === 'CONTENT' && finalImageUrl) {
+        // Si hay imagen, guardar la URL de la imagen; si también hay URL manual, usar ambas
+        finalContentUrl = finalImageUrl || formData.contentUrl
+      }
 
       const res = await fetch(url, {
         method: template ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          contentUrl: finalContentUrl,
           pointsReward: formData.pointsReward === '' ? 50 : formData.pointsReward,
           estimatedMinutes: formData.estimatedMinutes === '' ? null : formData.estimatedMinutes,
           questions: formData.type === 'QUESTIONNAIRE' ? questions : undefined
@@ -654,6 +783,76 @@ function TemplateModal({
                   className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500"
                 />
               </div>
+
+              {/* Subida de imagen */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Imagen (opcional)
+                </label>
+                <p className="text-xs text-slate-500 mb-3">
+                  Puedes subir una imagen de portada o referencia
+                </p>
+
+                {(imageUrl || imagePreview) && !imageFile && (
+                  <div className="relative mb-3">
+                    <img 
+                      src={imagePreview || imageUrl} 
+                      alt="Preview" 
+                      className="w-full h-40 object-cover rounded-xl border border-slate-700"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setImageUrl(''); setImagePreview(null); }}
+                      className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {imageFile && (
+                  <div className="flex items-center gap-3 p-3 bg-green-500/10 rounded-xl border border-green-500/30 mb-3">
+                    <ImageIcon className="w-8 h-8 text-green-400" />
+                    <div className="flex-1">
+                      <p className="text-sm text-white">{imageFile.name}</p>
+                      <p className="text-xs text-slate-400">{(imageFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setImageFile(null); setImagePreview(null); }}
+                      className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {!imageFile && !imageUrl && !imagePreview && (
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-600 rounded-xl cursor-pointer hover:border-purple-500/50 hover:bg-slate-800/50 transition-colors">
+                    <ImageIcon className="w-8 h-8 text-slate-500 mb-2" />
+                    <span className="text-sm text-slate-400">Haz clic para subir una imagen</span>
+                    <span className="text-xs text-slate-500 mt-1">JPG, PNG, GIF (máx. 5 MB)</span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          if (file.size > 5 * 1024 * 1024) {
+                            setError('La imagen no puede superar los 5 MB')
+                            return
+                          }
+                          setImageFile(file)
+                          setImagePreview(URL.createObjectURL(file))
+                          setError('')
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   URL del Contenido (opcional)
@@ -667,6 +866,83 @@ function TemplateModal({
                 />
               </div>
             </>
+          )}
+
+          {/* Sección de PDF para Reflexión */}
+          {formData.type === 'REFLECTION' && (
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Documento PDF (opcional)
+              </label>
+              <p className="text-xs text-slate-500 mb-3">
+                Puedes adjuntar un PDF con material de apoyo para la reflexión
+              </p>
+              
+              {pdfUrl && !pdfFile && (
+                <div className="flex items-center gap-3 p-3 bg-slate-800 rounded-xl border border-slate-700">
+                  <FileText className="w-8 h-8 text-red-400" />
+                  <div className="flex-1">
+                    <p className="text-sm text-white">PDF adjunto</p>
+                    <a 
+                      href={pdfUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-xs text-amber-400 hover:underline"
+                    >
+                      Ver documento
+                    </a>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPdfUrl('')}
+                    className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {pdfFile && (
+                <div className="flex items-center gap-3 p-3 bg-green-500/10 rounded-xl border border-green-500/30">
+                  <FileText className="w-8 h-8 text-green-400" />
+                  <div className="flex-1">
+                    <p className="text-sm text-white">{pdfFile.name}</p>
+                    <p className="text-xs text-slate-400">{(pdfFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPdfFile(null)}
+                    className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {!pdfFile && !pdfUrl && (
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-600 rounded-xl cursor-pointer hover:border-amber-500/50 hover:bg-slate-800/50 transition-colors">
+                  <Upload className="w-8 h-8 text-slate-500 mb-2" />
+                  <span className="text-sm text-slate-400">Haz clic para subir un PDF</span>
+                  <span className="text-xs text-slate-500 mt-1">Máximo 10 MB</span>
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        if (file.size > 10 * 1024 * 1024) {
+                          setError('El archivo PDF no puede superar los 10 MB')
+                          return
+                        }
+                        setPdfFile(file)
+                        setError('')
+                      }
+                    }}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
           )}
 
           {formData.type === 'QUESTIONNAIRE' && (
@@ -786,12 +1062,22 @@ function TemplateModal({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={saving}
+            disabled={saving || uploadingPdf || uploadingImage}
             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-amber-500/20 transition-all disabled:opacity-50"
           >
-            {saving ? (
+            {uploadingImage ? (
               <>
-                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Subiendo imagen...
+              </>
+            ) : uploadingPdf ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Subiendo PDF...
+              </>
+            ) : saving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
                 Guardando...
               </>
             ) : (

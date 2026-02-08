@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { 
   LayoutDashboard, Trophy, Target, BarChart3, User, LogOut, 
   UserPlus, DollarSign, Package, Shield, Drama, Theater,
-  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode, Store, Star, Crown, Image, Vote
+  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode, Store, Star, Crown, Image, Vote, BookOpen, Rocket
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { MENU_ITEMS } from '@/config/menuPermissions';
@@ -339,6 +339,65 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
           <LayoutDashboard size={20} />
           <span>Dashboard</span>
         </Link>
+
+        {/* Panel de Trainer */}
+        {usuario.rol === 'TRAINER' && (
+          <div className="pt-6 mt-6 border-t border-slate-800">
+            <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">🎓 Panel Trainer</p>
+            
+            <Link 
+              href="/dashboard/trainer/bitacoras"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/trainer/bitacoras' || pathname.startsWith('/dashboard/trainer/bitacoras')
+                  ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <FileText size={18} className="text-purple-400" />
+              <span>Bitácoras</span>
+            </Link>
+
+            <Link 
+              href="/dashboard/trainer/biblioteca"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/trainer/biblioteca' || pathname.startsWith('/dashboard/trainer/biblioteca')
+                  ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <BookOpen size={18} className="text-amber-400" />
+              <span>La Biblioteca</span>
+            </Link>
+
+            <Link 
+              href="/dashboard/trainer/lanzador"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/trainer/lanzador' || pathname.startsWith('/dashboard/trainer/lanzador')
+                  ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <Rocket size={18} className="text-pink-400" />
+              <span>El Lanzador</span>
+            </Link>
+
+            <Link 
+              href="/dashboard/trainer/perfil"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/trainer/perfil'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <User size={18} className="text-emerald-400" />
+              <span>Mi Perfil</span>
+            </Link>
+          </div>
+        )}
 
         {/* Panel de Game Changer */}
         {usuario.rol === 'GAME_CHANGER' && (

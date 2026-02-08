@@ -53,9 +53,46 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    // También obtener visiones donde es trainer via VisionStaff (PL_TRAINER, ADVANCED_TRAINER, BASIC_TRAINER)
+    const visionStaffAssignments = await prisma.visionStaff.findMany({
+      where: {
+        userId: userId,
+        role: { in: ['PL_TRAINER', 'ADVANCED_TRAINER', 'BASIC_TRAINER'] }
+      },
+      include: {
+        Vision: {
+          select: {
+            id: true,
+            nombre: true,
+            isActive: true,
+            Organization: {
+              select: { id: true, name: true }
+            },
+            // Obtener productos de la visión para verificar fechas
+            SchoolProduct: {
+              where: {
+                isActive: true,
+                trainingStatus: { not: 'COMPLETED' },
+                startDate: { lte: new Date(now.getTime() + 24 * 60 * 60 * 1000) },
+                endDate: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) }
+              },
+              select: {
+                id: true,
+                name: true,
+                levelType: true,
+                startDate: true,
+                endDate: true
+              }
+            }
+          }
+        }
+      }
+    })
+
     // Agrupar por visión
     const visionMap = new Map()
 
+    // Agregar productos donde es trainer directo
     productsAsTrainer.forEach(product => {
       if (product.Vision) {
         const vId = product.Vision.id
@@ -83,6 +120,30 @@ export async function GET(request: NextRequest) {
             endDate: product.endDate
           })
         }
+      }
+    })
+
+    // Agregar visiones donde es trainer via VisionStaff
+    visionStaffAssignments.forEach(staff => {
+      if (staff.Vision && staff.Vision.SchoolProduct && staff.Vision.SchoolProduct.length > 0) {
+        const vId = staff.Vision.id
+        if (!visionMap.has(vId)) {
+          visionMap.set(vId, {
+            id: staff.Vision.id,
+            nombre: staff.Vision.nombre,
+            organizacion: staff.Vision.Organization?.name || '',
+            isActive: staff.Vision.isActive,
+            staffRole: staff.role, // Indicar que es via VisionStaff
+            productos: staff.Vision.SchoolProduct.map(p => ({
+              id: p.id,
+              name: p.name,
+              levelType: p.levelType,
+              startDate: p.startDate,
+              endDate: p.endDate
+            }))
+          })
+        }
+        // Si ya existe la visión, no duplicar (trainer directo tiene prioridad)
       }
     })
 

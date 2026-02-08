@@ -58,6 +58,7 @@ export default function TrainerBitacorasPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'completed' | 'pending' | 'risk'>('all');
+  const [level, setLevel] = useState<'ADVANCED' | 'PL'>('ADVANCED');
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -75,6 +76,9 @@ export default function TrainerBitacorasPage() {
       if (result.participants) {
         setParticipants(result.participants);
         setStats(result.stats);
+        if (result.level) {
+          setLevel(result.level);
+        }
       }
     } catch (error) {
       console.error('Error loading participants:', error);
@@ -119,7 +123,7 @@ export default function TrainerBitacorasPage() {
             Bitácoras de Participantes
           </h1>
           <p className="text-gray-400">
-            Visualiza el panorama de vida de tus participantes de Avanzado
+            Visualiza el panorama de vida de tus participantes de {level === 'PL' ? 'Liderato (PL)' : 'Avanzado'}
           </p>
         </div>
 

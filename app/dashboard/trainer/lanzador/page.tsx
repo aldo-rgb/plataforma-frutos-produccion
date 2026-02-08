@@ -542,8 +542,27 @@ function LaunchModal({
   })
   const [launching, setLaunching] = useState(false)
   const [error, setError] = useState('')
+  const [participantCount, setParticipantCount] = useState<number | null>(null)
+  const [participantLevel, setParticipantLevel] = useState('')
 
   const type = typeConfig[template.type as keyof typeof typeConfig]
+
+  // Obtener conteo de participantes al montar
+  useEffect(() => {
+    const fetchParticipantCount = async () => {
+      try {
+        const res = await fetch(`/api/trainer/lanzador/participantes-count?visionId=${vision.id}`)
+        const data = await res.json()
+        if (data.success) {
+          setParticipantCount(data.count)
+          setParticipantLevel(data.level)
+        }
+      } catch (err) {
+        console.error('Error fetching participant count:', err)
+      }
+    }
+    fetchParticipantCount()
+  }, [vision.id])
 
   const handleLaunch = async () => {
     if (formData.releaseType === 'scheduled' && !formData.releaseAt) {
@@ -670,6 +689,12 @@ function LaunchModal({
                 <Users className="w-5 h-5 mx-auto mb-1" />
                 <p className="text-sm">Toda la visión</p>
                 <p className="text-xs opacity-70">{vision.nombre}</p>
+                {participantCount !== null && (
+                  <p className="text-xs mt-1 font-medium">
+                    {participantCount} participante{participantCount !== 1 ? 's' : ''}
+                    {participantLevel && <span className="opacity-70"> ({participantLevel})</span>}
+                  </p>
+                )}
               </button>
             </div>
           </div>
