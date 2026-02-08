@@ -567,22 +567,49 @@ export default function BitacoraDetailPage() {
                   </div>
                 )}
 
-                {/* Contract Photo */}
-                {data.legacyCapture.contractPhotoUrl && (
-                  <div>
-                    <h4 className="text-sm font-medium text-amber-400 mb-3">Foto del Contrato</h4>
-                    <a 
-                      href={data.legacyCapture.contractPhotoUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="block group"
-                    >
-                      <img 
-                        src={data.legacyCapture.contractPhotoUrl} 
-                        alt="Foto del Contrato" 
-                        className="max-w-md rounded-2xl border-2 border-amber-500/30 group-hover:border-amber-500 transition-colors"
-                      />
-                    </a>
+                {/* Contract Photo & Basic Blue Wall Photo - Side by Side */}
+                {(data.legacyCapture.contractPhotoUrl || data.basicLegacyCapture?.photoBlueWallUrl) && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Contract Photo */}
+                    {data.legacyCapture.contractPhotoUrl && (
+                      <div>
+                        <h4 className="text-sm font-medium text-amber-400 mb-3">Foto del Contrato</h4>
+                        <a 
+                          href={data.legacyCapture.contractPhotoUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="block group"
+                        >
+                          <img 
+                            src={data.legacyCapture.contractPhotoUrl} 
+                            alt="Foto del Contrato" 
+                            className="w-full rounded-2xl border-2 border-amber-500/30 group-hover:border-amber-500 transition-colors"
+                          />
+                        </a>
+                      </div>
+                    )}
+
+                    {/* Basic Blue Wall Photo */}
+                    {data.basicLegacyCapture?.photoBlueWallUrl && (
+                      <div>
+                        <h4 className="text-sm font-medium text-blue-400 mb-3 flex items-center gap-2">
+                          <ImageIcon className="w-4 h-4" />
+                          Pared Azul (Básico)
+                        </h4>
+                        <a 
+                          href={data.basicLegacyCapture.photoBlueWallUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="block group"
+                        >
+                          <img 
+                            src={data.basicLegacyCapture.photoBlueWallUrl} 
+                            alt="Foto Pared Azul - Básico" 
+                            className="w-full rounded-2xl border-2 border-blue-500/30 group-hover:border-blue-500 transition-colors"
+                          />
+                        </a>
+                      </div>
+                    )}
                   </div>
                 )}
 

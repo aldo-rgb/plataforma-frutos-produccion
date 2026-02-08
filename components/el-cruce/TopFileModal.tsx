@@ -658,7 +658,7 @@ export default function TopFileModal({ userId, userName, isOpen, onClose }: TopF
 
                 {/* SECCIÓN: HISTORIAL DE PRODUCTOS */}
                 <CollapsibleSection
-                  title="Historial de Productos"
+                  title="Historial de Visiones"
                   icon={<BookOpen className="w-5 h-5 text-purple-400" />}
                   count={topFile.historialProductos.enrollments.length}
                   isExpanded={expandedSections.has('historial')}

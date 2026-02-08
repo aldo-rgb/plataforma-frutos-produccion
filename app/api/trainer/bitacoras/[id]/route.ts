@@ -151,7 +151,7 @@ export async function GET(
         })
       : null;
 
-    // Obtener LegacyCapture del participante (contrato y fotos del cierre)
+    // Obtener LegacyCapture del participante (contrato y fotos del cierre) - ADVANCED
     const legacyCapture = await prisma.legacyCaptureSession.findFirst({
       where: {
         participantId: participantId,
@@ -169,6 +169,19 @@ export async function GET(
         status: true,
         completedAt: true,
       }
+    });
+
+    // Obtener LegacyCapture de BASIC (foto de la pared azul)
+    const basicLegacyCapture = await prisma.legacyCaptureSession.findFirst({
+      where: {
+        participantId: participantId,
+        level: 'BASIC',
+      },
+      select: {
+        photoBlueWallUrl: true,
+        status: true,
+      },
+      orderBy: { createdAt: 'desc' }
     });
 
     // Obtener BusinessProfile del participante (Futuro Imposible)
@@ -342,7 +355,7 @@ export async function GET(
         }
       },
 
-      // LEGACY CAPTURE (Contrato y fotos del cierre)
+      // LEGACY CAPTURE (Contrato y fotos del cierre) - ADVANCED
       legacyCapture: legacyCapture ? {
         contractPhotoUrl: legacyCapture.contractPhotoUrl,
         contractDeclaration: legacyCapture.contractDeclaration,
@@ -353,6 +366,12 @@ export async function GET(
         lullabyArtist: legacyCapture.lullabyArtist,
         status: legacyCapture.status,
         completedAt: legacyCapture.completedAt,
+      } : null,
+
+      // LEGACY CAPTURE BASIC (Foto de pared azul del básico)
+      basicLegacyCapture: basicLegacyCapture ? {
+        photoBlueWallUrl: basicLegacyCapture.photoBlueWallUrl,
+        status: basicLegacyCapture.status,
       } : null,
 
       // FUTURO IMPOSIBLE (BusinessProfile)
