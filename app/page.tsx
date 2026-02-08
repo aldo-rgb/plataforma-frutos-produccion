@@ -15,7 +15,7 @@ export default async function HomePage() {
   
   // Verificar si es un dominio personalizado de alguna organización
   // Excluir dominios conocidos del sistema
-  const systemDomains = ['localhost', 'vercel.app', 'appsync.mx', 'www.appsync.mx'];
+  const systemDomains = ['localhost', 'vercel.app', 'appsync.mx', 'www.appsync.mx', 'impactocuantico.net'];
   const isSystemDomain = systemDomains.some(d => cleanDomain.includes(d));
   
   if (!isSystemDomain) {
