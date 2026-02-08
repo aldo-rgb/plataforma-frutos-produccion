@@ -277,9 +277,9 @@ export default function QuantumHallOfFamePage() {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2 }}
-          className="max-w-3xl mx-auto mb-12"
+          className="max-w-xl mx-auto mb-12"
         >
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <StatCard
               icon={Users}
               label="Participantes"
@@ -291,12 +291,6 @@ export default function QuantumHallOfFamePage() {
               label="Confirmados"
               value={data.stats.totalEnrolled}
               color="green"
-            />
-            <StatCard
-              icon={Crown}
-              label="Con Resultados"
-              value={data.stats.participantsWithEnrollments}
-              color="cyan"
             />
           </div>
         </motion.div>
