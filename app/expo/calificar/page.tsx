@@ -87,8 +87,8 @@ function CalificarContent() {
   // Lista de expositores calificados
   const [ratedExhibitors, setRatedExhibitors] = useState<RatedExhibitor[]>([]);
   
-  // Modo actual: 'hub', 'rating' o 'catalog'
-  const [mode, setMode] = useState<'hub' | 'rating' | 'catalog'>('hub');
+  // Modo actual: 'hub', 'rating', 'catalog' o 'select-vision'
+  const [mode, setMode] = useState<'hub' | 'rating' | 'catalog' | 'select-vision'>('hub');
   
   // Datos del expositor actual
   const [currentExhibitor, setCurrentExhibitor] = useState<ExhibitorData | null>(null);
@@ -101,6 +101,11 @@ function CalificarContent() {
   const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [currentVisionId, setCurrentVisionId] = useState<number | null>(null);
   const [currentVisionName, setCurrentVisionName] = useState<string>('');
+  
+  // Selector de visiones
+  const [organizations, setOrganizations] = useState<{id: number, name: string, visions: {id: number, nombre: string}[]}[]>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState<number | null>(null);
+  const [loadingOrgs, setLoadingOrgs] = useState(false);
   
   // Formulario de calificación
   const [rating, setRating] = useState(0);
@@ -356,6 +361,30 @@ function CalificarContent() {
     }
   };
 
+  // Cargar organizaciones y sus visiones activas
+  const loadOrganizations = async () => {
+    setLoadingOrgs(true);
+    try {
+      const res = await fetch('/api/expo/organizations-visions');
+      if (res.ok) {
+        const data = await res.json();
+        setOrganizations(data.organizations || []);
+      }
+    } catch (err) {
+      console.error('Error cargando organizaciones:', err);
+    } finally {
+      setLoadingOrgs(false);
+    }
+  };
+
+  // Seleccionar visión y cargar catálogo
+  const selectVision = (visionId: number, visionName: string) => {
+    setCurrentVisionId(visionId);
+    setCurrentVisionName(visionName);
+    setMode('catalog');
+    loadCatalogWithVision(visionId);
+  };
+
   // Filtrar exhibidores por categoría
   const filteredCatalogExhibitors = selectedCategory
     ? catalogExhibitors.filter(e => e.categoryId === selectedCategory)
@@ -543,15 +572,15 @@ function CalificarContent() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => {
-                  setMode('catalog');
-                  loadCatalog();
+                  setMode('select-vision');
+                  loadOrganizations();
                 }}
                 className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 p-4 rounded-2xl border border-emerald-500/30 flex items-center justify-center gap-3"
               >
                 <Grid3X3 className="w-6 h-6 text-white" />
                 <div className="text-left">
                   <p className="text-white font-medium">Ver Catálogo de Expositores</p>
-                  <p className="text-emerald-200 text-xs">Explora todos los negocios por categoría</p>
+                  <p className="text-emerald-200 text-xs">Selecciona una visión para ver sus negocios</p>
                 </div>
                 <ChevronRight className="w-5 h-5 text-white ml-auto" />
               </motion.button>
@@ -660,6 +689,98 @@ function CalificarContent() {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+            </motion.div>
+          ) : mode === 'select-vision' ? (
+            /* ===== SELECTOR DE VISIÓN ===== */
+            <motion.div
+              key="select-vision"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              {/* Header */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setMode('hub');
+                    setSelectedOrgId(null);
+                  }}
+                  className="p-2 rounded-xl bg-slate-800 text-purple-400 hover:bg-slate-700"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div>
+                  <h1 className="text-xl font-bold text-white">Selecciona una Visión</h1>
+                  <p className="text-purple-300 text-sm">
+                    Elige la expo que deseas explorar
+                  </p>
+                </div>
+              </div>
+
+              {loadingOrgs ? (
+                <div className="text-center py-12">
+                  <Loader2 className="w-8 h-8 text-purple-400 animate-spin mx-auto mb-4" />
+                  <p className="text-slate-400">Cargando visiones...</p>
+                </div>
+              ) : organizations.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-slate-400">No hay visiones disponibles en este momento</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {organizations.map((org) => (
+                    <div key={org.id} className="space-y-2">
+                      {/* Nombre de la organización */}
+                      <button
+                        onClick={() => setSelectedOrgId(selectedOrgId === org.id ? null : org.id)}
+                        className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl border border-purple-500/20 hover:border-purple-500/40 transition-all"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-purple-600/20 flex items-center justify-center">
+                            <Rocket className="w-5 h-5 text-purple-400" />
+                          </div>
+                          <div className="text-left">
+                            <p className="text-white font-medium">{org.name}</p>
+                            <p className="text-slate-400 text-sm">{org.visions.length} visiones activas</p>
+                          </div>
+                        </div>
+                        <ChevronRight className={`w-5 h-5 text-purple-400 transition-transform ${selectedOrgId === org.id ? 'rotate-90' : ''}`} />
+                      </button>
+
+                      {/* Lista de visiones (expandible) */}
+                      <AnimatePresence>
+                        {selectedOrgId === org.id && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="pl-4 space-y-2">
+                              {org.visions.map((vision) => (
+                                <motion.button
+                                  key={vision.id}
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  onClick={() => selectVision(vision.id, vision.nombre)}
+                                  className="w-full flex items-center justify-between p-3 bg-emerald-600/20 hover:bg-emerald-600/30 rounded-xl border border-emerald-500/30 transition-all"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <Sparkles className="w-5 h-5 text-emerald-400" />
+                                    <span className="text-white font-medium">{vision.nombre}</span>
+                                  </div>
+                                  <ChevronRight className="w-5 h-5 text-emerald-400" />
+                                </motion.button>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  ))}
                 </div>
               )}
             </motion.div>
