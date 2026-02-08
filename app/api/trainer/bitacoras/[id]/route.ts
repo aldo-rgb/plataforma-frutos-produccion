@@ -201,6 +201,39 @@ export async function GET(
         })
       : null;
 
+    // Obtener quién invitó al participante (desde vision_enrollments)
+    const enrollment = await prisma.vision_enrollments.findFirst({
+      where: {
+        userId: participantId,
+        level: { in: ['BASIC', 'ADVANCED'] },
+        invitedBy: { not: null },
+      },
+      include: {
+        Usuario_vision_enrollments_invitedByToUsuario: {
+          select: {
+            id: true,
+            nombre: true,
+            telefono: true,
+            email: true,
+          }
+        }
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    const invitedByUser = enrollment?.Usuario_vision_enrollments_invitedByToUsuario || null;
+
+    // Obtener contacto de emergencia del MedicalForm
+    const medicalForm = await prisma.medicalForm.findFirst({
+      where: { userId: participantId },
+      select: {
+        emergencyContactName: true,
+        emergencyContactRelation: true,
+        emergencyContactPhone: true,
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
     // Calcular edad si hay birthdate
     let age = null;
     if (participant?.birthdate) {
@@ -331,6 +364,21 @@ export async function GET(
         isVerified: businessProfile.isVerified,
         isPLGraduate: businessProfile.isPLGraduate,
         category: businessProfile.category,
+      } : null,
+
+      // QUIÉN LO INVITÓ
+      invitedBy: invitedByUser ? {
+        id: invitedByUser.id,
+        nombre: invitedByUser.nombre,
+        telefono: invitedByUser.telefono,
+        email: invitedByUser.email,
+      } : null,
+
+      // CONTACTO DE EMERGENCIA
+      emergencyContact: medicalForm ? {
+        nombre: medicalForm.emergencyContactName,
+        relacion: medicalForm.emergencyContactRelation,
+        telefono: medicalForm.emergencyContactPhone,
       } : null,
     };
 

@@ -32,7 +32,11 @@ import {
   Target,
   Rocket,
   BadgeCheck,
+  UserPlus,
+  AlertCircle,
+  FolderOpen,
 } from 'lucide-react';
+import { TopFileModal } from '@/components/el-cruce';
 
 // Dimension configuration
 const DIMENSIONS = [
@@ -76,6 +80,7 @@ export default function BitacoraDetailPage() {
   const [activeDimension, setActiveDimension] = useState(1);
   const [showSensitiveData, setShowSensitiveData] = useState(false);
   const [markingReviewed, setMarkingReviewed] = useState(false);
+  const [showTopFile, setShowTopFile] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -253,6 +258,62 @@ export default function BitacoraDetailPage() {
                     value={data.participant.profesion || data.participant.ocupacion || 'No registrada'}
                     color="purple"
                   />
+                </div>
+
+                {/* Invitado por y Contacto de Emergencia */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                  {/* Quién lo invitó */}
+                  {data.invitedBy && (
+                    <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700/50">
+                      <div className="flex items-center gap-2 mb-2">
+                        <UserPlus className="w-4 h-4 text-cyan-400" />
+                        <span className="text-xs text-gray-400 uppercase tracking-wider">Invitado por</span>
+                      </div>
+                      <p className="text-white font-medium">{data.invitedBy.nombre}</p>
+                      {data.invitedBy.telefono && (
+                        <a 
+                          href={`tel:${data.invitedBy.telefono}`}
+                          className="text-sm text-cyan-400 hover:underline flex items-center gap-1 mt-1"
+                        >
+                          <Phone className="w-3 h-3" />
+                          {data.invitedBy.telefono}
+                        </a>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Contacto de Emergencia */}
+                  {data.emergencyContact && (
+                    <div className="p-4 bg-slate-800/50 rounded-xl border border-red-500/30">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertCircle className="w-4 h-4 text-red-400" />
+                        <span className="text-xs text-gray-400 uppercase tracking-wider">Contacto de Emergencia</span>
+                      </div>
+                      <p className="text-white font-medium">{data.emergencyContact.nombre}</p>
+                      <p className="text-xs text-gray-400 mb-1">({data.emergencyContact.relacion})</p>
+                      {data.emergencyContact.telefono && (
+                        <a 
+                          href={`tel:${data.emergencyContact.telefono}`}
+                          className="text-sm text-red-400 hover:underline flex items-center gap-1"
+                        >
+                          <Phone className="w-3 h-3" />
+                          {data.emergencyContact.telefono}
+                        </a>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Botón TOP FILE */}
+                  <div className="p-4 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-xl border border-indigo-500/30 flex flex-col justify-center">
+                    <button
+                      onClick={() => setShowTopFile(true)}
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-medium rounded-xl transition-all shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40"
+                    >
+                      <FolderOpen className="w-5 h-5" />
+                      Ver TOP FILE
+                    </button>
+                    <p className="text-xs text-gray-400 text-center mt-2">Expediente completo del participante</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -571,6 +632,16 @@ export default function BitacoraDetailPage() {
               </div>
             </div>
           </motion.div>
+        )}
+
+        {/* TOP FILE Modal */}
+        {data?.participant && (
+          <TopFileModal
+            userId={data.participant.id}
+            userName={data.participant.nombre}
+            isOpen={showTopFile}
+            onClose={() => setShowTopFile(false)}
+          />
         )}
       </div>
     </div>
