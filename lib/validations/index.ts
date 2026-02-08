@@ -47,8 +47,8 @@ export const registerSchema = z.object({
   visionId: idSchema.optional(),
   profession: z.string().max(200).optional(),
   birthdate: z.string().max(20).optional(),
-  children: z.string().max(20).optional(),
-  goals: z.string().max(2000).optional(),
+  children: z.union([z.string(), z.number()]).optional(), // Puede ser string o number
+  goals: z.union([z.string().max(2000), z.array(z.string())]).optional(), // Puede ser string o array
   expectations: z.string().max(2000).optional(),
 });
 
