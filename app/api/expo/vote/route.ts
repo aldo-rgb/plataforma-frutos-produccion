@@ -60,6 +60,14 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
+    // Validar feedback si se proporciona (mínimo 10 caracteres)
+    if (finalFeedback && finalFeedback.trim().length > 0 && finalFeedback.trim().length < 10) {
+      return NextResponse.json({ 
+        error: 'El comentario debe tener al menos 10 caracteres o dejarlo vacío',
+        field: 'feedback'
+      }, { status: 400 });
+    }
+
     // Verificar que el expositor existe
     const exhibitor = await prisma.usuario.findUnique({
       where: { id: parseInt(exhibitorId) },

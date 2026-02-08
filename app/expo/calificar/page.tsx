@@ -366,12 +366,19 @@ function CalificarContent() {
     if (!currentExhibitor || !visitorToken) return;
     
     if (rating === 0) {
-      setError('Por favor selecciona una calificación');
+      setError('⭐ Por favor selecciona una calificación con las estrellas');
       return;
     }
     
     if (!hiringIntent) {
-      setError('Por favor indica tu intención de contratar');
+      setError('👆 Por favor indica si te interesaría contratar sus servicios');
+      return;
+    }
+    
+    // Validar feedback si tiene contenido
+    const trimmedFeedback = feedback.trim();
+    if (trimmedFeedback.length > 0 && trimmedFeedback.length < 10) {
+      setError('📝 El comentario debe tener al menos 10 caracteres o déjalo vacío');
       return;
     }
     
@@ -427,7 +434,25 @@ function CalificarContent() {
       }, 2500);
       
     } catch (err: any) {
-      setError(err.message || 'Error al enviar');
+      // Mapear errores a mensajes amigables
+      let errorMessage = err.message || 'Error al enviar';
+      
+      // Mensajes específicos según el error
+      if (errorMessage.includes('al menos 10 caracteres')) {
+        errorMessage = '📝 El comentario debe tener al menos 10 caracteres o déjalo vacío';
+      } else if (errorMessage.includes('Ya has evaluado') || errorMessage.includes('alreadyVoted')) {
+        errorMessage = '⚠️ Ya calificaste a este expositor anteriormente';
+      } else if (errorMessage.includes('Token') || errorMessage.includes('inválido')) {
+        errorMessage = '🔑 Tu sesión expiró. Por favor regístrate nuevamente';
+      } else if (errorMessage.includes('no encontrado')) {
+        errorMessage = '❌ El expositor no fue encontrado. Intenta con otro';
+      } else if (errorMessage.includes('Faltan campos')) {
+        errorMessage = '⚠️ Por favor completa todos los campos requeridos';
+      } else if (errorMessage.includes('Error al guardar') || errorMessage.includes('500')) {
+        errorMessage = '🔄 Error de conexión. Por favor intenta de nuevo';
+      }
+      
+      setError(errorMessage);
     } finally {
       setSubmitting(false);
     }
