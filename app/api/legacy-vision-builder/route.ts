@@ -196,11 +196,13 @@ export async function GET(request: NextRequest) {
     // Buscar enrollment PL del usuario
     let targetVisionId: number | null = visionId ? parseInt(visionId) : null;
     
-    const plEnrollment = await prisma.vision_enrollments.findFirst({
+    // Primero buscar un enrollment PL con asistencia marcada (prioridad)
+    let plEnrollment = await prisma.vision_enrollments.findFirst({
       where: {
         userId: usuario.id,
         level: 'PL',
         enrollmentStatus: { in: ['CONFIRMED', 'ACTIVE', 'ENROLLED'] },
+        attendanceStatus: 'ATTENDED',
         ...(targetVisionId ? { visionId: targetVisionId } : {}),
       },
       include: {
@@ -215,6 +217,29 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { createdAt: 'desc' }
     });
+
+    // Si no hay enrollment con asistencia, buscar cualquier enrollment PL
+    if (!plEnrollment) {
+      plEnrollment = await prisma.vision_enrollments.findFirst({
+        where: {
+          userId: usuario.id,
+          level: 'PL',
+          enrollmentStatus: { in: ['CONFIRMED', 'ACTIVE', 'ENROLLED'] },
+          ...(targetVisionId ? { visionId: targetVisionId } : {}),
+        },
+        include: {
+          Vision: {
+            select: {
+              id: true,
+              nombre: true,
+              plWeekend1StartDate: true,
+              plWeekend1EndDate: true,
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+    }
 
     // Si no tiene enrollment PL y no es staff, no tiene acceso
     if (!plEnrollment && !isStaff) {
