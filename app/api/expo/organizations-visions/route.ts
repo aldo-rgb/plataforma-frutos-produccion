@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// GET - Obtener organizaciones con visiones activas (PL1 en curso)
+// GET - Obtener organizaciones con visiones activas (PL en curso)
 export async function GET(req: NextRequest) {
   try {
-    // Obtener organizaciones que tienen visiones activas
+    // Obtener organizaciones que tienen visiones activas con PL
     const organizations = await prisma.organization.findMany({
       where: {
         Visions: {
           some: {
-            activa: true,
-            level: 'PL' // Solo Programa de Liderazgo
+            isActive: true,
+            enabledLevels: {
+              has: 'PL' // Tiene PL en los niveles habilitados
+            }
           }
         }
       },
@@ -19,15 +21,17 @@ export async function GET(req: NextRequest) {
         name: true,
         Visions: {
           where: {
-            activa: true,
-            level: 'PL'
+            isActive: true,
+            enabledLevels: {
+              has: 'PL'
+            }
           },
           select: {
             id: true,
             nombre: true
           },
           orderBy: {
-            fechaInicio: 'desc'
+            createdAt: 'desc'
           }
         }
       },
