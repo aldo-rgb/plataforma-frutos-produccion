@@ -74,27 +74,25 @@ export async function GET(
       }
     });
 
-    // Obtener el siguiente nivel para contar enrolados
-    const nextLevel = level === 'BASIC' ? 'ADVANCED' : level === 'ADVANCED' ? 'PL' : null;
+    // Determinar el nivel objetivo para contar invitados
+    // Para BASIC y ADVANCED: cuenta invitados al siguiente nivel
+    // Para PL: cuenta invitados a BASIC (cuántos trajeron al programa)
+    const targetLevel = level === 'BASIC' ? 'ADVANCED' : level === 'ADVANCED' ? 'PL' : 'BASIC';
 
-    // Contar cuántas personas ha confirmado cada participante al siguiente nivel
+    // Contar cuántas personas ha invitado cada participante
     const participantsWithEnrollments = await Promise.all(
       enrollments.map(async (enrollment) => {
         const user = enrollment.Usuario_vision_enrollments_userIdToUsuario;
         
-        // Contar invitados confirmados al siguiente nivel de esta misma visión
-        let enrolledCount = 0;
-        
-        if (nextLevel) {
-          enrolledCount = await prisma.vision_enrollments.count({
-            where: {
-              visionId: visionId,
-              level: nextLevel as any,
-              invitedBy: user.id,
-              enrollmentStatus: { not: 'CANCELLED' },
-            }
-          });
-        }
+        // Contar invitados al nivel objetivo
+        const enrolledCount = await prisma.vision_enrollments.count({
+          where: {
+            visionId: visionId,
+            level: targetLevel as any,
+            invitedBy: user.id,
+            enrollmentStatus: { not: 'CANCELLED' },
+          }
+        });
 
         return {
           id: user.id,
@@ -138,7 +136,7 @@ export async function GET(
       },
       participants: rankedParticipants,
       stats,
-      nextLevel,
+      targetLevel, // Nivel al que se cuentan los invitados
     });
 
   } catch (error) {
