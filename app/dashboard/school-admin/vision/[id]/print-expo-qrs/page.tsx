@@ -84,9 +84,9 @@ export default function PrintExpoQRsPage() {
 
     for (const p of participantes) {
       try {
-        // URL al catálogo de la visión (mismo que en mi-negocio)
-        const catalogUrl = `${baseUrl}/expo/catalogo/${visionId}`;
-        const qrDataUrl = await QRCode.toDataURL(catalogUrl, {
+        // URL directa para votar por este usuario/negocio específico
+        const votarUrl = `${baseUrl}/expo/votar/${p.userId}`;
+        const qrDataUrl = await QRCode.toDataURL(votarUrl, {
           width: 400,
           margin: 2,
           color: {

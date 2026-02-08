@@ -248,7 +248,7 @@ function CalificarContent() {
                 const visionId = parseInt(match[1]);
                 setCurrentVisionId(visionId);
                 setMode('catalog');
-                loadCatalog();
+                loadCatalogWithVision(visionId);
                 return;
               }
             }
@@ -327,6 +327,27 @@ function CalificarContent() {
         const data = await res.json();
         setCatalogExhibitors(data.exhibitors || []);
         setCategories(data.categories || []);
+      }
+    } catch (err) {
+      console.error('Error cargando catálogo:', err);
+    } finally {
+      setLoadingCatalog(false);
+    }
+  };
+
+  // Cargar catálogo con visionId específico (para cuando viene del escáner QR)
+  const loadCatalogWithVision = async (visionId: number) => {
+    setLoadingCatalog(true);
+    try {
+      const url = `/api/expo/catalog?visionId=${visionId}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        setCatalogExhibitors(data.exhibitors || []);
+        setCategories(data.categories || []);
+        if (data.visionName) {
+          setCurrentVisionName(data.visionName);
+        }
       }
     } catch (err) {
       console.error('Error cargando catálogo:', err);

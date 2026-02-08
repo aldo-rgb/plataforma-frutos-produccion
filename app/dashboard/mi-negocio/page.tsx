@@ -132,13 +132,8 @@ function ExpoShareSection({ userId, userName, visionId }: { userId?: number; use
   useEffect(() => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
     
-    if (visionId) {
-      // Link al catálogo de la visión
-      const catalogLink = `${baseUrl}/expo/catalogo/${visionId}`;
-      setExpoLink(catalogLink);
-      generateQR(catalogLink);
-    } else if (userId) {
-      // Fallback al link directo de votar
+    if (userId) {
+      // Link directo para votar por este usuario/negocio
       const link = `${baseUrl}/expo/votar/${userId}`;
       setExpoLink(link);
       generateQR(link);
