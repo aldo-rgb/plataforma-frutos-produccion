@@ -1771,6 +1771,7 @@ model SchoolProduct {
   SmallGroups                SmallGroup[]
   TrainerMissions            TrainerMission[]            @relation("MissionProduct")
   TrainerSurveys             TrainerSurvey[]             @relation("TrainerSurveyProduct")
+  ParticipantSurveys         ParticipantSurvey[]         @relation("ParticipantSurveyProduct")
   UserLicense                UserLicense[]
   UserSongs                  UserSong[]                  @relation("ProductSongs")
 
@@ -2483,6 +2484,7 @@ model Usuario {
   weekly_payout_summary_weekly_payout_summary_approvedByToUsuario        weekly_payout_summary[]         @relation("weekly_payout_summary_approvedByToUsuario")
   weekly_payout_summary_weekly_payout_summary_generatedByToUsuario       weekly_payout_summary[]         @relation("weekly_payout_summary_generatedByToUsuario")
   AutomationMessageLog                                                   AutomationMessageLog[]
+  ParticipantSurveys                                                     ParticipantSurvey[]             @relation("ParticipantSurveys")
 
   @@index([communityOrganizationId])
 }
@@ -6227,4 +6229,54 @@ enum AutomationMessageStatus {
 enum AutomationSource {
   MANUAL
   CRON
+}
+
+// ==========================================
+// ENCUESTAS DE PARTICIPANTES
+// ==========================================
+model ParticipantSurvey {
+  id              Int           @id @default(autoincrement())
+  userId          Int
+  productId       Int
+  level           VisionLevel   // BASIC, ADVANCED, PL
+  
+  // Campos comunes
+  apodoNino       String?       // Básico
+  lugarNacimiento String?       // Básico
+  colorFavorito   String?       // Básico
+  caricaturaFavorita String?    // Básico
+  paisViajar      String?       // Básico
+  
+  // Campos Avanzado
+  superheroeFavorito String?    // Avanzado
+  gustaLeer       Boolean?      // Avanzado
+  autorFavorito   String?       // Avanzado (si gustaLeer = true)
+  jugueteDeseado  String?       // Avanzado
+  liderAdmiras    String?       // Avanzado
+  descripcionLider String?      // Avanzado (3 palabras)
+  descripcionUnaPalabra String? // Avanzado
+  
+  // Campos PL
+  // (se pueden agregar después si hay preguntas específicas para PL)
+  
+  // Referidos (5 espacios, 3 obligatorios)
+  referido1       String        // Obligatorio
+  referido2       String        // Obligatorio
+  referido3       String        // Obligatorio
+  referido4       String?       // Opcional
+  referido5       String?       // Opcional
+  
+  // Puntos otorgados
+  pointsAwarded   Int           @default(0)
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  Usuario         Usuario       @relation("ParticipantSurveys", fields: [userId], references: [id], onDelete: Cascade)
+  Product         SchoolProduct @relation("ParticipantSurveyProduct", fields: [productId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+  @@index([level])
 }
