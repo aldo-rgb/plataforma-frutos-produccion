@@ -1,11 +1,10 @@
 // 🏦 API BANCO CENTRAL DE LICENCIAS - Super Admin asigna créditos a escuelas
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import logger from '@/lib/logger';
 
-const prisma = new PrismaClient();
 
 // GET: Lista todos los créditos asignados (con filtros)
 export async function GET(request: Request) {

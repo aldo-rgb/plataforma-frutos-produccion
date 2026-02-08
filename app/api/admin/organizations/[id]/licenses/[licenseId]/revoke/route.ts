@@ -1,11 +1,10 @@
 // 🚨 API Revocación de Licencias - Botón de Pánico
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import logger from '@/lib/logger';
 
-const prisma = new PrismaClient();
 
 // POST: Revocar licencia (desactiva código y devuelve créditos)
 export async function POST(

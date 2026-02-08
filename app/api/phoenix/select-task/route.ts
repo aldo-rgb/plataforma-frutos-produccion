@@ -4,7 +4,6 @@ import { authOptions } from '@/lib/auth';
 import { PrismaClient, MicroTaskType } from '@prisma/client';
 import logger from '@/lib/logger';
 
-const prisma = new PrismaClient();
 
 /**
  * PROTOCOLO FÉNIX - SELECCIONAR MICRO-TAREA

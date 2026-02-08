@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { sendOrganicWelcomeMessage } from '@/lib/whatsapp';
 import { sendOrganicWelcomeEmail } from '@/lib/email';
 import logger from '@/lib/logger';
 
-const prisma = new PrismaClient();
 
 // Roles permitidos para registro público (sin autenticación)
 // Roles privilegiados como ADMIN, SCHOOL_ADMIN, COORDINADOR, TRAINER requieren proceso administrativo

@@ -5,7 +5,6 @@ import { authOptions } from "@/lib/auth"
 import { PrismaClient } from "@prisma/client"
 import logger from '@/lib/logger';
 
-const prisma = new PrismaClient()
 
 // GET - Obtener visiones donde el trainer tiene productos EN CURSO asignados
 export async function GET(request: NextRequest) {

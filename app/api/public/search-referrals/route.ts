@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
 import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 
-const prisma = new PrismaClient();
 
 export async function GET(request: NextRequest) {
   try {

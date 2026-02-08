@@ -1,9 +1,8 @@
 // app/api/ranking/global/route.ts
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
 
-const prisma = new PrismaClient();
 
 // Datos Mockeados para el Front-end agrupados por Visión
 const MOCK_RANKING_BY_VISION = [

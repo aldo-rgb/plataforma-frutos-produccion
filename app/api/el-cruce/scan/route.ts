@@ -6,7 +6,6 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { PrismaClient } from "@prisma/client"
 
-const prisma = new PrismaClient()
 // Importar tanto el emisor local como el cliente externo
 import { emitCrossing, emitCrossingStats, emitPreRegistrationAlert } from "@/lib/socket"
 import { emitCrossingToExternal, emitCrossingStatsToExternal, emitPreRegistrationAlertToExternal } from "@/lib/socket-client"

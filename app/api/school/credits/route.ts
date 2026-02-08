@@ -1,11 +1,10 @@
 // 💳 API para Coordinadores - Consultar balance de créditos disponibles
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import logger from '@/lib/logger';
 
-const prisma = new PrismaClient();
 
 // GET: Coordinador consulta créditos disponibles de su escuela
 export async function GET(request: Request) {

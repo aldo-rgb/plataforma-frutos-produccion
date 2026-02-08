@@ -5,7 +5,6 @@ import { PrismaClient, MicroTaskType } from '@prisma/client';
 import { sendPhoenixSOSNotifications } from '@/lib/notifications';
 import logger from '@/lib/logger';
 
-const prisma = new PrismaClient();
 
 /**
  * PROTOCOLO FÉNIX - ACTIVAR

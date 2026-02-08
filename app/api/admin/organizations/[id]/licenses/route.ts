@@ -1,13 +1,12 @@
 // 🎫 API Generación de Licencias con Sistema de Créditos
 // Los coordinadores consumen créditos asignados por el Super Admin
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { nanoid } from 'nanoid';
 import logger from '@/lib/logger';
 
-const prisma = new PrismaClient();
 
 // POST: Generar licencias consumiendo créditos disponibles
 export async function POST(

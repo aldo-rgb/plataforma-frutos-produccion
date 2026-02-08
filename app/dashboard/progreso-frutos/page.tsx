@@ -3,12 +3,7 @@ import { authOptions } from "../../../lib/auth";
 import { redirect } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Circle, TrendingUp, Target, Zap } from "lucide-react";
 import Link from "next/link";
-import { PrismaClient } from "@prisma/client";
-
-// Crear instancia de Prisma
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-const prisma = globalForPrisma.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+import { prisma } from "@/lib/prisma";
 
 // Mapeo de áreas con sus emojis
 const AREA_CONFIG: Record<string, { emoji: string; color: string; gradient: string }> = {

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
 
-const prisma = new PrismaClient();
 
 // POST - Asignar mentor a participante o game changer
 export async function POST(

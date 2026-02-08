@@ -77,7 +77,6 @@ export async function POST(req: NextRequest) {
 
     // Actualizar el perfil del usuario con la nueva imagen
     const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
 
     // Obtener usuario actual para guardar foto anterior en vault
     const usuario = await prisma.usuario.findUnique({
