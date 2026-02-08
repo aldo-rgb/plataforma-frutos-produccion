@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
+import { Html5Qrcode } from 'html5-qrcode';
 import {
   Star,
   Check,
@@ -24,7 +25,8 @@ import {
   Grid3X3,
   ArrowLeft,
   Filter,
-  ExternalLink
+  ExternalLink,
+  Camera
 } from 'lucide-react';
 
 interface ExhibitorData {
@@ -113,6 +115,11 @@ function CalificarContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<ExhibitorData[]>([]);
   const [searching, setSearching] = useState(false);
+  
+  // QR Scanner
+  const [showScanner, setShowScanner] = useState(false);
+  const [scannerError, setScannerError] = useState<string | null>(null);
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
 
   // Verificar registro al cargar
   useEffect(() => {
@@ -202,6 +209,69 @@ function CalificarContent() {
     } finally {
       setLoadingExhibitor(false);
     }
+  };
+
+  // Iniciar escáner QR
+  const startScanner = async () => {
+    setScannerError(null);
+    setShowScanner(true);
+    
+    // Esperar a que el DOM se actualice
+    setTimeout(async () => {
+      try {
+        const html5QrCode = new Html5Qrcode("qr-reader");
+        html5QrCodeRef.current = html5QrCode;
+        
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 }
+          },
+          (decodedText) => {
+            // QR escaneado exitosamente
+            console.log('QR escaneado:', decodedText);
+            stopScanner();
+            
+            // Extraer el ID del expositor de la URL
+            // Formatos esperados:
+            // - https://impactocuantico.net/expo/votar/123
+            // - /expo/votar/123
+            // - 123 (solo el ID)
+            let exhibitorId: string | null = null;
+            
+            if (decodedText.includes('/expo/votar/')) {
+              const match = decodedText.match(/\/expo\/votar\/(\d+)/);
+              if (match) exhibitorId = match[1];
+            } else if (/^\d+$/.test(decodedText)) {
+              exhibitorId = decodedText;
+            }
+            
+            if (exhibitorId) {
+              loadExhibitor(parseInt(exhibitorId));
+            } else {
+              setError('Código QR no válido. Intenta de nuevo.');
+            }
+          },
+          (errorMessage) => {
+            // Ignorar errores de escaneo continuo
+          }
+        );
+      } catch (err: any) {
+        console.error('Error iniciando escáner:', err);
+        setScannerError(err.message || 'No se pudo acceder a la cámara');
+        setShowScanner(false);
+      }
+    }, 100);
+  };
+
+  // Detener escáner QR
+  const stopScanner = () => {
+    if (html5QrCodeRef.current) {
+      html5QrCodeRef.current.stop().catch(() => {});
+      html5QrCodeRef.current = null;
+    }
+    setShowScanner(false);
   };
 
   // Buscar expositores
@@ -385,12 +455,10 @@ function CalificarContent() {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => {
-                    document.getElementById('search-input')?.focus();
-                  }}
+                  onClick={startScanner}
                   className="bg-gradient-to-br from-purple-600 to-purple-700 p-6 rounded-2xl border border-purple-500/30 text-center"
                 >
-                  <QrCode className="w-10 h-10 text-white mx-auto mb-2" />
+                  <Camera className="w-10 h-10 text-white mx-auto mb-2" />
                   <p className="text-white font-medium">Escanear QR</p>
                   <p className="text-purple-200 text-xs mt-1">Del gafete</p>
                 </motion.button>
@@ -941,6 +1009,63 @@ function CalificarContent() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Modal del Escáner QR */}
+      <AnimatePresence>
+        {showScanner && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/90 z-50 flex flex-col"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 bg-slate-900/80">
+              <h2 className="text-white font-bold text-lg">Escanear Código QR</h2>
+              <button
+                onClick={stopScanner}
+                className="p-2 bg-red-500/20 rounded-full text-red-400 hover:bg-red-500/30"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Área del escáner */}
+            <div className="flex-1 flex flex-col items-center justify-center p-4">
+              <div id="qr-reader" className="w-full max-w-sm rounded-2xl overflow-hidden" />
+              
+              {scannerError && (
+                <div className="mt-4 p-4 bg-red-500/20 border border-red-500/30 rounded-xl text-center">
+                  <p className="text-red-400">{scannerError}</p>
+                  <button
+                    onClick={() => {
+                      setScannerError(null);
+                      startScanner();
+                    }}
+                    className="mt-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm"
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              )}
+
+              <p className="text-purple-300 text-sm mt-4 text-center">
+                Apunta la cámara al código QR del gafete del expositor
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-slate-900/80">
+              <button
+                onClick={stopScanner}
+                className="w-full py-3 bg-slate-700 text-white rounded-xl font-medium"
+              >
+                Cancelar
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Footer */}
       <div className="fixed bottom-0 left-0 right-0 bg-slate-950/90 backdrop-blur-lg border-t border-purple-500/30 px-4 py-3">
