@@ -1720,6 +1720,12 @@ export default function VisionManagePage() {
                         <span>🪪</span> Gafetes
                       </button>
                       <button
+                        onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/expo-qr`)}
+                        className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white px-5 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                      >
+                        <span>🎪</span> QR Expo
+                      </button>
+                      <button
                         onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/call-management?level=BASIC`)}
                         className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
                       >
@@ -2112,6 +2118,12 @@ export default function VisionManagePage() {
                         className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white px-5 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
                       >
                         <span>🪪</span> Gafetes
+                      </button>
+                      <button
+                        onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/expo-qr`)}
+                        className="bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-white px-5 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                      >
+                        <span>🎪</span> QR Expo
                       </button>
                       <button
                         onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/call-management?level=ADVANCED`)}
@@ -2509,6 +2521,12 @@ export default function VisionManagePage() {
                         className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-5 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
                       >
                         <span>🪪</span> Gafetes
+                      </button>
+                      <button
+                        onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/expo-qr`)}
+                        className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white px-5 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+                      >
+                        <span>🎪</span> QR Expo
                       </button>
                       <button
                         onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/call-management?level=PL`)}
