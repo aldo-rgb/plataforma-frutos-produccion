@@ -13,9 +13,18 @@ export default async function HomePage() {
     .replace(/:\d+$/, '')
     .toLowerCase();
   
-  // Verificar si es un dominio personalizado de alguna organización
-  // Excluir dominios conocidos del sistema
-  const systemDomains = ['localhost', 'vercel.app', 'appsync.mx', 'www.appsync.mx', 'impactocuantico.net'];
+  // Mapeo de dominios personalizados conocidos (sin consultar DB)
+  const knownDomains: Record<string, string> = {
+    'impactocuantico.net': '/org/impacto-cu-ntico-monterrey',
+  };
+  
+  // Si es un dominio conocido, redirigir directamente
+  if (knownDomains[cleanDomain]) {
+    redirect(knownDomains[cleanDomain]);
+  }
+  
+  // Verificar si es un dominio del sistema
+  const systemDomains = ['localhost', 'vercel.app', 'appsync.mx', 'quantummatter.app'];
   const isSystemDomain = systemDomains.some(d => cleanDomain.includes(d));
   
   if (!isSystemDomain) {
