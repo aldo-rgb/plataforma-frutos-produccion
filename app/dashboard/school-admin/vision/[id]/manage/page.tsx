@@ -1720,7 +1720,7 @@ export default function VisionManagePage() {
                         <span>🪪</span> Gafetes
                       </button>
                       <button
-                        onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/expo-qr`)}
+                        onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/print-expo-qrs`)}
                         className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white px-5 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
                       >
                         <span>🎪</span> QR Expo
@@ -2120,7 +2120,7 @@ export default function VisionManagePage() {
                         <span>🪪</span> Gafetes
                       </button>
                       <button
-                        onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/expo-qr`)}
+                        onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/print-expo-qrs`)}
                         className="bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-white px-5 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
                       >
                         <span>🎪</span> QR Expo
@@ -2523,7 +2523,7 @@ export default function VisionManagePage() {
                         <span>🪪</span> Gafetes
                       </button>
                       <button
-                        onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/expo-qr`)}
+                        onClick={() => router.push(`/dashboard/school-admin/vision/${vision.id}/print-expo-qrs`)}
                         className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white px-5 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
                       >
                         <span>🎪</span> QR Expo
