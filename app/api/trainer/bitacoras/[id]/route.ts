@@ -181,7 +181,7 @@ export async function GET(
         photoBlueWallUrl: true,
         status: true,
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { capturedAt: 'desc' }
     });
 
     // Obtener BusinessProfile del participante (Futuro Imposible)
