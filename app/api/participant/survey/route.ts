@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { awardPoints } from '@/lib/points';
 import logger from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
@@ -180,15 +179,19 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Otorgar puntos
+    // Otorgar puntos directamente
+    let newTotal = 0;
     try {
-      await awardPoints({
-        usuarioId: userId,
-        puntos: 200,
-        tipo: 'ENCUESTA_PARTICIPANTE',
-        descripcion: `Encuesta completada: ${product.name}`,
-        metadata: { surveyId: survey.id, productId },
+      const updatedUser = await prisma.usuario.update({
+        where: { id: userId },
+        data: {
+          puntosCuanticos: {
+            increment: 200,
+          },
+        },
+        select: { puntosCuanticos: true }
       });
+      newTotal = updatedUser.puntosCuanticos || 0;
     } catch (pointsError) {
       logger.error('Error awarding points for survey:', pointsError);
       // No fallar si los puntos no se pueden otorgar
