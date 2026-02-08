@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { generateMagicLinkToken, sendVisionMagicLinkMessage } from '@/lib/whatsapp';
 import { sendVisionMagicLinkEmail } from '@/lib/email';
+import { generateReferralCode } from '@/lib/referralCode';
 import logger from '@/lib/logger';
 
 const DEFAULT_PASSWORD = 'Quantum123';
@@ -62,7 +63,7 @@ export async function POST(
     // Buscar usuarios existentes EN CUALQUIER ORGANIZACIÓN
     const allExistingUsers = await prisma.usuario.findMany({
       where: { email: { in: emailList } },
-      select: { id: true, email: true, organizationId: true }
+      select: { id: true, email: true, organizationId: true, nombre: true, referralCode: true }
     });
 
     // Separar por organización
@@ -79,10 +80,14 @@ export async function POST(
       const magicToken = generateMagicLinkToken();
       const tokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 días
       
+      // Generar código de referencia con número de visión
+      const nombreBase = email.split('@')[0];
+      const referralCode = generateReferralCode(nombreBase, visionId);
+      
       const user = await prisma.usuario.create({
         data: {
           email,
-          nombre: email.split('@')[0],
+          nombre: nombreBase,
           password: hashed,
           rol: 'PARTICIPANTE',
           isActive: true,
@@ -92,9 +97,10 @@ export async function POST(
           wizardCompleted: false,
           magicLinkToken: magicToken,
           magicLinkExpiry: tokenExpiry,
-          temporaryPassword: DEFAULT_PASSWORD
+          temporaryPassword: DEFAULT_PASSWORD,
+          referralCode: referralCode
         },
-        select: { id: true, email: true, nombre: true, telefono: true }
+        select: { id: true, email: true, nombre: true, telefono: true, referralCode: true }
       });
       created.push(user);
 
@@ -177,6 +183,18 @@ export async function POST(
         where: { id: user.id },
         data: { organizationId: coordinador.organizationId }
       });
+    }
+
+    // Generar referralCode para usuarios existentes que no tienen
+    for (const user of [...usersInSameOrg, ...usersWithoutOrg]) {
+      if (!user.referralCode) {
+        const newReferralCode = generateReferralCode(user.nombre || user.email.split('@')[0], visionId);
+        await prisma.usuario.update({
+          where: { id: user.id },
+          data: { referralCode: newReferralCode }
+        });
+        logger.debug(`🎟️ ReferralCode generado para usuario existente ${user.email}: ${newReferralCode}`);
+      }
     }
 
     // Agregar usuarios de MISMA organización o SIN organización

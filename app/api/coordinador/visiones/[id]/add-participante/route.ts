@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { generateReferralCode } from '@/lib/referralCode';
 import logger from '@/lib/logger';
 
 export async function POST(
@@ -78,6 +79,21 @@ export async function POST(
         { success: false, error: 'El participante ya está en esta visión' },
         { status: 400 }
       );
+    }
+
+    // Verificar si el participante tiene referralCode, si no, generarlo
+    const participante = await prisma.usuario.findUnique({
+      where: { id: participanteId },
+      select: { id: true, nombre: true, referralCode: true }
+    });
+
+    if (participante && !participante.referralCode) {
+      const newReferralCode = generateReferralCode(participante.nombre || 'Usuario', visionId);
+      await prisma.usuario.update({
+        where: { id: participanteId },
+        data: { referralCode: newReferralCode }
+      });
+      logger.debug(`🎟️ ReferralCode generado para participante ${participante.nombre}: ${newReferralCode}`);
     }
 
     // Agregar participante a la visión
