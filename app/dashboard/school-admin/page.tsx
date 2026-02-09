@@ -985,89 +985,7 @@ export default function SchoolAdminDashboard() {
               </p>
             </div>
 
-            <Link href={data.pendingOrders.length > 0 ? "/dashboard/school-admin/licenses/payment" : "/dashboard/school-admin/licenses/request"} className="block">
-              <div className={`bg-gradient-to-br ${(() => {
-                if (data.pendingOrders.length === 0) return 'from-purple-900/50 to-slate-900 border-2 border-purple-500/30';
-                const hasProcessing = data.pendingOrders.some((o: any) => o.status === 'PROCESSING');
-                return hasProcessing 
-                  ? 'from-blue-900/50 to-slate-900 border-2 border-blue-500/50 animate-pulse'
-                  : 'from-red-900/50 to-slate-900 border-2 border-red-500/50 animate-pulse';
-              })()} rounded-xl md:rounded-2xl p-4 md:p-6 transition-all cursor-pointer group relative overflow-hidden`}>
-                {/* Badge animado para órdenes pendientes */}
-                {data.pendingOrders.length > 0 && (() => {
-                  const hasProcessing = data.pendingOrders.some((o: any) => o.status === 'PROCESSING');
-                  const badgeBg = hasProcessing ? 'bg-blue-500' : 'bg-red-500';
-                  const badgePing = hasProcessing ? 'bg-blue-400' : 'bg-red-400';
-                  return (
-                    <div className="absolute top-2 right-2">
-                      <div className="relative">
-                        <div className={`animate-ping absolute inline-flex h-5 w-5 md:h-6 md:w-6 rounded-full ${badgePing} opacity-75`}></div>
-                        <div className={`relative inline-flex items-center justify-center h-5 w-5 md:h-6 md:w-6 rounded-full ${badgeBg} border-2 border-slate-900`}>
-                          <span className="text-white font-bold text-[10px] md:text-xs">{data.pendingOrders.length}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-                
-                <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
-                  <div className={`p-2 md:p-3 ${(() => {
-                    if (data.pendingOrders.length === 0) return 'bg-purple-500/20 group-hover:bg-purple-500/30';
-                    const hasProcessing = data.pendingOrders.some((o: any) => o.status === 'PROCESSING');
-                    return hasProcessing
-                      ? 'bg-blue-500/20 group-hover:bg-blue-500/30'
-                      : 'bg-red-500/20 group-hover:bg-red-500/30';
-                  })()} rounded-lg md:rounded-xl transition-colors flex-shrink-0`}>
-                    {data.pendingOrders.length > 0 ? (
-                      data.pendingOrders.some((o: any) => o.status === 'PROCESSING') ? (
-                        <AlertTriangle size={24} className="text-blue-300" />
-                      ) : (
-                        <AlertTriangle size={24} className="text-red-300" />
-                      )
-                    ) : (
-                      <Plus size={24} className="text-purple-300" />
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white text-sm uppercase">
-                      {data.pendingOrders.length > 0 
-                        ? (data.pendingOrders.some((o: any) => o.status === 'PROCESSING') ? '📋 Órdenes en Revisión' : '⚠️ Completar Pago')
-                        : 'Comprar Licencias'
-                      }
-                    </h3>
-                    <p className={`text-xs ${(() => {
-                      if (data.pendingOrders.length === 0) return 'text-purple-300';
-                      const hasProcessing = data.pendingOrders.some((o: any) => o.status === 'PROCESSING');
-                      return hasProcessing ? 'text-blue-300' : 'text-red-300';
-                    })()}`}>
-                      {data.pendingOrders.length > 0 
-                        ? (data.pendingOrders.some((o: any) => o.status === 'PROCESSING') ? 'Pendientes de aprobación' : 'Tienes órdenes pendientes')
-                        : 'Expande tu capacidad'
-                      }
-                    </p>
-                  </div>
-                </div>
-                <p className="text-xs text-slate-400">
-                  {data.pendingOrders.length > 0 
-                    ? (() => {
-                        const processingCount = data.pendingOrders.filter((o: any) => o.status === 'PROCESSING').length;
-                        const pendingCount = data.pendingOrders.filter((o: any) => o.status === 'PENDING').length;
-                        
-                        if (processingCount > 0 && pendingCount > 0) {
-                          return `${processingCount} en revisión, ${pendingCount} sin pagar`;
-                        } else if (processingCount > 0) {
-                          return `${processingCount} orden(es) en revisión - El administrador aprobará pronto`;
-                        } else {
-                          return `${pendingCount} orden(es) esperando pago`;
-                        }
-                      })()
-                    : 'Adquiere más licencias para tus estudiantes'
-                  }
-                </p>
-              </div>
-            </Link>
-
-            <Link href="/dashboard/school-admin/visiones" className="block mt-6">
+            <Link href="/dashboard/school-admin/visiones" className="block">
               <div className="bg-gradient-to-br from-emerald-900/50 to-slate-900 border-2 border-emerald-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/10">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-3 bg-emerald-500/20 group-hover:bg-emerald-500/30 rounded-xl transition-colors">
@@ -1075,7 +993,7 @@ export default function SchoolAdminDashboard() {
                   </div>
                   <div>
                     <h3 className="font-bold text-white text-sm uppercase">
-                      Gestionar Visiones
+                      Gestionar Visiones Activas
                     </h3>
                     <p className="text-xs text-emerald-300">
                       Crea y asigna licencias
@@ -1269,6 +1187,88 @@ export default function SchoolAdminDashboard() {
                 </div>
                 <p className="text-xs text-slate-400">
                   Genera códigos de regalo para tickets de acceso a tus visiones
+                </p>
+              </div>
+            </Link>
+
+            <Link href={data.pendingOrders.length > 0 ? "/dashboard/school-admin/licenses/payment" : "/dashboard/school-admin/licenses/request"} className="block mt-6">
+              <div className={`bg-gradient-to-br ${(() => {
+                if (data.pendingOrders.length === 0) return 'from-purple-900/50 to-slate-900 border-2 border-purple-500/30';
+                const hasProcessing = data.pendingOrders.some((o: any) => o.status === 'PROCESSING');
+                return hasProcessing 
+                  ? 'from-blue-900/50 to-slate-900 border-2 border-blue-500/50 animate-pulse'
+                  : 'from-red-900/50 to-slate-900 border-2 border-red-500/50 animate-pulse';
+              })()} rounded-xl md:rounded-2xl p-4 md:p-6 transition-all cursor-pointer group relative overflow-hidden`}>
+                {/* Badge animado para órdenes pendientes */}
+                {data.pendingOrders.length > 0 && (() => {
+                  const hasProcessing = data.pendingOrders.some((o: any) => o.status === 'PROCESSING');
+                  const badgeBg = hasProcessing ? 'bg-blue-500' : 'bg-red-500';
+                  const badgePing = hasProcessing ? 'bg-blue-400' : 'bg-red-400';
+                  return (
+                    <div className="absolute top-2 right-2">
+                      <div className="relative">
+                        <div className={`animate-ping absolute inline-flex h-5 w-5 md:h-6 md:w-6 rounded-full ${badgePing} opacity-75`}></div>
+                        <div className={`relative inline-flex items-center justify-center h-5 w-5 md:h-6 md:w-6 rounded-full ${badgeBg} border-2 border-slate-900`}>
+                          <span className="text-white font-bold text-[10px] md:text-xs">{data.pendingOrders.length}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+                
+                <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+                  <div className={`p-2 md:p-3 ${(() => {
+                    if (data.pendingOrders.length === 0) return 'bg-purple-500/20 group-hover:bg-purple-500/30';
+                    const hasProcessing = data.pendingOrders.some((o: any) => o.status === 'PROCESSING');
+                    return hasProcessing
+                      ? 'bg-blue-500/20 group-hover:bg-blue-500/30'
+                      : 'bg-red-500/20 group-hover:bg-red-500/30';
+                  })()} rounded-lg md:rounded-xl transition-colors flex-shrink-0`}>
+                    {data.pendingOrders.length > 0 ? (
+                      data.pendingOrders.some((o: any) => o.status === 'PROCESSING') ? (
+                        <AlertTriangle size={24} className="text-blue-300" />
+                      ) : (
+                        <AlertTriangle size={24} className="text-red-300" />
+                      )
+                    ) : (
+                      <Plus size={24} className="text-purple-300" />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm uppercase">
+                      {data.pendingOrders.length > 0 
+                        ? (data.pendingOrders.some((o: any) => o.status === 'PROCESSING') ? '📋 Órdenes en Revisión' : '⚠️ Completar Pago')
+                        : 'Comprar Licencias'
+                      }
+                    </h3>
+                    <p className={`text-xs ${(() => {
+                      if (data.pendingOrders.length === 0) return 'text-purple-300';
+                      const hasProcessing = data.pendingOrders.some((o: any) => o.status === 'PROCESSING');
+                      return hasProcessing ? 'text-blue-300' : 'text-red-300';
+                    })()}`}>
+                      {data.pendingOrders.length > 0 
+                        ? (data.pendingOrders.some((o: any) => o.status === 'PROCESSING') ? 'Pendientes de aprobación' : 'Tienes órdenes pendientes')
+                        : 'Expande tu capacidad'
+                      }
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400">
+                  {data.pendingOrders.length > 0 
+                    ? (() => {
+                        const processingCount = data.pendingOrders.filter((o: any) => o.status === 'PROCESSING').length;
+                        const pendingCount = data.pendingOrders.filter((o: any) => o.status === 'PENDING').length;
+                        
+                        if (processingCount > 0 && pendingCount > 0) {
+                          return `${processingCount} en revisión, ${pendingCount} sin pagar`;
+                        } else if (processingCount > 0) {
+                          return `${processingCount} orden(es) en revisión - El administrador aprobará pronto`;
+                        } else {
+                          return `${pendingCount} orden(es) esperando pago`;
+                        }
+                      })()
+                    : 'Adquiere más licencias para tus estudiantes'
+                  }
                 </p>
               </div>
             </Link>
