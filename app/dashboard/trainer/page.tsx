@@ -128,7 +128,9 @@ export default function TrainerDashboard() {
     };
   } | null>(null);
   const [loadingPLResults, setLoadingPLResults] = useState(false);
-  const [finalizadosPL, setFinalizadosPL] = useState<Set<number>>(new Set()); // IDs de productos PL ya finalizados
+  const [finalizadosPL, setFinalizadosPL] = useState<{[productId: number]: number}>({}); // productId -> último weekendNumber finalizado
+  const [savingPLResult, setSavingPLResult] = useState(false);
+  const [currentWeekendNumber, setCurrentWeekendNumber] = useState(1); // 1, 2 o 3
   
   // Estados para encuesta de cierre
   const [showTrainerSurvey, setShowTrainerSurvey] = useState(false);
@@ -166,6 +168,30 @@ export default function TrainerDashboard() {
 
       if (res.ok && result.success) {
         setData(result);
+        
+        // Cargar estado de fines de semana PL para productos de Liderato
+        const plProducts = [...result.entrenamientos.enCurso, ...result.entrenamientos.proximos]
+          .filter((p: Entrenamiento) => p.levelType === 'PL');
+        
+        if (plProducts.length > 0) {
+          const plStates: {[productId: number]: number} = {};
+          await Promise.all(plProducts.map(async (p: Entrenamiento) => {
+            try {
+              const weekendRes = await fetch(`/api/trainer/pl-weekend-result?productId=${p.id}`);
+              if (weekendRes.ok) {
+                const weekendData = await weekendRes.json();
+                if (weekendData.lastWeekendFinished > 0) {
+                  plStates[p.id] = weekendData.lastWeekendFinished;
+                }
+              }
+            } catch (e) {
+              console.error(`Error loading PL state for product ${p.id}:`, e);
+            }
+          }));
+          if (Object.keys(plStates).length > 0) {
+            setFinalizadosPL(prev => ({ ...prev, ...plStates }));
+          }
+        }
       } else {
         // Si hay error pero es trainer válido, mostrar dashboard vacío
         console.error('Error API:', result.error);
@@ -230,6 +256,16 @@ export default function TrainerDashboard() {
     setLoadingPLResults(true);
     
     try {
+      // Primero verificar estado de fines de semana finalizados
+      const weekendRes = await fetch(`/api/trainer/pl-weekend-result?productId=${producto.id}`);
+      if (weekendRes.ok) {
+        const weekendData = await weekendRes.json();
+        const lastWeekend = weekendData.lastWeekendFinished || 0;
+        setCurrentWeekendNumber(lastWeekend + 1);
+        setFinalizadosPL(prev => ({ ...prev, [producto.id]: lastWeekend }));
+      }
+      
+      // Obtener datos del Hall of Fame
       const res = await fetch(`/api/trainer/hall-of-fame/${producto.id}`);
       if (res.ok) {
         const data = await res.json();
@@ -252,6 +288,49 @@ export default function TrainerDashboard() {
       console.error('Error fetching PL results:', error);
     } finally {
       setLoadingPLResults(false);
+    }
+  };
+  
+  // Guardar resultado de fin de semana PL
+  const guardarResultadoPL = async () => {
+    if (!plResultsProduct || !plResultsData) return;
+    
+    setSavingPLResult(true);
+    try {
+      const res = await fetch('/api/trainer/pl-weekend-result', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: plResultsProduct.id,
+          totalParticipants: plResultsData.stats.totalParticipants,
+          totalEnrolled: plResultsData.stats.totalEnrolled,
+          expectedEnrollments: plResultsData.stats.expectedEnrollments,
+          percentage: plResultsData.stats.percentage,
+          participantsData: plResultsData.participants,
+        })
+      });
+      
+      const result = await res.json();
+      
+      if (res.ok && result.success) {
+        // Actualizar estado local
+        setFinalizadosPL(prev => ({ ...prev, [plResultsProduct.id]: result.weekendNumber }));
+        setShowPLResultsModal(false);
+        setPLResultsProduct(null);
+        setPLResultsData(null);
+        
+        if (result.isCompleted) {
+          // Si completó los 3 fines de semana, recargar datos
+          await fetchMisEntrenamientos();
+        }
+      } else {
+        alert(result.error || 'Error al guardar resultado');
+      }
+    } catch (error) {
+      console.error('Error saving PL result:', error);
+      alert('Error al guardar resultado');
+    } finally {
+      setSavingPLResult(false);
     }
   };
 
@@ -744,22 +823,22 @@ export default function TrainerDashboard() {
                           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                             <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 bg-purple-500/20 border border-purple-500/50 rounded-lg text-purple-400 text-xs sm:text-sm">
                               <Flag size={14} />
-                              Liderato
+                              Liderato {finalizadosPL[producto.id] ? `(${finalizadosPL[producto.id]}/3)` : ''}
                             </div>
-                            {!finalizadosPL.has(producto.id) && (
+                            {(!finalizadosPL[producto.id] || finalizadosPL[producto.id] < 3) && (
                               <button
                                 onClick={() => abrirModalResultadosPL(producto)}
                                 disabled={loadingPLResults}
                                 className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-orange-500/20 to-red-500/20 hover:from-orange-500/30 hover:to-red-500/30 border border-orange-500/50 rounded-lg text-orange-400 hover:text-orange-300 text-xs sm:text-sm font-semibold transition-all disabled:opacity-50"
                               >
                                 <CheckCircle2 size={14} />
-                                {loadingPLResults ? 'Cargando...' : 'Finalizar Fin de Semana'}
+                                {loadingPLResults ? 'Cargando...' : `Finalizar Fin de Semana ${(finalizadosPL[producto.id] || 0) + 1}`}
                               </button>
                             )}
-                            {finalizadosPL.has(producto.id) && (
+                            {finalizadosPL[producto.id] >= 3 && (
                               <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 bg-green-500/20 border border-green-500/50 rounded-lg text-green-400 text-xs sm:text-sm">
                                 <CheckCircle2 size={14} />
-                                Fin de semana finalizado
+                                Liderato Completado ✓
                               </div>
                             )}
                           </div>
@@ -1245,11 +1324,16 @@ export default function TrainerDashboard() {
                   <Flag className="w-8 h-8 text-orange-400" />
                 </div>
                 <h3 className="text-xl font-bold text-white mb-1">
-                  Finalizar Fin de Semana
+                  Finalizar Fin de Semana {currentWeekendNumber}
                 </h3>
                 <p className="text-orange-400 font-semibold">
                   {plResultsProduct.name}
                 </p>
+                {data?.trainer?.nombre && (
+                  <p className="text-slate-400 text-sm mt-1">
+                    Entrenador(a): <span className="text-white font-medium">{data.trainer.nombre}</span>
+                  </p>
+                )}
               </div>
 
               {loadingPLResults ? (
@@ -1350,18 +1434,16 @@ export default function TrainerDashboard() {
                       Cancelar
                     </button>
                     <button
-                      onClick={() => {
-                        if (plResultsProduct) {
-                          setFinalizadosPL(prev => new Set([...prev, plResultsProduct.id]));
-                        }
-                        setShowPLResultsModal(false);
-                        setPLResultsProduct(null);
-                        setPLResultsData(null);
-                      }}
-                      className="flex-1 px-4 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 rounded-xl text-white font-bold transition-all flex items-center justify-center gap-2"
+                      onClick={guardarResultadoPL}
+                      disabled={savingPLResult}
+                      className="flex-1 px-4 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white font-bold transition-all flex items-center justify-center gap-2"
                     >
-                      <CheckCircle2 size={18} />
-                      Confirmar Finalizar
+                      {savingPLResult ? (
+                        <Loader2 size={18} className="animate-spin" />
+                      ) : (
+                        <CheckCircle2 size={18} />
+                      )}
+                      {savingPLResult ? 'Guardando...' : `Guardar Fin de Semana ${currentWeekendNumber}`}
                     </button>
                   </div>
                 </>

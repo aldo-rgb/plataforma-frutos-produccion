@@ -1774,6 +1774,7 @@ model SchoolProduct {
   ParticipantSurveys         ParticipantSurvey[]         @relation("ParticipantSurveyProduct")
   UserLicense                UserLicense[]
   UserSongs                  UserSong[]                  @relation("ProductSongs")
+  PLWeekendResults           PLWeekendResult[]           @relation("PLWeekendResults")
 
   @@index([isActive])
   @@index([levelType])
@@ -1783,6 +1784,30 @@ model SchoolProduct {
   @@index([coordinatorId])
   @@index([trainerId])
   @@index([trainingStatus])
+}
+
+// Historial de resultados de fines de semana de Liderato (PL)
+// Guarda las estadísticas de cada fin de semana finalizado por el trainer
+model PLWeekendResult {
+  id                  Int           @id @default(autoincrement())
+  productId           Int
+  trainerId           Int
+  weekendNumber       Int           // 1, 2, o 3
+  totalParticipants   Int           // Participantes con asistencia
+  totalEnrolled       Int           // Total de enrollados por los participantes
+  expectedEnrollments Int           // Meta (participantes × 2)
+  percentage          Int           // Porcentaje logrado
+  participantsData    Json?         // Datos detallados de cada participante
+  finishedAt          DateTime      @default(now())
+  notes               String?
+  
+  Product             SchoolProduct @relation("PLWeekendResults", fields: [productId], references: [id], onDelete: Cascade)
+  Trainer             Usuario       @relation("TrainerPLResults", fields: [trainerId], references: [id])
+  
+  @@unique([productId, weekendNumber])
+  @@index([trainerId])
+  @@index([productId])
+  @@index([finishedAt])
 }
 
 model ProductAttendance {
@@ -2392,6 +2417,7 @@ model Usuario {
   SchoolProduct                                                          SchoolProduct[]
   ProductFinishedBy                                                      SchoolProduct[]                 @relation("ProductFinishedBy")
   ProductTrainer                                                         SchoolProduct[]                 @relation("ProductTrainer")
+  PLWeekendResults                                                       PLWeekendResult[]               @relation("TrainerPLResults")
   ServiceLadderProgress                                                  ServiceLadderProgress?
   ServiceReviewsWritten                                                  ServiceReview[]                 @relation("ReviewAuthor")
   SmallGroupsLed                                                         SmallGroup[]                    @relation("SmallGroupLeader")
