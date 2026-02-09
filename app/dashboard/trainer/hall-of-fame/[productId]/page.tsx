@@ -338,7 +338,7 @@ export default function QuantumHallOfFamePage() {
             <div className="flex items-center justify-center gap-3 mb-6">
               <Zap className="w-6 h-6 text-cyan-400" />
               <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
-                CORREDORES
+                PARTICIPANTES
               </h2>
               <Zap className="w-6 h-6 text-cyan-400" />
             </div>

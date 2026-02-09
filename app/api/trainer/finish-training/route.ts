@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
         id: true,
         name: true,
         trainerId: true,
+        visionId: true,
         endDate: true,
         trainingStatus: true,
         levelType: true,
@@ -57,7 +58,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar que el TRAINER está asignado a este producto
-    if (product.trainerId !== trainer.id) {
+    // Puede ser trainerId directo O VisionStaff con rol de trainer
+    let isAssigned = product.trainerId === trainer.id;
+    
+    if (!isAssigned && product.visionId) {
+      // Verificar si está asignado via VisionStaff
+      const visionStaff = await prisma.visionStaff.findFirst({
+        where: {
+          visionId: product.visionId,
+          userId: trainer.id,
+          role: { in: ['BASIC_TRAINER', 'ADVANCED_TRAINER', 'PL_TRAINER'] }
+        }
+      });
+      isAssigned = !!visionStaff;
+    }
+    
+    if (!isAssigned) {
       return NextResponse.json({ 
         error: 'No eres el TRAINER asignado a este entrenamiento' 
       }, { status: 403 });
@@ -70,7 +86,11 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    if (product.trainingStatus !== 'IN_PROGRESS') {
+    // Para productos PL sin fechas configuradas, permitir finalizar si está PENDING o IN_PROGRESS
+    // (El trainer tiene control directo sobre cuándo finalizar el liderato)
+    const isPL = product.levelType === 'PL';
+    
+    if (!isPL && product.trainingStatus !== 'IN_PROGRESS') {
       return NextResponse.json({ 
         error: 'Solo puedes finalizar entrenamientos que están en progreso' 
       }, { status: 400 });
@@ -82,30 +102,33 @@ export async function POST(request: NextRequest) {
       relevantEndDate = product.plWeekend3EndDate;
     }
 
+    // Para productos PL sin fechas, permitir finalizar sin restricción de fecha
     if (!relevantEndDate) {
-      return NextResponse.json({ 
-        error: 'Este producto no tiene fecha de finalización configurada' 
-      }, { status: 400 });
+      if (!isPL) {
+        return NextResponse.json({ 
+          error: 'Este producto no tiene fecha de finalización configurada' 
+        }, { status: 400 });
+      }
+      // Para PL sin fechas, no hacer validación de fecha
+    } else {
+      // Verificar que estamos en el día del endDate (o después para más flexibilidad)
+      const now = new Date();
+      const endDateStart = new Date(relevantEndDate);
+      endDateStart.setHours(0, 0, 0, 0);
+      
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+
+      if (todayStart < endDateStart) {
+        const daysRemaining = Math.ceil((endDateStart.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24));
+        return NextResponse.json({ 
+          error: `Solo puedes finalizar el día del fin del entrenamiento. Faltan ${daysRemaining} día(s).`,
+          endDate: relevantEndDate
+        }, { status: 400 });
+      }
     }
 
-    // Verificar que estamos en el día del endDate
     const now = new Date();
-    const endDateStart = new Date(relevantEndDate);
-    endDateStart.setHours(0, 0, 0, 0);
-    
-    const endDateEnd = new Date(relevantEndDate);
-    endDateEnd.setHours(23, 59, 59, 999);
-
-    const todayStart = new Date(now);
-    todayStart.setHours(0, 0, 0, 0);
-
-    if (todayStart < endDateStart) {
-      const daysRemaining = Math.ceil((endDateStart.getTime() - todayStart.getTime()) / (1000 * 60 * 60 * 24));
-      return NextResponse.json({ 
-        error: `Solo puedes finalizar el día del fin del entrenamiento. Faltan ${daysRemaining} día(s).`,
-        endDate: relevantEndDate
-      }, { status: 400 });
-    }
 
     // Actualizar el producto
     const updatedProduct = await prisma.schoolProduct.update({

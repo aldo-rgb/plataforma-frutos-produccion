@@ -554,8 +554,11 @@ export default function TrainerDashboard() {
                   const showCountdown = countdown[producto.id];
                   
                   // Determinar si es el último día del entrenamiento
-                  const isLastDay = endDate && 
-                    endDate.toDateString() === now.toDateString();
+                  // Para PL (Liderato) sin endDate pero en curso, permitir finalizar siempre
+                  const isPL = producto.levelType === 'PL';
+                  const isLastDay = endDate 
+                    ? endDate.toDateString() === now.toDateString()
+                    : (isPL && hasStarted); // PL sin fechas pero en curso puede finalizar
 
                   return (
                     <div
@@ -670,7 +673,7 @@ export default function TrainerDashboard() {
                               En curso
                             </div>
                             
-                            {/* Botón Finalizar - Solo visible el último día */}
+                            {/* Botón Finalizar - Solo visible el último día o para PL en curso */}
                             {isLastDay && (
                               <button
                                 onClick={() => abrirModalFinalizar(producto)}
@@ -684,7 +687,25 @@ export default function TrainerDashboard() {
                           </div>
                         )}
 
-                        {!hasStarted && !showCountdown && (
+                        {/* Para PL sin fechas: mostrar botón finalizar directamente */}
+                        {!hasStarted && isPL && !endDate && (
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                            <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 bg-purple-500/20 border border-purple-500/50 rounded-lg text-purple-400 text-xs sm:text-sm">
+                              <Flag size={14} />
+                              Liderato
+                            </div>
+                            <button
+                              onClick={() => abrirModalFinalizar(producto)}
+                              disabled={finalizandoEntrenamiento}
+                              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-red-500/20 to-orange-500/20 hover:from-red-500/30 hover:to-orange-500/30 border border-red-500/50 rounded-lg text-red-400 hover:text-red-300 text-xs sm:text-sm font-semibold transition-all disabled:opacity-50"
+                            >
+                              <CheckCircle2 size={14} />
+                              {finalizandoEntrenamiento ? 'Finalizando...' : 'Finalizar Liderato'}
+                            </button>
+                          </div>
+                        )}
+
+                        {!hasStarted && !showCountdown && !(isPL && !endDate) && (
                           <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 bg-slate-700/30 border border-slate-600/50 rounded-lg text-slate-400 text-xs sm:text-sm self-start sm:self-auto">
                             <Calendar size={14} />
                             Próximo
