@@ -67,6 +67,10 @@ interface ConfiguracionData {
   fuma: boolean;
   fumaCantidad: string;
   quiereSerStaff: boolean;
+  staffBasicoInterest: boolean;
+  staffAvanzadoInterest: boolean;
+  staffLideratoInterest: boolean;
+  staffServicioInterest: boolean;
   
   // Fotos
   fotoPrimerDia: string;
@@ -159,6 +163,10 @@ export default function ConfiguracionCompletaPage() {
     fuma: false,
     fumaCantidad: '',
     quiereSerStaff: false,
+    staffBasicoInterest: false,
+    staffAvanzadoInterest: false,
+    staffLideratoInterest: false,
+    staffServicioInterest: false,
     fotoPrimerDia: '',
     fotoUltimoDiaPL: '',
     fotoContrato: '',
@@ -938,12 +946,76 @@ export default function ConfiguracionCompletaPage() {
               </div>
               
               {config.quiereSerStaff && (
-                <div className="mt-4 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center gap-3">
-                  <span className="text-xl">✅</span>
-                  <p className="text-sm text-emerald-300">
-                    <span className="font-semibold">¡Estás en la lista!</span>
-                    <span className="text-emerald-400/80 ml-1">Los coordinadores pueden verte como prospecto de Staff.</span>
-                  </p>
+                <div className="mt-6 space-y-4">
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center gap-3">
+                    <span className="text-xl">✅</span>
+                    <p className="text-sm text-emerald-300">
+                      <span className="font-semibold">¡Estás en la lista!</span>
+                      <span className="text-emerald-400/80 ml-1">Los coordinadores pueden verte como prospecto de Staff.</span>
+                    </p>
+                  </div>
+                  
+                  {/* Selección de niveles de Staff */}
+                  <div className="p-4 bg-slate-800/50 border border-slate-700 rounded-xl">
+                    <h3 className="text-sm font-semibold text-white mb-3">¿En qué niveles te gustaría ser Staff?</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {/* Básico */}
+                      <button
+                        type="button"
+                        onClick={() => setConfig({...config, staffBasicoInterest: !config.staffBasicoInterest})}
+                        className={`p-3 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-2 ${
+                          config.staffBasicoInterest 
+                            ? 'bg-blue-500/20 border-blue-500 text-blue-400' 
+                            : 'bg-slate-900/50 border-slate-700 text-slate-400 hover:border-slate-600'
+                        }`}
+                      >
+                        <span className="text-2xl">🎯</span>
+                        <span className="text-sm font-medium">Básico</span>
+                      </button>
+                      
+                      {/* Avanzado */}
+                      <button
+                        type="button"
+                        onClick={() => setConfig({...config, staffAvanzadoInterest: !config.staffAvanzadoInterest})}
+                        className={`p-3 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-2 ${
+                          config.staffAvanzadoInterest 
+                            ? 'bg-orange-500/20 border-orange-500 text-orange-400' 
+                            : 'bg-slate-900/50 border-slate-700 text-slate-400 hover:border-slate-600'
+                        }`}
+                      >
+                        <span className="text-2xl">🚀</span>
+                        <span className="text-sm font-medium">Avanzado</span>
+                      </button>
+                      
+                      {/* Liderato */}
+                      <button
+                        type="button"
+                        onClick={() => setConfig({...config, staffLideratoInterest: !config.staffLideratoInterest})}
+                        className={`p-3 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-2 ${
+                          config.staffLideratoInterest 
+                            ? 'bg-purple-500/20 border-purple-500 text-purple-400' 
+                            : 'bg-slate-900/50 border-slate-700 text-slate-400 hover:border-slate-600'
+                        }`}
+                      >
+                        <span className="text-2xl">👑</span>
+                        <span className="text-sm font-medium">Liderato</span>
+                      </button>
+                      
+                      {/* Servicio */}
+                      <button
+                        type="button"
+                        onClick={() => setConfig({...config, staffServicioInterest: !config.staffServicioInterest})}
+                        className={`p-3 rounded-xl border-2 transition-all duration-200 flex flex-col items-center gap-2 ${
+                          config.staffServicioInterest 
+                            ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' 
+                            : 'bg-slate-900/50 border-slate-700 text-slate-400 hover:border-slate-600'
+                        }`}
+                      >
+                        <span className="text-2xl">🤝</span>
+                        <span className="text-sm font-medium">Servicio</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

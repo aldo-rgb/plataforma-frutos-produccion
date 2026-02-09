@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { 
   Users, Star, Search, Phone, Mail, MapPin, Shirt, 
-  Briefcase, Calendar, ArrowLeft, Loader2, UserCheck
+  Briefcase, Calendar, ArrowLeft, Loader2, UserCheck, GraduationCap
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -23,6 +23,13 @@ interface Prospecto {
   ocupacion: string | null;
   fechaRegistro: string;
   fechaSolicitud: string;
+  // Nuevos campos de interés en Staff
+  staffBasico?: boolean;
+  staffAvanzado?: boolean;
+  staffLiderato?: boolean;
+  staffServicio?: boolean;
+  productName?: string;
+  visionName?: string;
 }
 
 export default function ProspectosStaffPage() {
@@ -58,12 +65,43 @@ export default function ProspectosStaffPage() {
 
   const fetchProspectos = async () => {
     try {
-      const res = await fetch('/api/coordinador/prospectos-staff');
-      const data = await res.json();
+      // Intentar primero con el nuevo API de encuestas de participantes
+      const resSurvey = await fetch('/api/school-admin/prospectos-staff');
+      const dataSurvey = await resSurvey.json();
       
-      if (res.ok && data.success) {
-        setProspectos(data.prospectos);
-        setFilteredProspectos(data.prospectos);
+      if (resSurvey.ok && dataSurvey.success && dataSurvey.prospectos.length > 0) {
+        // Usar los prospectos de las encuestas de PL
+        const prospectosFromSurvey = dataSurvey.prospectos.map((p: any) => ({
+          id: p.usuario.id,
+          nombre: p.usuario.nombre,
+          email: p.usuario.email,
+          telefono: p.usuario.telefono || null,
+          profileImage: p.usuario.imagen || null,
+          rol: 'PARTICIPANTE_PL',
+          tallaCamiseta: null,
+          ciudad: null,
+          estado: null,
+          ocupacion: null,
+          fechaRegistro: p.createdAt || new Date().toISOString(),
+          fechaSolicitud: p.createdAt || new Date().toISOString(),
+          staffBasico: p.intereses?.basico,
+          staffAvanzado: p.intereses?.avanzado,
+          staffLiderato: p.intereses?.liderato,
+          staffServicio: p.intereses?.servicio,
+          productName: p.producto?.nombre,
+          visionName: p.producto?.vision,
+        }));
+        setProspectos(prospectosFromSurvey);
+        setFilteredProspectos(prospectosFromSurvey);
+      } else {
+        // Fallback al API antiguo
+        const res = await fetch('/api/coordinador/prospectos-staff');
+        const data = await res.json();
+        
+        if (res.ok && data.success) {
+          setProspectos(data.prospectos);
+          setFilteredProspectos(data.prospectos);
+        }
       }
     } catch (error) {
       console.error('Error fetching prospectos:', error);
@@ -190,6 +228,40 @@ export default function ProspectosStaffPage() {
                 
                 {/* Info */}
                 <div className="space-y-2 text-sm">
+                  {/* Staff Interest Badges */}
+                  {(prospecto.staffBasico || prospecto.staffAvanzado || prospecto.staffLiderato || prospecto.staffServicio) && (
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {prospecto.staffBasico && (
+                        <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs rounded-full border border-blue-500/30">
+                          Básico
+                        </span>
+                      )}
+                      {prospecto.staffAvanzado && (
+                        <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 text-xs rounded-full border border-orange-500/30">
+                          Avanzado
+                        </span>
+                      )}
+                      {prospecto.staffLiderato && (
+                        <span className="px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded-full border border-purple-500/30">
+                          Liderato
+                        </span>
+                      )}
+                      {prospecto.staffServicio && (
+                        <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs rounded-full border border-emerald-500/30">
+                          Servicio
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Product/Vision info */}
+                  {prospecto.productName && (
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <GraduationCap size={14} className="text-slate-500" />
+                      <span className="truncate">{prospecto.productName} {prospecto.visionName ? `• ${prospecto.visionName}` : ''}</span>
+                    </div>
+                  )}
+                  
                   {prospecto.telefono && (
                     <div className="flex items-center gap-2 text-slate-300">
                       <Phone size={14} className="text-slate-500" />

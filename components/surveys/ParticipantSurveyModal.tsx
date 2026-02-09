@@ -152,7 +152,23 @@ export default function ParticipantSurveyModal({
       return true;
     }
     
+    if (currentQuestion.type === 'staff-interest') {
+      // Al menos un switch debe estar activo, o ninguno si no quiere ser staff
+      return true; // Es válido aunque no seleccione ninguno (significa que no quiere ser staff)
+    }
+    
     return !!response;
+  };
+
+  const handleStaffToggle = (optionId: string, value: boolean) => {
+    setResponses(prev => ({
+      ...prev,
+      [currentQuestion.id]: {
+        ...(prev[currentQuestion.id] || {}),
+        [optionId]: value
+      }
+    }));
+    if (navigator.vibrate) navigator.vibrate(20);
   };
 
   const goNext = () => {
@@ -571,6 +587,51 @@ export default function ParticipantSurveyModal({
                       Agregar otra persona
                     </button>
                   )}
+                </div>
+              )}
+
+              {/* Staff Interest - Switches para elegir niveles */}
+              {currentQuestion.type === 'staff-interest' && currentQuestion.options && (
+                <div className="space-y-4">
+                  <p className="text-slate-400 text-sm text-center mb-6">
+                    {currentQuestion.subtitle}
+                  </p>
+                  {currentQuestion.options.map((option: { id: string; label: string; icon: string }, index: number) => {
+                    const isActive = (responses[currentQuestion.id] as Record<string, boolean>)?.[option.id] || false;
+                    return (
+                      <motion.button
+                        key={option.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        onClick={() => handleStaffToggle(option.id, !isActive)}
+                        className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all ${
+                          isActive
+                            ? 'bg-gradient-to-r from-purple-600/20 to-pink-600/20 border-purple-500 shadow-lg shadow-purple-500/20'
+                            : 'bg-slate-800/30 border-slate-700 hover:border-slate-600'
+                        }`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <span className="text-2xl">{option.icon}</span>
+                          <span className={`text-lg font-medium ${isActive ? 'text-white' : 'text-slate-300'}`}>
+                            {option.label}
+                          </span>
+                        </div>
+                        <div className={`w-14 h-8 rounded-full p-1 transition-all ${
+                          isActive ? 'bg-gradient-to-r from-purple-500 to-pink-500' : 'bg-slate-700'
+                        }`}>
+                          <motion.div
+                            animate={{ x: isActive ? 24 : 0 }}
+                            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                            className="w-6 h-6 bg-white rounded-full shadow-lg"
+                          />
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+                  <p className="text-slate-500 text-xs text-center mt-4">
+                    Puedes seleccionar uno o varios niveles donde te gustaría participar
+                  </p>
                 </div>
               )}
             </motion.div>

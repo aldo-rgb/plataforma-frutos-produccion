@@ -69,6 +69,8 @@ interface Props {
   products?: Product[]
   currentProductId?: number
   trainerLevel?: 'BASIC' | 'ADVANCED' | 'PL' | null // Nivel asignado al trainer
+  defaultExpanded?: boolean // Si debe mostrarse expandido por defecto
+  hideHeader?: boolean // Si debe ocultar el header colapsable
 }
 
 export default function ElCruceAccessWidget({ 
@@ -76,13 +78,15 @@ export default function ElCruceAccessWidget({
   organizationId: propOrgId,
   products: propProducts = [],
   currentProductId,
-  trainerLevel: propTrainerLevel
+  trainerLevel: propTrainerLevel,
+  defaultExpanded = false,
+  hideHeader = false
 }: Props) {
   const { data: session } = useSession()
   const [sessions, setSessions] = useState<CrossingSession[]>([])
   const [products, setProducts] = useState<Product[]>(propProducts)
   const [loading, setLoading] = useState(true)
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(defaultExpanded)
   const [copied, setCopied] = useState<string | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -442,9 +446,10 @@ export default function ElCruceAccessWidget({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-gradient-to-br from-amber-900/20 to-orange-900/20 border border-amber-500/30 rounded-2xl overflow-hidden"
+      className={hideHeader ? "" : "bg-gradient-to-br from-amber-900/20 to-orange-900/20 border border-amber-500/30 rounded-2xl overflow-hidden"}
     >
-      {/* Header */}
+      {/* Header - Solo mostrar si no está oculto */}
+      {!hideHeader && (
       <div className="w-full p-4 flex items-center justify-between hover:bg-amber-500/5 transition-colors">
         <button 
           onClick={() => setExpanded(!expanded)}
@@ -503,17 +508,18 @@ export default function ElCruceAccessWidget({
           </button>
         </div>
       </div>
+      )}
 
-      {/* Contenido expandible */}
+      {/* Contenido expandible - siempre visible si hideHeader es true */}
       <AnimatePresence>
-        {expanded && (
+        {(expanded || hideHeader) && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
+            initial={hideHeader ? { height: "auto", opacity: 1 } : { height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="p-4 pt-0 space-y-4">
+            <div className={hideHeader ? "space-y-4" : "p-4 pt-0 space-y-4"}>
               {/* Sesiones activas */}
               {activeSessions.length > 0 ? (
                 <div className="space-y-3">
@@ -793,7 +799,7 @@ export default function ElCruceAccessWidget({
                             <div className="p-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full">
                               <Zap className="w-4 h-4 text-white" />
                             </div>
-                            <p className="text-xs text-amber-400 mt-1 font-medium">El Atravesar</p>
+                            <p className="text-xs text-amber-400 mt-1 font-medium">EAtravesar</p>
                             <div className="w-px h-4 bg-gradient-to-b from-amber-500/50 to-slate-700" />
                           </div>
                         </div>

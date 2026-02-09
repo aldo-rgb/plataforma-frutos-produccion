@@ -248,18 +248,24 @@ export async function GET(request: NextRequest) {
     const productosConEstado = productos.map(p => {
       let estado = 'PROXIMO'
       
-      // Si trainingStatus es IN_PROGRESS, siempre mostrar como EN_CURSO
-      // independientemente de las fechas (el trainer aún no lo ha cerrado)
-      if (p.trainingStatus === 'IN_PROGRESS') {
-        estado = 'EN_CURSO'
-      } else if (p.startDate && p.endDate) {
-        const start = new Date(p.startDate)
+      // Primero verificar si ya pasó la fecha de fin - tiene prioridad sobre todo
+      if (p.endDate) {
         const end = new Date(p.endDate)
-        if (now >= start && now <= end) {
-          estado = 'EN_CURSO'
-        } else if (now > end) {
+        // Establecer la hora al final del día (23:59:59)
+        end.setHours(23, 59, 59, 999)
+        
+        if (now > end) {
+          // Si ya pasó la fecha de fin, siempre es FINALIZADO
           estado = 'FINALIZADO'
+        } else if (p.startDate) {
+          const start = new Date(p.startDate)
+          if (now >= start && now <= end) {
+            estado = 'EN_CURSO'
+          }
         }
+      } else if (p.trainingStatus === 'IN_PROGRESS') {
+        // Si no tiene endDate pero está IN_PROGRESS, mostrar como EN_CURSO
+        estado = 'EN_CURSO'
       } else if (p.startDate) {
         const start = new Date(p.startDate)
         if (now >= start) {
@@ -307,6 +313,18 @@ export async function GET(request: NextRequest) {
     const enCurso = productosConEstado.filter(p => p.estado === 'EN_CURSO')
     const proximos = productosConEstado.filter(p => p.estado === 'PROXIMO')
     const finalizados = productosConEstado.filter(p => p.estado === 'FINALIZADO')
+
+    // Actualizar automáticamente trainingStatus a COMPLETED para productos que ya pasaron su fecha de fin
+    // pero aún tienen trainingStatus diferente de COMPLETED
+    const productosParaCompletar = finalizados.filter(p => p.trainingStatus !== 'COMPLETED')
+    if (productosParaCompletar.length > 0) {
+      const idsParaCompletar = productosParaCompletar.map(p => p.id)
+      await prisma.schoolProduct.updateMany({
+        where: { id: { in: idsParaCompletar } },
+        data: { trainingStatus: 'COMPLETED' }
+      })
+      logger.debug(`🔄 Auto-completados ${idsParaCompletar.length} productos: ${idsParaCompletar.join(', ')}`)
+    }
 
     // Calcular totales de pre-registros
     const totalPreRegistrosPendientes = enCurso.reduce((acc, p) => acc + p.preRegistrosPendientes, 0)

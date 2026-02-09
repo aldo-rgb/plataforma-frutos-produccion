@@ -42,10 +42,9 @@ export async function GET(request: NextRequest) {
             SchoolProduct: {
               where: {
                 type: 'CORE_TRAINING',
-                trainingStatus: { in: ['IN_PROGRESS', 'SCHEDULED'] },
               },
               orderBy: { startDate: 'desc' },
-              take: 1,
+              take: 3, // Obtener más productos para buscar PL completados
             }
           }
         }
@@ -67,12 +66,50 @@ export async function GET(request: NextRequest) {
 
     for (const enrollment of enrollments) {
       for (const product of enrollment.Vision?.SchoolProduct || []) {
-        // Verificar si hoy es el último día del producto
+        
+        // Para productos PL: verificar si está COMPLETED (después del 3er fin de semana)
+        if (product.levelType === 'PL' && enrollment.level === 'PL') {
+          if (product.trainingStatus === 'COMPLETED') {
+            // Verificar si ya completó esta encuesta
+            const existingSurvey = await prisma.participantSurvey.findUnique({
+              where: {
+                userId_productId: {
+                  userId,
+                  productId: product.id,
+                }
+              }
+            });
+
+            if (!existingSurvey) {
+              // Verificar que el producto se completó recientemente (últimos 7 días)
+              const sevenDaysAgo = new Date(todayStart);
+              sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+              
+              if (product.finishedAt && new Date(product.finishedAt) >= sevenDaysAgo) {
+                const questions = getQuestionsForLevel('PL');
+                availableSurvey = {
+                  productId: product.id,
+                  productName: product.name,
+                  levelType: 'PL',
+                  questions,
+                };
+                break;
+              }
+            }
+          }
+          continue; // PL no usa la lógica de endDate
+        }
+        
+        // Para BASIC y ADVANCED: verificar si hoy es el último día del producto o terminó recientemente
         if (product.endDate) {
           const endDate = new Date(product.endDate);
+          // Establecer el fin del día para comparación correcta
+          endDate.setHours(23, 59, 59, 999);
+          
           const isLastDay = endDate >= todayStart && endDate <= todayEnd;
           
           // También aceptar si el entrenamiento ya terminó recientemente (últimos 3 días)
+          // Esto aplica incluso si trainingStatus es COMPLETED
           const threeDaysAgo = new Date(todayStart);
           threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
           const recentlyEnded = endDate >= threeDaysAgo && endDate < todayStart;
@@ -164,19 +201,66 @@ export async function POST(request: NextRequest) {
     }
 
     // Determinar el nivel
-    let level = 'BASIC';
+    let level: 'BASIC' | 'ADVANCED' | 'PL' = 'BASIC';
     if (product.levelType === 'ADVANCED') level = 'ADVANCED';
     else if (product.levelType === 'PL') level = 'PL';
 
+    // Preparar datos según el nivel
+    const surveyData: any = {
+      userId,
+      productId,
+      level,
+      pointsAwarded: 200,
+    };
+
+    // Campos según el nivel
+    if (level === 'BASIC') {
+      surveyData.apodoNino = responses.apodo || null;
+      surveyData.lugarNacimiento = responses.lugarNacimiento || null;
+      surveyData.colorFavorito = responses.colorFavorito || null;
+      surveyData.caricaturaFavorita = responses.caricaturaFavorita || null;
+      surveyData.paisViajar = responses.paisViajar || null;
+      // Referidos
+      const personas = responses.personasEntrenamiento || [];
+      surveyData.referido1 = personas[0]?.name || null;
+      surveyData.referido2 = personas[1]?.name || null;
+      surveyData.referido3 = personas[2]?.name || null;
+      surveyData.referido4 = personas[3]?.name || null;
+      surveyData.referido5 = personas[4]?.name || null;
+    } else if (level === 'ADVANCED') {
+      surveyData.superheroeFavorito = responses.superHeroe || null;
+      surveyData.gustaLeer = responses.gustaLeer || false;
+      surveyData.autorFavorito = responses.autorFavorito || null;
+      surveyData.jugueteDeseado = responses.jugueteNinez || null;
+      surveyData.liderAdmiras = responses.liderAdmiras?.name || null;
+      surveyData.descripcionLider = responses.liderAdmiras ? 
+        `${responses.liderAdmiras.word1 || ''} ${responses.liderAdmiras.word2 || ''} ${responses.liderAdmiras.word3 || ''}`.trim() : null;
+      surveyData.descripcionUnaPalabra = responses.palabraDescripcion || null;
+      // Referidos
+      const personas = responses.personasEntrenamiento || [];
+      surveyData.referido1 = personas[0]?.name || null;
+      surveyData.referido2 = personas[1]?.name || null;
+      surveyData.referido3 = personas[2]?.name || null;
+      surveyData.referido4 = personas[3]?.name || null;
+      surveyData.referido5 = personas[4]?.name || null;
+    } else if (level === 'PL') {
+      surveyData.legadoPersonal = responses.legadoPersonal || null;
+      surveyData.mayorAprendizaje = responses.mayorAprendizaje || null;
+      surveyData.compromisoComunidad = responses.compromisoComunidad || null;
+      surveyData.consejoFuturo = responses.consejoFuturo || null;
+      // Campos de staff
+      const staffData = responses.quiereSerStaff || {};
+      surveyData.quiereSerStaff = staffData.staffBasico || staffData.staffAvanzado || 
+                                   staffData.staffLiderato || staffData.staffServicio || false;
+      surveyData.staffBasico = staffData.staffBasico || false;
+      surveyData.staffAvanzado = staffData.staffAvanzado || false;
+      surveyData.staffLiderato = staffData.staffLiderato || false;
+      surveyData.staffServicio = staffData.staffServicio || false;
+    }
+
     // Guardar la encuesta
     const survey = await prisma.participantSurvey.create({
-      data: {
-        userId,
-        productId,
-        level,
-        responses,
-        pointsAwarded: 200,
-      }
+      data: surveyData
     });
 
     // Otorgar puntos directamente
@@ -331,7 +415,7 @@ function getQuestionsForLevel(level: string): any[] {
     ];
   }
 
-  // PL (nivel 3)
+  // PL (nivel 3) - Después del 3er fin de semana
   return [
     {
       id: 'legadoPersonal',
@@ -369,15 +453,18 @@ function getQuestionsForLevel(level: string): any[] {
       maxLength: 300,
     },
     {
-      id: 'personasEntrenamiento',
-      type: 'people-list',
-      question: '¿A quién de tu entorno ves en el programa de liderazgo?',
-      subtitle: 'Personas que tienen potencial de líder',
-      minRequired: 3,
-      maxItems: 5,
-      placeholder: 'Nombre completo',
+      id: 'quiereSerStaff',
+      type: 'staff-interest',
+      question: '¿Quieres ser Staff?',
+      subtitle: 'Selecciona en qué niveles te gustaría participar como staff',
       required: true,
-      icon: '👥',
+      icon: '🎯',
+      options: [
+        { id: 'staffBasico', label: 'Básico', icon: '🌱' },
+        { id: 'staffAvanzado', label: 'Avanzado', icon: '🚀' },
+        { id: 'staffLiderato', label: 'Liderato', icon: '👑' },
+        { id: 'staffServicio', label: 'Servicio', icon: '🤝' },
+      ],
     },
   ];
 }

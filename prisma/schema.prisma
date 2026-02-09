@@ -1223,6 +1223,10 @@ model PerfilCompleto {
   fuma              Boolean   @default(false)
   fumaCantidad      String?
   quiereSerStaff    Boolean   @default(false)
+  staffBasicoInterest    Boolean   @default(false)
+  staffAvanzadoInterest  Boolean   @default(false)
+  staffLideratoInterest  Boolean   @default(false)
+  staffServicioInterest  Boolean   @default(false)
   fotoPrimerDia     String?
   fotoUltimoDiaPL   String?
   fotoContrato      String?
@@ -6282,13 +6286,23 @@ model ParticipantSurvey {
   descripcionLider String?      // Avanzado (3 palabras)
   descripcionUnaPalabra String? // Avanzado
   
-  // Campos PL
-  // (se pueden agregar después si hay preguntas específicas para PL)
+  // Campos PL - Respuestas de reflexión
+  legadoPersonal      String?       // ¿Cuál es el legado que quieres dejar?
+  mayorAprendizaje    String?       // ¿Cuál ha sido tu mayor aprendizaje?
+  compromisoComunidad String?       // ¿Qué te comprometes a aportar?
+  consejoFuturo       String?       // ¿Qué consejo le darías?
   
-  // Referidos (5 espacios, 3 obligatorios)
-  referido1       String        // Obligatorio
-  referido2       String        // Obligatorio
-  referido3       String        // Obligatorio
+  // Campos PL - Interés en ser Staff
+  quiereSerStaff      Boolean?    @default(false)
+  staffBasico         Boolean?    @default(false)
+  staffAvanzado       Boolean?    @default(false)
+  staffLiderato       Boolean?    @default(false)
+  staffServicio       Boolean?    @default(false)
+  
+  // Referidos (5 espacios, 3 obligatorios) - Solo para BASIC y ADVANCED
+  referido1       String?       // Obligatorio en BASIC/ADVANCED
+  referido2       String?       // Obligatorio en BASIC/ADVANCED
+  referido3       String?       // Obligatorio en BASIC/ADVANCED
   referido4       String?       // Opcional
   referido5       String?       // Opcional
   

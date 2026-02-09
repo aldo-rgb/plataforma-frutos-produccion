@@ -7,12 +7,12 @@ import {
   Users, Ticket, AlertTriangle, Building2, GraduationCap, Activity,
   Clock, Calendar, Scan, Heart, Mic, BookOpen, Rocket, ChevronRight,
   X, Loader2, Phone, Mail, CreditCard, FileText, CheckCircle, Flag,
-  CheckCircle2, Trophy
+  CheckCircle2, Trophy, Zap
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import GCCallsMonitorWidget from '@/components/dashboard/GCCallsMonitorWidget';
-import { ElCruceAccessWidget, TopFileModal } from '@/components/el-cruce';
+import { TopFileModal } from '@/components/el-cruce';
 import { TrainerSurveyModal } from '@/components/training-closure';
 import VisionHistoryWidget from '@/components/widgets/VisionHistoryWidget';
 
@@ -643,10 +643,25 @@ export default function TrainerDashboard() {
           <GCCallsMonitorWidget />
         </div>
 
-        {/* Widget de El Atravezar */}
-        <div className="mt-8">
-          <ElCruceAccessWidget trainerLevel={data?.stats?.trainerLevel} />
-        </div>
+        {/* Botón de El Atravesar - Lleva a página dedicada */}
+        <Link href="/dashboard/trainer/el-atravesar" className="block mt-8">
+          <div className="bg-gradient-to-br from-amber-900/30 via-orange-900/20 to-slate-900 border border-amber-500/30 hover:border-amber-500/50 rounded-2xl p-4 sm:p-5 transition-all cursor-pointer group hover:shadow-lg hover:shadow-amber-500/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
+                  <Zap className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-base sm:text-lg">El Atravesar</h3>
+                  <p className="text-xs sm:text-sm text-slate-400">Escanea gafetes en tiempo real</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <ChevronRight className="w-5 h-5 text-amber-400 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          </div>
+        </Link>
 
         {/* Widget de Historial de Visiones */}
         <div className="mt-8">
@@ -885,17 +900,19 @@ export default function TrainerDashboard() {
                         </div>
                       )}
 
-                      {/* Botón Hall of Fame */}
-                      <div className="mt-3 pt-3 border-t border-slate-700/50">
-                        <Link
-                          href={`/dashboard/trainer/hall-of-fame/${producto.id}`}
-                          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 border border-purple-500/30 hover:border-purple-500/50 rounded-xl text-purple-300 hover:text-white transition-all group"
-                        >
-                          <Trophy className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                          <span className="font-medium text-sm">Ver Resultados</span>
-                          <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                        </Link>
-                      </div>
+                      {/* Botón Hall of Fame - Solo para productos de Liderato (PL) */}
+                      {producto.levelType === 'PL' && (
+                        <div className="mt-3 pt-3 border-t border-slate-700/50">
+                          <Link
+                            href={`/dashboard/trainer/hall-of-fame/${producto.id}`}
+                            className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 border border-purple-500/30 hover:border-purple-500/50 rounded-xl text-purple-300 hover:text-white transition-all group"
+                          >
+                            <Trophy className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                            <span className="font-medium text-sm">Ver Resultados</span>
+                            <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                          </Link>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
