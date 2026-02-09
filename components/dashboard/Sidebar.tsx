@@ -396,6 +396,19 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
               <User size={18} className="text-emerald-400" />
               <span>Mi Perfil</span>
             </Link>
+
+            <Link 
+              href="/dashboard/trainer/estadisticas"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/trainer/estadisticas'
+                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <BarChart3 size={18} className="text-cyan-400" />
+              <span>Mis Estadísticas</span>
+            </Link>
           </div>
         )}
 
