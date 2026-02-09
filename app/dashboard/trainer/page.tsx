@@ -110,7 +110,7 @@ export default function TrainerDashboard() {
   const [productoAFinalizar, setProductoAFinalizar] = useState<Entrenamiento | null>(null);
   const [finalizandoEntrenamiento, setFinalizandoEntrenamiento] = useState(false);
   
-  // Estados para modal de resultados PL
+  // Estados para modal de resultados PL (Finalizar Fin de Semana)
   const [showPLResultsModal, setShowPLResultsModal] = useState(false);
   const [plResultsProduct, setPLResultsProduct] = useState<Entrenamiento | null>(null);
   const [plResultsData, setPLResultsData] = useState<{
@@ -128,6 +128,7 @@ export default function TrainerDashboard() {
     };
   } | null>(null);
   const [loadingPLResults, setLoadingPLResults] = useState(false);
+  const [finalizadosPL, setFinalizadosPL] = useState<Set<number>>(new Set()); // IDs de productos PL ya finalizados
   
   // Estados para encuesta de cierre
   const [showTrainerSurvey, setShowTrainerSurvey] = useState(false);
@@ -738,21 +739,29 @@ export default function TrainerDashboard() {
                           </div>
                         )}
 
-                        {/* Para PL sin fechas: mostrar botón finalizar directamente */}
+                        {/* Para PL sin fechas: mostrar botón finalizar fin de semana */}
                         {!hasStarted && isPL && !endDate && (
                           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                             <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 bg-purple-500/20 border border-purple-500/50 rounded-lg text-purple-400 text-xs sm:text-sm">
                               <Flag size={14} />
                               Liderato
                             </div>
-                            <button
-                              onClick={() => abrirModalResultadosPL(producto)}
-                              disabled={loadingPLResults}
-                              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 border border-purple-500/50 rounded-lg text-purple-400 hover:text-purple-300 text-xs sm:text-sm font-semibold transition-all disabled:opacity-50"
-                            >
-                              <Trophy size={14} />
-                              {loadingPLResults ? 'Cargando...' : 'Ver Resultados'}
-                            </button>
+                            {!finalizadosPL.has(producto.id) && (
+                              <button
+                                onClick={() => abrirModalResultadosPL(producto)}
+                                disabled={loadingPLResults}
+                                className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-orange-500/20 to-red-500/20 hover:from-orange-500/30 hover:to-red-500/30 border border-orange-500/50 rounded-lg text-orange-400 hover:text-orange-300 text-xs sm:text-sm font-semibold transition-all disabled:opacity-50"
+                              >
+                                <CheckCircle2 size={14} />
+                                {loadingPLResults ? 'Cargando...' : 'Finalizar Fin de Semana'}
+                              </button>
+                            )}
+                            {finalizadosPL.has(producto.id) && (
+                              <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 bg-green-500/20 border border-green-500/50 rounded-lg text-green-400 text-xs sm:text-sm">
+                                <CheckCircle2 size={14} />
+                                Fin de semana finalizado
+                              </div>
+                            )}
                           </div>
                         )}
 
@@ -1227,18 +1236,18 @@ export default function TrainerDashboard() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-gradient-to-br from-slate-900 via-purple-950/30 to-slate-900 border-2 border-purple-500/30 rounded-2xl p-6 max-w-lg w-full shadow-2xl max-h-[80vh] overflow-hidden flex flex-col"
+              className="bg-gradient-to-br from-slate-900 via-orange-950/20 to-slate-900 border-2 border-orange-500/30 rounded-2xl p-6 max-w-lg w-full shadow-2xl max-h-[80vh] overflow-hidden flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
               <div className="text-center mb-4">
-                <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
-                  <Trophy className="w-8 h-8 text-purple-400" />
+                <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-orange-500/20 to-red-500/20 flex items-center justify-center">
+                  <Flag className="w-8 h-8 text-orange-400" />
                 </div>
                 <h3 className="text-xl font-bold text-white mb-1">
-                  Resultados del Liderato
+                  Finalizar Fin de Semana
                 </h3>
-                <p className="text-purple-400 font-semibold">
+                <p className="text-orange-400 font-semibold">
                   {plResultsProduct.name}
                 </p>
               </div>
@@ -1338,15 +1347,22 @@ export default function TrainerDashboard() {
                       }}
                       className="flex-1 px-4 py-3 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-xl text-slate-300 font-semibold transition-all"
                     >
-                      Cerrar
+                      Cancelar
                     </button>
-                    <Link
-                      href={`/dashboard/trainer/hall-of-fame/${plResultsProduct.id}`}
-                      className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-xl text-white font-bold transition-all flex items-center justify-center gap-2"
+                    <button
+                      onClick={() => {
+                        if (plResultsProduct) {
+                          setFinalizadosPL(prev => new Set([...prev, plResultsProduct.id]));
+                        }
+                        setShowPLResultsModal(false);
+                        setPLResultsProduct(null);
+                        setPLResultsData(null);
+                      }}
+                      className="flex-1 px-4 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 rounded-xl text-white font-bold transition-all flex items-center justify-center gap-2"
                     >
-                      <Trophy size={18} />
-                      Ver Hall of Fame
-                    </Link>
+                      <CheckCircle2 size={18} />
+                      Confirmar Finalizar
+                    </button>
                   </div>
                 </>
               ) : (
