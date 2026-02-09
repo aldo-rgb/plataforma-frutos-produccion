@@ -110,6 +110,25 @@ export default function TrainerDashboard() {
   const [productoAFinalizar, setProductoAFinalizar] = useState<Entrenamiento | null>(null);
   const [finalizandoEntrenamiento, setFinalizandoEntrenamiento] = useState(false);
   
+  // Estados para modal de resultados PL
+  const [showPLResultsModal, setShowPLResultsModal] = useState(false);
+  const [plResultsProduct, setPLResultsProduct] = useState<Entrenamiento | null>(null);
+  const [plResultsData, setPLResultsData] = useState<{
+    participants: Array<{
+      id: number;
+      nombre: string;
+      imagen: string | null;
+      enrolledCount: number;
+    }>;
+    stats: {
+      totalParticipants: number;
+      totalEnrolled: number;
+      expectedEnrollments: number;
+      percentage: number;
+    };
+  } | null>(null);
+  const [loadingPLResults, setLoadingPLResults] = useState(false);
+  
   // Estados para encuesta de cierre
   const [showTrainerSurvey, setShowTrainerSurvey] = useState(false);
   const [productoParaEncuesta, setProductoParaEncuesta] = useState<Entrenamiento | null>(null);
@@ -201,6 +220,38 @@ export default function TrainerDashboard() {
     setPreRegistrosFilter(filter);
     setShowPreRegistrosModal(true);
     fetchPreRegistros(filter);
+  };
+
+  // Abrir modal de resultados PL
+  const abrirModalResultadosPL = async (producto: Entrenamiento) => {
+    setPLResultsProduct(producto);
+    setShowPLResultsModal(true);
+    setLoadingPLResults(true);
+    
+    try {
+      const res = await fetch(`/api/trainer/hall-of-fame/${producto.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        const totalParticipants = data.participants.length;
+        const totalEnrolled = data.participants.reduce((acc: number, p: any) => acc + p.enrolledCount, 0);
+        const expectedEnrollments = totalParticipants * 2; // Meta: 2 enrollados por participante
+        const percentage = expectedEnrollments > 0 ? Math.round((totalEnrolled / expectedEnrollments) * 100) : 0;
+        
+        setPLResultsData({
+          participants: data.participants,
+          stats: {
+            totalParticipants,
+            totalEnrolled,
+            expectedEnrollments,
+            percentage
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching PL results:', error);
+    } finally {
+      setLoadingPLResults(false);
+    }
   };
 
   // Abrir TOP FILE de un usuario
@@ -695,12 +746,12 @@ export default function TrainerDashboard() {
                               Liderato
                             </div>
                             <button
-                              onClick={() => abrirModalFinalizar(producto)}
-                              disabled={finalizandoEntrenamiento}
-                              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-red-500/20 to-orange-500/20 hover:from-red-500/30 hover:to-orange-500/30 border border-red-500/50 rounded-lg text-red-400 hover:text-red-300 text-xs sm:text-sm font-semibold transition-all disabled:opacity-50"
+                              onClick={() => abrirModalResultadosPL(producto)}
+                              disabled={loadingPLResults}
+                              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 border border-purple-500/50 rounded-lg text-purple-400 hover:text-purple-300 text-xs sm:text-sm font-semibold transition-all disabled:opacity-50"
                             >
-                              <CheckCircle2 size={14} />
-                              {finalizandoEntrenamiento ? 'Finalizando...' : 'Finalizar Liderato'}
+                              <Trophy size={14} />
+                              {loadingPLResults ? 'Cargando...' : 'Ver Resultados'}
                             </button>
                           </div>
                         )}
@@ -1155,6 +1206,156 @@ export default function TrainerDashboard() {
               setProductoParaEncuesta(null);
             }}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Modal de Resultados PL (Liderato) */}
+      <AnimatePresence>
+        {showPLResultsModal && plResultsProduct && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setShowPLResultsModal(false);
+              setPLResultsProduct(null);
+              setPLResultsData(null);
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-gradient-to-br from-slate-900 via-purple-950/30 to-slate-900 border-2 border-purple-500/30 rounded-2xl p-6 max-w-lg w-full shadow-2xl max-h-[80vh] overflow-hidden flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="text-center mb-4">
+                <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                  <Trophy className="w-8 h-8 text-purple-400" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-1">
+                  Resultados del Liderato
+                </h3>
+                <p className="text-purple-400 font-semibold">
+                  {plResultsProduct.name}
+                </p>
+              </div>
+
+              {loadingPLResults ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-8 h-8 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
+                </div>
+              ) : plResultsData ? (
+                <>
+                  {/* Estadísticas principales */}
+                  <div className="bg-gradient-to-r from-purple-900/30 to-pink-900/30 rounded-xl p-4 mb-4 border border-purple-500/20">
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <p className="text-3xl font-bold text-white">{plResultsData.stats.totalParticipants}</p>
+                        <p className="text-xs text-slate-400">Participantes</p>
+                      </div>
+                      <div>
+                        <p className="text-3xl font-bold text-green-400">{plResultsData.stats.totalEnrolled}</p>
+                        <p className="text-xs text-slate-400">Enrollados</p>
+                      </div>
+                      <div>
+                        <p className={`text-3xl font-bold ${
+                          plResultsData.stats.percentage >= 80 ? 'text-emerald-400' :
+                          plResultsData.stats.percentage >= 50 ? 'text-amber-400' : 'text-red-400'
+                        }`}>
+                          {plResultsData.stats.percentage}%
+                        </p>
+                        <p className="text-xs text-slate-400">Meta ({plResultsData.stats.expectedEnrollments})</p>
+                      </div>
+                    </div>
+                    
+                    {/* Barra de progreso */}
+                    <div className="mt-4">
+                      <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.min(100, plResultsData.stats.percentage)}%` }}
+                          transition={{ duration: 0.8, ease: 'easeOut' }}
+                          className={`h-full rounded-full ${
+                            plResultsData.stats.percentage >= 80 ? 'bg-gradient-to-r from-emerald-500 to-green-400' :
+                            plResultsData.stats.percentage >= 50 ? 'bg-gradient-to-r from-amber-500 to-yellow-400' :
+                            'bg-gradient-to-r from-red-500 to-orange-400'
+                          }`}
+                        />
+                      </div>
+                      <p className="text-center text-xs text-slate-400 mt-2">
+                        Meta: {plResultsData.stats.totalParticipants} participantes × 2 = {plResultsData.stats.expectedEnrollments} enrollados
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Lista de participantes */}
+                  <div className="flex-1 overflow-y-auto">
+                    <p className="text-sm text-slate-400 mb-2 font-semibold">Resultados por participante:</p>
+                    <div className="space-y-2">
+                      {plResultsData.participants.map((p, index) => (
+                        <div
+                          key={p.id}
+                          className={`flex items-center justify-between p-3 rounded-lg ${
+                            p.enrolledCount >= 2 ? 'bg-emerald-500/10 border border-emerald-500/30' :
+                            p.enrolledCount >= 1 ? 'bg-amber-500/10 border border-amber-500/30' :
+                            'bg-slate-800/50 border border-slate-700/50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                              p.enrolledCount >= 2 ? 'bg-emerald-500/20 text-emerald-400' :
+                              p.enrolledCount >= 1 ? 'bg-amber-500/20 text-amber-400' :
+                              'bg-slate-700 text-slate-400'
+                            }`}>
+                              {p.nombre.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="text-white text-sm font-medium truncate max-w-[180px]">
+                              {p.nombre}
+                            </span>
+                          </div>
+                          <div className={`px-3 py-1 rounded-full text-sm font-bold ${
+                            p.enrolledCount >= 2 ? 'bg-emerald-500/20 text-emerald-400' :
+                            p.enrolledCount >= 1 ? 'bg-amber-500/20 text-amber-400' :
+                            'bg-slate-700/50 text-slate-400'
+                          }`}>
+                            {p.enrolledCount}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Botones */}
+                  <div className="flex gap-3 mt-4 pt-4 border-t border-slate-700">
+                    <button
+                      onClick={() => {
+                        setShowPLResultsModal(false);
+                        setPLResultsProduct(null);
+                        setPLResultsData(null);
+                      }}
+                      className="flex-1 px-4 py-3 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded-xl text-slate-300 font-semibold transition-all"
+                    >
+                      Cerrar
+                    </button>
+                    <Link
+                      href={`/dashboard/trainer/hall-of-fame/${plResultsProduct.id}`}
+                      className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 rounded-xl text-white font-bold transition-all flex items-center justify-center gap-2"
+                    >
+                      <Trophy size={18} />
+                      Ver Hall of Fame
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8 text-slate-400">
+                  No se pudieron cargar los resultados
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
