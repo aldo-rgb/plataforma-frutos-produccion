@@ -135,9 +135,11 @@ export async function POST(req: NextRequest) {
         const mentorAssignments = existingPaymentData.mentorAssignments || [];
         const totalStudents = existingPaymentData.totalStudents || 0;
 
-        // Asignar mentores
+        // Asignar mentores y crear MentorPackageOrder
         for (const assignment of mentorAssignments) {
-          const { mentorId } = assignment;
+          const { mentorId, studentCount, ratePerCall, totalCost } = assignment;
+          
+          // Crear VisionMentor si no existe
           const existingAssignment = await prisma.visionMentor.findFirst({
             where: { visionId, mentorId },
           });
@@ -151,6 +153,31 @@ export async function POST(req: NextRequest) {
               },
             });
           }
+          
+          // 📦 CREAR MentorPackageOrder para este mentor
+          const totalSessions = (studentCount || 1) * 18; // 18 llamadas por estudiante
+          const packageOrderId = `MPO-V${visionId}-M${mentorId}-${Date.now()}`;
+          
+          await prisma.mentorPackageOrder.create({
+            data: {
+              id: packageOrderId,
+              usuarioId: user.id,
+              mentorId: mentorId,
+              visionId: visionId,
+              organizationId: user.organizationId,
+              cantidad: studentCount || 1, // Cantidad de paquetes (estudiantes)
+              precioUnitario: ratePerCall || 90,
+              precioTotal: totalCost || 0,
+              currency: 'MXN',
+              metodoPago: 'code',
+              status: 'COMPLETED',
+              externalPaymentId: `CODE-${orderId}`,
+              paidAt: new Date(),
+              updatedAt: new Date(),
+            },
+          });
+          
+          logger.debug(`📦 MentorPackageOrder creado: ${packageOrderId} para mentor ${mentorId}`);
         }
 
         // Acreditar llamadas
