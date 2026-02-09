@@ -656,7 +656,7 @@ export default function TopFileModal({ userId, userName, isOpen, onClose }: TopF
                   )}
                 </CollapsibleSection>
 
-                {/* SECCIÓN: HISTORIAL DE PRODUCTOS */}
+                {/* SECCIÓN: HISTORIAL DE VISIONES */}
                 <CollapsibleSection
                   title="Historial de Visiones"
                   icon={<BookOpen className="w-5 h-5 text-purple-400" />}

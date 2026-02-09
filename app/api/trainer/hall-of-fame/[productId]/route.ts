@@ -74,21 +74,19 @@ export async function GET(
       }
     });
 
-    // Siempre contar invitados a BASIC (cuántas personas trajeron al programa)
+    // Contar invitados al programa (cuántas personas trajeron)
+    // Usamos Usuario.invitedBy para contar usuarios invitados de cualquier visión
     const targetLevel = 'BASIC';
 
-    // Contar cuántas personas ha invitado cada participante a Básico
+    // Contar cuántas personas ha invitado cada participante al programa
     const participantsWithEnrollments = await Promise.all(
       enrollments.map(async (enrollment) => {
         const user = enrollment.Usuario_vision_enrollments_userIdToUsuario;
         
-        // Contar invitados a Básico
-        const enrolledCount = await prisma.vision_enrollments.count({
+        // Contar usuarios invitados por este participante (de cualquier visión)
+        const enrolledCount = await prisma.usuario.count({
           where: {
-            visionId: visionId,
-            level: 'BASIC',
             invitedBy: user.id,
-            enrollmentStatus: { not: 'CANCELLED' },
           }
         });
 
@@ -99,7 +97,7 @@ export async function GET(
           imagen: user.imagen,
           enrolledCount,
           declaredCount: 0, // Ya no se usa, mantenido por compatibilidad
-          totalCount: enrolledCount, // Ahora solo cuenta confirmados
+          totalCount: enrolledCount, // Cuenta de usuarios invitados
           attendanceStatus: enrollment.attendanceStatus,
         };
       })
