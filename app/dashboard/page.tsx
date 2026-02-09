@@ -21,6 +21,7 @@ import IdentityHeroSection from "@/components/dashboard/identity/IdentityHeroSec
 import PendingTicketBanner from "@/components/dashboard/PendingTicketBanner";
 import BitacoraAlertWidget from "@/components/dashboard/BitacoraAlertWidget";
 import LegacyCaptureBlockingModal from "@/components/dashboard/LegacyCaptureBlockingModal";
+import ParticipantSurveyBanner from "@/components/surveys/ParticipantSurveyBanner";
 
 export default async function DashboardPage() {
   // 1. Obtener sesión y datos frescos
@@ -574,6 +575,9 @@ export default async function DashboardPage() {
 
       {/* WIDGET: NOTIFICACIONES DE CALIFICACIÓN DE MENTOR */}
       <PendingMentorReviewsWidget />
+
+      {/* ENCUESTA DE PARTICIPANTE - Último día del entrenamiento */}
+      <ParticipantSurveyBanner />
 
       {/* ============================================ */}
       {/* IDENTITY HERO SECTION: Badge + Progress Bar   */}
