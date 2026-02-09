@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Gift, Star, Sparkles, X } from 'lucide-react';
+import { Gift, Star, Sparkles, X, ChevronRight } from 'lucide-react';
 import ParticipantSurveyModal from './ParticipantSurveyModal';
 
 interface SurveyData {
@@ -12,7 +13,12 @@ interface SurveyData {
   questions: any[];
 }
 
-export default function ParticipantSurveyBanner() {
+interface Props {
+  compact?: boolean; // Modo compacto: solo notificación con link a /dashboard/hoy
+}
+
+export default function ParticipantSurveyBanner({ compact = false }: Props) {
+  const router = useRouter();
   const [surveyData, setSurveyData] = useState<SurveyData | null>(null);
   const [pointsReward, setPointsReward] = useState(200);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -75,6 +81,39 @@ export default function ParticipantSurveyBanner() {
     }
   };
 
+  // MODO COMPACTO: Solo notificación con link a /dashboard/hoy
+  if (compact) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        onClick={() => router.push('/dashboard/hoy')}
+        className={`cursor-pointer relative overflow-hidden rounded-xl bg-gradient-to-r ${getLevelGradient(surveyData.levelType)} p-0.5`}
+      >
+        <div className="relative bg-[#0f111a]/95 backdrop-blur-sm rounded-lg px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg bg-gradient-to-br ${getLevelGradient(surveyData.levelType)}`}>
+              <Gift className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-white">
+                📋 Encuesta pendiente: {surveyData.productName}
+              </p>
+              <p className="text-xs text-gray-400">
+                Complétala y gana <span className="text-yellow-400 font-bold">+{pointsReward} puntos</span>
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-white/70">
+            <span className="text-xs">Ir a completar</span>
+            <ChevronRight className="w-4 h-4" />
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // MODO COMPLETO: Banner con modal
   return (
     <>
       <AnimatePresence>

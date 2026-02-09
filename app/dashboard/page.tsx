@@ -576,8 +576,8 @@ export default async function DashboardPage() {
       {/* WIDGET: NOTIFICACIONES DE CALIFICACIÓN DE MENTOR */}
       <PendingMentorReviewsWidget />
 
-      {/* ENCUESTA DE PARTICIPANTE - Último día del entrenamiento */}
-      <ParticipantSurveyBanner />
+      {/* ENCUESTA DE PARTICIPANTE - Notificación que lleva a HOY */}
+      <ParticipantSurveyBanner compact />
 
       {/* ============================================ */}
       {/* IDENTITY HERO SECTION: Badge + Progress Bar   */}
