@@ -1272,51 +1272,6 @@ export default function SchoolAdminDashboard() {
                 </p>
               </div>
             </Link>
-
-            <Link href="/dashboard/school-admin/pasarela" className="block mt-6">
-              <div className="bg-gradient-to-br from-emerald-900/50 via-teal-900/40 to-slate-900 border-2 border-emerald-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-3 bg-emerald-500/20 group-hover:bg-emerald-500/30 rounded-xl transition-colors">
-                    <CreditCard size={24} className="text-emerald-300" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white text-sm uppercase">
-                      PASARELA DE PAGOS
-                    </h3>
-                    <p className="text-xs text-emerald-300">
-                      Mercado Pago, Stripe, PayPal
-                    </p>
-                  </div>
-                </div>
-                <p className="text-xs text-slate-400">
-                  Configura cómo tu organización recibe pagos con tarjeta
-                </p>
-              </div>
-            </Link>
-
-            <div className="bg-gradient-to-br from-green-900/50 to-slate-900 border border-green-500/30 rounded-2xl p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-green-500/20 rounded-xl">
-                  <Activity size={24} className="text-green-300" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-white text-sm uppercase">Progreso Global</h3>
-                  <p className="text-xs text-green-300">Rendimiento general</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Cumplimiento:</span>
-                  <span className="text-white font-bold">{data.overview.completionRate}%</span>
-                </div>
-                <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-green-500"
-                    style={{ width: `${data.overview.completionRate}%` }}
-                  />
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
