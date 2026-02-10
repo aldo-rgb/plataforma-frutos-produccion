@@ -625,7 +625,8 @@ export async function POST(request: Request) {
               totalWeeks,
               missedCallsCount: 0,
               maxMissedAllowed: 3,
-              status: 'ACTIVE'
+              status: 'ACTIVE',
+              updatedAt: new Date()
             }
           });
         }
