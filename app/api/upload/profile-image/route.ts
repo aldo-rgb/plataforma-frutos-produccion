@@ -24,42 +24,66 @@ function getSupabaseClient() {
 }
 
 export async function POST(req: NextRequest) {
+  logger.debug('📷 POST /api/upload/profile-image - Iniciando');
+  
   try {
     // Verificar autenticación
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
+      logger.warn('❌ No hay sesión de usuario');
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
+
+    logger.debug('✅ Usuario autenticado:', session.user.id);
 
     // Obtener el archivo del FormData
     const formData = await req.formData();
     const file = formData.get('file') as File;
 
     if (!file) {
+      logger.warn('❌ No se proporcionó archivo');
       return NextResponse.json({ error: 'No se proporcionó archivo' }, { status: 400 });
     }
 
+    logger.debug('📁 Archivo recibido:', file.name, 'tipo:', file.type, 'tamaño:', file.size);
+
     // Validar tipo de archivo
     if (!file.type.startsWith('image/')) {
+      logger.warn('❌ Tipo de archivo inválido:', file.type);
       return NextResponse.json({ error: 'El archivo debe ser una imagen' }, { status: 400 });
     }
 
-    // Validar tamaño (10MB máximo)
-    if (file.size > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: 'La imagen no puede superar los 10MB' }, { status: 400 });
+    // Validar tamaño (5MB máximo - límite de Supabase storage)
+    if (file.size > 5 * 1024 * 1024) {
+      logger.warn('❌ Archivo muy grande:', file.size);
+      return NextResponse.json({ error: 'La imagen no puede superar los 5MB' }, { status: 400 });
     }
 
     // Generar nombre único para el archivo
-    const fileExt = file.name.split('.').pop();
+    const fileExt = file.name.split('.').pop() || 'jpg';
     const fileName = `${session.user.id}-${Date.now()}.${fileExt}`;
     const filePath = `profile-images/${fileName}`;
+
+    logger.debug('📂 Subiendo a:', filePath);
 
     // Convertir el archivo a ArrayBuffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
+    logger.debug('📊 Buffer size:', buffer.length);
+
     // Subir a Supabase Storage
-    const { data, error } = await getSupabaseClient().storage
+    let supabaseClient;
+    try {
+      supabaseClient = getSupabaseClient();
+    } catch (configError: any) {
+      logger.error('❌ Error de configuración Supabase:', configError.message);
+      return NextResponse.json({ 
+        error: 'Servicio de almacenamiento no configurado. Contacta soporte.' 
+      }, { status: 503 });
+    }
+
+    const { data, error } = await supabaseClient.storage
       .from('mentor-assets')
       .upload(filePath, buffer, {
         contentType: file.type,
@@ -67,14 +91,20 @@ export async function POST(req: NextRequest) {
       });
 
     if (error) {
-      logger.error('Error subiendo a Supabase:', error);
-      return NextResponse.json({ error: 'Error al subir la imagen' }, { status: 500 });
+      logger.error('❌ Error subiendo a Supabase:', error.message, error);
+      return NextResponse.json({ 
+        error: `Error al subir la imagen: ${error.message}` 
+      }, { status: 500 });
     }
 
+    logger.debug('✅ Archivo subido exitosamente');
+
     // Obtener URL pública
-    const { data: { publicUrl } } = getSupabaseClient().storage
+    const { data: { publicUrl } } = supabaseClient.storage
       .from('mentor-assets')
       .getPublicUrl(filePath);
+
+    logger.debug('🔗 URL pública:', publicUrl);
 
     // Obtener usuario actual para guardar foto anterior en vault
     const usuario = await prisma.usuario.findUnique({

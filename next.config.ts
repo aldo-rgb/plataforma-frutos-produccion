@@ -40,8 +40,8 @@ const nextConfig: NextConfig = {
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
           // Política de referrer
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-          // Permisos de APIs del navegador
-          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          // Permisos de APIs del navegador - camera=(self) para permitir selfies
+          { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=()' },
           // Content Security Policy
           { key: 'Content-Security-Policy', value: ContentSecurityPolicy },
         ],

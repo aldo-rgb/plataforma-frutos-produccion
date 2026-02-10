@@ -105,46 +105,64 @@ export default function QuantumIdentityModal({
       // Modo sin IA: subir foto directamente como perfil
       setStage('generating');
       try {
+        console.log('📷 Iniciando subida de foto sin IA...');
+        console.log('  - Photo length:', photos[0]?.length || 0);
+        
         // Convertir base64 a blob
         const response = await fetch(photos[0]);
         const blob = await response.blob();
+        console.log('  - Blob size:', blob.size, 'type:', blob.type);
+        
         const file = new File([blob], 'profile.jpg', { type: 'image/jpeg' });
 
         const formData = new FormData();
         formData.append('file', file);
         formData.append('type', 'profile-upload');
 
+        console.log('📤 Enviando a /api/upload/profile-image...');
         const uploadRes = await fetch('/api/upload/profile-image', {
           method: 'POST',
           body: formData
         });
 
         if (!uploadRes.ok) {
-          throw new Error('Error al subir imagen');
+          const errorData = await uploadRes.json().catch(() => ({ error: 'Error desconocido' }));
+          console.error('❌ Error en upload:', uploadRes.status, errorData);
+          throw new Error(errorData.error || `Error ${uploadRes.status} al subir imagen`);
         }
 
         const { url: uploadedUrl } = await uploadRes.json();
+        console.log('✅ Imagen subida:', uploadedUrl);
 
         // Actualizar perfil
-        await fetch('/api/user/profile', {
+        const profileRes = await fetch('/api/user/profile', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ profileImage: uploadedUrl })
         });
+        
+        if (!profileRes.ok) {
+          console.warn('⚠️ Error actualizando perfil, pero la imagen se subió');
+        }
 
         setAvatarUrl(uploadedUrl);
         setStage('reveal');
         clearCooldown();
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error uploading photo:', error);
         setErrorTitle('Error al subir foto');
-        setErrorMessage('No se pudo subir la fotografía');
+        setErrorMessage(error.message || 'No se pudo subir la fotografía');
         setStage('error');
       }
     } else {
       // Modo con IA: generar avatar con múltiples fotos
       setStage('generating');
       try {
+        console.log('🤖 Iniciando generación con IA...');
+        console.log('  - Número de fotos:', photos.length);
+        console.log('  - Gender:', gender);
+        console.log('  - Designation:', selectedCandidate?.designation);
+        
         const res = await fetch('/api/avatar/generate-from-selfie', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -160,12 +178,16 @@ export default function QuantumIdentityModal({
           })
         });
 
+        console.log('📥 Respuesta:', res.status);
+        
         if (!res.ok) {
-          const error = await res.json().catch(() => ({ error: 'Error desconocido' }));
-          throw new Error(error.error || 'Error generando avatar');
+          const errorData = await res.json().catch(() => ({ error: 'Error desconocido' }));
+          console.error('❌ Error del servidor:', errorData);
+          throw new Error(errorData.error || errorData.message || `Error ${res.status} generando avatar`);
         }
 
         const data = await res.json();
+        console.log('✅ Avatar generado:', data.avatarUrl?.substring(0, 50) + '...');
         
         if (!data.avatarUrl) {
           throw new Error('No se recibió URL del avatar');
@@ -196,10 +218,10 @@ export default function QuantumIdentityModal({
       return;
     }
 
-    // Validar tamaño (máximo 10MB)
-    if (file.size > 10 * 1024 * 1024) {
+    // Validar tamaño (máximo 5MB - límite de Supabase)
+    if (file.size > 5 * 1024 * 1024) {
       setErrorTitle('Archivo muy grande');
-      setErrorMessage('La imagen no debe superar los 10MB');
+      setErrorMessage('La imagen no debe superar los 5MB');
       setStage('error');
       return;
     }
