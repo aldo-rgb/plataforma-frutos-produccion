@@ -83,7 +83,7 @@ export async function GET() {
           MentorPackageOrder: {
             select: {
               mentorId: true,
-              Mentor: {
+              Usuario_MentorPackageOrder_mentorIdToUsuario: {
                 select: {
                   id: true,
                   nombre: true,
@@ -96,7 +96,9 @@ export async function GET() {
         }
       });
 
-      if (packageCredits && packageCredits.MentorPackageOrder.Mentor) {
+      const loboMentor = packageCredits?.MentorPackageOrder?.Usuario_MentorPackageOrder_mentorIdToUsuario;
+      
+      if (packageCredits && loboMentor) {
         // Usuario tiene Lobo Solitario activo
         // Verificar si ya tiene sesiones agendadas (CallBooking sin programEnrollmentId)
         const scheduledSessions = await prisma.callBooking.findMany({
@@ -139,7 +141,11 @@ export async function GET() {
           message: needsScheduling ? 'Necesitas agendar tus sesiones semanales' : 'Programa Lobo Solitario activo',
           userTier: usuario?.tier || 'FREE',
           userRole: usuario?.rol,
-          mentor: packageCredits.MentorPackageOrder.Mentor,
+          mentor: {
+            id: loboMentor.id,
+            nombre: loboMentor.nombre,
+            profileImage: loboMentor.profileImage || loboMentor.imagen || '/default-avatar.svg'
+          },
           stats: {
             totalWeeks: 9, // Lobo Solitario = 9 semanas (63 días)
             totalSessions: 18, // 9 semanas × 2 sesiones/semana
@@ -153,6 +159,24 @@ export async function GET() {
             remainingSessions: packageCredits.remainingSessions,
             usedSessions: packageCredits.usedSessions,
             expiresAt: packageCredits.expiresAt
+          }
+        });
+      }
+      
+      // 🆕 Si no tiene enrollment ni Lobo Solitario, pero tiene mentor asignado
+      const assignedMentor = usuario?.Usuario_Usuario_assignedMentorIdToUsuario;
+      if (assignedMentor) {
+        return NextResponse.json({ 
+          hasEnrollment: false,
+          hasLoboSolitario: true, // Tratarlo como Lobo Solitario para mostrar UI correcta
+          needsScheduling: true, // Necesita agendar sesiones
+          message: 'Tienes un mentor asignado. Agenda tus sesiones.',
+          userTier: usuario?.tier || 'FREE',
+          userRole: usuario?.rol,
+          mentor: {
+            id: assignedMentor.id,
+            nombre: assignedMentor.nombre,
+            profileImage: assignedMentor.profileImage || assignedMentor.imagen || '/default-avatar.svg'
           }
         });
       }
