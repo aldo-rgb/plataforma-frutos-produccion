@@ -184,7 +184,18 @@ export async function POST(request: NextRequest) {
           }
         });
         
+        // *** ACTUALIZAR TIER DEL USUARIO A STANDARD ***
+        // Al activar licencia en check-in, el usuario obtiene tier STANDARD
+        await prisma.usuario.update({
+          where: { id: user.id },
+          data: {
+            tier: 'STANDARD',
+            subscriptionStatus: 'ACTIVE'
+          }
+        });
+        
         logger.debug(`✅ LicenseAssignment creado para usuario ${user.nombre} (ID: ${user.id}) en org ${organization.name}`);
+        logger.debug(`⬆️ Tier actualizado a STANDARD para usuario ${user.nombre}`);
       }
     }
 

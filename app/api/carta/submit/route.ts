@@ -58,16 +58,38 @@ export async function POST(req: Request) {
     });
 
     // 🎫 VERIFICAR PRIMERO SI TIENE LICENCIA ASIGNADA (mayor prioridad)
+    // Buscar licencia activa (activada o no activada)
     const licenseAssignment = await prisma.licenseAssignment.findFirst({
       where: {
         userId: userId,
-        isActive: true,
-        activatedAt: null // Licencia no activada aún
+        isActive: true
       },
       include: {
         Vision: true
       }
     });
+
+    // También verificar vision_enrollments con pago completado (BASIC, ADVANCED o PL)
+    const paidVisionEnrollment = await prisma.vision_enrollments.findFirst({
+      where: {
+        userId: userId,
+        paymentStatus: 'PAID',
+        level: {
+          in: ['BASIC', 'ADVANCED', 'PL']
+        }
+      },
+      include: {
+        Vision: {
+          select: { id: true, nombre: true, organizationId: true }
+        }
+      }
+    });
+
+    // Usuario tiene licencia válida si tiene LicenseAssignment o VisionEnrollment pagado
+    const hasValidLicense = !!licenseAssignment || !!paidVisionEnrollment;
+    
+    // Verificar si es usuario PL (solo Liderato, sin BASIC ni ADVANCED)
+    const isPLOnlyUser = paidVisionEnrollment?.level === 'PL' && !licenseAssignment;
 
     // ========== VALIDACIÓN USUARIOS DE VISION: MENTOR OBLIGATORIO ==========
     // Verificar si el usuario pertenece a una Vision (grupo)
@@ -134,14 +156,14 @@ export async function POST(req: Request) {
       logger.debug('🔍 Validación de licencia - Usuario:', userId);
       logger.debug('   Tier:', userTier);
       logger.debug('   Suscripción:', usuario.suscripcion);
-      logger.debug('   Tiene licencia asignada:', !!licenseAssignment);
+      logger.debug('   Tiene licencia válida:', hasValidLicense);
       logger.debug('   Pertenece a Vision:', perteneceAVision);
       logger.debug('   Tiene mentor:', !!mentorId);
       
-      // 🎫 Si tiene LICENCIA ASIGNADA de organización, permitir envío
-      if (licenseAssignment) {
-        logger.debug('🎫 Usuario tiene licencia de organización asignada - Permitiendo envío');
-        // La licencia se activará después de validar y enviar la carta al mentor
+      // 🎫 Si tiene LICENCIA VÁLIDA (LicenseAssignment o VisionEnrollment pagado), permitir envío
+      if (hasValidLicense) {
+        logger.debug('🎫 Usuario tiene licencia válida - Permitiendo envío');
+        // La carta será enviada al mentor para revisión
       } 
       // ✅ Usuario graduado FREE que confirmó continuar sin mentor -> Auto-aprobar
       else if (isGraduatedFreeUser && data.continueWithoutMentor) {
@@ -160,7 +182,7 @@ export async function POST(req: Request) {
       }
       // ✅ STANDARD o PREMIUM (ACTIVO o INACTIVO) -> Enviar a mentor
       else if (userTier === 'STANDARD' || userTier === 'PREMIUM') {
-        logger.debug(`✅ Usuario ${userTier} - Permitiendo envío a mentor (sin importar si está activo o inactivo)`);
+        logger.debug(\`✅ Usuario \${userTier} - Permitiendo envío a mentor (sin importar si está activo o inactivo)\`);
         // Continuar con el flujo normal de envío al mentor
       }
       // ❌ Cualquier otro caso -> Por seguridad, redirigir a pricing
@@ -300,26 +322,73 @@ export async function POST(req: Request) {
 
     // 🎫 ACTIVAR LICENCIA: Marcar la licencia como activada y actualizar tier del usuario
     if (licenseAssignment) {
-      // Activar la licencia
-      await prisma.licenseAssignment.update({
-        where: { id: licenseAssignment.id },
-        data: {
-          activatedAt: new Date(),
-          expiresAt: null // Ya no expira porque fue activada
-        }
-      });
+      // Solo activar si no ha sido activada aún
+      if (!licenseAssignment.activatedAt) {
+        await prisma.licenseAssignment.update({
+          where: { id: licenseAssignment.id },
+          data: {
+            activatedAt: new Date(),
+            expiresAt: null // Ya no expira porque fue activada
+          }
+        });
+        
+        // Actualizar el tier del usuario a STANDARD y activar suscripción
+        await prisma.usuario.update({
+          where: { id: userId },
+          data: { 
+            tier: 'STANDARD',
+            subscriptionStatus: 'ACTIVE'
+          }
+        });
+        
+        logger.debug('🎫 Licencia activada para usuario:', userId, '- Vision:', licenseAssignment.Vision?.nombre || 'N/A');
+        logger.debug('⬆️ Tier actualizado a STANDARD y suscripción activada');
+      }
+    }
+    // 🎫 CASO ESPECIAL: Usuarios PL (solo Liderato) - Activar licencia al enviar carta
+    else if (isPLOnlyUser && paidVisionEnrollment) {
+      const organizationId = paidVisionEnrollment.Vision?.organizationId;
+      const visionId = paidVisionEnrollment.visionId;
       
-      // Actualizar el tier del usuario a STANDARD y activar suscripción
-      await prisma.usuario.update({
-        where: { id: userId },
-        data: { 
-          tier: 'STANDARD',
-          suscripcion: 'ACTIVO'
-        }
-      });
-      
-      logger.debug('🎫 Licencia activada para usuario:', userId, '- Vision:', licenseAssignment.Vision?.nombre || 'N/A');
-      logger.debug('⬆️ Tier actualizado a STANDARD y suscripción activada');
+      if (organizationId) {
+        // Crear LicenseAssignment para usuario PL
+        const licenseCode = `LIC-${organizationId}-${userId}-${Date.now()}`;
+        
+        await prisma.licenseAssignment.create({
+          data: {
+            userId: userId,
+            organizationId: organizationId,
+            visionId: visionId,
+            licenseCode: licenseCode,
+            assignedBy: userId,
+            isActive: true,
+            activatedAt: new Date(),
+            notes: `Activado automáticamente al enviar carta - Usuario PL (solo Liderato)`
+          }
+        });
+        
+        // Consumir licencia de la organización
+        await prisma.organization.update({
+          where: { id: organizationId },
+          data: {
+            licensesAvailable: { decrement: 1 },
+            activeLicenses: { increment: 1 }
+          }
+        });
+        
+        // Actualizar tier del usuario a STANDARD
+        await prisma.usuario.update({
+          where: { id: userId },
+          data: { 
+            tier: 'STANDARD',
+            subscriptionStatus: 'ACTIVE'
+          }
+        });
+        
+        logger.debug('🎫 Licencia PL creada y activada para usuario:', userId);
+        logger.debug('🏢 Licencia consumida de organización:', organizationId);
+        logger.debug('⬆️ Tier actualizado a STANDARD');
+      }
     }
 
     logger.debug('✅ Wizard marcado como completado para usuario:', userId);

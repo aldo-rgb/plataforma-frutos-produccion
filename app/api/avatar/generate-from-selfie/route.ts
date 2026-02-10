@@ -179,12 +179,12 @@ export async function POST(request: NextRequest) {
     // Vibes por defecto (sin arquetipo específico)
     const vibePrompts: Record<string, { positive: string; negative: string }> = {
       cyberpunk: {
-        positive: `digital comic book illustration of img, stylized animated ${genderDescriptor} character, cyberpunk aesthetic, vibrant colors, bold clean lines, anime-western fusion art style, cel-shaded skin, futuristic tech-wear with glowing cyan and purple circuits, holographic displays, neon city background, dynamic waist-up portrait, high quality digital art, artstation, not a photograph`,
-        negative: 'photorealistic, real photo, photography, realistic skin, 3D render, unreal engine, muted colors, dark gritty, weapons, guns, aggressive, ugly, deformed, bad anatomy, watermark, text, blurry, low quality, multiple people'
+        positive: `digital comic book illustration of img, stylized animated ${genderDescriptor} character, face visible, no helmet, no mask, head uncovered, cyberpunk aesthetic, vibrant colors, bold clean lines, anime-western fusion art style, cel-shaded skin, futuristic tech-wear with glowing cyan and purple circuits, holographic displays, neon city background, dynamic waist-up portrait, high quality digital art, artstation, not a photograph`,
+        negative: 'helmet, mask, covered face, headgear, hood covering face, visor, photorealistic, real photo, photography, realistic skin, 3D render, unreal engine, muted colors, dark gritty, weapons, guns, aggressive, ugly, deformed, bad anatomy, watermark, text, blurry, low quality, multiple people'
       },
       mystic: {
-        positive: `digital comic book illustration of img, stylized animated ${genderDescriptor} mystic character, ethereal magical aesthetic, vibrant colors, bold clean lines, anime-western fusion art style, cel-shaded skin, flowing mystical robes with glowing runes, magical particles, cosmic sanctuary background, dynamic waist-up portrait, high quality digital art, artstation, not a photograph`,
-        negative: 'photorealistic, real photo, photography, realistic skin, 3D render, unreal engine, muted colors, dark gritty, weapons, guns, aggressive, ugly, deformed, bad anatomy, watermark, text, blurry, low quality, multiple people'
+        positive: `digital comic book illustration of img, stylized animated ${genderDescriptor} mystic character, face visible, no helmet, no mask, head uncovered, ethereal magical aesthetic, vibrant colors, bold clean lines, anime-western fusion art style, cel-shaded skin, flowing mystical robes with glowing runes, magical particles, cosmic sanctuary background, dynamic waist-up portrait, high quality digital art, artstation, not a photograph`,
+        negative: 'helmet, mask, covered face, headgear, hood covering face, visor, photorealistic, real photo, photography, realistic skin, 3D render, unreal engine, muted colors, dark gritty, weapons, guns, aggressive, ugly, deformed, bad anatomy, watermark, text, blurry, low quality, multiple people'
       }
     };
 
@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
       const outfits: Record<string, string> = {
         'SCOUT': 'illustrated tactical exploration suit in matte grey with glowing cyan geometric accents, sleek shoulder guards with luminescent circuit patterns, rendered with bold colors and clean highlights',
         'ARCHIVIST': 'illustrated sophisticated long coat with structured shoulders, glowing electric blue data-ports on the chest, circuitry lines flowing down the sleeves, painted with sharp clean lines',
-        'HUNTER': 'illustrated sleek stealth bodysuit with dark purple and red reinforced armor plates, integrated hooded cowl with subtle neon lining, rendered as stylized drawings',
+        'HUNTER': 'illustrated sleek stealth bodysuit with dark purple and red reinforced armor plates, high tactical collar with subtle neon lining, rendered as stylized drawings',
         'ARCHITECT': 'illustrated elegant futuristic formal suit with sharp angular shoulders, geometric crystalline tie with white and gold glow, structured blazer with glowing seams',
         'BIOHACKER': 'illustrated pristine white laboratory tactical suit with neon-green glowing accents, integrated diagnostic displays on forearms, biomechanical patterns rendered with bold lines',
         'SENTINEL': 'illustrated heavy-duty tactical armor with metallic silver finish, hexagonal armor plates with glowing energy conduits, painted with dramatic highlights',
@@ -289,10 +289,11 @@ export async function POST(request: NextRequest) {
       // PROMPT MAESTRO - Estilo Comic Book Animado Digital
       // Para PhotoMaker-Style: usar "img" como trigger word
       // Estilo: Ilustración digital vibrante tipo película animada
+      // IMPORTANTE: Sin casco ni máscara - cara visible siempre
       // ═══════════════════════════════════════════════════════════════
-      promptToUse = `digital comic book illustration of img, stylized animated character portrait, ${genderDescriptor} ${characterRole}, vibrant colors, bold clean lines, anime-western fusion art style, cel-shaded skin, ${outfit}, ${accessory}, glowing ${accentColor} neon accents, holographic elements, ${background}, dynamic waist-up composition, high quality digital art, artstation, painterly finish, not a photograph`;
+      promptToUse = `digital comic book illustration of img, stylized animated character portrait, ${genderDescriptor} ${characterRole}, face visible, no helmet, no mask, head uncovered, vibrant colors, bold clean lines, anime-western fusion art style, cel-shaded skin, ${outfit}, ${accessory}, glowing ${accentColor} neon accents, holographic elements, ${background}, dynamic waist-up composition, high quality digital art, artstation, painterly finish, not a photograph`;
     
-      negativePromptToUse = 'photorealistic, real photo, photography, realistic skin, realistic fabric, 3D render, unreal engine, muted colors, dark gritty, weapons, guns, aggressive, ugly, deformed, bad anatomy, watermark, text, blurry, low quality, cropped, multiple people, bad hands';
+      negativePromptToUse = 'helmet, mask, covered face, headgear, hood covering face, visor, photorealistic, real photo, photography, realistic skin, realistic fabric, 3D render, unreal engine, muted colors, dark gritty, weapons, guns, aggressive, ugly, deformed, bad anatomy, watermark, text, blurry, low quality, cropped, multiple people, bad hands';
       
       logger.debug('🎨 Prompt Comic Book Animado para PhotoMaker');
       logger.debug('🏢 Designación:', designation);
