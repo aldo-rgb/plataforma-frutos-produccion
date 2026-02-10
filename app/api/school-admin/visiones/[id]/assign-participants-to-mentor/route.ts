@@ -61,8 +61,12 @@ export async function POST(
       );
     }
 
-    // 🚫 VALIDAR LÍMITE DE PAQUETES PARA MENTORES PROFESIONALES (no LIDER)
-    if (mentor.rol !== 'LIDER') {
+    // 🚫 VALIDAR LÍMITE DE PAQUETES 
+    // Los LIDER de la misma organización no necesitan paquetes
+    // Cualquier otro mentor (MENTOR, TRAINER, SCHOOL_ADMIN con esMentor) necesita paquetes contratados
+    const esLiderInterno = mentor.rol === 'LIDER' && mentor.organizationId === vision.organizationId;
+    
+    if (!esLiderInterno) {
       // Obtener paquetes contratados para este mentor en esta visión
       const paquetesContratados = await prisma.mentorPackageOrder.findMany({
         where: {
@@ -75,20 +79,31 @@ export async function POST(
 
       const totalPaquetes = paquetesContratados.reduce((sum, p) => sum + p.cantidad, 0);
 
-      // Contar usuarios ya asignados a este mentor en esta visión
-      const usuariosAsignados = await prisma.vision_enrollments.count({
+      // Contar usuarios ya asignados a este mentor EN ESTA VISIÓN
+      // Usamos VisionParticipante y VisionGameChanger en lugar de vision_enrollments
+      const participantesAsignados = await prisma.visionParticipante.count({
         where: {
           visionId,
-          level: 'PL',
-          enrollmentStatus: { in: ['ENROLLED', 'ACTIVE', 'COMPLETED'] },
-          Usuario_vision_enrollments_userIdToUsuario: {
+          Usuario_VisionParticipante_participanteIdToUsuario: {
             assignedMentorId: mentorId
           }
         }
       });
+      
+      const gameChangersAsignados = await prisma.visionGameChanger.count({
+        where: {
+          visionId,
+          Usuario_VisionGameChanger_gameChangerIdToUsuario: {
+            assignedMentorId: mentorId
+          }
+        }
+      });
+      
+      const usuariosAsignados = participantesAsignados + gameChangersAsignados;
 
-      // Si no hay paquetes contratados para mentores profesionales, no permitir
+      // Si tiene paquetes, validar límite. Si no tiene paquetes, solo permitir si es rol MENTOR con 0 asignados (para pruebas)
       if (totalPaquetes === 0) {
+        // Para mentores sin paquetes, mostrar error
         return NextResponse.json(
           { 
             error: `No hay paquetes contratados para el mentor "${mentor.nombre}" en esta visión.`,
@@ -115,6 +130,8 @@ export async function POST(
           { status: 400 }
         );
       }
+      
+      logger.info(`✅ Mentor ${mentor.nombre} tiene ${espaciosDisponibles} espacios disponibles de ${totalPaquetes} paquetes`);
     }
 
     // Asignar mentor a todos los usuarios
