@@ -8,6 +8,7 @@ interface Participante {
   nombre: string;
   email: string;
   profileImage: string | null;
+  rol: 'PARTICIPANTE' | 'GAMECHANGER';
   enrollment: {
     id: number;
     missedCallsCount: number;
@@ -219,8 +220,13 @@ export default function WidgetDisciplinaV2() {
             {participantes.filter(p => p.llamadaHoy && p.llamadaHoy.attendanceStatus === 'PENDING').length} Hoy
           </span>
           <span className="bg-orange-900/30 text-orange-400 px-3 py-1 rounded-full text-xs font-bold border border-orange-500/30">
-            {participantes.length} Total
+            {participantes.filter(p => p.rol === 'PARTICIPANTE').length} Participantes
           </span>
+          {participantes.filter(p => p.rol === 'GAMECHANGER').length > 0 && (
+            <span className="bg-gradient-to-r from-yellow-900/30 to-orange-900/30 text-yellow-400 px-3 py-1 rounded-full text-xs font-bold border border-yellow-500/30">
+              {participantes.filter(p => p.rol === 'GAMECHANGER').length} GameChangers
+            </span>
+          )}
           <button
             onClick={cargarParticipantes}
             className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
@@ -283,7 +289,14 @@ export default function WidgetDisciplinaV2() {
                     </div>
                     
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-gray-200 text-sm truncate">{participante.nombre}</h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-gray-200 text-sm truncate">{participante.nombre}</h4>
+                        {participante.rol === 'GAMECHANGER' && (
+                          <span className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 text-yellow-400 text-[10px] px-2 py-0.5 rounded-full border border-yellow-500/30 font-bold uppercase">
+                            GameChanger
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-500 truncate">{participante.email}</p>
                       
                       {/* Sistema de Vidas */}

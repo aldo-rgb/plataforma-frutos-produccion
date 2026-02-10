@@ -535,29 +535,9 @@ export async function POST(request: Request) {
       }
     });
 
-    // Si tiene enrollment, verificar cuántas sesiones ACTIVAS tiene
+    // Si tiene enrollment activo, lo reutilizaremos (las llamadas se eliminarán y recrearán)
     if (existingEnrollment) {
-      const activeSessionsCount = await prisma.callBooking.count({
-        where: {
-          programEnrollmentId: existingEnrollment.id,
-          status: {
-            in: ['PENDING', 'CONFIRMED']
-          }
-        }
-      });
-
-      // Calcular cuántas sesiones debería tener
-      let expectedSessions = (existingEnrollment.totalWeeks || 8) * 2;
-      
-      // Si tiene todas las sesiones activas agendadas, no puede crear más
-      if (activeSessionsCount >= expectedSessions) {
-        return NextResponse.json({ 
-          error: 'Ya tienes un programa activo con sesiones agendadas. Complétalo antes de inscribirte a otro.' 
-        }, { status: 409 });
-      }
-      
-      // Si tiene menos sesiones de las esperadas, puede completarlas
-      logger.debug(`✅ Usuario tiene ${activeSessionsCount} de ${expectedSessions} sesiones. Puede completar.`);
+      logger.debug(`📋 Usuario tiene enrollment existente ID=${existingEnrollment.id}. Se reutilizará y reagendará.`);
     }
 
     // Si tiene enrollment sin sesiones (mentor fue cambiado), reutilizarlo
@@ -602,6 +582,20 @@ export async function POST(request: Request) {
     const result = await prisma.$transaction(async (tx) => {
       let enrollment = null;
       
+      // Si el usuario ya tiene llamadas PENDING con este mentor, eliminarlas primero
+      // para evitar conflictos con el constraint único (mentorId, scheduledAt)
+      const deletedBookings = await tx.callBooking.deleteMany({
+        where: {
+          studentId: session.user.id,
+          status: { in: ['PENDING', 'CONFIRMED'] },
+          type: 'DISCIPLINE'
+        }
+      });
+      
+      if (deletedBookings.count > 0) {
+        logger.debug(`🗑️ Eliminadas ${deletedBookings.count} llamadas previas para reagendamiento`);
+      }
+      
       // Solo crear/reutilizar enrollment si NO es Lobo Solitario
       if (!isLoboSolitario) {
         if (enrollmentToUse) {
@@ -611,10 +605,11 @@ export async function POST(request: Request) {
             where: { id: enrollmentToUse.id },
             data: {
               mentorId: Number(mentorId),
-              // Mantener las fechas originales del ciclo
-              startDate: enrollmentToUse.startDate || startDate,
-              endDate: enrollmentToUse.endDate || endDate,
-              totalWeeks: enrollmentToUse.totalWeeks || totalWeeks
+              // Reiniciar para nuevo ciclo
+              startDate,
+              endDate,
+              totalWeeks,
+              missedCallsCount: 0 // Reiniciar strikes al reagendar
             }
           });
         } else {

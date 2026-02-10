@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Usuario no es mentor' }, { status: 403 });
     }
 
-    // Obtener todos los participantes con ProgramEnrollment activo de este mentor
+    // Obtener todos los participantes Y GameChangers con ProgramEnrollment activo de este mentor
     const participantes = await prisma.usuario.findMany({
       where: {
         AND: [
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
               }
             ]
           },
-          { rol: 'PARTICIPANTE' },
+          { rol: { in: ['PARTICIPANTE', 'GAMECHANGER'] } }, // Incluir ambos roles
           { isActive: true }
         ]
       },
@@ -95,6 +95,7 @@ export async function GET(request: NextRequest) {
           nombre: participante.nombre || 'Sin nombre',
           email: participante.email,
           profileImage: participante.profileImage,
+          rol: participante.rol, // Incluir rol para distinguir PARTICIPANTE vs GAMECHANGER
           enrollment: {
             id: enrollment.id,
             missedCallsCount: enrollment.missedCallsCount || 0,
