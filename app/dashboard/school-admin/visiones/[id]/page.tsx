@@ -562,6 +562,13 @@ export default function VisionDetailPage() {
   const handleAssignParticipantsToMentor = async () => {
     if (!selectedMentorForAssign || selectedParticipantsForMentor.size === 0) return;
 
+    const userIdsArray = Array.from(selectedParticipantsForMentor);
+    console.log('🔄 Enviando asignación:', {
+      mentorId: selectedMentorForAssign.id,
+      mentorNombre: selectedMentorForAssign.nombre,
+      userIds: userIdsArray
+    });
+
     try {
       setAssigningParticipantsToMentor(true);
 
@@ -570,11 +577,12 @@ export default function VisionDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mentorId: selectedMentorForAssign.id,
-          userIds: Array.from(selectedParticipantsForMentor)
+          userIds: userIdsArray
         })
       });
 
       const data = await res.json();
+      console.log('📥 Respuesta del servidor:', data);
 
       if (data.success) {
         showToast({

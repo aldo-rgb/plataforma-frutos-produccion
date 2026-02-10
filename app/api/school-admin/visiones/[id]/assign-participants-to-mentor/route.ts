@@ -13,7 +13,10 @@ export async function POST(
     const body = await request.json();
     const { mentorId, userIds } = body; // userIds es un array de IDs
 
+    logger.info(`🔄 Asignando participantes a mentor - visionId: ${visionId}, mentorId: ${mentorId}, userIds: ${JSON.stringify(userIds)}`);
+
     if (isNaN(visionId) || !mentorId || !userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      logger.error('❌ Datos incompletos:', { visionId, mentorId, userIds });
       return NextResponse.json(
         { error: 'Datos incompletos. Se requiere mentorId y un array de userIds.' },
         { status: 400 }
