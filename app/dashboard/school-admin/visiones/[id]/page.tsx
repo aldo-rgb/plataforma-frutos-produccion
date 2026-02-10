@@ -263,6 +263,12 @@ export default function VisionDetailPage() {
   const [showPlCaptainModal, setShowPlCaptainModal] = useState(false);
   const [plCaptain, setPlCaptain] = useState<{id: number, nombre: string, email: string, imagen: string | null} | null>(null);
   const [assigningPlCaptain, setAssigningPlCaptain] = useState(false);
+  // Estados para modal de asignar participantes a mentor
+  const [showAssignParticipantsModal, setShowAssignParticipantsModal] = useState(false);
+  const [selectedMentorForAssign, setSelectedMentorForAssign] = useState<{id: number, nombre: string} | null>(null);
+  const [participantSearchQuery, setParticipantSearchQuery] = useState('');
+  const [selectedParticipantsForMentor, setSelectedParticipantsForMentor] = useState<Set<number>>(new Set());
+  const [assigningParticipantsToMentor, setAssigningParticipantsToMentor] = useState(false);
   const { showToast, toasts } = useToast();
 
   useEffect(() => {
@@ -531,6 +537,117 @@ export default function VisionDetailPage() {
     } finally {
       setReplacingMentor(false);
     }
+  };
+
+  // Función para abrir el modal de asignar participantes a un mentor
+  const handleOpenAssignParticipantsModal = (mentorId: number, mentorNombre: string) => {
+    setSelectedMentorForAssign({ id: mentorId, nombre: mentorNombre });
+    setParticipantSearchQuery('');
+    setSelectedParticipantsForMentor(new Set());
+    setShowAssignParticipantsModal(true);
+  };
+
+  // Función para toggle de selección de participante
+  const handleToggleParticipantForMentor = (userId: number) => {
+    const newSelected = new Set(selectedParticipantsForMentor);
+    if (newSelected.has(userId)) {
+      newSelected.delete(userId);
+    } else {
+      newSelected.add(userId);
+    }
+    setSelectedParticipantsForMentor(newSelected);
+  };
+
+  // Función para asignar participantes seleccionados al mentor
+  const handleAssignParticipantsToMentor = async () => {
+    if (!selectedMentorForAssign || selectedParticipantsForMentor.size === 0) return;
+
+    try {
+      setAssigningParticipantsToMentor(true);
+
+      const res = await fetch(`/api/school-admin/visiones/${visionId}/assign-participants-to-mentor`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mentorId: selectedMentorForAssign.id,
+          userIds: Array.from(selectedParticipantsForMentor)
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        showToast({
+          message: `✅ ${data.message}`,
+          type: 'success',
+          duration: 5000
+        });
+
+        if (data.results?.errors?.length > 0) {
+          showToast({
+            message: `⚠️ ${data.results.errors.length} error(es): ${data.results.errors.map((e: any) => e.error).join(', ')}`,
+            type: 'warning',
+            duration: 8000
+          });
+        }
+
+        // Cerrar modal y refrescar datos
+        setShowAssignParticipantsModal(false);
+        setSelectedMentorForAssign(null);
+        setSelectedParticipantsForMentor(new Set());
+        fetchVisionDetails();
+      } else {
+        showToast({
+          message: data.error || 'Error al asignar participantes',
+          type: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Error asignando participantes:', error);
+      showToast({
+        message: 'Error al asignar participantes',
+        type: 'error'
+      });
+    } finally {
+      setAssigningParticipantsToMentor(false);
+    }
+  };
+
+  // Filtrar participantes y gamechangers para el modal de asignación
+  const getFilteredParticipantsForAssign = () => {
+    const query = participantSearchQuery.toLowerCase().trim();
+    const mentorId = selectedMentorForAssign?.id;
+    
+    // Combinar participantes y gamechangers
+    const allUsers = [
+      ...participantes.map(p => ({
+        id: p.Usuario_VisionParticipante_participanteIdToUsuario.id,
+        nombre: p.Usuario_VisionParticipante_participanteIdToUsuario.nombre,
+        email: p.Usuario_VisionParticipante_participanteIdToUsuario.email,
+        tipo: 'Participante' as const,
+        assignedMentorId: p.Usuario_VisionParticipante_participanteIdToUsuario.assignedMentorId,
+        assignedMentorNombre: p.Usuario_VisionParticipante_participanteIdToUsuario.Usuario_Usuario_assignedMentorIdToUsuario?.nombre || null
+      })),
+      ...gameChangers.map(gc => ({
+        id: gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.id,
+        nombre: gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.nombre,
+        email: gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.email,
+        tipo: 'GameChanger' as const,
+        assignedMentorId: gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.assignedMentorId,
+        assignedMentorNombre: gc.Usuario_VisionGameChanger_gameChangerIdToUsuario.Usuario_Usuario_assignedMentorIdToUsuario?.nombre || null
+      }))
+    ];
+
+    // Filtrar por búsqueda
+    let filtered = allUsers;
+    if (query) {
+      filtered = allUsers.filter(u => 
+        u.nombre.toLowerCase().includes(query) || 
+        u.email.toLowerCase().includes(query)
+      );
+    }
+
+    return filtered;
   };
 
   const handleToggleUser = (userId: number) => {
@@ -1821,6 +1938,18 @@ export default function VisionDetailPage() {
                                 <p className="text-sm text-slate-400 mt-0.5">{usuario?.email}</p>
                                 
                                 <div className="flex items-center gap-4 mt-2">
+                                  <div className="flex items-center gap-1 text-xs text-cyan-400">
+                                    <span>👥</span>
+                                    <span>Relaciones</span>
+                                    <span className="ml-1 px-1.5 py-0.5 bg-cyan-500/30 text-cyan-300 rounded font-semibold">
+                                      {[...participantes, ...gameChangers].filter(p => {
+                                        const user = 'Usuario_VisionParticipante_participanteIdToUsuario' in p 
+                                          ? p.Usuario_VisionParticipante_participanteIdToUsuario 
+                                          : p.Usuario_VisionGameChanger_gameChangerIdToUsuario;
+                                        return user?.assignedMentorId === mentor.mentorId;
+                                      }).length}
+                                    </span>
+                                  </div>
                                   {perfilMentor?.especialidad && (
                                     <div className="flex items-center gap-1 text-xs text-cyan-400">
                                       <span>🎯</span>
@@ -1838,12 +1967,21 @@ export default function VisionDetailPage() {
                               </div>
                             </div>
                             
-                            <button
-                              onClick={() => handleRemoverMentor(mentor.mentorId, usuario?.nombre || 'Mentor')}
-                              className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs font-medium transition-colors border border-red-500/20"
-                            >
-                              Desasignar
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleOpenAssignParticipantsModal(mentor.mentorId, usuario?.nombre || 'Mentor')}
+                                className="px-3 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 rounded-lg text-xs font-medium transition-colors border border-cyan-500/20 flex items-center gap-1"
+                              >
+                                <UserPlus size={14} />
+                                Asignar Participantes
+                              </button>
+                              <button
+                                onClick={() => handleRemoverMentor(mentor.mentorId, usuario?.nombre || 'Mentor')}
+                                className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs font-medium transition-colors border border-red-500/20"
+                              >
+                                Desasignar
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );
@@ -1905,6 +2043,18 @@ export default function VisionDetailPage() {
                                 <p className="text-sm text-slate-400 mt-0.5">{usuario?.email}</p>
                                 
                                 <div className="flex items-center gap-4 mt-2">
+                                  <div className="flex items-center gap-1 text-xs text-emerald-400">
+                                    <span>👥</span>
+                                    <span>Relaciones</span>
+                                    <span className="ml-1 px-1.5 py-0.5 bg-emerald-500/30 text-emerald-300 rounded font-semibold">
+                                      {[...participantes, ...gameChangers].filter(p => {
+                                        const user = 'Usuario_VisionParticipante_participanteIdToUsuario' in p 
+                                          ? p.Usuario_VisionParticipante_participanteIdToUsuario 
+                                          : p.Usuario_VisionGameChanger_gameChangerIdToUsuario;
+                                        return user?.assignedMentorId === mentor.mentorId;
+                                      }).length}
+                                    </span>
+                                  </div>
                                   {perfilMentor?.especialidad && (
                                     <div className="flex items-center gap-1 text-xs text-emerald-400">
                                       <span>🎯</span>
@@ -1927,12 +2077,21 @@ export default function VisionDetailPage() {
                               </div>
                             </div>
                             
-                            <button
-                              onClick={() => handleRemoverMentor(mentor.mentorId, usuario?.nombre || 'Mentor')}
-                              className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs font-medium transition-colors border border-red-500/20"
-                            >
-                              Desasignar
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleOpenAssignParticipantsModal(mentor.mentorId, usuario?.nombre || 'Mentor')}
+                                className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg text-xs font-medium transition-colors border border-emerald-500/20 flex items-center gap-1"
+                              >
+                                <UserPlus size={14} />
+                                Asignar Participantes
+                              </button>
+                              <button
+                                onClick={() => handleRemoverMentor(mentor.mentorId, usuario?.nombre || 'Mentor')}
+                                className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs font-medium transition-colors border border-red-500/20"
+                              >
+                                Desasignar
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );
@@ -4070,6 +4229,166 @@ export default function VisionDetailPage() {
                 className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-colors"
               >
                 Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Asignar Participantes a Mentor */}
+      {showAssignParticipantsModal && selectedMentorForAssign && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden border border-slate-700 flex flex-col">
+            <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-6 z-10">
+              <h3 className="text-2xl font-bold text-white mb-2">
+                👥 Asignar Participantes
+              </h3>
+              <p className="text-slate-300">
+                Asignando participantes al mentor <span className="font-semibold text-cyan-400">{selectedMentorForAssign.nombre}</span>
+              </p>
+              
+              {/* Buscador */}
+              <div className="mt-4">
+                <input
+                  type="text"
+                  placeholder="🔍 Buscar por nombre o email..."
+                  value={participantSearchQuery}
+                  onChange={(e) => setParticipantSearchQuery(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
+                />
+              </div>
+              
+              {/* Info de selección */}
+              {selectedParticipantsForMentor.size > 0 && (
+                <div className="mt-3 flex items-center justify-between bg-cyan-900/30 border border-cyan-500/30 rounded-lg px-4 py-2">
+                  <span className="text-cyan-300 font-medium">
+                    {selectedParticipantsForMentor.size} participante(s) seleccionado(s)
+                  </span>
+                  <button
+                    onClick={() => setSelectedParticipantsForMentor(new Set())}
+                    className="text-cyan-400 hover:text-cyan-300 text-sm"
+                  >
+                    Limpiar selección
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Lista de participantes */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {getFilteredParticipantsForAssign().length === 0 ? (
+                <div className="py-12 text-center">
+                  <Users className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+                  <p className="text-slate-400">
+                    {participantSearchQuery 
+                      ? 'No se encontraron participantes con ese nombre' 
+                      : 'No hay participantes disponibles'}
+                  </p>
+                </div>
+              ) : (
+                getFilteredParticipantsForAssign().map((user) => {
+                  const isSelected = selectedParticipantsForMentor.has(user.id);
+                  const isAlreadyAssignedToThisMentor = user.assignedMentorId === selectedMentorForAssign.id;
+                  const hasOtherMentor = user.assignedMentorId && user.assignedMentorId !== selectedMentorForAssign.id;
+                  
+                  return (
+                    <button
+                      key={user.id}
+                      onClick={() => !isAlreadyAssignedToThisMentor && handleToggleParticipantForMentor(user.id)}
+                      disabled={isAlreadyAssignedToThisMentor}
+                      className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${
+                        isAlreadyAssignedToThisMentor
+                          ? 'bg-cyan-900/20 border-cyan-500/50 cursor-default opacity-60'
+                          : isSelected
+                          ? 'bg-cyan-900/30 border-cyan-500/50'
+                          : 'bg-slate-800/50 border-slate-700 hover:border-cyan-500/30 hover:bg-slate-800'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {/* Checkbox visual */}
+                        <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${
+                          isSelected || isAlreadyAssignedToThisMentor
+                            ? 'bg-cyan-500 border-cyan-500'
+                            : 'border-slate-500'
+                        }`}>
+                          {(isSelected || isAlreadyAssignedToThisMentor) && (
+                            <CheckCircle size={16} className="text-white" />
+                          )}
+                        </div>
+                        
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold">
+                          {user.nombre.charAt(0).toUpperCase()}
+                        </div>
+                        
+                        <div className="text-left">
+                          <p className="font-semibold text-white flex items-center gap-2">
+                            {user.nombre}
+                            <span className={`text-xs px-1.5 py-0.5 rounded ${
+                              user.tipo === 'GameChanger' 
+                                ? 'bg-amber-500/20 text-amber-400' 
+                                : 'bg-purple-500/20 text-purple-400'
+                            }`}>
+                              {user.tipo}
+                            </span>
+                          </p>
+                          <p className="text-xs text-slate-400">{user.email}</p>
+                          {hasOtherMentor && (
+                            <p className="text-xs text-orange-400 mt-1">
+                              ⚠️ Mentor actual: {user.assignedMentorNombre}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {isAlreadyAssignedToThisMentor ? (
+                        <span className="px-3 py-1.5 bg-cyan-500/30 text-cyan-300 rounded-lg text-sm font-medium">
+                          Ya asignado
+                        </span>
+                      ) : isSelected ? (
+                        <span className="px-3 py-1.5 bg-cyan-500/20 text-cyan-400 rounded-lg text-sm font-medium">
+                          ✓ Seleccionado
+                        </span>
+                      ) : hasOtherMentor ? (
+                        <span className="px-3 py-1.5 bg-orange-500/20 text-orange-400 rounded-lg text-sm font-medium">
+                          Reasignar
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer con acciones */}
+            <div className="sticky bottom-0 bg-slate-800 border-t border-slate-700 p-4 flex justify-between items-center gap-4">
+              <button
+                onClick={() => {
+                  setShowAssignParticipantsModal(false);
+                  setSelectedMentorForAssign(null);
+                  setSelectedParticipantsForMentor(new Set());
+                  setParticipantSearchQuery('');
+                }}
+                className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-colors"
+              >
+                Cancelar
+              </button>
+              
+              <button
+                onClick={handleAssignParticipantsToMentor}
+                disabled={selectedParticipantsForMentor.size === 0 || assigningParticipantsToMentor}
+                className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {assigningParticipantsToMentor ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Asignando...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus size={18} />
+                    Asignar {selectedParticipantsForMentor.size} Participante(s)
+                  </>
+                )}
               </button>
             </div>
           </div>
