@@ -267,9 +267,12 @@ export default function VisionDetailPage() {
 
   useEffect(() => {
     if (session?.user?.rol === 'SCHOOL_ADMIN' || session?.user?.rol === 'COORDINADOR') {
-      fetchVisionDetails();
-      fetchCredits();
-      fetchMentores();
+      // Ejecutar todas las llamadas en paralelo para mejor rendimiento
+      Promise.all([
+        fetchVisionDetails(),
+        fetchCredits(),
+        fetchMentores()
+      ]);
     }
   }, [session, visionId]);
 
@@ -1766,14 +1769,14 @@ export default function VisionDetailPage() {
             </div>
 
             {/* 💼 MENTORES PROFESIONALES CONTRATADOS */}
-            {mentoresAsignados.filter(m => m.Usuario_VisionMentor_mentorIdToUsuario?.rol === 'MENTOR').length > 0 && (
+            {mentoresAsignados.filter(m => m.Usuario_VisionMentor_mentorIdToUsuario?.esMentor === true && m.Usuario_VisionMentor_mentorIdToUsuario?.rol !== 'LIDER').length > 0 && (
               <div className="mt-6 bg-gradient-to-br from-cyan-900/20 to-blue-900/20 rounded-xl border border-cyan-500/30 overflow-hidden">
                 <div className="bg-cyan-950/40 px-4 py-3 border-b border-cyan-500/20">
                   <h3 className="text-white font-bold flex items-center gap-2">
                     <span className="text-2xl">💼</span>
                     Mentores Profesionales Contratados
                     <span className="text-sm font-normal text-cyan-400">
-                      ({mentoresAsignados.filter(m => m.Usuario_VisionMentor_mentorIdToUsuario?.rol === 'MENTOR').length})
+                      ({mentoresAsignados.filter(m => m.Usuario_VisionMentor_mentorIdToUsuario?.esMentor === true && m.Usuario_VisionMentor_mentorIdToUsuario?.rol !== 'LIDER').length})
                     </span>
                   </h3>
                   <p className="text-xs text-cyan-300/70 mt-1">
@@ -1783,7 +1786,7 @@ export default function VisionDetailPage() {
                 
                 <div className="p-4 space-y-3">
                   {mentoresAsignados
-                    .filter(mentor => mentor.Usuario_VisionMentor_mentorIdToUsuario?.rol === 'MENTOR')
+                    .filter(mentor => mentor.Usuario_VisionMentor_mentorIdToUsuario?.esMentor === true && mentor.Usuario_VisionMentor_mentorIdToUsuario?.rol !== 'LIDER')
                     .map((mentor) => {
                       const usuario = mentor.Usuario_VisionMentor_mentorIdToUsuario;
                       const perfilMentor = usuario?.PerfilMentor;

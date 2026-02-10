@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
                 organizationId: vision.organizationId,
                 balance: 0,
                 currency: 'MXN',
+                updatedAt: new Date(),
               }
             });
           }

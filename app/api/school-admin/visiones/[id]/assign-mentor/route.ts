@@ -226,18 +226,8 @@ export async function POST(
       }
     });
 
-    // Actualizar también en la tabla de relación si es participante
-    if (userType === 'PARTICIPANTE') {
-      await prisma.visionParticipante.updateMany({
-        where: {
-          visionId,
-          participanteId: userId
-        },
-        data: {
-          gameChangerId: mentorId // Usamos este campo para trackear el mentor
-        }
-      });
-    }
+    // NOTA: El mentor se guarda en usuario.assignedMentorId
+    // NO modificar gameChangerId ya que es un campo diferente (para el Game Changer asignado al participante)
 
     return NextResponse.json({
       success: true,

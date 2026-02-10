@@ -141,15 +141,20 @@ export default function AsignacionMentoresPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const visionRes = await fetch(`/api/school-admin/visiones/${visionId}`);
+      // Ejecutar las 3 llamadas en paralelo para mejor rendimiento
+      const [visionRes, mentoresRes, walletRes] = await Promise.all([
+        fetch(`/api/school-admin/visiones/${visionId}`),
+        fetch(`/api/school-admin/visiones/${visionId}/mentores`),
+        fetch('/api/school-admin/wallet')
+      ]);
+
       if (visionRes.ok) {
         const data = await visionRes.json();
         setVision(data.vision);
         setCicloInfo(data.cicloInfo);
-        setMentoresAsignados(data.mentoresAsignados || []);
+        // No setear mentoresAsignados aquí, se hará con mentoresRes
       }
 
-      const mentoresRes = await fetch(`/api/school-admin/visiones/${visionId}/mentores`);
       if (mentoresRes.ok) {
         const data = await mentoresRes.json();
         setMentoresAsignados(data.mentoresAsignados || []);
@@ -157,7 +162,6 @@ export default function AsignacionMentoresPage() {
         setLideresDisponibles(data.lideresDisponibles || []);
       }
 
-      const walletRes = await fetch('/api/school-admin/wallet');
       if (walletRes.ok) {
         const data = await walletRes.json();
         setWalletInfo(data);

@@ -129,17 +129,18 @@ export async function GET(
 
     // Determinar el nivel activo de la visión basado en los productos
     // Prioridad: IN_PROGRESS > REGISTRATION_OPEN > nivel más alto COMPLETED
-    const visionProducts = await prisma.schoolProduct.findMany({
-      where: { visionId, type: 'CORE_TRAINING', isActive: true },
-      select: { levelType: true, trainingStatus: true },
-      orderBy: { levelType: 'desc' } // PL > ADVANCED > BASIC
-    });
-
-    // Obtener enabledLevels de la visión para usar como fallback
-    const visionWithLevels = await prisma.vision.findUnique({
-      where: { id: visionId },
-      select: { enabledLevels: true }
-    });
+    // Ejecutar ambas consultas en paralelo
+    const [visionProducts, visionWithLevels] = await Promise.all([
+      prisma.schoolProduct.findMany({
+        where: { visionId, type: 'CORE_TRAINING', isActive: true },
+        select: { levelType: true, trainingStatus: true },
+        orderBy: { levelType: 'desc' } // PL > ADVANCED > BASIC
+      }),
+      prisma.vision.findUnique({
+        where: { id: visionId },
+        select: { enabledLevels: true }
+      })
+    ]);
 
     let activeLevel: 'BASIC' | 'ADVANCED' | 'PL' = 'BASIC';
     
@@ -399,82 +400,84 @@ export async function GET(
       },
     });
 
-    // Obtener productos/entrenamientos asociados a esta visión
-    const productos = await prisma.schoolProduct.findMany({
-      where: { 
-        visionId,
-        type: 'CORE_TRAINING',
-        isActive: true
-      },
-      include: {
-        Trainer: {
-          select: {
-            id: true,
-            nombre: true,
-            email: true,
-            imagen: true
+    // Ejecutar en paralelo: productos, plTrainers y mentores
+    const [productos, plTrainersData, mentoresAsignados] = await Promise.all([
+      // Obtener productos/entrenamientos asociados a esta visión
+      prisma.schoolProduct.findMany({
+        where: { 
+          visionId,
+          type: 'CORE_TRAINING',
+          isActive: true
+        },
+        include: {
+          Trainer: {
+            select: {
+              id: true,
+              nombre: true,
+              email: true,
+              imagen: true
+            }
+          },
+          Coordinator: {
+            select: {
+              id: true,
+              nombre: true,
+              email: true
+            }
           }
         },
-        Coordinator: {
-          select: {
-            id: true,
-            nombre: true,
-            email: true
+        orderBy: [
+          { levelType: 'asc' } // BASIC, ADVANCED, PL
+        ]
+      }),
+      // Obtener trainers de PL (3 trainers para el programa de liderato)
+      prisma.visionStaff.findMany({
+        where: {
+          visionId,
+          role: 'PL_TRAINER',
+          level: 'PL'
+        },
+        include: {
+          Usuario_VisionStaff_userIdToUsuario: {
+            select: {
+              id: true,
+              nombre: true,
+              email: true,
+              imagen: true
+            }
           }
+        },
+        orderBy: {
+          plWeekendNumber: 'asc' // 1, 2, 3
         }
-      },
-      orderBy: [
-        { levelType: 'asc' } // BASIC, ADVANCED, PL
-      ]
-    });
-
-    // Obtener trainers de PL (3 trainers para el programa de liderato)
-    const plTrainersData = await prisma.visionStaff.findMany({
-      where: {
-        visionId,
-        role: 'PL_TRAINER',
-        level: 'PL'
-      },
-      include: {
-        Usuario_VisionStaff_userIdToUsuario: {
-          select: {
-            id: true,
-            nombre: true,
-            email: true,
-            imagen: true
-          }
-        }
-      },
-      orderBy: {
-        plWeekendNumber: 'asc' // 1, 2, 3
-      }
-    });
-
-    // Obtener mentores asignados a esta visión con sus costos
-    const mentoresAsignados = await prisma.visionMentor.findMany({
-      where: { visionId },
-      include: {
-        Usuario_VisionMentor_mentorIdToUsuario: {
-          select: {
-            id: true,
-            nombre: true,
-            email: true,
-            imagen: true,
-            rol: true,
-            organizationId: true,
-            PerfilMentor: {
-              select: {
-                precioDisciplina: true,
-                precioBase: true,
+      }),
+      // Obtener mentores asignados a esta visión con sus costos
+      prisma.visionMentor.findMany({
+        where: { visionId },
+        include: {
+          Usuario_VisionMentor_mentorIdToUsuario: {
+            select: {
+              id: true,
+              nombre: true,
+              email: true,
+              imagen: true,
+              rol: true,
+              esMentor: true,
+              organizationId: true,
+              PerfilMentor: {
+                select: {
+                  precioDisciplina: true,
+                  precioBase: true,
+                }
               }
             }
           }
+        },
+        orderBy: {
+          createdAt: 'desc'
         }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
+      })
+    ]);
 
     // Verificar cuáles tienen paquetes contratados
     const mentoresIds = mentoresAsignados.map(m => m.mentorId);

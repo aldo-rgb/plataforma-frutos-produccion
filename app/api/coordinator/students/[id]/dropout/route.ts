@@ -172,6 +172,7 @@ export async function POST(
               organizationId: vision.organizationId,
               balance: 0,
               currency: 'MXN',
+              updatedAt: new Date(),
             }
           });
         }

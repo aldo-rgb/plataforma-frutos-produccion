@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
           organizationId: user.organizationId,
           balance: 0,
           currency: 'MXN',
+          updatedAt: new Date(),
         },
       });
     }
@@ -130,6 +131,7 @@ export async function POST(request: NextRequest) {
           organizationId: user.organizationId,
           balance: 0,
           currency: 'MXN',
+          updatedAt: new Date(),
         },
       });
     }
