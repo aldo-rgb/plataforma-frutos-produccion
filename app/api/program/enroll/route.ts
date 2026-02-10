@@ -750,6 +750,8 @@ export async function POST(request: Request) {
 
   } catch (error) {
     logger.error('❌ Error en program/enroll:', error);
+    logger.error('❌ Stack trace:', error instanceof Error ? error.stack : 'No stack');
+    logger.error('❌ Error message:', error instanceof Error ? error.message : String(error));
     return NextResponse.json({ 
       error: 'Error al inscribir en el programa',
       details: error instanceof Error ? error.message : 'Error desconocido'
