@@ -761,36 +761,6 @@ export default function SchoolAdminDashboard() {
         {/* WIDGETS DE DECLARADOS E INSCRITOS */}
         <DirectorTrainingWidgets />
 
-        {/* Widget Prospectos de Staff */}
-        <Link href="/dashboard/prospectos-staff" className="block mt-6">
-          <div className="bg-gradient-to-br from-cyan-900/30 via-emerald-900/20 to-slate-900/80 border-2 border-cyan-500/30 rounded-2xl p-6 hover:border-cyan-500/50 transition-all group hover:shadow-lg hover:shadow-cyan-500/10">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 rounded-xl group-hover:scale-110 transition-transform">
-                  <span className="text-3xl">🌟</span>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-cyan-400 uppercase tracking-wider mb-1">
-                    PROSPECTOS DE STAFF
-                  </p>
-                  <p className="text-lg font-bold text-white">
-                    Ver participantes interesados en ser Staff
-                  </p>
-                  <p className="text-sm text-slate-400 mt-1">
-                    Personas que activaron &quot;Quiero ser Staff&quot; en su perfil
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-cyan-400 font-semibold group-hover:gap-3 transition-all">
-                <span>Ver lista</span>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </Link>
-
         {/* WIDGET DE VISIONES ACTIVAS */}
         <div className="bg-slate-900 border border-white/10 rounded-3xl p-6 mt-8 w-full">
           <div className="flex items-center justify-between mb-6">
@@ -822,10 +792,14 @@ export default function SchoolAdminDashboard() {
                   : 0;
 
                 return (
-                  <div 
-                    key={vision.id} 
-                    className="bg-slate-950 border border-white/5 rounded-xl p-5 hover:border-purple-500/30 transition-all hover:shadow-lg hover:shadow-purple-500/10"
+                  <Link 
+                    key={vision.id}
+                    href={`/dashboard/school-admin/visiones/${vision.id}`}
+                    className="block"
                   >
+                    <div 
+                      className="bg-slate-950 border border-white/5 rounded-xl p-5 hover:border-purple-500/30 transition-all hover:shadow-lg hover:shadow-purple-500/10 cursor-pointer"
+                    >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
                         <h3 className="font-bold text-white text-sm mb-1 line-clamp-1">{vision.nombre}</h3>
@@ -883,6 +857,7 @@ export default function SchoolAdminDashboard() {
                       </div>
                     )}
                   </div>
+                  </Link>
                 );
               })}
             </div>
@@ -903,21 +878,147 @@ export default function SchoolAdminDashboard() {
               <TreasuryQuickWidget isAdmin={true} />
             </div>
 
-            {/* Widget de Checkouts Abandonados */}
-            <Link href="/dashboard/school-admin/abandoned-checkouts" className="block">
-              <div className="bg-gradient-to-br from-orange-900/50 via-red-900/30 to-slate-900 border-2 border-orange-500/30 rounded-xl md:rounded-2xl p-4 md:p-6 transition-all cursor-pointer group hover:border-orange-500/50 hover:shadow-lg hover:shadow-orange-500/10 relative overflow-hidden">
+            {/* Widget de QR de Organización - VIOLETA/CORONA */}
+            <div 
+              onClick={() => {
+                if (!qrDataURL) {
+                  generateOrganizationQR();
+                }
+                setShowQRModal(true);
+              }}
+              className="bg-gradient-to-br from-violet-900/50 via-purple-900/30 to-slate-900 border-2 border-violet-500/30 rounded-xl md:rounded-2xl p-4 md:p-6 transition-all cursor-pointer group hover:border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/10 relative overflow-hidden"
+            >
+              {/* Decorative elements */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/5 rounded-full blur-2xl -z-10"></div>
+              
+              <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+                <div className="p-2 md:p-3 bg-violet-500/20 group-hover:bg-violet-500/30 rounded-lg md:rounded-xl transition-colors flex-shrink-0">
+                  <span className="text-2xl">📱</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-bold text-white text-xs md:text-sm uppercase line-clamp-2">
+                    QR de Registro
+                  </h3>
+                  <p className="text-[10px] md:text-xs text-violet-300 line-clamp-1">
+                    Código QR personalizado de tu organización
+                  </p>
+                </div>
+              </div>
+              <p className="text-[10px] md:text-xs text-slate-400 line-clamp-2">
+                Comparte este QR para que nuevos usuarios se registren directamente en tu organización
+              </p>
+            </div>
+
+            {/* Widget de Misiones & Tareas Extraordinarias - ÍNDIGO/TERCER OJO */}
+            <div 
+              onClick={() => setMisionesModalOpen(true)}
+              className="bg-gradient-to-br from-indigo-900/50 via-blue-900/30 to-slate-900 border-2 border-indigo-500/30 rounded-xl md:rounded-2xl p-4 md:p-6 transition-all cursor-pointer group hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10 relative overflow-hidden"
+            >
+              {/* Decorative elements */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl -z-10"></div>
+              
+              <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+                <div className="p-2 md:p-3 bg-indigo-500/20 group-hover:bg-indigo-500/30 rounded-lg md:rounded-xl transition-colors flex-shrink-0">
+                  <Zap size={20} className="text-indigo-300 md:w-6 md:h-6" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-bold text-white text-xs md:text-sm uppercase line-clamp-2">
+                    Misiones & Tareas Extraordinarias
+                  </h3>
+                  <p className="text-[10px] md:text-xs text-indigo-300 line-clamp-1">
+                    Gestiona misiones, tareas y obtén consejos de IA
+                  </p>
+                </div>
+              </div>
+              <p className="text-[10px] md:text-xs text-slate-400 line-clamp-2">
+                Crea misiones especiales, asigna tareas y utiliza IA para optimizar el aprendizaje
+              </p>
+            </div>
+
+            {/* Widget Ver Mis Participantes - AZUL/GARGANTA */}
+            <Link href="/dashboard/school-admin/users" className="block">
+              <div className="bg-gradient-to-br from-blue-900/50 to-slate-900 border-2 border-blue-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-blue-500/20 group-hover:bg-blue-500/30 rounded-xl transition-colors">
+                    <GraduationCap size={24} className="text-blue-300" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm uppercase">
+                      Ver Mis Participantes
+                    </h3>
+                    <p className="text-xs text-blue-300">
+                      Detalle y avances
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Lista completa: Participantes, Game Changers, Coordinadores y Mentores
+                </p>
+              </div>
+            </Link>
+
+            {/* Widget de Prospectos de Staff - CYAN/GARGANTA */}
+            <Link href="/dashboard/prospectos-staff" className="block">
+              <div className="bg-gradient-to-br from-cyan-900/50 via-teal-900/30 to-slate-900 border-2 border-cyan-500/30 rounded-xl md:rounded-2xl p-4 md:p-6 transition-all cursor-pointer group hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10 relative overflow-hidden">
                 {/* Decorative elements */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full blur-2xl -z-10"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-2xl -z-10"></div>
                 
                 <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
-                  <div className="p-2 md:p-3 bg-orange-500/20 group-hover:bg-orange-500/30 rounded-lg md:rounded-xl transition-colors flex-shrink-0">
-                    <ShoppingCart size={20} className="text-orange-300 md:w-6 md:h-6" />
+                  <div className="p-2 md:p-3 bg-cyan-500/20 group-hover:bg-cyan-500/30 rounded-lg md:rounded-xl transition-colors flex-shrink-0">
+                    <span className="text-2xl">🌟</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-bold text-white text-xs md:text-sm uppercase line-clamp-2">
+                      🌟 Prospectos de Staff
+                    </h3>
+                    <p className="text-[10px] md:text-xs text-cyan-300 line-clamp-1">
+                      Ver participantes interesados en ser Staff
+                    </p>
+                  </div>
+                </div>
+                <p className="text-[10px] md:text-xs text-slate-400 line-clamp-2">
+                  Personas que activaron &quot;Quiero ser Staff&quot; en su perfil
+                </p>
+              </div>
+            </Link>
+
+            {/* Widget Gestionar Equipo - VERDE/CORAZÓN */}
+            <Link href="/dashboard/school-admin/coordinadores" className="block">
+              <div className="bg-gradient-to-br from-emerald-900/50 to-slate-900 border-2 border-emerald-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-emerald-500/20 group-hover:bg-emerald-500/30 rounded-xl transition-colors">
+                    <UserCheck size={24} className="text-emerald-300" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm uppercase">
+                      Gestionar Equipo
+                    </h3>
+                    <p className="text-xs text-emerald-300">
+                      Crear y asignar
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Crea coordinadores y mentores para asígnarlos a tus visiones
+                </p>
+              </div>
+            </Link>
+
+            {/* Widget de Checkouts Abandonados - TEAL/VERDE */}
+            <Link href="/dashboard/school-admin/abandoned-checkouts" className="block">
+              <div className="bg-gradient-to-br from-teal-900/50 via-green-900/30 to-slate-900 border-2 border-teal-500/30 rounded-xl md:rounded-2xl p-4 md:p-6 transition-all cursor-pointer group hover:border-teal-500/50 hover:shadow-lg hover:shadow-teal-500/10 relative overflow-hidden">
+                {/* Decorative elements */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/5 rounded-full blur-2xl -z-10"></div>
+                
+                <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+                  <div className="p-2 md:p-3 bg-teal-500/20 group-hover:bg-teal-500/30 rounded-lg md:rounded-xl transition-colors flex-shrink-0">
+                    <ShoppingCart size={20} className="text-teal-300 md:w-6 md:h-6" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="font-bold text-white text-xs md:text-sm uppercase line-clamp-2">
                       🛒 Checkouts Abandonados
                     </h3>
-                    <p className="text-[10px] md:text-xs text-orange-300 line-clamp-1">
+                    <p className="text-[10px] md:text-xs text-teal-300 line-clamp-1">
                       Recupera ventas perdidas con anticipos
                     </p>
                   </div>
@@ -928,99 +1029,21 @@ export default function SchoolAdminDashboard() {
               </div>
             </Link>
 
-            {/* Widget de QR de Organización */}
-            <div 
-              onClick={() => {
-                if (!qrDataURL) {
-                  generateOrganizationQR();
-                }
-                setShowQRModal(true);
-              }}
-              className="bg-gradient-to-br from-blue-900/50 via-indigo-900/30 to-slate-900 border-2 border-blue-500/30 rounded-xl md:rounded-2xl p-4 md:p-6 transition-all cursor-pointer group hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10 relative overflow-hidden"
-            >
-              {/* Decorative elements */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-2xl -z-10"></div>
-              
-              <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
-                <div className="p-2 md:p-3 bg-blue-500/20 group-hover:bg-blue-500/30 rounded-lg md:rounded-xl transition-colors flex-shrink-0">
-                  <span className="text-2xl">📱</span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-bold text-white text-xs md:text-sm uppercase line-clamp-2">
-                    QR de Registro
-                  </h3>
-                  <p className="text-[10px] md:text-xs text-blue-300 line-clamp-1">
-                    Código QR personalizado de tu organización
-                  </p>
-                </div>
-              </div>
-              <p className="text-[10px] md:text-xs text-slate-400 line-clamp-2">
-                Comparte este QR para que nuevos usuarios se registren directamente en tu organización
-              </p>
-            </div>
-
-            {/* Widget de Misiones & Tareas Extraordinarias */}
-            <div 
-              onClick={() => setMisionesModalOpen(true)}
-              className="bg-gradient-to-br from-amber-900/50 via-orange-900/30 to-slate-900 border-2 border-amber-500/30 rounded-xl md:rounded-2xl p-4 md:p-6 transition-all cursor-pointer group hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-500/10 relative overflow-hidden"
-            >
-              {/* Decorative elements */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl -z-10"></div>
-              
-              <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
-                <div className="p-2 md:p-3 bg-amber-500/20 group-hover:bg-amber-500/30 rounded-lg md:rounded-xl transition-colors flex-shrink-0">
-                  <Zap size={20} className="text-amber-300 md:w-6 md:h-6" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-bold text-white text-xs md:text-sm uppercase line-clamp-2">
-                    Misiones & Tareas Extraordinarias
-                  </h3>
-                  <p className="text-[10px] md:text-xs text-amber-300 line-clamp-1">
-                    Gestiona misiones, tareas y obtén consejos de IA
-                  </p>
-                </div>
-              </div>
-              <p className="text-[10px] md:text-xs text-slate-400 line-clamp-2">
-                Crea misiones especiales, asigna tareas y utiliza IA para optimizar el aprendizaje
-              </p>
-            </div>
-
-            <Link href="/dashboard/school-admin/visiones" className="block">
-              <div className="bg-gradient-to-br from-emerald-900/50 to-slate-900 border-2 border-emerald-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-3 bg-emerald-500/20 group-hover:bg-emerald-500/30 rounded-xl transition-colors">
-                    <Users size={24} className="text-emerald-300" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white text-sm uppercase">
-                      Gestionar Visiones Activas
-                    </h3>
-                    <p className="text-xs text-emerald-300">
-                      Crea y asigna licencias
-                    </p>
-                  </div>
-                </div>
-                <p className="text-xs text-slate-400">
-                  Crea visiones/grupos y gestiona las licencias de tus participantes
-                </p>
-              </div>
-            </Link>
-
-            {/* Widget de Resultados de Encuestas */}
-            <Link href="/dashboard/school-admin/survey-results" className="block mt-6">
-              <div className="bg-gradient-to-br from-violet-900/50 via-purple-900/30 to-slate-900 border-2 border-violet-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/10 relative overflow-hidden">
+            {/* Widget de Resultados de Encuestas - AMARILLO/PLEXO SOLAR */}
+            <Link href="/dashboard/school-admin/survey-results" className="block">
+              <div className="bg-gradient-to-br from-yellow-900/50 via-amber-900/30 to-slate-900 border-2 border-yellow-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-yellow-500/50 hover:shadow-lg hover:shadow-yellow-500/10 relative overflow-hidden">
                 {/* Decorative elements */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/5 rounded-full blur-2xl -z-10"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-2xl -z-10"></div>
                 
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="p-3 bg-violet-500/20 group-hover:bg-violet-500/30 rounded-xl transition-colors">
-                    <BarChart3 size={24} className="text-violet-300" />
+                  <div className="p-3 bg-yellow-500/20 group-hover:bg-yellow-500/30 rounded-xl transition-colors">
+                    <BarChart3 size={24} className="text-yellow-300" />
                   </div>
                   <div>
                     <h3 className="font-bold text-white text-sm uppercase">
                       📊 Resultados de Encuestas
                     </h3>
-                    <p className="text-xs text-violet-300">
+                    <p className="text-xs text-yellow-300">
                       Ver retroalimentación de entrenamientos
                     </p>
                   </div>
@@ -1031,8 +1054,74 @@ export default function SchoolAdminDashboard() {
               </div>
             </Link>
 
+            {/* Widget Gestión de Strikes - DORADO/PLEXO SOLAR */}
+            <Link href="/dashboard/school-admin/strikes" className="block">
+              <div className="bg-gradient-to-br from-amber-900/50 via-yellow-900/30 to-slate-900 border-2 border-amber-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-500/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-amber-500/20 group-hover:bg-amber-500/30 rounded-xl transition-colors">
+                    <Shield size={24} className="text-amber-300" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm uppercase">
+                      Gestión de Strikes
+                    </h3>
+                    <p className="text-xs text-amber-300">
+                      Administrar vidas extra
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Asigna tareas extraordinarias y revisa el status de llamadas
+                </p>
+              </div>
+            </Link>
+
+            {/* Widget Gestionar Entrenamientos - NARANJA/SACRAL */}
+            <Link href="/dashboard/school-admin/productos" className="block">
+              <div className="bg-gradient-to-br from-orange-900/50 to-slate-900 border-2 border-orange-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-orange-500/50 hover:shadow-lg hover:shadow-orange-500/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-orange-500/20 group-hover:bg-orange-500/30 rounded-xl transition-colors">
+                    <ShoppingCart size={24} className="text-orange-300" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm uppercase">
+                      Gestionar Entrenamientos
+                    </h3>
+                    <p className="text-xs text-orange-300">
+                      Entrenamientos y Talleres
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Administra todos tus productos: CORE y talleres extras
+                </p>
+              </div>
+            </Link>
+
+            {/* Widget Códigos Becas - NARANJA CLARO/SACRAL */}
+            <Link href="/dashboard/school-admin/gift-codes" className="block">
+              <div className="bg-gradient-to-br from-orange-900/50 via-amber-900/40 to-slate-900 border-2 border-orange-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-orange-500/50 hover:shadow-lg hover:shadow-orange-500/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-3 bg-orange-500/20 group-hover:bg-orange-500/30 rounded-xl transition-colors">
+                    <Ticket size={24} className="text-orange-300" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm uppercase">
+                      CODIGOS BECAS
+                    </h3>
+                    <p className="text-xs text-orange-300">
+                      Golden & Platinum Tickets
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Genera códigos de regalo para tickets de acceso a tus visiones
+                </p>
+              </div>
+            </Link>
+
             {/* Widget de Registros Médicos */}
-            <Link href="/dashboard/school-admin/medical-records" className="block mt-6">
+            <Link href="/dashboard/school-admin/medical-records" className="block">
               <div className="bg-gradient-to-br from-red-900/50 via-pink-900/30 to-slate-900 border-2 border-red-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-red-500/50 hover:shadow-lg hover:shadow-red-500/10 relative overflow-hidden">
                 {/* Badge de alertas */}
                 {medicalAlertsCount > 0 && (
@@ -1065,133 +1154,8 @@ export default function SchoolAdminDashboard() {
               </div>
             </Link>
 
-            <Link href="/dashboard/school-admin/strikes" className="block mt-6">
-              <div className="bg-gradient-to-br from-purple-900/50 via-pink-900/30 to-slate-900 border-2 border-purple-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-3 bg-purple-500/20 group-hover:bg-purple-500/30 rounded-xl transition-colors">
-                    <Shield size={24} className="text-purple-300" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white text-sm uppercase">
-                      Gestión de Strikes
-                    </h3>
-                    <p className="text-xs text-purple-300">
-                      Administrar vidas extra
-                    </p>
-                  </div>
-                </div>
-                <p className="text-xs text-slate-400">
-                  Asigna tareas extraordinarias y revisa el status de llamadas
-                </p>
-              </div>
-            </Link>
-
-            <Link href="/dashboard/school-admin/coordinadores" className="block mt-6">
-              <div className="bg-gradient-to-br from-blue-900/50 to-slate-900 border-2 border-blue-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-3 bg-blue-500/20 group-hover:bg-blue-500/30 rounded-xl transition-colors">
-                    <UserCheck size={24} className="text-blue-300" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white text-sm uppercase">
-                      Gestionar Equipo
-                    </h3>
-                    <p className="text-xs text-blue-300">
-                      Crear y asignar
-                    </p>
-                  </div>
-                </div>
-                <p className="text-xs text-slate-400">
-                  Crea coordinadores y mentores para asígnarlos a tus visiones
-                </p>
-              </div>
-            </Link>
-
-            <Link href="/dashboard/school-admin/users" className="block mt-6">
-              <div className="bg-gradient-to-br from-cyan-900/50 to-slate-900 border-2 border-cyan-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-3 bg-cyan-500/20 group-hover:bg-cyan-500/30 rounded-xl transition-colors">
-                    <GraduationCap size={24} className="text-cyan-300" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white text-sm uppercase">
-                      Ver Mis Participantes
-                    </h3>
-                    <p className="text-xs text-cyan-300">
-                      Detalle y avances
-                    </p>
-                  </div>
-                </div>
-                <p className="text-xs text-slate-400">
-                  Lista completa: Participantes, Game Changers, Coordinadores y Mentores
-                </p>
-              </div>
-            </Link>
-
-            <Link href="/dashboard/school-admin/roles" className="block mt-6">
-              <div className="bg-gradient-to-br from-violet-900/50 to-slate-900 border-2 border-violet-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-3 bg-violet-500/20 group-hover:bg-violet-500/30 rounded-xl transition-colors">
-                    <Shield size={24} className="text-violet-300" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white text-sm uppercase">
-                      Roles Múltiples
-                    </h3>
-                    <p className="text-xs text-violet-300">
-                      Asignar roles adicionales
-                    </p>
-                  </div>
-                </div>
-                <p className="text-xs text-slate-400">
-                  Asigna roles de Coordinador, Líder o Entrenador a tus usuarios
-                </p>
-              </div>
-            </Link>
-
-            <Link href="/dashboard/school-admin/productos" className="block mt-6">
-              <div className="bg-gradient-to-br from-pink-900/50 to-slate-900 border-2 border-pink-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-pink-500/50 hover:shadow-lg hover:shadow-pink-500/10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-3 bg-pink-500/20 group-hover:bg-pink-500/30 rounded-xl transition-colors">
-                    <ShoppingCart size={24} className="text-pink-300" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white text-sm uppercase">
-                      Gestionar Entrenamientos
-                    </h3>
-                    <p className="text-xs text-pink-300">
-                      Entrenamientos y Talleres
-                    </p>
-                  </div>
-                </div>
-                <p className="text-xs text-slate-400">
-                  Administra todos tus productos: CORE y talleres extras
-                </p>
-              </div>
-            </Link>
-
-            <Link href="/dashboard/school-admin/gift-codes" className="block mt-6">
-              <div className="bg-gradient-to-br from-yellow-900/50 via-amber-900/40 to-slate-900 border-2 border-yellow-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-yellow-500/50 hover:shadow-lg hover:shadow-yellow-500/10">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-3 bg-yellow-500/20 group-hover:bg-yellow-500/30 rounded-xl transition-colors">
-                    <Ticket size={24} className="text-yellow-300" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white text-sm uppercase">
-                      CODIGOS BECAS
-                    </h3>
-                    <p className="text-xs text-yellow-300">
-                      Golden & Platinum Tickets
-                    </p>
-                  </div>
-                </div>
-                <p className="text-xs text-slate-400">
-                  Genera códigos de regalo para tickets de acceso a tus visiones
-                </p>
-              </div>
-            </Link>
-
-            <Link href={data.pendingOrders.length > 0 ? "/dashboard/school-admin/licenses/payment" : "/dashboard/school-admin/licenses/request"} className="block mt-6">
+            {/* Widget Comprar Licencias */}
+            <Link href={data.pendingOrders.length > 0 ? "/dashboard/school-admin/licenses/payment" : "/dashboard/school-admin/licenses/request"} className="block">
               <div className={`bg-gradient-to-br ${(() => {
                 if (data.pendingOrders.length === 0) return 'from-purple-900/50 to-slate-900 border-2 border-purple-500/30';
                 const hasProcessing = data.pendingOrders.some((o: any) => o.status === 'PROCESSING');

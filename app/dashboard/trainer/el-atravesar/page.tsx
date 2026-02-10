@@ -21,7 +21,11 @@ export default function ElAtravesarPage() {
       return;
     }
     
-    if (session?.user?.rol !== 'TRAINER' && !session?.user?.esEntrenador) {
+    // Roles permitidos: TRAINER, COORDINATOR_BASIC, COORDINATOR_ADVANCED, SCHOOL_ADMIN, esEntrenador
+    const allowedRoles = ['TRAINER', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'SCHOOL_ADMIN', 'ADMINISTRADOR'];
+    const hasAccess = allowedRoles.includes(session?.user?.rol || '') || session?.user?.esEntrenador;
+    
+    if (!hasAccess) {
       router.push('/dashboard');
       return;
     }

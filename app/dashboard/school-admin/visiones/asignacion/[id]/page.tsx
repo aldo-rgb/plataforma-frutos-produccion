@@ -263,6 +263,7 @@ export default function AsignacionMentoresPage() {
         visionId: parseInt(params.id as string),
         totalAmount: budgetCalc.grandTotal,
         totalStudents: budgetCalc.totalStudents,
+        totalCallsPerStudent: budgetCalc.totalCallsPerStudent, // Llamadas por estudiante del ciclo
         mentorAssignments,
         useWalletBalance,
         walletDeduction,

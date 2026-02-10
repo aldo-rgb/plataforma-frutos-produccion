@@ -46,6 +46,14 @@ export async function GET(request: Request) {
         rol: true, // Incluir el tipo de coordinador
         isActive: true,
         createdAt: true,
+        // Roles múltiples
+        esMentor: true,
+        esEntrenador: true,
+        esCoordinador: true,
+        esLider: true,
+        esCoordinadorBasico: true,
+        esCoordinadorAvanzado: true,
+        esGameChanger: true,
         Vision: {
           select: {
             id: true,

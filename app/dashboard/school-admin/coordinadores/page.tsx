@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, Plus, Eye, UserCheck, XCircle, CheckCircle, Edit, Trash2, AlertTriangle, Key, Lock } from 'lucide-react';
+import { Users, Plus, Eye, UserCheck, XCircle, CheckCircle, Edit, Trash2, AlertTriangle, Key, Lock, Settings2 } from 'lucide-react';
 import Link from 'next/link';
 
 interface Coordinador {
@@ -17,6 +17,14 @@ interface Coordinador {
     id: number;
     nombre: string;
   }>;
+  // Roles múltiples
+  esMentor?: boolean;
+  esEntrenador?: boolean;
+  esCoordinador?: boolean;
+  esLider?: boolean;
+  esCoordinadorBasico?: boolean;
+  esCoordinadorAvanzado?: boolean;
+  esGameChanger?: boolean;
 }
 
 interface Vision {
@@ -39,6 +47,18 @@ const getRolLabel = (rol: string) => {
   return labels[rol] || { text: rol, emoji: '👤', color: 'from-slate-500 to-slate-600' };
 };
 
+const getRolesActivos = (coord: Coordinador) => {
+  const roles: Array<{ key: string; emoji: string; label: string }> = [];
+  if (coord.esMentor) roles.push({ key: 'mentor', emoji: '🎓', label: 'Mentor' });
+  if (coord.esEntrenador) roles.push({ key: 'entrenador', emoji: '🚀', label: 'Entrenador' });
+  if (coord.esCoordinador) roles.push({ key: 'coordinador', emoji: '🎯', label: 'Coordinador' });
+  if (coord.esLider) roles.push({ key: 'lider', emoji: '⭐', label: 'Líder' });
+  if (coord.esCoordinadorBasico) roles.push({ key: 'basico', emoji: '📋', label: 'Coord. Básico' });
+  if (coord.esCoordinadorAvanzado) roles.push({ key: 'avanzado', emoji: '🎪', label: 'Coord. Avanzado' });
+  if (coord.esGameChanger) roles.push({ key: 'gc', emoji: '🔥', label: 'Game Changer' });
+  return roles;
+};
+
 export default function CoordinadoresPage() {
   const [coordinadores, setCoordinadores] = useState<Coordinador[]>([]);
   const [visiones, setVisiones] = useState<Vision[]>([]);
@@ -47,10 +67,29 @@ export default function CoordinadoresPage() {
   const [modalAsignar, setModalAsignar] = useState(false);
   const [modalPassword, setModalPassword] = useState(false);
   const [modalCambiarRol, setModalCambiarRol] = useState(false);
+  const [modalRolesMultiples, setModalRolesMultiples] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Coordinador | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [nuevoRol, setNuevoRol] = useState<string>('');
   const [visionSeleccionada, setVisionSeleccionada] = useState<Vision | null>(null);
+  const [rolesUsuario, setRolesUsuario] = useState<{
+    esMentor: boolean;
+    esEntrenador: boolean;
+    esCoordinador: boolean;
+    esLider: boolean;
+    esCoordinadorBasico: boolean;
+    esCoordinadorAvanzado: boolean;
+    esGameChanger: boolean;
+  }>({
+    esMentor: false,
+    esEntrenador: false,
+    esCoordinador: false,
+    esLider: false,
+    esCoordinadorBasico: false,
+    esCoordinadorAvanzado: false,
+    esGameChanger: false,
+  });
+  const [savingRoles, setSavingRoles] = useState(false);
   const [formCoordinador, setFormCoordinador] = useState({
     nombre: '',
     email: '',
@@ -219,6 +258,64 @@ export default function CoordinadoresPage() {
     }
   };
 
+  const abrirModalRolesMultiples = (coord: Coordinador) => {
+    setSelectedUser(coord);
+    setRolesUsuario({
+      esMentor: coord.esMentor || false,
+      esEntrenador: coord.esEntrenador || false,
+      esCoordinador: coord.esCoordinador || false,
+      esLider: coord.esLider || false,
+      esCoordinadorBasico: coord.esCoordinadorBasico || false,
+      esCoordinadorAvanzado: coord.esCoordinadorAvanzado || false,
+      esGameChanger: coord.esGameChanger || false,
+    });
+    setModalRolesMultiples(true);
+  };
+
+  const guardarRolesMultiples = async () => {
+    if (!selectedUser) return;
+
+    setSavingRoles(true);
+    try {
+      const res = await fetch('/api/school-admin/users-roles', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          ...rolesUsuario
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        showNotification('success', `Roles actualizados para ${selectedUser.nombre}`);
+        // Actualizar el coordinador localmente
+        setCoordinadores(prev => prev.map(c => 
+          c.id === selectedUser.id 
+            ? { ...c, ...rolesUsuario }
+            : c
+        ));
+        setModalRolesMultiples(false);
+        setSelectedUser(null);
+      } else {
+        showNotification('error', data.error || 'Error al guardar roles');
+      }
+    } catch (error) {
+      console.error('Error guardando roles:', error);
+      showNotification('error', 'Error al guardar roles');
+    } finally {
+      setSavingRoles(false);
+    }
+  };
+
+  const toggleRol = (campo: keyof typeof rolesUsuario) => {
+    setRolesUsuario(prev => ({
+      ...prev,
+      [campo]: !prev[campo]
+    }));
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -342,6 +439,20 @@ export default function CoordinadoresPage() {
                           </span>
                         </div>
                         <p className="text-xs lg:text-sm text-slate-400 truncate">{coord.email}</p>
+                        {/* Roles Múltiples Activos */}
+                        {getRolesActivos(coord).length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {getRolesActivos(coord).map(rol => (
+                              <span
+                                key={rol.key}
+                                className="px-2 py-0.5 bg-slate-800 border border-slate-600 text-slate-300 text-[10px] rounded-md"
+                                title={rol.label}
+                              >
+                                {rol.emoji} {rol.label}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       {coord.isActive ? (
                         <span className="px-2.5 lg:px-4 py-1.5 lg:py-2 bg-emerald-500/30 text-emerald-300 text-[10px] lg:text-xs font-black rounded-lg lg:rounded-xl border-2 border-emerald-500/50 shadow-lg shadow-emerald-500/20 whitespace-nowrap">
@@ -386,6 +497,14 @@ export default function CoordinadoresPage() {
 
                     {/* Botones de Acciones */}
                     <div className="flex flex-wrap justify-end gap-2 mt-2">
+                      <button
+                        onClick={() => abrirModalRolesMultiples(coord)}
+                        className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 rounded-lg text-purple-300 text-xs lg:text-sm font-medium transition-all hover:scale-105"
+                      >
+                        <Settings2 size={14} className="lg:hidden" />
+                        <Settings2 size={16} className="hidden lg:block" />
+                        <span>Roles Múltiples</span>
+                      </button>
                       <button
                         onClick={() => {
                           setSelectedUser(coord);
@@ -829,6 +948,169 @@ export default function CoordinadoresPage() {
                   setModalPassword(false);
                   setSelectedUser(null);
                   setNewPassword('');
+                }}
+                className="px-6 py-4 bg-slate-700/50 border-2 border-slate-600 text-slate-300 rounded-xl font-bold hover:bg-slate-700 hover:text-white transition-all"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Roles Múltiples */}
+      {modalRolesMultiples && selectedUser && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 border-2 border-purple-500/30 rounded-3xl p-6 lg:p-8 max-w-lg w-full shadow-2xl shadow-purple-500/20 animate-in slide-in-from-bottom duration-300 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl shadow-lg shadow-purple-500/50">
+                <Settings2 size={28} className="text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl lg:text-2xl font-black text-white">Roles Múltiples</h2>
+                <p className="text-slate-400 text-sm">{selectedUser.nombre}</p>
+              </div>
+            </div>
+
+            <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 mb-6">
+              <p className="text-purple-300 text-sm">
+                Configura los roles adicionales para este usuario. Un usuario puede tener múltiples roles simultáneamente.
+              </p>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              {/* Mentor */}
+              <label className="flex items-center justify-between p-4 bg-slate-900/60 border border-slate-700 rounded-xl cursor-pointer hover:border-purple-500/50 transition-all">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🎓</span>
+                  <div>
+                    <p className="text-white font-bold">Mentor</p>
+                    <p className="text-slate-400 text-xs">Puede dar mentoría a participantes</p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={rolesUsuario.esMentor}
+                  onChange={() => toggleRol('esMentor')}
+                  className="w-5 h-5 rounded border-2 border-purple-500 bg-slate-800 text-purple-500 focus:ring-purple-500/30"
+                />
+              </label>
+
+              {/* Entrenador */}
+              <label className="flex items-center justify-between p-4 bg-slate-900/60 border border-slate-700 rounded-xl cursor-pointer hover:border-orange-500/50 transition-all">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🚀</span>
+                  <div>
+                    <p className="text-white font-bold">Entrenador</p>
+                    <p className="text-slate-400 text-xs">Puede dar entrenamientos</p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={rolesUsuario.esEntrenador}
+                  onChange={() => toggleRol('esEntrenador')}
+                  className="w-5 h-5 rounded border-2 border-orange-500 bg-slate-800 text-orange-500 focus:ring-orange-500/30"
+                />
+              </label>
+
+              {/* Coordinador */}
+              <label className="flex items-center justify-between p-4 bg-slate-900/60 border border-slate-700 rounded-xl cursor-pointer hover:border-pink-500/50 transition-all">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🎯</span>
+                  <div>
+                    <p className="text-white font-bold">Coordinador (Liderato)</p>
+                    <p className="text-slate-400 text-xs">Puede coordinar visiones</p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={rolesUsuario.esCoordinador}
+                  onChange={() => toggleRol('esCoordinador')}
+                  className="w-5 h-5 rounded border-2 border-pink-500 bg-slate-800 text-pink-500 focus:ring-pink-500/30"
+                />
+              </label>
+
+              {/* Líder */}
+              <label className="flex items-center justify-between p-4 bg-slate-900/60 border border-slate-700 rounded-xl cursor-pointer hover:border-yellow-500/50 transition-all">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">⭐</span>
+                  <div>
+                    <p className="text-white font-bold">Líder</p>
+                    <p className="text-slate-400 text-xs">Rol de liderazgo</p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={rolesUsuario.esLider}
+                  onChange={() => toggleRol('esLider')}
+                  className="w-5 h-5 rounded border-2 border-yellow-500 bg-slate-800 text-yellow-500 focus:ring-yellow-500/30"
+                />
+              </label>
+
+              {/* Coordinador Básico */}
+              <label className="flex items-center justify-between p-4 bg-slate-900/60 border border-slate-700 rounded-xl cursor-pointer hover:border-blue-500/50 transition-all">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">📋</span>
+                  <div>
+                    <p className="text-white font-bold">Coordinador Básico</p>
+                    <p className="text-slate-400 text-xs">Nivel básico de coordinación</p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={rolesUsuario.esCoordinadorBasico}
+                  onChange={() => toggleRol('esCoordinadorBasico')}
+                  className="w-5 h-5 rounded border-2 border-blue-500 bg-slate-800 text-blue-500 focus:ring-blue-500/30"
+                />
+              </label>
+
+              {/* Coordinador Avanzado */}
+              <label className="flex items-center justify-between p-4 bg-slate-900/60 border border-slate-700 rounded-xl cursor-pointer hover:border-emerald-500/50 transition-all">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🎪</span>
+                  <div>
+                    <p className="text-white font-bold">Coordinador Avanzado</p>
+                    <p className="text-slate-400 text-xs">Nivel avanzado de coordinación</p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={rolesUsuario.esCoordinadorAvanzado}
+                  onChange={() => toggleRol('esCoordinadorAvanzado')}
+                  className="w-5 h-5 rounded border-2 border-emerald-500 bg-slate-800 text-emerald-500 focus:ring-emerald-500/30"
+                />
+              </label>
+
+              {/* Game Changer */}
+              <label className="flex items-center justify-between p-4 bg-slate-900/60 border border-slate-700 rounded-xl cursor-pointer hover:border-cyan-500/50 transition-all">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🔥</span>
+                  <div>
+                    <p className="text-white font-bold">Game Changer</p>
+                    <p className="text-slate-400 text-xs">Rol especial Game Changer</p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={rolesUsuario.esGameChanger}
+                  onChange={() => toggleRol('esGameChanger')}
+                  className="w-5 h-5 rounded border-2 border-cyan-500 bg-slate-800 text-cyan-500 focus:ring-cyan-500/30"
+                />
+              </label>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={guardarRolesMultiples}
+                disabled={savingRoles}
+                className="flex-1 px-6 py-4 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 text-white rounded-xl font-bold hover:shadow-xl hover:shadow-purple-500/50 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                {savingRoles ? '⏳ Guardando...' : '💾 Guardar Roles'}
+              </button>
+              <button
+                onClick={() => {
+                  setModalRolesMultiples(false);
+                  setSelectedUser(null);
                 }}
                 className="px-6 py-4 bg-slate-700/50 border-2 border-slate-600 text-slate-300 rounded-xl font-bold hover:bg-slate-700 hover:text-white transition-all"
               >

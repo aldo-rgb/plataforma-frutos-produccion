@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { createClient } from '@supabase/supabase-js';
+import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
 
 // Función para obtener cliente de Supabase (lazy initialization)
@@ -75,9 +76,6 @@ export async function POST(req: NextRequest) {
       .from('mentor-assets')
       .getPublicUrl(filePath);
 
-    // Actualizar el perfil del usuario con la nueva imagen
-    const { PrismaClient } = await import('@prisma/client');
-
     // Obtener usuario actual para guardar foto anterior en vault
     const usuario = await prisma.usuario.findUnique({
       where: { id: parseInt(session.user.id) },
@@ -106,8 +104,6 @@ export async function POST(req: NextRequest) {
       where: { id: parseInt(session.user.id) },
       data: { profileImage: publicUrl },
     });
-
-    await prisma.$disconnect();
 
     return NextResponse.json({ 
       success: true, 

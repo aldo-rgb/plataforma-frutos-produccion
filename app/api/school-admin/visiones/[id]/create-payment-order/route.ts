@@ -45,7 +45,8 @@ export async function POST(
     
     const { 
       totalAmount, 
-      totalStudents, 
+      totalStudents,
+      totalCallsPerStudent,
       mentorAssignments,
       useWalletBalance,
       walletDeduction,
@@ -98,6 +99,7 @@ export async function POST(
           visionId,
           visionName: vision.nombre,
           totalStudents,
+          totalCallsPerStudent: totalCallsPerStudent || 18, // Llamadas por estudiante (default 18)
           mentorAssignments,
           useWalletBalance,
           walletDeduction,

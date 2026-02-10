@@ -48,21 +48,9 @@ export async function GET() {
       });
     }
 
-    // Obtener todos los IDs de organizaciones que pertenecen al mismo master
-    const masterOrgId = usuario.Organization_Usuario_organizationIdToOrganization?.masterOrganizationId;
-    
+    // TODOS los roles ven SOLO los productos de su propia organización
+    // Ya no se expande a sibling orgs del master
     let allowedOrganizationIds: number[] = [usuario.organizationId];
-    
-    if (masterOrgId) {
-      // Buscar todas las organizaciones que pertenecen al mismo master
-      const siblingOrgs = await prisma.organization.findMany({
-        where: {
-          masterOrganizationId: masterOrgId
-        },
-        select: { id: true }
-      });
-      allowedOrganizationIds = siblingOrgs.map(org => org.id);
-    }
 
     // Buscar todos los productos activos de la organización (todos los niveles y tipos)
     // Un producto está activo si:

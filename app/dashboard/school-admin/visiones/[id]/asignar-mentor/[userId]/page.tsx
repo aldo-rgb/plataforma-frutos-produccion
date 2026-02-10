@@ -76,9 +76,18 @@ export default function AsignarMentorPage() {
     try {
       setLoading(true);
       
-      // Fetch usuario
-      const userRes = await fetch(`/api/school-admin/usuarios/${userId}`);
-      const userData = await userRes.json();
+      // Ejecutar las 3 llamadas en paralelo para mejor rendimiento
+      const [userRes, mentoresRes, visionRes] = await Promise.all([
+        fetch(`/api/school-admin/usuarios/${userId}`),
+        fetch(`/api/school-admin/visiones/${visionId}/mentores`),
+        fetch(`/api/school-admin/visiones/${visionId}`)
+      ]);
+
+      const [userData, mentoresData, visionData] = await Promise.all([
+        userRes.json(),
+        mentoresRes.json(),
+        visionRes.json()
+      ]);
       
       if (!userRes.ok) {
         throw new Error(userData.error || 'Error al cargar usuario');
@@ -86,17 +95,9 @@ export default function AsignarMentorPage() {
       
       setUsuario(userData.usuario);
 
-      // Fetch mentores asignados a la visión
-      const mentoresRes = await fetch(`/api/school-admin/visiones/${visionId}/mentores`);
-      const mentoresData = await mentoresRes.json();
-      
       if (mentoresRes.ok) {
         setMentoresAsignados(mentoresData.mentoresAsignados || []);
       }
-
-      // Fetch vision details
-      const visionRes = await fetch(`/api/school-admin/visiones/${visionId}`);
-      const visionData = await visionRes.json();
       
       if (visionRes.ok) {
         setVisionNombre(visionData.vision.nombre);

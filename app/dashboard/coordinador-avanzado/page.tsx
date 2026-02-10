@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
   Users, Ticket, AlertTriangle, Building2, GraduationCap, Activity,
-  Clock, Calendar, Scan, Heart, X, Phone, Mail, Loader2, History
+  Clock, Calendar, Scan, Heart, X, Phone, Mail, Loader2, History, Zap, ChevronRight
 } from 'lucide-react';
 import Link from 'next/link';
 import MedicalAlertsWidget from '@/components/dashboard/MedicalAlertsWidget';
@@ -394,75 +394,6 @@ export default function CoordinadorAvanzadoDashboard() {
           </Link>
         </div>
 
-        {/* Widgets de Declarados e Inscritos */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Widget de Declarados */}
-          <div onClick={handleOpenDeclarados} className="cursor-pointer">
-            <div className="bg-gradient-to-br from-amber-900/40 to-slate-900/80 border-2 border-amber-500/30 rounded-2xl p-6 hover:border-amber-500/50 transition-all group">
-              {/* Header con nombre de visión y nivel */}
-              {visionInfo && (
-                <div className="mb-3 pb-3 border-b border-amber-500/20">
-                  <p className="text-xs text-amber-300/70 font-medium">
-                    📍 {visionInfo.nombre} • <span className="text-orange-400">Nivel {visionInfo.level}</span>
-                  </p>
-                </div>
-              )}
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-amber-500/20 rounded-xl">
-                  <Users className="w-6 h-6 text-amber-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-1">
-                    DECLARADOS
-                  </p>
-                  <div className="flex items-baseline gap-1">
-                    <p className="text-4xl font-black text-white">
-                      {widgetStats.declarados.numerator}
-                    </p>
-                    <span className="text-xl text-slate-500 font-bold">/{widgetStats.declarados.denominator}</span>
-                  </div>
-                  <p className="text-sm text-slate-400 mt-1">
-                    Participantes comprometidos
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Widget de Inscritos */}
-          <div onClick={handleOpenInscritos} className="cursor-pointer">
-            <div className="bg-gradient-to-br from-emerald-900/40 to-slate-900/80 border-2 border-emerald-500/30 rounded-2xl p-6 hover:border-emerald-500/50 transition-all group">
-              {/* Header con nombre de visión y nivel */}
-              {visionInfo && (
-                <div className="mb-3 pb-3 border-b border-emerald-500/20">
-                  <p className="text-xs text-emerald-300/70 font-medium">
-                    📍 {visionInfo.nombre} • <span className="text-green-400">Nivel {visionInfo.level}</span>
-                  </p>
-                </div>
-              )}
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-emerald-500/20 rounded-xl">
-                  <GraduationCap className="w-6 h-6 text-emerald-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-1">
-                    INSCRITOS
-                  </p>
-                  <div className="flex items-baseline gap-1">
-                    <p className="text-4xl font-black text-white">
-                      {widgetStats.inscritos.numerator}
-                    </p>
-                    <span className="text-xl text-slate-500 font-bold">/{widgetStats.inscritos.denominator}</span>
-                  </div>
-                  <p className="text-sm text-slate-400 mt-1">
-                    Participantes pagados
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Widget Prospectos de Staff */}
         <Link href="/dashboard/prospectos-staff" className="block mt-6">
           <div className="bg-gradient-to-br from-cyan-900/30 via-emerald-900/20 to-slate-900/80 border-2 border-cyan-500/30 rounded-2xl p-6 hover:border-cyan-500/50 transition-all group hover:shadow-lg hover:shadow-cyan-500/10">
@@ -513,10 +444,25 @@ export default function CoordinadorAvanzadoDashboard() {
           <BacklogsDropsWidget />
         </div>
 
-        {/* Widget de El Atravezar */}
-        <div className="mt-8">
-          <ElCruceAccessWidget />
-        </div>
+        {/* Botón de El Atravesar - Lleva a página dedicada */}
+        <Link href="/dashboard/trainer/el-atravesar" className="block mt-8">
+          <div className="bg-gradient-to-br from-amber-900/30 via-orange-900/20 to-slate-900 border border-amber-500/30 hover:border-amber-500/50 rounded-2xl p-4 sm:p-5 transition-all cursor-pointer group hover:shadow-lg hover:shadow-amber-500/10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
+                  <Zap className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-base sm:text-lg">El Atravesar</h3>
+                  <p className="text-xs sm:text-sm text-slate-400">Escanea gafetes en tiempo real</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <ChevronRight className="w-5 h-5 text-amber-400 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          </div>
+        </Link>
 
         {/* ═══════════════════════════════════════════════════ */}
         {/*              QR PERSONAL - INVITAR PARTICIPANTES    */}

@@ -180,9 +180,11 @@ export async function POST(req: NextRequest) {
           logger.debug(`📦 MentorPackageOrder creado: ${packageOrderId} para mentor ${mentorId}`);
         }
 
-        // Acreditar llamadas
-        const callsPerStudent = 18;
+        // Acreditar llamadas - usar el valor real del paquete, no el fijo de 18
+        const callsPerStudent = existingPaymentData.totalCallsPerStudent || 18;
         const totalCalls = totalStudents * callsPerStudent;
+        
+        logger.debug(`📞 Calculando llamadas: ${totalStudents} estudiantes × ${callsPerStudent} llamadas = ${totalCalls} total`);
 
         let schoolCredit = await prisma.schoolCredit.findFirst({
           where: { organizationId: user.organizationId!, isActive: true },

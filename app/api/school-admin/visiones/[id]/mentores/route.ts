@@ -145,40 +145,41 @@ export async function GET(
 
     logger.debug('✅ Mentores profesionales con horarios válidos (05:00-08:00):', mentoresProfesionalesConHorarios.length);
 
-    // 📊 Calcular espacios disponibles para cada mentor profesional
-    const mentoresConEspacios = await Promise.all(
-      mentoresProfesionalesConHorarios.map(async (mentor: any) => {
-        const maxClients = mentor.PerfilMentor?.maxDisciplineClients || 10;
+    // 📊 Obtener conteo de clientes activos por mentor en UNA SOLA consulta (optimización N+1)
+    const allMentorIds = [
+      ...mentoresProfesionalesConHorarios.map((m: any) => m.id),
+    ];
+    
+    const enrollmentCounts = await prisma.programEnrollment.groupBy({
+      by: ['mentorId'],
+      where: {
+        mentorId: { in: allMentorIds },
+        status: 'ACTIVE',
+      },
+      _count: { id: true }
+    });
+    
+    // Crear mapa de conteos para acceso rápido O(1)
+    const enrollmentCountMap = new Map(
+      enrollmentCounts.map(e => [e.mentorId, e._count.id])
+    );
 
-        // Contar clientes actuales (enrollments activos)
-        const currentClientsCount = await prisma.programEnrollment.count({
-          where: {
-            mentorId: mentor.id,
-            status: 'ACTIVE',
-          },
-        });
+    // Calcular espacios disponibles sin consultas adicionales
+    const mentoresConEspacios = mentoresProfesionalesConHorarios.map((mentor: any) => {
+      const maxClients = mentor.PerfilMentor?.maxDisciplineClients || 10;
+      const currentClientsCount = enrollmentCountMap.get(mentor.id) || 0;
+      const availableSlots = Math.max(0, maxClients - currentClientsCount);
 
-        const availableSlots = Math.max(0, maxClients - currentClientsCount);
-
-        logger.debug(`📊 Mentor Profesional ${mentor.nombre}:`, {
+      return {
+        ...mentor,
+        availabilityInfo: {
           maxClients,
           currentClients: currentClientsCount,
           availableSlots,
           percentage: maxClients > 0 ? Math.round((currentClientsCount / maxClients) * 100) : 0,
-          profileStatus: mentor.PerfilMentor?.profileApprovalStatus
-        });
-
-        return {
-          ...mentor,
-          availabilityInfo: {
-            maxClients,
-            currentClients: currentClientsCount,
-            availableSlots,
-            percentage: maxClients > 0 ? Math.round((currentClientsCount / maxClients) * 100) : 0,
-          },
-        };
-      })
-    );
+        },
+      };
+    });
 
     // 👤 Obtener mentores PRIVADOS (LIDER) de la organización
     const mentoresPrivados = await prisma.usuario.findMany({
@@ -226,30 +227,38 @@ export async function GET(
 
     logger.debug('✅ Mentores PRIVADOS disponibles para asignar:', mentoresPrivadosConHorarios.length);
 
-    // Calcular espacios disponibles para mentores privados
-    const mentoresPrivadosConEspacios = await Promise.all(
-      mentoresPrivadosConHorarios.map(async (mentor: any) => {
-        const maxClients = mentor.PerfilMentor?.maxDisciplineClients || 10;
-        const currentClientsCount = await prisma.programEnrollment.count({
-          where: {
-            mentorId: mentor.id,
-            status: 'ACTIVE',
-          },
-        });
-
-        const availableSlots = Math.max(0, maxClients - currentClientsCount);
-
-        return {
-          ...mentor,
-          availabilityInfo: {
-            maxClients,
-            currentClients: currentClientsCount,
-            availableSlots,
-            percentage: maxClients > 0 ? Math.round((currentClientsCount / maxClients) * 100) : 0,
-          },
-        };
-      })
+    // Obtener conteo de clientes para mentores privados (reutilizar misma estrategia)
+    const privatesMentorIds = mentoresPrivadosConHorarios.map((m: any) => m.id);
+    
+    const privateEnrollmentCounts = await prisma.programEnrollment.groupBy({
+      by: ['mentorId'],
+      where: {
+        mentorId: { in: privatesMentorIds },
+        status: 'ACTIVE',
+      },
+      _count: { id: true }
+    });
+    
+    const privateEnrollmentCountMap = new Map(
+      privateEnrollmentCounts.map(e => [e.mentorId, e._count.id])
     );
+
+    // Calcular espacios disponibles sin consultas adicionales
+    const mentoresPrivadosConEspacios = mentoresPrivadosConHorarios.map((mentor: any) => {
+      const maxClients = mentor.PerfilMentor?.maxDisciplineClients || 10;
+      const currentClientsCount = privateEnrollmentCountMap.get(mentor.id) || 0;
+      const availableSlots = Math.max(0, maxClients - currentClientsCount);
+
+      return {
+        ...mentor,
+        availabilityInfo: {
+          maxClients,
+          currentClients: currentClientsCount,
+          availableSlots,
+          percentage: maxClients > 0 ? Math.round((currentClientsCount / maxClients) * 100) : 0,
+        },
+      };
+    });
 
     // 🎯 SEPARAR: Mentores Certificados (MENTOR) vs Mentores Privados (LIDER)
     // El catálogo de "Mentores Certificados" solo debe mostrar rol MENTOR
