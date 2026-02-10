@@ -456,7 +456,7 @@ export async function POST(request: Request) {
       select: { 
         id: true, 
         assignedMentorId: true,
-        VisionParticipante: {
+        VisionParticipante_VisionParticipante_participanteIdToUsuario: {
           include: {
             Vision: true
           }
@@ -465,7 +465,8 @@ export async function POST(request: Request) {
     });
     
     const hasMentorAssigned = userWithMentor?.assignedMentorId != null;
-    const isVisionParticipant = hasMentorAssigned && userWithMentor?.VisionParticipante && userWithMentor.VisionParticipante.length > 0;
+    const visionParticipaciones = userWithMentor?.VisionParticipante_VisionParticipante_participanteIdToUsuario || [];
+    const isVisionParticipant = hasMentorAssigned && visionParticipaciones.length > 0;
 
     // Si no tiene licencia NI paquete activo NI mentor asignado, rechazar
     if (!activeLicense && !activePackage && !hasMentorAssigned) {
@@ -497,7 +498,7 @@ export async function POST(request: Request) {
       logger.debug('✅ Usuario tiene mentor asignado (participante de visión):', {
         userId: session.user.id,
         assignedMentorId: userWithMentor?.assignedMentorId,
-        visionCount: userWithMentor?.VisionParticipante?.length || 0
+        visionCount: visionParticipaciones.length
       });
     } else if (activePackage) {
       logger.debug('✅ Usuario tiene paquete Lobo Solitario activo:', {
