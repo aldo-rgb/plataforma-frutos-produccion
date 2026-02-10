@@ -418,7 +418,7 @@ export default function QuantumIdentityModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-50 p-4 overflow-y-auto">
       
       {/* STAGE 0: GENDER SELECTION */}
       {stage === 'gender' && (
@@ -725,7 +725,7 @@ export default function QuantumIdentityModal({
 
       {/* STAGE 4: REVEAL */}
       {stage === 'reveal' && (
-        <div className="max-w-2xl w-full space-y-8 text-center">
+        <div className="max-w-2xl w-full space-y-8 text-center bg-slate-900/80 backdrop-blur-xl p-4 sm:p-6 md:p-8 rounded-3xl border-2 border-purple-500/30 max-h-[95vh] overflow-y-auto">
           
           {/* Avatar Reveal */}
           <div className="relative">

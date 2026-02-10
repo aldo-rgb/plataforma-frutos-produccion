@@ -162,20 +162,29 @@ export async function POST(request: NextRequest) {
 
     logger.debug('⚠️ Verificación de límites temporalmente deshabilitada');
 
-    // Construir el prompt según el género y vibe
-    const genderPrompts: Record<string, string> = {
-      male: 'male person',
-      female: 'female person'
-    };
+    // ═══════════════════════════════════════════════════════════════
+    // SISTEMA DE PROMPTS - Estilo Comic Book Animado Digital
+    // Fusión de estética anime y novela gráfica occidental
+    // Similar a un still de película animada de alta calidad
+    // ═══════════════════════════════════════════════════════════════
 
+    // Descriptor de género para el prompt
+    const genderDescriptors: Record<string, string> = {
+      male: 'man',
+      female: 'woman',
+      neutral: 'person'
+    };
+    const genderDescriptor = genderDescriptors[gender] || 'person';
+
+    // Vibes por defecto (sin arquetipo específico)
     const vibePrompts: Record<string, { positive: string; negative: string }> = {
       cyberpunk: {
-        positive: `A photo of a img ${genderPrompts[gender]}, cyberpunk aesthetic, neon lights reflecting on face, futuristic tactical jacket with glowing circuit patterns, holographic displays in background, advanced tech visor, metallic and synthetic materials, dramatic lighting with blue and purple neon glow, high-tech urban environment, unreal engine 5 render, 8k quality, professional digital art, sharp focus, cinematic composition, from waist up`,
-        negative: 'ugly, deformed, disfigured, bad anatomy, bad proportions, extra limbs, cloned face, malformed limbs, missing arms, missing legs, fused fingers, too many fingers, long neck, watermark, signature, text, logo'
+        positive: `digital comic book illustration of img, stylized animated ${genderDescriptor} character, cyberpunk aesthetic, vibrant colors, bold clean lines, anime-western fusion art style, cel-shaded skin, futuristic tech-wear with glowing cyan and purple circuits, holographic displays, neon city background, dynamic waist-up portrait, high quality digital art, artstation, not a photograph`,
+        negative: 'photorealistic, real photo, photography, realistic skin, 3D render, unreal engine, muted colors, dark gritty, weapons, guns, aggressive, ugly, deformed, bad anatomy, watermark, text, blurry, low quality, multiple people'
       },
       mystic: {
-        positive: `A photo of a img ${genderPrompts[gender]}, fantasy druid aesthetic, glowing mystical runes on forehead, ethereal energy emanating from hands, organic elements like leaves and vines integrated into clothing, magical particles floating around, soft ethereal lighting, fantasy forest background, concept art style, 8k quality, professional digital art, sharp focus, from waist up`,
-        negative: 'ugly, deformed, disfigured, bad anatomy, bad proportions, watermark, signature, text, logo'
+        positive: `digital comic book illustration of img, stylized animated ${genderDescriptor} mystic character, ethereal magical aesthetic, vibrant colors, bold clean lines, anime-western fusion art style, cel-shaded skin, flowing mystical robes with glowing runes, magical particles, cosmic sanctuary background, dynamic waist-up portrait, high quality digital art, artstation, not a photograph`,
+        negative: 'photorealistic, real photo, photography, realistic skin, 3D render, unreal engine, muted colors, dark gritty, weapons, guns, aggressive, ugly, deformed, bad anatomy, watermark, text, blurry, low quality, multiple people'
       }
     };
 
@@ -186,98 +195,110 @@ export async function POST(request: NextRequest) {
     let negativePromptToUse = selectedVibe.negative;
 
     if (designation && visualTags && archetype) {
-      const genderPrompts: Record<string, string> = {
-        male: 'male person',
-        female: 'female person'
-      };
-
-      // Nuevos arquetipos del sistema de niveles
+      // Roles y descripciones por arquetipo
       const roleDescriptions: Record<string, string> = {
-        'SCOUT': `Futuristic Scout`,
-        'ARCHIVIST': `Data Archivist`,
-        'HUNTER': `Quantum Bounty Hunter`,
-        'ARCHITECT': `Reality Architect`,
-        'BIOHACKER': `Cybernetic Bio-Hacker`,
-        'SENTINEL': `Vault Sentinel`,
-        'WEAVER': `Quantum Network Weaver`,
-        'ALCHEMIST': `Matter Alchemist`,
-        'VOYAGER': `Deep Space Voyager`,
-        'APEX': `Grandmaster Apex Legend`,
-        // Mantener compatibilidad con arquetipos antiguos
-        'DIRECTOR': `Grandmaster Apex Legend`,
-        'CURATOR': `Data Archivist`,
-        'MODELER': `Reality Architect`,
-        'OVERSEER': `Vault Sentinel`,
-        'STRATEGIST': `Quantum Bounty Hunter`,
-        'ENGINEER': `Reality Architect`,
-        'ANALYST': `Data Archivist`,
-        'OBSERVER': `Futuristic Scout`,
-        'INTERFACE': `Quantum Network Weaver`
+        'SCOUT': 'Quantum Scout',
+        'ARCHIVIST': 'Data Archivist',
+        'HUNTER': 'Quantum Bounty Hunter',
+        'ARCHITECT': 'Reality Architect',
+        'BIOHACKER': 'Cybernetic Bio-Hacker',
+        'SENTINEL': 'Vault Sentinel',
+        'WEAVER': 'Quantum Network Weaver',
+        'ALCHEMIST': 'Matter Alchemist',
+        'VOYAGER': 'Deep Space Voyager',
+        'APEX': 'Quantum Director',
+        // Compatibilidad con arquetipos antiguos
+        'DIRECTOR': 'Quantum Director',
+        'CURATOR': 'Data Archivist',
+        'MODELER': 'Reality Architect',
+        'OVERSEER': 'Vault Sentinel',
+        'STRATEGIST': 'Quantum Bounty Hunter',
+        'ENGINEER': 'Reality Architect',
+        'ANALYST': 'Data Archivist',
+        'OBSERVER': 'Quantum Scout',
+        'INTERFACE': 'Quantum Network Weaver'
       };
 
-      const characterRole = roleDescriptions[archetype] || roleDescriptions['SCOUT'];
+      const characterRole = roleDescriptions[archetype] || 'Quantum Jumper';
       
-      // Outfits futuristas por arquetipo
+      // Outfits ilustrados por arquetipo (estilo dibujado, no texturizado)
       const outfits: Record<string, string> = {
-        'SCOUT': 'advanced tactical exploration suit in matte grey and cyan with integrated hexagonal mesh patterns, sleek shoulder guards, and luminescent circuit traces running down the arms',
-        'ARCHIVIST': 'sophisticated long coat with structured shoulders, multiple glowing data-ports embedded in the chest, electric blue circuitry lines elegantly flowing down the sleeves, high-tech collar with holographic displays',
-        'HUNTER': 'sleek aerodynamic stealth bodysuit with dark purple reinforced armor plates on chest and shoulders, integrated hooded cowl with subtle tech lining, form-fitting but protective design',
-        'ARCHITECT': 'elegant futuristic formal suit with sharp angular shoulders, geometric crystalline tie, structured blazer with glowing seams, high-collar design with embedded interface panels',
-        'BIOHACKER': 'pristine white and neon-green laboratory tactical suit with reinforced vest panels, integrated medical diagnostic displays on the forearms, tight biomechanical skinsuit underneath with visible tech-veins',
-        'SENTINEL': 'heavy-duty tactical armor suit with metallic chrome finish, hexagonal armor plates covering shoulders and chest, stylish yet tank-like protection with glowing energy conduits',
-        'WEAVER': 'flowing quantum robes made of fiber-optic smart fabric that shifts colors dynamically, elegant draping with embedded light nodes, high-tech ceremonial appearance',
-        'ALCHEMIST': 'vintage-futuristic alchemist coat with brass and gold accents, leather apron overlay with tech-inscriptions, underneath a sleek black bodysuit with energy channels',
-        'VOYAGER': 'sleek deep-space explorer suit with astronaut-inspired design (helmet off), reflective glass panels on shoulders, blue-tinted protective plating, streamlined for zero-gravity',
-        'APEX': 'divine ceremonial armor made of pure white luminescent material with solid gold geometric plates forming sacred patterns, regal and transcendent design radiating authority'
+        'SCOUT': 'illustrated tactical exploration suit in matte grey with glowing cyan geometric accents, sleek shoulder guards with luminescent circuit patterns, rendered with bold colors and clean highlights',
+        'ARCHIVIST': 'illustrated sophisticated long coat with structured shoulders, glowing electric blue data-ports on the chest, circuitry lines flowing down the sleeves, painted with sharp clean lines',
+        'HUNTER': 'illustrated sleek stealth bodysuit with dark purple and red reinforced armor plates, integrated hooded cowl with subtle neon lining, rendered as stylized drawings',
+        'ARCHITECT': 'illustrated elegant futuristic formal suit with sharp angular shoulders, geometric crystalline tie with white and gold glow, structured blazer with glowing seams',
+        'BIOHACKER': 'illustrated pristine white laboratory tactical suit with neon-green glowing accents, integrated diagnostic displays on forearms, biomechanical patterns rendered with bold lines',
+        'SENTINEL': 'illustrated heavy-duty tactical armor with metallic silver finish, hexagonal armor plates with glowing energy conduits, painted with dramatic highlights',
+        'WEAVER': 'illustrated flowing quantum robes with fiber-optic patterns that shift in rainbow spectrum colors, elegant draping with embedded light nodes',
+        'ALCHEMIST': 'illustrated vintage-futuristic alchemist coat with brass and gold glowing accents, leather apron with tech-inscriptions, rendered in warm metallics',
+        'VOYAGER': 'illustrated sleek deep-space explorer suit with astronaut-inspired design, reflective deep blue and silver panels, streamlined silhouette with glowing accents',
+        'APEX': 'illustrated divine ceremonial armor in pure white luminescent material with solid gold geometric plates forming sacred patterns, radiating authority and transcendence'
       };
 
       const outfit = outfits[archetype] || outfits['SCOUT'];
       
-      // Accesorios específicos por arquetipo
+      // Accesorios ilustrados por arquetipo
       const accessories: Record<string, string> = {
-        'SCOUT': 'holding a floating holographic compass that projects a map',
-        'ARCHIVIST': 'holding a glowing crystallized data-shard, examining it closely',
-        'HUNTER': 'equipped with a wrist-mounted scanner emitting a red laser grid',
-        'ARCHITECT': 'manipulating floating 3D wireframe blueprints of a hexagon structure with their hands',
-        'BIOHACKER': 'visible bioluminescent tattoos on the neck and a smart-injector device in hand',
-        'SENTINEL': 'a hexagonal energy shield projected from the forearm',
-        'WEAVER': 'surrounded by floating nodes of light connected by thin energy threads',
-        'ALCHEMIST': 'holding a flask where liquid energy is turning into a solid gold crystal',
-        'VOYAGER': 'looking at a floating hologram of a distant galaxy',
-        'APEX': 'a crown of floating hexagonal crystals hovering above their head'
+        'SCOUT': 'holding a floating illustrated holographic compass projecting a stylized map',
+        'ARCHIVIST': 'holding a glowing crystallized data-shard, examining it with focused expression',
+        'HUNTER': 'equipped with an illustrated wrist-mounted scanner emitting a stylized red laser grid',
+        'ARCHITECT': 'manipulating floating 3D wireframe blueprints with geometric patterns',
+        'BIOHACKER': 'visible illustrated bioluminescent tattoos on the neck, holding a glowing smart-injector',
+        'SENTINEL': 'projecting an illustrated hexagonal energy shield from the forearm',
+        'WEAVER': 'surrounded by floating illustrated nodes of light connected by colorful energy threads',
+        'ALCHEMIST': 'holding an illustrated flask where liquid energy transforms into a glowing gold crystal',
+        'VOYAGER': 'looking at a floating illustrated hologram of a distant galaxy with stars',
+        'APEX': 'with an illustrated crown of floating hexagonal crystals hovering above the head'
       };
 
       const accessory = accessories[archetype] || accessories['SCOUT'];
       
-      // Colores según arquetipo
+      // Colores de acento por arquetipo
       const accentColors: Record<string, string> = {
-        'SCOUT': 'cyan',
-        'ARCHIVIST': 'electric blue',
-        'HUNTER': 'dark purple and red',
+        'SCOUT': 'cyan and teal',
+        'ARCHIVIST': 'electric blue and white',
+        'HUNTER': 'purple, red and crimson',
         'ARCHITECT': 'white and gold',
-        'BIOHACKER': 'neon green',
-        'SENTINEL': 'metallic silver',
-        'WEAVER': 'rainbow spectrum',
-        'ALCHEMIST': 'brass and gold',
-        'VOYAGER': 'deep blue and silver',
-        'APEX': 'white and gold'
+        'BIOHACKER': 'neon green and white',
+        'SENTINEL': 'metallic silver and blue',
+        'WEAVER': 'rainbow spectrum with purple base',
+        'ALCHEMIST': 'brass, gold and amber',
+        'VOYAGER': 'deep blue, silver and starlight',
+        'APEX': 'white, gold and divine light'
       };
 
-      const accentColor = accentColors[archetype] || 'cyan';
+      const accentColor = accentColors[archetype] || 'cyan and purple';
+
+      // Fondos ilustrados por arquetipo
+      const backgrounds: Record<string, string> = {
+        'SCOUT': 'a richly illustrated exploration outpost with holographic terrain maps, scanning equipment, and a view of an alien landscape with geometric formations',
+        'ARCHIVIST': 'a richly illustrated data archive chamber with floating holographic books, glowing data streams, and towering crystalline storage structures',
+        'HUNTER': 'a richly illustrated urban rooftop at night with neon city lights below, holographic target displays, and stylized rain effects',
+        'ARCHITECT': 'a richly illustrated design studio with floating 3D blueprints, geometric wireframes, and a view of futuristic buildings being constructed',
+        'BIOHACKER': 'a richly illustrated high-tech laboratory with glowing specimen tubes, holographic DNA strands, and bioluminescent plant specimens',
+        'SENTINEL': 'a richly illustrated vault command center with security displays, energy barriers, and massive protected doors with geometric patterns',
+        'WEAVER': 'a richly illustrated quantum nexus with flowing data rivers, interconnected light nodes, and a cosmic network visualization',
+        'ALCHEMIST': 'a richly illustrated alchemical workshop with floating formulas, transmutation circles, and shelves of glowing crystalline substances',
+        'VOYAGER': 'a richly illustrated spacecraft bridge with a panoramic view of distant galaxies, star maps, and navigation holographics',
+        'APEX': 'a richly illustrated quantum command center with holographic displays showing growth charts, abstract data streams flowing, and a panoramic view of a glowing cyber-city through massive windows'
+      };
+
+      const background = backgrounds[archetype] || backgrounds['APEX'];
       
       // ═══════════════════════════════════════════════════════════════
-      // PROMPT MAESTRO - Estilo Digital Painting Cyberpunk
-      // Personaje futurista con gadgets cuánticos, desde la cintura
-      // IMPORTANTE: Solo usar 'img' UNA VEZ en todo el prompt
+      // PROMPT MAESTRO - Estilo Comic Book Animado Digital
+      // Para PhotoMaker-Style: usar "img" como trigger word
+      // Estilo: Ilustración digital vibrante tipo película animada
       // ═══════════════════════════════════════════════════════════════
-      promptToUse = `img ${genderPrompts[gender]}, digital painting illustration, semi-realistic anime style, waist-up portrait shot showing upper body and hands, bright ${accentColor} glowing eyes, friendly confident smile, stylized smooth skin with soft cel-shading, sleek white and dark grey futuristic cyber armor with glowing ${accentColor} circuit lines and hexagonal patterns, circular glowing ${accentColor} energy core on chest, futuristic single-eye quantum visor or monocle scanner with ${accentColor} holographic display, ear-mounted tech headset with spiral ${accentColor} glow pattern, one hand raised showing palm in friendly wave gesture or touching holographic interface, floating holographic data panels nearby, blurred cyberpunk city background with neon bokeh lights in ${accentColor} blue and purple, high quality digital art illustration, artstation trending, 8k, vibrant glowing colors, clean sharp lines, professional game character concept art, ${outfit}, ${accessory}`;
+      promptToUse = `digital comic book illustration of img, stylized animated character portrait, ${genderDescriptor} ${characterRole}, vibrant colors, bold clean lines, anime-western fusion art style, cel-shaded skin, ${outfit}, ${accessory}, glowing ${accentColor} neon accents, holographic elements, ${background}, dynamic waist-up composition, high quality digital art, artstation, painterly finish, not a photograph`;
     
-      negativePromptToUse = 'photorealistic, real photo, photography, realistic skin texture, muted colors, dark gritty, weapons, guns, swords, aggressive, ugly, deformed, bad anatomy, watermark, text, blurry, low quality, cropped, headshot only, face only';
+      negativePromptToUse = 'photorealistic, real photo, photography, realistic skin, realistic fabric, 3D render, unreal engine, muted colors, dark gritty, weapons, guns, aggressive, ugly, deformed, bad anatomy, watermark, text, blurry, low quality, cropped, multiple people, bad hands';
       
-      logger.debug('🎭 Prompt Anime/Digital 3D Style para PhotoMaker');
+      logger.debug('🎨 Prompt Comic Book Animado para PhotoMaker');
       logger.debug('🏢 Designación:', designation);
-      logger.debug('🏢 Arquetipo:', archetype);
+      logger.debug('🎭 Arquetipo:', archetype);
       logger.debug('👤 Rol:', characterRole);
+      logger.debug('🎨 Colores:', accentColor);
     }
 
     logger.debug('🎨 Generando con Replicate...');
@@ -300,16 +321,19 @@ export async function POST(request: NextRequest) {
     // Si hay múltiples imágenes, las combinamos o usamos la primera principal
     const primaryImage = inputImages[0];
     
-    // Si hay más de una imagen, PhotoMaker puede usar input_image2, input_image3, input_image4
+    // ═══════════════════════════════════════════════════════════════
+    // PhotoMaker: Genera avatares manteniendo identidad facial
+    // Aumentamos style_strength_ratio para más estilización
+    // ═══════════════════════════════════════════════════════════════
     const inputParams: any = {
       input_image: primaryImage,
       prompt: promptToUse,
       negative_prompt: negativePromptToUse,
       num_outputs: 1,
-      guidance_scale: inputImages.length > 1 ? 4.0 : 3.5, // Ligeramente mayor con múltiples fotos
-      num_inference_steps: 60,
-      scheduler: "DPMSolverMultistep",
-      style_strength_ratio: inputImages.length > 1 ? 20 : 15, // Más estilo con múltiples fotos para consistencia
+      guidance_scale: 7.5, // Alto para seguir el prompt de estilo
+      num_inference_steps: 50,
+      scheduler: "EulerDiscreteScheduler",
+      style_strength_ratio: 45, // 45% estilo, 55% identidad - más artístico
     };
 
     // Agregar imágenes adicionales si están disponibles
@@ -327,9 +351,9 @@ export async function POST(request: NextRequest) {
     }
 
     // IMPORTANTE: Usamos el método de predictions para obtener URLs directamente
-    // PhotoMaker retorna ReadableStream con replicate.run(), necesitamos polling
     
-    // Crear predicción en Replicate con parámetros optimizados para máxima preservación facial
+    // Crear predicción con PhotoMaker
+    // Modelo: tencentarc/photomaker
     const prediction = await replicateClient.predictions.create({
       version: "ddfc2b08d209f9fa8c1eca692712918bd449f695dabb4a958da31802a9570fe4",
       input: inputParams

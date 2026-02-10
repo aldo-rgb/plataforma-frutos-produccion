@@ -423,8 +423,8 @@ export async function POST(request: Request) {
       totalWeeks
     });
 
-    // ===== VALIDACIÓN 1: LICENCIA O PAQUETE ACTIVO =====
-    // Verificar que el usuario tenga una licencia activa O un paquete de Lobo Solitario
+    // ===== VALIDACIÓN 1: LICENCIA, PAQUETE O MENTOR ASIGNADO (VISIÓN) =====
+    // Verificar que el usuario tenga una licencia activa O un paquete de Lobo Solitario O mentor asignado por visión
     const activeLicense = await prisma.licenseAssignment.findFirst({
       where: {
         userId: session.user.id,
@@ -450,8 +450,25 @@ export async function POST(request: Request) {
       }
     });
 
-    // Si no tiene licencia NI paquete activo, rechazar
-    if (!activeLicense && !activePackage) {
+    // Verificar si tiene mentor asignado por visión (participante de visión)
+    const userWithMentor = await prisma.usuario.findUnique({
+      where: { id: session.user.id },
+      select: { 
+        id: true, 
+        assignedMentorId: true,
+        VisionParticipante: {
+          include: {
+            Vision: true
+          }
+        }
+      }
+    });
+    
+    const hasMentorAssigned = userWithMentor?.assignedMentorId != null;
+    const isVisionParticipant = hasMentorAssigned && userWithMentor?.VisionParticipante && userWithMentor.VisionParticipante.length > 0;
+
+    // Si no tiene licencia NI paquete activo NI mentor asignado, rechazar
+    if (!activeLicense && !activePackage && !hasMentorAssigned) {
       return NextResponse.json({ 
         error: 'No tienes una licencia activa. Contacta a tu coordinador para obtener acceso al programa.' 
       }, { status: 403 });
@@ -475,6 +492,12 @@ export async function POST(request: Request) {
         userId: session.user.id,
         licenseCode: activeLicense.licenseCode,
         expiresAt: activeLicense.expiresAt
+      });
+    } else if (hasMentorAssigned) {
+      logger.debug('✅ Usuario tiene mentor asignado (participante de visión):', {
+        userId: session.user.id,
+        assignedMentorId: userWithMentor?.assignedMentorId,
+        visionCount: userWithMentor?.VisionParticipante?.length || 0
       });
     } else if (activePackage) {
       logger.debug('✅ Usuario tiene paquete Lobo Solitario activo:', {
@@ -564,8 +587,16 @@ export async function POST(request: Request) {
     const startDate = new Date();
     const endDate = addWeeks(startDate, totalWeeks);
 
-    // Determinar si es Lobo Solitario (tiene paquete pero no licencia)
-    const isLoboSolitario = !activeLicense && activePackage;
+    // Determinar si es Lobo Solitario (tiene paquete pero no licencia NI mentor asignado por visión)
+    const isLoboSolitario = !activeLicense && !hasMentorAssigned && activePackage;
+    
+    logger.debug('📊 Tipo de usuario:', {
+      activeLicense: !!activeLicense,
+      activePackage: !!activePackage,
+      hasMentorAssigned,
+      isVisionParticipant,
+      isLoboSolitario
+    });
 
     // Usar transacción para garantizar consistencia
     const result = await prisma.$transaction(async (tx) => {
