@@ -1449,18 +1449,6 @@ export default function VisionDetailPage() {
               <div className="p-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   {productos.map((producto) => {
-                    // Debug: Ver fechas de PL específicamente
-                    if (producto.levelType === 'PL') {
-                      console.log('🔍 Renderizando PL:', {
-                        plWeekend1StartDate: producto.plWeekend1StartDate,
-                        plWeekend1EndDate: producto.plWeekend1EndDate,
-                        plWeekend2StartDate: producto.plWeekend2StartDate,
-                        plWeekend2EndDate: producto.plWeekend2EndDate,
-                        plWeekend3StartDate: producto.plWeekend3StartDate,
-                        plWeekend3EndDate: producto.plWeekend3EndDate,
-                      });
-                    }
-                    
                     const levelConfig = {
                       BASIC: { 
                         emoji: '🌱', 

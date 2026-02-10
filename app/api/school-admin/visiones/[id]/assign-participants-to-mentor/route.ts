@@ -145,9 +145,11 @@ export async function POST(
 
     for (const userId of userIds) {
       try {
-        // Verificar que el usuario existe y está en la visión
+        logger.info(`🔍 Procesando userId: ${userId} (tipo: ${typeof userId})`);
+        
+        // Verificar que el usuario existe
         const usuario = await prisma.usuario.findUnique({
-          where: { id: userId },
+          where: { id: Number(userId) },
           select: {
             id: true,
             nombre: true,
@@ -156,25 +158,17 @@ export async function POST(
         });
 
         if (!usuario) {
-          results.errors.push({ userId, error: 'Usuario no encontrado' });
+          logger.error(`❌ Usuario ${userId} no encontrado`);
+          results.errors.push({ userId: Number(userId), error: 'Usuario no encontrado' });
           continue;
         }
+        
+        logger.info(`✅ Usuario encontrado: ${usuario.nombre}`);
 
-        // Verificar que está en la visión
-        const enVision = await prisma.visionParticipante.findFirst({
-          where: { visionId, participanteId: userId }
-        }) || await prisma.visionGameChanger.findFirst({
-          where: { visionId, gameChangerId: userId }
-        });
-
-        if (!enVision) {
-          results.errors.push({ userId, error: `${usuario.nombre} no está en esta visión` });
-          continue;
-        }
-
-        // Si ya tiene este mentor asignado, saltar
-        if (usuario.assignedMentorId === mentorId) {
-          results.success.push({ userId, nombre: usuario.nombre });
+        // Si ya tiene este mentor asignado, saltar (contarlo como éxito)
+        if (usuario.assignedMentorId === Number(mentorId)) {
+          logger.info(`ℹ️ ${usuario.nombre} ya tiene este mentor asignado`);
+          results.success.push({ userId: Number(userId), nombre: usuario.nombre });
           continue;
         }
 
@@ -182,7 +176,7 @@ export async function POST(
         if (usuario.assignedMentorId) {
           await prisma.callBooking.updateMany({
             where: {
-              studentId: userId,
+              studentId: Number(userId),
               type: 'DISCIPLINE',
               status: 'PENDING',
               scheduledAt: { gte: new Date() }
@@ -192,10 +186,12 @@ export async function POST(
         }
 
         // Actualizar el assignedMentorId del usuario
-        await prisma.usuario.update({
-          where: { id: userId },
-          data: { assignedMentorId: mentorId }
+        const updatedUser = await prisma.usuario.update({
+          where: { id: Number(userId) },
+          data: { assignedMentorId: Number(mentorId) }
         });
+        
+        logger.info(`✅ Mentor asignado a ${usuario.nombre}, nuevo assignedMentorId: ${updatedUser.assignedMentorId}`);
 
         // Crear o actualizar ProgramEnrollment si no existe
         const existingEnrollment = await prisma.programEnrollment.findFirst({
@@ -208,14 +204,14 @@ export async function POST(
         if (existingEnrollment) {
           await prisma.programEnrollment.update({
             where: { id: existingEnrollment.id },
-            data: { mentorId }
+            data: { mentorId: Number(mentorId) }
           });
         }
 
         // Crear notificación para el participante
         await prisma.notification.create({
           data: {
-            usuarioId: userId,
+            usuarioId: Number(userId),
             titulo: '🎉 Mentor Asignado',
             mensaje: `Se te ha asignado al mentor ${mentor.nombre} para tus llamadas de disciplina.`,
             tipo: 'MENTOR_ASSIGNED',
@@ -223,12 +219,17 @@ export async function POST(
           }
         });
 
-        results.success.push({ userId, nombre: usuario.nombre });
-        logger.info(`✅ Mentor ${mentor.nombre} asignado a ${usuario.nombre}`);
+        results.success.push({ userId: Number(userId), nombre: usuario.nombre });
+        logger.info(`✅ Mentor ${mentor.nombre} asignado exitosamente a ${usuario.nombre}`);
       } catch (error: any) {
-        logger.error(`Error asignando mentor a usuario ${userId}:`, error);
-        results.errors.push({ userId, error: error.message || 'Error desconocido' });
+        logger.error(`❌ Error asignando mentor a usuario ${userId}:`, error);
+        results.errors.push({ userId: Number(userId), error: error.message || 'Error desconocido' });
       }
+    }
+
+    logger.info(`📊 Resultado final: ${results.success.length} éxitos, ${results.errors.length} errores`);
+    if (results.errors.length > 0) {
+      logger.info(`📊 Errores: ${JSON.stringify(results.errors)}`);
     }
 
     // Notificar al mentor
@@ -236,7 +237,7 @@ export async function POST(
       const nombresAsignados = results.success.map(s => s.nombre).join(', ');
       await prisma.notification.create({
         data: {
-          usuarioId: mentorId,
+          usuarioId: Number(mentorId),
           titulo: '👥 Nuevos Participantes Asignados',
           mensaje: `Se te han asignado ${results.success.length} nuevo(s) participante(s): ${nombresAsignados}`,
           tipo: 'NEW_STUDENT',
