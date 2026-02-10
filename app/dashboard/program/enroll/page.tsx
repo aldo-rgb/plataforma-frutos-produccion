@@ -305,6 +305,46 @@ export default function ProgramEnrollPage() {
           setIsLoading(false);
           return;
         }
+
+        // CASO 3: Participante de visión con mentor asignado (NO es Lobo Solitario)
+        if (enrollmentData.hasMentorAssigned && enrollmentData.mentor) {
+          console.log('✅ Participante de visión con mentor asignado:', enrollmentData.mentor);
+          console.log('🌍 Visión:', enrollmentData.vision);
+          console.log('📊 Stats:', enrollmentData.stats);
+          
+          setMentorAsignado(enrollmentData.mentor);
+          
+          // Si necesita agendar horarios, cargar los slots disponibles
+          if (enrollmentData.needsScheduling) {
+            console.log('📅 Usuario de visión necesita agendar horarios');
+            console.log('🔍 Cargando slots del mentor ID:', enrollmentData.mentor.id);
+            
+            const slotsResponse = await fetch(`/api/mentor/slots-disponibles?mentorId=${enrollmentData.mentor.id}`);
+            
+            if (slotsResponse.ok) {
+              const slotsData = await slotsResponse.json();
+              setSlotsDisponibles(slotsData.slotsDisponibles || {});
+              
+              // Preseleccionar horarios si hay disponibles
+              const diasDisponibles = Object.keys(slotsData.slotsDisponibles || {}).map(Number).sort();
+              
+              if (diasDisponibles.length >= 2) {
+                const dia1 = diasDisponibles[0];
+                const dia2 = diasDisponibles[1];
+                const horarios1 = slotsData.slotsDisponibles[dia1];
+                const horarios2 = slotsData.slotsDisponibles[dia2];
+                
+                if (horarios1?.length > 0 && horarios2?.length > 0) {
+                  setSlot1({ dayOfWeek: dia1, time: horarios1[0] });
+                  setSlot2({ dayOfWeek: dia2, time: horarios2[0] });
+                }
+              }
+            }
+          }
+          setEnrollmentInfo(enrollmentData);
+          setIsLoading(false);
+          return;
+        }
       }
       
       // Si no tiene enrollment o mentor en enrollment, verificar assignedMentorId
@@ -567,14 +607,15 @@ export default function ProgramEnrollPage() {
     );
   }
 
-  // Calcular semanas y sesiones según la visión
-  // Por defecto: 9 semanas / 18 sesiones para todos
-  // Solo cambia si hay una visión con fechas específicas
-  const totalWeeksDisplay = enrollmentInfo?.stats?.totalWeeks || 9;
+  // Calcular semanas y sesiones según la visión o stats del API
+  // Por defecto: 10 semanas para visiones normales, solo 9 para Lobo Solitario
+  const isLoboSolitario = enrollmentInfo?.hasLoboSolitario && !enrollmentInfo?.hasMentorAssigned;
+  const defaultWeeks = isLoboSolitario ? 9 : 10;
+  const totalWeeksDisplay = enrollmentInfo?.stats?.totalWeeks || defaultWeeks;
   const totalSessionsDisplay = totalWeeksDisplay * 2;
   const programName = enrollmentInfo?.vision 
-    ? enrollmentInfo.vision.nombre 
-    : 'Programa de Seguimiento (Lobo Solitario)';
+    ? `Programa de Disciplina - ${enrollmentInfo.vision.nombre}`
+    : (isLoboSolitario ? 'Programa de Seguimiento (Lobo Solitario)' : 'Programa de Disciplina');
 
   return (
     <ProtectedModulePage moduleKey="disciplina">
@@ -593,8 +634,10 @@ export default function ProgramEnrollPage() {
           </p>
           <p className="text-slate-400">
             {enrollmentInfo?.vision 
-              ? 'Inscríbete al programa de disciplina con llamadas semanales programadas'
-              : 'Ciclo de 63 días (9 semanas) con llamadas semanales - Modalidad Lobo Solitario'}
+              ? `Programa de ${totalWeeksDisplay} semanas con llamadas semanales programadas`
+              : (isLoboSolitario 
+                  ? 'Ciclo de 63 días (9 semanas) con llamadas semanales - Modalidad Lobo Solitario'
+                  : 'Inscríbete al programa de disciplina con llamadas semanales programadas')}
           </p>
           {enrollmentInfo?.vision && enrollmentInfo.vision.endDate && (
             <p className="text-purple-400 text-sm mt-2">

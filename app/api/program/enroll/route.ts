@@ -164,19 +164,70 @@ export async function GET() {
       }
       
       // 🆕 Si no tiene enrollment ni Lobo Solitario, pero tiene mentor asignado
+      // Este es el caso de participantes de visión que ya tienen mentor pero aún no han iniciado su programa
       const assignedMentor = usuario?.Usuario_Usuario_assignedMentorIdToUsuario;
       if (assignedMentor) {
+        // Buscar la visión del usuario desde VisionParticipante
+        const visionParticipante = await prisma.visionParticipante.findFirst({
+          where: { participanteId: session.user.id },
+          include: {
+            Vision: {
+              select: {
+                id: true,
+                nombre: true,
+                startDate: true,
+                endDate: true
+              }
+            }
+          },
+          orderBy: { createdAt: 'desc' }
+        });
+
+        // Calcular semanas y sesiones desde las fechas de la visión
+        let totalWeeks = 10; // Default para visiones
+        let visionData = null;
+        
+        if (visionParticipante?.Vision) {
+          const vision = visionParticipante.Vision;
+          visionData = {
+            id: vision.id,
+            nombre: vision.nombre,
+            startDate: vision.startDate,
+            endDate: vision.endDate
+          };
+          
+          if (vision.startDate && vision.endDate) {
+            const start = new Date(vision.startDate);
+            const end = new Date(vision.endDate);
+            const diffMs = end.getTime() - start.getTime();
+            const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+            totalWeeks = Math.ceil(diffDays / 7);
+          }
+        }
+
+        const totalSessions = totalWeeks * 2;
+
         return NextResponse.json({ 
           hasEnrollment: false,
-          hasLoboSolitario: true, // Tratarlo como Lobo Solitario para mostrar UI correcta
-          needsScheduling: true, // Necesita agendar sesiones
-          message: 'Tienes un mentor asignado. Agenda tus sesiones.',
+          hasLoboSolitario: false,
+          hasMentorAssigned: true,
+          needsScheduling: true,
+          message: 'Tienes un mentor asignado. Agenda tus sesiones para iniciar tu programa.',
           userTier: usuario?.tier || 'FREE',
           userRole: usuario?.rol,
           mentor: {
             id: assignedMentor.id,
             nombre: assignedMentor.nombre,
             profileImage: assignedMentor.profileImage || assignedMentor.imagen || '/default-avatar.svg'
+          },
+          vision: visionData,
+          stats: {
+            totalWeeks: totalWeeks,
+            totalSessions: totalSessions,
+            remainingSessions: totalSessions,
+            completedSessions: 0,
+            maxMissedAllowed: 3,
+            missedCalls: 0
           }
         });
       }
