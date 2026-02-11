@@ -1,6 +1,6 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { 
@@ -39,6 +39,8 @@ interface SidebarProps {
 
 export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const isParticipanteView = searchParams.get('view') === 'participante';
   const [cartaStatus, setCartaStatus] = useState<string | null>(null);
   const [showUpsellModal, setShowUpsellModal] = useState(false);
   const [upsellMessage, setUpsellMessage] = useState('');
@@ -341,7 +343,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
         </Link>
 
         {/* Panel de Trainer */}
-        {usuario.rol === 'TRAINER' && (
+        {!isParticipanteView && usuario.rol === 'TRAINER' && (
           <div className="pt-6 mt-6 border-t border-slate-800">
             <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">🎓 Panel Trainer</p>
             
@@ -413,7 +415,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
         )}
 
         {/* Panel de Game Changer */}
-        {usuario.rol === 'GAME_CHANGER' && (
+        {!isParticipanteView && usuario.rol === 'GAME_CHANGER' && (
           <div className="pt-6 mt-6 border-t border-slate-800">
             <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">Panel Game Changer</p>
             
@@ -433,7 +435,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
         )}
 
         {/* Panel de Mentor - Mostrar si rol es MENTOR o si activeRole es MENTOR y tiene esMentor */}
-        {(usuario.rol === 'MENTOR' || (activeRole === 'MENTOR' && usuario.esMentor)) && (
+        {!isParticipanteView && (usuario.rol === 'MENTOR' || (activeRole === 'MENTOR' && usuario.esMentor)) && (
           <div className="pt-6 mt-6 border-t border-slate-800">
             <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">Panel de Mentor</p>
             
@@ -540,7 +542,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
         )}
 
         {/* Panel de Líder */}
-        {usuario.rol === 'LIDER' && (
+        {!isParticipanteView && usuario.rol === 'LIDER' && (
           <div className="pt-6 mt-6 border-t border-slate-800">
             <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">Panel de Mentor</p>
             
@@ -621,7 +623,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
         )}
 
         {/* Panel de Trainer - Personajes solo si tiene avanzado vigente */}
-        {usuario.rol === 'TRAINER' && hasActiveAdvanced && (
+        {!isParticipanteView && usuario.rol === 'TRAINER' && hasActiveAdvanced && (
           <div className="pt-6 mt-6 border-t border-slate-800">
             <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">🎭 Herramientas Avanzado</p>
             
@@ -654,7 +656,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
         )}
 
         {/* Panel de Director de Escuela (SCHOOL_ADMIN) */}
-        {usuario.rol === 'SCHOOL_ADMIN' && (
+        {!isParticipanteView && usuario.rol === 'SCHOOL_ADMIN' && (
           <div className="pt-6 mt-6 border-t border-slate-800">
             <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">🏫 Mi Escuela</p>
             
@@ -751,7 +753,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
         )}
 
         {/* Panel Maestro (Basado en Permisos) */}
-        {(usuario.rol === 'ADMINISTRADOR' || allowedMenuItems.some(item => item.section === 'Panel Maestro')) && (
+        {!isParticipanteView && (usuario.rol === 'ADMINISTRADOR' || allowedMenuItems.some(item => item.section === 'Panel Maestro')) && (
           <div className="pt-6 mt-6 border-t border-slate-800">
             <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">Panel Maestro</p>
             
@@ -934,7 +936,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
         )}
 
         {/* REPORTES Y CONTROL - Solo Admin */}
-        {(usuario.rol === 'ADMIN' || usuario.rol === 'ADMINISTRADOR') && (
+        {!isParticipanteView && (usuario.rol === 'ADMIN' || usuario.rol === 'ADMINISTRADOR') && (
           <div className="pt-6 mt-6 border-t border-slate-800">
             <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">📊 Reportes y Control</p>
             
