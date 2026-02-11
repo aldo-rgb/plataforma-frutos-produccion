@@ -517,7 +517,7 @@ export function RegistrationForm({
                       setReferralSearchText(e.target.value);
                       setFormData(prev => ({ ...prev, referralCode: e.target.value }));
                     }}
-                    placeholder="Escribe el nombre de quien te invitó..."
+                    placeholder="Quien te invitó..."
                     className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00F0FF]/50 focus:border-[#00F0FF]/50 transition-all"
                   />
                   {searchingReferral && (

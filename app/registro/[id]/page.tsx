@@ -538,7 +538,7 @@ export default function RegistroPublicoPage() {
                     setFormData({ ...formData, angelEnrolamiento: e.target.value });
                     if (selectedAngel) setSelectedAngel(null);
                   }}
-                  placeholder="Escribe el nombre de quien te invitó..."
+                  placeholder="Quien te invitó?..."
                   className={`w-full px-4 py-3 bg-slate-800 border ${selectedAngel ? 'border-emerald-500' : 'border-slate-600'} rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 pr-12`}
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">

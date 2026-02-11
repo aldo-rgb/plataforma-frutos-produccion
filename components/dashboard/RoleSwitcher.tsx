@@ -87,6 +87,9 @@ export function RoleSwitcher({ usuario }: RoleSwitcherProps) {
 
   // Determinar qué roles tiene el usuario
   const availableRoles = allRoles.filter(role => {
+    // PARTICIPANTE siempre disponible para todos los usuarios con múltiples roles
+    if (role.key === 'PARTICIPANTE') return true;
+    
     // El rol principal siempre está disponible
     if (role.key === usuario.rol) return true;
     

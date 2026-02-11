@@ -449,7 +449,7 @@ export default function SolicitarMentorPage() {
                   <p className="text-white/90 text-lg mb-4">Quantum Matter - Certificación Profesional</p>
                   <div className="inline-block bg-white/20 backdrop-blur-sm rounded-xl px-6 py-3">
                     <div className="text-5xl font-bold">$999</div>
-                    <div className="text-sm text-white/80">USD / Anual</div>
+                    <div className="text-sm text-white/80">MXN / Anual</div>
                   </div>
                 </div>
               </div>
@@ -1352,7 +1352,7 @@ export default function SolicitarMentorPage() {
                 <p className="text-white/90 text-lg mb-4">Quantum Matter - Certificación Profesional</p>
                 <div className="inline-block bg-white/20 backdrop-blur-sm rounded-xl px-6 py-3">
                   <div className="text-5xl font-bold">$999</div>
-                  <div className="text-sm text-white/80">USD / Anual</div>
+                  <div className="text-sm text-white/80">MXN / Anual</div>
                 </div>
               </div>
             </div>
