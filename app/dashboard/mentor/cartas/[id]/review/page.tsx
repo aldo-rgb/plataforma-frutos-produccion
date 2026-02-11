@@ -471,7 +471,7 @@ export default function CartaReviewPage() {
           <div className="flex items-start justify-between flex-wrap gap-4">
             <div>
               <h1 className="text-3xl font-bold text-white mb-2">
-                🎓 Revisión de Carta F.R.U.T.O.S.
+                🎓 Revisión de Carta
               </h1>
               <p className="text-slate-300">
                 <strong>{cartaData.usuario.nombre}</strong> • {cartaData.usuario.email}

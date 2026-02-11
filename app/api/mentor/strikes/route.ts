@@ -35,7 +35,7 @@ export async function GET(request: Request) {
       reports = await prisma.mentorAbsenceReport.findMany({
         where: { mentorId: user.id },
         include: {
-          Student: {
+          Usuario_MentorAbsenceReport_studentIdToUsuario: {
             select: {
               id: true,
               nombre: true,
@@ -48,6 +48,12 @@ export async function GET(request: Request) {
         },
         take: 10
       });
+      
+      // Mapear a formato esperado por el frontend
+      reports = reports.map((r: any) => ({
+        ...r,
+        Student: r.Usuario_MentorAbsenceReport_studentIdToUsuario
+      }));
     }
 
     // Calcular nivel de confiabilidad

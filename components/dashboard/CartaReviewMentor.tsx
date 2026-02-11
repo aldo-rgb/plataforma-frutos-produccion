@@ -104,7 +104,7 @@ export default function CartaReviewMentor({ cartaId, userName, initialData, onSa
           <div>
             <h1 className="text-2xl font-bold text-white mb-1 flex items-center gap-2">
               <Sparkles className="text-purple-400" />
-              Revisión de Carta F.R.U.T.O.S.
+              Revisión de Carta.
             </h1>
             <p className="text-gray-300 text-sm">
               Usuario: <strong className="text-purple-300">{userName}</strong>
