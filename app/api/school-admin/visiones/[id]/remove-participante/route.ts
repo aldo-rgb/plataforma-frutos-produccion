@@ -6,7 +6,7 @@ import logger from '@/lib/logger';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +18,8 @@ export async function POST(
       );
     }
 
-    const visionId = parseInt(params.id);
+    const { id } = await params;
+    const visionId = parseInt(id);
     const { participanteRelationId } = await request.json();
 
     logger.debug(`🗑️ Intentando eliminar participante/GC con relationId: ${participanteRelationId} de visión ${visionId}`);
