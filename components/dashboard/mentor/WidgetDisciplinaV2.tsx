@@ -52,6 +52,14 @@ interface ConfirmModal {
   participanteNombre: string;
 }
 
+interface ChangeStatusModal {
+  show: boolean;
+  bookingId: number | null;
+  participanteId: number | null;
+  participanteNombre: string;
+  currentStatus: 'PRESENT' | 'MISSED' | null;
+}
+
 export default function WidgetDisciplinaV2() {
   const [participantes, setParticipantes] = useState<Participante[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,6 +67,7 @@ export default function WidgetDisciplinaV2() {
   const [now, setNow] = useState(new Date());
   const [strikeAlert, setStrikeAlert] = useState<StrikeAlert>({ show: false, type: 'success', totalStrikes: 0, maxStrikes: 3 });
   const [confirmModal, setConfirmModal] = useState<ConfirmModal>({ show: false, bookingId: null, participanteId: null, participanteNombre: '' });
+  const [changeStatusModal, setChangeStatusModal] = useState<ChangeStatusModal>({ show: false, bookingId: null, participanteId: null, participanteNombre: '', currentStatus: null });
 
   useEffect(() => {
     cargarParticipantes();
@@ -392,17 +401,13 @@ export default function WidgetDisciplinaV2() {
                     <button
                       onClick={() => {
                         const currentStatus = participante.llamadaHoy!.attendanceStatus;
-                        if (currentStatus === 'PRESENT') {
-                          // Si está como asistió, cambiar a faltó
-                          if (confirm('¿Cambiar a FALTÓ? Esto registrará un strike.')) {
-                            registrarStrike(participante.llamadaHoy!.id, participante.id);
-                          }
-                        } else {
-                          // Si está como faltó, cambiar a asistió
-                          if (confirm('¿Cambiar a ASISTIÓ? Esto revertirá el strike.')) {
-                            marcarAsistencia(participante.llamadaHoy!.id);
-                          }
-                        }
+                        setChangeStatusModal({
+                          show: true,
+                          bookingId: participante.llamadaHoy!.id,
+                          participanteId: participante.id,
+                          participanteNombre: participante.nombre,
+                          currentStatus: currentStatus as 'PRESENT' | 'MISSED'
+                        });
                       }}
                       disabled={procesando === participante.llamadaHoy!.id}
                       className={`text-xs font-bold px-3 py-2 rounded-full cursor-pointer transition-all hover:scale-105 disabled:opacity-50 ${
@@ -610,6 +615,146 @@ export default function WidgetDisciplinaV2() {
                 className="flex-1 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-500/20"
               >
                 {procesando !== null ? 'Registrando...' : 'Confirmar Strike'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE CAMBIO DE ASISTENCIA */}
+      {changeStatusModal.show && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className={`bg-gradient-to-br from-[#1a1d2d] to-[#0f111a] border ${
+            changeStatusModal.currentStatus === 'PRESENT' 
+              ? 'border-red-500/30' 
+              : 'border-green-500/30'
+          } rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200`}>
+            {/* Header */}
+            <div className={`p-6 ${
+              changeStatusModal.currentStatus === 'PRESENT'
+                ? 'bg-gradient-to-r from-red-600/20 to-orange-600/20 border-b border-red-500/30'
+                : 'bg-gradient-to-r from-green-600/20 to-emerald-600/20 border-b border-green-500/30'
+            }`}>
+              <div className="flex items-start gap-4">
+                <div className={`p-3 rounded-xl border ${
+                  changeStatusModal.currentStatus === 'PRESENT'
+                    ? 'bg-red-500/20 border-red-500/30'
+                    : 'bg-green-500/20 border-green-500/30'
+                }`}>
+                  {changeStatusModal.currentStatus === 'PRESENT' ? (
+                    <XCircle className="w-6 h-6 text-red-400" />
+                  ) : (
+                    <CheckCircle className="w-6 h-6 text-green-400" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white mb-1">
+                    {changeStatusModal.currentStatus === 'PRESENT' 
+                      ? 'Cambiar a Faltó' 
+                      : 'Cambiar a Asistió'}
+                  </h3>
+                  <p className="text-sm text-gray-400">
+                    {changeStatusModal.currentStatus === 'PRESENT'
+                      ? 'Esta acción registrará un strike'
+                      : 'Esta acción revertirá el strike'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setChangeStatusModal({ show: false, bookingId: null, participanteId: null, participanteNombre: '', currentStatus: null })}
+                  className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              <div className={`rounded-xl p-4 ${
+                changeStatusModal.currentStatus === 'PRESENT'
+                  ? 'bg-red-500/10 border border-red-500/30'
+                  : 'bg-green-500/10 border border-green-500/30'
+              }`}>
+                <p className="text-white font-medium mb-2">
+                  ¿Cambiar el estado de asistencia de{' '}
+                  <span className={`font-bold ${
+                    changeStatusModal.currentStatus === 'PRESENT' ? 'text-red-400' : 'text-green-400'
+                  }`}>{changeStatusModal.participanteNombre}</span>?
+                </p>
+                <p className="text-sm text-gray-400">
+                  {changeStatusModal.currentStatus === 'PRESENT'
+                    ? 'El estudiante pasará de "Asistió" a "Faltó" y se le agregará un strike a su historial.'
+                    : 'El estudiante pasará de "Faltó" a "Asistió" y se le revertirá el strike de su historial.'}
+                </p>
+              </div>
+
+              <div className={`rounded-xl p-4 ${
+                changeStatusModal.currentStatus === 'PRESENT'
+                  ? 'bg-orange-500/10 border border-orange-500/30'
+                  : 'bg-emerald-500/10 border border-emerald-500/30'
+              }`}>
+                <p className={`text-sm font-medium flex items-center gap-2 ${
+                  changeStatusModal.currentStatus === 'PRESENT' ? 'text-orange-300' : 'text-emerald-300'
+                }`}>
+                  {changeStatusModal.currentStatus === 'PRESENT' ? (
+                    <>
+                      <AlertTriangle size={16} />
+                      Consecuencias:
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle size={16} />
+                      Resultado:
+                    </>
+                  )}
+                </p>
+                <ul className="text-xs text-gray-400 space-y-1 mt-2 ml-6">
+                  {changeStatusModal.currentStatus === 'PRESENT' ? (
+                    <>
+                      <li>• Se registrará un strike al estudiante</li>
+                      <li>• Se incrementará su contador de faltas</li>
+                      <li>• Puede resultar en suspensión</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>• Se eliminará el strike del estudiante</li>
+                      <li>• Se reducirá su contador de faltas</li>
+                      <li>• Se registrará la comisión de la llamada</li>
+                    </>
+                  )}
+                </ul>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-800 flex gap-3">
+              <button
+                onClick={() => setChangeStatusModal({ show: false, bookingId: null, participanteId: null, participanteNombre: '', currentStatus: null })}
+                className="flex-1 py-3 rounded-xl font-medium text-gray-300 bg-gray-800 hover:bg-gray-700 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  if (changeStatusModal.currentStatus === 'PRESENT') {
+                    registrarStrike(changeStatusModal.bookingId!, changeStatusModal.participanteId!);
+                  } else {
+                    marcarAsistencia(changeStatusModal.bookingId!);
+                  }
+                  setChangeStatusModal({ show: false, bookingId: null, participanteId: null, participanteNombre: '', currentStatus: null });
+                }}
+                disabled={procesando !== null}
+                className={`flex-1 py-3 rounded-xl font-bold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg ${
+                  changeStatusModal.currentStatus === 'PRESENT'
+                    ? 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 shadow-red-500/20'
+                    : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 shadow-green-500/20'
+                }`}
+              >
+                {procesando !== null 
+                  ? 'Procesando...' 
+                  : changeStatusModal.currentStatus === 'PRESENT' 
+                    ? 'Confirmar Falta' 
+                    : 'Confirmar Asistencia'}
               </button>
             </div>
           </div>
