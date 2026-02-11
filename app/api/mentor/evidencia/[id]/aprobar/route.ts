@@ -120,10 +120,11 @@ export async function PUT(
         data: {
           status: 'COMPLETED',
           completedAt: new Date(),
-          evidenciaId: evidenciaId
+          evidenciaId: evidenciaId,
+          evidenceStatus: 'APPROVED'
         }
       });
-      logger.debug(`   📋 TaskInstance ${taskInstance.id} marcado como COMPLETED`);
+      logger.debug(`   📋 TaskInstance ${taskInstance.id} marcado como COMPLETED y evidenceStatus APPROVED`);
     }
 
     // 2. Otorgar recompensas equilibradas (XP + PC según rareza)

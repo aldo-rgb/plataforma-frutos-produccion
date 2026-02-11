@@ -16,7 +16,6 @@ import QuantumPointsWidget from "@/components/dashboard/QuantumPointsWidget";
 import RankingWidget from "@/components/dashboard/RankingWidget";
 import PersonalQRWidget from "@/components/dashboard/PersonalQRWidget";
 import SquadManagerWidget from "@/components/dashboard/SquadManagerWidget";
-import { ElCruceAccessWidget } from "@/components/el-cruce";
 import VisionHistoryWidget from "@/components/widgets/VisionHistoryWidget";
 import GCPendingSurveyBanner from "@/components/dashboard/GCPendingSurveyBanner";
 import GCLegacyRewardBanner from "@/components/dashboard/GCLegacyRewardBanner";
@@ -329,14 +328,8 @@ export default async function GameChangerDashboardPage() {
       {/* HISTORIAL DE VISIONES (MIS ÁTOMOS) */}
       <VisionHistoryWidget />
 
-      {/* SQUAD MANAGER + EL CRUCE */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <SquadManagerWidget />
-        <ElCruceAccessWidget 
-          userRole={usuario.rol}
-          organizationId={usuario.organizationId || undefined}
-        />
-      </div>
+      {/* SQUAD MANAGER */}
+      <SquadManagerWidget />
 
       {/* ZONA DE EJECUCIÓN DIARIA */}
       <ZonaEjecucionDiaria />
