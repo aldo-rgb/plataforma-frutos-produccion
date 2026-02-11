@@ -131,7 +131,14 @@ export default function RevisionEvidenciasWidget() {
         loadEvidencias();
       } else {
         const error = await response.json();
-        toast.error(error.error || 'Error al revisar evidencia');
+        // Si la evidencia ya fue revisada, cerrar modal y recargar lista
+        if (error.error?.includes('ya fue revisada') || error.error?.includes('ya está')) {
+          toast.info('ℹ️ Esta evidencia ya fue procesada');
+          closeModal();
+          loadEvidencias();
+        } else {
+          toast.error(error.error || 'Error al revisar evidencia');
+        }
       }
     } catch (error) {
       console.error('Error submitting review:', error);
