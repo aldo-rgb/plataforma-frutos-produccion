@@ -248,7 +248,8 @@ export default function WidgetDisciplinaV2() {
         ) : (
           participantesOrdenados.map((participante) => {
             const tieneLlamadaHoy = participante.llamadaHoy !== null;
-            const countdown = tieneLlamadaHoy ? calcularCountdown(participante.llamadaHoy!.scheduledAt) : null;
+            const llamadaPendiente = tieneLlamadaHoy && participante.llamadaHoy!.attendanceStatus === 'PENDING';
+            const countdown = llamadaPendiente ? calcularCountdown(participante.llamadaHoy!.scheduledAt) : null;
             const vidasRestantes = participante.enrollment.maxMissedAllowed - participante.enrollment.missedCallsCount;
             const enPeligro = vidasRestantes <= 1;
 
@@ -256,7 +257,7 @@ export default function WidgetDisciplinaV2() {
               <div 
                 key={participante.id} 
                 className={`p-4 transition-all ${
-                  tieneLlamadaHoy 
+                  llamadaPendiente 
                     ? countdown?.isPast 
                       ? 'bg-red-900/20 border-l-4 border-red-500' 
                       : 'bg-purple-900/10 border-l-4 border-purple-500' 
@@ -323,8 +324,8 @@ export default function WidgetDisciplinaV2() {
                         )}
                       </div>
 
-                      {/* Próxima llamada */}
-                      {tieneLlamadaHoy ? (
+                      {/* Próxima llamada - Solo mostrar countdown si está pendiente */}
+                      {llamadaPendiente ? (
                         <div className="mt-2">
                           <div className={`flex items-center gap-2 text-xs px-2 py-1 rounded-lg ${
                             countdown?.isPast 
@@ -344,6 +345,11 @@ export default function WidgetDisciplinaV2() {
                             )}
                             <span>• Sem {participante.llamadaHoy!.weekNumber}</span>
                           </div>
+                        </div>
+                      ) : tieneLlamadaHoy && participante.llamadaHoy!.attendanceStatus === 'ATTENDED' ? (
+                        <div className="mt-2 text-xs text-green-400 flex items-center gap-1 bg-green-900/20 px-2 py-1 rounded-lg border border-green-500/30">
+                          <CheckCircle size={10} />
+                          Asistió a las {new Date(participante.llamadaHoy!.scheduledAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} • Sem {participante.llamadaHoy!.weekNumber}
                         </div>
                       ) : participante.proximaLlamada ? (
                         <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
