@@ -131,11 +131,11 @@ export async function GET(request: NextRequest) {
       id: ev.id,
       tipo: 'CARTA',
       usuarioId: ev.usuarioId,
-      usuarioNombre: ev.Usuario.nombre,
-      usuarioEmail: ev.Usuario.email,
+      usuarioNombre: ev.Usuario?.nombre || 'Usuario desconocido',
+      usuarioEmail: ev.Usuario?.email || '',
       metaTitulo: ev.Meta?.metaPrincipal || 'Sin meta',
       categoria: ev.Meta?.categoria || 'SIN_CATEGORIA',
-      accionTexto: ev.Accion.texto,
+      accionTexto: ev.Accion?.texto || 'Acción sin texto',
       fotoUrl: ev.fotoUrl,
       descripcion: ev.descripcion,
       fechaSubida: ev.fechaSubida,
@@ -148,11 +148,11 @@ export async function GET(request: NextRequest) {
       submissionId: ev.id,
       tipo: 'EXTRAORDINARIA',
       usuarioId: ev.usuarioId,
-      usuarioNombre: ev.Usuario.nombre,
-      usuarioEmail: ev.Usuario.email,
-      metaTitulo: ev.AdminTask.titulo,
-      categoria: ev.AdminTask.type === 'EVENT' ? 'EVENTO' : 'MISION_ESPECIAL',
-      accionTexto: ev.AdminTask.descripcion || ev.AdminTask.titulo,
+      usuarioNombre: ev.Usuario?.nombre || 'Usuario desconocido',
+      usuarioEmail: ev.Usuario?.email || '',
+      metaTitulo: ev.AdminTask?.titulo || 'Tarea sin título',
+      categoria: ev.AdminTask?.type === 'EVENT' ? 'EVENTO' : 'MISION_ESPECIAL',
+      accionTexto: ev.AdminTask?.descripcion || ev.AdminTask?.titulo || 'Sin descripción',
       fotoUrl: ev.evidenciaUrl,
       descripcion: ev.comentario,
       fechaSubida: ev.submittedAt,
@@ -178,6 +178,10 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     logger.error('❌ Error al obtener evidencias para validación:', error);
-    return NextResponse.json({ error: 'Error al cargar evidencias' }, { status: 500 });
+    console.error('Stack trace:', error instanceof Error ? error.stack : error);
+    return NextResponse.json({ 
+      error: 'Error al cargar evidencias',
+      details: error instanceof Error ? error.message : 'Error desconocido'
+    }, { status: 500 });
   }
 }
