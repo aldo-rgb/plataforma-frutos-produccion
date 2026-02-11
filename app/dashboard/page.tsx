@@ -23,7 +23,15 @@ import BitacoraAlertWidget from "@/components/dashboard/BitacoraAlertWidget";
 import LegacyCaptureBlockingModal from "@/components/dashboard/LegacyCaptureBlockingModal";
 import ParticipantSurveyBanner from "@/components/surveys/ParticipantSurveyBanner";
 
-export default async function DashboardPage() {
+interface DashboardPageProps {
+  searchParams: Promise<{ view?: string }>;
+}
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+  // Resolver searchParams (Next.js 15)
+  const resolvedSearchParams = await searchParams;
+  const isParticipanteView = resolvedSearchParams?.view === 'participante';
+  
   // 1. Obtener sesión y datos frescos
   const session = await getServerSession(authOptions);
 
@@ -468,41 +476,43 @@ export default async function DashboardPage() {
   const completedTasks = areaProgress.reduce((sum, area) => sum + area.tasksCompleted, 0);
   const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  // 2. Redirección automática según el rol
-  if (usuario.rol === "ADMINISTRADOR") {
-    redirect("/dashboard/admin");
-  }
+  // 2. Redirección automática según el rol (SOLO si no pidió vista de participante)
+  if (!isParticipanteView) {
+    if (usuario.rol === "ADMINISTRADOR") {
+      redirect("/dashboard/admin");
+    }
 
-  if (usuario.rol === "SCHOOL_ADMIN") {
-    redirect("/dashboard/school-admin");
-  }
+    if (usuario.rol === "SCHOOL_ADMIN") {
+      redirect("/dashboard/school-admin");
+    }
 
-  if (usuario.rol === "MENTOR") {
-    redirect("/dashboard/mentor");
-  }
+    if (usuario.rol === "MENTOR") {
+      redirect("/dashboard/mentor");
+    }
 
-  if (usuario.rol === "LIDER") {
-    redirect("/dashboard/lider");
-  }
+    if (usuario.rol === "LIDER") {
+      redirect("/dashboard/lider");
+    }
 
-  if (usuario.rol === "COORDINADOR") {
-    redirect("/dashboard/coordinador");
-  }
+    if (usuario.rol === "COORDINADOR") {
+      redirect("/dashboard/coordinador");
+    }
 
-  if (usuario.rol === "COORDINATOR_BASIC") {
-    redirect("/dashboard/coordinador-basico");
-  }
+    if (usuario.rol === "COORDINATOR_BASIC") {
+      redirect("/dashboard/coordinador-basico");
+    }
 
-  if (usuario.rol === "COORDINATOR_ADVANCED") {
-    redirect("/dashboard/coordinador-avanzado");
-  }
+    if (usuario.rol === "COORDINATOR_ADVANCED") {
+      redirect("/dashboard/coordinador-avanzado");
+    }
 
-  if (usuario.rol === "TRAINER") {
-    redirect("/dashboard/trainer");
-  }
+    if (usuario.rol === "TRAINER") {
+      redirect("/dashboard/trainer");
+    }
 
-  if (usuario.rol === "GAMECHANGER") {
-    redirect("/dashboard/gamechanger");
+    if (usuario.rol === "GAMECHANGER") {
+      redirect("/dashboard/gamechanger");
+    }
   }
 
   // Calcular fechas del ciclo para mostrar en el widget
