@@ -86,9 +86,19 @@ export async function GET(request: NextRequest) {
           orderBy: { scheduledAt: 'asc' }
         });
 
-        // NO buscar próximas llamadas - solo mostrar la del día actual
-        // Si ya se procesó la de hoy, el widget no mostrará nada hasta mañana
-        const proximaLlamada = null;
+        // Buscar la próxima llamada programada (después de hoy)
+        const proximaLlamada = await prisma.callBooking.findFirst({
+          where: {
+            programEnrollmentId: enrollment.id,
+            type: 'DISCIPLINE',
+            scheduledAt: {
+              gte: manana // A partir de mañana
+            },
+            status: { in: ['PENDING', 'CONFIRMED'] },
+            attendanceStatus: 'PENDING'
+          },
+          orderBy: { scheduledAt: 'asc' }
+        });
 
         return {
           id: participante.id,
