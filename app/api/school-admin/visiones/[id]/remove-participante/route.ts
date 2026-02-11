@@ -21,6 +21,8 @@ export async function POST(
     const visionId = parseInt(params.id);
     const { participanteRelationId } = await request.json();
 
+    logger.debug(`🗑️ Intentando eliminar participante/GC con relationId: ${participanteRelationId} de visión ${visionId}`);
+
     if (isNaN(visionId) || !participanteRelationId) {
       return NextResponse.json(
         { success: false, error: 'Datos inválidos' },
@@ -52,7 +54,61 @@ export async function POST(
       );
     }
 
-    // Obtener información del participante o game changer antes de eliminarlo
+    // PRIMERO: Buscar en vision_enrollments (sistema nuevo)
+    const enrollment = await prisma.vision_enrollments.findUnique({
+      where: { id: participanteRelationId },
+      include: {
+        Usuario_vision_enrollments_userIdToUsuario: {
+          select: {
+            id: true,
+            licenseCode: true,
+          }
+        }
+      }
+    });
+
+    if (enrollment) {
+      logger.debug(`📋 Encontrado enrollment para userId: ${enrollment.userId}`);
+      
+      // Cancelar LicenseAssignment si existe
+      const licenseAssignment = await prisma.licenseAssignment.findFirst({
+        where: {
+          userId: enrollment.userId,
+          visionId: visionId,
+          isActive: true
+        }
+      });
+
+      if (licenseAssignment) {
+        await prisma.licenseAssignment.update({
+          where: { id: licenseAssignment.id },
+          data: {
+            isActive: false,
+            deactivatedAt: new Date()
+          }
+        });
+        logger.debug(`🔑 Licencia ${licenseAssignment.licenseCode} desactivada`);
+      }
+
+      // Marcar enrollment como DROP
+      await prisma.vision_enrollments.update({
+        where: { id: participanteRelationId },
+        data: {
+          enrollmentStatus: 'DROP',
+          attendanceStatus: 'DROP',
+          droppedAt: new Date()
+        }
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: licenseAssignment 
+          ? 'Participante eliminado de la visión y licencia desactivada'
+          : 'Participante eliminado de la visión',
+      });
+    }
+
+    // SEGUNDO: Buscar en VisionParticipante (sistema legacy)
     let participanteRelation = await prisma.visionParticipante.findUnique({
       where: { id: participanteRelationId },
       include: {
@@ -70,7 +126,7 @@ export async function POST(
     let licenseCode = null;
     let isGameChanger = false;
 
-    // Si no es un participante, buscar en game changers
+    // Si no es un participante legacy, buscar en game changers
     if (!participanteRelation) {
       gameChangerRelation = await prisma.visionGameChanger.findUnique({
         where: { id: participanteRelationId },
