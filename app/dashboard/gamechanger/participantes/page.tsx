@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { GraduationCap, Users, Eye, Trophy, Zap, Target, Star, ScrollText } from 'lucide-react';
+import { GraduationCap, Users, Eye, Trophy, Zap, Target, Star, ScrollText, Camera } from 'lucide-react';
 import Link from 'next/link';
 
 interface Participante {
@@ -134,6 +134,15 @@ export default function GameChangerParticipantesPage() {
                           Ver Carta
                         </Link>
                       )}
+                      
+                      <Link
+                        href={`/dashboard/gamechanger/participante/${participante.id}/vault`}
+                        className="px-4 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/50 text-yellow-400 rounded-lg font-bold transition-all flex items-center gap-2"
+                        title="Ver Vault"
+                      >
+                        <Camera size={18} />
+                        Ver Vault
+                      </Link>
                       
                       <Link
                         href={`/dashboard/gamechanger/participante/${participante.id}`}
