@@ -54,8 +54,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
-    // 2. Si asistió, solo marcamos el status y listo
+    // 2. Si asistió, marcamos el status y revertimos strike si era ABSENT
     if (present) {
+      const wasAbsent = booking.attendanceStatus === 'ABSENT';
+      
       await prisma.callBooking.update({
         where: { id: bookingId },
         data: { 
@@ -64,6 +66,34 @@ export async function POST(req: Request) {
           completedAt: new Date()
         } as any
       });
+      
+      // Si estaba como ABSENT, revertir el strike
+      if (wasAbsent && booking.ProgramEnrollment) {
+        const enrollment = booking.ProgramEnrollment;
+        const nuevosMissed = Math.max(0, enrollment.missedCallsCount - 1);
+        
+        await (prisma as any).programEnrollment.update({
+          where: { id: enrollment.id },
+          data: { 
+            missedCallsCount: nuevosMissed,
+            // Si estaba suspendido y ahora tiene menos faltas, reactivar
+            status: enrollment.status === 'SUSPENDED' && nuevosMissed < enrollment.maxMissedAllowed 
+              ? 'ACTIVE' 
+              : enrollment.status,
+            updatedAt: new Date()
+          }
+        });
+        
+        logger.debug(`✅ Strike revertido: ${booking.Usuario_CallBooking_studentIdToUsuario?.nombre} ahora tiene ${nuevosMissed} faltas`);
+        
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Asistencia confirmada y strike revertido',
+          present: true,
+          strikesRevertidos: true,
+          nuevosStrikes: nuevosMissed
+        });
+      }
       
       return NextResponse.json({ 
         success: true, 

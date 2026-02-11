@@ -389,13 +389,31 @@ export default function WidgetDisciplinaV2() {
                   )}
                   
                   {tieneLlamadaHoy && participante.llamadaHoy!.attendanceStatus !== 'PENDING' && (
-                    <div className={`text-xs font-bold px-3 py-2 rounded-full ${
-                      participante.llamadaHoy!.attendanceStatus === 'PRESENT' 
-                        ? 'text-green-500 bg-green-900/20 border border-green-500/30' 
-                        : 'text-red-500 bg-red-900/20 border border-red-500/30'
-                    }`}>
+                    <button
+                      onClick={() => {
+                        const currentStatus = participante.llamadaHoy!.attendanceStatus;
+                        if (currentStatus === 'PRESENT') {
+                          // Si está como asistió, cambiar a faltó
+                          if (confirm('¿Cambiar a FALTÓ? Esto registrará un strike.')) {
+                            registrarStrike(participante.llamadaHoy!.id, participante.id);
+                          }
+                        } else {
+                          // Si está como faltó, cambiar a asistió
+                          if (confirm('¿Cambiar a ASISTIÓ? Esto revertirá el strike.')) {
+                            marcarAsistencia(participante.llamadaHoy!.id);
+                          }
+                        }
+                      }}
+                      disabled={procesando === participante.llamadaHoy!.id}
+                      className={`text-xs font-bold px-3 py-2 rounded-full cursor-pointer transition-all hover:scale-105 disabled:opacity-50 ${
+                        participante.llamadaHoy!.attendanceStatus === 'PRESENT' 
+                          ? 'text-green-500 bg-green-900/20 border border-green-500/30 hover:bg-green-900/40' 
+                          : 'text-red-500 bg-red-900/20 border border-red-500/30 hover:bg-red-900/40'
+                      }`}
+                      title="Click para cambiar"
+                    >
                       {participante.llamadaHoy!.attendanceStatus === 'PRESENT' ? '✓ ASISTIÓ' : '✗ FALTÓ'}
-                    </div>
+                    </button>
                   )}
                 </div>
               </div>
