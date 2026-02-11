@@ -1052,8 +1052,8 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
           </div>
         )}
 
-        {/* NAVEGACIÓN GENERAL - Al final para todos los usuarios EXCEPTO SCHOOL_ADMIN */}
-        {usuario.rol !== 'SCHOOL_ADMIN' && (
+        {/* NAVEGACIÓN GENERAL - Al final para todos los usuarios EXCEPTO SCHOOL_ADMIN y MENTOR en su dashboard */}
+        {usuario.rol !== 'SCHOOL_ADMIN' && !pathname.startsWith('/dashboard/mentor') && (
         <div className="pt-6 mt-6 border-t border-slate-800">
           <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">🏠 Navegación</p>
           
