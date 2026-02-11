@@ -3,9 +3,19 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { writeFile } from 'fs/promises';
-import { join } from 'path';
+import { createClient } from '@supabase/supabase-js';
 import logger from '@/lib/logger';
+
+// Función para obtener cliente de Supabase
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase configuration');
+  }
+  return createClient(supabaseUrl, supabaseKey);
+}
 
 export async function POST(req: Request) {
   try {
@@ -35,27 +45,71 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Faltan datos requeridos' }, { status: 400 });
     }
 
-    // 3. Guardar archivo temporalmente (en producción usar S3/Cloudinary)
+    // 3. Subir archivo a Supabase Storage
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     
-    // Crear nombre único para el archivo
-    const fileName = `${userId}_${taskInstanceId}_${Date.now()}_${file.name}`;
-    const publicPath = join(process.cwd(), 'public', 'evidencias');
-    const filePath = join(publicPath, fileName);
+    // Limpiar nombre de archivo (quitar caracteres especiales)
+    const cleanFileName = file.name
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Quitar acentos
+      .replace(/[^a-zA-Z0-9.-]/g, '_') // Reemplazar especiales con _
+      .replace(/_+/g, '_'); // Quitar múltiples _
     
-    // Asegurar que el directorio existe (en producción esto ya estaría creado)
+    const fileName = `evidencia_${userId}_${taskInstanceId}_${Date.now()}_${cleanFileName}`;
+    
+    let fotoUrl: string;
+    
     try {
-      await writeFile(filePath, buffer);
-      logger.debug('💾 Archivo guardado:', fileName);
-    } catch (error) {
-      logger.error('Error guardando archivo:', error);
-      // Continuar con URL simulada si falla el guardado
-    }
+      const supabase = getSupabaseClient();
+      
+      // Subir a Supabase Storage en bucket "evidencias"
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('evidencias')
+        .upload(fileName, buffer, {
+          contentType: file.type,
+          upsert: false
+        });
 
-    const fotoUrl = `/evidencias/${fileName}`;
+      if (uploadError) {
+        logger.error('Error subiendo a Supabase:', uploadError);
+        throw uploadError;
+      }
+
+      // Obtener URL pública
+      const { data: urlData } = supabase.storage
+        .from('evidencias')
+        .getPublicUrl(fileName);
+
+      fotoUrl = urlData.publicUrl;
+      logger.debug('📸 Archivo subido a Supabase:', fotoUrl);
+      
+    } catch (storageError) {
+      logger.error('Error con Supabase Storage, intentando guardar localmente:', storageError);
+      
+      // Fallback: guardar localmente si Supabase falla
+      const { writeFile } = await import('fs/promises');
+      const { join } = await import('path');
+      const { mkdir } = await import('fs/promises');
+      
+      const publicPath = join(process.cwd(), 'public', 'evidencias');
+      const filePath = join(publicPath, fileName);
+      
+      try {
+        await mkdir(publicPath, { recursive: true });
+        await writeFile(filePath, buffer);
+        fotoUrl = `/evidencias/${fileName}`;
+        logger.debug('💾 Archivo guardado localmente:', fotoUrl);
+      } catch (localError) {
+        logger.error('Error guardando localmente:', localError);
+        return NextResponse.json({ 
+          error: 'No se pudo guardar la evidencia',
+          details: 'Error en almacenamiento'
+        }, { status: 500 });
+      }
+    }
     
-    logger.debug('📸 URL generada:', fotoUrl);
+    logger.debug('📸 URL final:', fotoUrl);
 
     // 4. Crear registro de evidencia
     const nuevaEvidencia = await prisma.evidenciaAccion.create({
