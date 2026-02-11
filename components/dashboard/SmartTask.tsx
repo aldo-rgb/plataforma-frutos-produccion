@@ -45,14 +45,23 @@ export default function SmartTask({ task, onUpdate, onUploadEvidence }: SmartTas
     // Si ya está completada o pendiente de aprobación, no mostramos retraso
     if (task.evidenceStatus === 'PENDING' || task.status === 'COMPLETED') return null;
 
+    // Parsear la fecha base (puede venir en UTC)
     const baseDate = parseISO(task.originalDueDate || task.dueDate);
-    if (!isPast(baseDate) || isToday(baseDate)) return null;
+    
+    // Obtener solo el día (sin hora) para comparación justa
+    // Esto evita problemas de timezone donde 2026-02-11T00:00:00Z se convierte a 2026-02-10 18:00 en México
+    const baseDateDay = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+    const todayDay = new Date();
+    todayDay.setHours(0, 0, 0, 0);
+    
+    // Si la fecha es hoy o en el futuro, no está retrasada
+    if (baseDateDay >= todayDay) return null;
 
-    const daysLate = differenceInCalendarDays(new Date(), baseDate);
+    const daysLate = differenceInCalendarDays(todayDay, baseDateDay);
     
     // Regla de negocio: 1 día = "Retrasada", >1 día = "Retrasada X días"
-    if (daysLate === 1) return { label: "Retrasada", originalDate: baseDate };
-    if (daysLate > 1) return { label: `Retrasada ${daysLate} días`, originalDate: baseDate };
+    if (daysLate === 1) return { label: "Retrasada", originalDate: baseDateDay };
+    if (daysLate > 1) return { label: `Retrasada ${daysLate} días`, originalDate: baseDateDay };
     
     return null;
   };
