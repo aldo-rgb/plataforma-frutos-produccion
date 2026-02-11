@@ -173,6 +173,22 @@ export default function ValidacionEvidenciasPage() {
     return colores[categoria] || 'text-slate-400 bg-slate-500/10';
   };
 
+  // Helper para normalizar URLs de evidencias
+  // Las URLs locales como /evidencias/... necesitan el dominio base
+  const getEvidenceUrl = (url: string) => {
+    if (!url) return '';
+    
+    // Si ya es una URL completa (https://...), usarla directamente
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // Si es una URL relativa, agregar el dominio de producción
+    // En producción, los archivos locales se sirven desde el mismo dominio
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
@@ -296,10 +312,26 @@ export default function ValidacionEvidenciasPage() {
                   {/* Imagen de Evidencia */}
                   <div className="relative rounded-lg overflow-hidden mb-4 bg-slate-900">
                     <img
-                      src={evidencia.fotoUrl}
+                      src={getEvidenceUrl(evidencia.fotoUrl)}
                       alt="Evidencia"
                       className="w-full h-auto max-h-96 object-contain"
                       loading="lazy"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        // Mostrar placeholder si la imagen no carga
+                        target.style.display = 'none';
+                        target.parentElement?.classList.add('min-h-48', 'flex', 'items-center', 'justify-center');
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'text-center text-slate-500';
+                        errorDiv.innerHTML = `
+                          <svg class="w-12 h-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                          </svg>
+                          <p class="text-xs">Imagen no disponible</p>
+                          <p class="text-xs mt-1 text-slate-600 break-all max-w-xs">${evidencia.fotoUrl}</p>
+                        `;
+                        target.parentElement?.appendChild(errorDiv);
+                      }}
                     />
                   </div>
 

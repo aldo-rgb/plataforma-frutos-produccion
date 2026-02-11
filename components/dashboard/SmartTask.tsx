@@ -45,12 +45,16 @@ export default function SmartTask({ task, onUpdate, onUploadEvidence }: SmartTas
     // Si ya está completada o pendiente de aprobación, no mostramos retraso
     if (task.evidenceStatus === 'PENDING' || task.status === 'COMPLETED') return null;
 
-    // Parsear la fecha base (puede venir en UTC)
+    // Parsear la fecha base (viene en UTC desde el servidor)
     const baseDate = parseISO(task.originalDueDate || task.dueDate);
     
-    // Obtener solo el día (sin hora) para comparación justa
-    // Esto evita problemas de timezone donde 2026-02-11T00:00:00Z se convierte a 2026-02-10 18:00 en México
-    const baseDateDay = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+    // IMPORTANTE: Usar componentes UTC para extraer el día correcto
+    // La fecha viene como 2026-02-11T00:00:00.000Z, que en UTC es día 11
+    // Pero parseISO la convierte a hora local (México UTC-6) = 2026-02-10 18:00
+    // Entonces usamos getUTC* para obtener el día correcto (11, no 10)
+    const baseDateDay = new Date(baseDate.getUTCFullYear(), baseDate.getUTCMonth(), baseDate.getUTCDate());
+    
+    // Hoy en hora local (medianoche)
     const todayDay = new Date();
     todayDay.setHours(0, 0, 0, 0);
     

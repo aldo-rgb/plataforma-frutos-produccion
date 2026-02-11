@@ -320,8 +320,12 @@ export default function TodayPage() {
   };
 
   const handleTaskUpdate = async (taskId: number, action: 'POSTPONE', days?: number) => {
+    console.log('🔄 handleTaskUpdate llamado:', { taskId, action, days });
+    
     try {
       if (action === 'POSTPONE' && days) {
+        console.log('📤 Enviando request a /api/tasks/postpone...');
+        
         const response = await fetch('/api/tasks/postpone', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -329,25 +333,29 @@ export default function TodayPage() {
         });
 
         const data = await response.json();
+        console.log('📥 Respuesta de postpone:', data);
 
         if (data.success) {
-          // Mostrar mensaje
-          if (data.mentorNotified) {
-            alert(data.message);
-          }
+          // Mostrar mensaje de éxito
+          alert(data.message || 'Tarea reagendada correctamente');
 
-          // Remover de la lista actual
-          setTasks(prev => prev.filter(task => task.id !== taskId));
+          // Remover de la lista actual (usando taskId, no task.id que es el id compuesto)
+          setTasks(prev => prev.filter(task => task.taskId !== taskId));
+          setTareasRetrasadas(prev => prev.filter(task => task.taskId !== taskId));
           setStats(prev => ({
             ...prev,
             total: prev.total - 1,
             pending: prev.pending - 1
           }));
+        } else {
+          // Error en la respuesta
+          console.error('❌ Error en respuesta:', data);
+          alert(data.error || 'Error al reagendar la tarea');
         }
       }
     } catch (error) {
-      console.error('Error updating task:', error);
-      alert('Hubo un error al actualizar la tarea');
+      console.error('❌ Error updating task:', error);
+      alert('Hubo un error al actualizar la tarea. Revisa la consola para más detalles.');
     }
   };
 
