@@ -438,10 +438,10 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">Panel de Mentor</p>
             
             <Link 
-              href="/dashboard/mentor/revisiones"
+              href="/dashboard/mentor/cartas"
               onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
-                pathname === '/dashboard/mentor/revisiones'
+                pathname === '/dashboard/mentor/cartas' || pathname.startsWith('/dashboard/mentor/cartas/')
                   ? 'bg-purple-600 text-white'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
@@ -545,10 +545,10 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">Panel de Mentor</p>
             
             <Link 
-              href="/dashboard/mentor/revisiones"
+              href="/dashboard/mentor/cartas"
               onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
-                pathname === '/dashboard/mentor/revisiones'
+                pathname === '/dashboard/mentor/cartas' || pathname.startsWith('/dashboard/mentor/cartas/')
                   ? 'bg-purple-600 text-white'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
@@ -559,6 +559,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
 
             <Link 
               href="/dashboard/mentor/validacion" 
+              onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
                 pathname === '/dashboard/mentor/validacion'
                   ? 'bg-cyan-600 text-white'
