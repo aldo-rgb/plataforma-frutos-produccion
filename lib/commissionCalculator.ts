@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { Decimal } from '@prisma/client/runtime/library';
+import { randomUUID } from 'crypto';
 
 /**
  * 💰 COMMISSION CALCULATOR SERVICE
@@ -70,6 +71,7 @@ export async function createLedgerEntry(params: CreateLedgerEntryParams) {
   // Crear registro inmutable
   const ledgerEntry = await prisma.commissionLedger.create({
     data: {
+      id: randomUUID(),
       mentorId,
       sourceType,
       sourceId,
@@ -84,6 +86,7 @@ export async function createLedgerEntry(params: CreateLedgerEntryParams) {
       serviceName: serviceName || `${sourceType} - ${studentName}`,
       scheduledAt,
       completedAt: completedAt || new Date(),
+      updatedAt: new Date(),
     }
   });
 

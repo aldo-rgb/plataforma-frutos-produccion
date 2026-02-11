@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
+import { onDisciplineCallCompleted } from '@/lib/commissionCalculator';
 
 export async function POST(req: Request) {
   try {
@@ -66,6 +67,24 @@ export async function POST(req: Request) {
           completedAt: new Date()
         } as any
       });
+      
+      // 🔥 REGISTRAR COMISIÓN POR LLAMADA COMPLETADA (solo si no estaba ya como ABSENT)
+      if (!wasAbsent) {
+        try {
+          const studentName = booking.Usuario_CallBooking_studentIdToUsuario?.nombre || 'Estudiante';
+          await onDisciplineCallCompleted(
+            bookingId,
+            mentor.id,
+            booking.studentId,
+            90, // Precio fijo por llamada de disciplina
+            new Date(booking.scheduledAt)
+          );
+          logger.debug(`💰 Comisión registrada para llamada ${bookingId}`);
+        } catch (commissionError) {
+          // No fallar si la comisión no se pudo registrar
+          logger.error('⚠️ Error registrando comisión (no crítico):', commissionError);
+        }
+      }
       
       // Si estaba como ABSENT, revertir el strike
       if (wasAbsent && booking.ProgramEnrollment) {
