@@ -397,6 +397,8 @@ export async function GET(req: Request) {
       areaIcon: AREA_ICONS[task.Accion?.Meta?.categoria || ''] || '🎯',
       metaContext: task.Accion?.Meta?.metaPrincipal || 'Meta general',
       fechaProgramada: task.dueDate.toISOString(),
+      originalDueDate: task.originalDueDate?.toISOString() || task.dueDate.toISOString(),
+      postponeCount: task.postponeCount || 0,
       status: task.status,
       evidenceStatus: task.evidenceStatus,
       evidenciaUrl: task.EvidenciaAccion?.fotoUrl || null,

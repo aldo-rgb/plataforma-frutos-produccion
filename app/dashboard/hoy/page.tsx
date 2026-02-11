@@ -280,6 +280,7 @@ export default function TodayPage() {
         areaType: task.area,
         identity: task.metaContext,
         dueDate: task.fechaProgramada,
+        originalDueDate: (task as any).originalDueDate || task.fechaProgramada,
         status: task.status as 'PENDING' | 'COMPLETED' | 'SKIPPED',
         postponeCount: task.postponeCount || 0,
         completedAt: task.completedAt,
