@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
         not: null
       },
       ...(esSupervisor ? {} : {
-        Usuario: {
+        Usuario_TaskSubmission_usuarioIdToUsuario: {
           OR: [
             { mentorId: mentor.id },
             { assignedMentorId: mentor.id }
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
     const evidenciasExtraordinarias = await prisma.taskSubmission.findMany({
       where: whereClauseExtraordinarias,
       include: {
-        Usuario: {
+        Usuario_TaskSubmission_usuarioIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -148,8 +148,8 @@ export async function GET(request: NextRequest) {
       submissionId: ev.id,
       tipo: 'EXTRAORDINARIA',
       usuarioId: ev.usuarioId,
-      usuarioNombre: ev.Usuario?.nombre || 'Usuario desconocido',
-      usuarioEmail: ev.Usuario?.email || '',
+      usuarioNombre: ev.Usuario_TaskSubmission_usuarioIdToUsuario?.nombre || 'Usuario desconocido',
+      usuarioEmail: ev.Usuario_TaskSubmission_usuarioIdToUsuario?.email || '',
       metaTitulo: ev.AdminTask?.titulo || 'Tarea sin título',
       categoria: ev.AdminTask?.type === 'EVENT' ? 'EVENTO' : 'MISION_ESPECIAL',
       accionTexto: ev.AdminTask?.descripcion || ev.AdminTask?.titulo || 'Sin descripción',
