@@ -173,7 +173,7 @@ export default async function MentorDashboard() {
           <CheckCircle className="w-4 h-4" /> Revisión de Evidencias
         </Link>
         <Link href="/dashboard/mentor/cartas" className="pb-3 hover:text-slate-300 transition-colors flex items-center gap-2 whitespace-nowrap">
-          <FileText className="w-4 h-4" /> Cartas F.R.U.T.O.S.
+          <FileText className="w-4 h-4" /> Cartas
         </Link>
         <Link href="/dashboard/mentor/comisiones" className="pb-3 hover:text-slate-300 transition-colors flex items-center gap-2 whitespace-nowrap">
           <DollarSign className="w-4 h-4" /> Mis Comisiones

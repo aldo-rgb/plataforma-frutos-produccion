@@ -117,7 +117,7 @@ export default function CartaReviewPanel() {
             <FileText className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-white font-bold text-lg">Cartas F.R.U.T.O.S. Pendientes</h3>
+            <h3 className="text-white font-bold text-lg">Cartas Pendientes</h3>
             <p className="text-slate-400 text-sm">Revisiones de metas y declaraciones • Auto-actualiza</p>
           </div>
         </div>

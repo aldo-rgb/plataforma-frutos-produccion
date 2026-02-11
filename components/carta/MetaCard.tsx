@@ -56,7 +56,7 @@ export default function MetaCard({
       diasProgramados: [],
       completada: false,
       enRevision: false,
-      requiereEvidencia: false
+      requiereEvidencia: true
     };
     onUpdate({ ...meta, acciones: [...meta.acciones, nuevaAccion] });
   };

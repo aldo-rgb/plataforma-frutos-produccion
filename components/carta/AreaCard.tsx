@@ -41,7 +41,7 @@ export const AreaCard: React.FC<AreaCardProps> = ({
       diasProgramados: [], 
       completada: false, 
       enRevision: false, 
-      requiereEvidencia: false 
+      requiereEvidencia: true 
     });
     setMetas(nuevas);
   };
@@ -75,7 +75,7 @@ export const AreaCard: React.FC<AreaCardProps> = ({
         declaracionPoder: '', 
         metaPrincipal: '', 
         avance: 0,
-        acciones: [{ texto: '', diasProgramados: [], completada: false, enRevision: false, requiereEvidencia: false }] 
+        acciones: [{ texto: '', diasProgramados: [], completada: false, enRevision: false, requiereEvidencia: true }] 
       }
     ]);
   };
