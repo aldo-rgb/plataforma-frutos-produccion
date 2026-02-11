@@ -182,7 +182,7 @@ export async function POST(req: Request) {
       }
       // ✅ STANDARD o PREMIUM (ACTIVO o INACTIVO) -> Enviar a mentor
       else if (userTier === 'STANDARD' || userTier === 'PREMIUM') {
-        logger.debug(\`✅ Usuario \${userTier} - Permitiendo envío a mentor (sin importar si está activo o inactivo)\`);
+        logger.debug(`✅ Usuario ${userTier} - Permitiendo envío a mentor (sin importar si está activo o inactivo)`);
         // Continuar con el flujo normal de envío al mentor
       }
       // ❌ Cualquier otro caso -> Por seguridad, redirigir a pricing
