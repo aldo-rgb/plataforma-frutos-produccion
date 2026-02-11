@@ -2,9 +2,43 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { writeFile } from 'fs/promises';
-import { join } from 'path';
+import { createClient } from '@supabase/supabase-js';
 import logger from '@/lib/logger';
+
+// Función para obtener cliente de Supabase
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase configuration');
+  }
+  return createClient(supabaseUrl, supabaseKey);
+}
+
+// Función para subir archivo a Supabase Storage
+async function uploadToSupabase(buffer: Buffer, fileName: string, contentType: string): Promise<string> {
+  const supabase = getSupabaseClient();
+  const filePath = `evidencias/${fileName}`;
+  
+  const { data, error } = await supabase.storage
+    .from('mentor-assets')
+    .upload(filePath, buffer, {
+      contentType,
+      upsert: true
+    });
+
+  if (error) {
+    logger.error('Error subiendo a Supabase:', error);
+    throw error;
+  }
+
+  const { data: urlData } = supabase.storage
+    .from('mentor-assets')
+    .getPublicUrl(filePath);
+
+  return urlData.publicUrl;
+}
 
 /**
  * POST /api/evidencias/upload
@@ -79,20 +113,18 @@ export async function POST(req: Request) {
       const fileExtension = file.name.split('.').pop();
       const fileName = `evidencia_carta_${userId}_${taskId}_${Date.now()}.${fileExtension}`;
       
-      // Guardar archivo en public/uploads/evidencias
-      const uploadDir = join(process.cwd(), 'public', 'uploads', 'evidencias');
-      const filePath = join(uploadDir, fileName);
-      
+      // Subir archivo a Supabase Storage
+      let publicUrl: string;
       try {
-        await writeFile(filePath, buffer);
-      } catch (writeError) {
-        logger.error('Error writing file:', writeError);
-        const { mkdir } = await import('fs/promises');
-        await mkdir(uploadDir, { recursive: true });
-        await writeFile(filePath, buffer);
+        publicUrl = await uploadToSupabase(buffer, fileName, file.type);
+        logger.debug('📸 Evidencia subida a Supabase:', publicUrl);
+      } catch (uploadError) {
+        logger.error('Error subiendo a Supabase:', uploadError);
+        return NextResponse.json(
+          { error: 'Error al subir la imagen. Intenta de nuevo.' },
+          { status: 500 }
+        );
       }
-
-      const publicUrl = `/uploads/evidencias/${fileName}`;
 
       // Obtener tier del usuario para determinar estado inicial
       const usuario = await prisma.usuario.findUnique({
@@ -223,20 +255,18 @@ export async function POST(req: Request) {
       const fileExtension = file.name.split('.').pop();
       const fileName = `evidencia_admin_${userId}_${submissionId}_${Date.now()}.${fileExtension}`;
       
-      // Guardar archivo en public/uploads/evidencias
-      const uploadDir = join(process.cwd(), 'public', 'uploads', 'evidencias');
-      const filePath = join(uploadDir, fileName);
-      
+      // Subir archivo a Supabase Storage
+      let publicUrl: string;
       try {
-        await writeFile(filePath, buffer);
-      } catch (writeError) {
-        logger.error('Error writing file:', writeError);
-        const { mkdir } = await import('fs/promises');
-        await mkdir(uploadDir, { recursive: true });
-        await writeFile(filePath, buffer);
+        publicUrl = await uploadToSupabase(buffer, fileName, file.type);
+        logger.debug('📸 Evidencia admin subida a Supabase:', publicUrl);
+      } catch (uploadError) {
+        logger.error('Error subiendo a Supabase:', uploadError);
+        return NextResponse.json(
+          { error: 'Error al subir la imagen. Intenta de nuevo.' },
+          { status: 500 }
+        );
       }
-
-      const publicUrl = `/uploads/evidencias/${fileName}`;
 
       // Actualizar TaskSubmission con evidencia y cambiar status a SUBMITTED
       await prisma.taskSubmission.update({

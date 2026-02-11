@@ -15,7 +15,7 @@ import UpcomingCallCard from '@/components/dashboard/UpcomingCallCard';
 import ArchetypeTaskCard from '@/components/dashboard/ArchetypeTaskCard';
 import MetamorfosisTaskCard from '@/components/dashboard/MetamorfosisTaskCard';
 import ParticipantSurveyBanner from '@/components/surveys/ParticipantSurveyBanner';
-import { ChevronLeft, ChevronRight, Calendar, Sparkles, TrendingUp, Check, Zap, Phone, Plus, Target, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, Sparkles, TrendingUp, Check, Zap, Phone, Plus, Target, User, X, CalendarDays } from 'lucide-react';
 
 interface Task {
   id: string | number; // Puede ser number (carta) o string (admin/trainer)
@@ -135,6 +135,14 @@ export default function TodayPage() {
     task: Task | null;
   }>({ isOpen: false, task: null });
   const [personalTaskModal, setPersonalTaskModal] = useState(false);
+  
+  // Modal de confirmación de reagendado
+  const [rescheduleModal, setRescheduleModal] = useState<{
+    isOpen: boolean;
+    message: string;
+    newDate: string;
+    postponeCount: number;
+  }>({ isOpen: false, message: '', newDate: '', postponeCount: 0 });
 
   useEffect(() => {
     fetchTasks();
@@ -336,8 +344,21 @@ export default function TodayPage() {
         console.log('📥 Respuesta de postpone:', data);
 
         if (data.success) {
-          // Mostrar mensaje de éxito
-          alert(data.message || 'Tarea reagendada correctamente');
+          // Mostrar modal de confirmación estilizado
+          const newDate = data.task?.dueDate 
+            ? format(new Date(data.task.dueDate), "EEEE d 'de' MMMM", { locale: es })
+            : `en ${days} día${days > 1 ? 's' : ''}`;
+          
+          setRescheduleModal({
+            isOpen: true,
+            message: data.postponeCount > 2 
+              ? '⚠️ Tu mentor ha sido notificado para apoyarte.' 
+              : data.postponeCount === 2 
+                ? '⚠️ Si la pospones una vez más, tu mentor será notificado.'
+                : '💪 Recuerda que la constancia es clave para tus objetivos.',
+            newDate: newDate,
+            postponeCount: data.postponeCount || 1
+          });
 
           // Remover de la lista actual (usando taskId, no task.id que es el id compuesto)
           setTasks(prev => prev.filter(task => task.taskId !== taskId));
@@ -348,14 +369,24 @@ export default function TodayPage() {
             pending: prev.pending - 1
           }));
         } else {
-          // Error en la respuesta
+          // Error en la respuesta - mostrar modal de error
           console.error('❌ Error en respuesta:', data);
-          alert(data.error || 'Error al reagendar la tarea');
+          setRescheduleModal({
+            isOpen: true,
+            message: data.error || 'Error al reagendar la tarea',
+            newDate: '',
+            postponeCount: -1 // -1 indica error
+          });
         }
       }
     } catch (error) {
       console.error('❌ Error updating task:', error);
-      alert('Hubo un error al actualizar la tarea. Revisa la consola para más detalles.');
+      setRescheduleModal({
+        isOpen: true,
+        message: 'Hubo un error de conexión. Intenta de nuevo.',
+        newDate: '',
+        postponeCount: -1
+      });
     }
   };
 
@@ -900,6 +931,86 @@ export default function TodayPage() {
         onTaskCreated={fetchPersonalTasks}
         initialDate={format(selectedDate, 'yyyy-MM-dd')}
       />
+
+      {/* Modal de Confirmación de Reagendado */}
+      {rescheduleModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Overlay */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setRescheduleModal({ ...rescheduleModal, isOpen: false })}
+          />
+          
+          {/* Modal Content */}
+          <div className="relative bg-gradient-to-br from-[#1a1d2e] to-[#0f111a] rounded-2xl border border-gray-700/50 shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+            {/* Header con icono */}
+            <div className={`p-6 ${rescheduleModal.postponeCount === -1 ? 'bg-red-500/10' : 'bg-purple-500/10'}`}>
+              <div className="flex items-center justify-center mb-4">
+                <div className={`p-4 rounded-full ${rescheduleModal.postponeCount === -1 ? 'bg-red-500/20' : 'bg-purple-500/20'}`}>
+                  {rescheduleModal.postponeCount === -1 ? (
+                    <X size={32} className="text-red-400" />
+                  ) : (
+                    <CalendarDays size={32} className="text-purple-400" />
+                  )}
+                </div>
+              </div>
+              
+              {/* Título */}
+              <h3 className="text-xl font-bold text-white text-center">
+                {rescheduleModal.postponeCount === -1 ? 'Error' : '✅ Tarea Reagendada'}
+              </h3>
+            </div>
+            
+            {/* Body */}
+            <div className="p-6 text-center">
+              {rescheduleModal.newDate && (
+                <p className="text-lg text-white mb-3">
+                  Nueva fecha: <span className="font-bold text-purple-400 capitalize">{rescheduleModal.newDate}</span>
+                </p>
+              )}
+              
+              <p className={`text-sm ${
+                rescheduleModal.postponeCount === -1 
+                  ? 'text-red-400' 
+                  : rescheduleModal.postponeCount > 2 
+                    ? 'text-orange-400' 
+                    : 'text-gray-400'
+              }`}>
+                {rescheduleModal.message}
+              </p>
+              
+              {rescheduleModal.postponeCount > 0 && rescheduleModal.postponeCount <= 3 && (
+                <div className="mt-4 flex justify-center gap-1">
+                  {[1, 2, 3].map((n) => (
+                    <div
+                      key={n}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        n <= rescheduleModal.postponeCount 
+                          ? 'bg-orange-400' 
+                          : 'bg-gray-600'
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            {/* Footer */}
+            <div className="p-4 bg-black/20">
+              <button
+                onClick={() => setRescheduleModal({ ...rescheduleModal, isOpen: false })}
+                className={`w-full py-3 rounded-xl font-semibold transition-all ${
+                  rescheduleModal.postponeCount === -1
+                    ? 'bg-red-600 hover:bg-red-500 text-white'
+                    : 'bg-purple-600 hover:bg-purple-500 text-white'
+                }`}
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

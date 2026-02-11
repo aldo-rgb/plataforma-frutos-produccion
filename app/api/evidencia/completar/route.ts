@@ -63,12 +63,15 @@ export async function POST(req: Request) {
     try {
       const supabase = getSupabaseClient();
       
-      // Subir a Supabase Storage en bucket "evidencias"
+      // Subir a Supabase Storage en bucket "mentor-assets" (carpeta evidencias/)
+      // Usamos mentor-assets porque es el bucket que ya existe y está configurado como público
+      const filePath = `evidencias/${fileName}`;
+      
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('evidencias')
-        .upload(fileName, buffer, {
+        .from('mentor-assets')
+        .upload(filePath, buffer, {
           contentType: file.type,
-          upsert: false
+          upsert: true // Permitir sobrescribir si existe
         });
 
       if (uploadError) {
@@ -78,8 +81,8 @@ export async function POST(req: Request) {
 
       // Obtener URL pública
       const { data: urlData } = supabase.storage
-        .from('evidencias')
-        .getPublicUrl(fileName);
+        .from('mentor-assets')
+        .getPublicUrl(filePath);
 
       fotoUrl = urlData.publicUrl;
       logger.debug('📸 Archivo subido a Supabase:', fotoUrl);
