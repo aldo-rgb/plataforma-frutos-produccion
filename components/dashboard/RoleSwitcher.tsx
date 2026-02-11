@@ -38,7 +38,7 @@ export function RoleSwitcher({ usuario }: RoleSwitcherProps) {
       key: 'PARTICIPANTE',
       label: 'Participante',
       icon: <User size={16} />,
-      path: '/dashboard',
+      path: '/dashboard/participante',
       color: 'from-slate-500 to-slate-600'
     },
     {
