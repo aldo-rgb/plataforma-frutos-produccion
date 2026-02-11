@@ -172,13 +172,15 @@ export async function onMentorshipSessionCompleted(
 /**
  * TRIGGER: Al completar una llamada de disciplina
  * Se llama desde el sistema de llamadas de disciplina
+ * @param customPlatformPercent - Si se pasa, usa este % en lugar del default del mentor (22.22% para disciplina)
  */
 export async function onDisciplineCallCompleted(
   callBookingId: number,
   mentorId: number,
   studentId: number,
   rateApplied: number,
-  scheduledAt: Date
+  scheduledAt: Date,
+  customPlatformPercent?: number
 ) {
   const student = await prisma.usuario.findUnique({
     where: { id: studentId },
@@ -190,7 +192,8 @@ export async function onDisciplineCallCompleted(
     return null;
   }
 
-  const platformPercent = await getMentorCommissionRate(mentorId);
+  // Usar comisión personalizada para disciplina (22.22%) o la del mentor
+  const platformPercent = customPlatformPercent ?? await getMentorCommissionRate(mentorId);
 
   return await createLedgerEntry({
     mentorId,

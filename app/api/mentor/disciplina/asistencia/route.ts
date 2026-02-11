@@ -77,7 +77,8 @@ export async function POST(req: Request) {
             mentor.id,
             booking.studentId,
             90, // Precio fijo por llamada de disciplina
-            new Date(booking.scheduledAt)
+            new Date(booking.scheduledAt),
+            22.22 // Comisión plataforma 22.22% - Mentor recibe $70 de $90
           );
           logger.debug(`💰 Comisión registrada para llamada ${bookingId}`);
         } catch (commissionError) {
