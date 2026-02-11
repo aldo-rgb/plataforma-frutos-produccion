@@ -2,7 +2,6 @@ import React from 'react';
 import Link from 'next/link';
 import { Calendar, CheckCircle, Clock, AlertTriangle, FileText, Phone, DollarSign } from 'lucide-react';
 import ProfileAlert from '@/components/dashboard/mentor/ProfileAlert';
-import AgendaDelDia from '@/components/dashboard/mentor/AgendaDelDia';
 import NotificacionSesionesPendientes from '@/components/dashboard/mentor/NotificacionSesionesPendientes';
 import WidgetDisciplinaV2 from '@/components/dashboard/mentor/WidgetDisciplinaV2';
 import CartaReviewPanel from '@/components/dashboard/mentor/CartaReviewPanel';
@@ -190,8 +189,6 @@ export default async function MentorDashboard() {
           
           {/* NUEVO: WIDGET DE REVISIÓN DE EVIDENCIAS DE TAREAS/EVENTOS */}
           <RevisionEvidenciasWidget />
-          
-          <AgendaDelDia />
           
           {/* CARTA F.R.U.T.O.S. REVIEWS PANEL */}
           <CartaReviewPanel />
