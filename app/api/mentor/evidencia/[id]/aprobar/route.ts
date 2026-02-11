@@ -103,6 +103,29 @@ export async function PUT(
       }
     });
 
+    // 1.5 Actualizar TaskInstance asociado a COMPLETED
+    // Buscar el TaskInstance más reciente pendiente para esta acción y usuario
+    const taskInstance = await prisma.taskInstance.findFirst({
+      where: {
+        usuarioId: evidencia.usuarioId,
+        accionId: evidenciaAprobada.accionId,
+        status: 'PENDING'
+      },
+      orderBy: { dueDate: 'desc' }
+    });
+
+    if (taskInstance) {
+      await prisma.taskInstance.update({
+        where: { id: taskInstance.id },
+        data: {
+          status: 'COMPLETED',
+          completedAt: new Date(),
+          evidenciaId: evidenciaId
+        }
+      });
+      logger.debug(`   📋 TaskInstance ${taskInstance.id} marcado como COMPLETED`);
+    }
+
     // 2. Otorgar recompensas equilibradas (XP + PC según rareza)
     const recompensa = await otorgarRecompensaPorEvidencia(
       evidencia.usuarioId,

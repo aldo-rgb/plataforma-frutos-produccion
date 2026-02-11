@@ -523,9 +523,9 @@ model DisciplineSchedule {
 model DisciplineBlockedSlot {
   id        Int      @id @default(autoincrement())
   mentorId  Int
-  dayOfWeek Int      // 0=Domingo, 1=Lunes, etc.
-  time      String   // ej: "06:40", "07:00", "07:20"
-  reason    String?  // Razón opcional del bloqueo
+  dayOfWeek Int // 0=Domingo, 1=Lunes, etc.
+  time      String // ej: "06:40", "07:00", "07:20"
+  reason    String? // Razón opcional del bloqueo
   createdAt DateTime @default(now())
   mentor    Usuario  @relation("DisciplineBlockedSlots", fields: [mentorId], references: [id], onDelete: Cascade)
 
@@ -1199,49 +1199,49 @@ model PaymentSettings {
 }
 
 model PerfilCompleto {
-  id                Int       @id @default(autoincrement())
-  usuarioId         Int       @unique
-  apellido          String?
-  fechaNacimiento   DateTime?
-  whatsapp          String?
-  misionTribu       String?
-  logoTribu         String?
-  fraseFavorita     String?
-  numeroVision      String?
-  angelEnrolamiento String?
-  calle             String?
-  numero            String?
-  colonia           String?
-  codigoPostal      String?
-  estadoMunicipio   String?
-  ocupacion         String?
-  tallaCamiseta     String?
-  peso              String?
-  imc               String?
-  estatura          String?
-  fotoTicketPeso    String?
-  fuma              Boolean   @default(false)
-  fumaCantidad      String?
-  quiereSerStaff    Boolean   @default(false)
-  staffBasicoInterest    Boolean   @default(false)
-  staffAvanzadoInterest  Boolean   @default(false)
-  staffLideratoInterest  Boolean   @default(false)
-  staffServicioInterest  Boolean   @default(false)
-  fotoPrimerDia     String?
-  fotoUltimoDiaPL   String?
-  fotoContrato      String?
-  contratoAvanzado  String?
-  coachBasico       String?
-  staffBasico       String?
-  coachAvanzado     String?
-  staffAvanzado     String?
-  gameChangerNombre String?
-  coachPrimerFin    String?
-  coachSegundoFin   String?
-  coachTercerFin    String?
-  condecoraciones   String[]  @default([])
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime
+  id                    Int       @id @default(autoincrement())
+  usuarioId             Int       @unique
+  apellido              String?
+  fechaNacimiento       DateTime?
+  whatsapp              String?
+  misionTribu           String?
+  logoTribu             String?
+  fraseFavorita         String?
+  numeroVision          String?
+  angelEnrolamiento     String?
+  calle                 String?
+  numero                String?
+  colonia               String?
+  codigoPostal          String?
+  estadoMunicipio       String?
+  ocupacion             String?
+  tallaCamiseta         String?
+  peso                  String?
+  imc                   String?
+  estatura              String?
+  fotoTicketPeso        String?
+  fuma                  Boolean   @default(false)
+  fumaCantidad          String?
+  quiereSerStaff        Boolean   @default(false)
+  staffBasicoInterest   Boolean   @default(false)
+  staffAvanzadoInterest Boolean   @default(false)
+  staffLideratoInterest Boolean   @default(false)
+  staffServicioInterest Boolean   @default(false)
+  fotoPrimerDia         String?
+  fotoUltimoDiaPL       String?
+  fotoContrato          String?
+  contratoAvanzado      String?
+  coachBasico           String?
+  staffBasico           String?
+  coachAvanzado         String?
+  staffAvanzado         String?
+  gameChangerNombre     String?
+  coachPrimerFin        String?
+  coachSegundoFin       String?
+  coachTercerFin        String?
+  condecoraciones       String[]  @default([])
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime
 }
 
 model PerfilMentor {
@@ -1317,76 +1317,76 @@ model PerfilMentor {
 
 // Perfil de Trainer - Similar a PerfilMentor pero para entrenadores de Quantum Leap
 model PerfilTrainer {
-  id                        Int                       @id @default(autoincrement())
-  usuarioId                 Int                       @unique
-  nivel                     NivelMentor               @default(JUNIOR)
+  id                        Int                   @id @default(autoincrement())
+  usuarioId                 Int                   @unique
+  nivel                     NivelMentor           @default(JUNIOR)
   especialidad              String
   biografia                 String?
-  experienciaAnios          Int                       @default(0)
-  calificacionPromedio      Float                     @default(0)
-  totalResenas              Int                       @default(0)
-  disponible                Boolean                   @default(true)
-  createdAt                 DateTime                  @default(now())
-  updatedAt                 DateTime                  @default(now())
+  experienciaAnios          Int                   @default(0)
+  calificacionPromedio      Float                 @default(0)
+  totalResenas              Int                   @default(0)
+  disponible                Boolean               @default(true)
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @default(now())
   biografiaCompleta         String?
   biografiaCorta            String?
-  destacado                 Boolean                   @default(false)
-  especialidadesSecundarias String[]                  @default([])
-  logros                    String[]                  @default([])
+  destacado                 Boolean               @default(false)
+  especialidadesSecundarias String[]              @default([])
+  logros                    String[]              @default([])
   titulo                    String?
-  totalSesiones             Int                       @default(0)
-  ratingSum                 Decimal                   @default(0) @db.Decimal(10, 2)
-  ratingCount               Int                       @default(0)
+  totalSesiones             Int                   @default(0)
+  ratingSum                 Decimal               @default(0) @db.Decimal(10, 2)
+  ratingCount               Int                   @default(0)
   enlaceVideoLlamada        String?
-  tipoVideoLlamada          String?                   @default("zoom")
-  horarioInicio             String?                   @default("09:00")
-  horarioFin                String?                   @default("18:00")
-  diasDisponibles           Int[]                     @default([1, 2, 3, 4, 5])
+  tipoVideoLlamada          String?               @default("zoom")
+  horarioInicio             String?               @default("09:00")
+  horarioFin                String?               @default("18:00")
+  diasDisponibles           Int[]                 @default([1, 2, 3, 4, 5])
   tagline                   String?
-  expertiseTags             String[]                  @default([])
+  expertiseTags             String[]              @default([])
   methodologyStyle          MentorStyle?
   idealClientDescription    String?
   heroJourneyBio            String?
   promiseStatement          String?
   videoIntroUrl             String?
-  aiGeneratedBio            Boolean                   @default(false)
+  aiGeneratedBio            Boolean               @default(false)
   lastAiInterviewAt         DateTime?
-  mentoradosActivos         Int                       @default(0)
-  mentoradosTotales         Int                       @default(0)
-  acceptingNewClients       Boolean                   @default(true)
-  maxClients                Int?                      @default(10)
-  profileApprovalStatus     ProfileApprovalStatus     @default(DRAFT)
+  mentoradosActivos         Int                   @default(0)
+  mentoradosTotales         Int                   @default(0)
+  acceptingNewClients       Boolean               @default(true)
+  maxClients                Int?                  @default(10)
+  profileApprovalStatus     ProfileApprovalStatus @default(DRAFT)
   profileSubmittedAt        DateTime?
-  Usuario                   Usuario                   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  Usuario                   Usuario               @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 }
 
 // Solicitud de Trainer - Similar a MentorApplication pero sin pago
 model TrainerApplication {
-  id                                              Int               @id @default(autoincrement())
-  usuarioId                                       Int               @unique
-  status                                          ApplicationStatus @default(PENDING)
-  titulo                                          String
-  especialidad                                    String
-  especialidadesSecundarias                       String[]          @default([])
-  experienciaAnios                                Int
-  biografiaCorta                                  String?
-  biografiaCompleta                               String
-  tagline                                         String?
-  promiseStatement                                String?
-  methodologyStyle                                MentorStyle?      @default(BALANCED)
-  idealClientDescription                          String?
-  horarioInicio                                   String?           @default("09:00")
-  horarioFin                                      String?           @default("18:00")
-  diasDisponibles                                 String[]          @default([])
-  logros                                          String[]          @default([])
-  expertiseTags                                   String[]          @default([])
-  videoIntroUrl                                   String?
-  reviewedBy                                      Int?
-  reviewedAt                                      DateTime?
-  rejectionReason                                 String?
-  createdAt                                       DateTime          @default(now())
-  updatedAt                                       DateTime
-  documentosUrls                                  String[]          @default([])
+  id                                             Int               @id @default(autoincrement())
+  usuarioId                                      Int               @unique
+  status                                         ApplicationStatus @default(PENDING)
+  titulo                                         String
+  especialidad                                   String
+  especialidadesSecundarias                      String[]          @default([])
+  experienciaAnios                               Int
+  biografiaCorta                                 String?
+  biografiaCompleta                              String
+  tagline                                        String?
+  promiseStatement                               String?
+  methodologyStyle                               MentorStyle?      @default(BALANCED)
+  idealClientDescription                         String?
+  horarioInicio                                  String?           @default("09:00")
+  horarioFin                                     String?           @default("18:00")
+  diasDisponibles                                String[]          @default([])
+  logros                                         String[]          @default([])
+  expertiseTags                                  String[]          @default([])
+  videoIntroUrl                                  String?
+  reviewedBy                                     Int?
+  reviewedAt                                     DateTime?
+  rejectionReason                                String?
+  createdAt                                      DateTime          @default(now())
+  updatedAt                                      DateTime
+  documentosUrls                                 String[]          @default([])
   Usuario_TrainerApplication_reviewedByToUsuario Usuario?          @relation("TrainerApplication_reviewedByToUsuario", fields: [reviewedBy], references: [id])
   Usuario_TrainerApplication_usuarioIdToUsuario  Usuario           @relation("TrainerApplication_usuarioIdToUsuario", fields: [usuarioId], references: [id], onDelete: Cascade)
 }
@@ -1793,21 +1793,21 @@ model SchoolProduct {
 // Historial de resultados de fines de semana de Liderato (PL)
 // Guarda las estadísticas de cada fin de semana finalizado por el trainer
 model PLWeekendResult {
-  id                  Int           @id @default(autoincrement())
+  id                  Int      @id @default(autoincrement())
   productId           Int
   trainerId           Int
-  weekendNumber       Int           // 1, 2, o 3
-  totalParticipants   Int           // Participantes con asistencia
-  totalEnrolled       Int           // Total de enrollados por los participantes
-  expectedEnrollments Int           // Meta (participantes × 2)
-  percentage          Int           // Porcentaje logrado
-  participantsData    Json?         // Datos detallados de cada participante
-  finishedAt          DateTime      @default(now())
+  weekendNumber       Int // 1, 2, o 3
+  totalParticipants   Int // Participantes con asistencia
+  totalEnrolled       Int // Total de enrollados por los participantes
+  expectedEnrollments Int // Meta (participantes × 2)
+  percentage          Int // Porcentaje logrado
+  participantsData    Json? // Datos detallados de cada participante
+  finishedAt          DateTime @default(now())
   notes               String?
-  
-  Product             SchoolProduct @relation("PLWeekendResults", fields: [productId], references: [id], onDelete: Cascade)
-  Trainer             Usuario       @relation("TrainerPLResults", fields: [trainerId], references: [id])
-  
+
+  Product SchoolProduct @relation("PLWeekendResults", fields: [productId], references: [id], onDelete: Cascade)
+  Trainer Usuario       @relation("TrainerPLResults", fields: [trainerId], references: [id])
+
   @@unique([productId, weekendNumber])
   @@index([trainerId])
   @@index([productId])
@@ -6219,24 +6219,24 @@ enum ReportStatus {
 // ============================================
 
 model AutomationMessageLog {
-  id              Int                       @id @default(autoincrement())
-  organizationId  Int
-  userId          Int
-  videoKey        String                    // ej: videoEnrolamientoUrl, videoBienvenidaLideres1Url
-  videoLabel      String                    // ej: "Enrolamiento", "Bienvenida Básico"
-  channel         AutomationChannel         // EMAIL, WHATSAPP
-  recipient       String                    // email o teléfono
-  status          AutomationMessageStatus   @default(PENDING)
-  errorMessage    String?
-  sentAt          DateTime?
-  createdAt       DateTime                  @default(now())
-  source          AutomationSource          @default(MANUAL) // MANUAL o CRON
-  visionId        Int?
-  
-  Organization    Organization              @relation(fields: [organizationId], references: [id])
-  Usuario         Usuario                   @relation(fields: [userId], references: [id])
-  Vision          Vision?                   @relation(fields: [visionId], references: [id])
-  
+  id             Int                     @id @default(autoincrement())
+  organizationId Int
+  userId         Int
+  videoKey       String // ej: videoEnrolamientoUrl, videoBienvenidaLideres1Url
+  videoLabel     String // ej: "Enrolamiento", "Bienvenida Básico"
+  channel        AutomationChannel // EMAIL, WHATSAPP
+  recipient      String // email o teléfono
+  status         AutomationMessageStatus @default(PENDING)
+  errorMessage   String?
+  sentAt         DateTime?
+  createdAt      DateTime                @default(now())
+  source         AutomationSource        @default(MANUAL) // MANUAL o CRON
+  visionId       Int?
+
+  Organization Organization @relation(fields: [organizationId], references: [id])
+  Usuario      Usuario      @relation(fields: [userId], references: [id])
+  Vision       Vision?      @relation(fields: [visionId], references: [id])
+
   @@index([organizationId])
   @@index([userId])
   @@index([createdAt])
@@ -6265,56 +6265,56 @@ enum AutomationSource {
 // ENCUESTAS DE PARTICIPANTES
 // ==========================================
 model ParticipantSurvey {
-  id              Int           @id @default(autoincrement())
-  userId          Int
-  productId       Int
-  level           VisionLevel   // BASIC, ADVANCED, PL
-  
+  id        Int         @id @default(autoincrement())
+  userId    Int
+  productId Int
+  level     VisionLevel // BASIC, ADVANCED, PL
+
   // Campos comunes
-  apodoNino       String?       // Básico
-  lugarNacimiento String?       // Básico
-  colorFavorito   String?       // Básico
-  caricaturaFavorita String?    // Básico
-  paisViajar      String?       // Básico
-  
+  apodoNino          String? // Básico
+  lugarNacimiento    String? // Básico
+  colorFavorito      String? // Básico
+  caricaturaFavorita String? // Básico
+  paisViajar         String? // Básico
+
   // Campos Avanzado
-  superheroeFavorito String?    // Avanzado
-  gustaLeer       Boolean?      // Avanzado
-  autorFavorito   String?       // Avanzado (si gustaLeer = true)
-  jugueteDeseado  String?       // Avanzado
-  liderAdmiras    String?       // Avanzado
-  descripcionLider String?      // Avanzado (3 palabras)
+  superheroeFavorito    String? // Avanzado
+  gustaLeer             Boolean? // Avanzado
+  autorFavorito         String? // Avanzado (si gustaLeer = true)
+  jugueteDeseado        String? // Avanzado
+  liderAdmiras          String? // Avanzado
+  descripcionLider      String? // Avanzado (3 palabras)
   descripcionUnaPalabra String? // Avanzado
-  
+
   // Campos PL - Respuestas de reflexión
-  legadoPersonal      String?       // ¿Cuál es el legado que quieres dejar?
-  mayorAprendizaje    String?       // ¿Cuál ha sido tu mayor aprendizaje?
-  compromisoComunidad String?       // ¿Qué te comprometes a aportar?
-  consejoFuturo       String?       // ¿Qué consejo le darías?
-  
+  legadoPersonal      String? // ¿Cuál es el legado que quieres dejar?
+  mayorAprendizaje    String? // ¿Cuál ha sido tu mayor aprendizaje?
+  compromisoComunidad String? // ¿Qué te comprometes a aportar?
+  consejoFuturo       String? // ¿Qué consejo le darías?
+
   // Campos PL - Interés en ser Staff
-  quiereSerStaff      Boolean?    @default(false)
-  staffBasico         Boolean?    @default(false)
-  staffAvanzado       Boolean?    @default(false)
-  staffLiderato       Boolean?    @default(false)
-  staffServicio       Boolean?    @default(false)
-  
+  quiereSerStaff Boolean? @default(false)
+  staffBasico    Boolean? @default(false)
+  staffAvanzado  Boolean? @default(false)
+  staffLiderato  Boolean? @default(false)
+  staffServicio  Boolean? @default(false)
+
   // Referidos (5 espacios, 3 obligatorios) - Solo para BASIC y ADVANCED
-  referido1       String?       // Obligatorio en BASIC/ADVANCED
-  referido2       String?       // Obligatorio en BASIC/ADVANCED
-  referido3       String?       // Obligatorio en BASIC/ADVANCED
-  referido4       String?       // Opcional
-  referido5       String?       // Opcional
-  
+  referido1 String? // Obligatorio en BASIC/ADVANCED
+  referido2 String? // Obligatorio en BASIC/ADVANCED
+  referido3 String? // Obligatorio en BASIC/ADVANCED
+  referido4 String? // Opcional
+  referido5 String? // Opcional
+
   // Puntos otorgados
-  pointsAwarded   Int           @default(0)
-  
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  Usuario         Usuario       @relation("ParticipantSurveys", fields: [userId], references: [id], onDelete: Cascade)
-  Product         SchoolProduct @relation("ParticipantSurveyProduct", fields: [productId], references: [id], onDelete: Cascade)
-  
+  pointsAwarded Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  Usuario Usuario       @relation("ParticipantSurveys", fields: [userId], references: [id], onDelete: Cascade)
+  Product SchoolProduct @relation("ParticipantSurveyProduct", fields: [productId], references: [id], onDelete: Cascade)
+
   @@unique([userId, productId])
   @@index([userId])
   @@index([productId])
