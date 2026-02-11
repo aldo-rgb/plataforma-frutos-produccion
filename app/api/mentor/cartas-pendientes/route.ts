@@ -27,10 +27,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No tienes permisos de mentor' }, { status: 403 });
     }
 
-    // Obtener cartas en estado EN_REVISION
+    // Obtener IDs de participantes asignados a este mentor
+    const participantesAsignados = await prisma.programEnrollment.findMany({
+      where: {
+        mentorId: mentor.id,
+        status: { in: ['ACTIVE', 'COMPLETED'] }
+      },
+      select: { userId: true }
+    });
+
+    const participanteIds = participantesAsignados.map(p => p.userId);
+
+    // Si no tiene participantes asignados, devolver lista vacía
+    if (participanteIds.length === 0) {
+      return NextResponse.json({ cartas: [] }, { status: 200 });
+    }
+
+    // Obtener cartas en estado EN_REVISION de participantes asignados
     const cartas = await prisma.cartaFrutos.findMany({
       where: {
-        estado: 'EN_REVISION'
+        estado: 'EN_REVISION',
+        usuarioId: { in: participanteIds }
       },
       include: {
         Usuario: {
@@ -58,15 +75,15 @@ export async function GET(request: NextRequest) {
       usuarioNombre: carta.Usuario.nombre,
       usuarioEmail: carta.Usuario.email,
       estado: carta.estado,
-      fechaEnvio: carta.createdAt || carta.updatedAt,
-      totalMetas: carta.Meta.length,
-      metas: carta.Meta.map((meta: any) => ({
+      fechaEnvio: carta.fechaActualizacion || carta.fechaCreacion,
+      totalMetas: carta.Meta?.length || 0,
+      metas: (carta.Meta || []).map((meta: any) => ({
         id: meta.id,
         categoria: meta.categoria,
         orden: meta.orden,
         metaPrincipal: meta.metaPrincipal,
         declaracionPoder: meta.declaracionPoder,
-        acciones: meta.Accion || [] // Mapear Accion -> acciones
+        acciones: meta.Accion || []
       }))
     }));
 
