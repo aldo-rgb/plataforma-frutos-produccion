@@ -28,15 +28,15 @@ export interface NivelConfig {
 
 export const NIVELES: NivelConfig[] = [
   { nivel: 1, xpRequerido: 0, rango: 'RASTREADOR', icono: '🔭', descripcion: 'Rastreador' },
-  { nivel: 2, xpRequerido: 100, rango: 'CAPTURADOR', icono: '📸', descripcion: 'Capturador' },
-  { nivel: 3, xpRequerido: 500, rango: 'CRONISTA', icono: '🗃️', descripcion: 'Cronista' },
-  { nivel: 4, xpRequerido: 1500, rango: 'GUARDIAN_REALIDAD', icono: '🔮', descripcion: 'Guardián de la Realidad' },
-  { nivel: 5, xpRequerido: 3000, rango: 'ARQUITECTO_TIEMPO', icono: '⏳', descripcion: 'Arquitecto del Tiempo' },
-  { nivel: 6, xpRequerido: 5000, rango: 'CAZADOR_MOMENTOS', icono: '🎯', descripcion: 'Cazador de Momentos' },
-  { nivel: 7, xpRequerido: 8000, rango: 'TEJEDOR_DESTINOS', icono: '🌌', descripcion: 'Tejedor de Destinos' },
-  { nivel: 8, xpRequerido: 12000, rango: 'MAESTRO_REALIDADES', icono: '💎', descripcion: 'Maestro de Realidades' },
-  { nivel: 9, xpRequerido: 18000, rango: 'GUARDIAN_CUANTICO', icono: '⚡', descripcion: 'Guardián Cuántico' },
-  { nivel: 10, xpRequerido: 25000, rango: 'SEÑOR_ARCHIVO', icono: '👑', descripcion: 'Señor del Archivo Eterno' },
+  { nivel: 2, xpRequerido: 5000, rango: 'CAPTURADOR', icono: '📸', descripcion: 'Capturador' },
+  { nivel: 3, xpRequerido: 15000, rango: 'CRONISTA', icono: '🗃️', descripcion: 'Cronista' },
+  { nivel: 4, xpRequerido: 35000, rango: 'GUARDIAN_REALIDAD', icono: '🔮', descripcion: 'Guardián de la Realidad' },
+  { nivel: 5, xpRequerido: 70000, rango: 'ARQUITECTO_TIEMPO', icono: '⏳', descripcion: 'Arquitecto del Tiempo' },
+  { nivel: 6, xpRequerido: 120000, rango: 'CAZADOR_MOMENTOS', icono: '🎯', descripcion: 'Cazador de Momentos' },
+  { nivel: 7, xpRequerido: 200000, rango: 'TEJEDOR_DESTINOS', icono: '🌌', descripcion: 'Tejedor de Destinos' },
+  { nivel: 8, xpRequerido: 350000, rango: 'MAESTRO_REALIDADES', icono: '💎', descripcion: 'Maestro de Realidades' },
+  { nivel: 9, xpRequerido: 550000, rango: 'GUARDIAN_CUANTICO', icono: '⚡', descripcion: 'Guardián Cuántico' },
+  { nivel: 10, xpRequerido: 1000000, rango: 'SEÑOR_ARCHIVO', icono: '👑', descripcion: 'Señor del Archivo Eterno' },
 ];
 
 export function getNivelPorXP(xp: number): NivelConfig {
@@ -86,27 +86,27 @@ export interface RecompensaConfig {
 // Recompensas por rareza de tarea
 export const RECOMPENSAS_POR_RAREZA: Record<TaskRarity, RecompensaConfig> = {
   COMMON: {
-    xp: 10,
+    xp: 1000,
     pc: 5,
     razon: 'Hábito diario completado'
   },
   UNCOMMON: {
-    xp: 25,
+    xp: 2000,
     pc: 50,
     razon: 'Tarea semanal completada'
   },
   RARE: {
-    xp: 50,
+    xp: 3000,
     pc: 100,
     razon: 'Desafío mensual superado'
   },
   EPIC: {
-    xp: 100,
+    xp: 10000,
     pc: 300,
     razon: 'Logro épico alcanzado'
   },
   LEGENDARY: {
-    xp: 200,
+    xp: 25000,
     pc: 500,
     razon: 'Misión legendaria completada'
   }

@@ -147,15 +147,15 @@ export default function UserLevelBadge({ user: userProp, compact = false, mode }
           <div className="flex items-center gap-2 text-xs text-gray-400">
             <div className="flex items-center gap-1">
               <div className="w-2 h-2 bg-gray-500 rounded-full" />
-              <span>COMÚN: 10 XP</span>
+              <span>COMÚN: 1,000 XP</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-2 h-2 bg-blue-500 rounded-full" />
-              <span>RARO: 25 XP</span>
+              <span>RARO: 3,000 XP</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-2 h-2 bg-purple-500 rounded-full" />
-              <span>ÉPICO: 100 XP</span>
+              <span>ÉPICO: 10,000 XP</span>
             </div>
           </div>
         </div>
