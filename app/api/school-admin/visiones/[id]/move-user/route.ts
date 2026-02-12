@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -6,8 +6,8 @@ import logger from '@/lib/logger';
 
 // POST - Mover un usuario a otra visión
 export async function POST(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -21,7 +21,8 @@ export async function POST(
       return NextResponse.json({ error: 'No tienes permisos para esta acción' }, { status: 403 });
     }
 
-    const sourceVisionId = parseInt(params.id);
+    const { id } = await params;
+    const sourceVisionId = parseInt(id);
     const body = await request.json();
     const { userId, targetVisionId, level, moveAllLevels = true } = body;
 
