@@ -83,6 +83,12 @@ export async function GET(request: NextRequest) {
       });
     } else {
       // COORDINADOR o SCHOOL_ADMIN ve eventos de su organización
+      if (!user.organizationId) {
+        return NextResponse.json({ 
+          error: 'Tu cuenta no tiene una organización asignada. Contacta al administrador.' 
+        }, { status: 400 });
+      }
+      
       events = await prisma.flightDeckEvent.findMany({
         where: {
           Vision: {
@@ -107,7 +113,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ events, userRole: user.rol });
   } catch (error) {
     console.error('Error fetching flight deck events:', error);
-    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+    return NextResponse.json({ error: `Error interno: ${errorMessage}` }, { status: 500 });
   }
 }
 
