@@ -14,18 +14,22 @@ export async function GET(request: NextRequest) {
     const userId = parseInt(session.user.id);
     const user = await prisma.usuario.findUnique({
       where: { id: userId },
-      select: { id: true, rol: true, organizationId: true }
+      select: { id: true, rol: true, organizationId: true, esEntrenador: true }
     });
 
     if (!user) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // Solo TRAINER, COORDINADOR, SCHOOL_ADMIN, ADMIN pueden ver Flight Deck
+    // Solo TRAINER, COORDINADOR, SCHOOL_ADMIN, ADMIN, o usuarios con esEntrenador pueden ver Flight Deck
     const allowedRoles = ['TRAINER', 'COORDINADOR', 'SCHOOL_ADMIN', 'ADMIN'];
-    if (!allowedRoles.includes(user.rol)) {
+    const hasAccess = allowedRoles.includes(user.rol) || user.esEntrenador;
+    if (!hasAccess) {
       return NextResponse.json({ error: 'No tienes acceso a Flight Deck' }, { status: 403 });
     }
+
+    // Determinar si el usuario es entrenador (por rol o por flag)
+    const isTrainer = user.rol === 'TRAINER' || user.esEntrenador;
 
     // Buscar eventos donde el usuario es TRAINER asignado al tercer fin de semana (liderato)
     // O es COORDINADOR/SCHOOL_ADMIN de la organización
@@ -47,7 +51,7 @@ export async function GET(request: NextRequest) {
         },
         orderBy: { createdAt: 'desc' }
       });
-    } else if (user.rol === 'TRAINER') {
+    } else if (isTrainer) {
       // Entrenador solo ve eventos donde está asignado al staff de la visión como TRAINER
       // y la visión tiene entrenamientos de liderato (tercer fin de semana)
       const visionStaffAssignments = await prisma.visionStaff.findMany({
