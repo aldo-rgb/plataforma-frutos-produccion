@@ -200,6 +200,20 @@ export default function FlightDeckPage() {
                 <p className="text-gray-400">Control de audio para ceremonias de vuelo</p>
               </div>
             </div>
+            
+            {/* Botón crear evento - Solo COORDINADOR/SCHOOL_ADMIN/ADMIN */}
+            {canCreateEvents && (
+              <button
+                onClick={() => {
+                  loadVisiones();
+                  setShowCreateModal(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl font-medium transition-colors"
+              >
+                <Plus className="w-5 h-5" />
+                Crear Evento
+              </button>
+            )}
           </div>
         </header>
 
@@ -325,6 +339,88 @@ export default function FlightDeckPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal Crear Evento */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-md overflow-hidden">
+            {/* Header Modal */}
+            <div className="p-6 border-b border-gray-700 bg-gradient-to-r from-cyan-900/30 to-blue-900/30">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-cyan-500/20 rounded-xl">
+                  <Plane className="w-6 h-6 text-cyan-400" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Crear Evento de Vuelo</h2>
+                  <p className="text-sm text-gray-400">Selecciona una visión para la ceremonia</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Contenido */}
+            <div className="p-6">
+              {visiones.length === 0 ? (
+                <div className="text-center py-8">
+                  <AlertCircle className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-400">No hay visiones disponibles</p>
+                  <p className="text-sm text-gray-500 mt-1">Todas las visiones ya tienen eventos creados</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-gray-300">
+                    Visión para el evento:
+                  </label>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {visiones.map((vision) => (
+                      <button
+                        key={vision.id}
+                        onClick={() => setSelectedVision(vision.id)}
+                        className={`w-full p-4 rounded-xl border text-left transition-all ${
+                          selectedVision === vision.id
+                            ? 'border-cyan-500 bg-cyan-500/10 text-white'
+                            : 'border-gray-700 bg-gray-800/50 text-gray-300 hover:border-gray-600'
+                        }`}
+                      >
+                        <span className="font-medium">{vision.nombre}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-gray-700 bg-gray-800/50 flex gap-3">
+              <button
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setSelectedVision(null);
+                }}
+                className="flex-1 py-2 px-4 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-xl font-medium transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleCreateEvent}
+                disabled={!selectedVision || creating}
+                className="flex-1 py-2 px-4 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                {creating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Creando...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    Crear Evento
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
