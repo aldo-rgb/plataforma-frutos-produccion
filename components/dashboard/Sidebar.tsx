@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { 
   LayoutDashboard, Trophy, Target, BarChart3, User, LogOut, 
   UserPlus, DollarSign, Package, Shield, Drama, Theater,
-  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode, Store, Star, Crown, Image, Vote, BookOpen, Rocket
+  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode, Store, Star, Crown, Image, Vote, BookOpen, Rocket, Plane, Archive
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { MENU_ITEMS } from '@/config/menuPermissions';
@@ -651,6 +651,39 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             >
               <Theater size={18} className="text-fuchsia-400" />
               <span>Saltos Cuánticos</span>
+            </Link>
+          </div>
+        )}
+
+        {/* Herramientas de Ceremonia - COORDINADOR, SCHOOL_ADMIN, TRAINER, ADMINISTRADOR */}
+        {!isParticipanteView && (usuario.rol === 'COORDINADOR' || usuario.rol === 'SCHOOL_ADMIN' || usuario.rol === 'TRAINER' || usuario.rol === 'ADMIN' || usuario.rol === 'ADMINISTRADOR') && (
+          <div className="pt-6 mt-6 border-t border-slate-800">
+            <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">✨ Herramientas de Ceremonia</p>
+            
+            <Link 
+              href="/dashboard/time-capsule"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname.startsWith('/dashboard/time-capsule')
+                  ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-amber-900/20'
+              }`}
+            >
+              <Archive size={18} className="text-amber-400" />
+              <span>Quantum Time Capsule</span>
+            </Link>
+
+            <Link 
+              href="/dashboard/flight-deck"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname.startsWith('/dashboard/flight-deck')
+                  ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-cyan-900/20'
+              }`}
+            >
+              <Plane size={18} className="text-cyan-400" />
+              <span>Quantum Flight Deck</span>
             </Link>
           </div>
         )}

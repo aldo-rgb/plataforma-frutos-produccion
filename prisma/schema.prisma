@@ -2522,6 +2522,11 @@ model Usuario {
   CapsuleMessagesReceived CapsuleMessage[]      @relation("CapsuleRecipient")
   CapsuleMessagesSent     CapsuleMessage[]      @relation("CapsuleSender")
 
+  // Quantum Flight Deck
+  FlightDeckCreated    FlightDeckEvent[]   @relation("FlightDeckCreator")
+  FlightPassenger      FlightPassenger[]
+  FlightOperatorOf     FlightLiveSession[] @relation("FlightOperator")
+
   @@index([communityOrganizationId])
 }
 
@@ -2620,6 +2625,7 @@ model Vision {
   weekly_payout_summary         weekly_payout_summary[]
   AutomationMessageLog          AutomationMessageLog[]
   TimeCapsuleCampaign           TimeCapsuleCampaign[]
+  FlightDeckEvent               FlightDeckEvent?
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -6432,4 +6438,137 @@ enum CapsuleMessageType {
   TEXT
   AUDIO
   BOTH
+}
+
+// ============================================
+// QUANTUM FLIGHT DECK - Sistema de Vuelo PL3
+// ============================================
+
+// Configuración del evento de vuelo para una visión
+model FlightDeckEvent {
+  id        Int @id @default(autoincrement())
+  visionId  Int @unique
+  creatorId Int // COORDINADOR/SCHOOL_ADMIN que creó
+
+  // Configuración global de tracks
+  trackEstiramiento   String? // Track 1: URL del MP3 para estiramiento
+  trackTransformacion String? // Track 2: URL del MP3 para transformación
+  trackReconocimiento String? // Track 4: URL del MP3 para reconocimiento
+  trackDespedida      String? // Track 5: URL del MP3 para despedida
+  trackVueloGenerico  String? // Track 3 de respaldo si participante no tiene canción
+
+  // Configuración de audio
+  crossfadeDuration Int     @default(3) // Segundos de crossfade entre tracks
+  duckingVolume     Int     @default(20) // % de volumen durante ducking (cápsulas)
+  isConfigured      Boolean @default(false) // Tracks globales están listos
+
+  // Estado del evento
+  eventStatus FlightEventStatus @default(SETUP)
+  startedAt   DateTime?
+  endedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  Vision       Vision              @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  Creator      Usuario             @relation("FlightDeckCreator", fields: [creatorId], references: [id])
+  Passengers   FlightPassenger[]
+  CurrentFlight FlightLiveSession?
+
+  @@index([visionId])
+  @@index([creatorId])
+  @@index([eventStatus])
+}
+
+// Lista de pasajeros (participantes) con su orden y canción
+model FlightPassenger {
+  id      Int @id @default(autoincrement())
+  eventId Int
+  userId  Int
+
+  // Orden en la secuencia de vuelo
+  flightOrder Int @default(0)
+
+  // Canción personalizada de vuelo (Track 3)
+  flightSongUrl  String? // URL del MP3 de su canción
+  flightSongName String? // Nombre de la canción para mostrar
+
+  // Estado del vuelo de este participante
+  flightStatus     PassengerFlightStatus @default(WAITING)
+  currentPhase     FlightPhase?
+  phaseStartedAt   DateTime?
+  completedAt      DateTime?
+
+  // Audios de cápsula pre-cargados (del Time Capsule o cargados manualmente)
+  capsuleAudios Json? // Array de {url, duration, senderName, order}
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  Event       FlightDeckEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  User        Usuario            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  LiveSession FlightLiveSession? @relation("CurrentFlightPassenger")
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+  @@index([flightOrder])
+  @@index([flightStatus])
+}
+
+// Sesión en vivo del vuelo (singleton por evento)
+model FlightLiveSession {
+  id      Int @id @default(autoincrement())
+  eventId Int @unique
+
+  // Pasajero actual
+  currentPassengerId Int?     @unique
+  currentPhase       FlightPhase @default(IDLE)
+
+  // Estado de audio de cápsulas
+  capsuleCurrentIndex Int      @default(0)
+  capsulePlaying      Boolean  @default(false)
+  capsulePaused       Boolean  @default(false)
+
+  // Operador actual (quién tiene el control)
+  operatorId Int?
+
+  // Timestamps
+  sessionStartedAt DateTime?
+  lastUpdatedAt    DateTime  @default(now())
+
+  // Relaciones
+  Event            FlightDeckEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  CurrentPassenger FlightPassenger? @relation("CurrentFlightPassenger", fields: [currentPassengerId], references: [id])
+  Operator         Usuario?         @relation("FlightOperator", fields: [operatorId], references: [id])
+
+  @@index([eventId])
+}
+
+// Enums para Flight Deck
+enum FlightEventStatus {
+  SETUP       // Configurando tracks y orden
+  READY       // Listo para iniciar
+  IN_PROGRESS // Evento en curso
+  COMPLETED   // Evento finalizado
+  PAUSED      // Pausado temporalmente
+}
+
+enum PassengerFlightStatus {
+  WAITING     // En espera de su turno
+  IN_PROGRESS // Su vuelo está en progreso
+  COMPLETED   // Ya voló
+  SKIPPED     // Saltado (no presente)
+}
+
+enum FlightPhase {
+  IDLE          // Sin actividad
+  ESTIRAMIENTO  // Fase 1
+  TRANSFORMACION // Fase 2
+  VUELO         // Fase 3 (canción personalizada)
+  RECONOCIMIENTO // Fase 4
+  CAPSULA       // Fase 5 (mensajes de poder)
+  DESPEDIDA     // Fase 6
 }

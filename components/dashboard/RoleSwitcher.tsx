@@ -144,7 +144,7 @@ export function RoleSwitcher({ usuario }: RoleSwitcherProps) {
   const currentRole = availableRoles.find(r => r.key === activeRole) || availableRoles[0];
 
   return (
-    <div className="relative z-[100]" ref={dropdownRef}>
+    <div className="relative z-[9999]" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r ${currentRole.color} hover:opacity-90 transition-all duration-200 shadow-lg`}
@@ -160,7 +160,7 @@ export function RoleSwitcher({ usuario }: RoleSwitcherProps) {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute top-full right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-[9999] animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="p-2 border-b border-slate-700">
             <p className="text-[10px] text-slate-400 uppercase font-bold px-2">Cambiar Vista</p>
           </div>
