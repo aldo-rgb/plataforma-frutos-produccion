@@ -100,8 +100,7 @@ export async function POST(
         await prisma.licenseAssignment.update({
           where: { id: licenseAssignment.id },
           data: {
-            isActive: false,
-            deactivatedAt: new Date()
+            isActive: false
           }
         });
         logger.debug(`🔑 Licencia ${licenseAssignment.licenseCode} desactivada`);
