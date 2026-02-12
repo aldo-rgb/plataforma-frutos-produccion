@@ -1109,6 +1109,7 @@ model Organization {
   coordinator_commissions                               coordinator_commissions[]
   weekly_payout_summary                                 weekly_payout_summary[]
   AutomationMessageLog                                  AutomationMessageLog[]
+  TimeCapsuleCampaign                                   TimeCapsuleCampaign[]
 
   @@index([masterOrganizationId])
   @@index([slug])
@@ -2516,6 +2517,11 @@ model Usuario {
   AutomationMessageLog                                                   AutomationMessageLog[]
   ParticipantSurveys                                                     ParticipantSurvey[]             @relation("ParticipantSurveys")
 
+  // Quantum Time Capsule
+  CapsuleReleasedBy       TimeCapsuleCampaign[] @relation("CapsuleReleasedBy")
+  CapsuleMessagesReceived CapsuleMessage[]      @relation("CapsuleRecipient")
+  CapsuleMessagesSent     CapsuleMessage[]      @relation("CapsuleSender")
+
   @@index([communityOrganizationId])
 }
 
@@ -2613,6 +2619,7 @@ model Vision {
   vision_enrollments            vision_enrollments[]
   weekly_payout_summary         weekly_payout_summary[]
   AutomationMessageLog          AutomationMessageLog[]
+  TimeCapsuleCampaign           TimeCapsuleCampaign[]
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -6319,4 +6326,110 @@ model ParticipantSurvey {
   @@index([userId])
   @@index([productId])
   @@index([level])
+}
+
+// ============================================
+// QUANTUM TIME CAPSULE - Sistema de Cápsulas del Tiempo
+// ============================================
+
+model TimeCapsuleCampaign {
+  id             Int     @id @default(autoincrement())
+  visionId       Int
+  organizationId Int
+  name           String // "Buzón Vision 25"
+  slug           String  @unique // "vision25" para URL /buzon/vision25
+  description    String?
+
+  // Fechas de control
+  startDate   DateTime // Cuándo se abre el buzón para recibir mensajes
+  closeDate   DateTime // Cuándo se cierra (00:00 del día PL3)
+  releaseDate DateTime? // Cuándo se liberan las cápsulas (null = no liberado aún)
+
+  // Estado
+  isActive     Boolean @default(true)
+  isReleased   Boolean @default(false) // El coordinador presionó "Liberar"
+  releasedById Int? // Quién liberó las cápsulas
+
+  // Configuración
+  notifyDaysBefore Int @default(5) // Días antes para notificar linaje
+  pointsPerMessage Int @default(100) // Puntos por mensaje enviado
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  Vision       Vision           @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  Organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  ReleasedBy   Usuario?         @relation("CapsuleReleasedBy", fields: [releasedById], references: [id])
+  Messages     CapsuleMessage[]
+
+  @@index([visionId])
+  @@index([organizationId])
+  @@index([slug])
+  @@index([isActive])
+}
+
+model CapsuleMessage {
+  id          Int @id @default(autoincrement())
+  campaignId  Int
+  recipientId Int // El participante que recibirá el mensaje
+
+  // Datos del remitente
+  senderName     String // Nombre de quien envía
+  senderRelation String // "Mamá", "Hermano", "Amigo", "Mentor", etc.
+  senderUserId   Int? // Si es usuario registrado (GameChanger, Mentor, etc.)
+  senderEmail    String? // Email opcional para externos
+
+  // Contenido
+  messageType   CapsuleMessageType // TEXT, AUDIO, BOTH
+  textContent   String?            @db.Text // El texto de la carta
+  audioUrl      String? // URL del audio en S3
+  audioDuration Int? // Duración en segundos
+
+  // Estado
+  isUnlocked Boolean @default(false) // Se desbloquea cuando se liberan las cápsulas
+  isFavorite Boolean @default(false) // Marcado como favorito por el destinatario
+  isRead     Boolean @default(false) // Si el destinatario ya lo leyó/escuchó
+
+  // Gamificación
+  pointsAwarded Boolean @default(false) // Si ya se dieron puntos al sender
+
+  createdAt DateTime @default(now())
+
+  // Relaciones
+  Campaign   TimeCapsuleCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  Recipient  Usuario             @relation("CapsuleRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  SenderUser Usuario?            @relation("CapsuleSender", fields: [senderUserId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId])
+  @@index([recipientId])
+  @@index([senderUserId])
+  @@index([isUnlocked])
+}
+
+// Notificaciones de linaje pendientes
+model CapsuleLineageNotification {
+  id             Int @id @default(autoincrement())
+  campaignId     Int
+  notifiedUserId Int // El usuario que fue notificado (enrolador nivel 1, 2 o 3)
+  participantId  Int // El participante que está por graduarse
+  lineageLevel   Int // 1, 2 o 3 (nivel de la cadena)
+
+  // Estado
+  notificationSent Boolean   @default(false)
+  sentAt           DateTime?
+  messageSent      Boolean   @default(false) // Si ya envió mensaje al participante
+
+  createdAt DateTime @default(now())
+
+  @@unique([campaignId, notifiedUserId, participantId])
+  @@index([campaignId])
+  @@index([notifiedUserId])
+  @@index([participantId])
+}
+
+enum CapsuleMessageType {
+  TEXT
+  AUDIO
+  BOTH
 }

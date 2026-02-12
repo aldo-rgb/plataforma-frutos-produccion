@@ -878,6 +878,32 @@ export default function SchoolAdminDashboard() {
               <TreasuryQuickWidget isAdmin={true} />
             </div>
 
+            {/* Widget de Quantum Time Capsule - CASI BLANCO/CORONA SUPERIOR */}
+            <Link href="/dashboard/admin/time-capsule" className="block">
+              <div className="bg-gradient-to-br from-violet-300/20 via-purple-200/15 to-white/10 border-2 border-violet-300/40 rounded-xl md:rounded-2xl p-4 md:p-6 transition-all cursor-pointer group hover:border-violet-300/60 hover:shadow-lg hover:shadow-violet-300/20 relative overflow-hidden">
+                {/* Decorative elements - más claros */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-violet-200/10 rounded-full blur-2xl -z-10"></div>
+                <div className="absolute -bottom-4 -left-4 w-24 h-24 bg-purple-200/10 rounded-full blur-xl -z-10"></div>
+                
+                <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+                  <div className="p-2 md:p-3 bg-violet-200/30 group-hover:bg-violet-200/40 rounded-lg md:rounded-xl transition-colors flex-shrink-0">
+                    <span className="text-2xl">🎁</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-bold text-white text-xs md:text-sm uppercase line-clamp-2">
+                      Quantum Time Capsule
+                    </h3>
+                    <p className="text-[10px] md:text-xs text-violet-200 line-clamp-1">
+                      Cartas de empoderamiento secretas
+                    </p>
+                  </div>
+                </div>
+                <p className="text-[10px] md:text-xs text-slate-300 line-clamp-2">
+                  Gestiona las cápsulas del tiempo y libera los mensajes de familiares en el PL3
+                </p>
+              </div>
+            </Link>
+
             {/* Widget de QR de Organización - VIOLETA/CORONA */}
             <div 
               onClick={() => {
