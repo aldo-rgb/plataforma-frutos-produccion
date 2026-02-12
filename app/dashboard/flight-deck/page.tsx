@@ -21,7 +21,7 @@ import {
 interface FlightEvent {
   id: number;
   visionId: number;
-  status: string;
+  eventStatus: string;
   trackEstiramiento: string | null;
   trackTransformacion: string | null;
   trackReconocimiento: string | null;
@@ -32,7 +32,6 @@ interface FlightEvent {
   Vision: {
     id: number;
     nombre: string;
-    fechaInicio: string;
   };
   _count: {
     Passengers: number;
@@ -160,7 +159,7 @@ export default function FlightDeckPage() {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {events.map((event) => {
-              const statusConfig = STATUS_CONFIG[event.status] || STATUS_CONFIG.SETUP;
+              const statusConfig = STATUS_CONFIG[event.eventStatus] || STATUS_CONFIG.SETUP;
               const tracksReady = hasRequiredTracks(event);
 
               return (

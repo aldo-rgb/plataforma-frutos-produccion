@@ -53,11 +53,11 @@ export async function GET(request: NextRequest) {
       });
     } else if (isTrainer) {
       // Entrenador solo ve eventos donde está asignado al staff de la visión como TRAINER
-      // y la visión tiene entrenamientos de liderato (tercer fin de semana)
+      // Incluir todos los roles de entrenador (TRAINER, PL_TRAINER, BASIC_TRAINER, ADVANCED_TRAINER)
       const visionStaffAssignments = await prisma.visionStaff.findMany({
         where: {
           userId: userId,
-          role: 'TRAINER'
+          role: { in: ['TRAINER', 'PL_TRAINER', 'BASIC_TRAINER', 'ADVANCED_TRAINER'] }
         },
         select: { visionId: true }
       });
