@@ -655,8 +655,8 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
           </div>
         )}
 
-        {/* Herramientas de Ceremonia - COORDINADOR, SCHOOL_ADMIN, TRAINER, ADMINISTRADOR */}
-        {!isParticipanteView && (usuario.rol === 'COORDINADOR' || usuario.rol === 'SCHOOL_ADMIN' || usuario.rol === 'TRAINER' || usuario.rol === 'ADMIN' || usuario.rol === 'ADMINISTRADOR') && (
+        {/* Herramientas de Ceremonia - COORDINADOR, SCHOOL_ADMIN, TRAINER, ADMINISTRADOR, esEntrenador */}
+        {!isParticipanteView && (usuario.rol === 'COORDINADOR' || usuario.rol === 'SCHOOL_ADMIN' || usuario.rol === 'TRAINER' || usuario.rol === 'ADMIN' || usuario.rol === 'ADMINISTRADOR' || usuario.esEntrenador) && (
           <div className="pt-6 mt-6 border-t border-slate-800">
             <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">✨ Herramientas de Ceremonia</p>
             
