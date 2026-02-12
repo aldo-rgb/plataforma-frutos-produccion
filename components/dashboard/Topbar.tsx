@@ -33,7 +33,7 @@ interface TopbarProps {
 
 export function Topbar({ usuario, onMenuClick }: TopbarProps) {
   return (
-    <header className="h-16 border-b border-slate-800 flex items-center justify-between px-4 md:px-8 bg-slate-900/50 backdrop-blur-sm">
+    <header className="sticky top-0 z-[9999] h-16 border-b border-slate-800 flex items-center justify-between px-4 md:px-8 bg-slate-900/95 backdrop-blur-sm">
       {/* Botón de menú móvil (solo visible cuando el sidebar está oculto) */}
       {onMenuClick && (
         <button
