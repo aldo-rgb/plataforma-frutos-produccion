@@ -22,9 +22,10 @@ export async function POST(
     const visionId = parseInt(id);
     const { participanteRelationId } = await request.json();
 
-    logger.debug(`🗑️ Intentando eliminar participante/GC con relationId: ${participanteRelationId} de visión ${visionId}`);
+    logger.debug(`🗑️ Intentando eliminar participante/GC con relationId: ${participanteRelationId} (tipo: ${typeof participanteRelationId}) de visión ${visionId}`);
 
     if (isNaN(visionId) || !participanteRelationId) {
+      logger.error(`Datos inválidos: visionId=${visionId}, participanteRelationId=${participanteRelationId}`);
       return NextResponse.json(
         { success: false, error: 'Datos inválidos' },
         { status: 400 }
@@ -55,9 +56,24 @@ export async function POST(
       );
     }
 
+    // Asegurar que participanteRelationId sea un número
+    const relationId = typeof participanteRelationId === 'string' 
+      ? parseInt(participanteRelationId) 
+      : participanteRelationId;
+    
+    if (isNaN(relationId)) {
+      logger.error(`relationId no es un número válido: ${participanteRelationId}`);
+      return NextResponse.json(
+        { success: false, error: 'ID de relación inválido' },
+        { status: 400 }
+      );
+    }
+
+    logger.debug(`🔍 Buscando relationId: ${relationId} en vision_enrollments, VisionParticipante y VisionGameChanger`);
+
     // PRIMERO: Buscar en vision_enrollments (sistema nuevo)
     const enrollment = await prisma.vision_enrollments.findUnique({
-      where: { id: participanteRelationId },
+      where: { id: relationId },
       include: {
         Usuario_vision_enrollments_userIdToUsuario: {
           select: {
@@ -93,7 +109,7 @@ export async function POST(
 
       // Marcar enrollment como DROP
       await prisma.vision_enrollments.update({
-        where: { id: participanteRelationId },
+        where: { id: relationId },
         data: {
           enrollmentStatus: 'DROP',
           attendanceStatus: 'DROP',
@@ -111,7 +127,7 @@ export async function POST(
 
     // SEGUNDO: Buscar en VisionParticipante (sistema legacy)
     let participanteRelation = await prisma.visionParticipante.findUnique({
-      where: { id: participanteRelationId },
+      where: { id: relationId },
       include: {
         Participante: {
           select: {
@@ -130,7 +146,7 @@ export async function POST(
     // Si no es un participante legacy, buscar en game changers
     if (!participanteRelation) {
       gameChangerRelation = await prisma.visionGameChanger.findUnique({
-        where: { id: participanteRelationId },
+        where: { id: relationId },
         include: {
           GameChanger: {
             select: {
@@ -194,11 +210,11 @@ export async function POST(
     // Eliminar la relación correspondiente
     if (isGameChanger) {
       await prisma.visionGameChanger.delete({
-        where: { id: participanteRelationId },
+        where: { id: relationId },
       });
     } else {
       await prisma.visionParticipante.delete({
-        where: { id: participanteRelationId },
+        where: { id: relationId },
       });
     }
 
@@ -209,10 +225,11 @@ export async function POST(
         ? `${userType} eliminado de la visión y licencia cancelada`
         : `${userType} eliminado de la visión`,
     });
-  } catch (error) {
+  } catch (error: any) {
     logger.error('Error removing participante from vision:', error);
+    logger.error('Error details:', error?.message, error?.code);
     return NextResponse.json(
-      { success: false, error: 'Error al eliminar participante' },
+      { success: false, error: `Error al eliminar participante: ${error?.message || 'Error desconocido'}` },
       { status: 500 }
     );
   }
