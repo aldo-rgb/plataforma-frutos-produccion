@@ -32,11 +32,21 @@ interface FlightEvent {
   Vision: {
     id: number;
     nombre: string;
+    organizationId: number | null;
+  };
+  Creator?: {
+    id: number;
+    nombre: string;
   };
   _count: {
     Passengers: number;
   };
   completedCount?: number;
+}
+
+interface VisionOption {
+  id: number;
+  nombre: string;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode; bg: string }> = {
@@ -76,6 +86,11 @@ export default function FlightDeckPage() {
   const [events, setEvents] = useState<FlightEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [visiones, setVisiones] = useState<VisionOption[]>([]);
+  const [selectedVision, setSelectedVision] = useState<number | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [userRole, setUserRole] = useState<string>('');
 
   useEffect(() => {
     async function loadEvents() {
@@ -88,7 +103,11 @@ export default function FlightDeckPage() {
           return;
         }
 
-        setEvents(data.events);
+        setEvents(data.events || []);
+        // Guardar el rol del usuario si viene en la respuesta
+        if (data.userRole) {
+          setUserRole(data.userRole);
+        }
       } catch {
         setError('Error de conexión');
       } finally {
@@ -99,6 +118,51 @@ export default function FlightDeckPage() {
     loadEvents();
   }, []);
 
+  // Cargar visiones disponibles para crear eventos (solo COORDINADOR)
+  const loadVisiones = async () => {
+    try {
+      const res = await fetch('/api/coordinador/visiones');
+      const data = await res.json();
+      if (res.ok && data.visiones) {
+        // Filtrar visiones que ya tienen evento
+        const visionesConEvento = events.map(e => e.visionId);
+        const visionesDisponibles = data.visiones.filter(
+          (v: VisionOption) => !visionesConEvento.includes(v.id)
+        );
+        setVisiones(visionesDisponibles);
+      }
+    } catch (err) {
+      console.error('Error loading visiones:', err);
+    }
+  };
+
+  const handleCreateEvent = async () => {
+    if (!selectedVision) return;
+    
+    setCreating(true);
+    try {
+      const res = await fetch('/api/flight-deck/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visionId: selectedVision })
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        // Recargar eventos
+        window.location.reload();
+      } else {
+        setError(data.error || 'Error al crear evento');
+      }
+    } catch {
+      setError('Error de conexión');
+    } finally {
+      setCreating(false);
+      setShowCreateModal(false);
+    }
+  };
+
   const hasRequiredTracks = (event: FlightEvent) => {
     return (
       event.trackEstiramiento &&
@@ -107,6 +171,8 @@ export default function FlightDeckPage() {
       event.trackDespedida
     );
   };
+
+  const canCreateEvents = userRole === 'COORDINADOR' || userRole === 'SCHOOL_ADMIN' || userRole === 'ADMIN';
 
   if (loading) {
     return (
@@ -189,7 +255,7 @@ export default function FlightDeckPage() {
                     <div className="space-y-2 text-sm text-gray-400 mb-4">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
-                        {new Date(event.Vision.fechaInicio).toLocaleDateString('es-MX', {
+                        Creado: {new Date(event.createdAt).toLocaleDateString('es-MX', {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric'

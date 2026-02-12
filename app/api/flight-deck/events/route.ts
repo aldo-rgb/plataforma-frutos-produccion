@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({ events });
+    return NextResponse.json({ events, userRole: user.rol });
   } catch (error) {
     console.error('Error fetching flight deck events:', error);
     return NextResponse.json({ error: 'Error interno' }, { status: 500 });
