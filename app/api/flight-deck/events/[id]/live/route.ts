@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { db } from '@/lib/db';
+import prisma from '@/lib/prisma';
 import { FlightPhase } from '@prisma/client';
 
 interface RouteParams {
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     }
 
-    const liveSession = await db.flightLiveSession.findUnique({
+    const liveSession = await prisma.flightLiveSession.findUnique({
       where: { eventId },
       include: {
         CurrentPassenger: {
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const userId = parseInt(session.user.id);
-    const user = await db.usuario.findUnique({
+    const user = await prisma.usuario.findUnique({
       where: { id: userId },
       select: { id: true, rol: true, organizationId: true }
     });
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'No tienes permisos' }, { status: 403 });
     }
 
-    const event = await db.flightDeckEvent.findUnique({
+    const event = await prisma.flightDeckEvent.findUnique({
       where: { id: eventId },
       include: { 
         Vision: { select: { organizationId: true } },
@@ -124,13 +124,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verificar si ya existe sesión
-    const existingSession = await db.flightLiveSession.findUnique({
+    const existingSession = await prisma.flightLiveSession.findUnique({
       where: { eventId }
     });
 
     if (existingSession) {
       // Actualizar operador
-      const updated = await db.flightLiveSession.update({
+      const updated = await prisma.flightLiveSession.update({
         where: { eventId },
         data: { 
           operatorId: userId,
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Crear nueva sesión
     const firstPassenger = event.Passengers[0];
 
-    const liveSession = await db.flightLiveSession.create({
+    const liveSession = await prisma.flightLiveSession.create({
       data: {
         eventId,
         currentPassengerId: firstPassenger?.id || null,
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     });
 
     // Actualizar estado del evento
-    await db.flightDeckEvent.update({
+    await prisma.flightDeckEvent.update({
       where: { id: eventId },
       data: { 
         eventStatus: 'IN_PROGRESS',
@@ -190,7 +190,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     const userId = parseInt(session.user.id);
 
-    const liveSession = await db.flightLiveSession.findUnique({
+    const liveSession = await prisma.flightLiveSession.findUnique({
       where: { eventId },
       include: {
         CurrentPassenger: true,
@@ -224,7 +224,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
       // Actualizar fase del pasajero actual
       if (liveSession.currentPassengerId) {
-        await db.flightPassenger.update({
+        await prisma.flightPassenger.update({
           where: { id: liveSession.currentPassengerId },
           data: {
             currentPhase: phase,
@@ -234,7 +234,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         });
       }
 
-      const updated = await db.flightLiveSession.update({
+      const updated = await prisma.flightLiveSession.update({
         where: { eventId },
         data: {
           currentPhase: phase,
@@ -258,7 +258,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       if (capsuleIndex !== undefined) updateData.capsuleCurrentIndex = capsuleIndex;
       if (capsulePaused !== undefined) updateData.capsulePaused = capsulePaused;
 
-      const updated = await db.flightLiveSession.update({
+      const updated = await prisma.flightLiveSession.update({
         where: { eventId },
         data: updateData
       });
@@ -270,7 +270,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (action === 'NEXT_PASSENGER') {
       // Marcar pasajero actual como completado
       if (liveSession.currentPassengerId) {
-        await db.flightPassenger.update({
+        await prisma.flightPassenger.update({
           where: { id: liveSession.currentPassengerId },
           data: {
             flightStatus: 'COMPLETED',
@@ -287,7 +287,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
       if (!nextPassenger) {
         // No hay más pasajeros, finalizar evento
-        await db.flightDeckEvent.update({
+        await prisma.flightDeckEvent.update({
           where: { id: eventId },
           data: {
             eventStatus: 'COMPLETED',
@@ -295,7 +295,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
           }
         });
 
-        await db.flightLiveSession.update({
+        await prisma.flightLiveSession.update({
           where: { eventId },
           data: {
             currentPassengerId: null,
@@ -312,7 +312,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       }
 
       // Actualizar al siguiente pasajero
-      const updated = await db.flightLiveSession.update({
+      const updated = await prisma.flightLiveSession.update({
         where: { eventId },
         data: {
           currentPassengerId: nextPassenger.id,
@@ -337,7 +337,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     // Acción: Saltar pasajero (SKIP)
     if (action === 'SKIP_PASSENGER') {
       if (liveSession.currentPassengerId) {
-        await db.flightPassenger.update({
+        await prisma.flightPassenger.update({
           where: { id: liveSession.currentPassengerId },
           data: {
             flightStatus: 'SKIPPED'
@@ -359,7 +359,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         });
       }
 
-      const updated = await db.flightLiveSession.update({
+      const updated = await prisma.flightLiveSession.update({
         where: { eventId },
         data: {
           currentPassengerId: nextPassenger.id,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { db } from '@/lib/db';
+import prisma from '@/lib/prisma';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     const userId = parseInt(session.user.id);
-    const user = await db.usuario.findUnique({
+    const user = await prisma.usuario.findUnique({
       where: { id: userId },
       select: { id: true, rol: true, organizationId: true }
     });
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    const event = await db.flightDeckEvent.findUnique({
+    const event = await prisma.flightDeckEvent.findUnique({
       where: { id: eventId },
       include: {
         Vision: {
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     if (user.rol !== 'ADMIN' && event.Vision.organizationId !== user.organizationId) {
       // Si es TRAINER, verificar que está asignado a esta visión
       if (user.rol === 'TRAINER') {
-        const isAssigned = await db.visionStaff.findFirst({
+        const isAssigned = await prisma.visionStaff.findFirst({
           where: {
             userId,
             visionId: event.visionId,
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Obtener audios de Time Capsule para cada pasajero si hay campaña activa
-    const capsuleCampaign = await db.timeCapsuleCampaign.findFirst({
+    const capsuleCampaign = await prisma.timeCapsuleCampaign.findFirst({
       where: {
         visionId: event.visionId,
         isReleased: true
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     if (capsuleCampaign) {
       // Cargar audios de cápsulas para cada pasajero
-      const capsuleMessages = await db.capsuleMessage.findMany({
+      const capsuleMessages = await prisma.capsuleMessage.findMany({
         where: {
           campaignId: capsuleCampaign.id,
           recipientId: { in: event.Passengers.map(p => p.userId) },
@@ -163,7 +163,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     const userId = parseInt(session.user.id);
-    const user = await db.usuario.findUnique({
+    const user = await prisma.usuario.findUnique({
       where: { id: userId },
       select: { id: true, rol: true, organizationId: true }
     });
@@ -177,7 +177,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'No tienes permisos' }, { status: 403 });
     }
 
-    const event = await db.flightDeckEvent.findUnique({
+    const event = await prisma.flightDeckEvent.findUnique({
       where: { id: eventId },
       include: { Vision: { select: { organizationId: true } } }
     });
@@ -234,7 +234,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       updateData.endedAt = new Date();
     }
 
-    const updated = await db.flightDeckEvent.update({
+    const updated = await prisma.flightDeckEvent.update({
       where: { id: eventId },
       data: updateData
     });
@@ -262,7 +262,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     const userId = parseInt(session.user.id);
-    const user = await db.usuario.findUnique({
+    const user = await prisma.usuario.findUnique({
       where: { id: userId },
       select: { id: true, rol: true, organizationId: true }
     });
@@ -276,7 +276,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'No tienes permisos' }, { status: 403 });
     }
 
-    const event = await db.flightDeckEvent.findUnique({
+    const event = await prisma.flightDeckEvent.findUnique({
       where: { id: eventId },
       include: { Vision: { select: { organizationId: true } } }
     });
@@ -295,7 +295,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       }, { status: 400 });
     }
 
-    await db.flightDeckEvent.delete({
+    await prisma.flightDeckEvent.delete({
       where: { id: eventId }
     });
 

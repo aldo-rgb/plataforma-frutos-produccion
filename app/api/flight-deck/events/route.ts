@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { db } from '@/lib/db';
+import prisma from '@/lib/prisma';
 
 // GET: Obtener eventos de Flight Deck disponibles para el usuario
 export async function GET(request: NextRequest) {
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = parseInt(session.user.id);
-    const user = await db.usuario.findUnique({
+    const user = await prisma.usuario.findUnique({
       where: { id: userId },
       select: { id: true, rol: true, organizationId: true }
     });
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     if (user.rol === 'ADMIN') {
       // Admin ve todos los eventos
-      events = await db.flightDeckEvent.findMany({
+      events = await prisma.flightDeckEvent.findMany({
         include: {
           Vision: {
             select: { id: true, nombre: true, organizationId: true }
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     } else if (user.rol === 'TRAINER') {
       // Entrenador solo ve eventos donde está asignado al staff de la visión como TRAINER
       // y la visión tiene entrenamientos de liderato (tercer fin de semana)
-      const visionStaffAssignments = await db.visionStaff.findMany({
+      const visionStaffAssignments = await prisma.visionStaff.findMany({
         where: {
           userId: userId,
           role: 'TRAINER'
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 
       const visionIds = visionStaffAssignments.map(vs => vs.visionId);
 
-      events = await db.flightDeckEvent.findMany({
+      events = await prisma.flightDeckEvent.findMany({
         where: {
           visionId: { in: visionIds }
         },
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
       });
     } else {
       // COORDINADOR o SCHOOL_ADMIN ve eventos de su organización
-      events = await db.flightDeckEvent.findMany({
+      events = await prisma.flightDeckEvent.findMany({
         where: {
           Vision: {
             organizationId: user.organizationId
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = parseInt(session.user.id);
-    const user = await db.usuario.findUnique({
+    const user = await prisma.usuario.findUnique({
       where: { id: userId },
       select: { id: true, rol: true, organizationId: true }
     });
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar que la visión existe y pertenece a la organización del usuario
-    const vision = await db.vision.findUnique({
+    const vision = await prisma.vision.findUnique({
       where: { id: visionId },
       select: { id: true, nombre: true, organizationId: true }
     });
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar si ya existe un evento para esta visión
-    const existingEvent = await db.flightDeckEvent.findUnique({
+    const existingEvent = await prisma.flightDeckEvent.findUnique({
       where: { visionId }
     });
 
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Crear el evento
-    const event = await db.flightDeckEvent.create({
+    const event = await prisma.flightDeckEvent.create({
       data: {
         visionId,
         creatorId: userId
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Obtener participantes graduados de la visión y agregarlos como pasajeros
-    const enrollments = await db.vision_enrollments.findMany({
+    const enrollments = await prisma.vision_enrollments.findMany({
       where: {
         visionId,
         status: { in: ['ACTIVE', 'SEATED', 'GRADUATED'] }
@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Crear pasajeros para cada participante
-    const passengers = await db.flightPassenger.createMany({
+    const passengers = await prisma.flightPassenger.createMany({
       data: enrollments.map((enrollment, index) => ({
         eventId: event.id,
         userId: enrollment.usuarioId,

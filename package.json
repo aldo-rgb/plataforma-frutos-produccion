@@ -22,6 +22,8 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.80",
+    "@aws-sdk/client-s3": "^3.988.0",
+    "@aws-sdk/s3-request-presigner": "^3.988.0",
     "@heroicons/react": "^2.2.0",
     "@next-auth/prisma-adapter": "^1.0.7",
     "@paypal/checkout-server-sdk": "^1.0.3",

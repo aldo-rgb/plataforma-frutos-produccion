@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { db } from '@/lib/db';
+import prisma from '@/lib/prisma';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -23,7 +23,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     const userId = parseInt(session.user.id);
-    const user = await db.usuario.findUnique({
+    const user = await prisma.usuario.findUnique({
       where: { id: userId },
       select: { id: true, rol: true, organizationId: true }
     });
@@ -37,7 +37,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'No tienes permisos' }, { status: 403 });
     }
 
-    const event = await db.flightDeckEvent.findUnique({
+    const event = await prisma.flightDeckEvent.findUnique({
       where: { id: eventId },
       include: { Vision: { select: { organizationId: true } } }
     });
@@ -57,20 +57,20 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (action === 'REORDER' && newOrder) {
       // newOrder es un array de IDs en el nuevo orden
       const updates = newOrder.map((passId: number, index: number) => 
-        db.flightPassenger.update({
+        prisma.flightPassenger.update({
           where: { id: passId },
           data: { flightOrder: index + 1 }
         })
       );
 
-      await db.$transaction(updates);
+      await prisma.$transaction(updates);
 
       return NextResponse.json({ success: true, message: 'Orden actualizado' });
     }
 
     // Acción: Actualizar pasajero individual
     if (passengerId) {
-      const passenger = await db.flightPassenger.findUnique({
+      const passenger = await prisma.flightPassenger.findUnique({
         where: { id: passengerId }
       });
 
@@ -85,7 +85,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       if (flightSongName !== undefined) updateData.flightSongName = flightSongName;
       if (capsuleAudios !== undefined) updateData.capsuleAudios = capsuleAudios;
 
-      const updated = await db.flightPassenger.update({
+      const updated = await prisma.flightPassenger.update({
         where: { id: passengerId },
         data: updateData,
         include: {
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const userId = parseInt(session.user.id);
-    const user = await db.usuario.findUnique({
+    const user = await prisma.usuario.findUnique({
       where: { id: userId },
       select: { id: true, rol: true, organizationId: true }
     });
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'No tienes permisos' }, { status: 403 });
     }
 
-    const event = await db.flightDeckEvent.findUnique({
+    const event = await prisma.flightDeckEvent.findUnique({
       where: { id: eventId },
       include: { 
         Vision: { select: { organizationId: true } },
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verificar si ya existe
-    const existing = await db.flightPassenger.findUnique({
+    const existing = await prisma.flightPassenger.findUnique({
       where: {
         eventId_userId: {
           eventId,
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const lastOrder = event.Passengers[0]?.flightOrder || 0;
 
-    const passenger = await db.flightPassenger.create({
+    const passenger = await prisma.flightPassenger.create({
       data: {
         eventId,
         userId: participantUserId,
@@ -213,7 +213,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     const userId = parseInt(session.user.id);
-    const user = await db.usuario.findUnique({
+    const user = await prisma.usuario.findUnique({
       where: { id: userId },
       select: { id: true, rol: true, organizationId: true }
     });
@@ -227,7 +227,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'No tienes permisos' }, { status: 403 });
     }
 
-    const passenger = await db.flightPassenger.findUnique({
+    const passenger = await prisma.flightPassenger.findUnique({
       where: { id: passengerId },
       include: {
         Event: {
@@ -250,7 +250,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       }, { status: 400 });
     }
 
-    await db.flightPassenger.delete({
+    await prisma.flightPassenger.delete({
       where: { id: passengerId }
     });
 
