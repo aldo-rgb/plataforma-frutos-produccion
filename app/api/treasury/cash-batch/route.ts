@@ -78,12 +78,24 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generar número de batch
+    // Generar número de batch único
     const year = new Date().getFullYear();
-    const batchCount = await prisma.cashBatch.count({
-      where: { organizationId: user.organizationId },
+    const lastBatch = await prisma.cashBatch.findFirst({
+      where: { 
+        organizationId: user.organizationId,
+        batchNumber: { startsWith: `BATCH-${year}-` }
+      },
+      orderBy: { batchNumber: 'desc' },
+      select: { batchNumber: true }
     });
-    const batchNumber = `BATCH-${year}-${String(batchCount + 1).padStart(3, '0')}`;
+    
+    let nextNumber = 1;
+    if (lastBatch?.batchNumber) {
+      const parts = lastBatch.batchNumber.split('-');
+      const lastNum = parseInt(parts[2] || '0', 10);
+      nextNumber = lastNum + 1;
+    }
+    const batchNumber = `BATCH-${year}-${String(nextNumber).padStart(3, '0')}`;
 
     // Crear el corte de caja
     const cashBatch = await prisma.$transaction(async (tx) => {

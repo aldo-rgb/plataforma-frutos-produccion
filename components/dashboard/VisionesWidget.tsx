@@ -179,7 +179,15 @@ export default function VisionesWidget({ visiones, userRole, loading }: Visiones
                   {/* Botón de Check-In para productos activos */}
                   {vision.activeProducts && vision.activeProducts.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-amber-500/30">
-                      {vision.activeProducts.map((product) => (
+                      {vision.activeProducts
+                        // COORDINADOR solo ve Check-In Liderato
+                        .filter((product) => {
+                          if (userRole === 'COORDINADOR') {
+                            return product.levelType === 'LEADERSHIP';
+                          }
+                          return true; // Otros roles ven todos los productos
+                        })
+                        .map((product) => (
                         <Link
                           key={product.id}
                           href={`/staff/check-in/${product.id}`}

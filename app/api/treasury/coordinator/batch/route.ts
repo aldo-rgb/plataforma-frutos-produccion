@@ -85,16 +85,22 @@ export async function POST(request: Request) {
 
     // Generar número de batch único
     const year = new Date().getFullYear();
-    const count = await prisma.cashBatch.count({
+    const lastBatch = await prisma.cashBatch.findFirst({
       where: {
         coordinatorId: user.id,
-        createdAt: {
-          gte: new Date(`${year}-01-01`),
-          lt: new Date(`${year + 1}-01-01`)
-        }
-      }
+        batchNumber: { startsWith: `BATCH-${year}-` }
+      },
+      orderBy: { batchNumber: 'desc' },
+      select: { batchNumber: true }
     });
-    const batchNumber = `BATCH-${year}-${String(count + 1).padStart(3, '0')}`;
+    
+    let nextNumber = 1;
+    if (lastBatch?.batchNumber) {
+      const parts = lastBatch.batchNumber.split('-');
+      const lastNum = parseInt(parts[2] || '0', 10);
+      nextNumber = lastNum + 1;
+    }
+    const batchNumber = `BATCH-${year}-${String(nextNumber).padStart(3, '0')}`;
 
     // Crear el batch con códigos y gastos
     const batch = await prisma.cashBatch.create({
