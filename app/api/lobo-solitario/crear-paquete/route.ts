@@ -184,9 +184,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Generar ID único para la orden
+    const orderId = `PKG-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
     // Crear orden de paquete SIN visionId (lobo solitario)
     const orden = await prisma.mentorPackageOrder.create({
       data: {
+        id: orderId,
         usuarioId: session.user.id,
         mentorId: mentorId,
         visionId: 1, // ID de visión por defecto para lobos (puede ser una visión especial)
@@ -196,6 +200,7 @@ export async function POST(request: NextRequest) {
         currency: 'MXN',
         metodoPago: 'pendiente', // Se definirá en el siguiente paso
         status: 'PENDING',
+        updatedAt: new Date(),
         paymentData: {
           plan: plan,
           frecuencia: frecuencia,
