@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
 // Función para crear sesión de Stripe
 async function createStripeCheckout(orderId: number, amount: number, organizationName: string) {
   // Obtener configuración de Stripe desde la base de datos
-  const stripeConfig = await prisma.paymentGateway.findFirst({
+  const stripeConfig = await prisma.paymentGatewayConfig.findFirst({
     where: {
       provider: 'STRIPE',
       isActive: true,
@@ -166,7 +166,7 @@ async function createStripeCheckout(orderId: number, amount: number, organizatio
 // Función para crear orden de PayPal
 async function createPayPalOrder(orderId: number, amount: number, organizationName: string) {
   // Obtener configuración de PayPal desde la base de datos
-  const paypalConfig = await prisma.paymentGateway.findFirst({
+  const paypalConfig = await prisma.paymentGatewayConfig.findFirst({
     where: {
       provider: 'PAYPAL',
       isActive: true,
@@ -213,7 +213,7 @@ async function createPayPalOrder(orderId: number, amount: number, organizationNa
 // Función para crear preferencia de Mercado Pago
 async function createMercadoPagoPreference(orderId: number, amount: number, organizationName: string) {
   // Obtener configuración de Mercado Pago desde la base de datos
-  const mpConfig = await prisma.paymentGateway.findFirst({
+  const mpConfig = await prisma.paymentGatewayConfig.findFirst({
     where: {
       provider: 'MERCADOPAGO',
       isActive: true,
