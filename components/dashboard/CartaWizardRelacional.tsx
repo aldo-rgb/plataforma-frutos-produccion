@@ -1331,7 +1331,8 @@ export default function CartaWizardRelacional() {
             categoria: metaData.areaKey, // Usar el areaKey correcto del metaData
             orden: i + 1,
             metaPrincipal: metaConfig.description,
-            declaracionPoder: identidadesPorArea[metaData.areaKey]?.[0]?.description || ''
+            // Usar la descripción del objetivo específico, no la primera del área
+            declaracionPoder: metaData.objetivoDescription || ''
           })
         });
         
