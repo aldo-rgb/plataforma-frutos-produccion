@@ -224,31 +224,34 @@ async function createMercadoPagoPreference(orderId: number, amount: number, orga
     throw new Error('Mercado Pago no está configurado. Por favor configúralo desde el panel de administrador.');
   }
 
-  const mercadopago = require('mercadopago');
+  const { MercadoPagoConfig, Preference } = require('mercadopago');
   
-  mercadopago.configure({
-    access_token: mpConfig.secretKey,
+  const client = new MercadoPagoConfig({ 
+    accessToken: mpConfig.secretKey 
   });
+  
+  const preference = new Preference(client);
 
-  const preference = {
-    items: [
-      {
-        title: `Plan Institucional - ${organizationName}`,
-        description: 'Licenciamiento anual para centro educativo',
-        quantity: 1,
-        unit_price: amount,
-        currency_id: 'USD',
+  const result = await preference.create({
+    body: {
+      items: [
+        {
+          title: `Plan Institucional - ${organizationName}`,
+          description: 'Licenciamiento anual para centro educativo',
+          quantity: 1,
+          unit_price: amount,
+          currency_id: 'MXN',
+        },
+      ],
+      back_urls: {
+        success: `${process.env.NEXTAUTH_URL}/dashboard/suscripcion/success?order_id=${orderId}`,
+        failure: `${process.env.NEXTAUTH_URL}/dashboard/suscripcion/contratar-institucional`,
+        pending: `${process.env.NEXTAUTH_URL}/dashboard/suscripcion/contratar-institucional`,
       },
-    ],
-    back_urls: {
-      success: `${process.env.NEXTAUTH_URL}/dashboard/suscripcion/success?order_id=${orderId}`,
-      failure: `${process.env.NEXTAUTH_URL}/dashboard/suscripcion/contratar-institucional`,
-      pending: `${process.env.NEXTAUTH_URL}/dashboard/suscripcion/contratar-institucional`,
-    },
-    auto_return: 'approved',
-    external_reference: orderId.toString(),
-  };
-
-  const response = await mercadopago.preferences.create(preference);
-  return response.body.init_point;
+      auto_return: 'approved',
+      external_reference: orderId.toString(),
+    }
+  });
+  
+  return result.init_point;
 }
