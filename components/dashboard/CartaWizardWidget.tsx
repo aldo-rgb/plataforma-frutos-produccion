@@ -64,7 +64,7 @@ export default function CartaWizardWidget({ hasCompletedCarta, cartaStatus, user
       return {
         title: '⏳ Carta en Revisión',
         description: 'Tu mentor está revisando tu carta. Te notificaremos cuando esté lista.',
-        action: 'Ver mi Carta',
+        action: 'Editar mi Carta',
         color: 'from-yellow-600 to-amber-600',
         icon: <CheckCircle className="w-6 h-6" />
       };

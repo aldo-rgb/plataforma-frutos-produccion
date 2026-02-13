@@ -1016,7 +1016,7 @@ export default function CartaResumenPage() {
                             {!isReadOnly && (
                               <button
                                 onClick={() => openEditObjetivo(area.id, area.objetivo || '')}
-                                className="w-full sm:w-auto px-3 py-2 rounded-lg bg-purple-600/20 text-purple-300 text-xs sm:text-sm border border-purple-500/30 hover:bg-purple-600 hover:text-white hover:border-purple-500 transition-all sm:opacity-0 sm:group-hover:opacity-100 flex-shrink-0 font-medium justify-center flex items-center gap-1"
+                                className="w-full sm:w-auto px-3 py-2 rounded-lg bg-purple-600/20 text-purple-300 text-xs sm:text-sm border border-purple-500/30 hover:bg-purple-600 hover:text-white hover:border-purple-500 transition-all flex-shrink-0 font-medium justify-center flex items-center gap-1"
                                 title="Editar objetivo"
                               >
                                 ✏️ <span>Editar</span>
@@ -1201,7 +1201,7 @@ export default function CartaResumenPage() {
                                     {isMetaEditable(meta) && (
                                       <button
                                         onClick={() => openEditModal(accion, meta)}
-                                        className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-indigo-600/20 text-indigo-300 text-xs sm:text-sm border border-indigo-500/30 hover:bg-indigo-600 hover:text-white hover:border-indigo-500 transition-all sm:opacity-0 sm:group-hover:opacity-100 font-medium flex items-center gap-1.5 sm:gap-2"
+                                        className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg bg-indigo-600/20 text-indigo-300 text-xs sm:text-sm border border-indigo-500/30 hover:bg-indigo-600 hover:text-white hover:border-indigo-500 transition-all font-medium flex items-center gap-1.5 sm:gap-2"
                                         title="Editar acción"
                                       >
                                         ✏️ <span>Editar</span>
