@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
             id: true,
             paymentData: true,
             paidAt: true,
-            Mentor: {
+            Usuario_MentorPackageOrder_mentorIdToUsuario: {
               select: {
                 nombre: true
               }
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
             remainingSessions: existingCredits.remainingSessions,
             totalSessions: existingCredits.totalSessions,
             expiresAt: existingCredits.expiresAt,
-            mentor: existingCredits.MentorPackageOrder.Mentor?.nombre,
+            mentor: existingCredits.MentorPackageOrder.Usuario_MentorPackageOrder_mentorIdToUsuario?.nombre,
             planType: planExistente?.plan,
             frecuencia: planExistente?.frecuencia
           }

@@ -171,6 +171,7 @@ export async function POST(req: NextRequest) {
               geofenceRadius: geofenceRadius,
               totalLicenses: codigoAcceso.cantidadLicencias || 100,
               activeLicenses: 1, // Primera licencia usada por el que canjea
+              licensesAvailable: (codigoAcceso.cantidadLicencias || 100) - 1, // Total - 1 (la del que canjea)
               schoolAdminId: user.id,
               masterOrganizationId: masterOrganizationId || null,
               status: 'ACTIVE',
