@@ -232,27 +232,34 @@ async function createMercadoPagoPreference(orderId: number, amount: number, orga
   });
   
   const preference = new Preference(client);
+  
+  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  const isProduction = baseUrl.includes('vercel.app') || baseUrl.includes('quantummatter');
 
-  const result = await preference.create({
-    body: {
-      items: [
-        {
-          title: `Plan Institucional - ${organizationName}`,
-          description: 'Licenciamiento anual para centro educativo',
-          quantity: 1,
-          unit_price: amount,
-          currency_id: 'MXN',
-        },
-      ],
-      back_urls: {
-        success: `${process.env.NEXTAUTH_URL}/dashboard/suscripcion/success?order_id=${orderId}`,
-        failure: `${process.env.NEXTAUTH_URL}/dashboard/suscripcion/contratar-institucional`,
-        pending: `${process.env.NEXTAUTH_URL}/dashboard/suscripcion/contratar-institucional`,
+  const preferenceBody: any = {
+    items: [
+      {
+        title: `Plan Institucional - ${organizationName}`,
+        description: 'Licenciamiento anual para centro educativo',
+        quantity: 1,
+        unit_price: amount,
+        currency_id: 'MXN',
       },
-      auto_return: 'approved',
-      external_reference: orderId.toString(),
-    }
-  });
+    ],
+    external_reference: orderId.toString(),
+  };
+  
+  // Solo agregar back_urls y auto_return en producción (Mercado Pago no acepta localhost)
+  if (isProduction) {
+    preferenceBody.back_urls = {
+      success: `${baseUrl}/dashboard/suscripcion/success?order_id=${orderId}`,
+      failure: `${baseUrl}/dashboard/suscripcion/contratar-institucional`,
+      pending: `${baseUrl}/dashboard/suscripcion/contratar-institucional`,
+    };
+    preferenceBody.auto_return = 'approved';
+  }
+
+  const result = await preference.create({ body: preferenceBody });
   
   return result.init_point;
 }
