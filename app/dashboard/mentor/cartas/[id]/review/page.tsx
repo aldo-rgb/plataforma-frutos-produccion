@@ -622,41 +622,39 @@ export default function CartaReviewPage() {
                                 Acciones Programadas SMART ({meta.acciones.length})
                               </label>
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                               {meta.acciones.map((accion, idx) => (
                                 <div 
                                   key={accion.id}
-                                  className="flex items-center gap-3 bg-slate-900/70 p-4 rounded-lg border border-slate-700 hover:border-slate-600 transition-colors"
+                                  className="bg-slate-900/70 p-4 rounded-lg border border-slate-700 hover:border-slate-600 transition-colors"
                                 >
-                                  {/* Número de acción */}
-                                  <div className="flex-shrink-0 w-7 h-7 bg-purple-900/50 border border-purple-600 rounded-full flex items-center justify-center">
-                                    <span className="text-purple-300 text-xs font-bold">{idx + 1}</span>
-                                  </div>
-
-                                  {/* Contenido de la acción */}
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-white mb-1 break-words">{accion.texto}</p>
-                                    <p className="text-slate-400 text-xs">
-                                      {getFrequencyLabel(accion.frequency, accion.assignedDays, accion.specificDate)}
-                                    </p>
-                                  </div>
-
-                                  {/* Toggle de Evidencia */}
-                                  <div className="flex-shrink-0">
+                                  {/* Header con número y botón de evidencia */}
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex-shrink-0 w-7 h-7 bg-purple-900/50 border border-purple-600 rounded-full flex items-center justify-center">
+                                      <span className="text-purple-300 text-xs font-bold">{idx + 1}</span>
+                                    </div>
                                     <button
                                       onClick={() => handleToggleEvidence(accion.id, accion.requiereEvidencia)}
-                                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all ${
+                                      className={`flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-all text-xs ${
                                         accion.requiereEvidencia
                                           ? 'bg-blue-900/30 border-blue-500/50 text-blue-400 hover:bg-blue-900/50'
                                           : 'bg-red-900/30 border-red-500/50 text-red-400 hover:bg-red-900/50'
                                       }`}
                                       title={accion.requiereEvidencia ? 'Click para cambiar a: No requiere evidencia' : 'Click para cambiar a: Sí requiere evidencia'}
                                     >
-                                      <span className="text-base">{accion.requiereEvidencia ? '📸' : '🚫'}</span>
-                                      <span className="text-xs font-semibold whitespace-nowrap">
-                                        {accion.requiereEvidencia ? 'Sí requiere evidencia' : 'No requiere evidencia'}
+                                      <span>{accion.requiereEvidencia ? '📸' : '🚫'}</span>
+                                      <span className="font-semibold hidden sm:inline">
+                                        {accion.requiereEvidencia ? 'Requiere evidencia' : 'Sin evidencia'}
                                       </span>
                                     </button>
+                                  </div>
+
+                                  {/* Contenido de la acción */}
+                                  <div>
+                                    <p className="text-white mb-1">{accion.texto}</p>
+                                    <p className="text-slate-400 text-xs flex items-center gap-1">
+                                      📅 {getFrequencyLabel(accion.frequency, accion.assignedDays, accion.specificDate)}
+                                    </p>
                                   </div>
                                 </div>
                               ))}

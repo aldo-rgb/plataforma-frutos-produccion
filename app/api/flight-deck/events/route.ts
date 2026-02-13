@@ -192,10 +192,10 @@ export async function POST(request: NextRequest) {
     const enrollments = await prisma.vision_enrollments.findMany({
       where: {
         visionId,
-        status: { in: ['ACTIVE', 'SEATED', 'GRADUATED'] }
+        enrollmentStatus: { in: ['ACTIVE', 'SEATED', 'GRADUATED'] }
       },
       include: {
-        Usuario: {
+        Usuario_vision_enrollments_userIdToUsuario: {
           select: { id: true, nombre: true, imagen: true }
         }
       },
@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
     const passengers = await prisma.flightPassenger.createMany({
       data: enrollments.map((enrollment, index) => ({
         eventId: event.id,
-        userId: enrollment.usuarioId,
+        userId: enrollment.userId,
         flightOrder: index + 1
       }))
     });
