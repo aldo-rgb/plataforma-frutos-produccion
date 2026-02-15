@@ -245,8 +245,8 @@ export default function ProductosPage() {
       return;
     }
 
-    if (productForm.basePrice <= 0) {
-      showToast('error', 'El precio base debe ser mayor a 0');
+    if (productForm.basePrice < 0) {
+      showToast('error', 'El precio base no puede ser negativo');
       return;
     }
 
