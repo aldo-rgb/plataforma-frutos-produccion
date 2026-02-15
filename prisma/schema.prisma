@@ -1110,6 +1110,7 @@ model Organization {
   weekly_payout_summary                                 weekly_payout_summary[]
   AutomationMessageLog                                  AutomationMessageLog[]
   TimeCapsuleCampaign                                   TimeCapsuleCampaign[]
+  EventRegistration                                     EventRegistration[]
 
   @@index([masterOrganizationId])
   @@index([slug])
@@ -1780,6 +1781,7 @@ model SchoolProduct {
   UserLicense                UserLicense[]
   UserSongs                  UserSong[]                  @relation("ProductSongs")
   PLWeekendResults           PLWeekendResult[]           @relation("PLWeekendResults")
+  EventRegistrations         EventRegistration[]
 
   @@index([isActive])
   @@index([levelType])
@@ -6571,4 +6573,42 @@ enum FlightPhase {
   RECONOCIMIENTO // Fase 4
   CAPSULA       // Fase 5 (mensajes de poder)
   DESPEDIDA     // Fase 6
+}
+
+// Registro de invitados a eventos/talleres públicos
+model EventRegistration {
+  id                Int       @id @default(autoincrement())
+  productId         Int
+  organizationId    Int
+  
+  // Datos del invitado
+  nombre            String
+  email             String
+  telefono          String?
+  comoTeEnteraste   String?   // amigo, redes, google, otro
+  
+  // Estado
+  status            EventRegistrationStatus @default(REGISTERED)
+  confirmedAt       DateTime?
+  attendedAt        DateTime?
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relaciones
+  Product           SchoolProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  Organization      Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@unique([productId, email])
+  @@index([productId])
+  @@index([organizationId])
+  @@index([email])
+}
+
+enum EventRegistrationStatus {
+  REGISTERED   // Registrado
+  CONFIRMED    // Confirmó asistencia
+  ATTENDED     // Asistió
+  NO_SHOW      // No se presentó
+  CANCELLED    // Canceló
 }

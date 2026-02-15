@@ -20,6 +20,12 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
+  Share2,
+  Link2,
+  QrCode,
+  Copy,
+  Check,
+  ExternalLink,
 } from 'lucide-react';
 import { toSafeISODate } from '@/lib/utils';
 
@@ -66,6 +72,13 @@ export default function ProductosPage() {
     message: '',
     type: 'success'
   });
+
+  // Share modal state
+  const [shareModal, setShareModal] = useState<{show: boolean; product: SchoolProduct | null}>({
+    show: false,
+    product: null
+  });
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const [productForm, setProductForm] = useState({
     name: '',
@@ -135,6 +148,29 @@ export default function ProductosPage() {
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
+  };
+
+  const handleShareProduct = (product: SchoolProduct) => {
+    setShareModal({ show: true, product });
+    setLinkCopied(false);
+  };
+
+  const getShareUrl = (productId: string) => {
+    if (typeof window !== 'undefined') {
+      return `${window.location.origin}/evento/${productId}`;
+    }
+    return `/evento/${productId}`;
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 3000);
+      showToast('success', '¡Enlace copiado al portapapeles!');
+    } catch (err) {
+      showToast('error', 'Error al copiar enlace');
+    }
   };
 
   const handleOpenModal = (product?: SchoolProduct) => {
@@ -618,6 +654,8 @@ export default function ProductosPage() {
                       onEdit={() => handleOpenModal(product)}
                       onDelete={() => handleDeleteProduct(product.id)}
                       onToggleActive={() => handleToggleActive(product)}
+                      onShare={() => handleShareProduct(product)}
+                      onViewRegistrations={() => router.push(`/dashboard/school-admin/productos/${product.id}/registros`)}
                     />
                   ))}
                 </div>
@@ -638,6 +676,8 @@ export default function ProductosPage() {
                       onEdit={() => handleOpenModal(product)}
                       onDelete={() => handleDeleteProduct(product.id)}
                       onToggleActive={() => handleToggleActive(product)}
+                      onShare={() => handleShareProduct(product)}
+                      onViewRegistrations={() => router.push(`/dashboard/school-admin/productos/${product.id}/registros`)}
                     />
                   ))}
                 </div>
@@ -646,6 +686,122 @@ export default function ProductosPage() {
           </div>
         )}
       </div>
+
+      {/* Share Modal */}
+      {shareModal.show && shareModal.product && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl border-2 border-purple-500/30 max-w-lg w-full shadow-2xl">
+            <div className="p-6 border-b border-slate-700 flex items-center justify-between">
+              <h3 className="text-xl font-black text-white flex items-center gap-2">
+                <Share2 className="w-5 h-5 text-purple-400" />
+                Compartir Evento
+              </h3>
+              <button
+                onClick={() => setShareModal({ show: false, product: null })}
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* Product Info */}
+              <div className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                {shareModal.product.imageUrl && (
+                  <img 
+                    src={shareModal.product.imageUrl} 
+                    alt={shareModal.product.name}
+                    className="w-16 h-16 rounded-lg object-cover"
+                  />
+                )}
+                <div>
+                  <h4 className="font-bold text-white">{shareModal.product.name}</h4>
+                  <p className="text-sm text-slate-400">
+                    {shareModal.product.startDate && new Date(shareModal.product.startDate).toLocaleDateString('es-MX', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric'
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              {/* Share URL */}
+              <div>
+                <label className="block text-sm font-bold text-slate-300 mb-2">
+                  🔗 Enlace de Registro Público
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={getShareUrl(shareModal.product.id)}
+                    className="flex-1 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(getShareUrl(shareModal.product!.id))}
+                    className={`px-4 py-3 rounded-lg font-bold text-sm flex items-center gap-2 transition-all ${
+                      linkCopied 
+                        ? 'bg-green-600 text-white' 
+                        : 'bg-purple-600 hover:bg-purple-700 text-white'
+                    }`}
+                  >
+                    {linkCopied ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Copiado
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        Copiar
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* QR Code Placeholder */}
+              <div className="text-center">
+                <label className="block text-sm font-bold text-slate-300 mb-3">
+                  📱 Código QR
+                </label>
+                <div className="inline-flex flex-col items-center p-6 bg-white rounded-xl">
+                  {/* Simple QR Code using Google Charts API */}
+                  <img 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(getShareUrl(shareModal.product.id))}`}
+                    alt="QR Code"
+                    className="w-48 h-48"
+                  />
+                </div>
+                <p className="text-xs text-slate-400 mt-2">
+                  Escanea para acceder a la página de registro
+                </p>
+              </div>
+
+              {/* Share Options */}
+              <div className="grid grid-cols-2 gap-3">
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(`¡Te invito a ${shareModal.product.name}! 🎉\n\nRegístrate aquí: ${getShareUrl(shareModal.product.id)}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold text-sm transition-all"
+                >
+                  <span>📱</span> WhatsApp
+                </a>
+                <a
+                  href={getShareUrl(shareModal.product.id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-sm transition-all"
+                >
+                  <ExternalLink className="w-4 h-4" /> Ver Página
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Product Modal */}
       {showModal && (
@@ -908,11 +1064,15 @@ function ProductCard({
   onEdit,
   onDelete,
   onToggleActive,
+  onShare,
+  onViewRegistrations,
 }: {
   product: SchoolProduct;
   onEdit: () => void;
   onDelete: () => void;
   onToggleActive: () => void;
+  onShare: () => void;
+  onViewRegistrations: () => void;
 }) {
   const isCoreProduct = product.type === 'CORE_TRAINING';
   const hasPromo = product.promoPrice && product.promoDeadline && new Date(product.promoDeadline) > new Date();
@@ -923,8 +1083,12 @@ function ProductCard({
         ? 'from-green-900/30 to-slate-900/50 border-green-500/30' 
         : 'from-orange-900/30 to-slate-900/50 border-orange-500/30'
     } ${!product.isActive ? 'opacity-60' : ''}`}>
-      {/* Image */}
-      <div className="relative h-32 bg-slate-900/50">
+      {/* Image - Clickeable */}
+      <div 
+        className="relative h-32 bg-slate-900/50 cursor-pointer hover:opacity-80 transition-opacity"
+        onClick={onViewRegistrations}
+        title="Ver registros"
+      >
         {product.imageUrl ? (
           <img
             src={product.imageUrl}
@@ -978,7 +1142,11 @@ function ProductCard({
 
       {/* Content */}
       <div className="p-3 space-y-2">
-        <h3 className="text-lg font-black text-white line-clamp-1">
+        <h3 
+          className="text-lg font-black text-white line-clamp-1 cursor-pointer hover:text-cyan-400 transition-colors"
+          onClick={onViewRegistrations}
+          title="Ver registros"
+        >
           {product.name}
         </h3>
 
@@ -1017,9 +1185,13 @@ function ProductCard({
           </div>
         )}
 
-        {/* Capacity */}
+        {/* Capacity - Clickeable para ver registros */}
         {product.maxCapacity && (
-          <div className="flex items-center gap-1.5 text-slate-400 text-xs">
+          <div 
+            className="flex items-center gap-1.5 text-slate-400 text-xs cursor-pointer hover:text-cyan-400 transition-colors"
+            onClick={onViewRegistrations}
+            title="Ver registros"
+          >
             <Users className="w-3 h-3" />
             <span>
               {product.currentEnrollment} / {product.maxCapacity} participantes
@@ -1027,11 +1199,34 @@ function ProductCard({
           </div>
         )}
 
-        {/* Actions */}
-        <div className="flex gap-1.5 pt-2 border-t border-slate-700">
+        {/* Actions - Primera fila (solo para talleres) */}
+        {!isCoreProduct && (
+          <div className="flex gap-1.5 pt-2 border-t border-slate-700">
+            <button
+              onClick={onViewRegistrations}
+              className="flex-1 px-2 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded font-bold text-xs transition-all flex items-center justify-center gap-1"
+              title="Ver registros"
+            >
+              <Users className="w-3 h-3" />
+              Registros
+              <span className="bg-cyan-500 px-1.5 rounded text-[10px]">{product.currentEnrollment}</span>
+            </button>
+            <button
+              onClick={onShare}
+              className="flex-1 px-2 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded font-bold text-xs transition-all flex items-center justify-center gap-1"
+              title="Compartir enlace de registro"
+            >
+              <Share2 className="w-3 h-3" />
+              Compartir
+            </button>
+          </div>
+        )}
+
+        {/* Actions - Segunda fila (o única fila para CORE) */}
+        <div className={`flex gap-1.5 ${isCoreProduct ? 'pt-2 border-t border-slate-700' : ''}`}>
           <button
             onClick={onToggleActive}
-            className={`flex-1 px-2 py-1.5 rounded font-bold text-xs transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 px-2 py-1.5 rounded font-bold text-xs transition-all flex items-center justify-center gap-1 ${
               product.isActive
                 ? 'bg-slate-700 hover:bg-slate-600 text-white'
                 : 'bg-green-600 hover:bg-green-700 text-white'
@@ -1040,27 +1235,29 @@ function ProductCard({
             {product.isActive ? (
               <>
                 <EyeOff className="w-3 h-3" />
-                <span className="hidden sm:inline">Desactivar</span>
+                Desactivar
               </>
             ) : (
               <>
                 <Eye className="w-3 h-3" />
-                <span className="hidden sm:inline">Activar</span>
+                Activar
               </>
             )}
           </button>
           <button
             onClick={onEdit}
-            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-xs transition-all"
+            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-xs transition-all flex items-center gap-1"
+            title="Editar producto"
           >
             <Edit className="w-3 h-3" />
           </button>
           {!isCoreProduct && (
             <button
               onClick={onDelete}
-              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded font-bold text-xs transition-all"
+              className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded font-bold text-xs transition-all flex items-center gap-1"
+              title="Eliminar producto"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-3 h-3" />
             </button>
           )}
         </div>
