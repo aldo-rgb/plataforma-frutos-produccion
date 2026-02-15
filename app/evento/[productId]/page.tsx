@@ -821,19 +821,15 @@ export default function EventoPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-slate-300 mb-2">
-                        ¿Cómo te enteraste?
+                        ¿Quién te invitó?
                       </label>
-                      <select
+                      <input
+                        type="text"
                         value={registerForm.comoTeEnteraste}
                         onChange={(e) => setRegisterForm({ ...registerForm, comoTeEnteraste: e.target.value })}
-                        className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500 transition-colors"
-                      >
-                        <option value="">Selecciona una opción</option>
-                        <option value="amigo">Un amigo me invitó</option>
-                        <option value="redes">Redes sociales</option>
-                        <option value="google">Búsqueda en Google</option>
-                        <option value="otro">Otro</option>
-                      </select>
+                        className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
+                        placeholder="Nombre de quien te invitó"
+                      />
                     </div>
                   </div>
 

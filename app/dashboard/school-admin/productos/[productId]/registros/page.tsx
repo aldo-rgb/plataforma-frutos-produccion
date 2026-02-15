@@ -172,7 +172,7 @@ export default function RegistrosProductoPage() {
   };
 
   const exportToCSV = () => {
-    const headers = ['Nombre', 'Email', 'Teléfono', 'Cómo se enteró', 'Estado', 'Fecha registro'];
+    const headers = ['Nombre', 'Email', 'Teléfono', 'Quién invitó', 'Estado', 'Fecha registro'];
     const rows = filteredRegistrations.map(r => [
       r.nombre,
       r.email,
@@ -389,7 +389,7 @@ export default function RegistrosProductoPage() {
                       Contacto
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
-                      Cómo se enteró
+                      Quién invitó
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
                       Estado
