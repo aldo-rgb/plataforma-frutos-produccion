@@ -67,8 +67,6 @@ export async function POST(request: Request) {
 
     const results = {
       processed: 0,
-      usersCreated: 0,
-      ticketsCreated: 0,
       emailsSent: 0,
       whatsappSent: 0,
       errors: [] as string[],
@@ -104,99 +102,22 @@ export async function POST(request: Request) {
           paymentDeadline.setHours(13, 0, 0, 0); // 1 PM
         }
 
-        // Verificar si el usuario existe o si necesitamos crearlo
-        let userId = checkout.userId;
+        // Obtener nombre del checkout (NO crear usuario - solo se crea al pagar)
         let userName = checkout.user?.nombre || checkout.firstName || 'Participante';
         
-        // Si no hay userId pero tenemos los datos de registro, crear el usuario
-        if (!userId && (checkout as any).registrationData && (checkout as any).passwordHash) {
+        // Si hay registrationData guardado, usar el nombre de ahí
+        if ((checkout as any).registrationData) {
           const regData = (checkout as any).registrationData as any;
-          
-          // Verificar que no exista ya un usuario con ese email
-          const existingUser = await prisma.usuario.findUnique({
-            where: { email: checkout.email }
-          });
-          
-          if (existingUser) {
-            // Usuario ya existe, usar ese
-            userId = existingUser.id;
-            userName = existingUser.nombre;
-            logger.debug(`✅ Usuario ya existía: ${checkout.email} (ID: ${userId})`);
-          } else {
-            // Crear el nuevo usuario
-            // Convertir goals a JSON string si es un array
-            let goalsString: string | null = null;
-            if (regData.goals) {
-              goalsString = Array.isArray(regData.goals) 
-                ? JSON.stringify(regData.goals) 
-                : regData.goals;
-            }
-            
-            const newUser = await prisma.usuario.create({
-              data: {
-                nombre: regData.nombre || `${checkout.firstName || ''} ${checkout.lastName || ''}`.trim(),
-                apodo: regData.apodo || null,
-                email: checkout.email,
-                password: (checkout as any).passwordHash,
-                telefono: checkout.phone || regData.telefono || null,
-                horarioLlamada: regData.horarioLlamada || null,
-                rol: 'PARTICIPANTE',
-                organizationId: checkout.organizationId,
-                profession: regData.profession || null,
-                birthdate: regData.birthdate ? new Date(regData.birthdate) : null,
-                children: regData.children || 0,
-                goals: goalsString,
-                expectations: regData.expectations || null,
-                referralCode: regData.referralCode || null,
-                isActive: true,
-                emailVerified: false,
-              },
-            });
-            
-            userId = newUser.id;
-            userName = newUser.nombre;
-            results.usersCreated++;
-            logger.debug(`✅ Usuario creado desde checkout abandonado: ${checkout.email} (ID: ${userId})`);
-            
-            // Actualizar el checkout con el userId
-            await prisma.abandonedCheckout.update({
-              where: { id: checkout.id },
-              data: { userId: userId },
-            });
-          }
+          userName = regData.nombre || regData.apodo || userName;
         }
 
-        // Crear ticket solo si tenemos userId
-        let ticket = null;
-        if (userId) {
-          // Crear ticket PENDING_PAYMENT para el usuario
-          ticket = await prisma.ticket.create({
-            data: {
-              ownerId: userId,
-              organizationId: checkout.organizationId,
-              visionId: checkout.visionId,
-              level: 'BASIC',
-              type: 'STANDARD',
-              status: 'PENDING_PAYMENT',
-              paymentStatus: 'UNPAID',
-              isTransferable: false, // Anticipos no son transferibles
-              isAnticipo: true,
-              costAtPurchase: checkout.originalPrice,
-              amountPaid: 0,
-              validUntil: paymentDeadline,
-            },
-          });
-          results.ticketsCreated++;
-        }
-
-        // Actualizar el checkout (con o sin ticket)
+        // Actualizar el checkout como abandonado con email enviado
         await prisma.abandonedCheckout.update({
           where: { id: checkout.id },
           data: {
             status: 'EMAIL_SENT',
             abandonedAt: new Date(),
             emailSentAt: new Date(),
-            ticketId: ticket?.id || null,
           },
         });
 
@@ -368,7 +289,7 @@ ${ctaUrl}
 
     return NextResponse.json({
       success: true,
-      message: `Procesados ${results.processed} checkouts abandonados. Usuarios creados: ${results.usersCreated}. Tickets: ${results.ticketsCreated}. Emails: ${results.emailsSent}`,
+      message: `Procesados ${results.processed} checkouts abandonados. Emails enviados: ${results.emailsSent}. WhatsApp: ${results.whatsappSent}`,
       results,
     });
   } catch (error: any) {
