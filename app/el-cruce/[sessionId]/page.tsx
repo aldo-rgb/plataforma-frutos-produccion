@@ -334,6 +334,7 @@ export default function ElCrucePage() {
   const [connected, setConnected] = useState(false)
   const [sessionStatus, setSessionStatus] = useState<string>("WAITING")
   const [sessionData, setSessionData] = useState<any>(null)
+  const [isInMaintenance, setIsInMaintenance] = useState(false)
   const [stats, setStats] = useState<CrossingStats>({
     crossedCount: 0,
     totalParticipants: 0,
@@ -379,12 +380,19 @@ export default function ElCrucePage() {
 
   // Cargar datos de sesión y participantes
   const fetchSessionData = useCallback(async () => {
-    if (!sessionId) return
+    if (!sessionId || isInMaintenance) return
     try {
       // Agregar timestamp para evitar cache del navegador
       const res = await fetch(`/api/el-cruce/session?sessionId=${sessionId}&t=${Date.now()}`, {
         cache: 'no-store'
       })
+      
+      // Si es 503 (mantenimiento), parar el polling
+      if (res.status === 503) {
+        setIsInMaintenance(true);
+        return;
+      }
+      
       const data = await res.json()
       
       if (data.session) {
@@ -433,12 +441,14 @@ export default function ElCrucePage() {
     }
   }, [sessionId, playCrossingSound])
 
-  // Polling cada 1 segundo para actualización más rápida
+  // Polling cada 1 segundo para actualización más rápida (solo si no está en mantenimiento)
   useEffect(() => {
+    if (isInMaintenance) return;
+    
     fetchSessionData()
     const interval = setInterval(fetchSessionData, 1000)
     return () => clearInterval(interval)
-  }, [fetchSessionData])
+  }, [fetchSessionData, isInMaintenance])
 
   // Conectar Socket.IO (como respaldo)
   useEffect(() => {

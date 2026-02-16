@@ -164,7 +164,13 @@ export default function ElCruceAccessWidget({
 
   // Buscar sesiones activas
   useEffect(() => {
+    let isMounted = true;
+    let isInMaintenance = false;
+    
     const fetchSessions = async () => {
+      // Si ya sabemos que está en mantenimiento, no hacer más requests
+      if (isInMaintenance) return;
+      
       try {
         // Buscar sesiones activas de la organización
         const url = organizationId 
@@ -172,22 +178,38 @@ export default function ElCruceAccessWidget({
           : `/api/el-cruce/session?active=true`
         
         const res = await fetch(url)
-        if (res.ok) {
+        
+        // Si es 503 (mantenimiento), parar el polling
+        if (res.status === 503) {
+          isInMaintenance = true;
+          if (isMounted) {
+            setSessions([]);
+            setLoading(false);
+          }
+          return;
+        }
+        
+        if (res.ok && isMounted) {
           const data = await res.json()
           setSessions(data.sessions || [])
         }
       } catch (error) {
         console.error("Error fetching sessions:", error)
       } finally {
-        setLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
 
     fetchSessions()
     
-    // Polling cada 10 segundos
+    // Polling cada 10 segundos (se detendrá si está en mantenimiento)
     const interval = setInterval(fetchSessions, 10000)
-    return () => clearInterval(interval)
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    }
   }, [organizationId])
 
   // Crear nueva sesión
@@ -799,7 +821,7 @@ export default function ElCruceAccessWidget({
                             <div className="p-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full">
                               <Zap className="w-4 h-4 text-white" />
                             </div>
-                            <p className="text-xs text-amber-400 mt-1 font-medium">EAtravesar</p>
+                            <p className="text-xs text-amber-400 mt-1 font-medium">El Atravesar</p>
                             <div className="w-px h-4 bg-gradient-to-b from-amber-500/50 to-slate-700" />
                           </div>
                         </div>

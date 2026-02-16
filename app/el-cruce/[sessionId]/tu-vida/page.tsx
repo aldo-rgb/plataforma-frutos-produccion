@@ -1142,6 +1142,7 @@ export default function ElAtravesarTuVidaPage() {
   const [socket, setSocket] = useState<Socket | null>(null)
   const [loading, setLoading] = useState(true)
   const [sessionData, setSessionData] = useState<any>(null)
+  const [isInMaintenance, setIsInMaintenance] = useState(false)
   const [pendingParticipants, setPendingParticipants] = useState<Participant[]>([])
   const [crossedParticipants, setCrossedParticipants] = useState<Participant[]>([])
   const [stats, setStats] = useState<CrossingStats>({
@@ -1158,6 +1159,7 @@ export default function ElAtravesarTuVidaPage() {
   // Ref para trackear IDs ya cruzados (para polling)
   const crossedIdsRef = useRef<Set<number>>(new Set())
   const isAnimatingRef = useRef<boolean>(false)
+  const isInMaintenanceRef = useRef<boolean>(false)
   
   // Cola de participantes que deben cruzar con animación al inicio
   const [initialCrossingQueue, setInitialCrossingQueue] = useState<Participant[]>([])
@@ -1166,6 +1168,9 @@ export default function ElAtravesarTuVidaPage() {
   // Cargar datos iniciales
   useEffect(() => {
     const fetchSession = async () => {
+      // Si está en mantenimiento, no hacer request
+      if (isInMaintenanceRef.current) return;
+      
       try {
         // Obtener sesión (usar query param, no ruta dinámica)
         // IMPORTANTE: credentials: 'include' para enviar cookies de sesión
@@ -1173,6 +1178,15 @@ export default function ElAtravesarTuVidaPage() {
           credentials: 'include'
         })
         console.log('📡 Respuesta API:', res.status, res.ok)
+        
+        // Si es 503 (mantenimiento), parar
+        if (res.status === 503) {
+          isInMaintenanceRef.current = true;
+          setIsInMaintenance(true);
+          setLoading(false);
+          return;
+        }
+        
         if (res.ok) {
           const data = await res.json()
           console.log('📊 Datos recibidos:', {
@@ -1254,8 +1268,19 @@ export default function ElAtravesarTuVidaPage() {
     
     // POLLING: Actualizar cada 3 segundos como fallback si el socket no funciona
     const pollInterval = setInterval(async () => {
+      // Si está en mantenimiento, no hacer polling
+      if (isInMaintenanceRef.current) return;
+      
       try {
         const res = await fetch(`/api/el-cruce/session?sessionId=${sessionId}&t=${Date.now()}`)
+        
+        // Si es 503 (mantenimiento), parar
+        if (res.status === 503) {
+          isInMaintenanceRef.current = true;
+          setIsInMaintenance(true);
+          return;
+        }
+        
         if (res.ok) {
           const data = await res.json()
           if (data.session) {

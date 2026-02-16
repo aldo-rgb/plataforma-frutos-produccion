@@ -53,6 +53,7 @@ export default function ElCruceControlWidget({ currentProductId, products }: Pro
   const [creating, setCreating] = useState(false)
   const [showSetup, setShowSetup] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
+  const [isInMaintenance, setIsInMaintenance] = useState(false)
   
   // Setup state
   const [targetLevel, setTargetLevel] = useState<"ADVANCED" | "PL">("ADVANCED")
@@ -60,31 +61,52 @@ export default function ElCruceControlWidget({ currentProductId, products }: Pro
 
   // Buscar sesión activa
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchSession = async () => {
+      // Si está en mantenimiento, no hacer más requests
+      if (isInMaintenance) return;
+      
       try {
         const res = await fetch(`/api/el-cruce/session?productId=${currentProductId}`)
-        if (res.ok) {
+        
+        // Si es 503 (mantenimiento), parar el polling
+        if (res.status === 503) {
+          if (isMounted) {
+            setIsInMaintenance(true);
+            setSession(null);
+            setLoading(false);
+          }
+          return;
+        }
+        
+        if (res.ok && isMounted) {
           const data = await res.json()
           setSession(data.session)
         }
       } catch (error) {
         console.error("Error fetching session:", error)
       } finally {
-        setLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
 
     fetchSession()
     
-    // Polling cada 5 segundos si hay sesión activa
+    // Polling cada 5 segundos si hay sesión activa (y no está en mantenimiento)
     const interval = setInterval(() => {
-      if (session?.status === "ACTIVE") {
+      if (session?.status === "ACTIVE" && !isInMaintenance) {
         fetchSession()
       }
     }, 5000)
 
-    return () => clearInterval(interval)
-  }, [currentProductId, session?.status])
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    }
+  }, [currentProductId, session?.status, isInMaintenance])
 
   // Crear nueva sesión
   const handleCreateSession = async () => {
