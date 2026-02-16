@@ -919,9 +919,9 @@ export default function CallManagementPage() {
 
       {/* Call Result Modal */}
       {showCallModal && selectedCard && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-800 rounded-2xl border-2 border-purple-500/50 max-w-md w-full shadow-2xl">
-            <div className="bg-gradient-to-r from-purple-900/50 to-blue-900/50 p-6 border-b border-slate-700">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-slate-800 rounded-2xl border-2 border-purple-500/50 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto my-4">
+            <div className="bg-gradient-to-r from-purple-900/50 to-blue-900/50 p-6 border-b border-slate-700 sticky top-0 z-10">
               <h2 className="text-2xl font-black text-white">
                 📞 Resultado de la Llamada
               </h2>
