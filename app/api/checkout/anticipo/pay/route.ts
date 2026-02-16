@@ -18,7 +18,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Obtener el checkout con sus relaciones
+    // Obtener el checkout con sus relaciones (incluyendo registrationData y passwordHash)
     const checkout = await prisma.abandonedCheckout.findUnique({
       where: { id: checkoutId },
       include: {
@@ -39,8 +39,13 @@ export async function POST(request: Request) {
     const orgName = checkout.organization.name;
 
     const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const successUrl = `${baseUrl}/checkout/success?type=anticipo&checkoutId=${checkoutId}`;
+    // Usar endpoint dedicado para procesar pago de anticipo exitoso
+    const successUrl = `${baseUrl}/api/checkout/anticipo/success?checkoutId=${checkoutId}`;
     const cancelUrl = `${baseUrl}/checkout/anticipo?id=${checkoutId}`;
+
+    // Preparar datos de registro para incluir en el pago
+    const registrationData = (checkout as any).registrationData || null;
+    const passwordHash = (checkout as any).passwordHash || null;
 
     // Obtener pasarela de pago para la organización
     const gateway = await getPaymentGateway(
@@ -82,7 +87,7 @@ export async function POST(request: Request) {
           },
         ],
         mode: 'payment',
-        success_url: successUrl + '&session_id={CHECKOUT_SESSION_ID}',
+        success_url: successUrl + '&session_id={CHECKOUT_SESSION_ID}&provider=stripe',
         cancel_url: cancelUrl,
         customer_email: checkout.email,
         metadata: {
@@ -92,6 +97,7 @@ export async function POST(request: Request) {
           userId: checkout.userId?.toString() || '',
           visionId: checkout.visionId?.toString() || '',
           organizationId: checkout.organizationId.toString(),
+          // No incluir registrationData en metadata de Stripe (tiene límite de tamaño)
         },
       });
 
@@ -130,7 +136,7 @@ export async function POST(request: Request) {
             surname: checkout.lastName || undefined,
           },
           back_urls: {
-            success: successUrl,
+            success: successUrl + '&provider=mercadopago',
             failure: cancelUrl,
             pending: `${baseUrl}/checkout/pending?checkoutId=${checkoutId}`,
           },
@@ -142,6 +148,9 @@ export async function POST(request: Request) {
             userId: checkout.userId,
             visionId: checkout.visionId,
             organizationId: checkout.organizationId,
+            // Incluir datos de registro para crear usuario al confirmar pago
+            registrationData,
+            passwordHash,
           }),
           notification_url: `${baseUrl}/api/webhooks/mercadopago`,
           statement_descriptor: orgName.substring(0, 22),

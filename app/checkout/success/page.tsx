@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { CheckCircle2, Ticket, ArrowRight, Mail, Sparkles, LogIn, Loader2 } from 'lucide-react';
+import { CheckCircle2, Ticket, ArrowRight, Mail, Sparkles, LogIn, Loader2, Clock, CreditCard } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 
@@ -13,12 +13,14 @@ function SuccessContent() {
   const email = searchParams.get('email');
   const ticketsCreated = parseInt(searchParams.get('tickets') || '1');
   const isNewRegistration = !!email; // If email is present, it's a new registration
+  const type = searchParams.get('type'); // 'anticipo' for anticipo payments
+  const checkoutId = searchParams.get('checkoutId');
   
   const [countdown, setCountdown] = useState(10);
 
   useEffect(() => {
-    // Only auto-redirect for existing users (Stripe flow)
-    if (!isNewRegistration) {
+    // Only auto-redirect for existing users (Stripe flow) - not for anticipo or new registrations
+    if (!isNewRegistration && type !== 'anticipo') {
       const interval = setInterval(() => {
         setCountdown(prev => {
           if (prev <= 1) {
@@ -31,7 +33,123 @@ function SuccessContent() {
 
       return () => clearInterval(interval);
     }
-  }, [router, isNewRegistration]);
+  }, [router, isNewRegistration, type]);
+
+  // Anticipo Payment Success
+  if (type === 'anticipo') {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white flex items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-2xl w-full"
+        >
+          <div className="text-center p-12 bg-slate-800/50 rounded-3xl border border-slate-700">
+            {/* Success Icon */}
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: 'spring' }}
+              className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center shadow-2xl shadow-yellow-500/50"
+            >
+              <CheckCircle2 size={48} className="text-white" />
+            </motion.div>
+
+            {/* Title */}
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-4xl font-bold mb-4 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 bg-clip-text text-transparent"
+            >
+              ¡Anticipo Registrado!
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="text-xl text-slate-300 mb-8"
+            >
+              Tu lugar ha sido reservado 🎉
+            </motion.p>
+
+            {/* Info Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="bg-slate-900/70 border border-slate-700 rounded-2xl p-6 text-left mb-8"
+            >
+              {/* Anticipo Pagado */}
+              <div className="flex items-center gap-4 pb-4 border-b border-slate-700 mb-4">
+                <div className="p-3 bg-yellow-500/20 rounded-xl">
+                  <CreditCard className="text-yellow-400" size={24} />
+                </div>
+                <div>
+                  <p className="font-bold text-white">Anticipo Pagado</p>
+                  <p className="text-sm text-slate-400">
+                    Tu lugar está reservado con este pago inicial
+                  </p>
+                </div>
+              </div>
+
+              {/* Próximo Paso */}
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-orange-500/20 rounded-xl">
+                  <Clock className="text-orange-400" size={24} />
+                </div>
+                <div>
+                  <p className="font-bold text-white">Completa tu Pago</p>
+                  <p className="text-sm text-slate-400">
+                    Recuerda completar el pago restante antes del inicio del programa
+                  </p>
+                </div>
+              </div>
+
+              {/* Email Sent */}
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-cyan-500/20 rounded-xl">
+                  <Mail className="text-cyan-400" size={24} />
+                </div>
+                <div>
+                  <p className="font-bold text-white">Confirmación Enviada</p>
+                  <p className="text-sm text-slate-400">
+                    Revisa tu correo: <span className="text-cyan-400">{email || 'tu email'}</span>
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* CTA Button */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+            >
+              <Link href="/login">
+                <button className="w-full py-4 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-yellow-500/30">
+                  <LogIn size={20} />
+                  Iniciar Sesión
+                  <ArrowRight size={20} />
+                </button>
+              </Link>
+            </motion.div>
+
+            {/* Footer Note */}
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.7 }}
+              className="mt-6 text-sm text-slate-500"
+            >
+              ¿Tienes preguntas? Contacta a tu coordinador o escríbenos a soporte@frutos.app
+            </motion.p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   // New Registration Flow (Gift Code)
   if (isNewRegistration) {
