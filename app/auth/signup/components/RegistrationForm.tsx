@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { tw } from '@/lib/theme/quantum';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -88,6 +88,7 @@ export function RegistrationForm({
   const [selectedReferral, setSelectedReferral] = useState<ReferralUser | null>(referralUser);
   const [showNoPasteModal, setShowNoPasteModal] = useState(false);
   const [ageWarning, setAgeWarning] = useState<'none' | 'needs_tutor' | 'too_young'>('none');
+  const [showScrollWarning, setShowScrollWarning] = useState(false);
 
   // Validar edad cuando cambia
   useEffect(() => {
@@ -517,7 +518,7 @@ export function RegistrationForm({
                       setReferralSearchText(e.target.value);
                       setFormData(prev => ({ ...prev, referralCode: e.target.value }));
                     }}
-                    placeholder="Quien te invitó..."
+                    placeholder="Quien te invitó?..."
                     className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00F0FF]/50 focus:border-[#00F0FF]/50 transition-all"
                   />
                   {searchingReferral && (
@@ -632,19 +633,62 @@ export function RegistrationForm({
               </p>
             )}
             
-            <label className="flex items-center gap-3 cursor-pointer group mt-4">
-              <input
-                type="checkbox"
-                checked={formData.acceptTerms}
-                onChange={handleChange('acceptTerms')}
-                disabled={!scrolledLegal}
-                className="w-5 h-5 rounded border-2 border-slate-600 bg-slate-800/50 checked:bg-[#00F0FF] checked:border-[#00F0FF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                required
-              />
-              <span className="text-sm text-slate-300 group-hover:text-white transition-colors">
-                {t('legal.checkbox')}
-              </span>
-            </label>
+            <div 
+              className="relative mt-4"
+              onClick={() => {
+                if (!scrolledLegal) {
+                  setShowScrollWarning(true);
+                  // Auto-hide after 4 seconds
+                  setTimeout(() => setShowScrollWarning(false), 4000);
+                }
+              }}
+            >
+              <label className={`flex items-center gap-3 group ${scrolledLegal ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
+                <input
+                  type="checkbox"
+                  checked={formData.acceptTerms}
+                  onChange={handleChange('acceptTerms')}
+                  disabled={!scrolledLegal}
+                  className="w-5 h-5 rounded border-2 border-slate-600 bg-slate-800/50 checked:bg-[#00F0FF] checked:border-[#00F0FF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  required
+                />
+                <span className={`text-sm transition-colors ${scrolledLegal ? 'text-slate-300 group-hover:text-white' : 'text-slate-500'}`}>
+                  {t('legal.checkbox')}
+                </span>
+              </label>
+              
+              <AnimatePresence>
+                {showScrollWarning && !scrolledLegal && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -5, scale: 0.95 }}
+                    className="absolute left-0 right-0 mt-3 p-4 bg-red-900/90 border border-red-500 rounded-lg shadow-lg shadow-red-500/20"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl flex-shrink-0">📜</span>
+                      <div>
+                        <p className="font-bold text-red-200 mb-1">
+                          {t('legal.mustScrollTitle')}
+                        </p>
+                        <p className="text-sm text-red-300">
+                          {t('legal.mustScrollMessage')}
+                        </p>
+                      </div>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowScrollWarning(false);
+                        }}
+                        className="text-red-400 hover:text-white transition-colors ml-auto"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </FormSection>
 
           {/* Sección: Credenciales */}

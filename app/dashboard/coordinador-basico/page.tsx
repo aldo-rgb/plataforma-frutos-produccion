@@ -47,7 +47,7 @@ export default function CoordinadorBasicoDashboard() {
   const [loadingProductos, setLoadingProductos] = useState(true);
   const [countdown, setCountdown] = useState<{[key: number]: string}>({});
   const [medicalAlertsCount, setMedicalAlertsCount] = useState(0);
-  const [callsData, setCallsData] = useState<{ completed: number; total: number }>({ completed: 0, total: 0 });
+  const [callsData, setCallsData] = useState<{ completed: number; total: number; visionId: number | null }>({ completed: 0, total: 0, visionId: null });
   const [preRegistros, setPreRegistros] = useState<{ pending: number; paid: number; total: number }>({ pending: 0, paid: 0, total: 0 });
   const [visionInfo, setVisionInfo] = useState<{ nombre: string; level: string } | null>(null);
   const [advancedStats, setAdvancedStats] = useState<{ pending: number; enrolled: number; total: number }>({ pending: 0, enrolled: 0, total: 0 });
@@ -158,7 +158,8 @@ export default function CoordinadorBasicoDashboard() {
       if (res.ok && result.success) {
         setCallsData({
           completed: result.completed || 0,
-          total: result.total || 0
+          total: result.total || 0,
+          visionId: result.visionId || null
         });
       }
     } catch (error) {
@@ -356,7 +357,7 @@ export default function CoordinadorBasicoDashboard() {
         {/* KPI Cards */}
         <div className="grid grid-cols-1 gap-6">
           {/* Widget Llamadas Pendientes con botón */}
-          <Link href="/dashboard/school-admin/vision/1/call-management?level=BASIC" className="h-full">
+          <Link href={callsData.visionId ? `/dashboard/school-admin/vision/${callsData.visionId}/call-management?level=BASIC` : '#'} className="h-full">
             <div className="bg-gradient-to-br from-yellow-900/40 via-orange-900/30 to-slate-900 border-2 border-yellow-500/30 rounded-2xl p-6 hover:border-yellow-500/50 transition-all cursor-pointer group hover:scale-105 hover:shadow-2xl h-full">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">

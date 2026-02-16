@@ -113,7 +113,9 @@
       "sunday": "Sunday: Start at 10 AM until approximately 7 PM (may vary based on group progress)",
       "integralWarning": "The Basic training is comprehensive and if the participant leaves the training at any time, they will NOT be allowed to re-enter as they may miss some dynamics.",
       "checkbox": "I have read and accept the training terms and conditions",
-      "scrollWarning": "You must read all content to continue"
+      "scrollWarning": "You must read all content to continue",
+      "mustScrollTitle": "You must read the terms!",
+      "mustScrollMessage": "Please scroll down and read all the terms and conditions content before accepting. This is important so you know your rights and obligations."
     },
     "credentials": {
       "title": "Access Credentials",

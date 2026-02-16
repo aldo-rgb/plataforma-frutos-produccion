@@ -113,7 +113,9 @@
       "sunday": "Domingo: Inicio a las 10 AM hasta aproximadamente 7 PM (puede variar según el avance del grupo)",
       "integralWarning": "El entrenamiento Básico es integral y si el participante abandona el entrenamiento en cualquier momento, NO se le permitirá reingresar ya que puede perderse algunas dinámicas.",
       "checkbox": "He leído y acepto los términos y condiciones del entrenamiento",
-      "scrollWarning": "Debes leer todo el contenido para continuar"
+      "scrollWarning": "Debes leer todo el contenido para continuar",
+      "mustScrollTitle": "¡Debes leer los términos!",
+      "mustScrollMessage": "Por favor, desplázate hacia abajo y lee todo el contenido de los términos y condiciones antes de aceptar. Esto es importante para que conozcas tus derechos y obligaciones."
     },
     "credentials": {
       "title": "Credenciales de Acceso",
