@@ -124,6 +124,14 @@ export async function POST(request: Request) {
             logger.debug(`✅ Usuario ya existía: ${checkout.email} (ID: ${userId})`);
           } else {
             // Crear el nuevo usuario
+            // Convertir goals a JSON string si es un array
+            let goalsString: string | null = null;
+            if (regData.goals) {
+              goalsString = Array.isArray(regData.goals) 
+                ? JSON.stringify(regData.goals) 
+                : regData.goals;
+            }
+            
             const newUser = await prisma.usuario.create({
               data: {
                 nombre: regData.nombre || `${checkout.firstName || ''} ${checkout.lastName || ''}`.trim(),
@@ -137,7 +145,7 @@ export async function POST(request: Request) {
                 profession: regData.profession || null,
                 birthdate: regData.birthdate ? new Date(regData.birthdate) : null,
                 children: regData.children || 0,
-                goals: regData.goals || [],
+                goals: goalsString,
                 expectations: regData.expectations || null,
                 referralCode: regData.referralCode || null,
                 isActive: true,
