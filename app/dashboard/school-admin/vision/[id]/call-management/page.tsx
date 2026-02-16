@@ -862,12 +862,12 @@ export default function CallManagementPage() {
 
                   {/* Card Footer - Action Buttons */}
                   <div className="p-4 bg-slate-900/50 border-t border-slate-700 grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => handleOpenCallModal(item)}
+                    <a
+                      href={`tel:${(item.tracking?.phone || item.usuario.telefono)?.replace(/\D/g, '')}`}
                       className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2"
                     >
                       📞 Llamar
-                    </button>
+                    </a>
                     <button
                       onClick={() => {
                         if (item.tracking?.phone || item.usuario.telefono) {
