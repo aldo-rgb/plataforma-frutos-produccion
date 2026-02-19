@@ -62,7 +62,7 @@ export default function BuzonPublicoPage() {
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Cargar campaña
+  // Cargar campaña y participantes iniciales
   useEffect(() => {
     async function fetchCampaign() {
       try {
@@ -75,6 +75,8 @@ export default function BuzonPublicoPage() {
         } else {
           setCampaign(data.campaign);
           setDaysRemaining(data.daysRemaining);
+          // Cargar participantes iniciales
+          setParticipants(data.participants || []);
         }
       } catch (err) {
         setError('Error al cargar el buzón');
@@ -87,8 +89,15 @@ export default function BuzonPublicoPage() {
 
   // Buscar participantes con debounce
   useEffect(() => {
+    // Si no hay búsqueda, no hacer nada (ya se cargaron los iniciales)
     if (searchQuery.length < 2) {
-      setParticipants([]);
+      // Recargar lista completa si se borra la búsqueda
+      if (searchQuery.length === 0 && campaign) {
+        fetch(`/api/public/buzon/${slug}`)
+          .then(res => res.json())
+          .then(data => setParticipants(data.participants || []))
+          .catch(console.error);
+      }
       return;
     }
 

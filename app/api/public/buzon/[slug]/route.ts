@@ -46,45 +46,51 @@ export async function GET(
       }, { status: 404 });
     }
 
-    // Si hay búsqueda, buscar participantes
+    // Buscar participantes - con filtro de búsqueda o todos
     let participants: any[] = [];
-    if (searchQuery && searchQuery.length >= 2) {
-      // Buscar en vision_enrollments (tabla actual)
-      const visionEnrollments = await prisma.vision_enrollments.findMany({
-        where: {
-          visionId: campaign.visionId,
-          enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] },
+    
+    // Buscar en vision_enrollments (tabla actual)
+    const visionEnrollments = await prisma.vision_enrollments.findMany({
+      where: {
+        visionId: campaign.visionId,
+        enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] },
+        ...(searchQuery && searchQuery.length >= 2 ? {
           Usuario_vision_enrollments_userIdToUsuario: {
             nombre: { contains: searchQuery, mode: 'insensitive' }
           }
-        },
-        include: {
-          Usuario_vision_enrollments_userIdToUsuario: {
-            select: {
-              id: true,
-              nombre: true,
-              imagen: true
-            }
+        } : {})
+      },
+      include: {
+        Usuario_vision_enrollments_userIdToUsuario: {
+          select: {
+            id: true,
+            nombre: true,
+            imagen: true
           }
-        },
-        take: 30
-      });
-
-      // Eliminar duplicados por userId
-      const uniqueParticipants = new Map();
-      visionEnrollments.forEach(ve => {
-        const user = ve.Usuario_vision_enrollments_userIdToUsuario;
-        if (!uniqueParticipants.has(user.id)) {
-          uniqueParticipants.set(user.id, {
-            id: user.id,
-            nombre: user.nombre,
-            imagen: user.imagen
-          });
         }
-      });
-      
-      participants = Array.from(uniqueParticipants.values()).slice(0, 10);
-    }
+      },
+      orderBy: {
+        Usuario_vision_enrollments_userIdToUsuario: {
+          nombre: 'asc'
+        }
+      },
+      take: 100
+    });
+
+    // Eliminar duplicados por userId
+    const uniqueParticipants = new Map();
+    visionEnrollments.forEach(ve => {
+      const user = ve.Usuario_vision_enrollments_userIdToUsuario;
+      if (!uniqueParticipants.has(user.id)) {
+        uniqueParticipants.set(user.id, {
+          id: user.id,
+          nombre: user.nombre,
+          imagen: user.imagen
+        });
+      }
+    });
+    
+    participants = Array.from(uniqueParticipants.values());
 
     return NextResponse.json({
       campaign: {
