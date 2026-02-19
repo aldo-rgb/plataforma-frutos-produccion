@@ -59,13 +59,19 @@ export async function PATCH(
       );
     }
 
-    // Verificar que el coordinador pertenezca a su organización
+    // Verificar que el coordinador pertenezca a su organización y tenga rol de coordinador
     const coordinador = await prisma.usuario.findUnique({
       where: { id: parseInt(coordinadorId) },
-      select: { rol: true, organizationId: true }
+      select: { rol: true, organizationId: true, esCoordinador: true }
     });
 
-    if (!coordinador || coordinador.rol !== 'COORDINADOR' || coordinador.organizationId !== director.organizationId) {
+    // Roles válidos para ser coordinador de una visión
+    const rolesCoordinador = ['COORDINADOR', 'COORDINATOR_BASIC', 'COORDINATOR_ADVANCED'];
+    const esCoordinadorValido = coordinador && 
+      (rolesCoordinador.includes(coordinador.rol) || coordinador.esCoordinador) &&
+      coordinador.organizationId === director.organizationId;
+
+    if (!esCoordinadorValido) {
       return NextResponse.json(
         { error: 'Coordinador no válido' },
         { status: 400 }
