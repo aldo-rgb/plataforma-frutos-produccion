@@ -186,6 +186,47 @@ export async function GET(
       });
     });
 
+    // Agregar Coordinadores únicos de vision_enrollments
+    const coordinatorsFromEnrollments = await prisma.vision_enrollments.findMany({
+      where: {
+        visionId,
+        level: 'PL',
+        coordinatorId: { not: null }
+      },
+      distinct: ['coordinatorId'],
+      include: {
+        Usuario_vision_enrollments_coordinatorIdToUsuario: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+            telefono: true,
+            referralCode: true,
+          }
+        }
+      }
+    });
+
+    for (const enrollment of coordinatorsFromEnrollments) {
+      const coordUser = enrollment.Usuario_vision_enrollments_coordinatorIdToUsuario;
+      if (!coordUser) continue;
+      // Skip si ya está en la lista (como Trainer o GC)
+      if (formattedStaff.find(s => s.Usuario.id === coordUser.id)) continue;
+      
+      formattedStaff.push({
+        id: coordUser.id + 200000,
+        oderId: coordUser.id,
+        rol: 'COORDINADOR',
+        Usuario: {
+          id: coordUser.id,
+          nombre: coordUser.nombre,
+          email: coordUser.email,
+          telefono: coordUser.telefono,
+          referralCode: coordUser.referralCode
+        }
+      });
+    }
+
     return NextResponse.json({
       success: true,
       enrollments: formattedEnrollments,
