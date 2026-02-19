@@ -117,10 +117,9 @@ export function RegistrationForm({
     }
   };
 
-  // Prevenir paste en email confirm
+  // Permitir paste en email confirm (removida la restricción)
   const handleEmailConfirmPaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    setShowNoPasteModal(true);
+    // Permitido - no hacer nada
   };
 
   const daysUntilStart = nextVision ? Math.ceil(

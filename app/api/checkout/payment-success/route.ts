@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import logger from '@/lib/logger';
+import Stripe from 'stripe';
 
 /**
  * GET /api/checkout/payment-success
@@ -19,10 +20,12 @@ export async function GET(request: NextRequest) {
     const collectionStatus = searchParams.get('collection_status');
     const preferenceId = searchParams.get('preference_id');
     const provider = searchParams.get('provider');
+    const sessionId = searchParams.get('session_id');
 
     logger.debug('📨 Payment success callback (registration) received');
     logger.debug('   Provider:', provider);
     logger.debug('   Payment ID:', paymentId);
+    logger.debug('   Session ID:', sessionId);
     logger.debug('   Preference ID:', preferenceId);
     logger.debug('   Status:', status);
     logger.debug('   Collection Status:', collectionStatus);
@@ -52,6 +55,12 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Si no tenemos los datos y tenemos session_id de Stripe, obtenerlos de la sesión
+    if (!orderData && sessionId && provider === 'stripe') {
+      logger.debug('🔍 Intentando obtener datos de la sesión de Stripe...');
+      orderData = await getOrderDataFromStripe(sessionId);
+    }
+
     // Si no tenemos los datos y tenemos payment_id, intentar obtenerlos de MercadoPago
     if (!orderData && paymentId && provider === 'mercadopago') {
       logger.debug('🔍 Intentando obtener datos del pago de MercadoPago...');
@@ -79,11 +88,13 @@ export async function GET(request: NextRequest) {
       amount,
       userData,
       appliedCodes,
+      stripePaymentStatus,
     } = orderData;
 
-    // Verify payment status - MercadoPago puede enviar status o collection_status
-    const paymentStatus = status || collectionStatus;
-    if (paymentStatus !== 'approved') {
+    // Verify payment status - MercadoPago envía status/collection_status, Stripe pasa en stripePaymentStatus
+    const paymentStatus = stripePaymentStatus || status || collectionStatus;
+    if (paymentStatus !== 'approved' && provider !== 'stripe') {
+      // Para Stripe, si llegamos aquí con session_id es porque el pago fue exitoso
       logger.debug('Payment not approved:', paymentStatus);
       return NextResponse.redirect(
         new URL(`/checkout?payment=failed&status=${paymentStatus}`, request.url)
@@ -389,6 +400,69 @@ async function getOrderDataFromPreference(preferenceId: string): Promise<any | n
     return null;
   } catch (error) {
     logger.error('Error in getOrderDataFromPreference:', error);
+    return null;
+  }
+}
+
+/**
+ * Obtener datos del pedido desde la sesión de Stripe
+ */
+async function getOrderDataFromStripe(sessionId: string): Promise<any | null> {
+  try {
+    // Buscar la clave de Stripe en las configuraciones de pago activas
+    const gateways = await prisma.paymentGatewayConfig.findMany({
+      where: {
+        provider: 'STRIPE',
+        isActive: true,
+      },
+    });
+
+    for (const gateway of gateways) {
+      if (!gateway.secretKey) continue;
+
+      try {
+        const stripe = new Stripe(gateway.secretKey, {
+          apiVersion: '2025-01-27.acacia',
+        });
+
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        
+        if (session && session.metadata) {
+          logger.debug('✅ Sesión de Stripe encontrada:', session.id);
+          logger.debug('   Payment Status:', session.payment_status);
+          logger.debug('   Metadata keys:', Object.keys(session.metadata));
+
+          // Construir orderData desde el metadata de Stripe
+          const orderData: any = {
+            organizationId: session.metadata.organizationId ? parseInt(session.metadata.organizationId) : null,
+            visionId: session.metadata.visionId ? parseInt(session.metadata.visionId) : null,
+            ticketSelection: session.metadata.ticketSelection || 'BASIC_ONLY',
+            amount: session.amount_total ? session.amount_total / 100 : 0,
+            userData: {
+              email: session.metadata.email || session.customer_email,
+              nombre: session.metadata.nombre || session.metadata.name,
+              apodo: session.metadata.apodo,
+              telefono: session.metadata.telefono || session.metadata.phone,
+              password: session.metadata.password,
+            },
+            appliedCodes: session.metadata.appliedCodes ? JSON.parse(session.metadata.appliedCodes) : [],
+          };
+
+          // Marcar como aprobado si el pago fue exitoso
+          if (session.payment_status === 'paid') {
+            return { ...orderData, stripePaymentStatus: 'approved' };
+          }
+
+          return orderData;
+        }
+      } catch (e) {
+        logger.error('Error fetching session from Stripe:', e);
+      }
+    }
+
+    return null;
+  } catch (error) {
+    logger.error('Error in getOrderDataFromStripe:', error);
     return null;
   }
 }

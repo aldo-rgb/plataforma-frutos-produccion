@@ -330,7 +330,15 @@ async function createStripeCheckout(
     metadata: {
       type: 'REGISTRATION',
       organizationId: orderData.organizationId.toString(),
+      visionId: orderData.visionId ? orderData.visionId.toString() : '',
       ticketSelection: orderData.ticketSelection,
+      // Datos del usuario para crear la cuenta después del pago
+      email: userData.email,
+      nombre: userData.nombre || userData.name,
+      apodo: userData.apodo || '',
+      telefono: userData.telefono || userData.phone || '',
+      password: userData.password || '',
+      appliedCodes: JSON.stringify(orderData.appliedCodes || []),
     },
   });
 
