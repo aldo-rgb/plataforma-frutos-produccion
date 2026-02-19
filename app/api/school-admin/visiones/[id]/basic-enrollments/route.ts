@@ -123,7 +123,7 @@ export async function GET(
       }
     });
 
-    // Obtener Trainer del SchoolProduct BASIC
+    // Obtener Trainer y Coordinador del SchoolProduct BASIC
     const schoolProduct = await prisma.schoolProduct.findFirst({
       where: {
         visionId,
@@ -139,11 +139,20 @@ export async function GET(
             telefono: true,
             referralCode: true,
           }
+        },
+        Coordinator: {
+          select: {
+            id: true,
+            nombre: true,
+            email: true,
+            telefono: true,
+            referralCode: true,
+          }
         }
       }
     });
 
-    // Crear lista de staff (GC + Trainer) al principio
+    // Crear lista de staff (Trainer + Coordinador + GC) al principio
     const staffList: typeof formattedEnrollments = [];
     
     // Agregar Trainer primero
@@ -163,6 +172,32 @@ export async function GET(
           email: schoolProduct.Trainer.email,
           telefono: schoolProduct.Trainer.telefono,
           referralCode: schoolProduct.Trainer.referralCode,
+          organizationId: null as any,
+          createdAt: new Date(),
+          Organization: null as any
+        },
+        gameChanger: null,
+        squadName: null
+      });
+    }
+
+    // Agregar Coordinador después del Trainer
+    if (schoolProduct?.Coordinator) {
+      staffList.push({
+        id: -schoolProduct.Coordinator.id - 5000,
+        oderId: schoolProduct.Coordinator.id,
+        visionId: visionId,
+        enrolledAt: new Date(),
+        enrollmentStatus: 'ACTIVE',
+        attendanceStatus: null as any,
+        level: 'BASIC',
+        rol: 'COORDINADOR',
+        Usuario: {
+          id: schoolProduct.Coordinator.id,
+          nombre: schoolProduct.Coordinator.nombre,
+          email: schoolProduct.Coordinator.email,
+          telefono: schoolProduct.Coordinator.telefono,
+          referralCode: schoolProduct.Coordinator.referralCode,
           organizationId: null as any,
           createdAt: new Date(),
           Organization: null as any
