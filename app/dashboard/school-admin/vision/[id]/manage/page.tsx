@@ -3013,7 +3013,7 @@ export default function VisionManagePage() {
                 >
                   <option value="">Seleccionar coordinador...</option>
                   {coordinadores
-                    .filter(c => c.rol === 'COORDINATOR_BASIC')
+                    .filter(c => ['COORDINATOR_BASIC', 'COORDINADOR'].includes(c.rol))
                     .map(c => (
                       <option key={c.id} value={c.id}>{c.nombre} - {c.email}</option>
                     ))}
@@ -3047,7 +3047,7 @@ export default function VisionManagePage() {
                 >
                   <option value="">Seleccionar coordinador...</option>
                   {coordinadores
-                    .filter(c => c.rol === 'COORDINATOR_ADVANCED')
+                    .filter(c => ['COORDINATOR_ADVANCED', 'COORDINADOR'].includes(c.rol))
                     .map(c => (
                       <option key={c.id} value={c.id}>{c.nombre} - {c.email}</option>
                     ))}
