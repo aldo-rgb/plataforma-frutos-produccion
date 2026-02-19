@@ -290,6 +290,31 @@ export async function GET(request: NextRequest) {
         logger.debug(`✅ Ticket PL creado`);
       }
 
+      // Mark applied gift codes as USED
+      if (appliedCodes && appliedCodes.length > 0) {
+        for (const codeInfo of appliedCodes) {
+          const codeToMark = typeof codeInfo === 'string' ? codeInfo : codeInfo.code;
+          if (codeToMark) {
+            try {
+              await tx.giftCode.updateMany({
+                where: { 
+                  code: codeToMark.toUpperCase(),
+                  status: 'ACTIVE'
+                },
+                data: {
+                  status: 'USED',
+                  usedBy: newUser.id,
+                  usedAt: new Date(),
+                },
+              });
+              logger.debug(`✅ Código ${codeToMark} marcado como USED`);
+            } catch (codeError) {
+              logger.warn(`⚠️ No se pudo marcar código ${codeToMark}:`, codeError);
+            }
+          }
+        }
+      }
+
       return { user: newUser, basicTicket };
     });
 
