@@ -201,69 +201,7 @@ export async function GET(
       });
     }
 
-    // Agregar Coordinadores únicos de vision_enrollments
-    // Primero obtenemos los IDs únicos de coordinadores
-    const coordinatorIds = await prisma.vision_enrollments.findMany({
-      where: {
-        visionId,
-        level: 'BASIC',
-        coordinatorId: { not: null }
-      },
-      distinct: ['coordinatorId'],
-      select: {
-        coordinatorId: true
-      }
-    });
-
-    // Luego obtenemos los datos de esos coordinadores
-    const uniqueCoordinatorIds = coordinatorIds
-      .map(c => c.coordinatorId)
-      .filter((id): id is number => id !== null);
-
-    if (uniqueCoordinatorIds.length > 0) {
-      const coordinators = await prisma.usuario.findMany({
-        where: {
-          id: { in: uniqueCoordinatorIds }
-        },
-        select: {
-          id: true,
-          nombre: true,
-          email: true,
-          telefono: true,
-          referralCode: true,
-        }
-      });
-
-      for (const coordUser of coordinators) {
-        // Skip si ya está en la lista (como Trainer o GC)
-        if (staffList.find(s => s.Usuario.id === coordUser.id)) continue;
-        
-        staffList.push({
-          id: -coordUser.id - 20000,
-          oderId: coordUser.id,
-          visionId: visionId,
-          enrolledAt: new Date(),
-          enrollmentStatus: 'ACTIVE',
-          attendanceStatus: null as any,
-          level: 'BASIC',
-          rol: 'COORDINADOR',
-          Usuario: {
-            id: coordUser.id,
-            nombre: coordUser.nombre,
-            email: coordUser.email,
-            telefono: coordUser.telefono,
-            referralCode: coordUser.referralCode,
-            organizationId: null as any,
-            createdAt: new Date(),
-            Organization: null as any
-          },
-          gameChanger: null,
-          squadName: null
-        });
-      }
-    }
-
-    // Filtrar participantes que ya están en staff (GC, Trainer o Coordinador)
+    // Filtrar participantes que ya están en staff (GC o Trainer)
     const staffIds = new Set(staffList.map(s => s.Usuario.id));
     const filteredEnrollments = formattedEnrollments.filter(e => !staffIds.has(e.Usuario.id));
 
