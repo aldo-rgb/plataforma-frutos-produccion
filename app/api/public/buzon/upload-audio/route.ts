@@ -1,66 +1,88 @@
-// API para subir audio de cápsulas a S3
+// API para subir audio de cápsulas a Supabase Storage
 import { NextRequest, NextResponse } from 'next/server';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { createClient } from '@supabase/supabase-js';
 
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-const BUCKET_NAME = process.env.AWS_S3_BUCKET || 'impacto-cuantico-assets';
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// POST - Obtener URL pre-firmada para subir audio
+const BUCKET_NAME = 'capsule-messages';
+
+// POST - Subir audio directamente
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { campaignSlug, recipientId, fileName, contentType } = body;
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    const campaignSlug = formData.get('campaignSlug') as string;
+    const recipientId = formData.get('recipientId') as string;
 
-    if (!campaignSlug || !recipientId || !fileName) {
+    if (!file || !campaignSlug || !recipientId) {
       return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 });
     }
 
     // Validar tipo de contenido
     const allowedTypes = ['audio/webm', 'audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/ogg'];
-    if (!allowedTypes.includes(contentType)) {
+    if (!allowedTypes.includes(file.type)) {
       return NextResponse.json({ error: 'Tipo de archivo no permitido' }, { status: 400 });
     }
 
     // Generar nombre único para el archivo
     const timestamp = Date.now();
-    const safeFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const key = `capsule-messages/${campaignSlug}/${recipientId}/${timestamp}-${safeFileName}`;
+    const extension = file.type.split('/')[1] || 'webm';
+    const filePath = `${campaignSlug}/${recipientId}/${timestamp}.${extension}`;
 
-    // Crear comando para subir
-    const command = new PutObjectCommand({
-      Bucket: BUCKET_NAME,
-      Key: key,
-      ContentType: contentType,
-      ACL: 'private', // Los audios son privados hasta que se liberen
-      Metadata: {
-        'campaign-slug': campaignSlug,
-        'recipient-id': String(recipientId),
-        'upload-date': new Date().toISOString()
+    // Convertir File a ArrayBuffer
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Subir a Supabase Storage
+    const { data, error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(filePath, buffer, {
+        contentType: file.type,
+        upsert: false
+      });
+
+    if (error) {
+      console.error('Error uploading to Supabase:', error);
+      
+      // Si el bucket no existe, intentar crearlo
+      if (error.message?.includes('not found')) {
+        await supabase.storage.createBucket(BUCKET_NAME, {
+          public: false,
+          allowedMimeTypes: ['audio/*'],
+          fileSizeLimit: 10485760 // 10MB
+        });
+        
+        // Reintentar upload
+        const { data: retryData, error: retryError } = await supabase.storage
+          .from(BUCKET_NAME)
+          .upload(filePath, buffer, {
+            contentType: file.type,
+            upsert: false
+          });
+          
+        if (retryError) {
+          throw retryError;
+        }
+      } else {
+        throw error;
       }
-    });
+    }
 
-    // Generar URL pre-firmada (válida por 5 minutos)
-    const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
-
-    // URL final del archivo (para guardar en DB)
-    const fileUrl = `https://${BUCKET_NAME}.s3.amazonaws.com/${key}`;
+    // Obtener URL pública (o signed URL si es privado)
+    const { data: { publicUrl } } = supabase.storage
+      .from(BUCKET_NAME)
+      .getPublicUrl(filePath);
 
     return NextResponse.json({
-      uploadUrl,
-      fileUrl,
-      key,
-      expiresIn: 300
+      success: true,
+      fileUrl: publicUrl,
+      filePath
     });
   } catch (error) {
-    console.error('Error generating upload URL:', error);
-    return NextResponse.json({ error: 'Error al generar URL de subida' }, { status: 500 });
+    console.error('Error uploading audio:', error);
+    return NextResponse.json({ error: 'Error al subir audio' }, { status: 500 });
   }
 }

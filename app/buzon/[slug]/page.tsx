@@ -186,29 +186,23 @@ export default function BuzonPublicoPage() {
 
       // Subir audio si existe
       if (audioBlob) {
-        // Obtener URL pre-firmada
+        // Crear FormData para subir
+        const formData = new FormData();
+        formData.append('file', audioBlob, `audio-${Date.now()}.webm`);
+        formData.append('campaignSlug', slug as string);
+        formData.append('recipientId', String(selectedParticipant.id));
+
         const uploadRes = await fetch('/api/public/buzon/upload-audio', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            campaignSlug: slug,
-            recipientId: selectedParticipant.id,
-            fileName: `audio-${Date.now()}.webm`,
-            contentType: 'audio/webm'
-          })
+          body: formData
         });
 
-        if (!uploadRes.ok) throw new Error('Error al preparar subida de audio');
+        if (!uploadRes.ok) {
+          const errorData = await uploadRes.json();
+          throw new Error(errorData.error || 'Error al subir audio');
+        }
         
-        const { uploadUrl, fileUrl } = await uploadRes.json();
-
-        // Subir audio a S3
-        await fetch(uploadUrl, {
-          method: 'PUT',
-          body: audioBlob,
-          headers: { 'Content-Type': 'audio/webm' }
-        });
-
+        const { fileUrl } = await uploadRes.json();
         uploadedAudioUrl = fileUrl;
       }
 
