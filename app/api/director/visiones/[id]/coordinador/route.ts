@@ -7,7 +7,7 @@ import logger from '@/lib/logger';
 // PATCH - Actualizar coordinador de una visión
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -19,8 +19,9 @@ export async function PATCH(
       );
     }
 
+    const resolvedParams = await params;
     const directorId = parseInt(session.user.id);
-    const visionId = parseInt(params.id);
+    const visionId = parseInt(resolvedParams.id);
     const body = await request.json();
 
     const { coordinadorId } = body;
@@ -109,7 +110,7 @@ export async function PATCH(
 // DELETE - Eliminar coordinador de una visión
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -121,8 +122,9 @@ export async function DELETE(
       );
     }
 
+    const resolvedParams = await params;
     const directorId = parseInt(session.user.id);
-    const visionId = parseInt(params.id);
+    const visionId = parseInt(resolvedParams.id);
 
     // Verificar que sea director
     const director = await prisma.usuario.findUnique({
