@@ -49,15 +49,17 @@ export async function GET(
     // Si hay búsqueda, buscar participantes
     let participants: any[] = [];
     if (searchQuery && searchQuery.length >= 2) {
-      const visionParticipants = await prisma.visionParticipante.findMany({
+      // Buscar en vision_enrollments (tabla actual)
+      const visionEnrollments = await prisma.vision_enrollments.findMany({
         where: {
           visionId: campaign.visionId,
-          Usuario_VisionParticipante_participanteIdToUsuario: {
+          enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] },
+          Usuario_vision_enrollments_userIdToUsuario: {
             nombre: { contains: searchQuery, mode: 'insensitive' }
           }
         },
         include: {
-          Usuario_VisionParticipante_participanteIdToUsuario: {
+          Usuario_vision_enrollments_userIdToUsuario: {
             select: {
               id: true,
               nombre: true,
@@ -65,14 +67,23 @@ export async function GET(
             }
           }
         },
-        take: 10
+        take: 30
       });
 
-      participants = visionParticipants.map(vp => ({
-        id: vp.Usuario_VisionParticipante_participanteIdToUsuario.id,
-        nombre: vp.Usuario_VisionParticipante_participanteIdToUsuario.nombre,
-        imagen: vp.Usuario_VisionParticipante_participanteIdToUsuario.imagen
-      }));
+      // Eliminar duplicados por userId
+      const uniqueParticipants = new Map();
+      visionEnrollments.forEach(ve => {
+        const user = ve.Usuario_vision_enrollments_userIdToUsuario;
+        if (!uniqueParticipants.has(user.id)) {
+          uniqueParticipants.set(user.id, {
+            id: user.id,
+            nombre: user.nombre,
+            imagen: user.imagen
+          });
+        }
+      });
+      
+      participants = Array.from(uniqueParticipants.values()).slice(0, 10);
     }
 
     return NextResponse.json({

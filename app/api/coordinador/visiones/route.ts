@@ -56,8 +56,8 @@ export async function GET() {
       { id: { in: visionIds.length > 0 ? visionIds : [0] } }
     ];
 
-    // Para rol COORDINADOR, también incluir visiones de su organización
-    if (usuario.rol === 'COORDINADOR' && usuario.organizationId) {
+    // Para rol COORDINADOR o SCHOOL_ADMIN, también incluir visiones de su organización
+    if ((usuario.rol === 'COORDINADOR' || usuario.rol === 'SCHOOL_ADMIN') && usuario.organizationId) {
       orConditions.push({ organizationId: usuario.organizationId });
       logger.debug('📋 Incluyendo visiones de organización:', usuario.organizationId);
     }
