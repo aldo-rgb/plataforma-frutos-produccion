@@ -203,54 +203,63 @@ export async function GET(
     }
 
     // Agregar Coordinadores únicos de vision_enrollments
-    const coordinatorsFromEnrollments = await prisma.vision_enrollments.findMany({
+    const coordinatorIds = await prisma.vision_enrollments.findMany({
       where: {
         visionId,
         level: 'ADVANCED',
         coordinatorId: { not: null }
       },
       distinct: ['coordinatorId'],
-      include: {
-        Usuario_vision_enrollments_coordinatorIdToUsuario: {
-          select: {
-            id: true,
-            nombre: true,
-            email: true,
-            telefono: true,
-            referralCode: true,
-          }
-        }
+      select: {
+        coordinatorId: true
       }
     });
 
-    for (const enrollment of coordinatorsFromEnrollments) {
-      const coordUser = enrollment.Usuario_vision_enrollments_coordinatorIdToUsuario;
-      if (!coordUser) continue;
-      // Skip si ya está en la lista (como Trainer o GC)
-      if (staffList.find(s => s.Usuario.id === coordUser.id)) continue;
-      
-      staffList.push({
-        id: -coordUser.id - 20000,
-        oderId: coordUser.id,
-        visionId: visionId,
-        enrolledAt: new Date(),
-        enrollmentStatus: 'ACTIVE',
-        attendanceStatus: null as any,
-        level: 'ADVANCED',
-        rol: 'COORDINADOR',
-        Usuario: {
-          id: coordUser.id,
-          nombre: coordUser.nombre,
-          email: coordUser.email,
-          telefono: coordUser.telefono,
-          referralCode: coordUser.referralCode,
-          organizationId: null as any,
-          createdAt: new Date(),
-          Organization: null as any
+    const uniqueCoordinatorIds = coordinatorIds
+      .map(c => c.coordinatorId)
+      .filter((id): id is number => id !== null);
+
+    if (uniqueCoordinatorIds.length > 0) {
+      const coordinators = await prisma.usuario.findMany({
+        where: {
+          id: { in: uniqueCoordinatorIds }
         },
-        gameChanger: null,
-        squadName: null
+        select: {
+          id: true,
+          nombre: true,
+          email: true,
+          telefono: true,
+          referralCode: true,
+        }
       });
+
+      for (const coordUser of coordinators) {
+        // Skip si ya está en la lista (como Trainer o GC)
+        if (staffList.find(s => s.Usuario.id === coordUser.id)) continue;
+        
+        staffList.push({
+          id: -coordUser.id - 20000,
+          oderId: coordUser.id,
+          visionId: visionId,
+          enrolledAt: new Date(),
+          enrollmentStatus: 'ACTIVE',
+          attendanceStatus: null as any,
+          level: 'ADVANCED',
+          rol: 'COORDINADOR',
+          Usuario: {
+            id: coordUser.id,
+            nombre: coordUser.nombre,
+            email: coordUser.email,
+            telefono: coordUser.telefono,
+            referralCode: coordUser.referralCode,
+            organizationId: null as any,
+            createdAt: new Date(),
+            Organization: null as any
+          },
+          gameChanger: null,
+          squadName: null
+        });
+      }
     }
 
     // Filtrar participantes que ya están en staff (GC, Trainer o Coordinador)
