@@ -21,8 +21,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // Solo TRAINER, COORDINADOR, SCHOOL_ADMIN, ADMIN, o usuarios con esEntrenador pueden ver Flight Deck
-    const allowedRoles = ['TRAINER', 'COORDINADOR', 'SCHOOL_ADMIN', 'ADMIN'];
+    // Solo TRAINER, COORDINADOR, SCHOOL_ADMIN, ADMIN, ADMINISTRADOR o usuarios con esEntrenador pueden ver Flight Deck
+    const allowedRoles = ['TRAINER', 'COORDINADOR', 'SCHOOL_ADMIN', 'ADMIN', 'ADMINISTRADOR'];
     const hasAccess = allowedRoles.includes(user.rol) || user.esEntrenador;
     if (!hasAccess) {
       return NextResponse.json({ error: 'No tienes acceso a Flight Deck' }, { status: 403 });
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     // O es COORDINADOR/SCHOOL_ADMIN de la organización
     let events;
 
-    if (user.rol === 'ADMIN') {
+    if (user.rol === 'ADMIN' || user.rol === 'ADMINISTRADOR') {
       // Admin ve todos los eventos
       events = await prisma.flightDeckEvent.findMany({
         include: {
@@ -136,8 +136,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // Solo COORDINADOR, SCHOOL_ADMIN, ADMIN pueden crear eventos
-    const allowedRoles = ['COORDINADOR', 'SCHOOL_ADMIN', 'ADMIN'];
+    // Solo COORDINADOR, SCHOOL_ADMIN, ADMIN, ADMINISTRADOR pueden crear eventos
+    const allowedRoles = ['COORDINADOR', 'SCHOOL_ADMIN', 'ADMIN', 'ADMINISTRADOR'];
     if (!allowedRoles.includes(user.rol)) {
       return NextResponse.json({ error: 'No tienes permisos para crear eventos' }, { status: 403 });
     }

@@ -65,12 +65,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verificar acceso
-    const allowedRoles = ['TRAINER', 'COORDINADOR', 'SCHOOL_ADMIN', 'ADMIN'];
+    const allowedRoles = ['TRAINER', 'COORDINADOR', 'SCHOOL_ADMIN', 'ADMIN', 'ADMINISTRADOR'];
     if (!allowedRoles.includes(user.rol)) {
       return NextResponse.json({ error: 'No tienes acceso' }, { status: 403 });
     }
 
-    if (user.rol !== 'ADMIN' && event.Vision.organizationId !== user.organizationId) {
+    if ((user.rol !== 'ADMIN' && user.rol !== 'ADMINISTRADOR') && event.Vision.organizationId !== user.organizationId) {
       // Si es TRAINER, verificar que está asignado a esta visión
       if (user.rol === 'TRAINER') {
         const isAssigned = await prisma.visionStaff.findFirst({
@@ -172,7 +172,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    const allowedRoles = ['TRAINER', 'COORDINADOR', 'SCHOOL_ADMIN', 'ADMIN'];
+    const allowedRoles = ['TRAINER', 'COORDINADOR', 'SCHOOL_ADMIN', 'ADMIN', 'ADMINISTRADOR'];
     if (!allowedRoles.includes(user.rol)) {
       return NextResponse.json({ error: 'No tienes permisos' }, { status: 403 });
     }
@@ -187,7 +187,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verificar acceso
-    if (user.rol !== 'ADMIN' && event.Vision.organizationId !== user.organizationId) {
+    if ((user.rol !== 'ADMIN' && user.rol !== 'ADMINISTRADOR') && event.Vision.organizationId !== user.organizationId) {
       return NextResponse.json({ error: 'No tienes acceso' }, { status: 403 });
     }
 
@@ -271,7 +271,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    const allowedRoles = ['COORDINADOR', 'SCHOOL_ADMIN', 'ADMIN'];
+    const allowedRoles = ['COORDINADOR', 'SCHOOL_ADMIN', 'ADMIN', 'ADMINISTRADOR'];
     if (!allowedRoles.includes(user.rol)) {
       return NextResponse.json({ error: 'No tienes permisos' }, { status: 403 });
     }
@@ -285,7 +285,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 });
     }
 
-    if (user.rol !== 'ADMIN' && event.Vision.organizationId !== user.organizationId) {
+    if ((user.rol !== 'ADMIN' && user.rol !== 'ADMINISTRADOR') && event.Vision.organizationId !== user.organizationId) {
       return NextResponse.json({ error: 'No tienes acceso' }, { status: 403 });
     }
 
