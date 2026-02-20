@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { createClient } from '@supabase/supabase-js';
+import prisma from '@/lib/prisma';
 
 const BUCKET_NAME = 'mantel-assets';
 
@@ -17,15 +18,34 @@ function getSupabaseClient() {
   return createClient(supabaseUrl, supabaseKey);
 }
 
+// Helper para obtener organizationId del usuario
+async function getOrganizationId(session: any): Promise<number | null> {
+  // Si ya tiene organizationId en sesión, usarlo
+  if (session.user.organizationId) {
+    return session.user.organizationId;
+  }
+  
+  // Buscar en la base de datos
+  const user = await prisma.usuario.findUnique({
+    where: { id: session.user.id },
+    select: { 
+      organizacionId: true, 
+      communityOrganizationId: true 
+    }
+  });
+  
+  return user?.organizacionId || user?.communityOrganizationId || null;
+}
+
 // GET - Obtener configuración de assets de la organización
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || !['SCHOOL_ADMIN', 'ADMINISTRADOR'].includes(session.user.rol)) {
+    if (!session?.user || !['SCHOOL_ADMIN', 'ADMINISTRADOR', 'COORDINADOR'].includes(session.user.rol)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const orgId = session.user.organizationId;
+    const orgId = await getOrganizationId(session);
     if (!orgId) {
       return NextResponse.json({ error: 'Sin organización asignada' }, { status: 400 });
     }
@@ -63,11 +83,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || !['SCHOOL_ADMIN', 'ADMINISTRADOR'].includes(session.user.rol)) {
+    if (!session?.user || !['SCHOOL_ADMIN', 'ADMINISTRADOR', 'COORDINADOR'].includes(session.user.rol)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const orgId = session.user.organizationId;
+    const orgId = await getOrganizationId(session);
     if (!orgId) {
       return NextResponse.json({ error: 'Sin organización asignada' }, { status: 400 });
     }
@@ -174,11 +194,11 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user || !['SCHOOL_ADMIN', 'ADMINISTRADOR'].includes(session.user.rol)) {
+    if (!session?.user || !['SCHOOL_ADMIN', 'ADMINISTRADOR', 'COORDINADOR'].includes(session.user.rol)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const orgId = session.user.organizationId;
+    const orgId = await getOrganizationId(session);
     if (!orgId) {
       return NextResponse.json({ error: 'Sin organización asignada' }, { status: 400 });
     }

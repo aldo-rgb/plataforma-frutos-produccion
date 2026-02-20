@@ -7,6 +7,19 @@ import { createClient } from '@supabase/supabase-js';
 
 const BUCKET_NAME = 'mantel-assets';
 
+// Helper para obtener organizationId desde sesión o BD
+async function getOrganizationId(session: any): Promise<number | null> {
+  if (session.user.organizationId) {
+    return session.user.organizationId;
+  }
+  // Si no está en la sesión, buscar en la BD
+  const user = await prisma.usuario.findUnique({
+    where: { id: session.user.id },
+    select: { organizacionId: true, communityOrganizationId: true }
+  });
+  return user?.organizacionId || user?.communityOrganizationId || null;
+}
+
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -180,7 +193,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 });
     }
 
-    const orgId = session.user.organizationId;
+    const orgId = await getOrganizationId(session);
     if (!orgId) {
       return NextResponse.json({ error: 'Sin organización asignada' }, { status: 400 });
     }
