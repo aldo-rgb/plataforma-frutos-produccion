@@ -259,6 +259,21 @@ export async function GET(req: NextRequest) {
     // Usar talla de votación si no tiene talla en perfil
     const tallaCamisetaFinal = perfilCompleto.tallaCamiseta || tallaVotacion || 'M';
 
+    // Verificar si tiene asistencia confirmada en Básico
+    let hasBasicAttendance = false;
+    try {
+      const basicEnrollment = await (prisma as any).vision_enrollments.findFirst({
+        where: {
+          userId: usuario.id,
+          level: 'BASIC',
+          attendanceStatus: 'ATTENDED'
+        }
+      });
+      hasBasicAttendance = !!basicEnrollment;
+    } catch (e) {
+      logger.debug('⚠️ Error verificando asistencia en Básico (no crítico):', e);
+    }
+
     return NextResponse.json({
       success: true,
       configuracion: {
@@ -276,6 +291,7 @@ export async function GET(req: NextRequest) {
         gameChangerNombre
       },
       visionesHistorial: visionesHistorial,
+      hasBasicAttendance,
       usuario: {
         email: usuario.email,
         profileImage: usuario.profileImage,

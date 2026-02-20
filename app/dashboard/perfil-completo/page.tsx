@@ -126,6 +126,7 @@ export default function ConfiguracionCompletaPage() {
   
   // Estados para modal de cambio de contraseña
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [hasBasicAttendance, setHasBasicAttendance] = useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -216,6 +217,9 @@ export default function ConfiguracionCompletaPage() {
         // Guardar historial de visiones
         console.log('📊 Visiones historial recibido:', data.visionesHistorial);
         setVisionesHistorial(data.visionesHistorial || []);
+        
+        // Verificar si tiene asistencia en Básico (para permitir cambiar nombre)
+        setHasBasicAttendance(data.hasBasicAttendance || false);
         
         // Verificar si ha pasado 1 mes desde el último cambio
         if (data.usuario?.lastAvatarChangeDate) {
@@ -550,10 +554,21 @@ export default function ConfiguracionCompletaPage() {
                 <input
                   type="text"
                   value={config.nombre}
-                  onChange={(e) => setConfig({...config, nombre: e.target.value})}
+                  onChange={(e) => hasBasicAttendance && setConfig({...config, nombre: e.target.value})}
                   placeholder="Nombre y apellidos"
-                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-cyan-500 focus:outline-none"
+                  disabled={!hasBasicAttendance}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none ${
+                    hasBasicAttendance 
+                      ? 'bg-slate-900 border-slate-700 text-white focus:border-cyan-500' 
+                      : 'bg-slate-800 border-slate-700 text-slate-400 cursor-not-allowed'
+                  }`}
                 />
+                {!hasBasicAttendance && (
+                  <p className="text-xs text-yellow-400 mt-1 flex items-center gap-1">
+                    <Lock size={12} />
+                    Podrás cambiar tu nombre después de asistir a Básico
+                  </p>
+                )}
               </div>
               
               <div>
