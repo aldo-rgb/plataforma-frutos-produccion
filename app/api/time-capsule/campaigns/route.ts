@@ -6,7 +6,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
-const ALLOWED_ROLES = ['COORDINADOR', 'SCHOOL_ADMIN', 'ADMIN'];
+const ALLOWED_ROLES = ['COORDINADOR', 'SCHOOL_ADMIN', 'ADMIN', 'ADMINISTRADOR'];
 
 // GET - Listar campañas de la organización
 export async function GET(request: NextRequest) {
