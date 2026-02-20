@@ -269,7 +269,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Función auxiliar para crear submissions para participantes
-// SOLO para usuarios con asistencia marcada (check-in)
+// SOLO para usuarios con asistencia confirmada (attendanceStatus = 'ATTENDED')
 async function createSubmissionsForMission(
   missionId: number,
   visionId: number | null,
@@ -280,41 +280,80 @@ async function createSubmissionsForMission(
     let participantIds: number[] = []
 
     if (squadId) {
-      // Obtener miembros del squad específico QUE TIENEN CHECK-IN
+      // Obtener miembros del squad específico QUE TIENEN ASISTENCIA
       const members = await prisma.smallGroupMember.findMany({
         where: { 
           groupId: squadId, 
-          isActive: true,
-          // Verificar que tienen check-in en algún producto
-          user: {
-            CheckInRecords: {
-              some: {}
-            }
-          }
+          isActive: true
         },
         select: { userId: true }
       })
-      participantIds = members.map(m => m.userId)
-    } else if (productId) {
-      // Obtener usuarios con check-in en el producto específico
-      const checkIns = await prisma.checkInRecord.findMany({
-        where: { productId },
-        select: { userId: true },
-        distinct: ['userId']
+      
+      // Filtrar solo los que tienen asistencia en la visión del squad
+      const group = await prisma.smallGroup.findUnique({
+        where: { id: squadId },
+        select: { productId: true, Product: { select: { visionId: true, type: true } } }
       })
-      participantIds = checkIns.map(e => e.userId)
+      
+      if (group?.Product) {
+        // Mapear tipo de producto a nivel
+        const levelMap: Record<string, string> = {
+          'CORE_TRAINING': 'BASIC',
+          'ADVANCED_TRAINING': 'ADVANCED', 
+          'PL_TRAINING': 'PL'
+        }
+        const level = levelMap[group.Product.type] || 'BASIC'
+        
+        const attendedUsers = await prisma.vision_enrollments.findMany({
+          where: {
+            visionId: group.Product.visionId,
+            level,
+            attendanceStatus: 'ATTENDED',
+            userId: { in: members.map(m => m.userId) }
+          },
+          select: { userId: true }
+        })
+        participantIds = attendedUsers.map(e => e.userId)
+      }
+    } else if (productId) {
+      // Obtener el producto para saber el nivel
+      const product = await prisma.schoolProduct.findUnique({
+        where: { id: productId },
+        select: { visionId: true, type: true }
+      })
+      
+      if (product) {
+        // Mapear tipo de producto a nivel de enrollment
+        const levelMap: Record<string, string> = {
+          'CORE_TRAINING': 'BASIC',
+          'ADVANCED_TRAINING': 'ADVANCED',
+          'PL_TRAINING': 'PL'
+        }
+        const level = levelMap[product.type] || 'BASIC'
+        
+        // Obtener usuarios con asistencia confirmada en ese nivel
+        const enrollments = await prisma.vision_enrollments.findMany({
+          where: {
+            visionId: product.visionId,
+            level,
+            attendanceStatus: 'ATTENDED'
+          },
+          select: { userId: true },
+          distinct: ['userId']
+        })
+        participantIds = enrollments.map(e => e.userId)
+      }
     } else if (visionId) {
-      // Obtener usuarios con check-in en CUALQUIER producto de la visión
-      const checkIns = await prisma.checkInRecord.findMany({
+      // Para toda la visión, obtener TODOS los usuarios con asistencia en cualquier nivel
+      const enrollments = await prisma.vision_enrollments.findMany({
         where: { 
-          Product: { 
-            visionId: visionId 
-          }
+          visionId,
+          attendanceStatus: 'ATTENDED'
         },
         select: { userId: true },
         distinct: ['userId']
       })
-      participantIds = checkIns.map(e => e.userId)
+      participantIds = enrollments.map(e => e.userId)
     }
 
     // Crear submissions en batch
@@ -329,7 +368,7 @@ async function createSubmissionsForMission(
       })
     }
 
-    logger.debug(`✅ Creadas ${participantIds.length} submissions para misión ${missionId} (solo usuarios con check-in)`)
+    logger.debug(`✅ Creadas ${participantIds.length} submissions para misión ${missionId} (solo usuarios con asistencia confirmada)`)
   } catch (error) {
     logger.error("Error creando submissions:", error)
   }

@@ -63,20 +63,21 @@ export async function GET(request: NextRequest) {
         where: {
           visionId: visionIdNum,
           trainerId: userId,
-          levelType: 'ADVANCED'
+          type: 'ADVANCED_TRAINING'
         }
       })
 
       if (isAdvancedTrainer) {
-        // Contar participantes de ADVANCED
+        // Contar participantes de ADVANCED con asistencia
         participantCount = await prisma.vision_enrollments.count({
           where: {
             visionId: visionIdNum,
             level: 'ADVANCED',
+            attendanceStatus: 'ATTENDED',
             enrollmentStatus: 'ACTIVE'
           }
         })
-        levelInfo = 'Avanzado'
+        levelInfo = 'Avanzado (con asistencia)'
       } else {
         // Verificar si es ADVANCED_TRAINER via VisionStaff
         const isAdvancedStaff = await prisma.visionStaff.findFirst({
@@ -92,10 +93,11 @@ export async function GET(request: NextRequest) {
             where: {
               visionId: visionIdNum,
               level: 'ADVANCED',
+              attendanceStatus: 'ATTENDED',
               enrollmentStatus: 'ACTIVE'
             }
           })
-          levelInfo = 'Avanzado'
+          levelInfo = 'Avanzado (con asistencia)'
         } else {
           // Verificar si es BASIC_TRAINER via VisionStaff
           const isBasicStaff = await prisma.visionStaff.findFirst({
@@ -111,17 +113,18 @@ export async function GET(request: NextRequest) {
               where: {
                 visionId: visionIdNum,
                 level: 'BASIC',
+                attendanceStatus: 'ATTENDED',
                 enrollmentStatus: 'ACTIVE'
               }
             })
-            levelInfo = 'Básico'
+            levelInfo = 'Básico (con asistencia)'
           } else {
             // Trainer directo de BASIC
             const isBasicTrainer = await prisma.schoolProduct.findFirst({
               where: {
                 visionId: visionIdNum,
                 trainerId: userId,
-                levelType: 'BASIC'
+                type: 'CORE_TRAINING'
               }
             })
 
@@ -130,10 +133,11 @@ export async function GET(request: NextRequest) {
                 where: {
                   visionId: visionIdNum,
                   level: 'BASIC',
+                  attendanceStatus: 'ATTENDED',
                   enrollmentStatus: 'ACTIVE'
                 }
               })
-              levelInfo = 'Básico'
+              levelInfo = 'Básico (con asistencia)'
             }
           }
         }
