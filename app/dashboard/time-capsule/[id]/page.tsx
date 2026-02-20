@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -75,6 +75,8 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRecipient, setFilterRecipient] = useState('');
   const [showSettings, setShowSettings] = useState(false);
+  const [playingAudioId, setPlayingAudioId] = useState<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     loadCampaign();
@@ -434,9 +436,44 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
                           )}
 
                           {msg.audioUrl && (
-                            <div className="flex items-center gap-2 text-sm text-purple-400">
-                              <Volume2 className="w-4 h-4" />
-                              Audio ({msg.audioDuration ? `${Math.floor(msg.audioDuration / 60)}:${(msg.audioDuration % 60).toString().padStart(2, '0')}` : 'N/A'})
+                            <div className="flex items-center gap-2 mt-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (playingAudioId === msg.id) {
+                                    // Pausar
+                                    audioRef.current?.pause();
+                                    setPlayingAudioId(null);
+                                  } else {
+                                    // Detener el anterior si existe
+                                    if (audioRef.current) {
+                                      audioRef.current.pause();
+                                    }
+                                    // Crear nuevo audio y reproducir
+                                    const audio = new Audio(msg.audioUrl!);
+                                    audioRef.current = audio;
+                                    audio.onended = () => setPlayingAudioId(null);
+                                    audio.play();
+                                    setPlayingAudioId(msg.id);
+                                  }
+                                }}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-purple-600/30 hover:bg-purple-600/50 rounded-lg transition-colors text-sm text-purple-300"
+                              >
+                                {playingAudioId === msg.id ? (
+                                  <>
+                                    <Pause className="w-4 h-4" />
+                                    Pausar
+                                  </>
+                                ) : (
+                                  <>
+                                    <Play className="w-4 h-4" />
+                                    Reproducir
+                                  </>
+                                )}
+                              </button>
+                              <span className="text-xs text-gray-500">
+                                {msg.audioDuration ? `${Math.floor(msg.audioDuration / 60)}:${(msg.audioDuration % 60).toString().padStart(2, '0')}` : ''}
+                              </span>
                             </div>
                           )}
 
