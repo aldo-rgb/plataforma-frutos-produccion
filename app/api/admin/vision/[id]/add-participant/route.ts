@@ -80,7 +80,10 @@ export async function POST(
       // Generar código de referido único para el nuevo usuario
       const timestamp = Date.now().toString(36).toUpperCase();
       const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-      const generatedReferralCode = `${nombre.trim().substring(0, 3).toUpperCase()}${timestamp}${random}`;
+      // Limpiar caracteres especiales (tildes, ñ, etc) para evitar problemas con QR
+      const nombreLimpio = nombre.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z]/g, '').toUpperCase();
+      const prefix = nombreLimpio.substring(0, 3).padEnd(3, 'X');
+      const generatedReferralCode = `${prefix}${timestamp}${random}`;
       
       // Hashear la contraseña temporal
       const hashedPassword = await bcrypt.hash('Quantum123', 10);

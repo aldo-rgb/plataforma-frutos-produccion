@@ -162,7 +162,10 @@ export async function POST(request: Request) {
     // Generar código de referido único para el nuevo usuario
     const timestamp = Date.now().toString(36).toUpperCase();
     const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-    generatedReferralCode = `${nombre.substring(0, 3).toUpperCase()}${timestamp}${random}`;
+    // Limpiar caracteres especiales (tildes, ñ, etc) para evitar problemas con QR
+    const nombreLimpio = nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z]/g, '').toUpperCase();
+    const prefix = nombreLimpio.substring(0, 3).padEnd(3, 'X');
+    generatedReferralCode = `${prefix}${timestamp}${random}`;
 
     // Crear usuario
     const newUser = await prisma.usuario.create({
