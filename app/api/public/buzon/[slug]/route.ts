@@ -151,11 +151,12 @@ export async function POST(
       }, { status: 400 });
     }
 
-    // Validar que el destinatario es participante de la visión
-    const isParticipant = await prisma.visionParticipante.findFirst({
+    // Validar que el destinatario es participante de la visión (buscar en vision_enrollments)
+    const isParticipant = await prisma.vision_enrollments.findFirst({
       where: {
         visionId: campaign.visionId,
-        participanteId: recipientId
+        userId: recipientId,
+        enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
       }
     });
 
