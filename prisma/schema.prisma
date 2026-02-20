@@ -428,15 +428,15 @@ model CodigoAcceso {
   codigo            String       @unique
   tipo              CodigoTipo
   cantidadLicencias Int?
-  cantidadLlamadas  Int?
   licenciasUsadas   Int?
-  llamadasUsadas    Int?
   descripcion       String?
   estado            CodigoEstado @default(DISPONIBLE)
   canjeadoPorId     Int?
   canjeadoEn        DateTime?
   createdAt         DateTime     @default(now())
   updatedAt         DateTime
+  cantidadLlamadas  Int?
+  llamadasUsadas    Int?
   Usuario           Usuario?     @relation(fields: [canjeadoPorId], references: [id])
 
   @@index([codigo])
@@ -519,13 +519,12 @@ model DisciplineSchedule {
   Usuario     Usuario  @relation(fields: [mentorId], references: [id], onDelete: Cascade)
 }
 
-// Slots ocupados por el mentor (ej: 6:40, 7:00, 7:20)
 model DisciplineBlockedSlot {
   id        Int      @id @default(autoincrement())
   mentorId  Int
-  dayOfWeek Int // 0=Domingo, 1=Lunes, etc.
-  time      String // ej: "06:40", "07:00", "07:20"
-  reason    String? // Razón opcional del bloqueo
+  dayOfWeek Int
+  time      String
+  reason    String?
   createdAt DateTime @default(now())
   mentor    Usuario  @relation("DisciplineBlockedSlots", fields: [mentorId], references: [id], onDelete: Cascade)
 
@@ -1047,20 +1046,12 @@ model Organization {
   anticiposEnabled                                      Boolean                         @default(false)
   transferDeadlineDays                                  Int                             @default(0)
   transfersEnabled                                      Boolean                         @default(false)
-  customLoginUrl                                        String?
   bankAccountClabe                                      String?
   bankAccountHolder                                     String?
   bankAccountNumber                                     String?
   bankName                                              String?
   bankReference                                         String?
   whatsappInviteImageUrl                                String?
-  videoBienvenidaLideres1Url                            String?
-  videoBienvenidaLideres2Url                            String?
-  video2daLlamadaPerdidaUrl                             String?
-  videoInvitacionTransformadoraUrl                      String?
-  video3raLlamadaUrl                                    String?
-  videoEnrolamientoUrl                                  String?
-  videoCierreLideresTuVidaUrl                           String?
   flyerBackgroundUrl                                    String?
   flyerCtaText                                          String?                         @default("Escanea para registrarte")
   flyerHeadline                                         String?
@@ -1069,14 +1060,24 @@ model Organization {
   flyerSubheadline                                      String?
   flyerUrgencyText                                      String?                         @default("CUPO LIMITADO")
   flyerWhatsappNumber                                   String?
-  website                                               String?
   customDomain                                          String?                         @unique
+  video2daLlamadaPerdidaUrl                             String?
+  video3raLlamadaUrl                                    String?
+  videoBienvenidaLideres1Url                            String?
+  videoBienvenidaLideres2Url                            String?
+  videoCierreLideresTuVidaUrl                           String?
+  videoEnrolamientoUrl                                  String?
+  videoInvitacionTransformadoraUrl                      String?
+  website                                               String?
+  customLoginUrl                                        String?
   AbandonedCheckout                                     AbandonedCheckout[]
   Archetypes                                            Archetype[]
+  AutomationMessageLog                                  AutomationMessageLog[]
   BusinessProfiles                                      BusinessProfile[]
   CashBatches                                           CashBatch[]
   CheckInRecord                                         CheckInRecord[]
   DefaultPrice                                          DefaultPrice[]
+  EventRegistration                                     EventRegistration[]
   Expenses                                              Expense[]
   ExpoVisitors                                          ExpoVisitor[]                   @relation("ExpoVisitors")
   GiftCode                                              GiftCode[]
@@ -1101,6 +1102,7 @@ model Organization {
   StripeConnectConfig                                   StripeConnectConfig?
   Ticket                                                Ticket[]
   TicketPriceConfig                                     TicketPriceConfig[]
+  TimeCapsuleCampaign                                   TimeCapsuleCampaign[]
   UserLicense                                           UserLicense[]
   Usuario_Usuario_communityOrganizationIdToOrganization Usuario[]                       @relation("Usuario_communityOrganizationIdToOrganization")
   Usuario_Usuario_organizationIdToOrganization          Usuario[]                       @relation("Usuario_organizationIdToOrganization")
@@ -1108,9 +1110,6 @@ model Organization {
   coordinator_commission_config                         coordinator_commission_config[]
   coordinator_commissions                               coordinator_commissions[]
   weekly_payout_summary                                 weekly_payout_summary[]
-  AutomationMessageLog                                  AutomationMessageLog[]
-  TimeCapsuleCampaign                                   TimeCapsuleCampaign[]
-  EventRegistration                                     EventRegistration[]
 
   @@index([masterOrganizationId])
   @@index([slug])
@@ -1225,10 +1224,6 @@ model PerfilCompleto {
   fuma                  Boolean   @default(false)
   fumaCantidad          String?
   quiereSerStaff        Boolean   @default(false)
-  staffBasicoInterest   Boolean   @default(false)
-  staffAvanzadoInterest Boolean   @default(false)
-  staffLideratoInterest Boolean   @default(false)
-  staffServicioInterest Boolean   @default(false)
   fotoPrimerDia         String?
   fotoUltimoDiaPL       String?
   fotoContrato          String?
@@ -1244,6 +1239,10 @@ model PerfilCompleto {
   condecoraciones       String[]  @default([])
   createdAt             DateTime  @default(now())
   updatedAt             DateTime
+  staffAvanzadoInterest Boolean   @default(false)
+  staffBasicoInterest   Boolean   @default(false)
+  staffLideratoInterest Boolean   @default(false)
+  staffServicioInterest Boolean   @default(false)
 }
 
 model PerfilMentor {
@@ -1317,7 +1316,6 @@ model PerfilMentor {
   SolicitudMentoria         SolicitudMentoria[]
 }
 
-// Perfil de Trainer - Similar a PerfilMentor pero para entrenadores de Quantum Leap
 model PerfilTrainer {
   id                        Int                   @id @default(autoincrement())
   usuarioId                 Int                   @unique
@@ -1362,7 +1360,6 @@ model PerfilTrainer {
   Usuario                   Usuario               @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 }
 
-// Solicitud de Trainer - Similar a MentorApplication pero sin pago
 model TrainerApplication {
   id                                             Int               @id @default(autoincrement())
   usuarioId                                      Int               @unique
@@ -1762,11 +1759,14 @@ model SchoolProduct {
   CollectiblePhotos          CollectiblePhoto[]          @relation("PhotoProduct")
   CrossingSessions           CrossingSession[]
   DirectorAudit              DirectorAudit?              @relation("DirectorAuditProduct")
+  EventRegistrations         EventRegistration[]
   GameChangerLocks           GameChangerLockStatus[]     @relation("GCLockProduct")
   GameChangerSurveys         GameChangerSurvey[]         @relation("GCSurveyProduct")
   LegacyCaptureSessions      LegacyCaptureSession[]      @relation("ProductLegacyCaptures")
   MedicalFormAcknowledgments MedicalFormAcknowledgment[]
   MetamorfosisAssignments    MetamorfosisAssignment[]    @relation("ProductMetamorfosisAssignments")
+  PLWeekendResults           PLWeekendResult[]           @relation("PLWeekendResults")
+  ParticipantSurveys         ParticipantSurvey[]         @relation("ParticipantSurveyProduct")
   ProductAttendance          ProductAttendance[]
   Coordinator                Usuario?                    @relation("ProductCoordinator", fields: [coordinatorId], references: [id])
   Usuario                    Usuario                     @relation(fields: [createdBy], references: [id])
@@ -1777,11 +1777,8 @@ model SchoolProduct {
   SmallGroups                SmallGroup[]
   TrainerMissions            TrainerMission[]            @relation("MissionProduct")
   TrainerSurveys             TrainerSurvey[]             @relation("TrainerSurveyProduct")
-  ParticipantSurveys         ParticipantSurvey[]         @relation("ParticipantSurveyProduct")
   UserLicense                UserLicense[]
   UserSongs                  UserSong[]                  @relation("ProductSongs")
-  PLWeekendResults           PLWeekendResult[]           @relation("PLWeekendResults")
-  EventRegistrations         EventRegistration[]
 
   @@index([isActive])
   @@index([levelType])
@@ -1793,23 +1790,20 @@ model SchoolProduct {
   @@index([trainingStatus])
 }
 
-// Historial de resultados de fines de semana de Liderato (PL)
-// Guarda las estadísticas de cada fin de semana finalizado por el trainer
 model PLWeekendResult {
-  id                  Int      @id @default(autoincrement())
+  id                  Int           @id @default(autoincrement())
   productId           Int
   trainerId           Int
-  weekendNumber       Int // 1, 2, o 3
-  totalParticipants   Int // Participantes con asistencia
-  totalEnrolled       Int // Total de enrollados por los participantes
-  expectedEnrollments Int // Meta (participantes × 2)
-  percentage          Int // Porcentaje logrado
-  participantsData    Json? // Datos detallados de cada participante
-  finishedAt          DateTime @default(now())
+  weekendNumber       Int
+  totalParticipants   Int
+  totalEnrolled       Int
+  expectedEnrollments Int
+  percentage          Int
+  participantsData    Json?
+  finishedAt          DateTime      @default(now())
   notes               String?
-
-  Product SchoolProduct @relation("PLWeekendResults", fields: [productId], references: [id], onDelete: Cascade)
-  Trainer Usuario       @relation("TrainerPLResults", fields: [trainerId], references: [id])
+  Product             SchoolProduct @relation("PLWeekendResults", fields: [productId], references: [id], onDelete: Cascade)
+  Trainer             Usuario       @relation("TrainerPLResults", fields: [trainerId], references: [id])
 
   @@unique([productId, weekendNumber])
   @@index([trainerId])
@@ -2299,6 +2293,7 @@ model Usuario {
   ArenaStats                                                             ArenaStats?
   ArenaTaunt_ArenaTaunt_receiverIdToUsuario                              ArenaTaunt[]                    @relation("ArenaTaunt_receiverIdToUsuario")
   ArenaTaunt_ArenaTaunt_senderIdToUsuario                                ArenaTaunt[]                    @relation("ArenaTaunt_senderIdToUsuario")
+  AutomationMessageLog                                                   AutomationMessageLog[]
   AvatarGenerationAttempt                                                AvatarGenerationAttempt[]
   BasicCallTracking                                                      BasicCallTracking[]
   BuddyBroken                                                            BuddyPair[]                     @relation("BuddyBrokenBy")
@@ -2312,6 +2307,8 @@ model Usuario {
   CallInteractionLog                                                     CallInteractionLog[]
   CallLog_CallLog_mentorIdToUsuario                                      CallLog[]                       @relation("CallLog_mentorIdToUsuario")
   CallLog_CallLog_studentIdToUsuario                                     CallLog[]                       @relation("CallLog_studentIdToUsuario")
+  CapsuleMessagesReceived                                                CapsuleMessage[]                @relation("CapsuleRecipient")
+  CapsuleMessagesSent                                                    CapsuleMessage[]                @relation("CapsuleSender")
   CaptaincyNotifications                                                 CaptaincyNotification[]         @relation("UserCaptaincyNotifications")
   CartaFrutos                                                            CartaFrutos[]
   CashBatchesCodeGenerated                                               CashBatch[]                     @relation("CashBatchCodeGenerator")
@@ -2327,9 +2324,9 @@ model Usuario {
   CommissionLedger_CommissionLedger_studentIdToUsuario                   CommissionLedger[]              @relation("CommissionLedger_studentIdToUsuario")
   CrossingSessionsCreated                                                CrossingSession[]
   DirectorAudits                                                         DirectorAudit[]                 @relation("DirectorAudits")
+  DisciplineBlockedSlots                                                 DisciplineBlockedSlot[]         @relation("DisciplineBlockedSlots")
   DisciplineConfig                                                       DisciplineConfig?
   DisciplineSchedule                                                     DisciplineSchedule?
-  DisciplineBlockedSlots                                                 DisciplineBlockedSlot[]         @relation("DisciplineBlockedSlots")
   DisciplineSubscription_DisciplineSubscription_mentorIdToUsuario        DisciplineSubscription[]        @relation("DisciplineSubscription_mentorIdToUsuario")
   DisciplineSubscription_DisciplineSubscription_studentIdToUsuario       DisciplineSubscription?         @relation("DisciplineSubscription_studentIdToUsuario")
   Evidencia                                                              Evidencia[]
@@ -2339,6 +2336,9 @@ model Usuario {
   ExhibitorReviews                                                       ExpoReview[]                    @relation("ExhibitorReviews")
   VisitorExpoReviews                                                     ExpoReview[]                    @relation("VisitorExpoReviews")
   ExpoVisitorReferrals                                                   ExpoVisitor[]                   @relation("ExpoVisitorReferrals")
+  FlightDeckCreated                                                      FlightDeckEvent[]               @relation("FlightDeckCreator")
+  FlightOperatorOf                                                       FlightLiveSession[]             @relation("FlightOperator")
+  FlightPassenger                                                        FlightPassenger[]
   GCAvailabilities                                                       GCAvailability[]                @relation("GCAvailabilityGC")
   GCCallAttempts                                                         GCCallAttempt[]                 @relation("GCCallAttempts")
   ParticipantCallAttempts                                                GCCallAttempt[]                 @relation("ParticipantCallAttempts")
@@ -2377,8 +2377,6 @@ model Usuario {
   MentorAlert_MentorAlert_usuarioIdToUsuario                             MentorAlert[]                   @relation("MentorAlert_usuarioIdToUsuario")
   MentorApplication_MentorApplication_reviewedByToUsuario                MentorApplication[]             @relation("MentorApplication_reviewedByToUsuario")
   MentorApplication_MentorApplication_usuarioIdToUsuario                 MentorApplication?              @relation("MentorApplication_usuarioIdToUsuario")
-  TrainerApplication_TrainerApplication_reviewedByToUsuario              TrainerApplication[]            @relation("TrainerApplication_reviewedByToUsuario")
-  TrainerApplication_TrainerApplication_usuarioIdToUsuario               TrainerApplication?             @relation("TrainerApplication_usuarioIdToUsuario")
   MentorPackageOrder_MentorPackageOrder_mentorIdToUsuario                MentorPackageOrder[]            @relation("MentorPackageOrder_mentorIdToUsuario")
   MentorPackageOrder_MentorPackageOrder_usuarioIdToUsuario               MentorPackageOrder[]            @relation("MentorPackageOrder_usuarioIdToUsuario")
   MentorPayout                                                           MentorPayout[]
@@ -2394,8 +2392,10 @@ model Usuario {
   Notification                                                           Notification[]
   Organization_Organization_schoolAdminIdToUsuario                       Organization?                   @relation("Organization_schoolAdminIdToUsuario")
   PLCallAttendances                                                      PLCallAttendance[]              @relation("PLCallAttendances")
+  PLWeekendResults                                                       PLWeekendResult[]               @relation("TrainerPLResults")
   PLCallsCancelled                                                       PLWeeklyCall[]                  @relation("PLCallCancelledBy")
   PLCallsScheduled                                                       PLWeeklyCall[]                  @relation("PLCallScheduledBy")
+  ParticipantSurveys                                                     ParticipantSurvey[]             @relation("ParticipantSurveys")
   PaymentCodesCreated                                                    PaymentCode[]                   @relation("PaymentCodeCreator")
   PaymentCodesRedeemed                                                   PaymentCode[]                   @relation("PaymentCodeRedeemer")
   PerfilMentor                                                           PerfilMentor?
@@ -2424,7 +2424,6 @@ model Usuario {
   SchoolProduct                                                          SchoolProduct[]
   ProductFinishedBy                                                      SchoolProduct[]                 @relation("ProductFinishedBy")
   ProductTrainer                                                         SchoolProduct[]                 @relation("ProductTrainer")
-  PLWeekendResults                                                       PLWeekendResult[]               @relation("TrainerPLResults")
   ServiceLadderProgress                                                  ServiceLadderProgress?
   ServiceReviewsWritten                                                  ServiceReview[]                 @relation("ReviewAuthor")
   SmallGroupsLed                                                         SmallGroup[]                    @relation("SmallGroupLeader")
@@ -2442,6 +2441,9 @@ model Usuario {
   Ticket_TicketOwner                                                     Ticket[]                        @relation("TicketOwner")
   Ticket_TicketReferrer                                                  Ticket[]                        @relation("TicketReferrer")
   TicketPurchase                                                         TicketPurchase[]
+  CapsuleReleasedBy                                                      TimeCapsuleCampaign[]           @relation("CapsuleReleasedBy")
+  TrainerApplication_TrainerApplication_reviewedByToUsuario              TrainerApplication[]            @relation("TrainerApplication_reviewedByToUsuario")
+  TrainerApplication_TrainerApplication_usuarioIdToUsuario               TrainerApplication?             @relation("TrainerApplication_usuarioIdToUsuario")
   TrainerInterventions                                                   TrainerIntervention[]           @relation("TrainerInterventions")
   TrainerMissionsCreated                                                 TrainerMission[]                @relation("TrainerMissions")
   TrainerSurveys                                                         TrainerSurvey[]                 @relation("TrainerSurveys")
@@ -2516,18 +2518,6 @@ model Usuario {
   vision_enrollments_vision_enrollments_userIdToUsuario                  vision_enrollments[]            @relation("vision_enrollments_userIdToUsuario")
   weekly_payout_summary_weekly_payout_summary_approvedByToUsuario        weekly_payout_summary[]         @relation("weekly_payout_summary_approvedByToUsuario")
   weekly_payout_summary_weekly_payout_summary_generatedByToUsuario       weekly_payout_summary[]         @relation("weekly_payout_summary_generatedByToUsuario")
-  AutomationMessageLog                                                   AutomationMessageLog[]
-  ParticipantSurveys                                                     ParticipantSurvey[]             @relation("ParticipantSurveys")
-
-  // Quantum Time Capsule
-  CapsuleReleasedBy       TimeCapsuleCampaign[] @relation("CapsuleReleasedBy")
-  CapsuleMessagesReceived CapsuleMessage[]      @relation("CapsuleRecipient")
-  CapsuleMessagesSent     CapsuleMessage[]      @relation("CapsuleSender")
-
-  // Quantum Flight Deck
-  FlightDeckCreated    FlightDeckEvent[]   @relation("FlightDeckCreator")
-  FlightPassenger      FlightPassenger[]
-  FlightOperatorOf     FlightLiveSession[] @relation("FlightOperator")
 
   @@index([communityOrganizationId])
 }
@@ -2571,12 +2561,14 @@ model Vision {
   AbandonedCheckouts            AbandonedCheckout[]
   AdvancedQuestionnaires        AdvancedQuestionnaire[]
   ArchetypeAssignments          ArchetypeAssignment[]          @relation("VisionArchetypeAssignments")
+  AutomationMessageLog          AutomationMessageLog[]
   BuddyPairs                    BuddyPair[]
   BusinessProfiles              BusinessProfile[]
   CashBatches                   CashBatch[]                    @relation("CashBatchVision")
   CheckInRecord                 CheckInRecord[]
   CollectiblePhotos             CollectiblePhoto[]             @relation("PhotoVision")
   Expenses                      Expense[]                      @relation("ExpenseVision")
+  FlightDeckEvent               FlightDeckEvent?
   GCCallAttempts                GCCallAttempt[]                @relation("VisionCallAttempts")
   GCCallLogs                    GCCallLog[]
   GiftCode                      GiftCode[]
@@ -2594,6 +2586,7 @@ model Vision {
   SmallGroups                   SmallGroup[]
   StaffCommissionsLog           StaffCommissionsLog[]
   Ticket                        Ticket[]
+  TimeCapsuleCampaign           TimeCapsuleCampaign[]
   TrainerMissions               TrainerMission[]
   TribeAuditChecklists          TribeAuditChecklist[]          @relation("VisionAuditChecklists")
   BankAccount                   TribeBankAccount?              @relation("VisionBankAccount")
@@ -2625,9 +2618,6 @@ model Vision {
   coordinator_commissions       coordinator_commissions[]
   vision_enrollments            vision_enrollments[]
   weekly_payout_summary         weekly_payout_summary[]
-  AutomationMessageLog          AutomationMessageLog[]
-  TimeCapsuleCampaign           TimeCapsuleCampaign[]
-  FlightDeckEvent               FlightDeckEvent?
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -5199,6 +5189,238 @@ model TribeShirtProduct {
   Vision            Vision              @relation(fields: [visionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
+model AutomationMessageLog {
+  id             Int                     @id @default(autoincrement())
+  organizationId Int
+  userId         Int
+  videoKey       String
+  videoLabel     String
+  channel        AutomationChannel
+  recipient      String
+  status         AutomationMessageStatus @default(PENDING)
+  errorMessage   String?
+  sentAt         DateTime?
+  createdAt      DateTime                @default(now())
+  source         AutomationSource        @default(MANUAL)
+  visionId       Int?
+  Organization   Organization            @relation(fields: [organizationId], references: [id])
+  Usuario        Usuario                 @relation(fields: [userId], references: [id])
+  Vision         Vision?                 @relation(fields: [visionId], references: [id])
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([status])
+  @@index([videoKey])
+}
+
+model ParticipantSurvey {
+  id                    Int           @id @default(autoincrement())
+  userId                Int
+  productId             Int
+  level                 VisionLevel
+  apodoNino             String?
+  lugarNacimiento       String?
+  colorFavorito         String?
+  caricaturaFavorita    String?
+  paisViajar            String?
+  superheroeFavorito    String?
+  gustaLeer             Boolean?
+  autorFavorito         String?
+  jugueteDeseado        String?
+  liderAdmiras          String?
+  descripcionLider      String?
+  descripcionUnaPalabra String?
+  referido1             String?
+  referido2             String?
+  referido3             String?
+  referido4             String?
+  referido5             String?
+  pointsAwarded         Int           @default(0)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  quiereSerStaff        Boolean?      @default(false)
+  staffAvanzado         Boolean?      @default(false)
+  staffBasico           Boolean?      @default(false)
+  staffLiderato         Boolean?      @default(false)
+  staffServicio         Boolean?      @default(false)
+  compromisoComunidad   String?
+  consejoFuturo         String?
+  legadoPersonal        String?
+  mayorAprendizaje      String?
+  Product               SchoolProduct @relation("ParticipantSurveyProduct", fields: [productId], references: [id], onDelete: Cascade)
+  Usuario               Usuario       @relation("ParticipantSurveys", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+  @@index([level])
+}
+
+model TimeCapsuleCampaign {
+  id               Int              @id @default(autoincrement())
+  visionId         Int
+  organizationId   Int
+  name             String
+  slug             String           @unique
+  description      String?
+  startDate        DateTime
+  closeDate        DateTime
+  releaseDate      DateTime?
+  isActive         Boolean          @default(true)
+  isReleased       Boolean          @default(false)
+  releasedById     Int?
+  notifyDaysBefore Int              @default(5)
+  pointsPerMessage Int              @default(100)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  Messages         CapsuleMessage[]
+  Organization     Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  ReleasedBy       Usuario?         @relation("CapsuleReleasedBy", fields: [releasedById], references: [id])
+  Vision           Vision           @relation(fields: [visionId], references: [id], onDelete: Cascade)
+
+  @@index([visionId])
+  @@index([organizationId])
+  @@index([slug])
+  @@index([isActive])
+}
+
+model CapsuleMessage {
+  id             Int                 @id @default(autoincrement())
+  campaignId     Int
+  recipientId    Int
+  senderName     String
+  senderRelation String
+  senderUserId   Int?
+  senderEmail    String?
+  messageType    CapsuleMessageType
+  textContent    String?
+  audioUrl       String?
+  audioDuration  Int?
+  isUnlocked     Boolean             @default(false)
+  isFavorite     Boolean             @default(false)
+  isRead         Boolean             @default(false)
+  pointsAwarded  Boolean             @default(false)
+  createdAt      DateTime            @default(now())
+  Campaign       TimeCapsuleCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  Recipient      Usuario             @relation("CapsuleRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  SenderUser     Usuario?            @relation("CapsuleSender", fields: [senderUserId], references: [id])
+
+  @@index([campaignId])
+  @@index([recipientId])
+  @@index([senderUserId])
+  @@index([isUnlocked])
+}
+
+model CapsuleLineageNotification {
+  id               Int       @id @default(autoincrement())
+  campaignId       Int
+  notifiedUserId   Int
+  participantId    Int
+  lineageLevel     Int
+  notificationSent Boolean   @default(false)
+  sentAt           DateTime?
+  messageSent      Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+
+  @@unique([campaignId, notifiedUserId, participantId])
+  @@index([campaignId])
+  @@index([notifiedUserId])
+  @@index([participantId])
+}
+
+model FlightDeckEvent {
+  id                  Int                @id @default(autoincrement())
+  visionId            Int                @unique
+  creatorId           Int
+  trackEstiramiento   String?
+  trackTransformacion String?
+  trackReconocimiento String?
+  trackDespedida      String?
+  trackVueloGenerico  String?
+  crossfadeDuration   Int                @default(3)
+  duckingVolume       Int                @default(20)
+  isConfigured        Boolean            @default(false)
+  eventStatus         FlightEventStatus  @default(SETUP)
+  startedAt           DateTime?
+  endedAt             DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  Creator             Usuario            @relation("FlightDeckCreator", fields: [creatorId], references: [id])
+  Vision              Vision             @relation(fields: [visionId], references: [id], onDelete: Cascade)
+  CurrentFlight       FlightLiveSession?
+  Passengers          FlightPassenger[]
+
+  @@index([visionId])
+  @@index([creatorId])
+  @@index([eventStatus])
+}
+
+model FlightPassenger {
+  id             Int                   @id @default(autoincrement())
+  eventId        Int
+  userId         Int
+  flightOrder    Int                   @default(0)
+  flightSongUrl  String?
+  flightSongName String?
+  flightStatus   PassengerFlightStatus @default(WAITING)
+  currentPhase   FlightPhase?
+  phaseStartedAt DateTime?
+  completedAt    DateTime?
+  capsuleAudios  Json?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  LiveSession    FlightLiveSession?    @relation("CurrentFlightPassenger")
+  Event          FlightDeckEvent       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  User           Usuario               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+  @@index([flightOrder])
+  @@index([flightStatus])
+}
+
+model FlightLiveSession {
+  id                  Int              @id @default(autoincrement())
+  eventId             Int              @unique
+  currentPassengerId  Int?             @unique
+  currentPhase        FlightPhase      @default(IDLE)
+  capsuleCurrentIndex Int              @default(0)
+  capsulePlaying      Boolean          @default(false)
+  capsulePaused       Boolean          @default(false)
+  operatorId          Int?
+  sessionStartedAt    DateTime?
+  lastUpdatedAt       DateTime         @default(now())
+  CurrentPassenger    FlightPassenger? @relation("CurrentFlightPassenger", fields: [currentPassengerId], references: [id])
+  Event               FlightDeckEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  Operator            Usuario?         @relation("FlightOperator", fields: [operatorId], references: [id])
+
+  @@index([eventId])
+}
+
+model EventRegistration {
+  id              Int                     @id @default(autoincrement())
+  productId       Int
+  organizationId  Int
+  nombre          String
+  email           String
+  telefono        String?
+  comoTeEnteraste String?
+  status          EventRegistrationStatus @default(REGISTERED)
+  confirmedAt     DateTime?
+  attendedAt      DateTime?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  Organization    Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  Product         SchoolProduct           @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, email])
+  @@index([productId])
+  @@index([organizationId])
+  @@index([email])
+}
+
 enum PLCallType {
   ATOM
   GROUP
@@ -6229,36 +6451,6 @@ enum ReportStatus {
   ACTION_TAKEN
 }
 
-// ============================================
-// AUTOMATION MESSAGE LOGS
-// ============================================
-
-model AutomationMessageLog {
-  id             Int                     @id @default(autoincrement())
-  organizationId Int
-  userId         Int
-  videoKey       String // ej: videoEnrolamientoUrl, videoBienvenidaLideres1Url
-  videoLabel     String // ej: "Enrolamiento", "Bienvenida Básico"
-  channel        AutomationChannel // EMAIL, WHATSAPP
-  recipient      String // email o teléfono
-  status         AutomationMessageStatus @default(PENDING)
-  errorMessage   String?
-  sentAt         DateTime?
-  createdAt      DateTime                @default(now())
-  source         AutomationSource        @default(MANUAL) // MANUAL o CRON
-  visionId       Int?
-
-  Organization Organization @relation(fields: [organizationId], references: [id])
-  Usuario      Usuario      @relation(fields: [userId], references: [id])
-  Vision       Vision?      @relation(fields: [visionId], references: [id])
-
-  @@index([organizationId])
-  @@index([userId])
-  @@index([createdAt])
-  @@index([status])
-  @@index([videoKey])
-}
-
 enum AutomationChannel {
   EMAIL
   WHATSAPP
@@ -6276,339 +6468,41 @@ enum AutomationSource {
   CRON
 }
 
-// ==========================================
-// ENCUESTAS DE PARTICIPANTES
-// ==========================================
-model ParticipantSurvey {
-  id        Int         @id @default(autoincrement())
-  userId    Int
-  productId Int
-  level     VisionLevel // BASIC, ADVANCED, PL
-
-  // Campos comunes
-  apodoNino          String? // Básico
-  lugarNacimiento    String? // Básico
-  colorFavorito      String? // Básico
-  caricaturaFavorita String? // Básico
-  paisViajar         String? // Básico
-
-  // Campos Avanzado
-  superheroeFavorito    String? // Avanzado
-  gustaLeer             Boolean? // Avanzado
-  autorFavorito         String? // Avanzado (si gustaLeer = true)
-  jugueteDeseado        String? // Avanzado
-  liderAdmiras          String? // Avanzado
-  descripcionLider      String? // Avanzado (3 palabras)
-  descripcionUnaPalabra String? // Avanzado
-
-  // Campos PL - Respuestas de reflexión
-  legadoPersonal      String? // ¿Cuál es el legado que quieres dejar?
-  mayorAprendizaje    String? // ¿Cuál ha sido tu mayor aprendizaje?
-  compromisoComunidad String? // ¿Qué te comprometes a aportar?
-  consejoFuturo       String? // ¿Qué consejo le darías?
-
-  // Campos PL - Interés en ser Staff
-  quiereSerStaff Boolean? @default(false)
-  staffBasico    Boolean? @default(false)
-  staffAvanzado  Boolean? @default(false)
-  staffLiderato  Boolean? @default(false)
-  staffServicio  Boolean? @default(false)
-
-  // Referidos (5 espacios, 3 obligatorios) - Solo para BASIC y ADVANCED
-  referido1 String? // Obligatorio en BASIC/ADVANCED
-  referido2 String? // Obligatorio en BASIC/ADVANCED
-  referido3 String? // Obligatorio en BASIC/ADVANCED
-  referido4 String? // Opcional
-  referido5 String? // Opcional
-
-  // Puntos otorgados
-  pointsAwarded Int @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  Usuario Usuario       @relation("ParticipantSurveys", fields: [userId], references: [id], onDelete: Cascade)
-  Product SchoolProduct @relation("ParticipantSurveyProduct", fields: [productId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, productId])
-  @@index([userId])
-  @@index([productId])
-  @@index([level])
-}
-
-// ============================================
-// QUANTUM TIME CAPSULE - Sistema de Cápsulas del Tiempo
-// ============================================
-
-model TimeCapsuleCampaign {
-  id             Int     @id @default(autoincrement())
-  visionId       Int
-  organizationId Int
-  name           String // "Buzón Vision 25"
-  slug           String  @unique // "vision25" para URL /buzon/vision25
-  description    String?
-
-  // Fechas de control
-  startDate   DateTime // Cuándo se abre el buzón para recibir mensajes
-  closeDate   DateTime // Cuándo se cierra (00:00 del día PL3)
-  releaseDate DateTime? // Cuándo se liberan las cápsulas (null = no liberado aún)
-
-  // Estado
-  isActive     Boolean @default(true)
-  isReleased   Boolean @default(false) // El coordinador presionó "Liberar"
-  releasedById Int? // Quién liberó las cápsulas
-
-  // Configuración
-  notifyDaysBefore Int @default(5) // Días antes para notificar linaje
-  pointsPerMessage Int @default(100) // Puntos por mensaje enviado
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relaciones
-  Vision       Vision           @relation(fields: [visionId], references: [id], onDelete: Cascade)
-  Organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  ReleasedBy   Usuario?         @relation("CapsuleReleasedBy", fields: [releasedById], references: [id])
-  Messages     CapsuleMessage[]
-
-  @@index([visionId])
-  @@index([organizationId])
-  @@index([slug])
-  @@index([isActive])
-}
-
-model CapsuleMessage {
-  id          Int @id @default(autoincrement())
-  campaignId  Int
-  recipientId Int // El participante que recibirá el mensaje
-
-  // Datos del remitente
-  senderName     String // Nombre de quien envía
-  senderRelation String // "Mamá", "Hermano", "Amigo", "Mentor", etc.
-  senderUserId   Int? // Si es usuario registrado (GameChanger, Mentor, etc.)
-  senderEmail    String? // Email opcional para externos
-
-  // Contenido
-  messageType   CapsuleMessageType // TEXT, AUDIO, BOTH
-  textContent   String?            @db.Text // El texto de la carta
-  audioUrl      String? // URL del audio en S3
-  audioDuration Int? // Duración en segundos
-
-  // Estado
-  isUnlocked Boolean @default(false) // Se desbloquea cuando se liberan las cápsulas
-  isFavorite Boolean @default(false) // Marcado como favorito por el destinatario
-  isRead     Boolean @default(false) // Si el destinatario ya lo leyó/escuchó
-
-  // Gamificación
-  pointsAwarded Boolean @default(false) // Si ya se dieron puntos al sender
-
-  createdAt DateTime @default(now())
-
-  // Relaciones
-  Campaign   TimeCapsuleCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  Recipient  Usuario             @relation("CapsuleRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
-  SenderUser Usuario?            @relation("CapsuleSender", fields: [senderUserId], references: [id], onDelete: SetNull)
-
-  @@index([campaignId])
-  @@index([recipientId])
-  @@index([senderUserId])
-  @@index([isUnlocked])
-}
-
-// Notificaciones de linaje pendientes
-model CapsuleLineageNotification {
-  id             Int @id @default(autoincrement())
-  campaignId     Int
-  notifiedUserId Int // El usuario que fue notificado (enrolador nivel 1, 2 o 3)
-  participantId  Int // El participante que está por graduarse
-  lineageLevel   Int // 1, 2 o 3 (nivel de la cadena)
-
-  // Estado
-  notificationSent Boolean   @default(false)
-  sentAt           DateTime?
-  messageSent      Boolean   @default(false) // Si ya envió mensaje al participante
-
-  createdAt DateTime @default(now())
-
-  @@unique([campaignId, notifiedUserId, participantId])
-  @@index([campaignId])
-  @@index([notifiedUserId])
-  @@index([participantId])
-}
-
 enum CapsuleMessageType {
   TEXT
   AUDIO
   BOTH
 }
 
-// ============================================
-// QUANTUM FLIGHT DECK - Sistema de Vuelo PL3
-// ============================================
-
-// Configuración del evento de vuelo para una visión
-model FlightDeckEvent {
-  id        Int @id @default(autoincrement())
-  visionId  Int @unique
-  creatorId Int // COORDINADOR/SCHOOL_ADMIN que creó
-
-  // Configuración global de tracks
-  trackEstiramiento   String? // Track 1: URL del MP3 para estiramiento
-  trackTransformacion String? // Track 2: URL del MP3 para transformación
-  trackReconocimiento String? // Track 4: URL del MP3 para reconocimiento
-  trackDespedida      String? // Track 5: URL del MP3 para despedida
-  trackVueloGenerico  String? // Track 3 de respaldo si participante no tiene canción
-
-  // Configuración de audio
-  crossfadeDuration Int     @default(3) // Segundos de crossfade entre tracks
-  duckingVolume     Int     @default(20) // % de volumen durante ducking (cápsulas)
-  isConfigured      Boolean @default(false) // Tracks globales están listos
-
-  // Estado del evento
-  eventStatus FlightEventStatus @default(SETUP)
-  startedAt   DateTime?
-  endedAt     DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relaciones
-  Vision       Vision              @relation(fields: [visionId], references: [id], onDelete: Cascade)
-  Creator      Usuario             @relation("FlightDeckCreator", fields: [creatorId], references: [id])
-  Passengers   FlightPassenger[]
-  CurrentFlight FlightLiveSession?
-
-  @@index([visionId])
-  @@index([creatorId])
-  @@index([eventStatus])
-}
-
-// Lista de pasajeros (participantes) con su orden y canción
-model FlightPassenger {
-  id      Int @id @default(autoincrement())
-  eventId Int
-  userId  Int
-
-  // Orden en la secuencia de vuelo
-  flightOrder Int @default(0)
-
-  // Canción personalizada de vuelo (Track 3)
-  flightSongUrl  String? // URL del MP3 de su canción
-  flightSongName String? // Nombre de la canción para mostrar
-
-  // Estado del vuelo de este participante
-  flightStatus     PassengerFlightStatus @default(WAITING)
-  currentPhase     FlightPhase?
-  phaseStartedAt   DateTime?
-  completedAt      DateTime?
-
-  // Audios de cápsula pre-cargados (del Time Capsule o cargados manualmente)
-  capsuleAudios Json? // Array de {url, duration, senderName, order}
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relaciones
-  Event       FlightDeckEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  User        Usuario            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  LiveSession FlightLiveSession? @relation("CurrentFlightPassenger")
-
-  @@unique([eventId, userId])
-  @@index([eventId])
-  @@index([userId])
-  @@index([flightOrder])
-  @@index([flightStatus])
-}
-
-// Sesión en vivo del vuelo (singleton por evento)
-model FlightLiveSession {
-  id      Int @id @default(autoincrement())
-  eventId Int @unique
-
-  // Pasajero actual
-  currentPassengerId Int?     @unique
-  currentPhase       FlightPhase @default(IDLE)
-
-  // Estado de audio de cápsulas
-  capsuleCurrentIndex Int      @default(0)
-  capsulePlaying      Boolean  @default(false)
-  capsulePaused       Boolean  @default(false)
-
-  // Operador actual (quién tiene el control)
-  operatorId Int?
-
-  // Timestamps
-  sessionStartedAt DateTime?
-  lastUpdatedAt    DateTime  @default(now())
-
-  // Relaciones
-  Event            FlightDeckEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  CurrentPassenger FlightPassenger? @relation("CurrentFlightPassenger", fields: [currentPassengerId], references: [id])
-  Operator         Usuario?         @relation("FlightOperator", fields: [operatorId], references: [id])
-
-  @@index([eventId])
-}
-
-// Enums para Flight Deck
 enum FlightEventStatus {
-  SETUP       // Configurando tracks y orden
-  READY       // Listo para iniciar
-  IN_PROGRESS // Evento en curso
-  COMPLETED   // Evento finalizado
-  PAUSED      // Pausado temporalmente
+  SETUP
+  READY
+  IN_PROGRESS
+  COMPLETED
+  PAUSED
 }
 
 enum PassengerFlightStatus {
-  WAITING     // En espera de su turno
-  IN_PROGRESS // Su vuelo está en progreso
-  COMPLETED   // Ya voló
-  SKIPPED     // Saltado (no presente)
+  WAITING
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
 }
 
 enum FlightPhase {
-  IDLE          // Sin actividad
-  ESTIRAMIENTO  // Fase 1
-  TRANSFORMACION // Fase 2
-  VUELO         // Fase 3 (canción personalizada)
-  RECONOCIMIENTO // Fase 4
-  CAPSULA       // Fase 5 (mensajes de poder)
-  DESPEDIDA     // Fase 6
-}
-
-// Registro de invitados a eventos/talleres públicos
-model EventRegistration {
-  id                Int       @id @default(autoincrement())
-  productId         Int
-  organizationId    Int
-  
-  // Datos del invitado
-  nombre            String
-  email             String
-  telefono          String?
-  comoTeEnteraste   String?   // amigo, redes, google, otro
-  
-  // Estado
-  status            EventRegistrationStatus @default(REGISTERED)
-  confirmedAt       DateTime?
-  attendedAt        DateTime?
-  
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  
-  // Relaciones
-  Product           SchoolProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
-  Organization      Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
-  @@unique([productId, email])
-  @@index([productId])
-  @@index([organizationId])
-  @@index([email])
+  IDLE
+  ESTIRAMIENTO
+  TRANSFORMACION
+  VUELO
+  RECONOCIMIENTO
+  CAPSULA
+  DESPEDIDA
 }
 
 enum EventRegistrationStatus {
-  REGISTERED   // Registrado
-  CONFIRMED    // Confirmó asistencia
-  ATTENDED     // Asistió
-  NO_SHOW      // No se presentó
-  CANCELLED    // Canceló
+  REGISTERED
+  CONFIRMED
+  ATTENDED
+  NO_SHOW
+  CANCELLED
 }

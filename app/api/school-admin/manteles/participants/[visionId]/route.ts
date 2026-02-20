@@ -36,7 +36,7 @@ export async function GET(
         attendanceStatus: 'ATTENDED'
       },
       include: {
-        Usuario: {
+        Usuario_vision_enrollments_userIdToUsuario: {
           select: {
             id: true,
             nombre: true,
@@ -45,7 +45,7 @@ export async function GET(
         }
       },
       orderBy: {
-        Usuario: {
+        Usuario_vision_enrollments_userIdToUsuario: {
           nombre: 'asc'
         }
       }
@@ -53,18 +53,19 @@ export async function GET(
 
     // Formatear datos para la tabla de validación
     const participants = enrollments.map(e => {
-      const fullName = e.Usuario.nombre || '';
+      const user = e.Usuario_vision_enrollments_userIdToUsuario;
+      const fullName = user?.nombre || '';
       const firstName = fullName.split(' ')[0];
       
       return {
         id: e.id,
-        odiseoId: e.odiseoId,
+        odiseoId: e.userId,
         fullName,
         firstName,
         displayName: firstName, // Editable por el coordinador
-        contract: e.Usuario.contrato || '',
-        hasContract: !!e.Usuario.contrato && e.Usuario.contrato.trim().length > 0,
-        status: (!!e.Usuario.contrato && e.Usuario.contrato.trim().length > 0) ? 'ready' : 'missing'
+        contract: user?.contrato || '',
+        hasContract: !!user?.contrato && user.contrato.trim().length > 0,
+        status: (!!user?.contrato && user.contrato.trim().length > 0) ? 'ready' : 'missing'
       };
     });
 
