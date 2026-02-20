@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const userId = parseInt(session.user.id);
     const user = await prisma.usuario.findUnique({
       where: { id: userId },
-      select: { id: true, rol: true, organizationId: true }
+      select: { id: true, rol: true, organizationId: true, esEntrenador: true }
     });
 
     if (!user) {
@@ -64,15 +64,19 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 });
     }
 
-    // Verificar acceso
+    // Verificar acceso - permitir TRAINER, roles admin, o usuarios con esEntrenador
     const allowedRoles = ['TRAINER', 'COORDINADOR', 'SCHOOL_ADMIN', 'ADMIN', 'ADMINISTRADOR'];
-    if (!allowedRoles.includes(user.rol)) {
+    const isTrainer = user.rol === 'TRAINER' || user.esEntrenador;
+    const isAdmin = ['ADMIN', 'ADMINISTRADOR'].includes(user.rol);
+    
+    if (!allowedRoles.includes(user.rol) && !user.esEntrenador) {
       return NextResponse.json({ error: 'No tienes acceso' }, { status: 403 });
     }
 
-    if ((user.rol !== 'ADMIN' && user.rol !== 'ADMINISTRADOR') && event.Vision.organizationId !== user.organizationId) {
-      // Si es TRAINER, verificar que está asignado a esta visión
-      if (user.rol === 'TRAINER') {
+    // Verificar acceso a la visión específica
+    if (!isAdmin && event.Vision.organizationId !== user.organizationId) {
+      // Si es trainer, verificar que está asignado a esta visión
+      if (isTrainer) {
         const isAssigned = await prisma.visionStaff.findFirst({
           where: {
             userId,
@@ -165,7 +169,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const userId = parseInt(session.user.id);
     const user = await prisma.usuario.findUnique({
       where: { id: userId },
-      select: { id: true, rol: true, organizationId: true }
+      select: { id: true, rol: true, organizationId: true, esEntrenador: true }
     });
 
     if (!user) {
@@ -173,7 +177,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     const allowedRoles = ['TRAINER', 'COORDINADOR', 'SCHOOL_ADMIN', 'ADMIN', 'ADMINISTRADOR'];
-    if (!allowedRoles.includes(user.rol)) {
+    const isTrainer = user.rol === 'TRAINER' || user.esEntrenador;
+    const isAdmin = ['ADMIN', 'ADMINISTRADOR'].includes(user.rol);
+    
+    if (!allowedRoles.includes(user.rol) && !user.esEntrenador) {
       return NextResponse.json({ error: 'No tienes permisos' }, { status: 403 });
     }
 
@@ -186,9 +193,22 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 });
     }
 
-    // Verificar acceso
-    if ((user.rol !== 'ADMIN' && user.rol !== 'ADMINISTRADOR') && event.Vision.organizationId !== user.organizationId) {
-      return NextResponse.json({ error: 'No tienes acceso' }, { status: 403 });
+    // Verificar acceso a la visión
+    if (!isAdmin && event.Vision.organizationId !== user.organizationId) {
+      if (isTrainer) {
+        const isAssigned = await prisma.visionStaff.findFirst({
+          where: {
+            userId,
+            visionId: event.visionId,
+            role: { in: ['BASIC_TRAINER', 'ADVANCED_TRAINER', 'PL_TRAINER'] }
+          }
+        });
+        if (!isAssigned) {
+          return NextResponse.json({ error: 'No estás asignado a esta visión' }, { status: 403 });
+        }
+      } else {
+        return NextResponse.json({ error: 'No tienes acceso' }, { status: 403 });
+      }
     }
 
     const body = await request.json();
