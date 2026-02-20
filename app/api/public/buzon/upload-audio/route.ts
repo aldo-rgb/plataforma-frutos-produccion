@@ -2,16 +2,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// Validar que las variables existen
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('Missing Supabase environment variables');
+}
+
+const supabase = supabaseUrl && supabaseServiceKey 
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : null;
 
 const BUCKET_NAME = 'capsule-messages';
 
 // POST - Subir audio directamente
 export async function POST(request: NextRequest) {
   try {
+    // Verificar que Supabase está configurado
+    if (!supabase) {
+      console.error('Supabase not configured - missing URL or Service Key');
+      return NextResponse.json({ 
+        error: 'Servicio de almacenamiento no configurado' 
+      }, { status: 500 });
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const campaignSlug = formData.get('campaignSlug') as string;
@@ -21,20 +36,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 });
     }
 
-    // Validar tipo de contenido
-    const allowedTypes = ['audio/webm', 'audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/ogg'];
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({ error: 'Tipo de archivo no permitido' }, { status: 400 });
+    // Validar tipo de contenido - ser más permisivos
+    const allowedTypes = ['audio/webm', 'audio/mp3', 'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/x-m4a'];
+    // También permitir si el tipo comienza con 'audio/'
+    if (!allowedTypes.includes(file.type) && !file.type.startsWith('audio/')) {
+      console.error('Invalid file type:', file.type);
+      return NextResponse.json({ error: `Tipo de archivo no permitido: ${file.type}` }, { status: 400 });
     }
 
     // Generar nombre único para el archivo
     const timestamp = Date.now();
-    const extension = file.type.split('/')[1] || 'webm';
+    const extension = file.type.split('/')[1]?.replace('x-', '') || 'webm';
     const filePath = `${campaignSlug}/${recipientId}/${timestamp}.${extension}`;
 
     // Convertir File a ArrayBuffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+
+    console.log('Uploading audio:', { filePath, type: file.type, size: buffer.length });
 
     // Subir a Supabase Storage
     const { data, error } = await supabase.storage
@@ -45,15 +64,20 @@ export async function POST(request: NextRequest) {
       });
 
     if (error) {
-      console.error('Error uploading to Supabase:', error);
+      console.error('Error uploading to Supabase:', error.message, error);
       
       // Si el bucket no existe, intentar crearlo
-      if (error.message?.includes('not found')) {
-        await supabase.storage.createBucket(BUCKET_NAME, {
-          public: false,
+      if (error.message?.includes('not found') || error.message?.includes('Bucket not found')) {
+        console.log('Creating bucket:', BUCKET_NAME);
+        const { error: bucketError } = await supabase.storage.createBucket(BUCKET_NAME, {
+          public: true, // Hacer público para facilitar acceso
           allowedMimeTypes: ['audio/*'],
           fileSizeLimit: 10485760 // 10MB
         });
+        
+        if (bucketError) {
+          console.error('Error creating bucket:', bucketError);
+        }
         
         // Reintentar upload
         const { data: retryData, error: retryError } = await supabase.storage
@@ -64,10 +88,15 @@ export async function POST(request: NextRequest) {
           });
           
         if (retryError) {
-          throw retryError;
+          console.error('Retry upload failed:', retryError);
+          return NextResponse.json({ 
+            error: `Error al subir: ${retryError.message}` 
+          }, { status: 500 });
         }
       } else {
-        throw error;
+        return NextResponse.json({ 
+          error: `Error de almacenamiento: ${error.message}` 
+        }, { status: 500 });
       }
     }
 
@@ -75,6 +104,8 @@ export async function POST(request: NextRequest) {
     const { data: { publicUrl } } = supabase.storage
       .from(BUCKET_NAME)
       .getPublicUrl(filePath);
+
+    console.log('Upload successful:', publicUrl);
 
     return NextResponse.json({
       success: true,
