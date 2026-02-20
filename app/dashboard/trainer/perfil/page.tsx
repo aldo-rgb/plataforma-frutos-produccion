@@ -168,7 +168,7 @@ export default function TrainerProfileEditorPage() {
       formDataUpload.append('file', file);
       formDataUpload.append('folder', 'trainer-profiles');
 
-      const response = await fetch('/api/upload/image', {
+      const response = await fetch('/api/upload', {
         method: 'POST',
         body: formDataUpload,
       });
