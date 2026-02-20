@@ -251,7 +251,7 @@ export async function POST(request: NextRequest) {
 
     // Si es liberación inmediata, crear submissions para participantes
     if (finalStatus === 'ACTIVE') {
-      await createSubmissionsForMission(mission.id, visionId, productId, squadId)
+      await createSubmissionsForMission(mission.id, visionId, productId, squadId, userId)
     }
 
     return NextResponse.json({
@@ -270,14 +270,40 @@ export async function POST(request: NextRequest) {
 
 // Función auxiliar para crear submissions para participantes
 // SOLO para usuarios con asistencia confirmada (attendanceStatus = 'ATTENDED')
+// Determina el nivel basándose en el rol del trainer en VisionStaff
 async function createSubmissionsForMission(
   missionId: number,
   visionId: number | null,
   productId: number | null,
-  squadId: string | null
+  squadId: string | null,
+  trainerId: number
 ) {
   try {
     let participantIds: number[] = []
+
+    // Primero determinar el nivel del trainer basándose en su rol en VisionStaff
+    let trainerLevel: string | null = null
+    
+    if (visionId) {
+      const staffRole = await prisma.visionStaff.findFirst({
+        where: { 
+          userId: trainerId, 
+          visionId,
+          role: { in: ['BASIC_TRAINER', 'ADVANCED_TRAINER', 'PL_TRAINER'] }
+        },
+        select: { role: true }
+      })
+      
+      if (staffRole) {
+        // Mapear rol de staff a nivel de enrollment
+        const roleToLevel: Record<string, string> = {
+          'BASIC_TRAINER': 'BASIC',
+          'ADVANCED_TRAINER': 'ADVANCED',
+          'PL_TRAINER': 'PL'
+        }
+        trainerLevel = roleToLevel[staffRole.role] || null
+      }
+    }
 
     if (squadId) {
       // Obtener miembros del squad específico QUE TIENEN ASISTENCIA
@@ -289,25 +315,17 @@ async function createSubmissionsForMission(
         select: { userId: true }
       })
       
-      // Filtrar solo los que tienen asistencia en la visión del squad
+      // Filtrar solo los que tienen asistencia en el nivel del trainer
       const group = await prisma.smallGroup.findUnique({
         where: { id: squadId },
-        select: { productId: true, Product: { select: { visionId: true, type: true } } }
+        select: { productId: true, Product: { select: { visionId: true } } }
       })
       
-      if (group?.Product) {
-        // Mapear tipo de producto a nivel
-        const levelMap: Record<string, string> = {
-          'CORE_TRAINING': 'BASIC',
-          'ADVANCED_TRAINING': 'ADVANCED', 
-          'PL_TRAINING': 'PL'
-        }
-        const level = levelMap[group.Product.type] || 'BASIC'
-        
+      if (group?.Product && trainerLevel) {
         const attendedUsers = await prisma.vision_enrollments.findMany({
           where: {
             visionId: group.Product.visionId,
-            level,
+            level: trainerLevel,
             attendanceStatus: 'ATTENDED',
             userId: { in: members.map(m => m.userId) }
           },
@@ -316,26 +334,18 @@ async function createSubmissionsForMission(
         participantIds = attendedUsers.map(e => e.userId)
       }
     } else if (productId) {
-      // Obtener el producto para saber el nivel
+      // Obtener el producto para saber la visión
       const product = await prisma.schoolProduct.findUnique({
         where: { id: productId },
-        select: { visionId: true, type: true }
+        select: { visionId: true, name: true }
       })
       
-      if (product) {
-        // Mapear tipo de producto a nivel de enrollment
-        const levelMap: Record<string, string> = {
-          'CORE_TRAINING': 'BASIC',
-          'ADVANCED_TRAINING': 'ADVANCED',
-          'PL_TRAINING': 'PL'
-        }
-        const level = levelMap[product.type] || 'BASIC'
-        
-        // Obtener usuarios con asistencia confirmada en ese nivel
+      if (product && trainerLevel) {
+        // Obtener usuarios con asistencia confirmada en el nivel del trainer
         const enrollments = await prisma.vision_enrollments.findMany({
           where: {
             visionId: product.visionId,
-            level,
+            level: trainerLevel,
             attendanceStatus: 'ATTENDED'
           },
           select: { userId: true },
@@ -343,11 +353,12 @@ async function createSubmissionsForMission(
         })
         participantIds = enrollments.map(e => e.userId)
       }
-    } else if (visionId) {
-      // Para toda la visión, obtener TODOS los usuarios con asistencia en cualquier nivel
+    } else if (visionId && trainerLevel) {
+      // Para toda la visión, obtener usuarios con asistencia en el nivel del trainer
       const enrollments = await prisma.vision_enrollments.findMany({
         where: { 
           visionId,
+          level: trainerLevel,
           attendanceStatus: 'ATTENDED'
         },
         select: { userId: true },
@@ -368,7 +379,7 @@ async function createSubmissionsForMission(
       })
     }
 
-    logger.debug(`✅ Creadas ${participantIds.length} submissions para misión ${missionId} (solo usuarios con asistencia confirmada)`)
+    logger.debug(`✅ Creadas ${participantIds.length} submissions para misión ${missionId} (nivel: ${trainerLevel}, solo usuarios con asistencia confirmada)`)
   } catch (error) {
     logger.error("Error creando submissions:", error)
   }
