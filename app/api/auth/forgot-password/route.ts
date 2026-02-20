@@ -146,12 +146,11 @@ export async function POST(request: NextRequest) {
     const tempPassword = generateTempPassword();
     const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
-    // Actualizar usuario con nueva contraseña y marcar para cambio obligatorio
+    // Actualizar usuario con nueva contraseña
     await prisma.usuario.update({
       where: { id: user.id },
       data: {
-        passwordHash: hashedPassword,
-        mustChangePassword: true,
+        password: hashedPassword,
       }
     });
 
