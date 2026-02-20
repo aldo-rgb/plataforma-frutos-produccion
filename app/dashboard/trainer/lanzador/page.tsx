@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Rocket, Search, Calendar, Clock, Target, Users, Award,
   BookOpen, ChevronRight, Filter, Zap, CheckCircle, AlertCircle,
-  X, Play, Pause, Eye, RefreshCw
+  X, Play, Pause, Eye, RefreshCw, FileText, User, ChevronDown, ChevronUp,
+  Image as ImageIcon
 } from 'lucide-react'
 
 interface Vision {
@@ -43,6 +44,34 @@ interface Mission {
   totalParticipants: number
 }
 
+interface SubmissionAnswer {
+  questionId: number
+  questionText: string
+  questionType: string
+  options: string[]
+  textAnswer: string | null
+  selectedOptions: string[]
+  scaleValue: number | null
+  booleanAnswer: boolean | null
+}
+
+interface Submission {
+  id: number
+  status: string
+  textResponse: string | null
+  evidenceUrl: string | null
+  learningNote: string | null
+  submittedAt: string | null
+  pointsEarned: number
+  user: {
+    id: number
+    nombre: string
+    email: string
+    imagen: string | null
+  }
+  answers: SubmissionAnswer[]
+}
+
 const typeConfig = {
   QUESTIONNAIRE: { icon: '📋', label: 'Cuestionario', color: 'bg-blue-500' },
   CONTENT: { icon: '🎬', label: 'Contenido', color: 'bg-purple-500' },
@@ -69,6 +98,12 @@ export default function LanzadorPage() {
   const [showLaunchModal, setShowLaunchModal] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
   const [view, setView] = useState<'launch' | 'missions'>('launch')
+  
+  // Estado para modal de respuestas
+  const [showResponsesModal, setShowResponsesModal] = useState(false)
+  const [selectedMissionForResponses, setSelectedMissionForResponses] = useState<Mission | null>(null)
+  const [submissions, setSubmissions] = useState<Submission[]>([])
+  const [loadingSubmissions, setLoadingSubmissions] = useState(false)
 
   useEffect(() => {
     fetchVisiones()
@@ -131,6 +166,27 @@ export default function LanzadorPage() {
     } catch (error) {
       console.error('Error fetching missions:', error)
     }
+  }
+
+  const fetchSubmissions = async (missionId: number) => {
+    setLoadingSubmissions(true)
+    try {
+      const res = await fetch(`/api/trainer/lanzador/${missionId}/submissions`)
+      const data = await res.json()
+      if (data.success) {
+        setSubmissions(data.submissions)
+      }
+    } catch (error) {
+      console.error('Error fetching submissions:', error)
+    } finally {
+      setLoadingSubmissions(false)
+    }
+  }
+
+  const handleOpenResponses = (mission: Mission) => {
+    setSelectedMissionForResponses(mission)
+    setShowResponsesModal(true)
+    fetchSubmissions(mission.id)
   }
 
   useEffect(() => {
@@ -475,19 +531,28 @@ export default function LanzadorPage() {
                           </div>
                         </div>
 
-                        {/* Progreso */}
-                        <div className="text-right">
-                          <div className="text-2xl font-bold text-white">
-                            {mission.submittedCount}/{mission.totalParticipants}
+                        {/* Progreso y botón Ver Respuestas */}
+                        <div className="text-right flex flex-col items-end gap-2">
+                          <div>
+                            <div className="text-2xl font-bold text-white">
+                              {mission.submittedCount}/{mission.totalParticipants}
+                            </div>
+                            <p className="text-xs text-slate-400">entregas</p>
+                            <div className="w-24 h-2 bg-slate-700 rounded-full mt-2 overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-green-500 to-emerald-500 transition-all"
+                                style={{ width: `${progress}%` }}
+                              />
+                            </div>
+                            <p className="text-xs text-slate-500 mt-1">{progress}%</p>
                           </div>
-                          <p className="text-xs text-slate-400">entregas</p>
-                          <div className="w-24 h-2 bg-slate-700 rounded-full mt-2 overflow-hidden">
-                            <div
-                              className="h-full bg-gradient-to-r from-green-500 to-emerald-500 transition-all"
-                              style={{ width: `${progress}%` }}
-                            />
-                          </div>
-                          <p className="text-xs text-slate-500 mt-1">{progress}%</p>
+                          <button
+                            onClick={() => handleOpenResponses(mission)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-lg transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            Ver Respuestas
+                          </button>
                         </div>
                       </div>
                     </motion.div>
@@ -512,8 +577,284 @@ export default function LanzadorPage() {
             onLaunched={handleMissionLaunched}
           />
         )}
+
+        {/* Modal de respuestas */}
+        {showResponsesModal && selectedMissionForResponses && (
+          <ResponsesModal
+            mission={selectedMissionForResponses}
+            submissions={submissions}
+            loading={loadingSubmissions}
+            onClose={() => {
+              setShowResponsesModal(false)
+              setSelectedMissionForResponses(null)
+              setSubmissions([])
+            }}
+          />
+        )}
       </AnimatePresence>
     </div>
+  )
+}
+
+// Modal de respuestas de usuarios
+function ResponsesModal({
+  mission,
+  submissions,
+  loading,
+  onClose
+}: {
+  mission: Mission
+  submissions: Submission[]
+  loading: boolean
+  onClose: () => void
+}) {
+  const [expandedUser, setExpandedUser] = useState<number | null>(null)
+  const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all')
+
+  const type = typeConfig[mission.type as keyof typeof typeConfig]
+
+  const filteredSubmissions = submissions.filter(sub => {
+    if (filter === 'pending') return sub.status === 'PENDING'
+    if (filter === 'completed') return sub.status === 'APPROVED' || sub.status === 'SUBMITTED'
+    return true
+  })
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'PENDING':
+        return <span className="px-2 py-0.5 bg-slate-600 text-slate-200 text-xs rounded-full">Pendiente</span>
+      case 'SUBMITTED':
+        return <span className="px-2 py-0.5 bg-blue-600 text-white text-xs rounded-full">Enviado</span>
+      case 'APPROVED':
+        return <span className="px-2 py-0.5 bg-green-600 text-white text-xs rounded-full">Completado</span>
+      case 'REJECTED':
+        return <span className="px-2 py-0.5 bg-red-600 text-white text-xs rounded-full">Rechazado</span>
+      default:
+        return null
+    }
+  }
+
+  const renderAnswerValue = (answer: SubmissionAnswer) => {
+    if (answer.textAnswer) {
+      return <p className="text-white">{answer.textAnswer}</p>
+    }
+    if (answer.selectedOptions && answer.selectedOptions.length > 0) {
+      return (
+        <div className="flex flex-wrap gap-1">
+          {answer.selectedOptions.map((opt, i) => (
+            <span key={i} className="px-2 py-0.5 bg-indigo-600/30 text-indigo-300 text-xs rounded">
+              {opt}
+            </span>
+          ))}
+        </div>
+      )
+    }
+    if (answer.scaleValue !== null) {
+      return <p className="text-white font-bold">{answer.scaleValue}/10</p>
+    }
+    if (answer.booleanAnswer !== null) {
+      return <p className="text-white">{answer.booleanAnswer ? '✅ Sí' : '❌ No'}</p>
+    }
+    return <p className="text-slate-500 italic">Sin respuesta</p>
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="p-6 border-b border-slate-700 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl">
+              <FileText className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-white">Respuestas de Participantes</h2>
+              <p className="text-sm text-slate-400">
+                {type?.icon} {mission.title}
+              </p>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-lg">
+              <X className="w-5 h-5 text-slate-400" />
+            </button>
+          </div>
+
+          {/* Filtros */}
+          <div className="flex gap-2 mt-4">
+            <button
+              onClick={() => setFilter('all')}
+              className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                filter === 'all' ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+              }`}
+            >
+              Todos ({submissions.length})
+            </button>
+            <button
+              onClick={() => setFilter('completed')}
+              className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                filter === 'completed' ? 'bg-green-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+              }`}
+            >
+              Completados ({submissions.filter(s => s.status === 'APPROVED' || s.status === 'SUBMITTED').length})
+            </button>
+            <button
+              onClick={() => setFilter('pending')}
+              className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                filter === 'pending' ? 'bg-slate-500 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+              }`}
+            >
+              Pendientes ({submissions.filter(s => s.status === 'PENDING').length})
+            </button>
+          </div>
+        </div>
+
+        {/* Body - Lista de usuarios */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full" />
+            </div>
+          ) : filteredSubmissions.length === 0 ? (
+            <div className="text-center py-12">
+              <Users className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+              <p className="text-slate-400">No hay participantes en esta categoría</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredSubmissions.map((sub) => (
+                <div
+                  key={sub.id}
+                  className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden"
+                >
+                  {/* Header del usuario */}
+                  <button
+                    onClick={() => setExpandedUser(expandedUser === sub.id ? null : sub.id)}
+                    className="w-full p-4 flex items-center gap-3 hover:bg-slate-700/30 transition-colors"
+                  >
+                    {sub.user.imagen ? (
+                      <img
+                        src={sub.user.imagen}
+                        alt={sub.user.nombre}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
+                        <User className="w-5 h-5 text-slate-400" />
+                      </div>
+                    )}
+                    <div className="flex-1 text-left">
+                      <p className="font-medium text-white">{sub.user.nombre}</p>
+                      <p className="text-xs text-slate-400">{sub.user.email}</p>
+                    </div>
+                    {getStatusBadge(sub.status)}
+                    {sub.submittedAt && (
+                      <span className="text-xs text-slate-500">
+                        {new Date(sub.submittedAt).toLocaleDateString('es-MX', {
+                          day: 'numeric',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    )}
+                    {expandedUser === sub.id ? (
+                      <ChevronUp className="w-5 h-5 text-slate-400" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-slate-400" />
+                    )}
+                  </button>
+
+                  {/* Contenido expandido */}
+                  <AnimatePresence>
+                    {expandedUser === sub.id && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="border-t border-slate-700"
+                      >
+                        <div className="p-4 space-y-4">
+                          {/* Respuesta de texto */}
+                          {sub.textResponse && (
+                            <div>
+                              <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Respuesta</p>
+                              <p className="text-white bg-slate-800 p-3 rounded-lg">{sub.textResponse}</p>
+                            </div>
+                          )}
+
+                          {/* Nota de aprendizaje */}
+                          {sub.learningNote && (
+                            <div>
+                              <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Nota de Aprendizaje</p>
+                              <p className="text-white bg-slate-800 p-3 rounded-lg">{sub.learningNote}</p>
+                            </div>
+                          )}
+
+                          {/* Evidencia */}
+                          {sub.evidenceUrl && (
+                            <div>
+                              <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Evidencia</p>
+                              <a
+                                href={sub.evidenceUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300"
+                              >
+                                <ImageIcon className="w-4 h-4" />
+                                Ver evidencia
+                              </a>
+                            </div>
+                          )}
+
+                          {/* Respuestas a preguntas */}
+                          {sub.answers && sub.answers.length > 0 && (
+                            <div className="space-y-3">
+                              <p className="text-xs text-slate-400 uppercase tracking-wider">Respuestas al Cuestionario</p>
+                              {sub.answers.map((answer, idx) => (
+                                <div key={idx} className="bg-slate-800 p-3 rounded-lg">
+                                  <p className="text-sm text-slate-300 mb-2">{answer.questionText}</p>
+                                  {renderAnswerValue(answer)}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Si no hay ninguna respuesta */}
+                          {!sub.textResponse && !sub.learningNote && !sub.evidenceUrl && (!sub.answers || sub.answers.length === 0) && (
+                            <p className="text-slate-500 italic text-center py-4">
+                              Este participante aún no ha enviado su respuesta
+                            </p>
+                          )}
+
+                          {/* Puntos ganados */}
+                          {sub.pointsEarned > 0 && (
+                            <div className="flex items-center gap-2 text-green-400 text-sm">
+                              <Award className="w-4 h-4" />
+                              +{sub.pointsEarned} puntos ganados
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
   )
 }
 
