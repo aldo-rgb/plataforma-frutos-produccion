@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Camera, Loader2, Clock, CheckCircle, AlertCircle, Upload, X, Zap, Calendar, Eye, User, Star } from 'lucide-react';
+import { Camera, Loader2, Clock, CheckCircle, AlertCircle, Upload, X, Zap, Calendar, Eye, User, Star, Target } from 'lucide-react';
 import { useToast } from '@/components/ui/ToastProvider';
 
 interface Tarea {
   id: string; // Changed: puede ser "carta-123" o "admin-456"
   taskId?: number; // ID original de TaskInstance
   submissionId?: number; // ID de TaskSubmission si es admin
-  tipo: 'CARTA' | 'EXTRAORDINARIA' | 'EVENTO' | 'PERSONAJE' | 'SALTO_CUANTICO';
+  tipo: 'CARTA' | 'EXTRAORDINARIA' | 'EVENTO' | 'PERSONAJE' | 'SALTO_CUANTICO' | 'TRAINER_MISSION';
   texto: string;
   area: string;
   areaIcon: string;
@@ -643,6 +643,14 @@ export default function ZonaEjecucionDiaria() {
                         className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white rounded-lg transition-all shadow-lg shadow-amber-500/30 text-xs sm:text-sm font-medium"
                       >
                         <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        Completar
+                      </button>
+                    ) : tarea.tipo === 'TRAINER_MISSION' ? (
+                      <button
+                        onClick={() => router.push('/dashboard/hoy')}
+                        className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg transition-all shadow-lg shadow-emerald-500/30 text-xs sm:text-sm font-medium"
+                      >
+                        <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         Completar
                       </button>
                     ) : tarea.evidenceStatus === 'PENDING' ? (
