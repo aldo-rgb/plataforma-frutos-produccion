@@ -1,12 +1,13 @@
 // API para gestionar una campaña específica
-// Solo COORDINADOR y SCHOOL_ADMIN
+// COORDINADOR, SCHOOL_ADMIN, ADMIN pueden gestionar
+// TRAINER con PL asignado puede ver campañas de sus visiones
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
-const ALLOWED_ROLES = ['COORDINADOR', 'SCHOOL_ADMIN', 'ADMIN', 'ADMINISTRADOR'];
+const ADMIN_ROLES = ['COORDINADOR', 'SCHOOL_ADMIN', 'ADMIN', 'ADMINISTRADOR'];
 
 // GET - Obtener detalles de una campaña
 export async function GET(
@@ -20,19 +21,51 @@ export async function GET(
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    const userId = parseInt(session.user.id);
     const user = await prisma.usuario.findUnique({
-      where: { id: parseInt(session.user.id) },
-      select: { rol: true, organizationId: true }
+      where: { id: userId },
+      select: { rol: true, organizationId: true, esEntrenador: true }
     });
 
-    if (!user || !ALLOWED_ROLES.includes(user.rol)) {
+    if (!user) {
+      return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 });
+    }
+
+    const isAdmin = ADMIN_ROLES.includes(user.rol);
+    const isTrainer = user.rol === 'TRAINER' || user.esEntrenador;
+
+    if (!isAdmin && !isTrainer) {
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 });
+    }
+
+    // Si es trainer, verificar que tiene PL asignado en esta visión
+    const campaignId = parseInt(id);
+    
+    if (isTrainer && !isAdmin) {
+      const campaign = await prisma.timeCapsuleCampaign.findUnique({
+        where: { id: campaignId },
+        select: { visionId: true }
+      });
+      
+      if (campaign) {
+        const hasAccess = await prisma.visionStaff.findFirst({
+          where: {
+            userId,
+            visionId: campaign.visionId,
+            role: 'PL_TRAINER'
+          }
+        });
+        
+        if (!hasAccess) {
+          return NextResponse.json({ error: 'No tienes acceso a esta campaña' }, { status: 403 });
+        }
+      }
     }
 
     const campaign = await prisma.timeCapsuleCampaign.findFirst({
       where: { 
-        id: parseInt(id),
-        organizationId: user.organizationId!
+        id: campaignId,
+        ...(isAdmin ? { organizationId: user.organizationId! } : {})
       },
       include: {
         Vision: { 
@@ -97,7 +130,8 @@ export async function PATCH(
       select: { rol: true, organizationId: true }
     });
 
-    if (!user || !ALLOWED_ROLES.includes(user.rol)) {
+    // Solo admins pueden modificar campañas
+    if (!user || !ADMIN_ROLES.includes(user.rol)) {
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 });
     }
 
@@ -202,7 +236,8 @@ export async function DELETE(
       select: { rol: true, organizationId: true }
     });
 
-    if (!user || !ALLOWED_ROLES.includes(user.rol)) {
+    // Solo admins pueden eliminar campañas
+    if (!user || !ADMIN_ROLES.includes(user.rol)) {
       return NextResponse.json({ error: 'Sin permisos' }, { status: 403 });
     }
 
