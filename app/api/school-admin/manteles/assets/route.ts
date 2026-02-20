@@ -29,12 +29,11 @@ async function getOrganizationId(session: any): Promise<number | null> {
   const user = await prisma.usuario.findUnique({
     where: { id: session.user.id },
     select: { 
-      organizacionId: true, 
       communityOrganizationId: true 
     }
   });
   
-  return user?.organizacionId || user?.communityOrganizationId || null;
+  return user?.communityOrganizationId || null;
 }
 
 // GET - Obtener configuración de assets de la organización

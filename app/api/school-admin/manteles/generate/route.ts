@@ -15,9 +15,9 @@ async function getOrganizationId(session: any): Promise<number | null> {
   // Si no está en la sesión, buscar en la BD
   const user = await prisma.usuario.findUnique({
     where: { id: session.user.id },
-    select: { organizacionId: true, communityOrganizationId: true }
+    select: { communityOrganizationId: true }
   });
-  return user?.organizacionId || user?.communityOrganizationId || null;
+  return user?.communityOrganizationId || null;
 }
 
 function getSupabaseClient() {
