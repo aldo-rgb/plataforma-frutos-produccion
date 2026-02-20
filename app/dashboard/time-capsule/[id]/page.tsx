@@ -438,7 +438,7 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
                           {msg.audioUrl && (
                             <div className="flex items-center gap-2 mt-2">
                               <button
-                                onClick={(e) => {
+                                onClick={async (e) => {
                                   e.stopPropagation();
                                   if (playingAudioId === msg.id) {
                                     // Pausar
@@ -449,12 +449,40 @@ export default function CampaignDetailPage({ params }: { params: Promise<{ id: s
                                     if (audioRef.current) {
                                       audioRef.current.pause();
                                     }
-                                    // Crear nuevo audio y reproducir
-                                    const audio = new Audio(msg.audioUrl!);
-                                    audioRef.current = audio;
-                                    audio.onended = () => setPlayingAudioId(null);
-                                    audio.play();
-                                    setPlayingAudioId(msg.id);
+                                    
+                                    try {
+                                      // Obtener la URL del audio
+                                      let audioSrc = msg.audioUrl!;
+                                      
+                                      // Si es una URL de Supabase Storage, obtener signed URL
+                                      if (audioSrc.includes('supabase') && audioSrc.includes('capsule-messages')) {
+                                        // Extraer el path del archivo
+                                        const pathMatch = audioSrc.match(/capsule-messages\/(.+)$/);
+                                        if (pathMatch) {
+                                          const filePath = pathMatch[1];
+                                          const res = await fetch(`/api/public/buzon/signed-url?path=${encodeURIComponent(filePath)}`);
+                                          const data = await res.json();
+                                          if (data.signedUrl) {
+                                            audioSrc = data.signedUrl;
+                                          }
+                                        }
+                                      }
+                                      
+                                      // Crear nuevo audio y reproducir
+                                      const audio = new Audio(audioSrc);
+                                      audioRef.current = audio;
+                                      audio.onended = () => setPlayingAudioId(null);
+                                      audio.onerror = () => {
+                                        console.error('Error reproduciendo audio');
+                                        setPlayingAudioId(null);
+                                        alert('Error al reproducir el audio');
+                                      };
+                                      await audio.play();
+                                      setPlayingAudioId(msg.id);
+                                    } catch (err) {
+                                      console.error('Error:', err);
+                                      alert('No se pudo reproducir el audio');
+                                    }
                                   }
                                 }}
                                 className="flex items-center gap-2 px-3 py-1.5 bg-purple-600/30 hover:bg-purple-600/50 rounded-lg transition-colors text-sm text-purple-300"
