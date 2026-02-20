@@ -2,24 +2,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-// Validar que las variables existen
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('Missing Supabase environment variables');
-}
-
-const supabase = supabaseUrl && supabaseServiceKey 
-  ? createClient(supabaseUrl, supabaseServiceKey)
-  : null;
-
 const BUCKET_NAME = 'capsule-messages';
+
+// Función para obtener cliente de Supabase (lazy initialization) - mismo patrón que /api/upload
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('Missing Supabase env vars');
+    return null;
+  }
+  return createClient(supabaseUrl, supabaseKey);
+}
 
 // POST - Subir audio directamente
 export async function POST(request: NextRequest) {
   try {
     // Verificar que Supabase está configurado
+    const supabase = getSupabaseClient();
     if (!supabase) {
       console.error('Supabase not configured - missing URL or Service Key');
       return NextResponse.json({ 
