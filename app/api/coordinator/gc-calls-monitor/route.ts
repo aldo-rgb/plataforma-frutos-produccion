@@ -68,10 +68,11 @@ export async function GET(request: Request) {
     }
 
     // Construir filtro de organización
-    // Admins y superAdmins pueden ver todas las organizaciones
+    // Admins, superAdmins y TRAINERs pueden ver todas las organizaciones (trainers ven sus asignaciones sin importar org)
     const isAdmin = ['ADMINISTRADOR', 'SUPER_ADMIN'].includes(coordinator.rol);
-    const organizationFilter: any = isAdmin || !coordinator.organizationId
-      ? {} // Sin filtro de organización para admins o si no tiene org
+    const isTrainer = coordinator.rol === 'TRAINER';
+    const organizationFilter: any = isAdmin || isTrainer || !coordinator.organizationId
+      ? {} // Sin filtro de organización para admins, trainers o si no tiene org
       : { organizationId: coordinator.organizationId };
 
     logger.debug('📊 Monitor GC Calls - Filtros:', {
