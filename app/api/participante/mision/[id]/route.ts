@@ -239,7 +239,7 @@ export async function POST(
       await prisma.usuario.update({
         where: { id: userId },
         data: {
-          puntosConocimiento: { increment: totalPoints }
+          puntosCuanticos: { increment: totalPoints }
         }
       })
     }
