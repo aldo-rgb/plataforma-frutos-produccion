@@ -153,7 +153,7 @@ export function TransferModal({ ticket, onClose, onSuccess }: Props) {
                     ⏰ Tiempo límite para transferir
                   </div>
                   <div className="text-yellow-300/80 text-xs mb-2">
-                    Puedes transferir hasta 1 hora después del inicio del evento
+                    Puedes transferir hasta 24 horas antes del inicio del evento
                   </div>
                   <div 
                     className="text-xl font-black text-yellow-400"

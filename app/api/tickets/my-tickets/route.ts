@@ -62,6 +62,7 @@ export async function GET() {
           select: {
             name: true,
             logoUrl: true,
+            transfersEnabled: true,
           },
         },
       },
@@ -119,6 +120,7 @@ export async function GET() {
           organization: {
             name: ticket.organization.name,
             logoUrl: ticket.organization.logoUrl,
+            transfersEnabled: ticket.organization.transfersEnabled,
           },
           product: product ? {
             id: product.id,

@@ -38,6 +38,7 @@ interface Ticket {
   organization: {
     name: string;
     logoUrl: string | null;
+    transfersEnabled?: boolean;
   };
   product: Product | null;
 }
@@ -93,7 +94,9 @@ export default function MyTicketsPage() {
 
   // Buscar ticket BASIC para transferencia
   const basicTicket = tickets.find(t => t.level === 'BASIC' && t.status === 'ACTIVE');
-  const canTransfer = basicTicket && basicTicket.isTransferable && 
+  const canTransfer = basicTicket && 
+    basicTicket.isTransferable && 
+    basicTicket.organization?.transfersEnabled &&
     new Date(basicTicket.vision.startDate) > new Date();
 
   if (loading) {
