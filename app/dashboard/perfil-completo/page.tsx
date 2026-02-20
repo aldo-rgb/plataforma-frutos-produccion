@@ -563,12 +563,6 @@ export default function ConfiguracionCompletaPage() {
                       : 'bg-slate-800 border-slate-700 text-slate-400 cursor-not-allowed'
                   }`}
                 />
-                {!hasBasicAttendance && (
-                  <p className="text-xs text-yellow-400 mt-1 flex items-center gap-1">
-                    <Lock size={12} />
-                    Podrás cambiar tu nombre después de asistir a Básico
-                  </p>
-                )}
               </div>
               
               <div>
