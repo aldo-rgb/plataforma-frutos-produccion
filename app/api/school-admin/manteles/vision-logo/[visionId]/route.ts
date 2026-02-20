@@ -34,6 +34,21 @@ export async function POST(
       return NextResponse.json({ error: 'Storage no configurado' }, { status: 500 });
     }
 
+    // Verificar/crear bucket si no existe
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some(b => b.name === BUCKET_NAME);
+    
+    if (!bucketExists) {
+      const { error: createError } = await supabase.storage.createBucket(BUCKET_NAME, {
+        public: true,
+        fileSizeLimit: 5242880 // 5MB
+      });
+      if (createError && !createError.message.includes('already exists')) {
+        console.error('Error creating bucket:', createError);
+        return NextResponse.json({ error: 'Error creando storage' }, { status: 500 });
+      }
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
 
@@ -63,7 +78,9 @@ export async function POST(
 
     if (uploadError) {
       console.error('Upload error:', uploadError);
-      return NextResponse.json({ error: 'Error al subir archivo' }, { status: 500 });
+      return NextResponse.json({ 
+        error: 'Error al subir archivo: ' + uploadError.message 
+      }, { status: 500 });
     }
 
     // Obtener URL pública

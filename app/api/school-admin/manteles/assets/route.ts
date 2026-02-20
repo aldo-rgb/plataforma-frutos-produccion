@@ -55,6 +55,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Storage no configurado' }, { status: 500 });
     }
 
+    // Verificar/crear bucket si no existe
+    const { data: buckets } = await supabase.storage.listBuckets();
+    const bucketExists = buckets?.some(b => b.name === BUCKET_NAME);
+    
+    if (!bucketExists) {
+      const { error: createError } = await supabase.storage.createBucket(BUCKET_NAME, {
+        public: true,
+        fileSizeLimit: 5242880 // 5MB
+      });
+      if (createError && !createError.message.includes('already exists')) {
+        console.error('Error creating bucket:', createError);
+        return NextResponse.json({ error: 'Error creando storage' }, { status: 500 });
+      }
+    }
+
     // Intentar leer el archivo de configuración
     const configPath = `org-${orgId}/config.json`;
     const { data, error } = await supabase.storage

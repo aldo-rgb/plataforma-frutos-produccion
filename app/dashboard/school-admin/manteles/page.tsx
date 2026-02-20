@@ -142,9 +142,12 @@ export default function MantelesPage() {
       const data = await res.json();
       if (data.success) {
         setVisionLogo(data.logoUrl);
+      } else {
+        alert('Error al subir logo: ' + (data.error || 'Error desconocido'));
       }
     } catch (error) {
       console.error('Error uploading vision logo:', error);
+      alert('Error de conexión al subir el logo');
     } finally {
       setUploadingAsset(null);
     }
