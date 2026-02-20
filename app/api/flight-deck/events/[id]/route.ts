@@ -77,7 +77,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           where: {
             userId,
             visionId: event.visionId,
-            role: 'TRAINER'
+            role: { in: ['BASIC_TRAINER', 'ADVANCED_TRAINER', 'PL_TRAINER'] }
           }
         });
         if (!isAssigned) {
