@@ -152,15 +152,21 @@ export async function POST(
     }
 
     // Validar que el destinatario es participante de la visión (buscar en vision_enrollments)
+    const recipientIdNum = Number(recipientId);
+    if (isNaN(recipientIdNum)) {
+      return NextResponse.json({ error: 'ID de destinatario inválido' }, { status: 400 });
+    }
+
     const isParticipant = await prisma.vision_enrollments.findFirst({
       where: {
         visionId: campaign.visionId,
-        userId: recipientId,
+        userId: recipientIdNum,
         enrollmentStatus: { in: ['ENROLLED', 'ACTIVE'] }
       }
     });
 
     if (!isParticipant) {
+      console.log('Destinatario no encontrado:', { recipientIdNum, visionId: campaign.visionId });
       return NextResponse.json({ error: 'Destinatario no válido' }, { status: 400 });
     }
 
@@ -181,7 +187,7 @@ export async function POST(
     const message = await prisma.capsuleMessage.create({
       data: {
         campaignId: campaign.id,
-        recipientId,
+        recipientId: recipientIdNum,
         senderName,
         senderRelation,
         senderEmail: senderEmail || null,
@@ -195,7 +201,7 @@ export async function POST(
 
     // Obtener destinatario para el mensaje de confirmación
     const recipient = await prisma.usuario.findUnique({
-      where: { id: recipientId },
+      where: { id: recipientIdNum },
       select: { nombre: true }
     });
 
