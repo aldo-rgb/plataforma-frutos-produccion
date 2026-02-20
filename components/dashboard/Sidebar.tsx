@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { 
   LayoutDashboard, Trophy, Target, BarChart3, User, LogOut, 
   UserPlus, DollarSign, Package, Shield, Drama, Theater,
-  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode, Store, Star, Crown, Image, Vote, BookOpen, Rocket, Plane, Archive
+  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode, Store, Star, Crown, Image, Vote, BookOpen, Rocket, Plane, Archive, Printer
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { MENU_ITEMS } from '@/config/menuPermissions';
@@ -757,6 +757,19 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             >
               <CreditCard size={18} className="text-indigo-400" />
               <span>Pasarela de Pago</span>
+            </Link>
+
+            <Link 
+              href="/dashboard/school-admin/manteles"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/school-admin/manteles'
+                  ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-amber-900/20'
+              }`}
+            >
+              <Printer size={18} className="text-amber-400" />
+              <span>Generador Manteles</span>
             </Link>
 
             <Link 
