@@ -162,6 +162,7 @@ export async function GET(request: NextRequest) {
           organizationId: organizationId,
           rol: 'PARTICIPANTE',
           isActive: true,
+          suscripcion: 'ACTIVO',
           createdAt: new Date(),
           updatedAt: new Date(),
         },
