@@ -5,6 +5,7 @@ import { PhoenixButton } from '../phoenix/PhoenixButton';
 import LanguageSwitcher from '../ui/LanguageSwitcher';
 import { RoleSwitcher } from './RoleSwitcher';
 import { useState } from 'react';
+import Image from 'next/image';
 
 interface TopbarProps {
   usuario: {
@@ -15,6 +16,8 @@ interface TopbarProps {
     suscripcion: string | null;
     puntosCuanticos: number;
     timezone?: string;
+    imagen?: string | null;
+    profileImage?: string | null;
     esMentor?: boolean;
     esEntrenador?: boolean;
     esCoordinador?: boolean;
@@ -81,9 +84,19 @@ export function Topbar({ usuario, onMenuClick }: TopbarProps) {
             <h2 className="text-sm font-bold text-white">{usuario.nombre}</h2>
             <p className="text-[10px] text-slate-400 uppercase">{usuario.rol}</p>
           </div>
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold">
-            {usuario.nombre?.charAt(0)}
-          </div>
+          {(usuario.imagen || usuario.profileImage) ? (
+            <Image
+              src={usuario.imagen || usuario.profileImage || ''}
+              alt={usuario.nombre}
+              width={40}
+              height={40}
+              className="w-10 h-10 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold">
+              {usuario.nombre?.charAt(0)}
+            </div>
+          )}
         </div>
       </div>
     </header>
