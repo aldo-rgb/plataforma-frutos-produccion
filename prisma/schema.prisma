@@ -2265,8 +2265,12 @@ model Usuario {
   birthdate                                                              DateTime?
   children                                                               Int?
   goals                                                                  String?
+  goal1                                                                  String?
+  goal2                                                                  String?
+  goal3                                                                  String?
   profession                                                             String?
   expectations                                                           String?
+  profileCompleted                                                       Boolean                         @default(false)
   invitedByText                                                          String?
   esMentor                                                               Boolean                         @default(false)
   esEntrenador                                                           Boolean                         @default(false)

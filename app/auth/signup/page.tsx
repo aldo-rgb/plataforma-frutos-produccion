@@ -290,11 +290,10 @@ export default function SignUpPageQuantum() {
   };
 
   const validateForm = () => {
-    // Validar campos requeridos (sin contraseña - se asigna automáticamente)
-    if (!formData.firstName || !formData.lastName || !formData.nickname || 
+    // Validar campos requeridos (simplificado - solo datos básicos)
+    if (!formData.firstName || !formData.lastName || 
         !formData.profession || !formData.birthdate || !formData.phone ||
-        !formData.contactPreference || !formData.email || !formData.confirmEmail ||
-        !formData.goal1 || !formData.expectations) {
+        !formData.email || !formData.confirmEmail) {
       setError(messages.signup.errors.allFieldsRequired);
       return false;
     }

@@ -284,14 +284,6 @@ export function RegistrationForm({
             </div>
 
             <InputField
-              label={t('personalInfo.nickname')}
-              value={formData.nickname}
-              onChange={handleChange('nickname')}
-              placeholder={t('personalInfo.nicknamePlaceholder')}
-              required
-            />
-
-            <InputField
               label={t('personalInfo.profession')}
               value={formData.profession}
               onChange={handleChange('profession')}
@@ -371,33 +363,6 @@ export function RegistrationForm({
               placeholder={t('personalInfo.phonePlaceholder')}
               required
             />
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-3">
-                {t('personalInfo.contactPreference')} <span className="text-[#00F0FF]">*</span>
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[
-                  { value: '5am-10am', label: t('personalInfo.timeSlots.earlyMorning') },
-                  { value: '10am-3pm', label: t('personalInfo.timeSlots.midday') },
-                  { value: '3pm-7pm', label: t('personalInfo.timeSlots.afternoon') },
-                  { value: '7pm-10pm', label: t('personalInfo.timeSlots.night') },
-                ].map((slot) => (
-                  <button
-                    key={slot.value}
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, contactPreference: slot.value }))}
-                    className={`px-4 py-3 rounded-lg border-2 transition-all font-medium ${
-                      formData.contactPreference === slot.value
-                        ? 'border-[#00F0FF] bg-[#00F0FF]/10 text-[#00F0FF] shadow-[0_0_15px_rgba(0,240,255,0.3)]'
-                        : 'border-slate-700/50 bg-slate-800/30 text-slate-300 hover:border-slate-600 hover:bg-slate-800/50'
-                    }`}
-                  >
-                    {slot.label}
-                  </button>
-                ))}
-              </div>
-            </div>
           </FormSection>
 
           {/* Sección: Contacto */}
@@ -417,52 +382,6 @@ export function RegistrationForm({
               onChange={handleChange('confirmEmail')}
               onPaste={handleEmailConfirmPaste}
               placeholder={t('contact.confirmEmailPlaceholder')}
-              required
-            />
-          </FormSection>
-
-          {/* Sección: Familia */}
-          <FormSection title={t('family.title')}>
-            <InputField
-              label={t('family.children')}
-              type="number"
-              min="0"
-              value={formData.children}
-              onChange={handleChange('children')}
-              placeholder={t('family.childrenPlaceholder')}
-            />
-          </FormSection>
-
-          {/* Sección: Metas */}
-          <FormSection title={t('goals.title')}>
-            <TextareaField
-              label={t('goals.goal1')}
-              value={formData.goal1}
-              onChange={handleChange('goal1')}
-              placeholder={t('goals.goal1Placeholder')}
-              required
-            />
-            <TextareaField
-              label={t('goals.goal2')}
-              value={formData.goal2}
-              onChange={handleChange('goal2')}
-              placeholder={t('goals.goal2Placeholder')}
-            />
-            <TextareaField
-              label={t('goals.goal3')}
-              value={formData.goal3}
-              onChange={handleChange('goal3')}
-              placeholder={t('goals.goal3Placeholder')}
-            />
-          </FormSection>
-
-          {/* Sección: Expectativas */}
-          <FormSection title={t('expectations.title')}>
-            <TextareaField
-              label={t('expectations.question')}
-              value={formData.expectations}
-              onChange={handleChange('expectations')}
-              placeholder={t('expectations.placeholder')}
               required
             />
           </FormSection>

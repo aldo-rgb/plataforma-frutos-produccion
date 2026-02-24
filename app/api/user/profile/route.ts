@@ -30,6 +30,17 @@ export async function GET() {
         profileImage: true,
         organizationId: true,
         assignedMentorId: true,
+        apodo: true,
+        horarioLlamada: true,
+        children: true,
+        goal1: true,
+        goal2: true,
+        goal3: true,
+        goals: true,
+        expectations: true,
+        profileCompleted: true,
+        profession: true,
+        birthdate: true,
         Organization: {
           select: {
             id: true,
@@ -64,7 +75,18 @@ export async function GET() {
         organizationId: usuario.organizationId,
         Organization: usuario.Organization,
         assignedMentorId: usuario.assignedMentorId,
-        assignedMentor: usuario.Usuario_Usuario_assignedMentorIdToUsuario
+        assignedMentor: usuario.Usuario_Usuario_assignedMentorIdToUsuario,
+        apodo: usuario.apodo,
+        horarioLlamada: usuario.horarioLlamada,
+        children: usuario.children,
+        goal1: usuario.goal1,
+        goal2: usuario.goal2,
+        goal3: usuario.goal3,
+        goals: usuario.goals,
+        expectations: usuario.expectations,
+        profileCompleted: usuario.profileCompleted,
+        profession: usuario.profession,
+        birthdate: usuario.birthdate
       }
     });
 
@@ -91,21 +113,42 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json();
-    const { nombre, telefono, profileImage } = body;
-
-    // Validar que al menos un campo venga
-    if (!nombre && telefono === undefined && profileImage === undefined) {
-      return NextResponse.json(
-        { error: 'Debes proporcionar al menos un campo para actualizar' },
-        { status: 400 }
-      );
-    }
+    const { 
+      nombre, 
+      telefono, 
+      profileImage,
+      apodo,
+      horarioLlamada,
+      children,
+      goals, // Array de metas
+      goal1,
+      goal2,
+      goal3,
+      expectations,
+      profileCompleted
+    } = body;
 
     // Construir objeto de actualización solo con campos presentes
     const updateData: any = {};
     if (nombre) updateData.nombre = nombre;
     if (telefono !== undefined) updateData.telefono = telefono || null;
     if (profileImage !== undefined) updateData.profileImage = profileImage || null;
+    if (apodo !== undefined) updateData.apodo = apodo;
+    if (horarioLlamada !== undefined) updateData.horarioLlamada = horarioLlamada;
+    if (children !== undefined) updateData.children = parseInt(children) || 0;
+    if (expectations !== undefined) updateData.expectations = expectations;
+    if (profileCompleted !== undefined) updateData.profileCompleted = profileCompleted;
+    
+    // Manejar metas - puede venir como array o como campos individuales
+    if (goals !== undefined && Array.isArray(goals)) {
+      if (goals[0]) updateData.goal1 = goals[0];
+      if (goals[1]) updateData.goal2 = goals[1];
+      if (goals[2]) updateData.goal3 = goals[2];
+    } else {
+      if (goal1 !== undefined) updateData.goal1 = goal1;
+      if (goal2 !== undefined) updateData.goal2 = goal2;
+      if (goal3 !== undefined) updateData.goal3 = goal3;
+    }
 
     // Actualizar usuario
     const usuarioActualizado = await prisma.usuario.update({
@@ -117,7 +160,15 @@ export async function PATCH(request: Request) {
         email: true,
         telefono: true,
         profileImage: true,
-        rol: true
+        rol: true,
+        apodo: true,
+        horarioLlamada: true,
+        children: true,
+        goal1: true,
+        goal2: true,
+        goal3: true,
+        expectations: true,
+        profileCompleted: true
       }
     });
 

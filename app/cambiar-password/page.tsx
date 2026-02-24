@@ -17,6 +17,7 @@ export default function CambiarPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [redirectingToProfile, setRedirectingToProfile] = useState(false);
 
   if (!session || session.status === 'loading') {
     return (
@@ -65,7 +66,25 @@ export default function CambiarPasswordPage() {
 
       setSuccess(true);
       
-      // Redirigir al dashboard después de 2 segundos
+      // Verificar si el perfil está completo antes de redirigir
+      try {
+        const profileRes = await fetch('/api/user/profile');
+        const profileData = await profileRes.json();
+        
+        // Si el perfil no está completo, redirigir a completar-perfil
+        if (profileData.user && !profileData.user.profileCompleted && !profileData.user.apodo) {
+          setRedirectingToProfile(true);
+          setTimeout(() => {
+            router.push('/dashboard/completar-perfil');
+          }, 2000);
+          return;
+        }
+      } catch (e) {
+        // Si hay error, redirigir al dashboard normal
+        console.error('Error checking profile:', e);
+      }
+      
+      // Redirigir al dashboard si el perfil ya está completo
       setTimeout(() => {
         router.push('/dashboard');
       }, 2000);
@@ -88,7 +107,11 @@ export default function CambiarPasswordPage() {
             <CheckCircle className="text-green-500" size={32} />
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">¡Contraseña Actualizada!</h2>
-          <p className="text-slate-400">Redirigiendo al dashboard...</p>
+          <p className="text-slate-400">
+            {redirectingToProfile 
+              ? 'Redirigiendo a completar tu perfil...' 
+              : 'Redirigiendo al dashboard...'}
+          </p>
         </div>
       </div>
     );

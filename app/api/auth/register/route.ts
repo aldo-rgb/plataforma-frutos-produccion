@@ -49,7 +49,8 @@ export async function POST(request: Request) {
     } = validation.data;
 
     // Validaciones básicas (password ya no es requerido - se usa Quantum123 por defecto)
-    if (!nombre || !apodo || !telefono || !horarioLlamada || !email) {
+    // apodo y horarioLlamada ahora se completan después del pago en /dashboard/completar-perfil
+    if (!nombre || !telefono || !email) {
       return NextResponse.json(
         { success: false, error: 'Por favor completa todos los campos requeridos' },
         { status: 400 }
@@ -175,9 +176,7 @@ export async function POST(request: Request) {
     const newUser = await prisma.usuario.create({
       data: {
         nombre,
-        apodo,
         telefono,
-        horarioLlamada,
         email,
         password: hashedPassword,
         requirePasswordChange, // Marcar si necesita cambiar contraseña al primer login
@@ -191,6 +190,8 @@ export async function POST(request: Request) {
         invitedByText: invitedByText,
         referralCode: generatedReferralCode,
         // Campos opcionales del formulario extendido
+        ...(apodo && { apodo }),
+        ...(horarioLlamada && { horarioLlamada }),
         ...(profession && { profession }),
         ...(birthdate && { birthdate: new Date(birthdate) }),
         ...(children !== undefined && { children: parseInt(children) }),
