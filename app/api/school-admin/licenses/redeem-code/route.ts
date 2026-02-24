@@ -75,41 +75,60 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Buscar el código de licencias
-    const licenseCode = await prisma.licenseCode.findUnique({
-      where: { code: code.toUpperCase() },
+    // Buscar el código en CodigoAcceso (códigos institucionales)
+    const codigoAcceso = await prisma.codigoAcceso.findFirst({
+      where: { codigo: code.toUpperCase() },
     });
 
-    if (!licenseCode) {
+    if (!codigoAcceso) {
       return NextResponse.json(
         { success: false, error: 'Código no válido' },
         { status: 400 }
       );
     }
 
-    if (licenseCode.used) {
+    // Verificar que sea un código de licencias institucionales
+    if (codigoAcceso.tipo !== 'LICENCIAS_INSTITUCIONAL') {
       return NextResponse.json(
-        { success: false, error: 'Este código ya fue utilizado' },
+        { success: false, error: 'Este código no es válido para licencias institucionales' },
         { status: 400 }
       );
     }
 
-    if (licenseCode.expiresAt && new Date(licenseCode.expiresAt) < new Date()) {
+    if (codigoAcceso.estado !== 'DISPONIBLE') {
+      return NextResponse.json(
+        { success: false, error: 'Este código ya fue utilizado o está inactivo' },
+        { status: 400 }
+      );
+    }
+
+    if (codigoAcceso.fechaExpiracion && new Date(codigoAcceso.fechaExpiracion) < new Date()) {
       return NextResponse.json(
         { success: false, error: 'Este código ha expirado' },
         { status: 400 }
       );
     }
 
+    // Verificar que el código tenga suficientes licencias
+    const licenciasDisponibles = (codigoAcceso.cantidadLicencias || 0) - (codigoAcceso.licenciasUsadas || 0);
+    if (licenciasDisponibles < order.quantity) {
+      return NextResponse.json(
+        { success: false, error: `Este código solo tiene ${licenciasDisponibles} licencias disponibles, pero la orden es de ${order.quantity}` },
+        { status: 400 }
+      );
+    }
+
     // El código es válido, procesar el canje en una transacción
     await prisma.$transaction(async (tx) => {
-      // Marcar el código como usado
-      await tx.licenseCode.update({
-        where: { id: licenseCode.id },
+      // Actualizar el código - marcar licencias usadas
+      const nuevasLicenciasUsadas = (codigoAcceso.licenciasUsadas || 0) + order.quantity;
+      const todasUsadas = nuevasLicenciasUsadas >= (codigoAcceso.cantidadLicencias || 0);
+      
+      await tx.codigoAcceso.update({
+        where: { id: codigoAcceso.id },
         data: {
-          used: true,
-          usedBy: user.id,
-          usedAt: new Date(),
+          licenciasUsadas: nuevasLicenciasUsadas,
+          estado: todasUsadas ? 'CANJEADO' : 'DISPONIBLE',
           updatedAt: new Date(),
         },
       });
@@ -125,7 +144,7 @@ export async function POST(req: NextRequest) {
           paymentData: {
             ...(order.paymentData as object || {}),
             codeUsed: code,
-            codeId: licenseCode.id,
+            codigoAccesoId: codigoAcceso.id,
           },
         },
       });
