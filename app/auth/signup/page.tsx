@@ -233,6 +233,36 @@ export default function SignUpPageQuantum() {
     }
   };
 
+  // Función para cargar sedes cuando el usuario quiere cambiar de sede
+  const handleBackToSedeSelection = async () => {
+    setLoading(true);
+    setStep('sede');
+    setSelectedOrganization(null);
+    setNextVision(null);
+    
+    try {
+      // Si tenemos una organización del referral, cargar las sedes de su master organization
+      if (referralUser?.organizationId) {
+        const res = await fetch(`/api/public/organization/${referralUser.organizationId}`);
+        const data = await res.json();
+        
+        if (data.success) {
+          setMasterOrganization(data.masterOrganization);
+          setChildOrganizations(data.childOrganizations || []);
+        }
+      } else if (orgCode) {
+        // Si hay orgCode en la URL, cargar normalmente
+        await fetchOrganizationData();
+        return; // fetchOrganizationData ya maneja setLoading(false)
+      }
+    } catch (error) {
+      console.error('Error loading organizations:', error);
+      setError('Error al cargar las sedes');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLegalScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const element = e.currentTarget;
     const isScrolledToBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 10;
@@ -413,11 +443,7 @@ export default function SignUpPageQuantum() {
               error={error}
               submitting={submitting}
               locale={locale}
-              onBack={() => {
-                setStep('sede');
-                setSelectedOrganization(null);
-                setNextVision(null);
-              }}
+              onBack={handleBackToSedeSelection}
               onLegalScroll={handleLegalScroll}
               onSubmit={handleSubmit}
             />
