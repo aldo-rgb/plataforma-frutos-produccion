@@ -25,12 +25,28 @@ export default function MiQRPage() {
 
   const fetchMentorProfile = async () => {
     try {
+      // Primero obtener el usuario actual para tener su ID
+      const userRes = await fetch('/api/user/me');
+      const userData = await userRes.json();
+      
       const res = await fetch('/api/mentor/profile-editor');
       const data = await res.json();
       
-      if (data.success && data.profile) {
-        setMentorProfile(data.profile);
-        generateQR(data.profile.slug);
+      // El API devuelve directamente el perfil, no { success, profile }
+      if (data && !data.error && data.nombre) {
+        const userId = userData?.id || session?.user?.id;
+        
+        setMentorProfile({
+          displayName: data.nombre,
+          title: data.titulo || data.jobTitle || data.especialidad,
+          photoUrl: data.profileImage,
+          id: userId,
+          ...data
+        });
+        
+        if (userId) {
+          generateQR(userId.toString());
+        }
       }
     } catch (error) {
       console.error('Error fetching mentor profile:', error);
@@ -39,8 +55,8 @@ export default function MiQRPage() {
     }
   };
 
-  const generateQR = async (slug: string) => {
-    const url = `${window.location.origin}/mentores/${slug}`;
+  const generateQR = async (id: string) => {
+    const url = `${window.location.origin}/mentores/${id}`;
     try {
       const dataUrl = await QRCode.toDataURL(url, {
         width: 300,
@@ -57,8 +73,8 @@ export default function MiQRPage() {
   };
 
   const getProfileUrl = () => {
-    if (!mentorProfile?.slug) return '';
-    return `${window.location.origin}/mentores/${mentorProfile.slug}`;
+    if (!mentorProfile?.id) return '';
+    return `${window.location.origin}/mentores/${mentorProfile.id}`;
   };
 
   const handleCopyLink = async () => {
@@ -75,7 +91,7 @@ export default function MiQRPage() {
     if (!qrDataUrl) return;
     
     const link = document.createElement('a');
-    link.download = `qr-mentor-${mentorProfile?.slug || 'profile'}.png`;
+    link.download = `qr-mentor-${mentorProfile?.id || 'profile'}.png`;
     link.href = qrDataUrl;
     link.click();
   };
