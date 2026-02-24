@@ -1043,11 +1043,12 @@ function FooterSection({
 
   // If already logged in, show dashboard button
   if (status === 'authenticated' && session?.user) {
+    const firstName = session.user.name?.split(' ')[0] || session.user.email?.split('@')[0] || '';
     return (
       <footer className="relative py-24 bg-gradient-to-b from-slate-950 to-black overflow-hidden" ref={loginRef}>
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-black text-white mb-4">
-            ¡Bienvenido de vuelta, {session.user.name?.split(' ')[0]}!
+            Hola, {firstName}
           </h2>
           <p className="text-slate-400 mb-8">Ya tienes una sesión activa.</p>
           <div className="flex flex-col items-center gap-4">
