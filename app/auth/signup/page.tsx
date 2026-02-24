@@ -99,18 +99,27 @@ export default function SignUpPageQuantum() {
   });
 
   useEffect(() => {
-    if (orgCode) {
-      fetchOrganizationData();
-    } else {
-      setLoading(false);
-    }
-  }, [orgCode]);
-
-  useEffect(() => {
-    if (refCode) {
-      fetchReferralUser(refCode);
-    }
-  }, [refCode]);
+    const initializeSignup = async () => {
+      // Si hay código de referido, primero validarlo
+      if (refCode) {
+        const referralOrg = await fetchReferralUser(refCode);
+        // Si el referral tiene organización, ya se auto-seleccionó, no cargar selector
+        if (referralOrg) {
+          setLoading(false);
+          return;
+        }
+      }
+      
+      // Si no hay referral con organización, cargar organizaciones normalmente
+      if (orgCode) {
+        fetchOrganizationData();
+      } else {
+        setLoading(false);
+      }
+    };
+    
+    initializeSignup();
+  }, [orgCode, refCode]);
 
   useEffect(() => {
     // Calcular edad automáticamente
@@ -128,7 +137,7 @@ export default function SignUpPageQuantum() {
     }
   }, [formData.birthdate]);
 
-  const fetchReferralUser = async (code: string) => {
+  const fetchReferralUser = async (code: string): Promise<boolean> => {
     try {
       // Limpiar el código: tomar solo la parte alfanumérica antes de espacios/emojis
       const cleanCode = code
@@ -138,7 +147,7 @@ export default function SignUpPageQuantum() {
       
       if (!cleanCode || cleanCode.length < 5) {
         console.warn('Invalid referral code:', code);
-        return;
+        return false;
       }
 
       const res = await fetch(`/api/public/referral/${encodeURIComponent(cleanCode)}`);
@@ -152,7 +161,6 @@ export default function SignUpPageQuantum() {
         // Si el referidor tiene organización, auto-seleccionarla
         if (data.organization) {
           setSelectedOrganization(data.organization);
-          setLoading(true);
           
           // Obtener la próxima visión de la organización
           try {
@@ -166,13 +174,16 @@ export default function SignUpPageQuantum() {
             console.error('Error fetching vision:', visionError);
           }
           
-          setLoading(false);
           setStep('registro');
+          return true; // Indica que se encontró organización
         }
       }
+      return false;
     } catch (error) {
       console.error('Error fetching referral:', error);
+      return false;
     }
+  };
   };
 
   const fetchOrganizationData = async () => {
