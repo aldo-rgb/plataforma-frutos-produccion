@@ -539,6 +539,19 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
               <User size={18} className="text-emerald-400" />
               <span>Editar Mi Perfil</span>
             </Link>
+
+            <Link 
+              href="/dashboard/mentor/mi-qr"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/mentor/mi-qr'
+                  ? 'bg-cyan-600 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <QrCode size={18} className="text-cyan-400" />
+              <span>Mi QR Personal</span>
+            </Link>
           </div>
         )}
 
