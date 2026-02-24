@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Building2,
@@ -14,25 +14,72 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+interface BankInfo {
+  banco: string;
+  clabe: string;
+  beneficiario: string;
+  referencia: string;
+  whatsapp: string;
+}
+
 function TransferPendingContent() {
   const searchParams = useSearchParams();
   const orderRef = searchParams.get('ref') || '';
   const email = searchParams.get('email') || '';
   const amount = searchParams.get('amount') || '0';
+  const orgId = searchParams.get('orgId') || '';
+
+  const [loading, setLoading] = useState(true);
+  const [bankInfo, setBankInfo] = useState<BankInfo>({
+    banco: '',
+    clabe: '',
+    beneficiario: '',
+    referencia: orderRef,
+    whatsapp: '',
+  });
+
+  useEffect(() => {
+    const fetchBankConfig = async () => {
+      if (!orgId) {
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        const res = await fetch(`/api/public/prices?organizationId=${orgId}`);
+        const data = await res.json();
+        
+        if (data.success && data.bankConfig) {
+          setBankInfo({
+            banco: data.bankConfig.bankName || '',
+            clabe: data.bankConfig.bankAccountClabe || '',
+            beneficiario: data.bankConfig.bankAccountHolder || '',
+            referencia: orderRef,
+            whatsapp: data.bankConfig.transferWhatsappNumber || '',
+          });
+        }
+      } catch (e) {
+        console.error('Error fetching bank config:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBankConfig();
+  }, [orgId, orderRef]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     // Could add a toast notification here
   };
 
-  // Datos bancarios - estos deberían venir de configuración
-  const bankInfo = {
-    banco: 'BBVA',
-    clabe: '012180001234567890',
-    beneficiario: 'QUANTUM MATTER SA DE CV',
-    referencia: orderRef,
-    whatsapp: '+52 81 1234 5678',
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">

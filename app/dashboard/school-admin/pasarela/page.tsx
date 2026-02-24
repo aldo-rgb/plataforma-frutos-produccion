@@ -19,6 +19,8 @@ import {
   Zap,
   HelpCircle,
   X,
+  Building2,
+  Phone,
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -74,11 +76,20 @@ const PROVIDERS = [
   },
 ];
 
+interface BankConfig {
+  bankName: string;
+  bankAccountClabe: string;
+  bankAccountHolder: string;
+  bankAccountNumber: string;
+  transferWhatsappNumber: string;
+}
+
 export default function PaymentGatewayPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingBank, setSavingBank] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [organizationName, setOrganizationName] = useState('');
   const [notification, setNotification] = useState<{
@@ -92,6 +103,14 @@ export default function PaymentGatewayPage() {
     secretKey: '',
     webhookSecret: '',
     isActive: true,
+  });
+
+  const [bankConfig, setBankConfig] = useState<BankConfig>({
+    bankName: '',
+    bankAccountClabe: '',
+    bankAccountHolder: '',
+    bankAccountNumber: '',
+    transferWhatsappNumber: '',
   });
 
   const [showSecretKey, setShowSecretKey] = useState(false);
@@ -131,12 +150,54 @@ export default function PaymentGatewayPage() {
           });
           setHasExistingConfig(true);
         }
+        // Cargar configuración bancaria
+        if (data.bankConfig) {
+          setBankConfig({
+            bankName: data.bankConfig.bankName || '',
+            bankAccountClabe: data.bankConfig.bankAccountClabe || '',
+            bankAccountHolder: data.bankConfig.bankAccountHolder || '',
+            bankAccountNumber: data.bankConfig.bankAccountNumber || '',
+            transferWhatsappNumber: data.bankConfig.transferWhatsappNumber || '',
+          });
+        }
       }
     } catch (error) {
       console.error('Error fetching config:', error);
       showNotification('error', 'Error al cargar la configuración');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveBankConfig = async () => {
+    if (!bankConfig.bankName || !bankConfig.bankAccountClabe || !bankConfig.bankAccountHolder) {
+      showNotification('error', 'Banco, CLABE y Beneficiario son requeridos');
+      return;
+    }
+
+    setSavingBank(true);
+    try {
+      const res = await fetch('/api/school-admin/payment-gateway/bank-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bankConfig),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        showNotification('success', data.message);
+        if (data.bankConfig) {
+          setBankConfig(data.bankConfig);
+        }
+      } else {
+        showNotification('error', data.error || 'Error al guardar');
+      }
+    } catch (error) {
+      console.error('Error saving bank config:', error);
+      showNotification('error', 'Error al guardar la configuración bancaria');
+    } finally {
+      setSavingBank(false);
     }
   };
 
@@ -683,10 +744,154 @@ export default function PaymentGatewayPage() {
           </button>
         </div>
 
-        {/* Help Section */}
+        {/* Sección de Transferencia Bancaria */}
+        <div className="mt-10 pt-8 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <Building2 className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                Configuración para Transferencias
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Datos bancarios que se mostrarán cuando un usuario elija pagar por transferencia
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Banco */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Banco <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={bankConfig.bankName}
+                  onChange={(e) => setBankConfig(prev => ({ ...prev, bankName: e.target.value }))}
+                  placeholder="Ej: BBVA, Santander, Banorte..."
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
+                />
+              </div>
+
+              {/* CLABE */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  CLABE Interbancaria <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={bankConfig.bankAccountClabe}
+                  onChange={(e) => setBankConfig(prev => ({ ...prev, bankAccountClabe: e.target.value.replace(/\D/g, '').slice(0, 18) }))}
+                  placeholder="18 dígitos"
+                  maxLength={18}
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all font-mono"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  {bankConfig.bankAccountClabe.length}/18 dígitos
+                </p>
+              </div>
+
+              {/* Beneficiario */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Nombre del Beneficiario <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={bankConfig.bankAccountHolder}
+                  onChange={(e) => setBankConfig(prev => ({ ...prev, bankAccountHolder: e.target.value }))}
+                  placeholder="Nombre como aparece en la cuenta"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
+                />
+              </div>
+
+              {/* Número de cuenta (opcional) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Número de Cuenta <span className="text-gray-400">(opcional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={bankConfig.bankAccountNumber}
+                  onChange={(e) => setBankConfig(prev => ({ ...prev, bankAccountNumber: e.target.value }))}
+                  placeholder="Número de cuenta"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
+                />
+              </div>
+
+              {/* WhatsApp para comprobantes */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <Phone className="w-4 h-4 inline mr-1" />
+                  WhatsApp para recibir comprobantes <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={bankConfig.transferWhatsappNumber}
+                  onChange={(e) => setBankConfig(prev => ({ ...prev, transferWhatsappNumber: e.target.value }))}
+                  placeholder="Ej: +52 81 1234 5678"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Los usuarios enviarán su comprobante de pago a este número para activar su cuenta
+                </p>
+              </div>
+            </div>
+
+            {/* Botón guardar configuración bancaria */}
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={handleSaveBankConfig}
+                disabled={savingBank}
+                className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                {savingBank ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                Guardar datos bancarios
+              </button>
+            </div>
+          </div>
+
+          {/* Preview de cómo se verá */}
+          {bankConfig.bankName && bankConfig.bankAccountClabe && (
+            <div className="mt-6 bg-gray-50 dark:bg-gray-900 rounded-xl p-6">
+              <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-4">
+                Vista previa (así lo verán los usuarios):
+              </h4>
+              <div className="bg-slate-900 rounded-xl p-5 space-y-3 text-white">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Banco</span>
+                  <span className="font-bold">{bankConfig.bankName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">CLABE</span>
+                  <span className="font-mono font-bold">{bankConfig.bankAccountClabe}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Beneficiario</span>
+                  <span className="font-bold">{bankConfig.bankAccountHolder}</span>
+                </div>
+                {bankConfig.transferWhatsappNumber && (
+                  <div className="mt-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-200 text-sm">
+                    <strong>Importante:</strong> Después de la transferencia, envía tu comprobante al WhatsApp{' '}
+                    <span className="font-bold text-white">{bankConfig.transferWhatsappNumber}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Help Section - Pasarelas */}
         <div className="mt-8 bg-gray-100 dark:bg-gray-800/50 rounded-xl p-6">
           <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
-            ¿Necesitas ayuda?
+            ¿Necesitas ayuda con las pasarelas?
           </h3>
           <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
             <p>

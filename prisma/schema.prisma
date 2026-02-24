@@ -1046,6 +1046,7 @@ model Organization {
   anticiposEnabled                                      Boolean                         @default(false)
   transferDeadlineDays                                  Int                             @default(0)
   transfersEnabled                                      Boolean                         @default(false)
+  transferWhatsappNumber                                String?
   bankAccountClabe                                      String?
   bankAccountHolder                                     String?
   bankAccountNumber                                     String?

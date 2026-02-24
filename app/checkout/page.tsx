@@ -78,6 +78,14 @@ interface PriceConfig {
 type TicketSelection = 'BASIC_ONLY' | 'FULL_VISION';
 type PaymentMethod = 'GIFT_CODE' | 'STRIPE' | 'TRANSFER';
 
+interface BankConfig {
+  bankName: string;
+  bankAccountClabe: string;
+  bankAccountHolder: string;
+  bankAccountNumber: string;
+  transferWhatsappNumber: string;
+}
+
 function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -85,6 +93,7 @@ function CheckoutContent() {
   // Get registration data from sessionStorage
   const [registrationData, setRegistrationData] = useState<RegistrationData | null>(null);
   const [prices, setPrices] = useState<PriceConfig | null>(null);
+  const [bankConfig, setBankConfig] = useState<BankConfig | null>(null);
   const [loading, setLoading] = useState(true);
   
   // Checkout tracking for abandoned cart
@@ -197,6 +206,10 @@ function CheckoutContent() {
       
       if (data.success) {
         setPrices(data.prices);
+        // Set bank config if available
+        if (data.bankConfig) {
+          setBankConfig(data.bankConfig);
+        }
       } else {
         // Use default prices
         setPrices({
@@ -405,8 +418,8 @@ function CheckoutContent() {
         // Clear session storage
         sessionStorage.removeItem('pendingRegistration');
 
-        // Redirect to transfer pending page with order reference
-        router.push(`/checkout/transfer-pending?ref=${transferData.orderReference}&email=${encodeURIComponent(registrationData.email)}&amount=${remainingBalance}`);
+        // Redirect to transfer pending page with order reference and org info
+        router.push(`/checkout/transfer-pending?ref=${transferData.orderReference}&email=${encodeURIComponent(registrationData.email)}&amount=${remainingBalance}&orgId=${registrationData.organizationId}`);
         return;
       }
 
@@ -1029,33 +1042,43 @@ function CheckoutContent() {
                     Pago por Transferencia Bancaria
                   </h3>
                   
-                  <div className="space-y-4">
-                    <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                      <p className="text-slate-400 text-sm mb-1">Banco</p>
-                      <p className="text-white font-bold">BBVA</p>
+                  {bankConfig && bankConfig.bankName ? (
+                    <div className="space-y-4">
+                      <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                        <p className="text-slate-400 text-sm mb-1">Banco</p>
+                        <p className="text-white font-bold">{bankConfig.bankName}</p>
+                      </div>
+                      
+                      <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                        <p className="text-slate-400 text-sm mb-1">CLABE Interbancaria</p>
+                        <p className="text-white font-mono font-bold tracking-wider">{bankConfig.bankAccountClabe}</p>
+                      </div>
+                      
+                      <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                        <p className="text-slate-400 text-sm mb-1">Beneficiario</p>
+                        <p className="text-white font-bold">{bankConfig.bankAccountHolder}</p>
+                      </div>
+                      
+                      <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                        <p className="text-slate-400 text-sm mb-1">Monto a Transferir</p>
+                        <p className="text-purple-400 font-bold text-xl">${getTotalAmount().toLocaleString()} MXN</p>
+                      </div>
+                      
+                      {bankConfig.transferWhatsappNumber && (
+                        <div className="bg-purple-500/20 border border-purple-500/50 rounded-lg p-4">
+                          <p className="text-purple-300 text-sm">
+                            <strong>Importante:</strong> Después de realizar la transferencia, envía tu comprobante de pago al WhatsApp <span className="text-white font-bold">{bankConfig.transferWhatsappNumber}</span> junto con tu nombre completo para activar tu cuenta.
+                          </p>
+                        </div>
+                      )}
                     </div>
-                    
-                    <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                      <p className="text-slate-400 text-sm mb-1">CLABE Interbancaria</p>
-                      <p className="text-white font-mono font-bold tracking-wider">012180001234567890</p>
-                    </div>
-                    
-                    <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                      <p className="text-slate-400 text-sm mb-1">Beneficiario</p>
-                      <p className="text-white font-bold">QUANTUM MATTER SA DE CV</p>
-                    </div>
-                    
-                    <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                      <p className="text-slate-400 text-sm mb-1">Monto a Transferir</p>
-                      <p className="text-purple-400 font-bold text-xl">${getTotalAmount().toLocaleString()} MXN</p>
-                    </div>
-                    
-                    <div className="bg-purple-500/20 border border-purple-500/50 rounded-lg p-4">
-                      <p className="text-purple-300 text-sm">
-                        <strong>Importante:</strong> Después de realizar la transferencia, envía tu comprobante de pago al WhatsApp <span className="text-white font-bold">+52 81 1234 5678</span> junto con tu nombre completo para activar tu cuenta.
+                  ) : (
+                    <div className="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-4">
+                      <p className="text-yellow-300 text-sm">
+                        <strong>Nota:</strong> La organización no ha configurado datos bancarios para transferencias. Por favor, contacta al administrador o elige otro método de pago.
                       </p>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 

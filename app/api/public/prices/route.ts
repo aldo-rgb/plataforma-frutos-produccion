@@ -23,7 +23,38 @@ export async function GET(req: NextRequest) {
       FULL_VISION: 12000,
     };
 
+    // Bank config defaults
+    let bankConfig = {
+      bankName: '',
+      bankAccountClabe: '',
+      bankAccountHolder: '',
+      bankAccountNumber: '',
+      transferWhatsappNumber: '',
+    };
+
     if (organizationId) {
+      // Get organization with bank config
+      const organization = await prisma.organization.findUnique({
+        where: { id: parseInt(organizationId) },
+        select: {
+          bankName: true,
+          bankAccountClabe: true,
+          bankAccountHolder: true,
+          bankAccountNumber: true,
+          transferWhatsappNumber: true,
+        },
+      });
+
+      if (organization) {
+        bankConfig = {
+          bankName: organization.bankName || '',
+          bankAccountClabe: organization.bankAccountClabe || '',
+          bankAccountHolder: organization.bankAccountHolder || '',
+          bankAccountNumber: organization.bankAccountNumber || '',
+          transferWhatsappNumber: organization.transferWhatsappNumber || '',
+        };
+      }
+
       // Check if organization has custom prices
       const orgPrices = await prisma.ticketPriceConfig.findFirst({
         where: {
@@ -68,6 +99,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       prices,
+      bankConfig,
     });
   } catch (error) {
     logger.error('Error fetching prices:', error);
@@ -79,7 +111,14 @@ export async function GET(req: NextRequest) {
           ADVANCED: 4500,
           PL: 5500,
           FULL_VISION: 12000,
-        }
+        },
+        bankConfig: {
+          bankName: '',
+          bankAccountClabe: '',
+          bankAccountHolder: '',
+          bankAccountNumber: '',
+          transferWhatsappNumber: '',
+        },
       },
       { status: 200 }
     );

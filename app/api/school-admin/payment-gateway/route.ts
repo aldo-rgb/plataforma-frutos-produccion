@@ -37,7 +37,14 @@ export async function GET(request: NextRequest) {
     // Obtener la organización con su configuración de gateway
     const organization = await prisma.organization.findUnique({
       where: { id: usuario.organizationId },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        bankName: true,
+        bankAccountClabe: true,
+        bankAccountHolder: true,
+        bankAccountNumber: true,
+        transferWhatsappNumber: true,
         PaymentGatewayConfig: true,
       },
     });
@@ -64,6 +71,13 @@ export async function GET(request: NextRequest) {
       success: true,
       config: safeConfig,
       organizationName: organization.name,
+      bankConfig: {
+        bankName: organization.bankName || '',
+        bankAccountClabe: organization.bankAccountClabe || '',
+        bankAccountHolder: organization.bankAccountHolder || '',
+        bankAccountNumber: organization.bankAccountNumber || '',
+        transferWhatsappNumber: organization.transferWhatsappNumber || '',
+      },
     });
     
     // Prevenir caché del navegador
