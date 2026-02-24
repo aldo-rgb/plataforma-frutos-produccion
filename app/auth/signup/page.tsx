@@ -50,7 +50,6 @@ export default function SignUpPageQuantum() {
   const [error, setError] = useState('');
   
   const messages = locale === 'es' ? esMessages : enMessages;
-  const [scrolledLegal, setScrolledLegal] = useState(false);
 
   // Estados de datos
   const [masterOrganization, setMasterOrganization] = useState<Organization | null>(null);
@@ -89,9 +88,6 @@ export default function SignUpPageQuantum() {
     
     // Referral
     referralCode: '',
-    
-    // Legal
-    acceptTerms: false,
     
     // Credentials
     password: '',
@@ -281,14 +277,6 @@ export default function SignUpPageQuantum() {
     }
   };
 
-  const handleLegalScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const element = e.currentTarget;
-    const isScrolledToBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 10;
-    if (isScrolledToBottom && !scrolledLegal) {
-      setScrolledLegal(true);
-    }
-  };
-
   const validateForm = () => {
     // Validar campos requeridos (simplificado - solo datos básicos)
     if (!formData.firstName || !formData.lastName || 
@@ -314,12 +302,6 @@ export default function SignUpPageQuantum() {
     }
 
     // Ya no se validan contraseñas - se asigna Quantum123 por defecto
-
-    // Validar términos
-    if (!formData.acceptTerms) {
-      setError(messages.signup.errors.mustAcceptTerms);
-      return false;
-    }
 
     // Validar organización
     if (!selectedOrganization) {
@@ -447,12 +429,10 @@ export default function SignUpPageQuantum() {
                 setFormData={setFormData}
                 referralUser={referralUser}
                 referralLocked={referralLocked}
-                scrolledLegal={scrolledLegal}
                 error={error}
                 submitting={submitting}
                 locale={locale}
                 onBack={handleBackToSedeSelection}
-                onLegalScroll={handleLegalScroll}
                 onSubmit={handleSubmit}
               />
             )}

@@ -45,7 +45,6 @@ interface FormData {
   goal3: string;
   expectations: string;
   referralCode: string;
-  acceptTerms: boolean;
   password: string;
   confirmPassword: string;
 }
@@ -57,11 +56,9 @@ interface Props {
   setFormData: React.Dispatch<React.SetStateAction<FormData>>;
   referralUser: ReferralUser | null;
   referralLocked: boolean;
-  scrolledLegal: boolean;
   error: string;
   submitting: boolean;
   onBack: () => void;
-  onLegalScroll: (e: React.UIEvent<HTMLDivElement>) => void;
   onSubmit: (e: React.FormEvent) => void;
   locale: 'es' | 'en';
 }
@@ -73,11 +70,9 @@ export function RegistrationForm({
   setFormData,
   referralUser,
   referralLocked,
-  scrolledLegal,
   error,
   submitting,
   onBack,
-  onLegalScroll,
   onSubmit,
   locale,
 }: Props) {
@@ -88,7 +83,6 @@ export function RegistrationForm({
   const [selectedReferral, setSelectedReferral] = useState<ReferralUser | null>(referralUser);
   const [showNoPasteModal, setShowNoPasteModal] = useState(false);
   const [ageWarning, setAgeWarning] = useState<'none' | 'needs_tutor' | 'too_young'>('none');
-  const [showScrollWarning, setShowScrollWarning] = useState(false);
 
   // Validar edad cuando cambia
   useEffect(() => {
@@ -483,129 +477,6 @@ export function RegistrationForm({
                   )}
                 </div>
               )}
-            </div>
-          </FormSection>
-
-          {/* Sección: Legal */}
-          <FormSection title={t('legal.title')}>
-            <p className="text-sm text-slate-300 mb-3 font-medium">{t('legal.intro')}</p>
-            <div
-              className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-5 h-80 overflow-y-auto text-sm text-slate-300 space-y-4"
-              onScroll={onLegalScroll}
-            >
-              {/* Política de Reembolso */}
-              <div>
-                <h4 className={`font-bold text-base mb-2 ${tw.textQuantum}`}>{t('legal.refundTitle')}</h4>
-                <p className="font-semibold mb-2">{t('legal.refundIntro')}</p>
-                <ul className="list-none space-y-2 pl-4">
-                  <li className="flex items-start gap-2">
-                    <span className="text-[#00F0FF] mt-1">1.</span>
-                    <span>{t('legal.refund1')}</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[#00F0FF] mt-1">2.</span>
-                    <span className="font-semibold text-yellow-400">{t('legal.refund2')}</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[#00F0FF] mt-1">3.</span>
-                    <span className="font-semibold text-green-400">{t('legal.refund3')}</span>
-                  </li>
-                </ul>
-              </div>
-
-              {/* Detalles del Entrenamiento */}
-              <div className="border-t border-slate-700 pt-4">
-                <h4 className={`font-bold text-base mb-2 ${tw.textQuantum}`}>{t('legal.scheduleTitle')}</h4>
-                <p className="font-semibold mb-3">{t('legal.scheduleIntro')}</p>
-                <div className="space-y-2 pl-4">
-                  <div className="flex items-start gap-2">
-                    <span className="text-[#00F0FF] font-bold">•</span>
-                    <p><span className="font-semibold">{t('legal.friday')}</span></p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-[#00F0FF] font-bold">•</span>
-                    <p><span className="font-semibold">{t('legal.saturday')}</span></p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-[#00F0FF] font-bold">•</span>
-                    <p><span className="font-semibold">{t('legal.sunday')}</span></p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Advertencia Importante */}
-              <div className="border-t border-slate-700 pt-4">
-                <div className="bg-red-900/20 border-l-4 border-red-500 p-4 rounded">
-                  <p className="font-bold text-red-400">{t('legal.integralWarning')}</p>
-                </div>
-              </div>
-
-              {/* Espaciador final para asegurar scroll */}
-              <div className="h-4"></div>
-            </div>
-            
-            {!scrolledLegal && (
-              <p className="text-xs text-yellow-400 mt-2 flex items-center gap-2">
-                <span>⚠️</span>
-                <span>{t('legal.scrollWarning')}</span>
-              </p>
-            )}
-            
-            <div 
-              className="relative mt-4"
-              onClick={() => {
-                if (!scrolledLegal) {
-                  setShowScrollWarning(true);
-                  // Auto-hide after 4 seconds
-                  setTimeout(() => setShowScrollWarning(false), 4000);
-                }
-              }}
-            >
-              <label className={`flex items-center gap-3 group ${scrolledLegal ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
-                <input
-                  type="checkbox"
-                  checked={formData.acceptTerms}
-                  onChange={handleChange('acceptTerms')}
-                  disabled={!scrolledLegal}
-                  className="w-5 h-5 rounded border-2 border-slate-600 bg-slate-800/50 checked:bg-[#00F0FF] checked:border-[#00F0FF] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  required
-                />
-                <span className={`text-sm transition-colors ${scrolledLegal ? 'text-slate-300 group-hover:text-white' : 'text-slate-500'}`}>
-                  {t('legal.checkbox')}
-                </span>
-              </label>
-              
-              <AnimatePresence>
-                {showScrollWarning && !scrolledLegal && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -5, scale: 0.95 }}
-                    className="absolute left-0 right-0 mt-3 p-4 bg-red-900/90 border border-red-500 rounded-lg shadow-lg shadow-red-500/20"
-                  >
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl flex-shrink-0">📜</span>
-                      <div>
-                        <p className="font-bold text-red-200 mb-1">
-                          {t('legal.mustScrollTitle')}
-                        </p>
-                        <p className="text-sm text-red-300">
-                          {t('legal.mustScrollMessage')}
-                        </p>
-                      </div>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowScrollWarning(false);
-                        }}
-                        className="text-red-400 hover:text-white transition-colors ml-auto"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
           </FormSection>
 
