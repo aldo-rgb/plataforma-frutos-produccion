@@ -100,8 +100,26 @@ export default function SignUpPageQuantum() {
 
   useEffect(() => {
     const initializeSignup = async () => {
-      // Si hay código de referido, primero validarlo
-      if (refCode) {
+      // Si hay código de referido SIN código de organización, 
+      // redirigir a la landing page para que el usuario conozca el programa primero
+      if (refCode && !orgCode) {
+        try {
+          // Obtener la organización del referidor para redirigir a su landing
+          const res = await fetch(`/api/public/referral/${encodeURIComponent(refCode)}`);
+          const data = await res.json();
+          
+          if (data.success && data.organization?.slug) {
+            // Redirigir a la landing page de la organización con el código de referido
+            router.push(`/org/${data.organization.slug}?ref=${refCode}`);
+            return;
+          }
+        } catch (error) {
+          console.error('Error fetching referral for redirect:', error);
+        }
+      }
+      
+      // Si hay código de referido Y código de organización, proceder con el registro directo
+      if (refCode && orgCode) {
         const referralOrg = await fetchReferralUser(refCode);
         // Si el referral tiene organización, ya se auto-seleccionó, no cargar selector
         if (referralOrg) {
@@ -119,7 +137,7 @@ export default function SignUpPageQuantum() {
     };
     
     initializeSignup();
-  }, [orgCode, refCode]);
+  }, [orgCode, refCode, router]);
 
   useEffect(() => {
     // Calcular edad automáticamente
