@@ -43,7 +43,7 @@ export async function GET(
     }
 
     // Buscar usuario por código de referido
-    const user = await prisma.usuario.findUnique({
+    const user = await prisma.usuario.findFirst({
       where: {
         referralCode: cleanCode,
       },
@@ -52,7 +52,7 @@ export async function GET(
         nombre: true,
         referralCode: true,
         organizationId: true,
-        Organization: {
+        Organization_Usuario_organizationIdToOrganization: {
           select: {
             id: true,
             name: true,
@@ -79,7 +79,7 @@ export async function GET(
         referralCode: user.referralCode,
         organizationId: user.organizationId,
       },
-      organization: user.Organization,
+      organization: user.Organization_Usuario_organizationIdToOrganization,
     });
   } catch (error) {
     logger.error('Error validating referral code:', error);

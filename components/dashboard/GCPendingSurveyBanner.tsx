@@ -41,7 +41,9 @@ export default function GCPendingSurveyBanner() {
   };
 
   const handleOpenSurvey = (survey: PendingSurvey) => {
-    if (!survey.canSubmit) {
+    // Permitir si canSubmit=true O si tiene 0 participantes
+    const canAnswer = survey.canSubmit || survey.totalParticipants === 0;
+    if (!canAnswer) {
       // No abrir modal si no puede evaluar
       return;
     }
@@ -65,6 +67,8 @@ export default function GCPendingSurveyBanner() {
 
   const currentSurvey = pendingSurveys[0];
   const isBlocked = !currentSurvey.canSubmit;
+  // Si tiene 0 participantes, puede contestar la encuesta aunque canSubmit=false (caso legacy)
+  const canAnswerSurvey = currentSurvey.canSubmit || currentSurvey.totalParticipants === 0;
 
   return (
     <>
@@ -161,7 +165,7 @@ export default function GCPendingSurveyBanner() {
 
                 {/* Botones */}
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  {isBlocked ? (
+                  {!canAnswerSurvey ? (
                     <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-600/50 rounded-xl text-slate-400 font-semibold text-sm cursor-not-allowed">
                       <Lock className="w-4 h-4" />
                       <span className="hidden sm:inline">Bloqueado</span>

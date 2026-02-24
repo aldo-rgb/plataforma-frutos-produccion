@@ -163,7 +163,9 @@ export async function GET(request: NextRequest) {
             scheduledParticipants = scheduledSlots.length;
           }
 
-          const allScheduled = totalParticipants > 0 && scheduledParticipants >= totalParticipants;
+          // Si no tiene participantes activos, puede completar la encuesta directamente
+          // Si tiene participantes, todos deben tener llamada agendada
+          const allScheduled = totalParticipants === 0 || scheduledParticipants >= totalParticipants;
 
           return {
             productId: p.id,

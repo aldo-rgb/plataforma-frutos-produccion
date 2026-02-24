@@ -353,9 +353,9 @@ export default function PersonalQRWidget({
   const generateQR = async () => {
     setGeneratingQR(true);
     try {
-      // URL que dirige al signup con el código de referido y organización
-      const userURL = referralCode && organizationId
-        ? `${window.location.origin}/auth/signup?org=${organizationId}&ref=${referralCode}`
+      // URL que dirige al signup con el código de referido (la org se obtiene del referral)
+      const userURL = referralCode
+        ? `${window.location.origin}/auth/signup?ref=${referralCode}`
         : `${window.location.origin}/profile/${userId}`;
       
       // Guardar la URL de registro para compartir
@@ -509,9 +509,9 @@ export default function PersonalQRWidget({
               <div className="flex gap-3">
                 <button
                   onClick={async () => {
-                    // URL directa al registro con organización y código de referido
-                    const invitationURL = referralCode && organizationId
-                      ? `${window.location.origin}/auth/signup?org=${organizationId}&ref=${referralCode}`
+                    // URL directa al registro con código de referido (la org se obtiene del referral)
+                    const invitationURL = referralCode
+                      ? `${window.location.origin}/auth/signup?ref=${referralCode}`
                       : registrationURL || `${window.location.origin}/auth/signup`;
 
                     const shareText = `🎓 ¡Te invito a vivir una experiencia que cambiará tu vida!

@@ -175,6 +175,16 @@ export async function POST(req: NextRequest) {
           updatedAt: new Date(),
         },
       });
+
+      // IMPORTANTE: Actualizar también la Organization para que el dashboard refleje las licencias
+      await tx.organization.update({
+        where: { id: user.organizationId! },
+        data: {
+          totalLicenses: { increment: order.quantity },
+          licensesAvailable: { increment: order.quantity },
+          updatedAt: new Date(),
+        },
+      });
     });
 
     logger.debug('✅ Código canjeado exitosamente:', {
