@@ -16,6 +16,7 @@ import {
   Upload,
   X,
   Ticket,
+  Trash2,
 } from 'lucide-react';
 
 export default function PaymentPage() {
@@ -36,6 +37,7 @@ export default function PaymentPage() {
   const [codeValidating, setCodeValidating] = useState(false);
   const [codeError, setCodeError] = useState<string | null>(null);
   const [codeSuccess, setCodeSuccess] = useState(false);
+  const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -62,6 +64,32 @@ export default function PaymentPage() {
       console.error('Error fetching pending orders:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta orden?')) {
+      return;
+    }
+
+    setDeletingOrderId(orderId);
+    try {
+      const res = await fetch(`/api/school-admin/licenses/delete-order?orderId=${orderId}`, {
+        method: 'DELETE',
+      });
+      const result = await res.json();
+
+      if (result.success) {
+        // Actualizar la lista de órdenes
+        setPendingOrders(prev => prev.filter(order => order.id !== orderId));
+      } else {
+        alert(result.error || 'Error al eliminar la orden');
+      }
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      alert('Error al eliminar la orden');
+    } finally {
+      setDeletingOrderId(null);
     }
   };
 
@@ -425,45 +453,59 @@ export default function PaymentPage() {
                 key={order.id}
                 className="bg-slate-800/50 border border-slate-700 rounded-xl p-4"
               >
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                  <div>
-                    <p className="text-slate-400 text-xs mb-1">Orden</p>
-                    <p className="text-white font-semibold">#{order.id.slice(0, 8)}</p>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div>
+                      <p className="text-slate-400 text-xs mb-1">Orden</p>
+                      <p className="text-white font-semibold">#{order.id.slice(0, 8)}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-xs mb-1">Licencias</p>
+                      <p className="text-white font-semibold">{order.quantity}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-xs mb-1">Tipo</p>
+                      <p className="text-purple-300 font-semibold">
+                        {order.paymentData && typeof order.paymentData === 'string' 
+                          ? (() => {
+                              try {
+                                const data = JSON.parse(order.paymentData);
+                                return data.type === 'VISION_MENTOR_PAYMENT' ? 'Mentorías' : order.tier;
+                              } catch {
+                                return order.tier;
+                              }
+                            })()
+                          : order.paymentData?.type === 'VISION_MENTOR_PAYMENT' 
+                            ? 'Mentorías' 
+                            : order.tier
+                        }
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-xs mb-1">Precio unitario</p>
+                      <p className="text-blue-300 font-semibold">
+                        ${(order.amount / order.quantity).toFixed(2)} MXN
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 text-xs mb-1">Total</p>
+                      <p className="text-white font-bold text-lg">
+                        ${order.amount.toLocaleString()} MXN
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-slate-400 text-xs mb-1">Licencias</p>
-                    <p className="text-white font-semibold">{order.quantity}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-400 text-xs mb-1">Tipo</p>
-                    <p className="text-purple-300 font-semibold">
-                      {order.paymentData && typeof order.paymentData === 'string' 
-                        ? (() => {
-                            try {
-                              const data = JSON.parse(order.paymentData);
-                              return data.type === 'VISION_MENTOR_PAYMENT' ? 'Mentorías' : order.tier;
-                            } catch {
-                              return order.tier;
-                            }
-                          })()
-                        : order.paymentData?.type === 'VISION_MENTOR_PAYMENT' 
-                          ? 'Mentorías' 
-                          : order.tier
-                      }
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-slate-400 text-xs mb-1">Precio unitario</p>
-                    <p className="text-blue-300 font-semibold">
-                      ${(order.amount / order.quantity).toFixed(2)} MXN
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-slate-400 text-xs mb-1">Total</p>
-                    <p className="text-white font-bold text-lg">
-                      ${order.amount.toLocaleString()} MXN
-                    </p>
-                  </div>
+                  <button
+                    onClick={() => handleDeleteOrder(order.id)}
+                    disabled={deletingOrderId === order.id}
+                    className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
+                    title="Eliminar orden"
+                  >
+                    {deletingOrderId === order.id ? (
+                      <Loader2 size={20} className="animate-spin" />
+                    ) : (
+                      <Trash2 size={20} />
+                    )}
+                  </button>
                 </div>
               </div>
             ))}
