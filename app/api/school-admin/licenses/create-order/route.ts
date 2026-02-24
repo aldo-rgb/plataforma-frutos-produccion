@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
+import { randomUUID } from 'crypto';
 
 export async function POST(req: NextRequest) {
   try {
@@ -72,6 +73,7 @@ export async function POST(req: NextRequest) {
     // Crear la orden de licencias (sin método de pago aún)
     const order = await prisma.licenseOrder.create({
       data: {
+        id: randomUUID(),
         organizationId,
         requestedBy: user.id,
         quantity,
