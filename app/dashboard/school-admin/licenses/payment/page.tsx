@@ -15,6 +15,7 @@ import {
   ShoppingCart,
   Upload,
   X,
+  Ticket,
 } from 'lucide-react';
 
 export default function PaymentPage() {
@@ -23,7 +24,7 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(true);
   const [pendingOrders, setPendingOrders] = useState<any[]>([]);
   const [organization, setOrganization] = useState<any>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal' | 'mercadopago'>('stripe');
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal' | 'mercadopago' | 'code'>('stripe');
   const [processing, setProcessing] = useState(false);
   const [proofImage, setProofImage] = useState<File | null>(null);
   const [proofPreview, setProofPreview] = useState<string | null>(null);
@@ -31,6 +32,10 @@ export default function PaymentPage() {
   const [showPayPalModal, setShowPayPalModal] = useState(false);
   const [paypalProcessing, setPaypalProcessing] = useState(false);
   const [paypalStep, setPaypalStep] = useState<'login' | 'confirm' | 'processing' | 'success'>('login');
+  const [licenseCode, setLicenseCode] = useState('');
+  const [codeValidating, setCodeValidating] = useState(false);
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [codeSuccess, setCodeSuccess] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -135,6 +140,44 @@ export default function PaymentPage() {
   };
 
   const handleProceedToPayment = async (orderId: string) => {
+    // Si es código, validar y aplicar
+    if (paymentMethod === 'code') {
+      if (!licenseCode.trim()) {
+        setCodeError('Por favor ingresa un código');
+        return;
+      }
+      
+      setCodeValidating(true);
+      setCodeError(null);
+      
+      try {
+        const res = await fetch('/api/school-admin/licenses/redeem-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId,
+            code: licenseCode.trim().toUpperCase(),
+          }),
+        });
+        
+        const result = await res.json();
+        
+        if (result.success) {
+          setCodeSuccess(true);
+          setTimeout(() => {
+            router.push('/dashboard/school-admin');
+          }, 2000);
+        } else {
+          setCodeError(result.error || 'Código inválido');
+        }
+      } catch (error) {
+        setCodeError('Error al validar el código');
+      } finally {
+        setCodeValidating(false);
+      }
+      return;
+    }
+
     // Si es PayPal, mostrar modal simulado
     if (paymentMethod === 'paypal') {
       setShowPayPalModal(true);
@@ -444,7 +487,7 @@ export default function PaymentPage() {
             Método de Pago
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Stripe */}
             <button
               onClick={() => setPaymentMethod('stripe')}
@@ -541,30 +584,97 @@ export default function PaymentPage() {
                   <h3 className="text-white font-bold">Mercado Pago</h3>
                 </div>
                 <div className="h-8 w-auto flex items-center">
-                  <img 
-                    src="data:image/png;base64,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" 
-                    alt="Mercado Pago"
-                    className="h-full w-auto"
-                  />
+                  <svg className="h-6" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M24 4C12.954 4 4 12.954 4 24s8.954 20 20 20 20-8.954 20-20S35.046 4 24 4z" fill="#009EE3"/>
+                    <path d="M34.5 20.5c0-3.59-2.91-6.5-6.5-6.5h-8c-3.59 0-6.5 2.91-6.5 6.5v7c0 3.59 2.91 6.5 6.5 6.5h8c3.59 0 6.5-2.91 6.5-6.5v-7z" fill="#fff"/>
+                    <path d="M24 18c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z" fill="#009EE3"/>
+                  </svg>
                 </div>
               </div>
               <p className="text-slate-400 text-sm">
                 Paga con tarjeta, débito o efectivo en México
               </p>
             </button>
+
+            {/* Código de Licencias */}
+            <button
+              onClick={() => setPaymentMethod('code')}
+              className={`p-6 rounded-xl border-2 transition-all text-left ${
+                paymentMethod === 'code'
+                  ? 'border-green-500 bg-green-500/10'
+                  : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                      paymentMethod === 'code'
+                        ? 'border-green-500 bg-green-500'
+                        : 'border-slate-600'
+                    }`}
+                  >
+                    {paymentMethod === 'code' && (
+                      <CheckCircle size={16} className="text-white" />
+                    )}
+                  </div>
+                  <h3 className="text-white font-bold">Código</h3>
+                </div>
+                <Ticket className="h-6 w-6 text-green-400" />
+              </div>
+              <p className="text-slate-400 text-sm">
+                Canjea un código de licencias prepagado
+              </p>
+            </button>
           </div>
+
+          {/* Input para código */}
+          {paymentMethod === 'code' && (
+            <div className="mt-6 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Ingresa tu código de licencias
+              </label>
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={licenseCode}
+                  onChange={(e) => {
+                    setLicenseCode(e.target.value.toUpperCase());
+                    setCodeError(null);
+                  }}
+                  placeholder="XXXX-XXXX-XXXX"
+                  className="flex-1 px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-green-500 font-mono text-lg tracking-wider"
+                  disabled={codeValidating || codeSuccess}
+                />
+              </div>
+              {codeError && (
+                <p className="mt-2 text-red-400 text-sm">{codeError}</p>
+              )}
+              {codeSuccess && (
+                <p className="mt-2 text-green-400 text-sm flex items-center gap-2">
+                  <CheckCircle size={16} />
+                  ¡Código aplicado exitosamente! Redirigiendo...
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Action Button */}
         <button
           onClick={() => handleProceedToPayment(pendingOrders[0].id)}
-          disabled={processing || uploadingProof}
+          disabled={processing || uploadingProof || codeValidating || codeSuccess}
           className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all flex items-center justify-center gap-3 shadow-lg shadow-purple-500/50"
         >
           {uploadingProof ? (
             <>
               <Loader2 className="animate-spin" size={20} />
               <span>Subiendo comprobante...</span>
+            </>
+          ) : codeValidating ? (
+            <>
+              <Loader2 className="animate-spin" size={20} />
+              <span>Validando código...</span>
             </>
           ) : processing ? (
             <>
@@ -577,6 +687,8 @@ export default function PaymentPage() {
               <span>
                 {paymentMethod === 'transfer' 
                   ? 'Enviar Orden con Comprobante' 
+                  : paymentMethod === 'code'
+                  ? 'Canjear Código'
                   : `Confirmar y Pagar ${totalAmount.toLocaleString()} MXN`}
               </span>
             </>
