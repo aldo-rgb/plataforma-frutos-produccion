@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { signIn, signOut, useSession } from 'next-auth/react';
 import { 
   Play, ChevronDown, Sparkles, Target, Users, Trophy, 
@@ -1002,11 +1002,13 @@ function UpcomingTrainingsSection({ trainings }: { trainings: Training[] }) {
 function FooterSection({ 
   organization, 
   loginRef,
-  slug 
+  slug,
+  refCode 
 }: { 
   organization: OrgData;
   loginRef: React.RefObject<HTMLDivElement | null>;
   slug: string;
+  refCode: string | null;
 }) {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -1097,7 +1099,7 @@ function FooterSection({
 
             <div className="flex flex-col sm:flex-row gap-4">
               <a
-                href={`/auth/signup?org=${organization.id}`}
+                href={`/auth/signup?org=${organization.id}${refCode ? `&ref=${refCode}` : ''}`}
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-cyan-500 text-cyan-400 font-semibold rounded-xl hover:bg-cyan-500/10 transition-colors"
               >
                 <ExternalLink className="w-5 h-5" />
@@ -1240,7 +1242,9 @@ function FooterSection({
 // Main Page Component
 export default function OrgLandingPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const slug = params.slug as string;
+  const refCode = searchParams.get('ref');
   const loginRef = useRef<HTMLDivElement>(null);
 
   const [loading, setLoading] = useState(true);
@@ -1318,7 +1322,7 @@ export default function OrgLandingPage() {
       <PlatformFeaturesSection />
       {testimonials.length > 0 && <TestimonialsSection testimonials={testimonials} />}
       {trainings.length > 0 && <UpcomingTrainingsSection trainings={trainings} />}
-      <FooterSection organization={organization} loginRef={loginRef} slug={slug} />
+      <FooterSection organization={organization} loginRef={loginRef} slug={slug} refCode={refCode} />
     </main>
   );
 }
