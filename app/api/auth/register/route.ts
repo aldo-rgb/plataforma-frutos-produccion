@@ -48,13 +48,17 @@ export async function POST(request: Request) {
       expectations
     } = validation.data;
 
-    // Validaciones básicas
-    if (!nombre || !apodo || !telefono || !horarioLlamada || !email || !password) {
+    // Validaciones básicas (password ya no es requerido - se usa Quantum123 por defecto)
+    if (!nombre || !apodo || !telefono || !horarioLlamada || !email) {
       return NextResponse.json(
         { success: false, error: 'Por favor completa todos los campos requeridos' },
         { status: 400 }
       );
     }
+    
+    // Usar contraseña por defecto si no se proporciona
+    const finalPassword = password || 'Quantum123';
+    const requirePasswordChange = !password; // Marcar para cambio si usó contraseña por defecto
 
     // Verificar si el email ya existe
     const existingUser = await prisma.usuario.findUnique({
@@ -113,8 +117,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // Hashear contraseña
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Hashear contraseña (usa la proporcionada o Quantum123 por defecto)
+    const hashedPassword = await bcrypt.hash(finalPassword, 10);
 
     // Procesar referido si existe
     let invitedById: number | null = null;
@@ -176,6 +180,7 @@ export async function POST(request: Request) {
         horarioLlamada,
         email,
         password: hashedPassword,
+        requirePasswordChange, // Marcar si necesita cambiar contraseña al primer login
         rol: 'PARTICIPANTE',
         tier: 'FREE',
         organizationId: finalOrganizationId,

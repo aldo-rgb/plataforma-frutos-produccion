@@ -290,11 +290,11 @@ export default function SignUpPageQuantum() {
   };
 
   const validateForm = () => {
-    // Validar campos requeridos
+    // Validar campos requeridos (sin contraseña - se asigna automáticamente)
     if (!formData.firstName || !formData.lastName || !formData.nickname || 
         !formData.profession || !formData.birthdate || !formData.phone ||
         !formData.contactPreference || !formData.email || !formData.confirmEmail ||
-        !formData.goal1 || !formData.expectations || !formData.password || !formData.confirmPassword) {
+        !formData.goal1 || !formData.expectations) {
       setError(messages.signup.errors.allFieldsRequired);
       return false;
     }
@@ -314,10 +314,7 @@ export default function SignUpPageQuantum() {
       return false;
     }
 
-    // Validar contraseñas
-    if (formData.password !== formData.confirmPassword) {
-      setError(messages.signup.errors.passwordMismatch);
-      return false;
+    // Ya no se validan contraseñas - se asigna Quantum123 por defecto
     }
 
     if (formData.password.length < 6) {

@@ -33,7 +33,7 @@ export const loginSchema = z.object({
 
 export const registerSchema = z.object({
   email: emailSchema,
-  password: passwordSchema,
+  password: passwordSchema.optional(), // Opcional - se asigna Quantum123 por defecto
   nombre: z.string().min(1).max(100),
   apodo: z.string().min(1).max(50).optional(),
   apellidoPaterno: z.string().min(1).max(100).optional(),

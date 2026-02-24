@@ -34,10 +34,9 @@ function ChangePasswordContent() {
       router.push('/login');
     }
 
-    // Si ya completó el cambio, redirigir a completar perfil o dashboard
+    // Si ya completó el cambio, redirigir directo al dashboard
     if (session?.user && !session.user.requirePasswordChange) {
-      // Todos los usuarios van a completar su perfil después de cambiar contraseña
-      router.push('/dashboard/perfil-completo?onboarding=true');
+      router.push('/dashboard');
     }
   }, [session, status, isMagicLink, router]);
 
@@ -82,8 +81,8 @@ function ChangePasswordContent() {
           });
 
           if (result?.ok) {
-            // Redirigir al wizard o dashboard
-            router.push(data.redirectTo || '/wizard');
+            // Redirigir directo al dashboard
+            router.push('/dashboard');
           } else {
             // Si falla el auto-login, ir a login manual
             router.push('/login?message=password_changed');

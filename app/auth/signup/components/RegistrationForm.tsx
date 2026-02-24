@@ -690,25 +690,7 @@ export function RegistrationForm({
             </div>
           </FormSection>
 
-          {/* Sección: Credenciales */}
-          <FormSection title={t('credentials.title')}>
-            <InputField
-              label={t('credentials.password')}
-              type="password"
-              value={formData.password}
-              onChange={handleChange('password')}
-              placeholder={t('credentials.passwordPlaceholder')}
-              required
-            />
-            <InputField
-              label={t('credentials.confirmPassword')}
-              type="password"
-              value={formData.confirmPassword}
-              onChange={handleChange('confirmPassword')}
-              placeholder={t('credentials.confirmPasswordPlaceholder')}
-              required
-            />
-          </FormSection>
+          {/* Nota: La contraseña se asigna automáticamente */}
 
           {/* Notificación de Error */}
           {error && (
