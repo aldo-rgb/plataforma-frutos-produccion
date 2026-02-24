@@ -2,7 +2,7 @@
   "redirects": [
     {
       "source": "/",
-      "destination": "https://impactocuantico.net/org/impacto-cu-ntico-monterrey",
+      "destination": "/org/impacto-cu-ntico-monterrey",
       "permanent": false,
       "has": [
         {
@@ -13,7 +13,7 @@
     },
     {
       "source": "/",
-      "destination": "https://impactocuantico.net/org/impacto-cu-ntico-monterrey",
+      "destination": "/org/impacto-cu-ntico-monterrey",
       "permanent": false,
       "has": [
         {
