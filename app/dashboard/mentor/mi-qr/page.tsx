@@ -25,7 +25,7 @@ export default function MiQRPage() {
 
   const fetchMentorProfile = async () => {
     try {
-      const res = await fetch('/api/mentor/profile');
+      const res = await fetch('/api/mentor/profile-editor');
       const data = await res.json();
       
       if (data.success && data.profile) {
