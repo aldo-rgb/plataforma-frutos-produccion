@@ -143,13 +143,13 @@ export async function POST(req: NextRequest) {
       });
 
       // Agregar créditos a la organización
-      const existingCredit = await tx.schoolCredit.findUnique({
+      const existingCredit = await tx.schoolCredit.findFirst({
         where: { organizationId: user.organizationId! },
       });
 
       if (existingCredit) {
         await tx.schoolCredit.update({
-          where: { organizationId: user.organizationId! },
+          where: { id: existingCredit.id },
           data: {
             totalPurchased: { increment: order.quantity },
             updatedAt: new Date(),
@@ -191,6 +191,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     logger.error('Error al canjear código:', error);
+    console.error('Error completo:', error);
     return NextResponse.json(
       {
         success: false,
