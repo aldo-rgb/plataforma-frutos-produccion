@@ -1,4 +1,28 @@
 {
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "https://impactocuantico.net/org/impacto-cu-ntico-monterrey",
+      "permanent": false,
+      "has": [
+        {
+          "type": "host",
+          "value": "impactocuantico.com"
+        }
+      ]
+    },
+    {
+      "source": "/",
+      "destination": "https://impactocuantico.net/org/impacto-cu-ntico-monterrey",
+      "permanent": false,
+      "has": [
+        {
+          "type": "host",
+          "value": "www.impactocuantico.com"
+        }
+      ]
+    }
+  ],
   "crons": [
     {
       "path": "/api/cron/expire-tasks",
