@@ -102,13 +102,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (codigoAcceso.fechaExpiracion && new Date(codigoAcceso.fechaExpiracion) < new Date()) {
-      return NextResponse.json(
-        { success: false, error: 'Este código ha expirado' },
-        { status: 400 }
-      );
-    }
-
     // Verificar que el código tenga suficientes licencias
     const licenciasDisponibles = (codigoAcceso.cantidadLicencias || 0) - (codigoAcceso.licenciasUsadas || 0);
     if (licenciasDisponibles < order.quantity) {
@@ -158,8 +151,7 @@ export async function POST(req: NextRequest) {
         await tx.schoolCredit.update({
           where: { organizationId: user.organizationId! },
           data: {
-            availableCredits: { increment: order.quantity },
-            totalCredits: { increment: order.quantity },
+            totalPurchased: { increment: order.quantity },
             updatedAt: new Date(),
           },
         });
@@ -167,9 +159,9 @@ export async function POST(req: NextRequest) {
         await tx.schoolCredit.create({
           data: {
             organizationId: user.organizationId!,
-            availableCredits: order.quantity,
-            totalCredits: order.quantity,
-            usedCredits: 0,
+            totalPurchased: order.quantity,
+            totalAllocated: 0,
+            updatedAt: new Date(),
           },
         });
       }
