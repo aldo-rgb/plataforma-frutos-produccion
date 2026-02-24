@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Loader2, CheckCircle, User, Clock, Users, Target, Sparkles } from 'lucide-react';
+import { Loader2, CheckCircle, User, Clock, Users, Target, Sparkles, FileText } from 'lucide-react';
+import Link from 'next/link';
 
 export default function CompletarPerfilPage() {
   const { data: session, status } = useSession();
@@ -23,6 +24,7 @@ export default function CompletarPerfilPage() {
     goal3: '',
     expectations: '',
   });
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -81,6 +83,10 @@ export default function CompletarPerfilPage() {
     }
     if (!formData.expectations.trim()) {
       setError('Por favor cuéntanos qué esperas del entrenamiento');
+      return;
+    }
+    if (!acceptedTerms) {
+      setError('Debes aceptar los términos y condiciones para continuar');
       return;
     }
 
@@ -282,6 +288,38 @@ export default function CompletarPerfilPage() {
               className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all resize-none"
               required
             />
+          </div>
+
+          {/* Términos y Condiciones */}
+          <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                className="mt-1 w-5 h-5 rounded border-slate-600 bg-slate-800 text-cyan-500 focus:ring-cyan-500/50 focus:ring-offset-0 cursor-pointer"
+              />
+              <span className="text-sm text-slate-300">
+                <FileText size={14} className="inline text-cyan-400 mr-1" />
+                He leído y acepto los{' '}
+                <Link 
+                  href="/terminos-y-condiciones" 
+                  target="_blank"
+                  className="text-cyan-400 hover:text-cyan-300 underline"
+                >
+                  Términos y Condiciones
+                </Link>
+                {' '}y el{' '}
+                <Link 
+                  href="/aviso-de-privacidad" 
+                  target="_blank"
+                  className="text-cyan-400 hover:text-cyan-300 underline"
+                >
+                  Aviso de Privacidad
+                </Link>
+                <span className="text-cyan-400"> *</span>
+              </span>
+            </label>
           </div>
 
           {/* Error */}
