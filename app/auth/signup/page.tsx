@@ -184,7 +184,6 @@ export default function SignUpPageQuantum() {
       return false;
     }
   };
-  };
 
   const fetchOrganizationData = async () => {
     try {
@@ -425,7 +424,7 @@ export default function SignUpPageQuantum() {
           )}
         </AnimatePresence>
       </div>
-    </div>
+      </div>
     </NextIntlClientProvider>
   );
 }

@@ -200,7 +200,7 @@ function HeroSection({ organization, scrollToLogin }: { organization: OrgData; s
             className="group relative px-8 py-4 bg-gradient-to-r from-cyan-500 to-violet-500 text-white font-bold text-lg rounded-xl overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/30"
           >
             <span className="relative z-10 flex items-center gap-2">
-              COMENZAR MI TRANSFORMACIÓN
+              COMENZAR MI REGISTRO
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </span>
             <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity" />
