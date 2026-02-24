@@ -126,11 +126,11 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      // Actualizar la orden como pagada
+      // Actualizar la orden como completada
       await tx.licenseOrder.update({
         where: { id: orderId },
         data: {
-          status: 'PAID',
+          status: 'COMPLETED',
           paymentMethod: 'code',
           paidAt: new Date(),
           updatedAt: new Date(),
