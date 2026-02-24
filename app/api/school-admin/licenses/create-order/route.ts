@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
           unitPrice,
           createdAt: new Date().toISOString(),
         },
+        updatedAt: new Date(),
       },
     });
 
