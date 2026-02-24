@@ -1047,7 +1047,7 @@ function CheckoutContent() {
                     
                     <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
                       <p className="text-slate-400 text-sm mb-1">Monto a Transferir</p>
-                      <p className="text-purple-400 font-bold text-xl">${getTotalPrice().toLocaleString()} MXN</p>
+                      <p className="text-purple-400 font-bold text-xl">${getTotalAmount().toLocaleString()} MXN</p>
                     </div>
                     
                     <div className="bg-purple-500/20 border border-purple-500/50 rounded-lg p-4">
