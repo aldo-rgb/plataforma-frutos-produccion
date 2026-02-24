@@ -646,12 +646,24 @@ export default function MentorProfileEditorPage() {
             <div className="mb-4">
               <p className="text-xs text-slate-400 mb-2">Especialidades Secundarias:</p>
               <div className="flex flex-wrap gap-2">
-                {formData.especialidadesSecundariasInput.split(',').map((esp, i) => (
+                {formData.especialidadesSecundariasInput.split(',').map((esp, i) => esp.trim() && (
                   <span 
                     key={i} 
-                    className="bg-blue-600/20 text-blue-300 px-3 py-1 rounded-full text-sm border border-blue-500/30"
+                    className="bg-blue-600/20 text-blue-300 px-3 py-1 rounded-full text-sm border border-blue-500/30 flex items-center gap-2 group"
                   >
                     {esp.trim()}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const items = formData.especialidadesSecundariasInput.split(',').map(s => s.trim()).filter(s => s);
+                        items.splice(i, 1);
+                        setFormData(prev => ({ ...prev, especialidadesSecundariasInput: items.join(', ') }));
+                      }}
+                      className="text-blue-400 hover:text-red-400 hover:bg-red-500/20 rounded-full p-0.5 transition-colors"
+                      title="Eliminar"
+                    >
+                      <XCircle size={14} />
+                    </button>
                   </span>
                 ))}
               </div>
@@ -663,12 +675,24 @@ export default function MentorProfileEditorPage() {
             <div className="mb-4">
               <p className="text-xs text-slate-400 mb-2">Habilidades:</p>
               <div className="flex flex-wrap gap-2">
-                {formData.skillsInput.split(',').map((skill, i) => (
+                {formData.skillsInput.split(',').map((skill, i) => skill.trim() && (
                   <span 
                     key={i} 
-                    className="bg-purple-600/20 text-purple-300 px-3 py-1 rounded-full text-sm border border-purple-500/30"
+                    className="bg-purple-600/20 text-purple-300 px-3 py-1 rounded-full text-sm border border-purple-500/30 flex items-center gap-2 group"
                   >
                     {skill.trim()}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const items = formData.skillsInput.split(',').map(s => s.trim()).filter(s => s);
+                        items.splice(i, 1);
+                        setFormData(prev => ({ ...prev, skillsInput: items.join(', ') }));
+                      }}
+                      className="text-purple-400 hover:text-red-400 hover:bg-red-500/20 rounded-full p-0.5 transition-colors"
+                      title="Eliminar"
+                    >
+                      <XCircle size={14} />
+                    </button>
                   </span>
                 ))}
               </div>
@@ -680,12 +704,24 @@ export default function MentorProfileEditorPage() {
             <div>
               <p className="text-xs text-slate-400 mb-2">Logros:</p>
               <div className="flex flex-wrap gap-2">
-                {formData.logrosInput.split(',').map((logro, i) => (
+                {formData.logrosInput.split(',').map((logro, i) => logro.trim() && (
                   <span 
                     key={i} 
-                    className="bg-amber-600/20 text-amber-300 px-3 py-1 rounded-full text-sm border border-amber-500/30"
+                    className="bg-amber-600/20 text-amber-300 px-3 py-1 rounded-full text-sm border border-amber-500/30 flex items-center gap-2 group"
                   >
                     {logro.trim()}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const items = formData.logrosInput.split(',').map(s => s.trim()).filter(s => s);
+                        items.splice(i, 1);
+                        setFormData(prev => ({ ...prev, logrosInput: items.join(', ') }));
+                      }}
+                      className="text-amber-400 hover:text-red-400 hover:bg-red-500/20 rounded-full p-0.5 transition-colors"
+                      title="Eliminar"
+                    >
+                      <XCircle size={14} />
+                    </button>
                   </span>
                 ))}
               </div>
