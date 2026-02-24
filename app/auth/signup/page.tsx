@@ -148,6 +148,27 @@ export default function SignUpPageQuantum() {
         setReferralUser(data.user);
         setFormData(prev => ({ ...prev, referralCode: data.user.referralCode }));
         setReferralLocked(true);
+        
+        // Si el referidor tiene organización, auto-seleccionarla
+        if (data.organization) {
+          setSelectedOrganization(data.organization);
+          setLoading(true);
+          
+          // Obtener la próxima visión de la organización
+          try {
+            const visionRes = await fetch(`/api/public/organization/${data.organization.id}/next-vision`);
+            const visionData = await visionRes.json();
+            
+            if (visionData.success) {
+              setNextVision(visionData.nextVision);
+            }
+          } catch (visionError) {
+            console.error('Error fetching vision:', visionError);
+          }
+          
+          setLoading(false);
+          setStep('registro');
+        }
       }
     } catch (error) {
       console.error('Error fetching referral:', error);

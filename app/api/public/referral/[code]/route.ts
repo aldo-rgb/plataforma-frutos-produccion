@@ -51,6 +51,16 @@ export async function GET(
         id: true,
         nombre: true,
         referralCode: true,
+        organizationId: true,
+        Organization: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            logoUrl: true,
+            brandColor: true,
+          },
+        },
       },
     });
 
@@ -67,7 +77,9 @@ export async function GET(
         id: user.id,
         nombre: user.nombre,
         referralCode: user.referralCode,
+        organizationId: user.organizationId,
       },
+      organization: user.Organization,
     });
   } catch (error) {
     logger.error('Error validating referral code:', error);
