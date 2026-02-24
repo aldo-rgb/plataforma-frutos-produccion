@@ -1110,6 +1110,7 @@ model Organization {
   coordinator_commission_config                         coordinator_commission_config[]
   coordinator_commissions                               coordinator_commissions[]
   weekly_payout_summary                                 weekly_payout_summary[]
+  PendingTransferOrder                                  PendingTransferOrder[]
 
   @@index([masterOrganizationId])
   @@index([slug])
@@ -2618,6 +2619,7 @@ model Vision {
   coordinator_commissions       coordinator_commissions[]
   vision_enrollments            vision_enrollments[]
   weekly_payout_summary         weekly_payout_summary[]
+  PendingTransferOrder          PendingTransferOrder[]
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -6505,4 +6507,52 @@ enum EventRegistrationStatus {
   ATTENDED
   NO_SHOW
   CANCELLED
+}
+
+// ========================
+// Ordenes Pendientes de Registro (Transferencia Bancaria)
+// ========================
+model PendingTransferOrder {
+  id               String   @id @default(uuid())
+  orderReference   String   @unique // TRF-XXXXXX
+  organizationId   Int
+  visionId         Int?
+  amount           Float
+  ticketSelection  String   @default("BASIC_ONLY") // BASIC_ONLY | FULL_VISION
+  status           String   @default("PENDING_PAYMENT") // PENDING_PAYMENT | CONFIRMED | EXPIRED | CANCELLED
+  paymentMethod    String   @default("TRANSFER")
+  
+  // Datos del usuario (aún no creado)
+  userEmail        String
+  userName         String
+  userPhone        String?
+  userApodo        String?
+  
+  // Datos completos del usuario para crear después
+  userData         String?  @db.Text // JSON stringified
+  
+  // Códigos aplicados (si hay)
+  appliedCodes     String?  @db.Text // JSON stringified
+  
+  // Datos de confirmación
+  confirmedAt      DateTime?
+  confirmedBy      Int?     // Admin que confirmó
+  transactionRef   String?  // Referencia de la transferencia
+  
+  // Usuario creado después de confirmar
+  createdUserId    Int?
+  
+  // Fechas
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  expiresAt        DateTime
+  
+  // Relaciones
+  Organization     Organization @relation(fields: [organizationId], references: [id])
+  Vision           Vision?      @relation(fields: [visionId], references: [id])
+  
+  @@index([orderReference])
+  @@index([userEmail])
+  @@index([status])
+  @@index([organizationId])
 }

@@ -315,12 +315,6 @@ export default function SignUpPageQuantum() {
     }
 
     // Ya no se validan contraseñas - se asigna Quantum123 por defecto
-    }
-
-    if (formData.password.length < 6) {
-      setError(messages.signup.errors.passwordTooShort);
-      return false;
-    }
 
     // Validar términos
     if (!formData.acceptTerms) {
@@ -402,69 +396,69 @@ export default function SignUpPageQuantum() {
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
       <div className={`min-h-screen ${tw.bgPrimary} relative overflow-hidden`}>
-      {/* Background effects */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className={`absolute top-20 -right-40 w-96 h-96 bg-[${quantumTheme.colors.quantum[500]}] opacity-10 blur-[100px] rounded-full`}></div>
-        <div className={`absolute bottom-20 -left-40 w-96 h-96 bg-[${quantumTheme.colors.magic[500]}] opacity-10 blur-[100px] rounded-full`}></div>
-      </div>
-
-      {/* Language Switch */}
-      <div className="absolute top-6 right-6 z-50">
-        <div className="flex items-center gap-2 bg-slate-900/50 backdrop-blur-md border border-slate-700/50 rounded-full p-1">
-          <button
-            onClick={() => setLocale('es')}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-              locale === 'es'
-                ? `${tw.textQuantum} bg-slate-800/80 ${tw.glowQuantum}`
-                : 'text-slate-400 hover:text-slate-300'
-            }`}
-          >
-            ES
-          </button>
-          <button
-            onClick={() => setLocale('en')}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-              locale === 'en'
-                ? `${tw.textQuantum} bg-slate-800/80 ${tw.glowQuantum}`
-                : 'text-slate-400 hover:text-slate-300'
-            }`}
-          >
-            EN
-          </button>
+        {/* Background effects */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 -right-40 w-96 h-96 bg-cyan-500 opacity-10 blur-[100px] rounded-full"></div>
+          <div className="absolute bottom-20 -left-40 w-96 h-96 bg-purple-500 opacity-10 blur-[100px] rounded-full"></div>
         </div>
-      </div>
 
-      <div className="relative z-10 container mx-auto px-4 py-12 max-w-4xl">
-        <AnimatePresence mode="wait">
-          {step === 'sede' ? (
-            <SedeSelection
-              key="sede"
-              masterOrganization={masterOrganization}
-              childOrganizations={childOrganizations}
-              loading={loadingVision}
-              error={error}
-              onSelectOrganization={handleSelectOrganization}
-            />
-          ) : (
-            <RegistrationForm
-              key="registro"
-              selectedOrganization={selectedOrganization}
-              nextVision={nextVision}
-              formData={formData}
-              setFormData={setFormData}
-              referralUser={referralUser}
-              referralLocked={referralLocked}
-              scrolledLegal={scrolledLegal}
-              error={error}
-              submitting={submitting}
-              locale={locale}
-              onBack={handleBackToSedeSelection}
-              onLegalScroll={handleLegalScroll}
-              onSubmit={handleSubmit}
-            />
-          )}
-        </AnimatePresence>
-      </div>
+        {/* Language Switch */}
+        <div className="absolute top-6 right-6 z-50">
+          <div className="flex items-center gap-2 bg-slate-900/50 backdrop-blur-md border border-slate-700/50 rounded-full p-1">
+            <button
+              onClick={() => setLocale('es')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                locale === 'es'
+                  ? `${tw.textQuantum} bg-slate-800/80 ${tw.glowQuantum}`
+                  : 'text-slate-400 hover:text-slate-300'
+              }`}
+            >
+              ES
+            </button>
+            <button
+              onClick={() => setLocale('en')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                locale === 'en'
+                  ? `${tw.textQuantum} bg-slate-800/80 ${tw.glowQuantum}`
+                  : 'text-slate-400 hover:text-slate-300'
+              }`}
+            >
+              EN
+            </button>
+          </div>
+        </div>
+
+        <div className="relative z-10 container mx-auto px-4 py-12 max-w-4xl">
+          <AnimatePresence mode="wait">
+            {step === 'sede' ? (
+              <SedeSelection
+                key="sede"
+                masterOrganization={masterOrganization}
+                childOrganizations={childOrganizations}
+                loading={loadingVision}
+                error={error}
+                onSelectOrganization={handleSelectOrganization}
+              />
+            ) : (
+              <RegistrationForm
+                key="registro"
+                selectedOrganization={selectedOrganization}
+                nextVision={nextVision}
+                formData={formData}
+                setFormData={setFormData}
+                referralUser={referralUser}
+                referralLocked={referralLocked}
+                scrolledLegal={scrolledLegal}
+                error={error}
+                submitting={submitting}
+                locale={locale}
+                onBack={handleBackToSedeSelection}
+                onLegalScroll={handleLegalScroll}
+                onSubmit={handleSubmit}
+              />
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </NextIntlClientProvider>
   );

@@ -76,7 +76,7 @@ interface PriceConfig {
 }
 
 type TicketSelection = 'BASIC_ONLY' | 'FULL_VISION';
-type PaymentMethod = 'GIFT_CODE' | 'STRIPE';
+type PaymentMethod = 'GIFT_CODE' | 'STRIPE' | 'TRANSFER';
 
 function CheckoutContent() {
   const router = useRouter();
@@ -354,10 +354,59 @@ function CheckoutContent() {
       const remainingBalance = getRemainingBalance();
       const giftCodes = appliedPayments.filter(p => p.type === 'GIFT_CODE');
 
-      // If there's remaining balance and no card payment method selected
-      if (remainingBalance > 0 && paymentMethod !== 'STRIPE') {
-        setError(`Aún falta por pagar $${remainingBalance.toLocaleString()} MXN. Agrega más códigos o selecciona pago con tarjeta.`);
+      // If there's remaining balance and no card/transfer payment method selected
+      if (remainingBalance > 0 && paymentMethod !== 'STRIPE' && paymentMethod !== 'TRANSFER') {
+        setError(`Aún falta por pagar $${remainingBalance.toLocaleString()} MXN. Agrega más códigos o selecciona pago con tarjeta/transferencia.`);
         setProcessing(false);
+        return;
+      }
+
+      // If paying with TRANSFER, create a pending order and show bank details
+      if (remainingBalance > 0 && paymentMethod === 'TRANSFER') {
+        const codesToRedeem = appliedPayments.filter(p => p.type === 'GIFT_CODE' || p.type === 'CASH_PAYMENT');
+        
+        console.log('[CHECKOUT] Creando orden pendiente de transferencia...');
+        
+        const transferRes = await fetch('/api/checkout/create-transfer-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            organizationId: registrationData.organizationId,
+            visionId: registrationData.visionId,
+            amount: remainingBalance,
+            ticketSelection: ticketSelection,
+            userData: {
+              nombre: registrationData.nombre,
+              email: registrationData.email,
+              apodo: registrationData.apodo,
+              telefono: registrationData.telefono,
+              password: registrationData.password,
+              horarioLlamada: registrationData.horarioLlamada,
+              profession: registrationData.profession,
+              birthdate: registrationData.birthdate,
+              children: registrationData.children,
+              goals: registrationData.goals,
+              expectations: registrationData.expectations,
+              referralCode: registrationData.referralCode,
+            },
+            appliedCodes: codesToRedeem.map(p => p.code),
+          }),
+        });
+
+        const transferData = await transferRes.json();
+        console.log('[CHECKOUT] Respuesta:', transferData);
+
+        if (!transferRes.ok || !transferData.success) {
+          const errorMsg = transferData.error || transferData.details || 'Error al crear la orden';
+          console.error('[CHECKOUT] Error:', errorMsg);
+          throw new Error(errorMsg);
+        }
+
+        // Clear session storage
+        sessionStorage.removeItem('pendingRegistration');
+
+        // Redirect to transfer pending page with order reference
+        router.push(`/checkout/transfer-pending?ref=${transferData.orderReference}&email=${encodeURIComponent(registrationData.email)}&amount=${remainingBalance}`);
         return;
       }
 
@@ -507,9 +556,9 @@ function CheckoutContent() {
       setStep('payment');
     } else if (step === 'payment') {
       const remaining = getRemainingBalance();
-      // Allow to continue if: fully paid OR will pay remaining with card
-      if (remaining > 0 && paymentMethod !== 'STRIPE') {
-        setCodeError(`Falta por pagar $${remaining.toLocaleString()} MXN. Agrega más códigos o selecciona pago con tarjeta.`);
+      // Allow to continue if: fully paid OR will pay remaining with card OR transfer
+      if (remaining > 0 && paymentMethod !== 'STRIPE' && paymentMethod !== 'TRANSFER') {
+        setCodeError(`Falta por pagar $${remaining.toLocaleString()} MXN. Agrega más códigos o selecciona pago con tarjeta/transferencia.`);
         return;
       }
       setStep('confirm');
@@ -829,7 +878,7 @@ function CheckoutContent() {
               )}
               
               {/* Payment Methods - Now supports multiple */}
-              <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="grid grid-cols-3 gap-3 mb-6">
                 <button
                   onClick={() => setPaymentMethod('STRIPE')}
                   disabled={getRemainingBalance() === 0}
@@ -839,7 +888,7 @@ function CheckoutContent() {
                       : 'border-slate-700 hover:border-slate-600 bg-slate-900/50'
                   } ${getRemainingBalance() === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  {getRemainingBalance() > 0 && (
+                  {getRemainingBalance() > 0 && paymentMethod === 'STRIPE' && (
                     <div className="absolute -top-2 -right-2">
                       <span className="text-[10px] bg-cyan-500 text-white px-2 py-0.5 rounded-full font-bold">
                         ${getRemainingBalance().toLocaleString()}
@@ -863,6 +912,20 @@ function CheckoutContent() {
                   <Banknote className={`mx-auto mb-2 ${paymentMethod === 'GIFT_CODE' ? 'text-green-400' : 'text-slate-400'}`} size={24} />
                   <span className={`text-sm font-medium ${paymentMethod === 'GIFT_CODE' ? 'text-green-400' : 'text-slate-300'}`}>
                     Pago con Código
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setPaymentMethod('TRANSFER')}
+                  className={`p-4 rounded-xl border-2 transition-all ${
+                    paymentMethod === 'TRANSFER'
+                      ? 'border-purple-500 bg-purple-500/10'
+                      : 'border-slate-700 hover:border-slate-600 bg-slate-900/50'
+                  }`}
+                >
+                  <Building2 className={`mx-auto mb-2 ${paymentMethod === 'TRANSFER' ? 'text-purple-400' : 'text-slate-400'}`} size={24} />
+                  <span className={`text-sm font-medium ${paymentMethod === 'TRANSFER' ? 'text-purple-400' : 'text-slate-300'}`}>
+                    Transferencia
                   </span>
                 </button>
 
@@ -958,6 +1021,44 @@ function CheckoutContent() {
                 </div>
               )}
 
+              {/* Bank Transfer Info */}
+              {paymentMethod === 'TRANSFER' && (
+                <div className="bg-slate-900/50 border border-purple-500/50 rounded-xl p-6">
+                  <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+                    <Building2 className="text-purple-400" size={20} />
+                    Pago por Transferencia Bancaria
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                      <p className="text-slate-400 text-sm mb-1">Banco</p>
+                      <p className="text-white font-bold">BBVA</p>
+                    </div>
+                    
+                    <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                      <p className="text-slate-400 text-sm mb-1">CLABE Interbancaria</p>
+                      <p className="text-white font-mono font-bold tracking-wider">012180001234567890</p>
+                    </div>
+                    
+                    <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                      <p className="text-slate-400 text-sm mb-1">Beneficiario</p>
+                      <p className="text-white font-bold">QUANTUM MATTER SA DE CV</p>
+                    </div>
+                    
+                    <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                      <p className="text-slate-400 text-sm mb-1">Monto a Transferir</p>
+                      <p className="text-purple-400 font-bold text-xl">${getTotalPrice().toLocaleString()} MXN</p>
+                    </div>
+                    
+                    <div className="bg-purple-500/20 border border-purple-500/50 rounded-lg p-4">
+                      <p className="text-purple-300 text-sm">
+                        <strong>Importante:</strong> Después de realizar la transferencia, envía tu comprobante de pago al WhatsApp <span className="text-white font-bold">+52 81 1234 5678</span> junto con tu nombre completo para activar tu cuenta.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Card Payment Info */}
               {paymentMethod === 'STRIPE' && getRemainingBalance() > 0 && (
                 <div className="bg-slate-900/50 border border-cyan-500/50 rounded-xl p-6">
@@ -976,12 +1077,17 @@ function CheckoutContent() {
 
               <button
                 onClick={goNext}
-                disabled={appliedPayments.length === 0 && getRemainingBalance() > 0 && paymentMethod !== 'STRIPE'}
+                disabled={appliedPayments.length === 0 && getRemainingBalance() > 0 && paymentMethod !== 'STRIPE' && paymentMethod !== 'TRANSFER'}
                 className="w-full mt-8 py-4 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {getRemainingBalance() > 0 && paymentMethod === 'STRIPE' ? (
                   <>
                     Continuar al Pago con Tarjeta
+                    <ArrowRight size={20} />
+                  </>
+                ) : getRemainingBalance() > 0 && paymentMethod === 'TRANSFER' ? (
+                  <>
+                    Ver Datos de Transferencia
                     <ArrowRight size={20} />
                   </>
                 ) : getRemainingBalance() > 0 ? (
@@ -1140,7 +1246,9 @@ function CheckoutContent() {
                     <CheckCircle size={20} />
                     {getRemainingBalance() === 0 
                       ? 'Canjear Códigos y Registrarse' 
-                      : `Pagar $${getRemainingBalance().toLocaleString()} MXN y Registrarse`}
+                      : paymentMethod === 'TRANSFER'
+                        ? `Ver Datos para Transferir $${getRemainingBalance().toLocaleString()} MXN`
+                        : `Pagar $${getRemainingBalance().toLocaleString()} MXN y Registrarse`}
                   </>
                 )}
               </button>
