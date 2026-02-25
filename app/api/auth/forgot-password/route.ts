@@ -82,7 +82,7 @@ function getPasswordResetEmailTemplate(nombre: string, tempPassword: string): st
               <!-- Security Note -->
               <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 0 8px 8px 0; margin-top: 30px;">
                 <p style="margin: 0; color: #92400e; font-size: 13px; line-height: 1.5;">
-                  ⚠️ <strong>Nota de seguridad:</strong> Si tú no solicitaste este cambio, ignora este correo. Tu contraseña anterior seguirá funcionando hasta que uses la nueva.
+                  ⚠️ <strong>Importante:</strong> Tu contraseña anterior ha sido reemplazada. Usa esta nueva contraseña para iniciar sesión.
                 </p>
               </div>
             </td>
