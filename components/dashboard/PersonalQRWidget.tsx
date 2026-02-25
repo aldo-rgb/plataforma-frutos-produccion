@@ -35,7 +35,14 @@ export default function PersonalQRWidget({
   const [currency, setCurrency] = useState<string>('MXN');
   const [registrationURL, setRegistrationURL] = useState<string>('');
   const [organizationId, setOrganizationId] = useState<number | null | undefined>(propOrganizationId);
+  const [showCopiedToast, setShowCopiedToast] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Mostrar toast de copiado
+  const showCopiedNotification = () => {
+    setShowCopiedToast(true);
+    setTimeout(() => setShowCopiedToast(false), 2500);
+  };
 
   // Si no hay organizationId en props, obtenerlo del usuario
   useEffect(() => {
@@ -556,12 +563,12 @@ ${invitationURL}
                       } catch (err) {
                         // Usuario canceló o error - copiar al portapapeles
                         await navigator.clipboard.writeText(shareText);
-                        alert('Mensaje copiado al portapapeles');
+                        showCopiedNotification();
                       }
                     } else {
                       // Copiar al portapapeles como fallback
                       await navigator.clipboard.writeText(shareText);
-                      alert('Mensaje copiado al portapapeles');
+                      showCopiedNotification();
                     }
                   }}
                   disabled={!referralCode && !registrationURL}
@@ -570,6 +577,16 @@ ${invitationURL}
                   <span>🔗</span> Compartir
                 </button>
               </div>
+
+              {/* Toast de copiado */}
+              {showCopiedToast && (
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[60] animate-in fade-in slide-in-from-bottom-4 duration-300">
+                  <div className="flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-xl shadow-2xl border border-emerald-400/30">
+                    <span className="text-xl">✅</span>
+                    <span className="font-medium">Mensaje copiado al portapapeles</span>
+                  </div>
+                </div>
+              )}
 
               {/* Tip informativo */}
               <div className="mt-6 p-4 bg-gradient-to-r from-amber-900/20 to-orange-900/20 border border-amber-500/20 rounded-xl">
