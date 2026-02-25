@@ -2,12 +2,15 @@
 
 import { useState } from 'react';
 import { signOut, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { Lock, Eye, EyeOff, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Lock, Eye, EyeOff, AlertTriangle, CheckCircle, Loader2, Sparkles } from 'lucide-react';
 
 export default function CambiarPasswordPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const session = useSession();
+  const isFirstLogin = searchParams.get('firstLogin') === 'true';
+  
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -127,23 +130,49 @@ export default function CambiarPasswordPage() {
 
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-2">
-            Cambio de Contraseña Obligatorio
-          </h1>
-          <p className="text-slate-400">Por seguridad, debes cambiar tu contraseña temporal</p>
+          {isFirstLogin ? (
+            <>
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Sparkles className="text-white" size={32} />
+              </div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent mb-2">
+                ¡Bienvenido! 🎉
+              </h1>
+              <p className="text-slate-400">Solo un paso más: crea tu contraseña personal</p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-2">
+                Cambio de Contraseña
+              </h1>
+              <p className="text-slate-400">Por seguridad, debes cambiar tu contraseña temporal</p>
+            </>
+          )}
         </div>
 
         <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-8 shadow-2xl">
-          {/* Mensaje de advertencia */}
-          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-6 flex items-start gap-3">
-            <AlertTriangle className="text-yellow-500 flex-shrink-0 mt-0.5" size={20} />
-            <div className="text-sm text-yellow-200">
-              <p className="font-semibold mb-1">Contraseña Temporal Detectada</p>
-              <p className="text-yellow-300/80">
-                Tu cuenta fue creada con una contraseña temporal. Por favor, cámbiala ahora para continuar.
-              </p>
+          {/* Mensaje informativo */}
+          {isFirstLogin ? (
+            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 mb-6 flex items-start gap-3">
+              <CheckCircle className="text-green-500 flex-shrink-0 mt-0.5" size={20} />
+              <div className="text-sm text-green-200">
+                <p className="font-semibold mb-1">Tu cuenta está lista</p>
+                <p className="text-green-300/80">
+                  Tu contraseña temporal es <strong className="text-yellow-300">Quantum123</strong>. Cámbiala por una personal para mayor seguridad.
+                </p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 mb-6 flex items-start gap-3">
+              <AlertTriangle className="text-yellow-500 flex-shrink-0 mt-0.5" size={20} />
+              <div className="text-sm text-yellow-200">
+                <p className="font-semibold mb-1">Contraseña Temporal Detectada</p>
+                <p className="text-yellow-300/80">
+                  Tu cuenta fue creada con una contraseña temporal. Por favor, cámbiala ahora para continuar.
+                </p>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (

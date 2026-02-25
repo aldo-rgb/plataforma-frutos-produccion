@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { signIn } from 'next-auth/react';
+import { signIn, getSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, Loader2, ArrowRight, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
@@ -29,6 +29,7 @@ function LoginForm() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isNewUser, setIsNewUser] = useState(false);
   
   // Estado para organización con dominio personalizado
   const [orgBranding, setOrgBranding] = useState<OrgBranding | null>(null);
@@ -66,6 +67,19 @@ function LoginForm() {
     if (searchParams.get('registrado') === 'true') {
       setSuccessMessage('¡Cuenta creada con éxito! Por favor, inicia sesión para continuar.');
     }
+    
+    // Pre-llenar email si viene desde checkout success
+    const emailParam = searchParams.get('email');
+    const newUserParam = searchParams.get('newUser');
+    
+    if (emailParam) {
+      setData(prev => ({ ...prev, email: decodeURIComponent(emailParam) }));
+    }
+    
+    if (newUserParam === 'true') {
+      setIsNewUser(true);
+      setSuccessMessage('🎉 ¡Bienvenido! Tu cuenta está lista. Ingresa tu contraseña (Quantum123) para continuar.');
+    }
   }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -85,9 +99,17 @@ function LoginForm() {
         setError('Credenciales inválidas. Verifica tu correo y contraseña.');
         setLoading(false);
       } else {
-        // Login exitoso - redirigir al dashboard
-        const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
-        router.push(callbackUrl);
+        // Login exitoso - verificar si necesita cambiar contraseña
+        const session = await getSession();
+        
+        if (session?.user?.requirePasswordChange) {
+          // Redirigir a cambiar contraseña
+          router.push('/cambiar-password?firstLogin=true');
+        } else {
+          // Redirigir al dashboard o callback normal
+          const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+          router.push(callbackUrl);
+        }
       }
     } catch (error) {
       setError('Ocurrió un error inesperado. Inténtalo de nuevo.');

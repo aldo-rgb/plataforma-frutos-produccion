@@ -247,7 +247,7 @@ function SuccessContent() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
             >
-              <Link href="/login">
+              <Link href={`/login?email=${encodeURIComponent(email || '')}&newUser=true`}>
                 <button className="w-full py-4 bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/30">
                   <LogIn size={20} />
                   Iniciar Sesión
