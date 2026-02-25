@@ -732,15 +732,27 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
               </button>
               <button
                 onClick={() => setPaymentMode('card')}
-                disabled={posConfigured === false}
+                disabled={posConfigured === false || (posConfigured === true && posDevices.length === 0)}
                 className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg transition-all ${
                   paymentMode === 'card'
                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
                     : 'bg-slate-700/50 text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed'
                 }`}
-                title={posConfigured === false ? 'Terminal POS no configurada' : 'Cobrar con tarjeta'}
+                title={
+                  posConfigured === null 
+                    ? 'Verificando terminal POS...' 
+                    : posConfigured === false 
+                      ? 'Terminal POS no configurada' 
+                      : posDevices.length === 0 
+                        ? 'No hay terminales POS vinculadas' 
+                        : 'Cobrar con tarjeta'
+                }
               >
-                <CreditCard size={18} />
+                {posConfigured === null ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <CreditCard size={18} />
+                )}
                 Tarjeta
               </button>
             </div>
@@ -1027,6 +1039,12 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                 {posConfigured === false && (
                   <p className="text-xs text-red-400 text-center">
                     ❌ Terminal POS no configurada. Configura Mercado Pago Point en ajustes.
+                  </p>
+                )}
+                
+                {posConfigured === true && posDevices.length === 0 && (
+                  <p className="text-xs text-red-400 text-center">
+                    ❌ No hay terminales POS vinculadas. Vincula un dispositivo Point desde Mercado Pago.
                   </p>
                 )}
               </div>
