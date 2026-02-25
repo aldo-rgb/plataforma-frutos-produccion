@@ -1000,7 +1000,6 @@ function CheckoutContent() {
                       </div>
                     </div>
                   )}
-                  )}
                 </div>
               )}
 
