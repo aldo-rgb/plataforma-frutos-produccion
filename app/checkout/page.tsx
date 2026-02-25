@@ -268,7 +268,10 @@ function CheckoutContent() {
 
       if (data.success) {
         setValidatedCode(data.giftCode);
-        // Don't auto-add, let user confirm first
+        // Auto-agregar el código inmediatamente
+        setTimeout(() => {
+          addGiftCodePaymentWithData(data.giftCode);
+        }, 300);
       } else {
         setCodeError(data.error || 'Código inválido');
       }
@@ -280,9 +283,9 @@ function CheckoutContent() {
     }
   };
 
-  // Add validated code to applied payments
-  const addGiftCodePayment = () => {
-    if (!validatedCode || !prices) return;
+  // Add validated code to applied payments (with data parameter for auto-add)
+  const addGiftCodePaymentWithData = (codeData: typeof validatedCode) => {
+    if (!codeData || !prices) return;
 
     const currentPaid = appliedPayments.reduce((sum, p) => sum + p.amount, 0);
 
@@ -290,34 +293,34 @@ function CheckoutContent() {
     let codeValue = 0;
     let description = '';
 
-    if (validatedCode.type === 'GOLDEN') {
+    if (codeData.type === 'GOLDEN') {
       // GOLDEN covers full BASIC price
       const remaining = prices.BASIC - currentPaid;
       codeValue = Math.min(prices.BASIC, Math.max(0, remaining));
       description = '🎫 Golden Ticket - Básico Gratis';
-    } else if (validatedCode.type === 'GOLDEN_DISCOUNT') {
+    } else if (codeData.type === 'GOLDEN_DISCOUNT') {
       // GOLDEN_DISCOUNT gives a percentage discount on BASIC
-      const discountAmount = Math.round(prices.BASIC * ((validatedCode.discountPercentage || 0) / 100));
+      const discountAmount = Math.round(prices.BASIC * ((codeData.discountPercentage || 0) / 100));
       const remaining = prices.BASIC - currentPaid;
       codeValue = Math.min(discountAmount, Math.max(0, remaining));
-      description = `🎫 Golden ${validatedCode.discountPercentage}% - Descuento`;
-    } else if (validatedCode.type === 'PLATINUM') {
+      description = `🎫 Golden ${codeData.discountPercentage}% - Descuento`;
+    } else if (codeData.type === 'PLATINUM') {
       // PLATINUM covers full FULL_VISION price - calculate against FULL price, not current selection
       const remaining = prices.FULL_VISION - currentPaid;
       codeValue = Math.min(prices.FULL_VISION, Math.max(0, remaining));
       description = '👑 Platinum Ticket - Visión Completa';
       // Auto-switch to FULL_VISION if PLATINUM
       setTicketSelection('FULL_VISION');
-    } else if (validatedCode.type === 'CASH_PAYMENT') {
+    } else if (codeData.type === 'CASH_PAYMENT') {
       // CASH_PAYMENT - applies the value directly as payment
       const totalPrice = ticketSelection === 'FULL_VISION' ? prices.FULL_VISION : prices.BASIC;
       const remaining = totalPrice - currentPaid;
-      codeValue = Math.min(validatedCode.value || 0, Math.max(0, remaining));
-      description = `🎟️ Pago con Código - $${(validatedCode.value || 0).toLocaleString('es-MX')} MXN`;
+      codeValue = Math.min(codeData.value || 0, Math.max(0, remaining));
+      description = `🎟️ Pago con Código - $${(codeData.value || 0).toLocaleString('es-MX')} MXN`;
     }
 
     // Determinar el tipo de pago
-    const paymentType = validatedCode.type === 'CASH_PAYMENT' || validatedCode.isCashPayment 
+    const paymentType = codeData.type === 'CASH_PAYMENT' || codeData.isCashPayment 
       ? 'CASH_PAYMENT' 
       : 'GIFT_CODE';
 
@@ -325,16 +328,21 @@ function CheckoutContent() {
     setAppliedPayments(prev => [...prev, {
       id: `code-${Date.now()}`,
       type: paymentType,
-      code: validatedCode.code,
-      codeType: validatedCode.type,
+      code: codeData.code,
+      codeType: codeData.type,
       amount: codeValue,
       description,
-      discountPercentage: validatedCode.discountPercentage,
+      discountPercentage: codeData.discountPercentage,
     }]);
 
     // Clear the input
     setGiftCode('');
     setValidatedCode(null);
+  };
+
+  // Wrapper function for manual add (uses current validatedCode state)
+  const addGiftCodePayment = () => {
+    addGiftCodePaymentWithData(validatedCode);
   };
 
   // Remove a payment from the list
@@ -952,7 +960,7 @@ function CheckoutContent() {
                     Agregar Código de Referencia
                   </h3>
                   
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <input
                       type="text"
                       value={giftCode}
@@ -961,16 +969,16 @@ function CheckoutContent() {
                         setCodeError('');
                         setValidatedCode(null);
                       }}
-                      placeholder="GOLDEN-XXXXXXXX o PLATINUM-XXXXXXXX"
-                      className="flex-1 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white uppercase tracking-widest font-mono focus:border-yellow-500 outline-none"
+                      placeholder="GOLDEN-XXXXXXXX"
+                      className="flex-1 px-4 py-3 bg-slate-800 border border-slate-600 rounded-lg text-white uppercase tracking-widest font-mono text-sm focus:border-yellow-500 outline-none"
                     />
                     <button
                       onClick={validateGiftCode}
                       disabled={validatingCode}
-                      className="px-6 py-3 bg-yellow-500 hover:bg-yellow-600 text-black font-bold rounded-lg transition-colors disabled:opacity-50"
+                      className="px-6 py-3 bg-yellow-500 hover:bg-yellow-600 text-black font-bold rounded-lg transition-colors disabled:opacity-50 whitespace-nowrap"
                     >
                       {validatingCode ? (
-                        <Loader2 className="animate-spin" size={20} />
+                        <Loader2 className="animate-spin mx-auto" size={20} />
                       ) : (
                         'Validar'
                       )}
@@ -986,50 +994,12 @@ function CheckoutContent() {
 
                   {validatedCode && (
                     <div className="mt-4 p-4 bg-green-500/20 border border-green-500/50 rounded-lg">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <CheckCircle className="text-green-400" size={24} />
-                          <span className="font-bold text-green-400">¡Código válido!</span>
-                        </div>
-                        <button
-                          onClick={addGiftCodePayment}
-                          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg transition-colors flex items-center gap-2"
-                        >
-                          <Plus size={18} />
-                          Agregar
-                        </button>
-                      </div>
-                      <div className="space-y-2 text-sm">
-                        <p className="text-slate-300">
-                          <span className="text-slate-500">Tipo:</span>{' '}
-                          {validatedCode.type === 'GOLDEN' ? (
-                            <span className="text-yellow-400 font-bold">🎫 GOLDEN TICKET</span>
-                          ) : validatedCode.type === 'GOLDEN_DISCOUNT' ? (
-                            <span className="text-green-400 font-bold">🎫 GOLDEN TICKET {validatedCode.discountPercentage}% OFF</span>
-                          ) : validatedCode.type === 'CASH_PAYMENT' || validatedCode.isCashPayment ? (
-                            <span className="text-emerald-400 font-bold">💵 CÓDIGO DE REFERENCIA</span>
-                          ) : (
-                            <span className="text-purple-400 font-bold">👑 PLATINUM TICKET</span>
-                          )}
-                        </p>
-                        <p className="text-slate-300">
-                          <span className="text-slate-500">Incluye:</span>{' '}
-                          {validatedCode.type === 'CASH_PAYMENT' || validatedCode.isCashPayment 
-                            ? 'Pago con Código'
-                            : validatedCode.ticketsIncluded?.map((t: string) => 
-                                t === 'BASIC' ? 'Básico' : t === 'ADVANCED' ? 'Avanzado' : 'Tu Vida'
-                              ).join(', ') || validatedCode.description}
-                        </p>
-                        <p className="text-slate-300">
-                          <span className="text-slate-500">{validatedCode.type === 'GOLDEN_DISCOUNT' ? 'Descuento:' : 'Valor:'}</span>{' '}
-                          <span className="text-green-400 font-bold">
-                            {validatedCode.type === 'GOLDEN_DISCOUNT' 
-                              ? `${validatedCode.discountPercentage}% ($${validatedCode.value?.toLocaleString()} MXN)`
-                              : validatedCode.value ? `$${validatedCode.value.toLocaleString()} MXN` : '🎁 Regalo'}
-                          </span>
-                        </p>
+                      <div className="flex items-center gap-3">
+                        <Loader2 className="text-green-400 animate-spin" size={24} />
+                        <span className="font-bold text-green-400">¡Código válido! Agregando...</span>
                       </div>
                     </div>
+                  )}
                   )}
                 </div>
               )}
