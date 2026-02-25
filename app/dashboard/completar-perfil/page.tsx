@@ -311,67 +311,50 @@ export default function CompletarPerfilPage() {
             <div 
               ref={termsContainerRef}
               onScroll={handleTermsScroll}
-              className="h-48 overflow-y-auto bg-slate-800/30 border border-slate-700/50 rounded-lg p-4 text-sm text-slate-300 scroll-smooth"
+              className="h-64 overflow-y-auto bg-slate-800/30 border border-slate-700/50 rounded-lg p-4 text-sm text-slate-300 scroll-smooth"
             >
-              <h3 className="font-bold text-white mb-3">TÉRMINOS Y CONDICIONES DE USO</h3>
+              <h3 className="font-bold text-white mb-3">TÉRMINOS Y CONDICIONES</h3>
               
-              <p className="mb-3">
-                Bienvenido a la plataforma de Impacto Cuántico. Al utilizar nuestros servicios, aceptas los siguientes términos y condiciones:
+              <p className="mb-4 text-slate-400">
+                Antes de completar el registro, por favor lee cuidadosamente la siguiente información:
               </p>
 
-              <h4 className="font-semibold text-cyan-400 mt-4 mb-2">1. ACEPTACIÓN DE TÉRMINOS</h4>
-              <p className="mb-3">
-                Al acceder y utilizar esta plataforma, confirmas que has leído, entendido y aceptado estos términos. Si no estás de acuerdo con alguno de ellos, te pedimos que no utilices nuestros servicios.
+              <h4 className="font-semibold text-amber-400 mt-4 mb-2">📋 POLÍTICA DE REEMBOLSO</h4>
+              <p className="mb-2 font-medium text-white">
+                TENDRÁS DERECHO A UN REEMBOLSO TOTAL DEL MONTO DEL ENTRENAMIENTO SI:
               </p>
+              <ul className="list-disc list-inside mb-4 space-y-2 text-slate-300">
+                <li>El entrenamiento es cancelado</li>
+                <li>La cuota de inscripción <span className="text-red-400 font-semibold">NO ES REEMBOLSABLE</span> y <span className="text-red-400 font-semibold">NO ES TRANSFERIBLE</span> a otra persona</li>
+                <li><span className="text-green-400 font-semibold">GARANTÍA DE SATISFACCIÓN:</span> Si no estás satisfecho con el valor del entrenamiento, puedes solicitar un reembolso (debes quedarte hasta el cierre del domingo)</li>
+              </ul>
 
-              <h4 className="font-semibold text-cyan-400 mt-4 mb-2">2. DESCRIPCIÓN DEL SERVICIO</h4>
-              <p className="mb-3">
-                Impacto Cuántico ofrece programas de entrenamiento y desarrollo personal. Los servicios incluyen acceso a contenido educativo, sesiones de mentoría, y herramientas de seguimiento personal.
-              </p>
+              <h4 className="font-semibold text-cyan-400 mt-6 mb-2">📅 DETALLES DEL ENTRENAMIENTO BÁSICO</h4>
+              <p className="mb-2 font-medium text-white">Horario:</p>
+              <ul className="list-none space-y-2 mb-4">
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-400 font-bold">Viernes:</span>
+                  <span>Registro 9AM - Inicio a las 10 AM hasta aproximadamente 10 PM (puede variar según el avance del grupo)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-400 font-bold">Sábado:</span>
+                  <span>Inicio a las 10 AM hasta aproximadamente 10 PM (puede variar según el avance del grupo)</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-400 font-bold">Domingo:</span>
+                  <span>Inicio a las 10 AM hasta aproximadamente 7 PM (puede variar según el avance del grupo)</span>
+                </li>
+              </ul>
 
-              <h4 className="font-semibold text-cyan-400 mt-4 mb-2">3. REGISTRO Y CUENTA</h4>
-              <p className="mb-3">
-                Para acceder a nuestros servicios, debes crear una cuenta proporcionando información veraz y actualizada. Eres responsable de mantener la confidencialidad de tu contraseña y de todas las actividades que ocurran bajo tu cuenta.
-              </p>
-
-              <h4 className="font-semibold text-cyan-400 mt-4 mb-2">4. PRIVACIDAD Y DATOS PERSONALES</h4>
-              <p className="mb-3">
-                Tu información personal será tratada conforme a nuestro Aviso de Privacidad. Nos comprometemos a proteger tus datos y a no compartirlos con terceros sin tu consentimiento, excepto cuando sea requerido por ley.
-              </p>
-
-              <h4 className="font-semibold text-cyan-400 mt-4 mb-2">5. CÓDIGO DE CONDUCTA</h4>
-              <p className="mb-3">
-                Te comprometes a utilizar la plataforma de manera respetuosa, sin acosar, discriminar o actuar de forma inapropiada hacia otros usuarios o el personal de Impacto Cuántico.
-              </p>
-
-              <h4 className="font-semibold text-cyan-400 mt-4 mb-2">6. PAGOS Y REEMBOLSOS</h4>
-              <p className="mb-3">
-                Los pagos realizados por nuestros servicios son finales. Las solicitudes de reembolso serán evaluadas caso por caso según nuestras políticas internas.
-              </p>
-
-              <h4 className="font-semibold text-cyan-400 mt-4 mb-2">7. PROPIEDAD INTELECTUAL</h4>
-              <p className="mb-3">
-                Todo el contenido de la plataforma, incluyendo textos, gráficos, logos, y material audiovisual, es propiedad de Impacto Cuántico y está protegido por las leyes de propiedad intelectual.
-              </p>
-
-              <h4 className="font-semibold text-cyan-400 mt-4 mb-2">8. LIMITACIÓN DE RESPONSABILIDAD</h4>
-              <p className="mb-3">
-                Impacto Cuántico no será responsable por daños indirectos, incidentales o consecuentes que puedan surgir del uso de nuestros servicios.
-              </p>
-
-              <h4 className="font-semibold text-cyan-400 mt-4 mb-2">9. MODIFICACIONES</h4>
-              <p className="mb-3">
-                Nos reservamos el derecho de modificar estos términos en cualquier momento. Te notificaremos de cambios significativos a través de la plataforma o por correo electrónico.
-              </p>
-
-              <h4 className="font-semibold text-cyan-400 mt-4 mb-2">10. CONTACTO</h4>
-              <p className="mb-3">
-                Para cualquier duda o aclaración sobre estos términos, puedes contactarnos a través de los canales oficiales disponibles en la plataforma.
-              </p>
+              <div className="mt-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+                <p className="text-red-400 font-semibold">
+                  ⚠️ IMPORTANTE: El entrenamiento Básico es integral y si el participante abandona el entrenamiento en cualquier momento, NO se le permitirá reingresar ya que puede perderse algunas dinámicas.
+                </p>
+              </div>
 
               <div className="mt-6 pt-4 border-t border-slate-700">
-                <p className="text-center text-slate-400 text-xs">
-                  Última actualización: Febrero 2026
+                <p className="text-center text-slate-500 text-xs">
+                  Al aceptar estos términos, confirmas que has leído y entendido toda la información anterior.
                 </p>
               </div>
             </div>
@@ -397,7 +380,7 @@ export default function CompletarPerfilPage() {
               />
               <span className="text-sm text-slate-300">
                 <FileText size={14} className="inline text-cyan-400 mr-1" />
-                He leído y acepto los Términos y Condiciones y el Aviso de Privacidad
+                He leído y acepto los términos y condiciones del entrenamiento
                 <span className="text-cyan-400"> *</span>
               </span>
             </label>
