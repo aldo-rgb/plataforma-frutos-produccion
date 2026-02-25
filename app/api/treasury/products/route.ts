@@ -6,8 +6,9 @@ import logger from '@/lib/logger';
 
 /**
  * GET /api/treasury/products
- * Obtiene todos los productos (Visiones y SchoolProducts) de las organizaciones
- * que pertenecen a la misma Master Organization del usuario
+ * Obtiene todos los productos (Visiones y SchoolProducts) de la organización del usuario
+ * Para SUPER_ADMIN y DIRECCION_PILAR: muestra de todas las organizaciones de la Master Org
+ * Para otros roles: solo muestra los de su propia organización
  */
 export async function GET() {
   try {
@@ -17,12 +18,13 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    // Primero obtener el usuario básico
+    // Primero obtener el usuario con su rol
     const usuario = await prisma.usuario.findUnique({
       where: { email: session.user.email },
       select: {
         id: true,
-        organizationId: true
+        organizationId: true,
+        rol: true
       }
     });
 
@@ -44,10 +46,13 @@ export async function GET() {
       return NextResponse.json({ error: 'Organización no encontrada' }, { status: 400 });
     }
 
-    // Obtener todas las organizaciones de la misma Master Organization
+    // Determinar qué organizaciones mostrar según el rol
     let organizationIds: number[] = [userOrg.id];
     
-    if (userOrg.masterOrganizationId) {
+    // Solo SUPER_ADMIN y DIRECCION_PILAR pueden ver todas las organizaciones de la Master Org
+    const rolesConAccesoGlobal = ['SUPER_ADMIN', 'DIRECCION_PILAR'];
+    
+    if (rolesConAccesoGlobal.includes(usuario.rol) && userOrg.masterOrganizationId) {
       const siblingOrgs = await prisma.organization.findMany({
         where: {
           masterOrganizationId: userOrg.masterOrganizationId,
@@ -57,6 +62,7 @@ export async function GET() {
       });
       organizationIds = siblingOrgs.map(o => o.id);
     }
+    // Para SCHOOL_ADMIN y otros roles, solo ven su propia organización
 
     // Obtener Visiones activas de todas las organizaciones hermanas
     const visiones = await prisma.vision.findMany({

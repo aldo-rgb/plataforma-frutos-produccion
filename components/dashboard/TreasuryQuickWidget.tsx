@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   Wallet, Receipt, Plus, DollarSign, 
   CheckCircle, Clock, AlertTriangle, X,
-  Copy, QrCode, ArrowRight, Banknote, Share2, Download, Trash2, Ban
+  Copy, QrCode, ArrowRight, Banknote, Share2, Download, Trash2, Ban,
+  CreditCard, Smartphone, Loader2, Wifi, WifiOff, Users
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -39,6 +40,57 @@ interface Product {
   type: 'VISION' | 'TRAINING' | 'WORKSHOP';
   organizationId: number;
   organizationName: string;
+}
+
+interface Participante {
+  id: number;
+  nombre: string;
+  email: string;
+  telefono?: string;
+  saldoPendiente?: number;
+  totalPagado?: number;
+}
+
+interface ParticipantInfo {
+  participant: {
+    id: number;
+    nombre: string;
+    email: string;
+    telefono?: string;
+  };
+  progression: {
+    completedLevels: string[];
+    nextLevel: string;
+    nextLevelName: string;
+    isGraduate: boolean;
+  };
+  nextVision: {
+    id: number;
+    nombre: string;
+    level: string;
+    startDate: string;
+  } | null;
+  payment: {
+    hasPendingTicket: boolean;
+    ticketId: string | null;
+    pendingAmount: number;
+    suggestedPrice: number;
+    promoPrice: number | null;
+  };
+}
+
+interface POSDevice {
+  id: string;
+  pos_id: string;
+  operating_mode: string;
+  store_id?: string;
+}
+
+interface POSTransaction {
+  id: string;
+  status: 'PENDING' | 'PROCESSING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'ERROR';
+  amount: number;
+  reference: string;
 }
 
 const EXPENSE_CATEGORIES = [
@@ -86,11 +138,18 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
   const [cobroForm, setCobroForm] = useState({
     amount: '',
     reference: '',
-    visionId: ''
+    visionId: '',
+    participanteId: ''
   });
   const [generatedCode, setGeneratedCode] = useState<PaymentCode | null>(null);
   const [showCodeModal, setShowCodeModal] = useState(false);
   const [copied, setCopied] = useState(false);
+  
+  // Participantes de la visión seleccionada
+  const [participantes, setParticipantes] = useState<Participante[]>([]);
+  const [loadingParticipantes, setLoadingParticipantes] = useState(false);
+  const [searchParticipante, setSearchParticipante] = useState('');
+  const [selectedParticipante, setSelectedParticipante] = useState<Participante | null>(null);
   
   // Form gasto
   const [gastoForm, setGastoForm] = useState({
@@ -110,9 +169,164 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
   const [cancellingCode, setCancellingCode] = useState<string | null>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState<PaymentCode | null>(null);
 
+  // Estados para Quantum POS
+  const [paymentMode, setPaymentMode] = useState<'cash' | 'card'>('cash');
+  const [posDevices, setPosDevices] = useState<POSDevice[]>([]);
+  const [selectedDevice, setSelectedDevice] = useState<string>('');
+  const [posConfigured, setPosConfigured] = useState<boolean | null>(null);
+  const [loadingPOS, setLoadingPOS] = useState(false);
+  const [activePOSTransaction, setActivePOSTransaction] = useState<POSTransaction | null>(null);
+  const [participantInfo, setParticipantInfo] = useState<ParticipantInfo | null>(null);
+  const [showReceiverPaymentModal, setShowReceiverPaymentModal] = useState(false);
+
   useEffect(() => {
     fetchInitialData();
+    // Cargar dispositivos POS al inicio
+    fetchPOSDevices();
   }, []);
+
+  // Cargar participantes cuando se selecciona una visión
+  useEffect(() => {
+    if (cobroForm.visionId) {
+      fetchParticipantes(cobroForm.visionId);
+    } else {
+      setParticipantes([]);
+      setSelectedParticipante(null);
+      setSearchParticipante('');
+    }
+  }, [cobroForm.visionId]);
+
+  // Cargar info del participante cuando se selecciona uno
+  useEffect(() => {
+    if (selectedParticipante) {
+      fetchParticipantInfo(selectedParticipante.id);
+    } else {
+      setParticipantInfo(null);
+    }
+  }, [selectedParticipante]);
+
+  const fetchParticipantes = async (visionId: string) => {
+    setLoadingParticipantes(true);
+    try {
+      const res = await fetch(`/api/treasury/vision-participants?visionId=${visionId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setParticipantes(data.participants || []);
+      }
+    } catch (error) {
+      console.error('Error fetching participants:', error);
+    } finally {
+      setLoadingParticipantes(false);
+    }
+  };
+
+  // Cargar dispositivos POS de Mercado Pago
+  const fetchPOSDevices = async () => {
+    try {
+      const res = await fetch('/api/treasury/quantum-pos');
+      if (res.ok) {
+        const data = await res.json();
+        setPosConfigured(data.configured);
+        setPosDevices(data.devices || []);
+        if (data.devices?.length > 0) {
+          setSelectedDevice(data.devices[0].id);
+        }
+      } else {
+        setPosConfigured(false);
+      }
+    } catch (error) {
+      console.error('Error fetching POS devices:', error);
+      setPosConfigured(false);
+    }
+  };
+
+  // Obtener info detallada del participante (nivel, siguiente visión, etc.)
+  const fetchParticipantInfo = async (participantId: number) => {
+    try {
+      const res = await fetch(`/api/treasury/participant-info?participantId=${participantId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setParticipantInfo(data);
+        // Auto-llenar el monto si hay saldo pendiente
+        if (data.payment?.pendingAmount > 0) {
+          setCobroForm(prev => ({ 
+            ...prev, 
+            amount: data.payment.pendingAmount.toString(),
+            reference: `Pago ${data.progression.nextLevelName} - ${data.participant.nombre}`
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching participant info:', error);
+    }
+  };
+
+  // Enviar cobro a terminal POS
+  const handleSendToPOS = async () => {
+    if (!selectedDevice || !cobroForm.amount || parseFloat(cobroForm.amount) <= 0) {
+      showNotification('error', 'Selecciona un dispositivo y monto válido');
+      return;
+    }
+
+    if (!selectedParticipante) {
+      showNotification('error', 'Selecciona un participante para cobrar con tarjeta');
+      return;
+    }
+
+    setLoadingPOS(true);
+    try {
+      const res = await fetch('/api/treasury/quantum-pos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deviceId: selectedDevice,
+          amount: parseFloat(cobroForm.amount),
+          description: cobroForm.reference || `Pago ${selectedParticipante.nombre}`,
+          participantId: selectedParticipante.id,
+          participantName: selectedParticipante.nombre,
+          visionId: cobroForm.visionId || null,
+          ticketLevel: participantInfo?.progression?.nextLevel || null
+        })
+      });
+
+      const data = await res.json();
+      
+      if (data.success) {
+        setActivePOSTransaction({
+          id: data.paymentIntent.id,
+          status: 'PENDING',
+          amount: parseFloat(cobroForm.amount),
+          reference: data.paymentIntent.reference
+        });
+        showNotification('success', '📲 Cobro enviado a terminal. Esperando pago...');
+      } else {
+        showNotification('error', data.error || 'Error al enviar a terminal');
+      }
+    } catch (error) {
+      showNotification('error', 'Error de conexión con terminal');
+    } finally {
+      setLoadingPOS(false);
+    }
+  };
+
+  // Cancelar transacción POS activa
+  const handleCancelPOS = async () => {
+    if (!activePOSTransaction || !selectedDevice) return;
+
+    try {
+      const res = await fetch(
+        `/api/treasury/quantum-pos?deviceId=${selectedDevice}&paymentIntentId=${activePOSTransaction.id}`,
+        { method: 'DELETE' }
+      );
+      
+      if (res.ok) {
+        setActivePOSTransaction(null);
+        showNotification('success', 'Cobro cancelado');
+      }
+    } catch (error) {
+      showNotification('error', 'Error al cancelar');
+    }
+  };
 
   const fetchInitialData = async () => {
     try {
@@ -170,8 +384,9 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount: parseFloat(cobroForm.amount),
-          reference: cobroForm.reference || `Cobro $${cobroForm.amount}`,
-          visionId: cobroForm.visionId || null
+          reference: cobroForm.reference || (selectedParticipante ? `Pago ${selectedParticipante.nombre}` : `Cobro $${cobroForm.amount}`),
+          visionId: cobroForm.visionId || null,
+          participanteId: cobroForm.participanteId || null
         })
       });
 
@@ -203,7 +418,9 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
           visionName 
         });
         setShowCodeModal(true);
-        setCobroForm({ amount: '', reference: '', visionId: '' });
+        setCobroForm({ amount: '', reference: '', visionId: '', participanteId: '' });
+        setSelectedParticipante(null);
+        setSearchParticipante('');
         fetchInitialData();
       } else {
         showNotification('error', data.error || 'Error al generar código');
@@ -500,6 +717,97 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
               </div>
             )}
 
+            {/* Toggle Modo de Pago: Efectivo / Tarjeta */}
+            <div className="flex items-center justify-center gap-2 p-2 bg-slate-800/30 rounded-xl">
+              <button
+                onClick={() => setPaymentMode('cash')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg transition-all ${
+                  paymentMode === 'cash'
+                    ? 'bg-green-600 text-white shadow-lg shadow-green-500/20'
+                    : 'bg-slate-700/50 text-slate-400 hover:text-white'
+                }`}
+              >
+                <DollarSign size={18} />
+                Efectivo
+              </button>
+              <button
+                onClick={() => setPaymentMode('card')}
+                disabled={posConfigured === false}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg transition-all ${
+                  paymentMode === 'card'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                    : 'bg-slate-700/50 text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed'
+                }`}
+                title={posConfigured === false ? 'Terminal POS no configurada' : 'Cobrar con tarjeta'}
+              >
+                <CreditCard size={18} />
+                Tarjeta
+              </button>
+            </div>
+
+            {/* Info de transacción POS activa */}
+            {activePOSTransaction && (
+              <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl animate-pulse">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-ping" />
+                    <span className="text-blue-400 font-semibold">Esperando pago...</span>
+                  </div>
+                  <span className="text-xl font-bold text-white">{formatMoney(activePOSTransaction.amount)}</span>
+                </div>
+                <p className="text-xs text-slate-400 mb-3">Referencia: {activePOSTransaction.reference}</p>
+                <button
+                  onClick={handleCancelPOS}
+                  className="w-full py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all text-sm"
+                >
+                  Cancelar Cobro
+                </button>
+              </div>
+            )}
+
+            {/* Info del participante seleccionado */}
+            {participantInfo && selectedParticipante && (
+              <div className="p-3 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/30 rounded-xl">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-purple-400 font-semibold">PROGRESO DEL PARTICIPANTE</span>
+                  <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                    participantInfo.progression.currentLevel === 'BASIC' ? 'bg-green-500/20 text-green-400' :
+                    participantInfo.progression.currentLevel === 'ADVANCED' ? 'bg-blue-500/20 text-blue-400' :
+                    participantInfo.progression.currentLevel === 'PL' ? 'bg-purple-500/20 text-purple-400' :
+                    'bg-slate-500/20 text-slate-400'
+                  }`}>
+                    {participantInfo.progression.currentLevelName}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center mb-2">
+                  <div className={`p-2 rounded-lg ${participantInfo.progression.completedLevels.includes('BASIC') ? 'bg-green-500/20' : 'bg-slate-700/50'}`}>
+                    <span className="text-lg">{participantInfo.progression.completedLevels.includes('BASIC') ? '✅' : '⬜'}</span>
+                    <p className="text-[10px] text-slate-400">Básico</p>
+                  </div>
+                  <div className={`p-2 rounded-lg ${participantInfo.progression.completedLevels.includes('ADVANCED') ? 'bg-blue-500/20' : 'bg-slate-700/50'}`}>
+                    <span className="text-lg">{participantInfo.progression.completedLevels.includes('ADVANCED') ? '✅' : '⬜'}</span>
+                    <p className="text-[10px] text-slate-400">Avanzado</p>
+                  </div>
+                  <div className={`p-2 rounded-lg ${participantInfo.progression.completedLevels.includes('PL') ? 'bg-purple-500/20' : 'bg-slate-700/50'}`}>
+                    <span className="text-lg">{participantInfo.progression.completedLevels.includes('PL') ? '✅' : '⬜'}</span>
+                    <p className="text-[10px] text-slate-400">PL</p>
+                  </div>
+                </div>
+                {participantInfo.progression.nextLevel && (
+                  <div className="p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                    <p className="text-xs text-yellow-400">
+                      🎯 Siguiente nivel: <span className="font-bold">{participantInfo.progression.nextLevelName}</span>
+                    </p>
+                    {participantInfo.payment.pendingAmount > 0 && (
+                      <p className="text-xs text-yellow-300 mt-1">
+                        💰 Saldo pendiente: <span className="font-bold">{formatMoney(participantInfo.payment.pendingAmount)}</span>
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Cobro Form */}
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -519,7 +827,11 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
                 <label className="text-xs text-slate-400 mb-1 block">Producto</label>
                 <select
                   value={cobroForm.visionId}
-                  onChange={(e) => setCobroForm({ ...cobroForm, visionId: e.target.value })}
+                  onChange={(e) => {
+                    setCobroForm({ ...cobroForm, visionId: e.target.value, participanteId: '' });
+                    setSelectedParticipante(null);
+                    setSearchParticipante('');
+                  }}
                   className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white focus:border-green-500/50 focus:outline-none"
                 >
                   <option value="">General</option>
@@ -544,6 +856,103 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
               </div>
             </div>
 
+            {/* Selector de Participante - Solo cuando hay visión seleccionada */}
+            {cobroForm.visionId && (
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">Participante (opcional)</label>
+                {selectedParticipante ? (
+                  <div className="flex items-center justify-between p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-sm">
+                        {selectedParticipante.nombre.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-white font-medium text-sm">{selectedParticipante.nombre}</p>
+                        <p className="text-xs text-slate-400">{selectedParticipante.email}</p>
+                        {selectedParticipante.saldoPendiente !== undefined && selectedParticipante.saldoPendiente > 0 && (
+                          <p className="text-xs text-yellow-400">Saldo pendiente: {formatMoney(selectedParticipante.saldoPendiente)}</p>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedParticipante(null);
+                        setCobroForm({ ...cobroForm, participanteId: '' });
+                        setSearchParticipante('');
+                      }}
+                      className="p-1 text-slate-400 hover:text-red-400 transition-colors"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder={loadingParticipantes ? "Cargando participantes..." : "Buscar participante por nombre..."}
+                      value={searchParticipante}
+                      onChange={(e) => setSearchParticipante(e.target.value)}
+                      disabled={loadingParticipantes}
+                      className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-500 focus:border-blue-500/50 focus:outline-none disabled:opacity-50"
+                    />
+                    {loadingParticipantes && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500/30 border-t-blue-500" />
+                      </div>
+                    )}
+                    {/* Lista de participantes filtrados */}
+                    {searchParticipante.length >= 1 && !loadingParticipantes && (
+                      <div className="absolute z-50 w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                        {participantes
+                          .filter(p => 
+                            p.nombre.toLowerCase().includes(searchParticipante.toLowerCase()) ||
+                            p.email.toLowerCase().includes(searchParticipante.toLowerCase())
+                          )
+                          .slice(0, 10)
+                          .map(p => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedParticipante(p);
+                                setCobroForm({ ...cobroForm, participanteId: p.id.toString(), reference: `Pago ${p.nombre}` });
+                                setSearchParticipante('');
+                              }}
+                              className="w-full px-3 py-2 text-left hover:bg-slate-800 transition-colors border-b border-slate-800 last:border-b-0 flex items-center gap-3"
+                            >
+                              <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-bold text-xs">
+                                {p.nombre.charAt(0)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-white text-sm font-medium truncate">{p.nombre}</p>
+                                <p className="text-xs text-slate-400 truncate">{p.email}</p>
+                              </div>
+                              {p.saldoPendiente !== undefined && p.saldoPendiente > 0 && (
+                                <span className="text-xs text-yellow-400 bg-yellow-500/10 px-2 py-1 rounded">
+                                  {formatMoney(p.saldoPendiente)}
+                                </span>
+                              )}
+                            </button>
+                          ))}
+                        {participantes.filter(p => 
+                          p.nombre.toLowerCase().includes(searchParticipante.toLowerCase()) ||
+                          p.email.toLowerCase().includes(searchParticipante.toLowerCase())
+                        ).length === 0 && (
+                          <p className="px-3 py-2 text-slate-500 text-sm">No se encontraron participantes</p>
+                        )}
+                      </div>
+                    )}
+                    {/* Mostrar conteo de participantes */}
+                    {!searchParticipante && participantes.length > 0 && (
+                      <p className="mt-1 text-xs text-slate-500">
+                        {participantes.length} participante{participantes.length !== 1 ? 's' : ''} en esta visión
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div>
               <label className="text-xs text-slate-400 mb-1 block">Referencia</label>
               <input
@@ -555,20 +964,73 @@ ${generatedCode.visionName ? `🎯 Visión: ${generatedCode.visionName}` : ''}
               />
             </div>
 
-            <button
-              onClick={handleGenerarCodigo}
-              disabled={loading || !cobroForm.amount}
-              className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-500/20"
-            >
-              {loading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white" />
-              ) : (
-                <>
-                  <QrCode size={20} />
-                  Generar Código de Cobro
-                </>
-              )}
-            </button>
+            {/* Botón según modo de pago */}
+            {paymentMode === 'cash' ? (
+              <button
+                onClick={handleGenerarCodigo}
+                disabled={loading || !cobroForm.amount || !!activePOSTransaction}
+                className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-green-500/20"
+              >
+                {loading ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white" />
+                ) : (
+                  <>
+                    <QrCode size={20} />
+                    Generar Código de Cobro
+                  </>
+                )}
+              </button>
+            ) : (
+              <div className="space-y-3">
+                {/* Selector de dispositivo POS */}
+                {posDevices.length > 1 && (
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">Terminal POS</label>
+                    <select
+                      value={selectedDevice}
+                      onChange={(e) => setSelectedDevice(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-slate-800/50 border border-slate-600/50 rounded-lg text-white focus:border-blue-500/50 focus:outline-none"
+                    >
+                      {posDevices.map(device => (
+                        <option key={device.id} value={device.id}>
+                          📱 {device.name || `Terminal ${device.id.slice(-4)}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                
+                <button
+                  onClick={handleSendToPOS}
+                  disabled={loadingPOS || !cobroForm.amount || !selectedParticipante || !selectedDevice || !!activePOSTransaction}
+                  className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
+                >
+                  {loadingPOS ? (
+                    <>
+                      <Loader2 size={20} className="animate-spin" />
+                      Enviando a terminal...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard size={20} />
+                      Enviar a Terminal POS
+                    </>
+                  )}
+                </button>
+                
+                {!selectedParticipante && (
+                  <p className="text-xs text-yellow-400 text-center">
+                    ⚠️ Selecciona un participante para cobrar con tarjeta
+                  </p>
+                )}
+                
+                {posConfigured === false && (
+                  <p className="text-xs text-red-400 text-center">
+                    ❌ Terminal POS no configurada. Configura Mercado Pago Point en ajustes.
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Recent Codes */}
             {recentCodes.length > 0 && (

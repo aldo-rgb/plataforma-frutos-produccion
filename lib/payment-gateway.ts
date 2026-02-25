@@ -27,8 +27,9 @@ interface PlatformPaymentSettings {
  * Obtiene las credenciales de pasarela de pago para una organización
  * 
  * Orden de prioridad:
- * 1. PaymentGatewayConfig de la organización
- * 2. PaymentSettings de la plataforma (fallback global)
+ * 1. PaymentGatewayConfig de la organización para el proveedor específico
+ * 2. PaymentGatewayConfig de la organización (cualquier proveedor activo)
+ * 3. PaymentSettings de la plataforma (fallback global)
  * 
  * @param organizationId - ID de la organización
  * @param preferredProvider - Proveedor preferido (opcional)
@@ -39,19 +40,47 @@ export async function getPaymentGateway(
   preferredProvider?: PaymentProvider
 ): Promise<PaymentGatewayCredentials | null> {
   try {
-    // 1. Intentar obtener configuración de la organización
+    // 1. Intentar obtener configuración específica de la organización
     if (organizationId) {
-      const orgConfig = await prisma.paymentGatewayConfig.findUnique({
-        where: { organizationId },
+      // Si se especifica un proveedor, buscar ese específico
+      if (preferredProvider) {
+        const orgConfig = await prisma.paymentGatewayConfig.findUnique({
+          where: { 
+            organizationId_provider: {
+              organizationId,
+              provider: preferredProvider.toUpperCase(),
+            }
+          },
+        });
+
+        if (orgConfig && orgConfig.isActive && orgConfig.secretKey) {
+          logger.debug(`✅ Usando pasarela de organización ${organizationId}: ${orgConfig.provider}`);
+          return {
+            provider: orgConfig.provider.toLowerCase() as PaymentProvider,
+            publicKey: orgConfig.publicKey,
+            secretKey: orgConfig.secretKey,
+            webhookSecret: orgConfig.webhookSecret,
+            source: 'organization',
+          };
+        }
+      }
+
+      // Si no se especifica proveedor o no se encontró el específico, buscar cualquiera activo
+      const anyOrgConfig = await prisma.paymentGatewayConfig.findFirst({
+        where: { 
+          organizationId,
+          isActive: true,
+          secretKey: { not: null }
+        },
       });
 
-      if (orgConfig && orgConfig.isActive && orgConfig.secretKey) {
-        logger.debug(`✅ Usando pasarela de organización ${organizationId}: ${orgConfig.provider}`);
+      if (anyOrgConfig && anyOrgConfig.secretKey) {
+        logger.debug(`✅ Usando pasarela de organización ${organizationId}: ${anyOrgConfig.provider}`);
         return {
-          provider: orgConfig.provider.toLowerCase() as PaymentProvider,
-          publicKey: orgConfig.publicKey,
-          secretKey: orgConfig.secretKey,
-          webhookSecret: orgConfig.webhookSecret,
+          provider: anyOrgConfig.provider.toLowerCase() as PaymentProvider,
+          publicKey: anyOrgConfig.publicKey,
+          secretKey: anyOrgConfig.secretKey,
+          webhookSecret: anyOrgConfig.webhookSecret,
           source: 'organization',
         };
       }
@@ -197,25 +226,37 @@ export async function hasPaymentGateway(organizationId: number | null | undefine
 
 /**
  * Obtiene los métodos de pago disponibles para una organización
+ * Ahora soporta múltiples proveedores configurados por organización
  * @param organizationId - ID de la organización
  * @returns Lista de proveedores disponibles
  */
 export async function getAvailablePaymentMethods(organizationId: number | null | undefined): Promise<PaymentProvider[]> {
   const methods: PaymentProvider[] = [];
 
-  // Verificar configuración de la organización
+  // Verificar TODAS las configuraciones de la organización
   if (organizationId) {
-    const orgConfig = await prisma.paymentGatewayConfig.findUnique({
-      where: { organizationId },
+    const orgConfigs = await prisma.paymentGatewayConfig.findMany({
+      where: { 
+        organizationId,
+        isActive: true,
+        secretKey: { not: null }
+      },
     });
 
-    if (orgConfig && orgConfig.isActive && orgConfig.secretKey) {
-      methods.push(orgConfig.provider.toLowerCase() as PaymentProvider);
-      return methods; // Organización solo usa su propia pasarela
+    // Agregar todos los proveedores configurados y activos de la organización
+    for (const config of orgConfigs) {
+      if (config.secretKey) {
+        methods.push(config.provider.toLowerCase() as PaymentProvider);
+      }
+    }
+
+    // Si la organización tiene al menos un proveedor configurado, retornar solo esos
+    if (methods.length > 0) {
+      return methods;
     }
   }
 
-  // Fallback: Métodos de la plataforma
+  // Fallback: Métodos de la plataforma (solo si la organización no tiene ninguno)
   const platformSettings = await prisma.paymentSettings.findFirst({
     orderBy: { createdAt: 'desc' },
   });

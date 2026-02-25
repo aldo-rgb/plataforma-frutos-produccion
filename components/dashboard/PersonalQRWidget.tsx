@@ -534,6 +534,13 @@ export default function PersonalQRWidget({
               {/* Botones de acción */}
               <div className="flex gap-3">
                 <button
+                  onClick={downloadQR}
+                  disabled={!premiumCardURL}
+                  className="flex-1 px-6 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-bold rounded-xl shadow-xl transition-all flex items-center justify-center gap-2"
+                >
+                  <span>💾</span> Guardar QR
+                </button>
+                <button
                   onClick={async () => {
                     // URL fija de producción .com con código de referido
                     const invitationURL = referralCode

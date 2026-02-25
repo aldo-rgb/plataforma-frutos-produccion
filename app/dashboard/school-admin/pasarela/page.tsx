@@ -34,6 +34,27 @@ interface PaymentConfig {
   isActive: boolean;
 }
 
+// Configuración por proveedor (nuevo - soporta múltiples)
+interface ProviderConfigs {
+  MERCADOPAGO: PaymentConfig;
+  STRIPE: PaymentConfig;
+  PAYPAL: PaymentConfig;
+}
+
+const DEFAULT_CONFIG: PaymentConfig = {
+  provider: '',
+  publicKey: '',
+  secretKey: '',
+  webhookSecret: '',
+  isActive: true,
+};
+
+const DEFAULT_PROVIDER_CONFIGS: ProviderConfigs = {
+  MERCADOPAGO: { ...DEFAULT_CONFIG, provider: 'MERCADOPAGO' },
+  STRIPE: { ...DEFAULT_CONFIG, provider: 'STRIPE' },
+  PAYPAL: { ...DEFAULT_CONFIG, provider: 'PAYPAL' },
+};
+
 const PROVIDERS = [
   {
     id: 'MERCADOPAGO',
@@ -88,22 +109,19 @@ export default function PaymentGatewayPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState<string | null>(null); // Ahora guarda el provider que está guardando
   const [savingBank, setSavingBank] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null); // Ahora guarda el provider que está eliminando
   const [organizationName, setOrganizationName] = useState('');
   const [notification, setNotification] = useState<{
     type: 'success' | 'error';
     message: string;
   } | null>(null);
 
-  const [config, setConfig] = useState<PaymentConfig>({
-    provider: '',
-    publicKey: '',
-    secretKey: '',
-    webhookSecret: '',
-    isActive: true,
-  });
+  // Nuevo: Configuraciones por proveedor (soporta múltiples)
+  const [providerConfigs, setProviderConfigs] = useState<ProviderConfigs>(DEFAULT_PROVIDER_CONFIGS);
+  // Proveedor actualmente siendo editado/expandido
+  const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
 
   const [bankConfig, setBankConfig] = useState<BankConfig>({
     bankName: '',
@@ -113,11 +131,19 @@ export default function PaymentGatewayPage() {
     transferWhatsappNumber: '',
   });
 
-  const [showSecretKey, setShowSecretKey] = useState(false);
-  const [showWebhookSecret, setShowWebhookSecret] = useState(false);
-  const [hasExistingConfig, setHasExistingConfig] = useState(false);
-  const [testingPayment, setTestingPayment] = useState(false);
+  const [showSecretKey, setShowSecretKey] = useState<Record<string, boolean>>({});
+  const [showWebhookSecret, setShowWebhookSecret] = useState<Record<string, boolean>>({});
+  const [testingPayment, setTestingPayment] = useState<string | null>(null);
   const [showHelpModal, setShowHelpModal] = useState(false);
+
+  // Helper para verificar si un proveedor tiene configuración existente
+  const hasExistingConfig = (provider: string) => {
+    const cfg = providerConfigs[provider as keyof ProviderConfigs];
+    return cfg?.id !== undefined;
+  };
+
+  // Helper para contar proveedores configurados
+  const configuredProvidersCount = Object.values(providerConfigs).filter(c => c.id !== undefined).length;
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -139,17 +165,25 @@ export default function PaymentGatewayPage() {
 
       if (data.success) {
         setOrganizationName(data.organizationName);
-        if (data.config) {
-          setConfig({
-            id: data.config.id,
-            provider: data.config.provider || '',
-            publicKey: data.config.publicKey || '',
-            secretKey: data.config.secretKey || '',
-            webhookSecret: data.config.webhookSecret || '',
-            isActive: data.config.isActive,
+        
+        // Cargar todas las configuraciones de proveedores
+        if (data.configs && Array.isArray(data.configs)) {
+          const newProviderConfigs = { ...DEFAULT_PROVIDER_CONFIGS };
+          data.configs.forEach((cfg: any) => {
+            if (cfg.provider && newProviderConfigs[cfg.provider as keyof ProviderConfigs]) {
+              newProviderConfigs[cfg.provider as keyof ProviderConfigs] = {
+                id: cfg.id,
+                provider: cfg.provider,
+                publicKey: cfg.publicKey || '',
+                secretKey: cfg.secretKey || '',
+                webhookSecret: cfg.webhookSecret || '',
+                isActive: cfg.isActive,
+              };
+            }
           });
-          setHasExistingConfig(true);
+          setProviderConfigs(newProviderConfigs);
         }
+        
         // Cargar configuración bancaria
         if (data.bankConfig) {
           setBankConfig({
@@ -201,22 +235,19 @@ export default function PaymentGatewayPage() {
     }
   };
 
-  const handleSave = async () => {
-    if (!config.provider) {
-      showNotification('error', 'Selecciona un proveedor de pagos');
-      return;
-    }
-
+  const handleSave = async (providerId: string) => {
+    const config = providerConfigs[providerId as keyof ProviderConfigs];
+    
     if (!config.publicKey && !config.secretKey) {
       showNotification('error', 'Proporciona al menos una credencial');
       return;
     }
 
-    setSaving(true);
+    setSaving(providerId);
     try {
       // Log para debug
       console.log('🔵 [pasarela-frontend] Enviando config:', {
-        provider: config.provider,
+        provider: providerId,
         publicKeyLength: config.publicKey?.length,
         secretKeyLength: config.secretKey?.length,
         secretKeyContainsAsterisk: config.secretKey?.includes('*'),
@@ -226,24 +257,31 @@ export default function PaymentGatewayPage() {
       const res = await fetch('/api/school-admin/payment-gateway', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config),
+        body: JSON.stringify({
+          provider: providerId,
+          publicKey: config.publicKey,
+          secretKey: config.secretKey,
+          webhookSecret: config.webhookSecret,
+          isActive: config.isActive,
+        }),
       });
 
       const data = await res.json();
 
       if (data.success) {
-        showNotification('success', data.message);
-        setHasExistingConfig(true);
+        showNotification('success', `${providerId} configurado correctamente`);
         // Actualizar estado con valores del servidor (enmascarados para secretos)
         if (data.config) {
-          setConfig(prev => ({
+          setProviderConfigs(prev => ({
             ...prev,
-            id: data.config.id,
-            provider: data.config.provider,
-            publicKey: data.config.publicKey || '',
-            secretKey: data.config.secretKey || '', // Será el valor enmascarado
-            webhookSecret: data.config.webhookSecret || '',
-            isActive: data.config.isActive,
+            [providerId]: {
+              id: data.config.id,
+              provider: data.config.provider,
+              publicKey: data.config.publicKey || '',
+              secretKey: data.config.secretKey || '', // Será el valor enmascarado
+              webhookSecret: data.config.webhookSecret || '',
+              isActive: data.config.isActive,
+            },
           }));
         }
       } else {
@@ -253,33 +291,31 @@ export default function PaymentGatewayPage() {
       console.error('Error saving config:', error);
       showNotification('error', 'Error al guardar la configuración');
     } finally {
-      setSaving(false);
+      setSaving(null);
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm('¿Estás seguro de eliminar la configuración de pasarela de pagos? Los usuarios no podrán pagar con tarjeta.')) {
+  const handleDelete = async (providerId: string) => {
+    const providerName = PROVIDERS.find(p => p.id === providerId)?.name || providerId;
+    if (!confirm(`¿Estás seguro de eliminar la configuración de ${providerName}?`)) {
       return;
     }
 
-    setDeleting(true);
+    setDeleting(providerId);
     try {
-      const res = await fetch('/api/school-admin/payment-gateway', {
+      const res = await fetch(`/api/school-admin/payment-gateway?provider=${providerId}`, {
         method: 'DELETE',
       });
 
       const data = await res.json();
 
       if (data.success) {
-        showNotification('success', 'Configuración eliminada');
-        setConfig({
-          provider: '',
-          publicKey: '',
-          secretKey: '',
-          webhookSecret: '',
-          isActive: true,
-        });
-        setHasExistingConfig(false);
+        showNotification('success', `Configuración de ${providerName} eliminada`);
+        setProviderConfigs(prev => ({
+          ...prev,
+          [providerId]: { ...DEFAULT_CONFIG, provider: providerId as any },
+        }));
+        setExpandedProvider(null);
       } else {
         showNotification('error', data.error || 'Error al eliminar');
       }
@@ -287,20 +323,22 @@ export default function PaymentGatewayPage() {
       console.error('Error deleting config:', error);
       showNotification('error', 'Error al eliminar la configuración');
     } finally {
-      setDeleting(false);
+      setDeleting(null);
     }
   };
 
-  const handleTestPayment = async () => {
-    if (!hasExistingConfig) {
-      showNotification('error', 'Primero guarda la configuración de la pasarela');
+  const handleTestPayment = async (providerId: string) => {
+    if (!hasExistingConfig(providerId)) {
+      showNotification('error', 'Primero guarda la configuración del proveedor');
       return;
     }
 
-    setTestingPayment(true);
+    setTestingPayment(providerId);
     try {
       const res = await fetch('/api/school-admin/payment-gateway/test-payment', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: providerId }),
       });
 
       const data = await res.json();
@@ -316,16 +354,22 @@ export default function PaymentGatewayPage() {
       console.error('Error creating test payment:', error);
       showNotification('error', 'Error al crear pago de prueba');
     } finally {
-      setTestingPayment(false);
+      setTestingPayment(null);
     }
+  };
+
+  // Helper para actualizar config de un proveedor específico
+  const updateProviderConfig = (providerId: string, updates: Partial<PaymentConfig>) => {
+    setProviderConfigs(prev => ({
+      ...prev,
+      [providerId]: { ...prev[providerId as keyof ProviderConfigs], ...updates },
+    }));
   };
 
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 5000);
   };
-
-  const selectedProvider = PROVIDERS.find(p => p.id === config.provider);
 
   if (loading) {
     return (
@@ -519,229 +563,271 @@ export default function PaymentGatewayPage() {
                 ¿Cómo funciona?
               </h3>
               <p className="text-sm text-blue-800 dark:text-blue-400">
-                Cuando tus alumnos paguen inscripciones (Básico, Avanzado, PL) o tickets pendientes con tarjeta, 
-                el dinero irá directamente a tu cuenta de {config.provider || 'la pasarela configurada'}. 
-                Los pagos de licencias y membresías van a la cuenta administrativa global.
+                Puedes configurar <strong>múltiples pasarelas de pago</strong>. Cuando tus alumnos paguen inscripciones o tickets, 
+                podrán elegir entre las opciones que hayas habilitado. El dinero irá directamente a tu cuenta de cada pasarela.
               </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Provider Selection */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Selecciona un proveedor
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {PROVIDERS.map((provider) => (
-              <button
-                key={provider.id}
-                onClick={() => setConfig(prev => ({ ...prev, provider: provider.id as any }))}
-                className={`p-4 rounded-xl border-2 transition-all text-left ${
-                  config.provider === provider.id
-                    ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                }`}
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <div className={`w-10 h-10 ${provider.color} rounded-lg flex items-center justify-center`}>
-                    <CreditCard className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="font-semibold text-gray-900 dark:text-white">
-                    {provider.name}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {provider.description}
+              {configuredProvidersCount > 0 && (
+                <p className="text-sm text-blue-800 dark:text-blue-400 mt-2">
+                  <CheckCircle className="w-4 h-4 inline mr-1" />
+                  Tienes <strong>{configuredProvidersCount}</strong> pasarela(s) configurada(s).
                 </p>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Credentials Form */}
-        {config.provider && selectedProvider && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Credenciales de {selectedProvider.name}
-              </h2>
-              <a
-                href={selectedProvider.docsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-amber-600 hover:text-amber-700 flex items-center gap-1"
-              >
-                Ver documentación
-                <ExternalLink className="w-4 h-4" />
-              </a>
-            </div>
-
-            <div className="space-y-4">
-              {/* Public Key */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {selectedProvider.fields.publicKey}
-                </label>
-                <input
-                  type="text"
-                  value={config.publicKey}
-                  onChange={(e) => setConfig(prev => ({ ...prev, publicKey: e.target.value }))}
-                  placeholder={`Ingresa tu ${selectedProvider.fields.publicKey}`}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                />
-              </div>
-
-              {/* Secret Key */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {selectedProvider.fields.secretKey}
-                  <span className="ml-2 text-xs text-gray-500">
-                    <Shield className="w-3 h-3 inline" /> Encriptado
-                  </span>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showSecretKey ? 'text' : 'password'}
-                    value={config.secretKey}
-                    onChange={(e) => setConfig(prev => ({ ...prev, secretKey: e.target.value }))}
-                    onFocus={() => {
-                      // Si el valor actual contiene asteriscos (enmascarado), limpiar al hacer focus
-                      if (config.secretKey.includes('*')) {
-                        setConfig(prev => ({ ...prev, secretKey: '' }));
-                      }
-                    }}
-                    placeholder={hasExistingConfig && config.secretKey.includes('*') 
-                      ? 'Ingresa nueva credencial para actualizar' 
-                      : `Ingresa tu ${selectedProvider.fields.secretKey}`}
-                    className="w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowSecretKey(!showSecretKey)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  >
-                    {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                {hasExistingConfig && config.secretKey.includes('*') && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    La clave está enmascarada. Haz clic en el campo para ingresar una nueva.
-                  </p>
-                )}
-              </div>
-
-              {/* Webhook Secret */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {selectedProvider.fields.webhookSecret}
-                  <span className="ml-2 text-xs text-gray-500">(Opcional)</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showWebhookSecret ? 'text' : 'password'}
-                    value={config.webhookSecret}
-                    onChange={(e) => setConfig(prev => ({ ...prev, webhookSecret: e.target.value }))}
-                    placeholder={`Ingresa tu ${selectedProvider.fields.webhookSecret}`}
-                    className="w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowWebhookSecret(!showWebhookSecret)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  >
-                    {showWebhookSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Active Toggle */}
-              <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    Pasarela activa
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {config.isActive ? 'Los usuarios pueden pagar con tarjeta' : 'Pagos con tarjeta deshabilitados'}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setConfig(prev => ({ ...prev, isActive: !prev.isActive }))}
-                  className={`relative w-14 h-7 rounded-full transition-colors ${
-                    config.isActive ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
-                  }`}
-                >
-                  <div
-                    className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
-                      config.isActive ? 'translate-x-8' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {/* Test Payment Button */}
-              {hasExistingConfig && config.isActive && (
-                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-amber-900 dark:text-amber-300">
-                          Probar pasarela de pagos
-                        </p>
-                        <p className="text-sm text-amber-700 dark:text-amber-400">
-                          Genera un link de pago de $10 MXN para verificar que todo funciona
-                        </p>
-                      </div>
-                      <button
-                        onClick={handleTestPayment}
-                        disabled={testingPayment}
-                        className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
-                      >
-                        {testingPayment ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Zap className="w-4 h-4" />
-                        )}
-                        Probar $10
-                      </button>
-                    </div>
-                  </div>
-                </div>
               )}
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Actions */}
-        <div className="flex items-center justify-between">
-          <div>
-            {hasExistingConfig && (
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
-              >
-                {deleting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Trash2 className="w-4 h-4" />
-                )}
-                Eliminar configuración
-              </button>
-            )}
+        {/* Provider Cards - Ahora soporta múltiples */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Pasarelas de Pago
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Haz clic en una pasarela para configurarla. Puedes tener varias activas al mismo tiempo.
+          </p>
+          
+          <div className="space-y-4">
+            {PROVIDERS.map((provider) => {
+              const config = providerConfigs[provider.id as keyof ProviderConfigs];
+              const isConfigured = config?.id !== undefined;
+              const isExpanded = expandedProvider === provider.id;
+              const isActive = config?.isActive && isConfigured;
+
+              return (
+                <div key={provider.id} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                  {/* Provider Header - Clickeable */}
+                  <button
+                    onClick={() => setExpandedProvider(isExpanded ? null : provider.id)}
+                    className={`w-full p-4 text-left transition-colors ${
+                      isExpanded 
+                        ? 'bg-amber-50 dark:bg-amber-900/20' 
+                        : isConfigured 
+                          ? 'bg-green-50 dark:bg-green-900/10 hover:bg-green-100 dark:hover:bg-green-900/20'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 ${provider.color} rounded-lg flex items-center justify-center`}>
+                          <CreditCard className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-gray-900 dark:text-white">
+                              {provider.name}
+                            </span>
+                            {isConfigured && (
+                              <span className={`px-2 py-0.5 text-xs rounded-full ${
+                                isActive 
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                  : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                              }`}>
+                                {isActive ? '✓ Activa' : 'Desactivada'}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {provider.description}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {isConfigured && (
+                          <CheckCircle className="w-5 h-5 text-green-500" />
+                        )}
+                        <svg 
+                          className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                          fill="none" 
+                          viewBox="0 0 24 24" 
+                          stroke="currentColor"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Provider Form - Expandible */}
+                  {isExpanded && (
+                    <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-sm text-gray-500">
+                          Credenciales de {provider.name}
+                        </span>
+                        <a
+                          href={provider.docsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-amber-600 hover:text-amber-700 flex items-center gap-1"
+                        >
+                          Ver documentación
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      </div>
+
+                      <div className="space-y-4">
+                        {/* Public Key */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {provider.fields.publicKey}
+                          </label>
+                          <input
+                            type="text"
+                            value={config.publicKey}
+                            onChange={(e) => updateProviderConfig(provider.id, { publicKey: e.target.value })}
+                            placeholder={`Ingresa tu ${provider.fields.publicKey}`}
+                            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                          />
+                        </div>
+
+                        {/* Secret Key */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {provider.fields.secretKey}
+                            <span className="ml-2 text-xs text-gray-500">
+                              <Shield className="w-3 h-3 inline" /> Encriptado
+                            </span>
+                          </label>
+                          <div className="relative">
+                            <input
+                              type={showSecretKey[provider.id] ? 'text' : 'password'}
+                              value={config.secretKey}
+                              onChange={(e) => updateProviderConfig(provider.id, { secretKey: e.target.value })}
+                              onFocus={() => {
+                                if (config.secretKey.includes('*')) {
+                                  updateProviderConfig(provider.id, { secretKey: '' });
+                                }
+                              }}
+                              placeholder={isConfigured && config.secretKey.includes('*') 
+                                ? 'Ingresa nueva credencial para actualizar' 
+                                : `Ingresa tu ${provider.fields.secretKey}`}
+                              className="w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowSecretKey(prev => ({ ...prev, [provider.id]: !prev[provider.id] }))}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            >
+                              {showSecretKey[provider.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Webhook Secret */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {provider.fields.webhookSecret}
+                            <span className="ml-2 text-xs text-gray-500">(Opcional)</span>
+                          </label>
+                          <div className="relative">
+                            <input
+                              type={showWebhookSecret[provider.id] ? 'text' : 'password'}
+                              value={config.webhookSecret}
+                              onChange={(e) => updateProviderConfig(provider.id, { webhookSecret: e.target.value })}
+                              placeholder={`Ingresa tu ${provider.fields.webhookSecret}`}
+                              className="w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowWebhookSecret(prev => ({ ...prev, [provider.id]: !prev[provider.id] }))}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            >
+                              {showWebhookSecret[provider.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Active Toggle */}
+                        <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-white">
+                              Pasarela activa
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {config.isActive ? 'Los usuarios pueden pagar con esta pasarela' : 'Pasarela deshabilitada'}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => updateProviderConfig(provider.id, { isActive: !config.isActive })}
+                            className={`relative w-14 h-7 rounded-full transition-colors ${
+                              config.isActive ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'
+                            }`}
+                          >
+                            <div
+                              className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
+                                config.isActive ? 'translate-x-8' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                        </div>
+
+                        {/* Test Payment Button */}
+                        {isConfigured && config.isActive && (
+                          <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                            <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-medium text-amber-900 dark:text-amber-300">
+                                    Probar pasarela
+                                  </p>
+                                  <p className="text-sm text-amber-700 dark:text-amber-400">
+                                    Genera un link de pago de $10 MXN
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => handleTestPayment(provider.id)}
+                                  disabled={testingPayment === provider.id}
+                                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+                                >
+                                  {testingPayment === provider.id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Zap className="w-4 h-4" />
+                                  )}
+                                  Probar $10
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Actions */}
+                        <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <div>
+                            {isConfigured && (
+                              <button
+                                onClick={() => handleDelete(provider.id)}
+                                disabled={deleting === provider.id}
+                                className="px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+                              >
+                                {deleting === provider.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-4 h-4" />
+                                )}
+                                Eliminar
+                              </button>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleSave(provider.id)}
+                            disabled={saving === provider.id || (!config.publicKey && !config.secretKey)}
+                            className="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {saving === provider.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Save className="w-4 h-4" />
+                            )}
+                            {isConfigured ? 'Actualizar' : 'Guardar'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-          <button
-            onClick={handleSave}
-            disabled={saving || !config.provider}
-            className="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {saving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            {hasExistingConfig ? 'Actualizar' : 'Guardar'} configuración
-          </button>
         </div>
 
         {/* Sección de Transferencia Bancaria */}

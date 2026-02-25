@@ -8,7 +8,7 @@ import logger from '@/lib/logger';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// GET - Obtener configuración de pasarela de pagos
+// GET - Obtener configuración de pasarela de pagos (soporta múltiples proveedores)
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No perteneces a ninguna organización' }, { status: 404 });
     }
 
-    // Obtener la organización con su configuración de gateway
+    // Obtener la organización con TODAS sus configuraciones de gateway
     const organization = await prisma.organization.findUnique({
       where: { id: usuario.organizationId },
       select: {
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
         bankAccountHolder: true,
         bankAccountNumber: true,
         transferWhatsappNumber: true,
-        PaymentGatewayConfig: true,
+        PaymentGatewayConfigs: true, // Ahora es plural - múltiples configuraciones
       },
     });
 
@@ -53,10 +53,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Organización no encontrada' }, { status: 404 });
     }
 
-    const config = organization.PaymentGatewayConfig;
+    const configs = organization.PaymentGatewayConfigs || [];
 
-    // Ocultar la secretKey parcialmente por seguridad
-    const safeConfig = config ? {
+    // Ocultar la secretKey parcialmente por seguridad en cada config
+    const safeConfigs = configs.map(config => ({
       id: config.id,
       provider: config.provider,
       publicKey: config.publicKey,
@@ -65,11 +65,15 @@ export async function GET(request: NextRequest) {
       isActive: config.isActive,
       createdAt: config.createdAt,
       updatedAt: config.updatedAt,
-    } : null;
+    }));
+
+    // Para retrocompatibilidad, también enviar el primer config activo como "config"
+    const firstActiveConfig = safeConfigs.find(c => c.isActive) || safeConfigs[0] || null;
 
     const response = NextResponse.json({
       success: true,
-      config: safeConfig,
+      config: firstActiveConfig, // Retrocompatibilidad
+      configs: safeConfigs, // Nuevo: array de todas las configuraciones
       organizationName: organization.name,
       bankConfig: {
         bankName: organization.bankName || '',
@@ -91,7 +95,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST/PUT - Crear o actualizar configuración de pasarela de pagos
+// POST/PUT - Crear o actualizar configuración de pasarela de pagos (por proveedor)
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -146,18 +150,22 @@ export async function POST(request: NextRequest) {
 
     const organizationId = usuario.organizationId;
 
-    // Verificar si ya existe una configuración
+    // Verificar si ya existe una configuración para este proveedor específico
     const existingConfig = await prisma.paymentGatewayConfig.findUnique({
-      where: { organizationId },
+      where: { 
+        organizationId_provider: {
+          organizationId,
+          provider,
+        }
+      },
     });
 
     let config;
 
     if (existingConfig) {
-      // Actualizar configuración existente
+      // Actualizar configuración existente para este proveedor
       // Solo actualizar secretKey si se proporciona una nueva (no enmascarada)
       const updateData: any = {
-        provider,
         publicKey,
         isActive: isActive !== undefined ? isActive : true,
       };
@@ -184,7 +192,7 @@ export async function POST(request: NextRequest) {
       
       logger.debug('🟢 [payment-gateway] Config actualizada, id:', config.id);
     } else {
-      // Crear nueva configuración
+      // Crear nueva configuración para este proveedor
       config = await prisma.paymentGatewayConfig.create({
         data: {
           organizationId,
@@ -195,6 +203,8 @@ export async function POST(request: NextRequest) {
           isActive: isActive !== undefined ? isActive : true,
         },
       });
+      
+      logger.debug('🟢 [payment-gateway] Nueva config creada para proveedor:', provider);
     }
 
     return NextResponse.json({
@@ -215,7 +225,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE - Eliminar configuración de pasarela de pagos
+// DELETE - Eliminar configuración de pasarela de pagos (por proveedor específico)
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -227,6 +237,10 @@ export async function DELETE(request: NextRequest) {
     if (session.user.rol !== 'SCHOOL_ADMIN') {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
+
+    // Obtener el proveedor a eliminar de query params
+    const { searchParams } = new URL(request.url);
+    const provider = searchParams.get('provider');
 
     // Obtener el organizationId del usuario
     const usuario = await prisma.usuario.findUnique({
@@ -240,22 +254,43 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'No perteneces a ninguna organización' }, { status: 404 });
     }
 
-    // Verificar si existe la configuración
-    const existingConfig = await prisma.paymentGatewayConfig.findUnique({
+    // Si se especifica un proveedor, eliminar solo ese
+    if (provider) {
+      const existingConfig = await prisma.paymentGatewayConfig.findUnique({
+        where: { 
+          organizationId_provider: {
+            organizationId: usuario.organizationId,
+            provider,
+          }
+        },
+      });
+
+      if (!existingConfig) {
+        return NextResponse.json({ error: `No hay configuración de ${provider} para eliminar` }, { status: 404 });
+      }
+
+      await prisma.paymentGatewayConfig.delete({
+        where: { id: existingConfig.id },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Configuración de ${provider} eliminada`,
+      });
+    }
+
+    // Si no se especifica proveedor, eliminar todas las configuraciones (para retrocompatibilidad)
+    const deletedCount = await prisma.paymentGatewayConfig.deleteMany({
       where: { organizationId: usuario.organizationId },
     });
 
-    if (!existingConfig) {
+    if (deletedCount.count === 0) {
       return NextResponse.json({ error: 'No hay configuración para eliminar' }, { status: 404 });
     }
 
-    await prisma.paymentGatewayConfig.delete({
-      where: { id: existingConfig.id },
-    });
-
     return NextResponse.json({
       success: true,
-      message: 'Configuración eliminada',
+      message: `${deletedCount.count} configuración(es) eliminada(s)`,
     });
   } catch (error) {
     logger.error('Error deleting payment gateway config:', error);
