@@ -6524,7 +6524,7 @@ model PendingTransferOrder {
   visionId         Int?
   amount           Float
   ticketSelection  String   @default("BASIC_ONLY") // BASIC_ONLY | FULL_VISION
-  status           String   @default("PENDING_PAYMENT") // PENDING_PAYMENT | CONFIRMED | EXPIRED | CANCELLED
+  status           String   @default("PENDING_PAYMENT") // PENDING_PAYMENT | RECEIPT_RECEIVED | PENDING_APPROVAL | CONFIRMED | REJECTED | EXPIRED | CANCELLED
   paymentMethod    String   @default("TRANSFER")
   
   // Datos del usuario (aún no creado)
@@ -6538,6 +6538,15 @@ model PendingTransferOrder {
   
   // Códigos aplicados (si hay)
   appliedCodes     String?  @db.Text // JSON stringified
+  
+  // === Quantum Pay-Bot: Datos del comprobante ===
+  receiptImageUrl    String?   // URL de la imagen del comprobante (guardada en Supabase)
+  receiptMediaId     String?   // Media ID de WhatsApp 
+  receiptReceivedAt  DateTime? // Cuándo se recibió el comprobante
+  whatsappMessageId  String?   // ID del mensaje de WhatsApp inicial enviado
+  whatsappPhone      String?   // Teléfono de WhatsApp normalizado para matching
+  rejectionReason    String?   // Razón si fue rechazado
+  rejectionCount     Int       @default(0) // Número de veces rechazado
   
   // Datos de confirmación
   confirmedAt      DateTime?
@@ -6560,4 +6569,20 @@ model PendingTransferOrder {
   @@index([userEmail])
   @@index([status])
   @@index([organizationId])
+  @@index([whatsappPhone])
+}
+
+// Comprobantes huérfanos (recibidos antes de vincular con una orden)
+model OrphanReceipt {
+  id            String    @id @default(uuid())
+  mediaId       String    // ID del media de WhatsApp
+  senderPhone   String    // Teléfono normalizado del remitente
+  senderName    String?   // Nombre del perfil de WhatsApp
+  imageUrl      String?   // URL si se descargó la imagen
+  processedAt   DateTime? // Cuando se vinculó con una orden
+  linkedOrderId String?   // ID de la orden vinculada
+  createdAt     DateTime  @default(now())
+  
+  @@index([senderPhone])
+  @@index([processedAt])
 }

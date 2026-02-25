@@ -279,3 +279,262 @@ export function generateTemporaryPassword(): string {
   
   return password;
 }
+
+// ===================================================
+// QUANTUM PAY-BOT: Sistema de Comprobantes por WhatsApp
+// ===================================================
+
+/**
+ * Normaliza un número de teléfono para matching
+ * Retorna el número en formato internacional sin +
+ */
+export function normalizePhoneNumber(phone: string): string {
+  // Remover todo excepto dígitos
+  let clean = phone.replace(/[^\d]/g, '');
+  
+  // Si empieza con 52 (México) pero no tiene 10 dígitos después, ajustar
+  if (clean.length === 10) {
+    // Agregar código de México
+    clean = '52' + clean;
+  } else if (clean.length === 12 && clean.startsWith('52')) {
+    // Ya tiene código de país
+  } else if (clean.length === 13 && clean.startsWith('521')) {
+    // Tiene 521 (México móvil antiguo), quitar el 1 extra
+    clean = '52' + clean.slice(3);
+  }
+  
+  return clean;
+}
+
+/**
+ * Pay-Bot: Envía mensaje inicial cuando se crea orden de transferencia
+ */
+export async function sendTransferOrderCreatedMessage(
+  phoneNumber: string,
+  userName: string,
+  amount: number,
+  ticketType: string,
+  orderReference: string,
+  bankConfig: {
+    bankName: string;
+    clabe: string;
+    holder: string;
+  }
+): Promise<SendMessageResult> {
+  const ticketLabel = ticketType === 'FULL_VISION' ? 'Boleto Full Vision' : 'Boleto Básico';
+  
+  const message = `🤖 *Quantum Pay-Bot* 
+
+¡Hola ${userName}! 👋
+
+Tu orden *${orderReference}* está lista.
+
+💰 *Monto a transferir:* $${amount.toLocaleString('es-MX')} MXN
+🎫 *Concepto:* ${ticketLabel}
+
+📋 *Datos bancarios:*
+🏦 Banco: ${bankConfig.bankName}
+📝 CLABE: ${bankConfig.clabe}
+👤 Beneficiario: ${bankConfig.holder}
+
+*IMPORTANTE:* Cuando realices la transferencia, responde a este mensaje con una *foto del comprobante* y lo revisaremos de inmediato.
+
+⏰ Tu orden expira en 72 horas.
+
+_Si alguien más va a pagar por ti, dile que envíe el comprobante a este número junto con tu referencia: *${orderReference}*_`;
+
+  return sendWhatsAppTextMessage(phoneNumber, message);
+}
+
+/**
+ * Pay-Bot: Confirma recepción del comprobante
+ */
+export async function sendReceiptReceivedMessage(
+  phoneNumber: string,
+  userName: string,
+  orderReference: string
+): Promise<SendMessageResult> {
+  const message = `✅ *Comprobante Recibido*
+
+¡Gracias ${userName}! 
+
+Hemos recibido tu comprobante para la orden *${orderReference}*.
+
+🔍 El Director/Administrador lo está revisando y te notificaremos cuando sea aprobado.
+
+_Tiempo estimado de revisión: 1-24 horas en días hábiles_`;
+
+  return sendWhatsAppTextMessage(phoneNumber, message);
+}
+
+/**
+ * Pay-Bot: Pide referencia cuando el teléfono no coincide
+ */
+export async function sendAskForReferenceMessage(
+  phoneNumber: string
+): Promise<SendMessageResult> {
+  const message = `🤖 *Quantum Pay-Bot*
+
+¡Hola! Recibí tu comprobante, pero no encontré una orden pendiente asociada a este número.
+
+Si estás pagando *por otra persona*, por favor envía el *código de referencia* de la orden (formato: TRF-XXXXX).
+
+_El usuario que creó la orden recibió este código cuando inició su compra._`;
+
+  return sendWhatsAppTextMessage(phoneNumber, message);
+}
+
+/**
+ * Pay-Bot: Confirma que se vinculó el comprobante con referencia manual
+ */
+export async function sendReferenceMatchedMessage(
+  phoneNumber: string,
+  userName: string,
+  orderReference: string
+): Promise<SendMessageResult> {
+  const message = `✅ *Comprobante Vinculado*
+
+He encontrado la orden *${orderReference}* de ${userName}.
+
+Tu comprobante ha sido recibido y está siendo revisado por el Director.
+
+_Te notificaremos cuando sea aprobado._`;
+
+  return sendWhatsAppTextMessage(phoneNumber, message);
+}
+
+/**
+ * Pay-Bot: Notifica que la referencia no existe
+ */
+export async function sendReferenceNotFoundMessage(
+  phoneNumber: string,
+  reference: string
+): Promise<SendMessageResult> {
+  const message = `❌ *Referencia No Encontrada*
+
+No encontré ninguna orden con la referencia *${reference}*.
+
+Por favor verifica el código e intenta de nuevo. El formato correcto es: TRF-XXXXX
+
+_Si tienes dudas, contacta al Director de tu escuela._`;
+
+  return sendWhatsAppTextMessage(phoneNumber, message);
+}
+
+/**
+ * Pay-Bot: Notifica aprobación del pago
+ */
+export async function sendPaymentApprovedMessage(
+  phoneNumber: string,
+  userName: string,
+  orderReference: string,
+  email: string,
+  tempPassword: string
+): Promise<SendMessageResult> {
+  const loginUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://plataforma-frutos.com';
+  
+  const message = `🎉 *¡PAGO APROBADO!* 🎉
+
+¡Felicidades ${userName}! Tu pago ha sido verificado y aprobado.
+
+📋 *Orden:* ${orderReference}
+
+🚀 *Ya puedes acceder a la plataforma:*
+🔗 ${loginUrl}/login
+
+📧 *Tu correo:* ${email}
+🔑 *Contraseña temporal:* ${tempPassword}
+
+_Cambia tu contraseña después de tu primer inicio de sesión._
+
+¡Bienvenido/a a Quantum Matter! 🌟`;
+
+  return sendWhatsAppTextMessage(phoneNumber, message);
+}
+
+/**
+ * Pay-Bot: Notifica rechazo del pago
+ */
+export async function sendPaymentRejectedMessage(
+  phoneNumber: string,
+  userName: string,
+  orderReference: string,
+  reason: string
+): Promise<SendMessageResult> {
+  const message = `⚠️ *Comprobante No Válido*
+
+Hola ${userName}, revisamos tu comprobante para la orden *${orderReference}* pero no pudimos validarlo.
+
+📝 *Motivo:* ${reason}
+
+Por favor envía un nuevo comprobante que muestre claramente:
+✅ Monto correcto
+✅ CLABE de destino
+✅ Fecha y hora de la operación
+✅ Número de autorización
+
+_Si crees que es un error, contacta al Director de tu escuela._`;
+
+  return sendWhatsAppTextMessage(phoneNumber, message);
+}
+
+/**
+ * Pay-Bot: Descarga imagen de WhatsApp Media
+ */
+export async function downloadWhatsAppMedia(mediaId: string): Promise<{
+  success: boolean;
+  imageBuffer?: Buffer;
+  mimeType?: string;
+  error?: string;
+}> {
+  try {
+    const {
+      WHATSAPP_ACCESS_TOKEN,
+      WHATSAPP_API_VERSION = 'v18.0'
+    } = process.env;
+
+    if (!WHATSAPP_ACCESS_TOKEN) {
+      return { success: false, error: 'WhatsApp credentials not configured' };
+    }
+
+    // Primero obtener la URL del media
+    const mediaUrl = `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${mediaId}`;
+    
+    const mediaResponse = await fetch(mediaUrl, {
+      headers: {
+        'Authorization': `Bearer ${WHATSAPP_ACCESS_TOKEN}`
+      }
+    });
+
+    if (!mediaResponse.ok) {
+      const error = await mediaResponse.json();
+      return { success: false, error: error.error?.message || 'Failed to get media URL' };
+    }
+
+    const mediaData = await mediaResponse.json();
+    
+    // Descargar el archivo
+    const downloadResponse = await fetch(mediaData.url, {
+      headers: {
+        'Authorization': `Bearer ${WHATSAPP_ACCESS_TOKEN}`
+      }
+    });
+
+    if (!downloadResponse.ok) {
+      return { success: false, error: 'Failed to download media' };
+    }
+
+    const arrayBuffer = await downloadResponse.arrayBuffer();
+    const imageBuffer = Buffer.from(arrayBuffer);
+
+    return {
+      success: true,
+      imageBuffer,
+      mimeType: mediaData.mime_type || 'image/jpeg'
+    };
+
+  } catch (error: any) {
+    console.error('❌ Error downloading WhatsApp media:', error);
+    return { success: false, error: error.message };
+  }
+}

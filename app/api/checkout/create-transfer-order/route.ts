@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 import logger from '@/lib/logger';
 import crypto from 'crypto';
+import { sendTransferOrderCreatedMessage, normalizePhoneNumber } from '@/lib/whatsapp';
 
 // Forzar que esta ruta sea dinámica (sin caché)
 export const dynamic = 'force-dynamic';
@@ -50,10 +51,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar que la organización existe
+    // Verificar que la organización existe y obtener config bancaria
     const organization = await prisma.organization.findUnique({
       where: { id: organizationId },
-      select: { id: true, name: true },
+      select: { 
+        id: true, 
+        name: true,
+        bankName: true,
+        bankAccountClabe: true,
+        bankAccountHolder: true,
+        transferWhatsappNumber: true,
+      },
     });
 
     if (!organization) {
@@ -73,6 +81,9 @@ export async function POST(request: NextRequest) {
     // Generar referencia única para la orden
     const orderReference = `TRF-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
 
+    // Normalizar teléfono para WhatsApp matching
+    const normalizedPhone = userData.telefono ? normalizePhoneNumber(userData.telefono) : null;
+
     // Crear la orden pendiente en la base de datos
     const pendingOrder = await prisma.pendingTransferOrder.create({
       data: {
@@ -88,6 +99,7 @@ export async function POST(request: NextRequest) {
         userName: userData.nombre,
         userPhone: userData.telefono || null,
         userApodo: userData.apodo || null,
+        whatsappPhone: normalizedPhone, // Para Pay-Bot matching
         // Guardar todos los datos del usuario para crear después
         userData: JSON.stringify(userData),
         // Códigos aplicados (si hay)
@@ -105,11 +117,45 @@ export async function POST(request: NextRequest) {
       organizationId,
     });
 
+    // === QUANTUM PAY-BOT: Enviar WhatsApp inicial ===
+    let whatsappSent = false;
+    if (userData.telefono && organization.bankAccountClabe) {
+      try {
+        const result = await sendTransferOrderCreatedMessage(
+          userData.telefono,
+          userData.nombre,
+          amount,
+          ticketSelection || 'BASIC_ONLY',
+          orderReference,
+          {
+            bankName: organization.bankName || 'BBVA',
+            clabe: organization.bankAccountClabe,
+            holder: organization.bankAccountHolder || organization.name,
+          }
+        );
+        
+        if (result.success) {
+          whatsappSent = true;
+          // Guardar el ID del mensaje enviado
+          await prisma.pendingTransferOrder.update({
+            where: { id: pendingOrder.id },
+            data: { whatsappMessageId: result.messageId }
+          });
+          logger.info('🤖 [Pay-Bot] WhatsApp enviado:', result.messageId);
+        } else {
+          logger.warn('⚠️ [Pay-Bot] No se pudo enviar WhatsApp:', result.error);
+        }
+      } catch (whatsappError) {
+        logger.error('❌ [Pay-Bot] Error enviando WhatsApp:', whatsappError);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       orderReference,
       orderId: pendingOrder.id,
       expiresAt: pendingOrder.expiresAt,
+      whatsappSent,
       message: 'Orden creada. Realiza la transferencia y envía el comprobante.',
     });
 

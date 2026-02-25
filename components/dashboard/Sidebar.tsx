@@ -773,6 +773,19 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             </Link>
 
             <Link 
+              href="/dashboard/school-admin/auditar-transferencias"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/school-admin/auditar-transferencias'
+                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-green-900/20'
+              }`}
+            >
+              <DollarSign size={18} className="text-green-400" />
+              <span>🤖 Quantum Pay-Bot</span>
+            </Link>
+
+            <Link 
               href="/dashboard/school-admin/manteles"
               onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
