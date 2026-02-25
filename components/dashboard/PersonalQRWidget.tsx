@@ -548,6 +548,8 @@ export default function PersonalQRWidget({
 💫 Entrenamiento práctico para resultados reales  
 🤝 Una comunidad extraordinaria
 
+⚡ ¡QUEDAN POCOS LUGARES!
+
 👉 Conoce más y regístrate aquí:
 ${invitationURL}
 
