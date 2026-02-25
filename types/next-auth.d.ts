@@ -8,6 +8,8 @@ declare module "next-auth" {
     wizardCompleted?: boolean
     onboardingOrigin?: string
     organizationId?: number
+    referralCode?: string
+    profileCompleted?: boolean
     // Roles múltiples
     esMentor?: boolean
     esEntrenador?: boolean
@@ -25,6 +27,8 @@ declare module "next-auth" {
       wizardCompleted?: boolean
       onboardingOrigin?: string
       organizationId?: number
+      referralCode?: string
+      profileCompleted?: boolean
       // Roles múltiples
       esMentor?: boolean
       esEntrenador?: boolean
@@ -44,6 +48,8 @@ declare module "next-auth/jwt" {
     wizardCompleted?: boolean
     onboardingOrigin?: string
     organizationId?: number
+    referralCode?: string
+    profileCompleted?: boolean
     // Roles múltiples
     esMentor?: boolean
     esEntrenador?: boolean
