@@ -8,7 +8,7 @@ import { Lock, Eye, EyeOff, AlertTriangle, CheckCircle, Loader2, Sparkles } from
 export default function CambiarPasswordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const session = useSession();
+  const { data: session, status } = useSession();
   const isFirstLogin = searchParams.get('firstLogin') === 'true';
   
   const [currentPassword, setCurrentPassword] = useState('');
@@ -22,7 +22,17 @@ export default function CambiarPasswordPage() {
   const [success, setSuccess] = useState(false);
   const [redirectingToProfile, setRedirectingToProfile] = useState(false);
 
-  if (!session || session.status === 'loading') {
+  // Redirigir al login si no está autenticado
+  if (status === 'unauthenticated') {
+    router.push('/login');
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-white animate-spin" />
+      </div>
+    );
+  }
+
+  if (status === 'loading') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-white animate-spin" />
