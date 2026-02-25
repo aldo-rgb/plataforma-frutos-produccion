@@ -40,6 +40,9 @@ interface Usuario {
   nombre: string;
   email: string;
   rol: string;
+  esCoordinador?: boolean;
+  esCoordinadorBasico?: boolean;
+  esCoordinadorAvanzado?: boolean;
 }
 
 interface Participante {
@@ -351,9 +354,10 @@ export default function VisionManagePage() {
       const data = await res.json();
       
       if (data.success) {
-        // Solo coordinadores (no trainers, esos vienen del API global)
+        // Coordinadores: por rol tradicional O por flags de rol múltiple
         setCoordinadores(data.coordinadores.filter((u: Usuario) => 
-          ['COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'COORDINADOR'].includes(u.rol)
+          ['COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'COORDINADOR', 'SCHOOL_ADMIN'].includes(u.rol) ||
+          u.esCoordinador || u.esCoordinadorBasico || u.esCoordinadorAvanzado
         ));
       }
     } catch (error) {
@@ -3013,7 +3017,7 @@ export default function VisionManagePage() {
                 >
                   <option value="">Seleccionar coordinador...</option>
                   {coordinadores
-                    .filter(c => ['COORDINATOR_BASIC', 'COORDINADOR'].includes(c.rol))
+                    .filter(c => ['COORDINATOR_BASIC', 'COORDINADOR'].includes(c.rol) || c.esCoordinadorBasico)
                     .map(c => (
                       <option key={c.id} value={c.id}>{c.nombre} - {c.email}</option>
                     ))}
@@ -3047,7 +3051,7 @@ export default function VisionManagePage() {
                 >
                   <option value="">Seleccionar coordinador...</option>
                   {coordinadores
-                    .filter(c => ['COORDINATOR_ADVANCED', 'COORDINADOR'].includes(c.rol))
+                    .filter(c => ['COORDINATOR_ADVANCED', 'COORDINADOR'].includes(c.rol) || c.esCoordinadorAvanzado)
                     .map(c => (
                       <option key={c.id} value={c.id}>{c.nombre} - {c.email}</option>
                     ))}
