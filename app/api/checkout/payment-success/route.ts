@@ -148,8 +148,19 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Usar contraseña por defecto si no se proporciona
+    const finalPassword = userData.password || 'Quantum123';
+    const requirePasswordChange = !userData.password; // Marcar para cambio si usó contraseña por defecto
+    
     // Hash password
-    const hashedPassword = await bcrypt.hash(userData.password || 'temporal123', 10);
+    const hashedPassword = await bcrypt.hash(finalPassword, 10);
+
+    // Generar código de referido único para el nuevo usuario
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const nombreLimpio = userData.nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z]/g, '').toUpperCase();
+    const prefix = nombreLimpio.substring(0, 3).padEnd(3, 'X');
+    const generatedReferralCode = `${prefix}${timestamp}${random}`;
 
     // Create user and tickets in transaction
     const result = await prisma.$transaction(async (tx) => {
@@ -158,9 +169,11 @@ export async function GET(request: NextRequest) {
         data: {
           email: userData.email,
           nombre: userData.nombre,
-          apodo: userData.apodo || userData.nombre,
+          apodo: userData.apodo || null, // No usar nombre como apodo, se completa en fase 2
           telefono: userData.telefono || '',
           password: hashedPassword,
+          requirePasswordChange, // Marcar si necesita cambiar contraseña al primer login
+          referralCode: generatedReferralCode, // Código de referido personal
           organizationId: organizationId,
           rol: 'PARTICIPANTE',
           isActive: true,
@@ -322,14 +335,13 @@ export async function GET(request: NextRequest) {
     });
 
     // Enviar notificaciones de bienvenida (Email + WhatsApp)
-    const plainPassword = userData.password || 'Quantum123';
     try {
       await sendWelcomeNotifications({
         userId: result.user.id,
         email: userData.email,
         telefono: userData.telefono || '',
         nombre: userData.nombre,
-        password: plainPassword,
+        password: finalPassword, // Contraseña en texto plano (Quantum123 por defecto)
         organizationName: organization.name,
         visionName: vision?.nombre
       });

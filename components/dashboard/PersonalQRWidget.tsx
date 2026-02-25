@@ -19,7 +19,7 @@ export default function PersonalQRWidget({
   userId, 
   userEmail, 
   referralCode, 
-  organizationId,
+  organizationId: propOrganizationId,
   organizationName = 'FRUTOS',
   organizationLogo,
   squadName
@@ -34,10 +34,29 @@ export default function PersonalQRWidget({
   const [basicPrice, setBasicPrice] = useState<number>(1500);
   const [currency, setCurrency] = useState<string>('MXN');
   const [registrationURL, setRegistrationURL] = useState<string>('');
+  const [organizationId, setOrganizationId] = useState<number | null | undefined>(propOrganizationId);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Si no hay organizationId en props, obtenerlo del usuario
+  useEffect(() => {
+    if (!propOrganizationId && userId) {
+      console.log('🔄 No hay organizationId en props, obteniendo del usuario:', userId);
+      fetch(`/api/user/${userId}/organization`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.organizationId) {
+            console.log('✅ OrganizationId obtenido del usuario:', data.organizationId);
+            setOrganizationId(data.organizationId);
+          }
+        })
+        .catch(err => console.error('Error fetching user organization:', err));
+    }
+  }, [propOrganizationId, userId]);
 
   // Cargar logo, nombre y precios de la organización
   useEffect(() => {
+    console.log('🔍 PersonalQRWidget - organizationId recibido:', organizationId, typeof organizationId);
+    
     if (organizationId) {
       console.log('🔍 Cargando datos de organización:', organizationId);
       

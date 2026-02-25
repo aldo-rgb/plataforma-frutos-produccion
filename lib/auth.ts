@@ -123,7 +123,7 @@ export const authOptions: NextAuthOptions = {
           requirePasswordChange: requirePasswordChange,
           wizardCompleted: user.wizardCompleted || false,
           onboardingOrigin: user.onboardingOrigin || 'ORGANIC_SIGNUP',
-          organizationId: user.organizacionId || undefined,
+          organizationId: user.organizationId || undefined,
           referralCode: user.referralCode || undefined,
           profileCompleted: !!user.apodo, // Perfil completo si tiene apodo
           // Roles múltiples
