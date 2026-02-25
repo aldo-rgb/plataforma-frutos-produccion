@@ -535,10 +535,10 @@ export default function PersonalQRWidget({
               <div className="flex gap-3">
                 <button
                   onClick={async () => {
-                    // URL directa al registro con código de referido (la org se obtiene del referral)
+                    // URL fija de producción .com con código de referido
                     const invitationURL = referralCode
-                      ? `${window.location.origin}/auth/signup?ref=${referralCode}`
-                      : registrationURL || `${window.location.origin}/auth/signup`;
+                      ? `https://www.impactocuantico.com/auth/signup?ref=${referralCode}`
+                      : `https://www.impactocuantico.com/auth/signup`;
 
                     const shareText = `🎓 ¡Te invito a vivir una experiencia que cambiará tu vida!
 
