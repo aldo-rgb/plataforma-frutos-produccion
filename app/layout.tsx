@@ -21,6 +21,11 @@ export const metadata: Metadata = {
   description: "Plataforma de transformación cuántica con mentoría y seguimiento",
   manifest: "/manifest.json",
   themeColor: "#050B14",
+  verification: {
+    other: {
+      "facebook-domain-verification": "9t2zu84xjteixtik41d6v3plb7rbmo",
+    },
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
