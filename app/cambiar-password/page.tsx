@@ -69,7 +69,16 @@ export default function CambiarPasswordPage() {
 
       setSuccess(true);
       
-      // Verificar si el perfil está completo antes de redirigir
+      // Si es primer login, SIEMPRE redirigir a completar perfil
+      if (isFirstLogin) {
+        setRedirectingToProfile(true);
+        setTimeout(() => {
+          router.push('/dashboard/completar-perfil');
+        }, 2000);
+        return;
+      }
+      
+      // Para cambios de contraseña normales, verificar si el perfil está completo
       try {
         const profileRes = await fetch('/api/user/profile');
         const profileData = await profileRes.json();
