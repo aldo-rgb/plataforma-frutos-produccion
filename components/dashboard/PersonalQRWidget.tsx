@@ -569,24 +569,6 @@ ${invitationURL}
                 >
                   <span>🔗</span> Compartir
                 </button>
-                <button 
-                  onClick={async () => {
-                    if (!referralCode) return;
-                    
-                    // Descargar el flyer
-                    const flyerUrl = `${window.location.origin}/api/og/flyer?codigo=${referralCode}`;
-                    const link = document.createElement('a');
-                    link.href = flyerUrl;
-                    link.download = `flyer-invitacion-${userName.replace(/\s+/g, '-')}.png`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  }}
-                  disabled={!referralCode}
-                  className="flex-1 px-6 py-4 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:cursor-not-allowed text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2"
-                >
-                  <span>📥</span> Descargar Flyer
-                </button>
               </div>
 
               {/* Tip informativo */}
