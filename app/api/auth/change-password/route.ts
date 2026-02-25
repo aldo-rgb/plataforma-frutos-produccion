@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
     logger.debug(`✅ Contraseña actualizada para usuario: ${updatedUser.email}`);
 
     // Después de cambiar contraseña, siempre ir a completar perfil
-    let redirectTo = '/dashboard/perfil-completo?onboarding=true';
+    let redirectTo = '/dashboard/completar-perfil';
 
     // Preparar respuesta con redirect
     const response = NextResponse.json({ 

@@ -81,8 +81,9 @@ function ChangePasswordContent() {
           });
 
           if (result?.ok) {
-            // Redirigir directo al dashboard
-            router.push('/dashboard');
+            // Usar redirectTo de la API si existe, sino ir a completar-perfil
+            const destination = data.redirectTo || '/dashboard/completar-perfil';
+            router.push(destination);
           } else {
             // Si falla el auto-login, ir a login manual
             router.push('/login?message=password_changed');
