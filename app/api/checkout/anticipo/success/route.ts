@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import logger from '@/lib/logger';
+import { sendWelcomeNotifications } from '@/lib/welcome-notification';
 
 /**
  * GET /api/checkout/anticipo/success
@@ -173,6 +174,28 @@ export async function GET(request: NextRequest) {
     });
 
     logger.debug(`✅ Checkout actualizado a CONVERTED_ANTICIPO`);
+
+    // Enviar notificaciones de bienvenida si es un usuario nuevo
+    // (Solo enviar si el usuario fue creado en este flujo, no si ya existía)
+    if (registrationData && passwordHash) {
+      try {
+        // La contraseña original se usa 'Quantum123' por defecto si no se especificó otra
+        const plainPassword = 'Quantum123'; // El password guardado en registrationData ya fue hasheado
+        
+        await sendWelcomeNotifications({
+          email: checkout.email,
+          telefono: checkout.phone || registrationData?.telefono || '',
+          nombre: userName,
+          password: plainPassword,
+          organizationName: checkout.organization?.name || 'Impacto Cuántico',
+          visionName: checkout.vision?.nombre
+        });
+        logger.debug('📬 Notificaciones de bienvenida enviadas (anticipo)');
+      } catch (notifError) {
+        logger.error('Error enviando notificaciones de bienvenida:', notifError);
+        // No fallar el checkout si fallan las notificaciones
+      }
+    }
 
     // Redirigir a página de éxito
     const successUrl = new URL('/checkout/success', request.url);

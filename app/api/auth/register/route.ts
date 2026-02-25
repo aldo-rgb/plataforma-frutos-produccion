@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { rateLimit, RateLimitPresets } from '@/lib/rate-limit';
 import logger from '@/lib/logger';
 import { registerSchema, validateData, getValidationErrorMessage } from '@/lib/validations';
+import { sendWelcomeNotifications, DEFAULT_PASSWORD } from '@/lib/welcome-notification';
 
 export async function POST(request: Request) {
   try {
@@ -73,8 +74,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Determinar organizationId
+    // Determinar organizationId y obtener nombre para notificaciones
     let finalOrganizationId = organizationId;
+    let organizationName = 'Impacto Cuántico'; // Default
     
     if (!finalOrganizationId && organizationCode) {
       const organization = await prisma.organization.findFirst({
@@ -83,11 +85,22 @@ export async function POST(request: Request) {
             { slug: organizationCode },
             { id: !isNaN(Number(organizationCode)) ? parseInt(organizationCode) : 0 }
           ]
-        }
+        },
+        select: { id: true, name: true }
       });
 
       if (organization) {
         finalOrganizationId = organization.id;
+        organizationName = organization.name;
+      }
+    } else if (finalOrganizationId) {
+      // Si ya tenemos el ID, buscar el nombre
+      const organization = await prisma.organization.findUnique({
+        where: { id: finalOrganizationId },
+        select: { name: true }
+      });
+      if (organization) {
+        organizationName = organization.name;
       }
     }
 
@@ -276,34 +289,54 @@ export async function POST(request: Request) {
     }
 
     // Inscribir al usuario en la visión
+    let visionName: string | undefined;
     if (finalVisionId && finalOrganizationId) {
       try {
         // Buscar el coordinador de la visión
         const vision = await prisma.vision.findUnique({
           where: { id: finalVisionId },
-          select: { coordinadorId: true }
+          select: { coordinadorId: true, nombre: true }
         });
 
-        if (vision?.coordinadorId) {
-          await prisma.vision_enrollments.create({
-            data: {
-              userId: newUser.id,
-              visionId: finalVisionId,
-              coordinatorId: vision.coordinadorId,
-              level: 'BASIC',
-              enrollmentStatus: 'ENROLLED',
-              updatedAt: new Date()
-            }
-          });
+        if (vision) {
+          visionName = vision.nombre;
+          
+          if (vision.coordinadorId) {
+            await prisma.vision_enrollments.create({
+              data: {
+                userId: newUser.id,
+                visionId: finalVisionId,
+                coordinatorId: vision.coordinadorId,
+                level: 'BASIC',
+                enrollmentStatus: 'ENROLLED',
+                updatedAt: new Date()
+              }
+            });
 
-          logger.debug(`✅ Usuario ${newUser.id} inscrito en visión ${finalVisionId}`);
-        } else {
-          logger.warn(`⚠️ Visión ${finalVisionId} no tiene coordinador asignado`);
+            logger.debug(`✅ Usuario ${newUser.id} inscrito en visión ${finalVisionId}`);
+          } else {
+            logger.warn(`⚠️ Visión ${finalVisionId} no tiene coordinador asignado`);
+          }
         }
       } catch (error) {
         logger.error('Error al inscribir usuario en visión:', error);
         // No fallar el registro si falla la inscripción
       }
+    }
+
+    // Enviar notificaciones de bienvenida (Email + WhatsApp)
+    try {
+      await sendWelcomeNotifications({
+        email,
+        telefono,
+        nombre,
+        password: finalPassword, // Contraseña en texto plano
+        organizationName,
+        visionName
+      });
+    } catch (notifError) {
+      logger.error('Error enviando notificaciones de bienvenida:', notifError);
+      // No fallar el registro si fallan las notificaciones
     }
 
     return NextResponse.json({

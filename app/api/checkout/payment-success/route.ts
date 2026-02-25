@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import logger from '@/lib/logger';
 import Stripe from 'stripe';
+import { sendWelcomeNotifications } from '@/lib/welcome-notification';
 
 /**
  * GET /api/checkout/payment-success
@@ -121,6 +122,7 @@ export async function GET(request: NextRequest) {
     // Get organization and vision
     const organization = await prisma.organization.findUnique({
       where: { id: organizationId },
+      select: { id: true, name: true },
     });
 
     if (!organization) {
@@ -318,6 +320,23 @@ export async function GET(request: NextRequest) {
 
       return { user: newUser, basicTicket };
     });
+
+    // Enviar notificaciones de bienvenida (Email + WhatsApp)
+    const plainPassword = userData.password || 'Quantum123';
+    try {
+      await sendWelcomeNotifications({
+        email: userData.email,
+        telefono: userData.telefono || '',
+        nombre: userData.nombre,
+        password: plainPassword,
+        organizationName: organization.name,
+        visionName: vision?.nombre
+      });
+      logger.debug('✅ Notificaciones de bienvenida enviadas');
+    } catch (notifError) {
+      logger.error('Error enviando notificaciones de bienvenida:', notifError);
+      // No fallar el checkout si fallan las notificaciones
+    }
 
     // Redirect to success
     const successUrl = new URL('/checkout/success', request.url);

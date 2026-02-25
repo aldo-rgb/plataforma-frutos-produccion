@@ -9,6 +9,7 @@ import {
   sendPaymentRejectedMessage,
   generateTemporaryPassword 
 } from '@/lib/whatsapp';
+import { sendWelcomeNotifications } from '@/lib/welcome-notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -307,21 +308,34 @@ async function approveOrder(order: any, adminUser: any, transactionRef?: string)
     approvedBy: adminUser.email,
   });
 
-  // Enviar WhatsApp de confirmación
-  if (order.userPhone || order.whatsappPhone) {
-    const phone = order.userPhone || order.whatsappPhone;
-    try {
-      await sendPaymentApprovedMessage(
-        phone,
-        order.userName,
-        order.orderReference,
-        order.userEmail,
-        tempPassword
-      );
-      logger.info('🤖 [Pay-Bot] Mensaje de aprobación enviado');
-    } catch (whatsappError) {
-      logger.error('❌ [Pay-Bot] Error enviando aprobación:', whatsappError);
-    }
+  // Obtener nombre de organización y visión para las notificaciones
+  const organization = await prisma.organization.findUnique({
+    where: { id: order.organizationId },
+    select: { name: true }
+  });
+  
+  let visionName: string | undefined;
+  if (order.visionId) {
+    const vision = await prisma.vision.findUnique({
+      where: { id: order.visionId },
+      select: { nombre: true }
+    });
+    visionName = vision?.nombre;
+  }
+
+  // Enviar notificaciones de bienvenida (Email + WhatsApp con credenciales)
+  try {
+    await sendWelcomeNotifications({
+      email: order.userEmail,
+      telefono: order.userPhone || order.whatsappPhone || '',
+      nombre: order.userName,
+      password: tempPassword,
+      organizationName: organization?.name || 'Impacto Cuántico',
+      visionName
+    });
+    logger.info('📬 [transfer-orders] Notificaciones de bienvenida enviadas');
+  } catch (notifError) {
+    logger.error('❌ [transfer-orders] Error enviando notificaciones:', notifError);
   }
 
   return NextResponse.json({

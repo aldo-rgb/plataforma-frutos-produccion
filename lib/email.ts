@@ -505,4 +505,117 @@ export async function sendAnticipoEmail(
 
   return sendEmail(email, subject, html);
 }
+
+/**
+ * Envía email de bienvenida con credenciales de acceso
+ * Se usa cuando un usuario completa cualquier flujo de pago exitoso
+ */
+export async function sendWelcomeCredentialsEmail(
+  email: string,
+  data: {
+    nombre: string;
+    password: string; // Contraseña en texto plano (Quantum123 por defecto)
+    organizationName: string;
+    visionName?: string;
+    loginUrl?: string;
+  }
+): Promise<SendEmailResult> {
+  const loginUrl = data.loginUrl || 'https://impactocuantico.net/auth/login';
+  const subject = `🎉 ¡Bienvenid@ a ${data.organizationName}! - Tus credenciales de acceso`;
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #0f172a; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+      <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+        
+        <!-- Header con logo -->
+        <div style="text-align: center; margin-bottom: 30px;">
+          <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+            <span style="font-size: 40px;">🎉</span>
+          </div>
+          <h1 style="color: #10b981; font-size: 28px; margin: 0; font-weight: bold;">
+            ¡Bienvenid@ a ${data.organizationName}!
+          </h1>
+          ${data.visionName ? `<p style="color: #94a3b8; font-size: 16px; margin: 10px 0 0 0;">${data.visionName}</p>` : ''}
+        </div>
+
+        <!-- Contenido principal -->
+        <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid #334155; border-radius: 16px; padding: 35px;">
+          
+          <p style="color: #e2e8f0; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
+            Hola <strong style="color: #10b981;">${data.nombre}</strong>,
+          </p>
+          
+          <p style="color: #94a3b8; font-size: 15px; line-height: 1.6; margin: 0 0 25px 0;">
+            Tu registro ha sido completado exitosamente. Aquí están tus credenciales para acceder a la plataforma:
+          </p>
+
+          <!-- Credenciales -->
+          <div style="background: rgba(16, 185, 129, 0.1); border: 2px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 25px; margin: 20px 0;">
+            <div style="margin-bottom: 15px;">
+              <span style="color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">📧 Correo electrónico</span>
+              <div style="color: #10b981; font-size: 18px; font-weight: bold; margin-top: 5px; word-break: break-all;">
+                ${email}
+              </div>
+            </div>
+            
+            <div style="border-top: 1px solid rgba(16, 185, 129, 0.2); padding-top: 15px;">
+              <span style="color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">🔑 Contraseña</span>
+              <div style="color: #fbbf24; font-size: 24px; font-weight: bold; margin-top: 5px; letter-spacing: 2px;">
+                ${data.password}
+              </div>
+            </div>
+          </div>
+
+          <!-- Nota de seguridad -->
+          <div style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 8px; padding: 15px; margin: 20px 0;">
+            <p style="color: #fbbf24; font-size: 13px; margin: 0;">
+              🔒 <strong>Importante:</strong> Te recomendamos cambiar tu contraseña después de iniciar sesión por primera vez.
+            </p>
+          </div>
+
+          <!-- Botón CTA -->
+          <div style="text-align: center; margin: 35px 0;">
+            <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; text-decoration: none; padding: 18px 50px; border-radius: 12px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
+              🚀 Iniciar Sesión Ahora
+            </a>
+          </div>
+
+          <!-- Pasos siguientes -->
+          <div style="margin: 30px 0;">
+            <p style="color: #e2e8f0; font-size: 15px; margin: 0 0 15px 0; font-weight: bold;">
+              📋 Próximos pasos:
+            </p>
+            <ol style="color: #94a3b8; font-size: 14px; line-height: 2; margin: 0; padding-left: 20px;">
+              <li>Inicia sesión con las credenciales de arriba</li>
+              <li>Completa tu perfil con tu foto y datos</li>
+              <li>Explora el contenido disponible</li>
+              <li>¡Comienza tu transformación!</li>
+            </ol>
+          </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div style="text-align: center; padding-top: 30px;">
+          <p style="color: #64748b; font-size: 12px; line-height: 1.6; margin: 0;">
+            Este correo fue enviado por <strong style="color: #94a3b8;">${data.organizationName}</strong>
+          </p>
+          <p style="color: #475569; font-size: 11px; margin: 10px 0 0 0;">
+            Si tienes dudas, responde a este correo o contacta a tu coordinador.
+          </p>
+        </div>
+
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendEmail(email, subject, html);
+}
 // Force rebuild Tue Feb  3 19:40:09 CST 2026

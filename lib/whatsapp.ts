@@ -538,3 +538,102 @@ export async function downloadWhatsAppMedia(mediaId: string): Promise<{
     return { success: false, error: error.message };
   }
 }
+
+/**
+ * Envía mensaje de WhatsApp con credenciales de bienvenida
+ * Usa mensaje de texto libre (no template) para enviar las credenciales
+ */
+export async function sendWelcomeCredentialsWhatsApp(
+  phoneNumber: string,
+  data: {
+    nombre: string;
+    email: string;
+    password: string;
+    organizationName: string;
+    visionName?: string;
+    loginUrl?: string;
+  }
+): Promise<SendMessageResult> {
+  try {
+    const cleanPhone = normalizePhoneNumber(phoneNumber);
+    const loginUrl = data.loginUrl || 'https://impactocuantico.net/auth/login';
+    
+    const {
+      WHATSAPP_PHONE_NUMBER_ID,
+      WHATSAPP_ACCESS_TOKEN,
+      WHATSAPP_API_VERSION = 'v18.0'
+    } = process.env;
+
+    if (!WHATSAPP_PHONE_NUMBER_ID || !WHATSAPP_ACCESS_TOKEN) {
+      console.warn('⚠️ WhatsApp credentials not configured. Message not sent.');
+      return {
+        success: false,
+        error: 'WhatsApp credentials not configured'
+      };
+    }
+
+    const url = `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
+
+    // Mensaje de texto con las credenciales
+    const messageText = `🎉 *¡Bienvenid@ a ${data.organizationName}!*
+${data.visionName ? `📍 ${data.visionName}\n` : ''}
+Hola *${data.nombre}*, tu registro fue exitoso.
+
+🔐 *Tus credenciales de acceso:*
+
+📧 *Correo:* ${data.email}
+🔑 *Contraseña:* ${data.password}
+
+👉 *Inicia sesión aquí:*
+${loginUrl}
+
+⚠️ Te recomendamos cambiar tu contraseña después de tu primer inicio de sesión.
+
+¡Comienza tu transformación! 🚀`;
+
+    const payload = {
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: cleanPhone,
+      type: 'text',
+      text: {
+        preview_url: true,
+        body: messageText
+      }
+    };
+
+    console.log(`📱 Enviando credenciales WhatsApp a ${cleanPhone}...`);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      console.error('❌ WhatsApp API Error:', responseData);
+      return {
+        success: false,
+        error: responseData.error?.message || 'Failed to send WhatsApp message'
+      };
+    }
+
+    console.log('✅ WhatsApp credentials sent:', responseData.messages?.[0]?.id);
+    return {
+      success: true,
+      messageId: responseData.messages?.[0]?.id
+    };
+
+  } catch (error: any) {
+    console.error('❌ Error sending WhatsApp credentials:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
