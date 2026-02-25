@@ -123,6 +123,7 @@ export const authOptions: NextAuthOptions = {
           wizardCompleted: user.wizardCompleted || false,
           onboardingOrigin: user.onboardingOrigin || 'ORGANIC_SIGNUP',
           organizationId: user.organizacionId || undefined,
+          profileCompleted: !!user.apodo, // Perfil completo si tiene apodo
           // Roles múltiples
           esMentor: user.esMentor || false,
           esEntrenador: user.esEntrenador || false,
@@ -144,6 +145,7 @@ export const authOptions: NextAuthOptions = {
         token.wizardCompleted = user.wizardCompleted || false
         token.onboardingOrigin = user.onboardingOrigin || 'ORGANIC_SIGNUP'
         token.organizationId = user.organizationId
+        token.profileCompleted = user.profileCompleted || false
         // Roles múltiples
         token.esMentor = user.esMentor || false
         token.esEntrenador = user.esEntrenador || false
@@ -163,6 +165,7 @@ export const authOptions: NextAuthOptions = {
         session.user.wizardCompleted = token.wizardCompleted as boolean
         session.user.onboardingOrigin = token.onboardingOrigin as string
         session.user.organizationId = token.organizationId as number | undefined
+        session.user.profileCompleted = token.profileCompleted as boolean
         // Roles múltiples
         session.user.esMentor = token.esMentor as boolean
         session.user.esEntrenador = token.esEntrenador as boolean

@@ -16,24 +16,19 @@ export default withAuth(
       return NextResponse.redirect(new URL('/auth/change-password', req.url))
     }
 
-    // CASO 2: PARTICIPANTE sin wizard completado accediendo al dashboard principal
-    // DESHABILITADO: Ahora permitimos acceso libre a todas las funciones del sidebar
-    // aunque el usuario no haya completado el wizard
-    // const esParticipante = token?.rol === 'PARTICIPANTE'
-    // const esPrimeraVez = token?.onboardingOrigin && !token?.wizardCompleted
-    // const estaSaliendoDelWizard = path.startsWith('/dashboard') && 
-    //                                !path.startsWith('/dashboard/carta/wizard-v2') &&
-    //                                !path.startsWith('/dashboard/mentor-ia') &&
-    //                                !path.startsWith('/dashboard/mentorship/sessions') &&
-    //                                !path.startsWith('/dashboard/mentorship/request')
-    // 
-    // if (esParticipante && 
-    //     esPrimeraVez && 
-    //     !token?.requirePasswordChange && 
-    //     estaSaliendoDelWizard && 
-    //     !path.startsWith('/api/')) {
-    //   return NextResponse.redirect(new URL('/dashboard/carta/wizard-v2', req.url))
-    // }
+    // CASO 2: Usuario sin perfil completo (Fase 2) - solo PARTICIPANTES
+    const esParticipante = token?.rol === 'PARTICIPANTE'
+    const perfilIncompleto = !token?.profileCompleted
+    const noEstaEnCompletarPerfil = path !== '/dashboard/completar-perfil'
+    
+    if (esParticipante && 
+        perfilIncompleto && 
+        !token?.requirePasswordChange &&
+        noEstaEnCompletarPerfil &&
+        path.startsWith('/dashboard') &&
+        !path.startsWith('/api/')) {
+      return NextResponse.redirect(new URL('/dashboard/completar-perfil', req.url))
+    }
 
     // CASO 3: Usuario ya completó todo y está intentando acceder a cambio de password
     if (!token?.requirePasswordChange && 
