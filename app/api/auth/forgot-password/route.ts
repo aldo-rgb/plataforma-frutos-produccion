@@ -73,7 +73,7 @@ function getPasswordResetEmailTemplate(nombre: string, tempPassword: string): st
               
               <!-- CTA Button -->
               <div style="text-align: center; margin: 35px 0;">
-                <a href="https://impactocuantico.net/login" 
+                <a href="https://www.quantummatter.app/login" 
                    style="display: inline-block; background: linear-gradient(135deg, #0891b2 0%, #3b82f6 100%); color: white; text-decoration: none; padding: 14px 35px; border-radius: 8px; font-weight: 600; font-size: 15px;">
                   Iniciar Sesión
                 </a>
@@ -160,18 +160,20 @@ export async function POST(request: NextRequest) {
       tempPassword
     );
 
+    logger.info(`📧 Enviando email de recuperación a: ${user.email}`);
+
     const emailResult = await sendEmail(
       user.email,
-      '🔐 Tu Nueva Contraseña - Impacto Cuántico',
+      '🔐 Tu Nueva Contraseña - Quantum Platform',
       emailHtml,
-      { fromName: 'Impacto Cuántico' }
+      { fromName: 'Quantum Platform' }
     );
 
     if (!emailResult.success) {
-      logger.error('Failed to send password reset email:', emailResult.error);
+      logger.error('❌ Failed to send password reset email:', emailResult.error);
       // Aún así responder con éxito por seguridad
     } else {
-      logger.debug(`Password reset email sent to: ${user.email}`);
+      logger.info(`✅ Password reset email sent to: ${user.email}`);
     }
 
     return NextResponse.json({ success: true });
