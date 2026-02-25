@@ -71,19 +71,31 @@ export async function GET(request: NextRequest) {
     }
 
     // Obtener coordinadores y trainers de la misma organización
-    // Incluir COORDINATOR_BASIC, COORDINATOR_ADVANCED, TRAINER, COORDINADOR, y SCHOOL_ADMIN
+    // Incluir usuarios con rol específico O con flags de rol múltiple activos
     const coordinadores = await prisma.usuario.findMany({
       where: {
         organizationId: targetOrganizationId,
-        rol: {
-          in: ['COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER', 'COORDINADOR', 'SCHOOL_ADMIN']
-        }
+        OR: [
+          // Usuarios con rol tradicional
+          {
+            rol: {
+              in: ['COORDINATOR_BASIC', 'COORDINATOR_ADVANCED', 'TRAINER', 'COORDINADOR', 'SCHOOL_ADMIN']
+            }
+          },
+          // Usuarios con rol múltiple (flags)
+          { esCoordinador: true },
+          { esCoordinadorBasico: true },
+          { esCoordinadorAvanzado: true },
+        ]
       },
       select: {
         id: true,
         nombre: true,
         email: true,
-        rol: true
+        rol: true,
+        esCoordinador: true,
+        esCoordinadorBasico: true,
+        esCoordinadorAvanzado: true,
       },
       orderBy: {
         nombre: 'asc'
