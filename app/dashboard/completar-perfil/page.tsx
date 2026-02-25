@@ -155,7 +155,7 @@ export default function CompletarPerfilPage() {
           <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="text-green-400" size={40} />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">¡Perfil Completado!</h1>
+          <h1 className="text-2xl font-bold text-white mb-2">¡Registro Completado!</h1>
           <p className="text-slate-400">Redirigiendo al dashboard...</p>
         </motion.div>
       </div>
@@ -180,7 +180,7 @@ export default function CompletarPerfilPage() {
           <div className="w-16 h-16 bg-cyan-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <User className="text-cyan-400" size={32} />
           </div>
-          <h1 className="text-3xl font-bold mb-2">Completa tu Perfil</h1>
+          <h1 className="text-3xl font-bold mb-2">Completa tu Registro</h1>
           <p className="text-slate-400">Solo un paso más para comenzar tu transformación</p>
         </motion.div>
 
@@ -428,7 +428,7 @@ export default function CompletarPerfilPage() {
             ) : (
               <>
                 <CheckCircle size={20} />
-                Completar Perfil
+                Completar Registro
               </>
             )}
           </button>
