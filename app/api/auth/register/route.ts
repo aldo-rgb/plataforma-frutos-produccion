@@ -327,6 +327,7 @@ export async function POST(request: Request) {
     // Enviar notificaciones de bienvenida (Email + WhatsApp)
     try {
       await sendWelcomeNotifications({
+        userId: newUser.id,
         email,
         telefono,
         nombre,

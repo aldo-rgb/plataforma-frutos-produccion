@@ -325,6 +325,7 @@ export async function GET(request: NextRequest) {
     const plainPassword = userData.password || 'Quantum123';
     try {
       await sendWelcomeNotifications({
+        userId: result.user.id,
         email: userData.email,
         telefono: userData.telefono || '',
         nombre: userData.nombre,

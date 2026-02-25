@@ -637,3 +637,109 @@ ${loginUrl}
     };
   }
 }
+
+
+/**
+ * Envía mensaje de WhatsApp con plantilla de bienvenida y botón de auto-login
+ * Plantilla: quantum_confirmar (debe estar aprobada en Meta)
+ * Variables: [nombre]
+ * Botón: URL con token de auto-login
+ */
+export async function sendWelcomeWithAutoLoginButton(
+  phoneNumber: string,
+  data: {
+    nombre: string;
+    autoLoginUrl: string;
+  }
+): Promise<SendMessageResult> {
+  try {
+    const cleanPhone = normalizePhoneNumber(phoneNumber);
+    
+    const {
+      WHATSAPP_PHONE_NUMBER_ID,
+      WHATSAPP_ACCESS_TOKEN,
+      WHATSAPP_API_VERSION = "v22.0"
+    } = process.env;
+
+    if (!WHATSAPP_PHONE_NUMBER_ID || !WHATSAPP_ACCESS_TOKEN) {
+      console.warn("⚠️ WhatsApp credentials not configured. Message not sent.");
+      return {
+        success: false,
+        error: "WhatsApp credentials not configured"
+      };
+    }
+
+    const url = `https://graph.facebook.com/${WHATSAPP_API_VERSION}/${WHATSAPP_PHONE_NUMBER_ID}/messages`;
+
+    // Payload con plantilla y botón URL dinámico
+    const payload = {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: cleanPhone,
+      type: "template",
+      template: {
+        name: "quantum_confirmar",
+        language: {
+          code: "es_MX"
+        },
+        components: [
+          {
+            type: "body",
+            parameters: [
+              {
+                type: "text",
+                text: data.nombre
+              }
+            ]
+          },
+          {
+            type: "button",
+            sub_type: "url",
+            index: "0",
+            parameters: [
+              {
+                type: "text",
+                text: data.autoLoginUrl.split("/auto-login?token=")[1] || data.autoLoginUrl
+              }
+            ]
+          }
+        ]
+      }
+    };
+
+    console.log(`📱 Enviando WhatsApp con botón auto-login a ${cleanPhone}...`);
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      console.error("❌ WhatsApp API Error:", responseData);
+      return {
+        success: false,
+        error: responseData.error?.message || "Failed to send WhatsApp message"
+      };
+    }
+
+    console.log("✅ WhatsApp auto-login sent:", responseData.messages?.[0]?.id);
+    return {
+      success: true,
+      messageId: responseData.messages?.[0]?.id
+    };
+
+  } catch (error: any) {
+    console.error("❌ Error sending WhatsApp auto-login:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+

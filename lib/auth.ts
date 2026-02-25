@@ -17,10 +17,53 @@ export const authOptions: NextAuthOptions = {
       name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
+        autoLoginToken: { label: "Auto Login Token", type: "text" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        if (!credentials?.email) {
+          throw new Error("Email requerido")
+        }
+
+        // Auto-login con token (magic link)
+        if (credentials.autoLoginToken) {
+          const tokenRecord = await prisma.autoLoginToken.findUnique({
+            where: { token: credentials.autoLoginToken },
+            include: {
+              Usuario: {
+                include: {
+                  PerfilMentor: { select: { id: true } }
+                }
+              }
+            }
+          });
+
+          if (!tokenRecord || tokenRecord.expiresAt < new Date()) {
+            throw new Error("Token inválido o expirado");
+          }
+
+          const user = tokenRecord.Usuario;
+          
+          return {
+            id: user.id,
+            email: user.email,
+            nombre: user.nombre,
+            rol: user.rol,
+            requirePasswordChange: user.requirePasswordChange || false,
+            wizardCompleted: user.wizardCompleted || false,
+            onboardingOrigin: user.onboardingOrigin || 'MAGIC_LINK',
+            organizationId: user.organizationId || undefined,
+            esMentor: user.esMentor || false,
+            esEntrenador: user.esEntrenador || false,
+            esCoordinador: user.esCoordinador || false,
+            esLider: user.esLider || false,
+            esCoordinadorBasico: user.esCoordinadorBasico || false,
+            esCoordinadorAvanzado: user.esCoordinadorAvanzado || false,
+          };
+        }
+
+        // Login tradicional con password
+        if (!credentials?.password) {
           throw new Error("Credenciales incompletas")
         }
 

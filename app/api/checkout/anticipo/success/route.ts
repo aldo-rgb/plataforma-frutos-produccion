@@ -183,6 +183,7 @@ export async function GET(request: NextRequest) {
         const plainPassword = 'Quantum123'; // El password guardado en registrationData ya fue hasheado
         
         await sendWelcomeNotifications({
+          userId: userId,
           email: checkout.email,
           telefono: checkout.phone || registrationData?.telefono || '',
           nombre: userName,

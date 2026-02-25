@@ -326,6 +326,7 @@ async function approveOrder(order: any, adminUser: any, transactionRef?: string)
   // Enviar notificaciones de bienvenida (Email + WhatsApp con credenciales)
   try {
     await sendWelcomeNotifications({
+      userId: result.id,
       email: order.userEmail,
       telefono: order.userPhone || order.whatsappPhone || '',
       nombre: order.userName,
