@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Loader2, CheckCircle, User, Clock, Users, Target, Sparkles, FileText, ScrollText } from 'lucide-react';
@@ -125,19 +125,10 @@ export default function CompletarPerfilPage() {
 
       setSuccess(true);
       
-      // Redirigir al dashboard después de 2 segundos
+      // Cerrar sesión y redirigir al login después de 2 segundos
+      // El usuario tendrá que iniciar sesión de nuevo con su token actualizado
       setTimeout(async () => {
-        try {
-          // Refrescar sesión para actualizar profileCompleted en el token
-          await update();
-          router.push('/dashboard');
-          // Fallback con window.location si router.push no funciona
-          setTimeout(() => {
-            window.location.href = '/dashboard';
-          }, 500);
-        } catch {
-          window.location.href = '/dashboard';
-        }
+        await signOut({ callbackUrl: '/login?registered=true' });
       }, 2000);
 
     } catch (e: any) {
@@ -166,7 +157,8 @@ export default function CompletarPerfilPage() {
             <CheckCircle className="text-green-400" size={40} />
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">¡Registro Completado!</h1>
-          <p className="text-slate-400">Redirigiendo al dashboard...</p>
+          <p className="text-slate-400">Redirigiendo al inicio de sesión...</p>
+          <p className="text-slate-500 text-sm mt-2">Por favor inicia sesión nuevamente</p>
         </motion.div>
       </div>
     );
