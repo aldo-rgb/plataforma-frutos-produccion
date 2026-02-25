@@ -65,14 +65,27 @@ export async function sendWelcomeNotifications(
 
   console.log(`📬 Enviando notificaciones de bienvenida a ${data.email}...`);
 
-  // Enviar Email con credenciales
+  // Generar token de auto-login si tenemos userId
+  let autoLoginUrl: string | undefined;
+  if (data.userId) {
+    const autoLoginToken = await generateAutoLoginToken(data.userId);
+    if (autoLoginToken) {
+      const baseUrl = process.env.NEXTAUTH_URL || 'https://www.quantummatter.app';
+      autoLoginUrl = `${baseUrl}/auto-login?token=${autoLoginToken}`;
+      result.autoLoginUrl = autoLoginUrl;
+      console.log('🔑 Token de auto-login generado');
+    }
+  }
+
+  // Enviar Email con credenciales y botón de auto-login
   try {
     const emailResult = await sendWelcomeCredentialsEmail(data.email, {
       nombre: data.nombre,
       password: data.password,
       organizationName: data.organizationName,
       visionName: data.visionName,
-      loginUrl: data.loginUrl
+      loginUrl: data.loginUrl,
+      autoLoginUrl: autoLoginUrl // Incluir URL de auto-login
     });
     
     result.emailSent = emailResult.success;
@@ -87,32 +100,20 @@ export async function sendWelcomeNotifications(
     console.error('❌ Error enviando email de bienvenida:', error);
   }
 
-  // Enviar WhatsApp con botón de auto-login (solo si hay teléfono y userId)
-  if (data.telefono && data.userId) {
+  // Enviar WhatsApp con botón de auto-login (solo si hay teléfono y autoLoginUrl)
+  if (data.telefono && autoLoginUrl) {
     try {
-      // Generar token de auto-login
-      const autoLoginToken = await generateAutoLoginToken(data.userId);
+      const whatsappResult = await sendWelcomeWithAutoLoginButton(data.telefono, {
+        nombre: data.nombre,
+        autoLoginUrl
+      });
       
-      if (autoLoginToken) {
-        const baseUrl = process.env.NEXTAUTH_URL || 'https://www.quantummatter.app';
-        const autoLoginUrl = `${baseUrl}/auto-login?token=${autoLoginToken}`;
-        result.autoLoginUrl = autoLoginUrl;
-
-        const whatsappResult = await sendWelcomeWithAutoLoginButton(data.telefono, {
-          nombre: data.nombre,
-          autoLoginUrl
-        });
-        
-        result.whatsappSent = whatsappResult.success;
-        if (!whatsappResult.success) {
-          result.whatsappError = whatsappResult.error;
-          console.error('❌ Error enviando WhatsApp con botón:', whatsappResult.error);
-        } else {
-          console.log('✅ WhatsApp con botón auto-login enviado');
-        }
+      result.whatsappSent = whatsappResult.success;
+      if (!whatsappResult.success) {
+        result.whatsappError = whatsappResult.error;
+        console.error('❌ Error enviando WhatsApp con botón:', whatsappResult.error);
       } else {
-        result.whatsappError = 'No se pudo generar token de auto-login';
-        console.error('❌ Error generando token de auto-login');
+        console.log('✅ WhatsApp con botón auto-login enviado');
       }
     } catch (error: any) {
       result.whatsappError = error.message;
@@ -120,8 +121,8 @@ export async function sendWelcomeNotifications(
     }
   } else if (!data.telefono) {
     console.log('⚠️ No se envió WhatsApp: sin número de teléfono');
-  } else if (!data.userId) {
-    console.log('⚠️ No se envió WhatsApp: sin userId para generar token');
+  } else if (!autoLoginUrl) {
+    console.log('⚠️ No se envió WhatsApp: sin token de auto-login');
   }
 
   return result;

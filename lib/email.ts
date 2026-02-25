@@ -518,10 +518,12 @@ export async function sendWelcomeCredentialsEmail(
     organizationName: string;
     visionName?: string;
     loginUrl?: string;
+    autoLoginUrl?: string; // URL de auto-login con token
   }
 ): Promise<SendEmailResult> {
-  const loginUrl = data.loginUrl || 'https://impactocuantico.net/auth/login';
-  const subject = `🎉 ¡Bienvenid@ a ${data.organizationName}! - Tus credenciales de acceso`;
+  const loginUrl = data.loginUrl || 'https://www.quantummatter.app/login';
+  const autoLoginUrl = data.autoLoginUrl;
+  const subject = `🎉 ¡Bienvenid@ a ${data.organizationName}! - Confirma tu asistencia`;
   
   const html = `
     <!DOCTYPE html>
@@ -575,16 +577,27 @@ export async function sendWelcomeCredentialsEmail(
           <!-- Nota de seguridad -->
           <div style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 8px; padding: 15px; margin: 20px 0;">
             <p style="color: #fbbf24; font-size: 13px; margin: 0;">
-              🔒 <strong>Importante:</strong> Te recomendamos cambiar tu contraseña después de iniciar sesión por primera vez.
+              🔒 <strong>Importante:</strong> Al confirmar tu asistencia, te pediremos crear tu contraseña personal.
             </p>
           </div>
 
-          <!-- Botón CTA -->
+          <!-- Botón CTA Principal - Auto Login -->
+          ${autoLoginUrl ? `
           <div style="text-align: center; margin: 35px 0;">
-            <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; text-decoration: none; padding: 18px 50px; border-radius: 12px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
-              🚀 Iniciar Sesión Ahora
+            <a href="${autoLoginUrl}" style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color: white; text-decoration: none; padding: 20px 60px; border-radius: 12px; font-weight: bold; font-size: 18px; box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4); text-transform: uppercase; letter-spacing: 1px;">
+              ✨ CONFIRMAR ASISTENCIA
             </a>
           </div>
+          <p style="text-align: center; color: #64748b; font-size: 12px; margin: -15px 0 20px 0;">
+            Haz clic para acceder automáticamente y completar tu registro
+          </p>
+          ` : `
+          <div style="text-align: center; margin: 35px 0;">
+            <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; text-decoration: none; padding: 18px 50px; border-radius: 12px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
+              🚀 Iniciar Sesión
+            </a>
+          </div>
+          `}
 
           <!-- Pasos siguientes -->
           <div style="margin: 30px 0;">
@@ -592,9 +605,9 @@ export async function sendWelcomeCredentialsEmail(
               📋 Próximos pasos:
             </p>
             <ol style="color: #94a3b8; font-size: 14px; line-height: 2; margin: 0; padding-left: 20px;">
-              <li>Inicia sesión con las credenciales de arriba</li>
-              <li>Completa tu perfil con tu foto y datos</li>
-              <li>Explora el contenido disponible</li>
+              <li>Haz clic en "Confirmar Asistencia"</li>
+              <li>Crea tu contraseña personal</li>
+              <li>Completa tu perfil</li>
               <li>¡Comienza tu transformación!</li>
             </ol>
           </div>
