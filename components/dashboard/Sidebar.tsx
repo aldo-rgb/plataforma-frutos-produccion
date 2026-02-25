@@ -772,6 +772,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
               <span>Pasarela de Pago</span>
             </Link>
 
+{/* QUANTUM PAY-BOT OCULTO - Pendiente desarrollo
             <Link 
               href="/dashboard/school-admin/auditar-transferencias"
               onClick={handleLinkClick}
@@ -784,6 +785,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
               <DollarSign size={18} className="text-green-400" />
               <span>🤖 Quantum Pay-Bot</span>
             </Link>
+            */}
 
             <Link 
               href="/dashboard/school-admin/manteles"

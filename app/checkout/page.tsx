@@ -898,8 +898,8 @@ function CheckoutContent() {
                 </div>
               )}
               
-              {/* Payment Methods - Now supports multiple */}
-              <div className="grid grid-cols-3 gap-3 mb-6">
+              {/* Payment Methods */}
+              <div className="grid grid-cols-2 gap-3 mb-6">
                 <button
                   onClick={() => setPaymentMethod('STRIPE')}
                   disabled={getRemainingBalance() === 0}
@@ -936,6 +936,7 @@ function CheckoutContent() {
                   </span>
                 </button>
 
+                {/* TRANSFERENCIA OCULTA - Pendiente desarrollo Pay-Bot
                 <button
                   onClick={() => setPaymentMethod('TRANSFER')}
                   className={`p-4 rounded-xl border-2 transition-all ${
@@ -949,6 +950,7 @@ function CheckoutContent() {
                     Transferencia
                   </span>
                 </button>
+                */}
 
               </div>
 
