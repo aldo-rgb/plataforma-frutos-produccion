@@ -33,23 +33,23 @@ export const loginSchema = z.object({
 
 export const registerSchema = z.object({
   email: emailSchema,
-  password: passwordSchema.optional(), // Opcional - se asigna Quantum123 por defecto
+  password: z.string().max(100).optional().transform(v => v === '' ? undefined : v), // Opcional - se asigna Quantum123 por defecto
   nombre: z.string().min(1).max(100),
-  apodo: z.string().min(1).max(50).optional(),
-  apellidoPaterno: z.string().min(1).max(100).optional(),
-  apellidoMaterno: z.string().max(100).optional(),
+  apodo: z.string().max(50).optional().transform(v => v === '' ? undefined : v),
+  apellidoPaterno: z.string().max(100).optional().transform(v => v === '' ? undefined : v),
+  apellidoMaterno: z.string().max(100).optional().transform(v => v === '' ? undefined : v),
   telefono: z.string().min(1).max(20),
-  horarioLlamada: z.string().max(50).optional(),
-  codigoReferido: z.string().max(50).optional(),
-  referralCode: z.string().max(50).optional(),
-  organizationCode: z.string().max(100).optional(),
+  horarioLlamada: z.string().max(50).optional().transform(v => v === '' ? undefined : v),
+  codigoReferido: z.string().max(50).optional().transform(v => v === '' ? undefined : v),
+  referralCode: z.string().max(50).optional().transform(v => v === '' ? undefined : v),
+  organizationCode: z.string().max(100).optional().transform(v => v === '' ? undefined : v),
   organizationId: idSchema.optional(),
   visionId: idSchema.optional(),
-  profession: z.string().max(200).optional(),
-  birthdate: z.string().max(20).optional(),
+  profession: z.string().max(200).optional().transform(v => v === '' ? undefined : v),
+  birthdate: z.string().max(20).optional().transform(v => v === '' ? undefined : v),
   children: z.union([z.string(), z.number()]).optional(), // Puede ser string o number
   goals: z.union([z.string().max(2000), z.array(z.string())]).optional(), // Puede ser string o array
-  expectations: z.string().max(2000).optional(),
+  expectations: z.string().max(2000).optional().transform(v => v === '' ? undefined : v),
 });
 
 // ============================================
@@ -73,16 +73,16 @@ export const checkoutCreatePaymentSchema = z.object({
   userData: z.object({
     nombre: z.string().min(1).max(100),
     email: emailSchema,
-    apodo: z.string().max(50).optional(),
-    telefono: z.string().max(20).optional(),
-    password: z.string().min(6).max(100).optional(),
-    horarioLlamada: z.string().max(50).optional(),
-    profession: z.string().max(200).optional(),
-    birthdate: z.string().max(20).optional(),
+    apodo: z.string().max(50).optional().transform(v => v === '' ? undefined : v),
+    telefono: z.string().max(20).optional().transform(v => v === '' ? undefined : v),
+    password: z.string().max(100).optional().transform(v => v === '' ? undefined : v),
+    horarioLlamada: z.string().max(50).optional().transform(v => v === '' ? undefined : v),
+    profession: z.string().max(200).optional().transform(v => v === '' ? undefined : v),
+    birthdate: z.string().max(20).optional().transform(v => v === '' ? undefined : v),
     children: z.union([z.string(), z.number()]).optional(),
     goals: z.union([z.string().max(2000), z.array(z.string())]).optional(),
-    expectations: z.string().max(1000).optional(),
-    referralCode: z.string().max(50).optional().nullable(),
+    expectations: z.string().max(1000).optional().transform(v => v === '' ? undefined : v),
+    referralCode: z.string().max(50).optional().nullable().transform(v => v === '' ? undefined : v),
   }).passthrough(), // Permite campos adicionales del registro
   appliedCodes: z.array(z.string().max(50)).optional(),
 });
