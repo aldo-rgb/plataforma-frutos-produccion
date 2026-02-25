@@ -57,7 +57,7 @@ export default function AutoLoginPage() {
       // Redirigir según el estado del usuario
       setTimeout(() => {
         if (data.requirePasswordChange) {
-          router.push('/cambiar-password?firstLogin=true');
+          router.push('/auth/change-password');
         } else if (!data.profileCompleted || !data.hasApodo) {
           router.push('/dashboard/completar-perfil');
         } else {

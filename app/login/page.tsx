@@ -104,7 +104,7 @@ function LoginForm() {
         
         if (session?.user?.requirePasswordChange) {
           // Redirigir a cambiar contraseña
-          router.push('/cambiar-password?firstLogin=true');
+          router.push('/auth/change-password');
         } else {
           // Redirigir al dashboard o callback normal
           const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';

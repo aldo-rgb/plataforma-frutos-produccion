@@ -1046,7 +1046,6 @@ model Organization {
   anticiposEnabled                                      Boolean                         @default(false)
   transferDeadlineDays                                  Int                             @default(0)
   transfersEnabled                                      Boolean                         @default(false)
-  transferWhatsappNumber                                String?
   bankAccountClabe                                      String?
   bankAccountHolder                                     String?
   bankAccountNumber                                     String?
@@ -1071,6 +1070,7 @@ model Organization {
   videoInvitacionTransformadoraUrl                      String?
   website                                               String?
   customLoginUrl                                        String?
+  transferWhatsappNumber                                String?
   AbandonedCheckout                                     AbandonedCheckout[]
   Archetypes                                            Archetype[]
   AutomationMessageLog                                  AutomationMessageLog[]
@@ -1094,6 +1094,7 @@ model Organization {
   OrganizationWallet                                    OrganizationWallet?
   PaymentCodes                                          PaymentCode[]
   PaymentGatewayConfig                                  PaymentGatewayConfig?
+  PendingTransferOrder                                  PendingTransferOrder[]
   RefundRequest                                         RefundRequest[]
   ReporteAnonimoVision                                  ReporteAnonimoVision[]
   SchoolCredit                                          SchoolCredit[]
@@ -1111,7 +1112,6 @@ model Organization {
   coordinator_commission_config                         coordinator_commission_config[]
   coordinator_commissions                               coordinator_commissions[]
   weekly_payout_summary                                 weekly_payout_summary[]
-  PendingTransferOrder                                  PendingTransferOrder[]
 
   @@index([masterOrganizationId])
   @@index([slug])
@@ -2266,12 +2266,8 @@ model Usuario {
   birthdate                                                              DateTime?
   children                                                               Int?
   goals                                                                  String?
-  goal1                                                                  String?
-  goal2                                                                  String?
-  goal3                                                                  String?
   profession                                                             String?
   expectations                                                           String?
-  profileCompleted                                                       Boolean                         @default(false)
   invitedByText                                                          String?
   esMentor                                                               Boolean                         @default(false)
   esEntrenador                                                           Boolean                         @default(false)
@@ -2280,6 +2276,10 @@ model Usuario {
   esCoordinadorBasico                                                    Boolean                         @default(false)
   esCoordinadorAvanzado                                                  Boolean                         @default(false)
   esGameChanger                                                          Boolean                         @default(false)
+  goal1                                                                  String?
+  goal2                                                                  String?
+  goal3                                                                  String?
+  profileCompleted                                                       Boolean                         @default(false)
   AbandonedCheckouts                                                     AbandonedCheckout[]
   AccessCode_AccessCode_generatedByToUsuario                             AccessCode[]                    @relation("AccessCode_generatedByToUsuario")
   AccessCode_AccessCode_usedByToUsuario                                  AccessCode[]                    @relation("AccessCode_usedByToUsuario")
@@ -2299,6 +2299,7 @@ model Usuario {
   ArenaStats                                                             ArenaStats?
   ArenaTaunt_ArenaTaunt_receiverIdToUsuario                              ArenaTaunt[]                    @relation("ArenaTaunt_receiverIdToUsuario")
   ArenaTaunt_ArenaTaunt_senderIdToUsuario                                ArenaTaunt[]                    @relation("ArenaTaunt_senderIdToUsuario")
+  AutoLoginTokens                                                        AutoLoginToken[]
   AutomationMessageLog                                                   AutomationMessageLog[]
   AvatarGenerationAttempt                                                AvatarGenerationAttempt[]
   BasicCallTracking                                                      BasicCallTracking[]
@@ -2524,7 +2525,6 @@ model Usuario {
   vision_enrollments_vision_enrollments_userIdToUsuario                  vision_enrollments[]            @relation("vision_enrollments_userIdToUsuario")
   weekly_payout_summary_weekly_payout_summary_approvedByToUsuario        weekly_payout_summary[]         @relation("weekly_payout_summary_approvedByToUsuario")
   weekly_payout_summary_weekly_payout_summary_generatedByToUsuario       weekly_payout_summary[]         @relation("weekly_payout_summary_generatedByToUsuario")
-  AutoLoginTokens                                                        AutoLoginToken[]
 
   @@index([communityOrganizationId])
 }
@@ -2588,6 +2588,7 @@ model Vision {
   MetamorfosisAssignments       MetamorfosisAssignment[]       @relation("VisionMetamorfosisAssignments")
   PLWeeklyCalls                 PLWeeklyCall[]                 @relation("VisionPLCalls")
   PaymentCodes                  PaymentCode[]                  @relation("PaymentCodeVision")
+  PendingTransferOrder          PendingTransferOrder[]
   RefundRequest                 RefundRequest[]
   SchoolProduct                 SchoolProduct[]
   SmallGroups                   SmallGroup[]
@@ -2625,7 +2626,6 @@ model Vision {
   coordinator_commissions       coordinator_commissions[]
   vision_enrollments            vision_enrollments[]
   weekly_payout_summary         weekly_payout_summary[]
-  PendingTransferOrder          PendingTransferOrder[]
 
   @@index([coordinadorId])
   @@index([isActive])
@@ -5429,6 +5429,73 @@ model EventRegistration {
   @@index([email])
 }
 
+model PendingTransferOrder {
+  id                String       @id @default(uuid())
+  orderReference    String       @unique
+  organizationId    Int
+  visionId          Int?
+  amount            Float
+  ticketSelection   String       @default("BASIC_ONLY")
+  status            String       @default("PENDING_PAYMENT")
+  paymentMethod     String       @default("TRANSFER")
+  userEmail         String
+  userName          String
+  userPhone         String?
+  userApodo         String?
+  userData          String?
+  appliedCodes      String?
+  confirmedAt       DateTime?
+  confirmedBy       Int?
+  transactionRef    String?
+  createdUserId     Int?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  expiresAt         DateTime
+  receiptImageUrl   String?
+  receiptMediaId    String?
+  receiptReceivedAt DateTime?
+  rejectionCount    Int          @default(0)
+  rejectionReason   String?
+  whatsappMessageId String?
+  whatsappPhone     String?
+  Organization      Organization @relation(fields: [organizationId], references: [id])
+  Vision            Vision?      @relation(fields: [visionId], references: [id])
+
+  @@index([orderReference])
+  @@index([userEmail])
+  @@index([status])
+  @@index([organizationId])
+  @@index([whatsappPhone])
+}
+
+model OrphanReceipt {
+  id            String    @id @default(uuid())
+  mediaId       String
+  senderPhone   String
+  senderName    String?
+  imageUrl      String?
+  processedAt   DateTime?
+  linkedOrderId String?
+  createdAt     DateTime  @default(now())
+
+  @@index([senderPhone])
+  @@index([processedAt])
+}
+
+model AutoLoginToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    Int
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  Usuario   Usuario   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@index([expiresAt])
+}
+
 enum PLCallType {
   ATOM
   GROUP
@@ -6513,93 +6580,4 @@ enum EventRegistrationStatus {
   ATTENDED
   NO_SHOW
   CANCELLED
-}
-
-// ========================
-// Ordenes Pendientes de Registro (Transferencia Bancaria)
-// ========================
-model PendingTransferOrder {
-  id               String   @id @default(uuid())
-  orderReference   String   @unique // TRF-XXXXXX
-  organizationId   Int
-  visionId         Int?
-  amount           Float
-  ticketSelection  String   @default("BASIC_ONLY") // BASIC_ONLY | FULL_VISION
-  status           String   @default("PENDING_PAYMENT") // PENDING_PAYMENT | RECEIPT_RECEIVED | PENDING_APPROVAL | CONFIRMED | REJECTED | EXPIRED | CANCELLED
-  paymentMethod    String   @default("TRANSFER")
-  
-  // Datos del usuario (aún no creado)
-  userEmail        String
-  userName         String
-  userPhone        String?
-  userApodo        String?
-  
-  // Datos completos del usuario para crear después
-  userData         String?  @db.Text // JSON stringified
-  
-  // Códigos aplicados (si hay)
-  appliedCodes     String?  @db.Text // JSON stringified
-  
-  // === Quantum Pay-Bot: Datos del comprobante ===
-  receiptImageUrl    String?   // URL de la imagen del comprobante (guardada en Supabase)
-  receiptMediaId     String?   // Media ID de WhatsApp 
-  receiptReceivedAt  DateTime? // Cuándo se recibió el comprobante
-  whatsappMessageId  String?   // ID del mensaje de WhatsApp inicial enviado
-  whatsappPhone      String?   // Teléfono de WhatsApp normalizado para matching
-  rejectionReason    String?   // Razón si fue rechazado
-  rejectionCount     Int       @default(0) // Número de veces rechazado
-  
-  // Datos de confirmación
-  confirmedAt      DateTime?
-  confirmedBy      Int?     // Admin que confirmó
-  transactionRef   String?  // Referencia de la transferencia
-  
-  // Usuario creado después de confirmar
-  createdUserId    Int?
-  
-  // Fechas
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  expiresAt        DateTime
-  
-  // Relaciones
-  Organization     Organization @relation(fields: [organizationId], references: [id])
-  Vision           Vision?      @relation(fields: [visionId], references: [id])
-  
-  @@index([orderReference])
-  @@index([userEmail])
-  @@index([status])
-  @@index([organizationId])
-  @@index([whatsappPhone])
-}
-
-// Comprobantes huérfanos (recibidos antes de vincular con una orden)
-model OrphanReceipt {
-  id            String    @id @default(uuid())
-  mediaId       String    // ID del media de WhatsApp
-  senderPhone   String    // Teléfono normalizado del remitente
-  senderName    String?   // Nombre del perfil de WhatsApp
-  imageUrl      String?   // URL si se descargó la imagen
-  processedAt   DateTime? // Cuando se vinculó con una orden
-  linkedOrderId String?   // ID de la orden vinculada
-  createdAt     DateTime  @default(now())
-  
-  @@index([senderPhone])
-  @@index([processedAt])
-}
-
-// Tokens para auto-login (magic links)
-model AutoLoginToken {
-  id        String   @id @default(uuid())
-  token     String   @unique
-  userId    Int
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime @default(now())
-  
-  Usuario   Usuario  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([token])
-  @@index([userId])
-  @@index([expiresAt])
 }
