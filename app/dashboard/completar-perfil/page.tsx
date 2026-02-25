@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Loader2, CheckCircle, User, Clock, Users, Target, Sparkles, FileText } from 'lucide-react';
+import { Loader2, CheckCircle, User, Clock, Users, Target, Sparkles, FileText, ScrollText } from 'lucide-react';
 import Link from 'next/link';
 
 export default function CompletarPerfilPage() {
@@ -14,6 +14,8 @@ export default function CompletarPerfilPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+  const termsContainerRef = useRef<HTMLDivElement>(null);
 
   const [formData, setFormData] = useState({
     apodo: '',
@@ -25,6 +27,15 @@ export default function CompletarPerfilPage() {
     expectations: '',
   });
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+  // Handle scroll en términos y condiciones
+  const handleTermsScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const element = e.currentTarget;
+    const isAtBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 20;
+    if (isAtBottom && !hasScrolledToBottom) {
+      setHasScrolledToBottom(true);
+    }
+  };
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -290,33 +301,103 @@ export default function CompletarPerfilPage() {
             />
           </div>
 
-          {/* Términos y Condiciones */}
-          <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4">
-            <label className="flex items-start gap-3 cursor-pointer">
+          {/* Términos y Condiciones - Con scroll obligatorio */}
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-300">
+              <ScrollText size={16} className="text-cyan-400" />
+              Términos y Condiciones <span className="text-cyan-400">*</span>
+            </label>
+            
+            <div 
+              ref={termsContainerRef}
+              onScroll={handleTermsScroll}
+              className="h-48 overflow-y-auto bg-slate-800/30 border border-slate-700/50 rounded-lg p-4 text-sm text-slate-300 scroll-smooth"
+            >
+              <h3 className="font-bold text-white mb-3">TÉRMINOS Y CONDICIONES DE USO</h3>
+              
+              <p className="mb-3">
+                Bienvenido a la plataforma de Impacto Cuántico. Al utilizar nuestros servicios, aceptas los siguientes términos y condiciones:
+              </p>
+
+              <h4 className="font-semibold text-cyan-400 mt-4 mb-2">1. ACEPTACIÓN DE TÉRMINOS</h4>
+              <p className="mb-3">
+                Al acceder y utilizar esta plataforma, confirmas que has leído, entendido y aceptado estos términos. Si no estás de acuerdo con alguno de ellos, te pedimos que no utilices nuestros servicios.
+              </p>
+
+              <h4 className="font-semibold text-cyan-400 mt-4 mb-2">2. DESCRIPCIÓN DEL SERVICIO</h4>
+              <p className="mb-3">
+                Impacto Cuántico ofrece programas de entrenamiento y desarrollo personal. Los servicios incluyen acceso a contenido educativo, sesiones de mentoría, y herramientas de seguimiento personal.
+              </p>
+
+              <h4 className="font-semibold text-cyan-400 mt-4 mb-2">3. REGISTRO Y CUENTA</h4>
+              <p className="mb-3">
+                Para acceder a nuestros servicios, debes crear una cuenta proporcionando información veraz y actualizada. Eres responsable de mantener la confidencialidad de tu contraseña y de todas las actividades que ocurran bajo tu cuenta.
+              </p>
+
+              <h4 className="font-semibold text-cyan-400 mt-4 mb-2">4. PRIVACIDAD Y DATOS PERSONALES</h4>
+              <p className="mb-3">
+                Tu información personal será tratada conforme a nuestro Aviso de Privacidad. Nos comprometemos a proteger tus datos y a no compartirlos con terceros sin tu consentimiento, excepto cuando sea requerido por ley.
+              </p>
+
+              <h4 className="font-semibold text-cyan-400 mt-4 mb-2">5. CÓDIGO DE CONDUCTA</h4>
+              <p className="mb-3">
+                Te comprometes a utilizar la plataforma de manera respetuosa, sin acosar, discriminar o actuar de forma inapropiada hacia otros usuarios o el personal de Impacto Cuántico.
+              </p>
+
+              <h4 className="font-semibold text-cyan-400 mt-4 mb-2">6. PAGOS Y REEMBOLSOS</h4>
+              <p className="mb-3">
+                Los pagos realizados por nuestros servicios son finales. Las solicitudes de reembolso serán evaluadas caso por caso según nuestras políticas internas.
+              </p>
+
+              <h4 className="font-semibold text-cyan-400 mt-4 mb-2">7. PROPIEDAD INTELECTUAL</h4>
+              <p className="mb-3">
+                Todo el contenido de la plataforma, incluyendo textos, gráficos, logos, y material audiovisual, es propiedad de Impacto Cuántico y está protegido por las leyes de propiedad intelectual.
+              </p>
+
+              <h4 className="font-semibold text-cyan-400 mt-4 mb-2">8. LIMITACIÓN DE RESPONSABILIDAD</h4>
+              <p className="mb-3">
+                Impacto Cuántico no será responsable por daños indirectos, incidentales o consecuentes que puedan surgir del uso de nuestros servicios.
+              </p>
+
+              <h4 className="font-semibold text-cyan-400 mt-4 mb-2">9. MODIFICACIONES</h4>
+              <p className="mb-3">
+                Nos reservamos el derecho de modificar estos términos en cualquier momento. Te notificaremos de cambios significativos a través de la plataforma o por correo electrónico.
+              </p>
+
+              <h4 className="font-semibold text-cyan-400 mt-4 mb-2">10. CONTACTO</h4>
+              <p className="mb-3">
+                Para cualquier duda o aclaración sobre estos términos, puedes contactarnos a través de los canales oficiales disponibles en la plataforma.
+              </p>
+
+              <div className="mt-6 pt-4 border-t border-slate-700">
+                <p className="text-center text-slate-400 text-xs">
+                  Última actualización: Febrero 2026
+                </p>
+              </div>
+            </div>
+
+            {!hasScrolledToBottom && (
+              <p className="text-amber-400 text-xs flex items-center gap-1">
+                <ScrollText size={12} />
+                Desplázate hasta el final para poder aceptar los términos
+              </p>
+            )}
+
+            <label className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${
+              hasScrolledToBottom 
+                ? 'cursor-pointer bg-slate-800/30 border-slate-700/50 hover:border-cyan-500/50' 
+                : 'cursor-not-allowed bg-slate-800/10 border-slate-800/30 opacity-50'
+            }`}>
               <input
                 type="checkbox"
                 checked={acceptedTerms}
-                onChange={(e) => setAcceptedTerms(e.target.checked)}
-                className="mt-1 w-5 h-5 rounded border-slate-600 bg-slate-800 text-cyan-500 focus:ring-cyan-500/50 focus:ring-offset-0 cursor-pointer"
+                onChange={(e) => hasScrolledToBottom && setAcceptedTerms(e.target.checked)}
+                disabled={!hasScrolledToBottom}
+                className="mt-0.5 w-5 h-5 rounded border-slate-600 bg-slate-800 text-cyan-500 focus:ring-cyan-500/50 focus:ring-offset-0 disabled:opacity-50"
               />
               <span className="text-sm text-slate-300">
                 <FileText size={14} className="inline text-cyan-400 mr-1" />
-                He leído y acepto los{' '}
-                <Link 
-                  href="/terminos-y-condiciones" 
-                  target="_blank"
-                  className="text-cyan-400 hover:text-cyan-300 underline"
-                >
-                  Términos y Condiciones
-                </Link>
-                {' '}y el{' '}
-                <Link 
-                  href="/aviso-de-privacidad" 
-                  target="_blank"
-                  className="text-cyan-400 hover:text-cyan-300 underline"
-                >
-                  Aviso de Privacidad
-                </Link>
+                He leído y acepto los Términos y Condiciones y el Aviso de Privacidad
                 <span className="text-cyan-400"> *</span>
               </span>
             </label>
