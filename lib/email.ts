@@ -34,7 +34,7 @@ export async function sendEmail(
 ): Promise<SendEmailResult> {
   try {
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
-    const FROM_EMAIL_BASE = process.env.EMAIL_FROM || 'noreply@frutos.com';
+    const FROM_EMAIL_BASE = process.env.EMAIL_FROM || 'noreply@quantummatter.app';
     
     // Si se proporciona un nombre personalizado, usarlo
     let FROM_EMAIL = FROM_EMAIL_BASE;
