@@ -8,7 +8,7 @@ import { Loader2, CheckCircle, User, Clock, Users, Target, Sparkles, FileText, S
 import Link from 'next/link';
 
 export default function CompletarPerfilPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -126,8 +126,18 @@ export default function CompletarPerfilPage() {
       setSuccess(true);
       
       // Redirigir al dashboard después de 2 segundos
-      setTimeout(() => {
-        router.push('/dashboard');
+      setTimeout(async () => {
+        try {
+          // Refrescar sesión para actualizar profileCompleted en el token
+          await update();
+          router.push('/dashboard');
+          // Fallback con window.location si router.push no funciona
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 500);
+        } catch {
+          window.location.href = '/dashboard';
+        }
       }, 2000);
 
     } catch (e: any) {
