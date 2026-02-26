@@ -13,7 +13,6 @@ import VisionesWidget from '@/components/dashboard/VisionesWidget';
 import MedicalAlertsWidget from '@/components/dashboard/MedicalAlertsWidget';
 import GCCallsMonitorWidget from '@/components/dashboard/GCCallsMonitorWidget';
 import TreasuryQuickWidget from '@/components/dashboard/TreasuryQuickWidget';
-import TrainingStatsWidgets from '@/components/dashboard/TrainingStatsWidgets';
 import BacklogsDropsWidget from '@/components/dashboard/BacklogsDropsWidget';
 import PersonalQRWidget from '@/components/dashboard/PersonalQRWidget';
 import { ElCruceAccessWidget } from '@/components/el-cruce';
@@ -224,15 +223,6 @@ export default function CoordinadorDashboard() {
         {/* Widget de Cartas Prellenadas */}
         <div className="mt-8">
           <CartaPrellenadaWidget />
-        </div>
-
-        {/* Widgets de Estadísticas de Entrenamiento */}
-        <div className="mt-8">
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <Activity className="w-5 h-5 text-amber-400" />
-            Entrenamiento en Curso
-          </h2>
-          <TrainingStatsWidgets />
         </div>
 
         {/* Widget de Visiones */}
