@@ -7,7 +7,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  let currentStep = 'init';
+  
   try {
+    currentStep = 'params';
     const { slug } = await params;
 
     if (!slug) {
@@ -17,6 +20,7 @@ export async function GET(
       );
     }
 
+    currentStep = 'find-org';
     // Buscar organización por slug
     const organization = await prisma.organization.findFirst({
       where: { 
@@ -46,6 +50,7 @@ export async function GET(
       );
     }
 
+    currentStep = 'sibling-orgs';
     // Obtener todas las organizaciones de la misma Master Organization
     let siblingOrganizationIds: number[] = [organization.id];
     
@@ -60,6 +65,7 @@ export async function GET(
       siblingOrganizationIds = siblingOrgs.map(o => o.id);
     }
 
+    currentStep = 'find-trainings';
     // Obtener próximos entrenamientos vigentes de TODAS las organizaciones hermanas
     const now = new Date();
     const upcomingTrainings = await prisma.vision.findMany({
@@ -105,6 +111,7 @@ export async function GET(
       take: 6 // Aumentado a 6 para mostrar más entrenamientos de diferentes sedes
     });
 
+    currentStep = 'format-trainings';
     // Formatear entrenamientos con información de niveles y sede
     const formattedTrainings = upcomingTrainings.map(training => {
       const levels = [];
@@ -196,6 +203,7 @@ export async function GET(
       }
     });
 
+    currentStep = 'count-usuarios';
     // Contar toda la comunidad Quantum Matter (usuarios activos)
     const comunidadTotal = await prisma.usuario.count({
       where: {
@@ -219,9 +227,10 @@ export async function GET(
     });
 
   } catch (error) {
-    logger.error('Error fetching org landing:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Error fetching org landing:', { error: errorMessage, step: currentStep });
     return NextResponse.json(
-      { success: false, error: 'Error al obtener la información' },
+      { success: false, error: `Error al obtener la información (step: ${currentStep})`, details: errorMessage },
       { status: 500 }
     );
   }
