@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { 
   LayoutDashboard, Trophy, Target, BarChart3, User, LogOut, 
   UserPlus, DollarSign, Package, Shield, Drama, Theater,
-  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode, Store, Star, Crown, Image, Vote, BookOpen, Rocket, Plane, Archive, Printer
+  CreditCard, Gift, Compass, Bot, CheckCircle2, Lock, ClipboardCheck, Users, Calendar, ShieldAlert, CalendarCheck, Zap, Camera, Sparkles, Settings, TrendingUp, FileText, Briefcase, QrCode, Store, Star, Crown, Image, Vote, BookOpen, Rocket, Plane, Archive, Printer, Phone
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { MENU_ITEMS } from '@/config/menuPermissions';
@@ -669,6 +669,111 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
           </div>
         )}
 
+        {/* Panel de Coordinador Básico - Solo cuando activeRole es COORDINATOR_BASIC */}
+        {(activeRole === 'COORDINATOR_BASIC' || pathname.startsWith('/dashboard/coordinador-basico')) && (
+          <div className="pt-6 mt-6 border-t border-slate-800">
+            <p className="px-4 text-xs font-bold text-teal-400 uppercase mb-2">📋 Coordinador Básico</p>
+            
+            <Link 
+              href="/dashboard/coordinador-basico"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/coordinador-basico'
+                  ? 'bg-gradient-to-r from-teal-600 to-cyan-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-teal-900/20'
+              }`}
+            >
+              <LayoutDashboard size={18} className="text-teal-400" />
+              <span>Dashboard</span>
+            </Link>
+
+            <Link 
+              href="/dashboard/coordinador-basico/asistencia"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname.startsWith('/dashboard/coordinador-basico/asistencia')
+                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-green-900/20'
+              }`}
+            >
+              <CheckCircle2 size={18} className="text-green-400" />
+              <span>Asistencia</span>
+            </Link>
+
+            <Link 
+              href="/dashboard/llamadas"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/llamadas'
+                  ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-blue-900/20'
+              }`}
+            >
+              <Phone size={18} className="text-blue-400" />
+              <span>Llamadas</span>
+            </Link>
+
+            <Link 
+              href="/dashboard/tesoreria"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname.startsWith('/dashboard/tesoreria')
+                  ? 'bg-gradient-to-r from-yellow-600 to-amber-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-yellow-900/20'
+              }`}
+            >
+              <DollarSign size={18} className="text-yellow-400" />
+              <span>Tesorería</span>
+            </Link>
+          </div>
+        )}
+
+        {/* Panel de Coordinador Avanzado - Solo cuando activeRole es COORDINATOR_ADVANCED */}
+        {(activeRole === 'COORDINATOR_ADVANCED' || pathname.startsWith('/dashboard/coordinador-avanzado')) && (
+          <div className="pt-6 mt-6 border-t border-slate-800">
+            <p className="px-4 text-xs font-bold text-rose-400 uppercase mb-2">🎯 Coordinador Avanzado</p>
+            
+            <Link 
+              href="/dashboard/coordinador-avanzado"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/coordinador-avanzado'
+                  ? 'bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-rose-900/20'
+              }`}
+            >
+              <LayoutDashboard size={18} className="text-rose-400" />
+              <span>Dashboard</span>
+            </Link>
+
+            <Link 
+              href="/dashboard/llamadas"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname === '/dashboard/llamadas'
+                  ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-blue-900/20'
+              }`}
+            >
+              <Phone size={18} className="text-blue-400" />
+              <span>Llamadas</span>
+            </Link>
+
+            <Link 
+              href="/dashboard/tesoreria"
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname.startsWith('/dashboard/tesoreria')
+                  ? 'bg-gradient-to-r from-yellow-600 to-amber-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-yellow-900/20'
+              }`}
+            >
+              <DollarSign size={18} className="text-yellow-400" />
+              <span>Tesorería</span>
+            </Link>
+          </div>
+        )}
+
         {/* Herramientas de Ceremonia - COORDINADOR, TRAINER, ADMINISTRADOR o activeRole TRAINER */}
         {!isParticipanteView && (usuario.rol === 'COORDINADOR' || usuario.rol === 'TRAINER' || usuario.rol === 'ADMIN' || usuario.rol === 'ADMINISTRADOR' || activeRole === 'TRAINER') && (
           <div className="pt-6 mt-6 border-t border-slate-800">
@@ -1114,8 +1219,8 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
           </div>
         )}
 
-        {/* NAVEGACIÓN GENERAL - Al final para todos los usuarios EXCEPTO SCHOOL_ADMIN, COORDINADOR, MENTOR en su dashboard, y cuando activeRole es TRAINER */}
-        {usuario.rol !== 'SCHOOL_ADMIN' && usuario.rol !== 'COORDINADOR' && activeRole !== 'TRAINER' && !pathname.startsWith('/dashboard/mentor') && (
+        {/* NAVEGACIÓN GENERAL - Al final para todos los usuarios EXCEPTO SCHOOL_ADMIN, COORDINADOR, MENTOR en su dashboard, y cuando activeRole es TRAINER o COORDINATOR_BASIC/ADVANCED */}
+        {usuario.rol !== 'SCHOOL_ADMIN' && usuario.rol !== 'COORDINADOR' && activeRole !== 'TRAINER' && activeRole !== 'COORDINATOR_BASIC' && activeRole !== 'COORDINATOR_ADVANCED' && !pathname.startsWith('/dashboard/mentor') && !pathname.startsWith('/dashboard/coordinador-basico') && !pathname.startsWith('/dashboard/coordinador-avanzado') && (
         <div className="pt-6 mt-6 border-t border-slate-800">
           <p className="px-4 text-xs font-bold text-slate-500 uppercase mb-2">🏠 Navegación</p>
           
