@@ -1083,6 +1083,40 @@ const isMaskedValue = (value: string | null | undefined): boolean => {
 ```
 
 ================================================================================
+10. PAYMENT GATEWAY - FIX CONSTRAINT ÚNICO (CAUSA RAÍZ)
+================================================================================
+
+Problema raíz identificado:
+- La base de datos tenía: organizationId Int @unique
+- El schema de Prisma tenía: @@unique([organizationId, provider])
+- Discrepancia causaba que solo se pudiera tener UNA pasarela por organización
+
+Solución aplicada (sin pérdida de datos):
+```sql
+-- Eliminar constraint antiguo
+ALTER TABLE "PaymentGatewayConfig" 
+  DROP CONSTRAINT IF EXISTS "PaymentGatewayConfig_organizationId_key";
+
+-- Crear nuevo constraint compuesto
+ALTER TABLE "PaymentGatewayConfig" 
+  ADD CONSTRAINT "PaymentGatewayConfig_organizationId_provider_key" 
+  UNIQUE ("organizationId", "provider");
+```
+
+Archivo de migración creado:
+- prisma/migrations/20260226_fix_payment_gateway_constraint/migration.sql
+
+Resultado:
+- ✅ 2 registros existentes conservados
+- ✅ Ahora se pueden tener múltiples proveedores (Stripe + MercadoPago) por org
+- ✅ El constraint permite: una config por combinación (organizationId, provider)
+
+LECCIÓN IMPORTANTE:
+- Siempre verificar que el schema de Prisma esté sincronizado con la BD real
+- Usar `npx prisma db pull --print` para ver el estado real de la BD
+- Las migraciones manuales deben documentarse en prisma/migrations/
+
+================================================================================
 FIN DE LA DOCUMENTACIÓN
 ================================================================================
 
