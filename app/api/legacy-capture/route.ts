@@ -360,7 +360,10 @@ export async function POST(request: NextRequest) {
     } else {
       // Crear nueva
       captura = await prisma.legacyCaptureSession.create({
-        data: captureData,
+        data: {
+          ...captureData,
+          updatedAt: new Date(),
+        },
       });
     }
 
