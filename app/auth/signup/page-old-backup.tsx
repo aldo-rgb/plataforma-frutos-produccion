@@ -477,7 +477,7 @@ export default function SignUpPage() {
                     type="text"
                     required
                     className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    placeholder="Nombre de quien te invitó"
+                    placeholder="Nombre de"
                     value={formData.angelEnrrolamiento}
                     onChange={(e) => setFormData({ ...formData, angelEnrrolamiento: e.target.value })}
                   />

@@ -94,7 +94,7 @@
     },
     "referral": {
       "title": "Referido",
-      "code": "Nombre de quien te invitó",
+      "code": "Nombre de",
       "codePlaceholder": "JUAN123",
       "locked": "Invitación recibida por QR"
     },

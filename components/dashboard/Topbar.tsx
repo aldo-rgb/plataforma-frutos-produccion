@@ -50,7 +50,7 @@ export function Topbar({ usuario, onMenuClick }: TopbarProps) {
 
       <div className="flex-1 lg:flex-initial" />
       
-      <div className="flex items-center gap-3 md:gap-6">
+      <div className="flex items-center gap-2 sm:gap-3 md:gap-6">
         {/* Role Switcher - Para usuarios con múltiples roles */}
         <RoleSwitcher usuario={usuario} />
         
@@ -62,8 +62,8 @@ export function Topbar({ usuario, onMenuClick }: TopbarProps) {
         {/* Phoenix SOS Button */}
         <PhoenixButton />
         
-        {/* Zona Horaria */}
-        <div className="hidden md:block text-right">
+        {/* Zona Horaria - solo en pantallas grandes */}
+        <div className="hidden lg:block text-right">
           <p className="text-xs text-slate-500 uppercase font-bold">Tu Zona Horaria</p>
           <div className="flex items-center gap-1 text-slate-300 text-sm">
             <Globe size={12} />
@@ -71,16 +71,16 @@ export function Topbar({ usuario, onMenuClick }: TopbarProps) {
           </div>
         </div>
 
-        {/* Puntos Cuánticos */}
-        <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-lg border border-blue-500/30">
-          <Zap size={18} className="text-yellow-400" />
-          <span className="font-bold text-white">{usuario.puntosCuanticos.toLocaleString()}</span>
-          <span className="text-xs text-slate-400">Puntos</span>
+        {/* Puntos Cuánticos - compacto en móvil */}
+        <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-lg border border-blue-500/30">
+          <Zap size={16} className="text-yellow-400 sm:w-[18px] sm:h-[18px]" />
+          <span className="font-bold text-white text-sm sm:text-base">{usuario.puntosCuanticos.toLocaleString()}</span>
+          <span className="text-[10px] sm:text-xs text-slate-400 hidden sm:inline">Puntos</span>
         </div>
 
-        {/* User Info */}
-        <div className="flex items-center gap-3">
-          <div className="text-right">
+        {/* User Info - solo avatar en móvil */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="text-right hidden sm:block">
             <h2 className="text-sm font-bold text-white">{usuario.nombre}</h2>
             <p className="text-[10px] text-slate-400 uppercase">{usuario.rol}</p>
           </div>
@@ -90,10 +90,10 @@ export function Topbar({ usuario, onMenuClick }: TopbarProps) {
               alt={usuario.nombre}
               width={40}
               height={40}
-              className="w-10 h-10 rounded-full object-cover"
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold text-sm sm:text-base">
               {usuario.nombre?.charAt(0)}
             </div>
           )}
