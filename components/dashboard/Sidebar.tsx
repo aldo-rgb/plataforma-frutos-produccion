@@ -703,19 +703,6 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
         {(activeRole === 'COORDINATOR_BASIC' || pathname.startsWith('/dashboard/coordinador-basico')) && (
           <div className="pt-6 mt-6 border-t border-slate-800">
             <p className="px-4 text-xs font-bold text-teal-400 uppercase mb-2">📋 Coordinador Básico</p>
-            
-            <Link 
-              href="/dashboard/coordinador-basico"
-              onClick={handleLinkClick}
-              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
-                pathname === '/dashboard/coordinador-basico'
-                  ? 'bg-gradient-to-r from-teal-600 to-cyan-600 text-white shadow-lg'
-                  : 'text-slate-400 hover:text-white hover:bg-teal-900/20'
-              }`}
-            >
-              <LayoutDashboard size={18} className="text-teal-400" />
-              <span>Dashboard</span>
-            </Link>
 
             <Link 
               href={`/dashboard/school-admin/vision/${activeVisionId || 6}/call-management?level=BASIC`}
