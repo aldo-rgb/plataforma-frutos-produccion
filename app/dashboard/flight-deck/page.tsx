@@ -196,7 +196,7 @@ export default function FlightDeckPage() {
                 <Plane className="w-8 h-8 text-cyan-400" />
               </div>
               <div>
-                <h1 className="text-3xl font-black text-white">Quantum Flight Deck</h1>
+                <h1 className="text-3xl font-black text-white">Vuelos 3er Fin</h1>
                 <p className="text-gray-400">Control de audio para ceremonias de vuelo</p>
               </div>
             </div>

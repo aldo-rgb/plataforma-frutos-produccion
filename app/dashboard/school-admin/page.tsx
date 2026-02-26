@@ -888,7 +888,7 @@ export default function SchoolAdminDashboard() {
               <TreasuryQuickWidget isAdmin={true} />
             </div>
 
-            {/* Widget de Quantum Time Capsule - CASI BLANCO/CORONA SUPERIOR */}
+            {/* Widget de Cartas de Aprecio - CASI BLANCO/CORONA SUPERIOR */}
             <Link href="/dashboard/admin/time-capsule" className="block">
               <div className="bg-gradient-to-br from-violet-300/20 via-purple-200/15 to-white/10 border-2 border-violet-300/40 rounded-xl md:rounded-2xl p-4 md:p-6 transition-all cursor-pointer group hover:border-violet-300/60 hover:shadow-lg hover:shadow-violet-300/20 relative overflow-hidden">
                 {/* Decorative elements - más claros */}
@@ -901,7 +901,7 @@ export default function SchoolAdminDashboard() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="font-bold text-white text-xs md:text-sm uppercase line-clamp-2">
-                      Quantum Time Capsule
+                      Cartas de Aprecio
                     </h3>
                     <p className="text-[10px] md:text-xs text-violet-200 line-clamp-1">
                       Cartas de empoderamiento secretas

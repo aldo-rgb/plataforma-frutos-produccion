@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
-  Users, Target, Ticket, BarChart3, Zap,
-  AlertTriangle, Building2, GraduationCap, Star, Activity,
+  Users, Target, BarChart3, Zap,
+  AlertTriangle, GraduationCap, Star, Activity,
   FileText, Shield, Heart, ChevronRight
 } from 'lucide-react';
 import Link from 'next/link';
@@ -180,38 +180,6 @@ export default function CoordinadorDashboard() {
             <p className="text-slate-400 mt-1">COORDINADOR • Panel de Control</p>
             <p className="text-sm text-slate-500">{session?.user?.email}</p>
           </div>
-        </div>
-
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <KpiCard
-            icon={<Users className="text-cyan-400" />}
-            label="Usuarios Totales"
-            value={data.overview.totalStudents.toString()}
-            trend="✅ Activos"
-            color="cyan"
-          />
-          <KpiCard
-            icon={<Building2 className="text-blue-400" />}
-            label="Comunidad"
-            value={(data.overview.totalCommunityMembers || 0).toString()}
-            trend="Todos los usuarios que pertenecen la comunidad"
-            color="blue"
-          />
-          <KpiCard
-            icon={<Target className="text-purple-400" />}
-            label="Tasa de Cumplimiento"
-            value={`${data.overview.completionRate}%`}
-            trend="Cartas y evidencias"
-            color="purple"
-          />
-          <KpiCard
-            icon={<Ticket className="text-yellow-400" />}
-            label="Licencias Disponibles"
-            value={data.availableCredits.toString()}
-            trend="✅ Activos"
-            color="yellow"
-          />
         </div>
 
         {/* Widget de Cartas Prellenadas */}
@@ -521,29 +489,6 @@ export default function CoordinadorDashboard() {
           </Link>
 
         </div>
-      </div>
-    </div>
-  );
-}
-
-function KpiCard({ icon, label, value, trend, color }: any) {
-  const colors: any = {
-    cyan: 'border-cyan-500/20 bg-cyan-500/5',
-    blue: 'border-blue-500/20 bg-blue-500/5',
-    purple: 'border-purple-500/20 bg-purple-500/5',
-    yellow: 'border-yellow-500/20 bg-yellow-500/5',
-  };
-
-  return (
-    <div className={`p-6 rounded-2xl border ${colors[color]} backdrop-blur-sm`}>
-      <div className="flex items-center justify-between mb-4">
-        <div className="p-2 bg-slate-900 rounded-lg">{icon}</div>
-        <span className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">KPI</span>
-      </div>
-      <p className="text-3xl font-black text-white">{value}</p>
-      <p className="text-xs font-medium text-slate-400 mt-1">{label}</p>
-      <div className="mt-4 pt-4 border-t border-white/5 text-[10px] font-mono text-slate-500">
-        {trend}
       </div>
     </div>
   );

@@ -127,7 +127,7 @@ export default function CapsuleMissionWidget({ className = '', onClose }: Widget
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-white">
-                    {isUrgent ? '⚠️ ACCIÓN REQUERIDA' : '🎁 Quantum Time Capsule'}
+                    {isUrgent ? '⚠️ ACCIÓN REQUERIDA' : '🎁 Cartas de Aprecio'}
                   </h3>
                   {totalPending > 0 && (
                     <span className="bg-white/30 px-2 py-0.5 rounded-full text-xs text-white font-medium">

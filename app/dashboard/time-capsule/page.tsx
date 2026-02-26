@@ -233,7 +233,7 @@ export default function TimeCapsulePage() {
                 <Archive className="w-8 h-8 text-amber-400" />
               </div>
               <div>
-                <h1 className="text-3xl font-black text-white">Quantum Time Capsule</h1>
+                <h1 className="text-3xl font-black text-white">Cartas de Aprecio</h1>
                 <p className="text-gray-400">Gestiona los buzones de mensajes para visiones</p>
               </div>
             </div>

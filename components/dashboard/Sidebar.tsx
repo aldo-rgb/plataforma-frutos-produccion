@@ -832,7 +832,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
               }`}
             >
               <Plane size={18} className="text-cyan-400" />
-              <span>Quantum Flight Deck</span>
+              <span>Vuelos 3er Fin</span>
             </Link>
           </div>
         )}

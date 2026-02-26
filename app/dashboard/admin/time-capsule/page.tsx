@@ -194,7 +194,7 @@ export default function TimeCapsuleAdminPage() {
           <div>
             <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
               <Gift className="w-8 h-8 text-purple-400" />
-              Quantum Time Capsule
+              Cartas de Aprecio
             </h1>
             <p className="text-gray-400">
               Administra las campañas de cartas de empoderamiento
