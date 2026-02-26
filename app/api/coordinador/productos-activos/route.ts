@@ -274,7 +274,7 @@ export async function GET() {
     // Calcular el conteo real de inscripciones pagadas por cada producto
     const productosConConteoReal = await Promise.all(
       productos.map(async (producto) => {
-        // Si no tiene visionId o levelType, no podemos contar tickets
+        // Si no tiene visionId o levelType, no podemos contar enrollments
         if (!producto.visionId || !producto.levelType) {
           return { ...producto, currentEnrollment: 0 };
         }
@@ -289,24 +289,22 @@ export async function GET() {
         };
         const enrollmentLevel = levelMap[producto.levelType] || producto.levelType;
 
-        // Si el nivel no es válido para tickets, retornar 0
+        // Si el nivel no es válido, retornar 0
         if (!validLevels.includes(enrollmentLevel)) {
           return { ...producto, currentEnrollment: 0 };
         }
 
-        // Contar tickets pagados para esta visión y nivel
-        const paidTicketsCount = await prisma.ticket.count({
+        // Contar enrollments para esta visión y nivel (todos, no solo pagados)
+        const enrollmentsCount = await prisma.vision_enrollments.count({
           where: {
             visionId: producto.visionId,
-            level: enrollmentLevel as any,
-            status: 'ACTIVE',
-            paymentStatus: { in: ['PAID', 'PARTIAL'] }
+            level: enrollmentLevel as any
           }
         });
 
         return {
           ...producto,
-          currentEnrollment: paidTicketsCount
+          currentEnrollment: enrollmentsCount
         };
       })
     );
