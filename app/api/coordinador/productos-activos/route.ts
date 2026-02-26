@@ -203,9 +203,68 @@ export async function GET() {
     }
 
     // Combinar productos activos y completados visibles
-    const productos = [...productosActivos, ...productosCompletadosVisibles];
+    const todosProductos = [...productosActivos, ...productosCompletadosVisibles];
     
     // Ordenar por fecha de inicio
+    todosProductos.sort((a, b) => {
+      const dateA = a.startDate ? new Date(a.startDate).getTime() : 0;
+      const dateB = b.startDate ? new Date(b.startDate).getTime() : 0;
+      return dateA - dateB;
+    });
+
+    // FILTRAR: Solo el próximo entrenamiento vigente por visión
+    // Agrupar por visionId y tomar solo el que tenga la fecha de inicio más próxima que no ha terminado
+    const productosPorVision = new Map<number, typeof todosProductos[0]>();
+    
+    for (const producto of todosProductos) {
+      if (!producto.visionId) continue;
+      
+      const visionId = producto.visionId;
+      const existente = productosPorVision.get(visionId);
+      
+      // Si ya tenemos un producto para esta visión, comparar cuál es más relevante
+      if (existente) {
+        // Prioridad: productos no completados sobre completados
+        if (existente.trainingStatus === 'COMPLETED' && producto.trainingStatus !== 'COMPLETED') {
+          productosPorVision.set(visionId, producto);
+          continue;
+        }
+        
+        // Si ambos tienen el mismo estado, tomar el de fecha más próxima
+        if (existente.trainingStatus === producto.trainingStatus) {
+          const fechaExistente = existente.startDate ? new Date(existente.startDate).getTime() : Infinity;
+          const fechaProducto = producto.startDate ? new Date(producto.startDate).getTime() : Infinity;
+          
+          // Si el producto actual tiene fecha más próxima y no ha terminado aún
+          if (fechaProducto < fechaExistente) {
+            // Para PL, verificar plWeekend3EndDate o endDate
+            const endDateProducto = producto.levelType === 'PL' 
+              ? (producto.plWeekend3EndDate || producto.endDate)
+              : producto.endDate;
+            
+            // Solo reemplazar si el entrenamiento no ha terminado
+            if (!endDateProducto || new Date(endDateProducto) >= now) {
+              productosPorVision.set(visionId, producto);
+            }
+          }
+        }
+      } else {
+        // Verificar que el producto no haya terminado
+        const endDateProducto = producto.levelType === 'PL' 
+          ? (producto.plWeekend3EndDate || producto.endDate)
+          : producto.endDate;
+        
+        // Solo agregar si no ha terminado o está en curso
+        const haTerminado = endDateProducto && new Date(endDateProducto) < now;
+        
+        if (!haTerminado || producto.trainingStatus !== 'COMPLETED') {
+          productosPorVision.set(visionId, producto);
+        }
+      }
+    }
+    
+    // Convertir Map a array y ordenar por fecha
+    const productos = Array.from(productosPorVision.values());
     productos.sort((a, b) => {
       const dateA = a.startDate ? new Date(a.startDate).getTime() : 0;
       const dateB = b.startDate ? new Date(b.startDate).getTime() : 0;
