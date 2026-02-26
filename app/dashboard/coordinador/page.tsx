@@ -11,7 +11,6 @@ import {
 import Link from 'next/link';
 import VisionesWidget from '@/components/dashboard/VisionesWidget';
 import MedicalAlertsWidget from '@/components/dashboard/MedicalAlertsWidget';
-import MedicalFormsListWidget from '@/components/dashboard/MedicalFormsListWidget';
 import GCCallsMonitorWidget from '@/components/dashboard/GCCallsMonitorWidget';
 import TreasuryQuickWidget from '@/components/dashboard/TreasuryQuickWidget';
 import TrainingStatsWidgets from '@/components/dashboard/TrainingStatsWidgets';
@@ -278,11 +277,6 @@ export default function CoordinadorDashboard() {
             </p>
           </div>
         </Link>
-
-        {/* Widget de Formularios Médicos */}
-        <div className="mt-8">
-          <MedicalFormsListWidget />
-        </div>
 
         {/* Widget de Alertas Médicas */}
         <div className="mt-8">
