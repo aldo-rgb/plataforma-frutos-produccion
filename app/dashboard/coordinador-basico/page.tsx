@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
   Users, Ticket, AlertTriangle, Building2, GraduationCap, Activity,
-  Clock, Calendar, Scan, Heart, ChevronRight, X, Phone, Mail, Loader2, History, Zap
+  Clock, Calendar, Scan, Heart, ChevronRight, X, Phone, Mail, Loader2, Zap
 } from 'lucide-react';
 import Link from 'next/link';
 import MedicalAlertsWidget from '@/components/dashboard/MedicalAlertsWidget';
@@ -471,18 +471,6 @@ export default function CoordinadorBasicoDashboard() {
                     
                     // En curso: a partir del segundo día
                     showInProgress = now > dayEnd;
-                    
-                    // DEBUG LOG
-                    console.log(`[Check-In Debug] Producto: ${producto.name} (ID: ${producto.id})`);
-                    console.log(`  - isPL: ${isPL}`);
-                    console.log(`  - plWeekend1StartDate raw: ${producto.plWeekend1StartDate}`);
-                    console.log(`  - effectiveStartDate: ${effectiveStartDate.toISOString()}`);
-                    console.log(`  - now: ${now.toISOString()}`);
-                    console.log(`  - dayStart: ${dayStart.toISOString()}`);
-                    console.log(`  - dayEnd: ${dayEnd.toISOString()}`);
-                    console.log(`  - now >= dayStart: ${now >= dayStart}`);
-                    console.log(`  - now <= dayEnd: ${now <= dayEnd}`);
-                    console.log(`  - showCheckInButton: ${showCheckInButton}`);
                   }
                   
                   const isCompleted = producto.trainingStatus === 'COMPLETED';
@@ -667,28 +655,6 @@ export default function CoordinadorBasicoDashboard() {
             </div>
             <p className="text-xs text-slate-400">
               Revisa los registros médicos de los participantes y alertas de condiciones especiales
-            </p>
-          </div>
-        </Link>
-
-        {/* Widget de Historial de Entrenamientos */}
-        <Link href="/dashboard/coordinator/training-history" className="block mt-8">
-          <div className="bg-gradient-to-br from-indigo-900/50 via-purple-900/30 to-slate-900 border-2 border-indigo-500/30 rounded-2xl p-6 transition-all cursor-pointer group hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-indigo-500/20 group-hover:bg-indigo-500/30 rounded-xl transition-colors">
-                <History size={24} className="text-indigo-300" />
-              </div>
-              <div>
-                <h3 className="font-bold text-white text-sm uppercase">
-                  📋 HISTORIAL DE ENTRENAMIENTOS
-                </h3>
-                <p className="text-xs text-indigo-300">
-                  Todos los entrenamientos
-                </p>
-              </div>
-            </div>
-            <p className="text-xs text-slate-400">
-              Ver entrenamientos activos, próximos y completados de tu organización
             </p>
           </div>
         </Link>
