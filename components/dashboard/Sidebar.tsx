@@ -834,6 +834,19 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
               <Plane size={18} className="text-cyan-400" />
               <span>Vuelos 3er Fin</span>
             </Link>
+
+            <Link 
+              href={`/dashboard/school-admin/vision/${activeVisionId || 6}/call-management?level=BASIC`}
+              onClick={handleLinkClick}
+              className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
+                pathname.includes('/call-management')
+                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg'
+                  : 'text-slate-400 hover:text-white hover:bg-green-900/20'
+              }`}
+            >
+              <Phone size={18} className="text-green-400" />
+              <span>Llamadas</span>
+            </Link>
           </div>
         )}
 
