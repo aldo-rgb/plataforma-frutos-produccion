@@ -68,7 +68,7 @@ export default function CallManagementPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
-  const visionId = params?.id as string;
+  const visionIdFromUrl = params?.id as string;
 
   // Obtener el nivel desde la URL o usar BASIC por defecto
   const levelFromUrl = searchParams?.get('level') as 'BASIC' | 'ADVANCED' | 'PL' | null;
@@ -100,15 +100,57 @@ export default function CallManagementPage() {
     preferredCallTimeEnd: '',
   });
 
+  // Estado para visiones disponibles
+  const [visiones, setVisiones] = useState<Array<{id: number; nombre: string}>>([]);
+  const [selectedVisionId, setSelectedVisionId] = useState<string>(visionIdFromUrl);
+
+  // Variable para usar en fetch
+  const visionId = selectedVisionId;
+
+  // Cargar visiones disponibles
+  useEffect(() => {
+    const fetchVisiones = async () => {
+      try {
+        const response = await fetch('/api/coordinador/productos-activos');
+        if (response.ok) {
+          const data = await response.json();
+          // Extraer visiones únicas de los productos
+          const visionesUnicas = new Map<number, string>();
+          data.productos?.forEach((p: any) => {
+            if (p.visionId && p.name) {
+              // Extraer nombre de la visión del nombre del producto (ej: "Vision 25 - Básico" -> "Vision 25")
+              const visionName = p.name.split(' - ')[0] || p.name;
+              if (!visionesUnicas.has(p.visionId)) {
+                visionesUnicas.set(p.visionId, visionName);
+              }
+            }
+          });
+          const visionesArray = Array.from(visionesUnicas.entries()).map(([id, nombre]) => ({ id, nombre }));
+          setVisiones(visionesArray);
+          
+          // Si no hay visión seleccionada en URL o no existe, usar la primera disponible
+          if (visionesArray.length > 0 && !visionesArray.find(v => v.id.toString() === visionIdFromUrl)) {
+            setSelectedVisionId(visionesArray[0].id.toString());
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching visiones:', error);
+      }
+    };
+    fetchVisiones();
+  }, [visionIdFromUrl]);
+
   // Fetch data
   useEffect(() => {
-    fetchCallTrackingData();
-  }, [visionId, selectedLevel, excludeUnpaid]);
+    if (selectedVisionId) {
+      fetchCallTrackingData();
+    }
+  }, [selectedVisionId, selectedLevel, excludeUnpaid]);
 
   const fetchCallTrackingData = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/school-admin/visiones/${visionId}/call-tracking?level=${selectedLevel}&excludeUnpaid=${excludeUnpaid}`);
+      const response = await fetch(`/api/school-admin/visiones/${selectedVisionId}/call-tracking?level=${selectedLevel}&excludeUnpaid=${excludeUnpaid}`);
       if (response.ok) {
         const data = await response.json();
         setCallData(data);
@@ -284,7 +326,7 @@ export default function CallManagementPage() {
       // If no tracking exists yet, create it
       if (!selectedCard.tracking) {
         const trackingResponse = await fetch(
-          `/api/school-admin/visiones/${visionId}/call-tracking`,
+          `/api/school-admin/visiones/${selectedVisionId}/call-tracking`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -325,7 +367,7 @@ export default function CallManagementPage() {
       }
       
       const response = await fetch(
-        `/api/school-admin/visiones/${visionId}/call-interactions`,
+        `/api/school-admin/visiones/${selectedVisionId}/call-interactions`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -363,7 +405,7 @@ export default function CallManagementPage() {
   const handleSaveTracking = async (enrollmentId: number) => {
     try {
       const response = await fetch(
-        `/api/school-admin/visiones/${visionId}/call-tracking`,
+        `/api/school-admin/visiones/${selectedVisionId}/call-tracking`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -388,7 +430,7 @@ export default function CallManagementPage() {
     if (!item.tracking) {
       // Create tracking first
       const response = await fetch(
-        `/api/school-admin/visiones/${visionId}/call-tracking`,
+        `/api/school-admin/visiones/${selectedVisionId}/call-tracking`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -412,7 +454,7 @@ export default function CallManagementPage() {
       item.tracking.attendanceStatus === 'ASISTE' ? 'NO_ASISTE' : 'ASISTE';
 
     const response = await fetch(
-      `/api/school-admin/visiones/${visionId}/call-tracking`,
+      `/api/school-admin/visiones/${selectedVisionId}/call-tracking`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -447,12 +489,29 @@ export default function CallManagementPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6">
       {/* Header */}
       <div className="max-w-7xl mx-auto mb-6">
-        <button
-          onClick={() => router.back()}
-          className="text-white/60 hover:text-white mb-4 flex items-center gap-2"
-        >
-          ← Volver
-        </button>
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => router.back()}
+            className="text-white/60 hover:text-white flex items-center gap-2"
+          >
+            ← Volver
+          </button>
+          
+          {/* Selector de Visión */}
+          {visiones.length > 0 && (
+            <select
+              value={selectedVisionId}
+              onChange={(e) => setSelectedVisionId(e.target.value)}
+              className="bg-slate-800 border border-slate-600 text-white rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              {visiones.map((vision) => (
+                <option key={vision.id} value={vision.id.toString()}>
+                  {vision.nombre}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
 
         <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl p-4 md:p-6 border border-slate-700 shadow-xl">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
