@@ -17,8 +17,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
-    // Solo SCHOOL_ADMIN puede acceder
-    if (session.user.rol !== 'SCHOOL_ADMIN') {
+    // Solo SCHOOL_ADMIN o ADMINISTRADOR puede acceder
+    const allowedRoles = ['SCHOOL_ADMIN', 'ADMINISTRADOR', 'ADMIN'];
+    if (!allowedRoles.includes(session.user.rol)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
@@ -104,7 +105,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
-    if (session.user.rol !== 'SCHOOL_ADMIN') {
+    // Permitir SCHOOL_ADMIN y ADMINISTRADOR
+    const allowedRoles = ['SCHOOL_ADMIN', 'ADMINISTRADOR', 'ADMIN'];
+    if (!allowedRoles.includes(session.user.rol)) {
+      logger.error('🔴 [payment-gateway] Rol no autorizado:', session.user.rol);
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
@@ -219,9 +223,13 @@ export async function POST(request: NextRequest) {
         isActive: config.isActive,
       },
     });
-  } catch (error) {
-    logger.error('Error saving payment gateway config:', error);
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+  } catch (error: any) {
+    logger.error('🔴 [payment-gateway] Error saving config:', error?.message || error);
+    logger.error('🔴 [payment-gateway] Stack:', error?.stack);
+    return NextResponse.json({ 
+      error: 'Error interno del servidor',
+      details: process.env.NODE_ENV === 'development' ? error?.message : undefined
+    }, { status: 500 });
   }
 }
 
@@ -234,7 +242,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
-    if (session.user.rol !== 'SCHOOL_ADMIN') {
+    const allowedRolesDelete = ['SCHOOL_ADMIN', 'ADMINISTRADOR', 'ADMIN'];
+    if (!allowedRolesDelete.includes(session.user.rol)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
