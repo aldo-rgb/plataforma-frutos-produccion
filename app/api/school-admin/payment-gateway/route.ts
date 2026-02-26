@@ -172,6 +172,22 @@ export async function POST(request: NextRequest) {
 
     let config;
 
+    // Función para detectar si un valor está enmascarado
+    const isMaskedValue = (value: string | null | undefined): boolean => {
+      if (!value) return true;
+      // Detectar asteriscos, puntos de contraseña (•), o si el valor es mayormente caracteres repetidos
+      if (value.includes('*') || value.includes('•') || value.includes('·')) return true;
+      // Si más del 50% son el mismo carácter, probablemente está enmascarado
+      const chars = value.split('');
+      const charCount = chars.reduce((acc, char) => {
+        acc[char] = (acc[char] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      const maxCount = Math.max(...Object.values(charCount));
+      if (maxCount > value.length * 0.5 && value.length > 10) return true;
+      return false;
+    };
+
     if (existingConfig) {
       // Actualizar configuración existente para este proveedor
       // Solo actualizar secretKey si se proporciona una nueva (no enmascarada)
@@ -180,16 +196,16 @@ export async function POST(request: NextRequest) {
         isActive: isActive !== undefined ? isActive : true,
       };
 
-      // Solo actualizar secretKey si no está enmascarada (contiene asteriscos)
-      if (secretKey && !secretKey.includes('*')) {
+      // Solo actualizar secretKey si no está enmascarada
+      if (secretKey && !isMaskedValue(secretKey)) {
         updateData.secretKey = secretKey;
         logger.debug('🟢 [payment-gateway] Actualizando secretKey (nueva credencial)');
       } else {
-        logger.debug('🟡 [payment-gateway] Manteniendo secretKey existente (valor enmascarado)');
+        logger.debug('🟡 [payment-gateway] Manteniendo secretKey existente (valor enmascarado o vacío)');
       }
 
       // Solo actualizar webhookSecret si no está enmascarado
-      if (webhookSecret && !webhookSecret.includes('*')) {
+      if (webhookSecret && !isMaskedValue(webhookSecret)) {
         updateData.webhookSecret = webhookSecret;
       }
 
