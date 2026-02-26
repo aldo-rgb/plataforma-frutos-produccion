@@ -189,6 +189,9 @@ export async function POST(request: NextRequest) {
 
       logger.debug('🔵 [payment-gateway] updateData keys:', Object.keys(updateData));
 
+      // Agregar updatedAt manualmente
+      updateData.updatedAt = new Date();
+
       config = await prisma.paymentGatewayConfig.update({
         where: { id: existingConfig.id },
         data: updateData,
@@ -205,6 +208,7 @@ export async function POST(request: NextRequest) {
           secretKey,
           webhookSecret,
           isActive: isActive !== undefined ? isActive : true,
+          updatedAt: new Date(),
         },
       });
       
