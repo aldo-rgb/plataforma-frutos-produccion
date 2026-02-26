@@ -181,6 +181,11 @@ export default function CoordinadorDashboard() {
           </div>
         </div>
 
+        {/* Widget de Tesorería Express - PRIMERO */}
+        <div className="mt-8">
+          <TreasuryQuickWidget />
+        </div>
+
         {/* Widget de Cartas Prellenadas */}
         <div className="mt-8">
           <CartaPrellenadaWidget />
@@ -267,11 +272,6 @@ export default function CoordinadorDashboard() {
         {/* Widget Monitor de Llamadas */}
         <div className="mt-8">
           <GCCallsMonitorWidget />
-        </div>
-
-        {/* Widget de Tesorería Express */}
-        <div className="mt-8">
-          <TreasuryQuickWidget />
         </div>
 
         {/* Widget de Backlogs y Drops */}
