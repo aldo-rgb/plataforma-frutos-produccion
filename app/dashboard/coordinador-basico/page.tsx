@@ -354,36 +354,6 @@ export default function CoordinadorBasicoDashboard() {
           </div>
         </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 gap-6">
-          {/* Widget Llamadas Pendientes con botón */}
-          <Link href={callsData.visionId ? `/dashboard/school-admin/vision/${callsData.visionId}/call-management?level=BASIC` : '#'} className="h-full">
-            <div className="bg-gradient-to-br from-yellow-900/40 via-orange-900/30 to-slate-900 border-2 border-yellow-500/30 rounded-2xl p-6 hover:border-yellow-500/50 transition-all cursor-pointer group hover:scale-105 hover:shadow-2xl h-full">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 bg-yellow-500/20 group-hover:bg-yellow-500/30 rounded-xl transition-colors">
-                    <Ticket className="text-yellow-400" size={32} />
-                  </div>
-                  <div>
-                    <div className="text-yellow-400 text-sm font-medium uppercase tracking-wider">Llamadas Pendientes</div>
-                    <div className="text-white text-4xl font-black mt-1">{callsData.completed}/{callsData.total}</div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400 text-sm">Gestión de llamadas del día</span>
-                <div className="flex items-center gap-2 text-yellow-400 font-semibold group-hover:gap-3 transition-all">
-                  <span>Ir a llamadas</span>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </Link>
-        </div>
-
         {/* Widget de Cartas Prellenadas */}
         <div className="mt-6">
           <CartaPrellenadaWidget />
