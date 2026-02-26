@@ -220,12 +220,30 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
     }
   };
 
-  // Cargar dispositivos POS de Mercado Pago
+  // Cargar dispositivos POS de Mercado Pago Point
   const fetchPOSDevices = async () => {
     try {
-      const res = await fetch('/api/treasury/quantum-pos');
-      if (res.ok) {
-        const data = await res.json();
+      // Intentar primero con Mercado Pago Point
+      const mpRes = await fetch('/api/treasury/mercadopago-point?action=devices');
+      if (mpRes.ok) {
+        const data = await mpRes.json();
+        if (data.configured && data.devices?.length > 0) {
+          setPosConfigured(true);
+          setPosDevices(data.devices.map((d: any) => ({
+            id: d.id,
+            pos_id: d.pos_id || d.id,
+            operating_mode: d.operating_mode || 'PDV',
+            store_id: d.store_id,
+          })));
+          setSelectedDevice(data.devices[0].id);
+          return;
+        }
+      }
+      
+      // Fallback a Stripe Terminal si MP no está configurado
+      const stripeRes = await fetch('/api/treasury/quantum-pos');
+      if (stripeRes.ok) {
+        const data = await stripeRes.json();
         setPosConfigured(data.configured);
         setPosDevices(data.devices || []);
         if (data.devices?.length > 0) {
@@ -261,7 +279,14 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
     }
   };
 
-  // Enviar cobro a terminal POS
+  // Detectar si el dispositivo es de Mercado Pago Point
+  const isMercadoPagoDevice = (deviceId: string) => {
+    // Los dispositivos de MP Point tienen formatos como: "PAX_A910__SMARTPOS1234567890"
+    // o IDs numéricos largos
+    return deviceId.includes('PAX') || deviceId.includes('SMARTPOS') || /^\d{10,}$/.test(deviceId);
+  };
+
+  // Enviar cobro a terminal POS (Mercado Pago Point o Stripe)
   const handleSendToPOS = async () => {
     if (!selectedDevice || !cobroForm.amount || parseFloat(cobroForm.amount) <= 0) {
       showNotification('error', 'Selecciona un dispositivo y monto válido');
@@ -275,13 +300,20 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
 
     setLoadingPOS(true);
     try {
-      const res = await fetch('/api/treasury/quantum-pos', {
+      // Determinar qué API usar basado en el tipo de dispositivo
+      const useMercadoPago = isMercadoPagoDevice(selectedDevice);
+      const apiUrl = useMercadoPago 
+        ? '/api/treasury/mercadopago-point' 
+        : '/api/treasury/quantum-pos';
+
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           deviceId: selectedDevice,
           amount: parseFloat(cobroForm.amount),
           description: cobroForm.reference || `Pago ${selectedParticipante.nombre}`,
+          externalReference: `QM-${Date.now()}`,
           participantId: selectedParticipante.id,
           participantName: selectedParticipante.nombre,
           visionId: cobroForm.visionId || null,
@@ -298,7 +330,15 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
           amount: parseFloat(cobroForm.amount),
           reference: data.paymentIntent.reference
         });
-        showNotification('success', '📲 Cobro enviado a terminal. Esperando pago...');
+        showNotification('success', useMercadoPago 
+          ? '📲 Cobro enviado a terminal Point. Esperando pago...'
+          : '📲 Cobro enviado a terminal. Esperando pago...'
+        );
+        
+        // Iniciar polling para verificar estado del pago
+        if (useMercadoPago) {
+          startPaymentStatusPolling(data.paymentIntent.id);
+        }
       } else {
         showNotification('error', data.error || 'Error al enviar a terminal');
       }
@@ -309,15 +349,55 @@ export default function TreasuryQuickWidget({ isAdmin = false }: TreasuryQuickWi
     }
   };
 
+  // Polling para verificar estado del pago en Mercado Pago Point
+  const startPaymentStatusPolling = (paymentIntentId: string) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/treasury/mercadopago-point?action=status&paymentIntentId=${paymentIntentId}`);
+        if (res.ok) {
+          const data = await res.json();
+          const state = data.paymentIntent?.state;
+          
+          if (state === 'FINISHED') {
+            clearInterval(pollInterval);
+            setActivePOSTransaction(prev => prev ? { ...prev, status: 'APPROVED' } : null);
+            showNotification('success', '✅ ¡Pago aprobado!');
+            // Limpiar después de 3 segundos
+            setTimeout(() => {
+              setActivePOSTransaction(null);
+              setCobroForm({ amount: '', reference: '', visionId: '', participanteId: '' });
+              setSelectedParticipante(null);
+              fetchInitialData();
+            }, 3000);
+          } else if (state === 'CANCELED' || state === 'ERROR') {
+            clearInterval(pollInterval);
+            setActivePOSTransaction(prev => prev ? { ...prev, status: state === 'CANCELED' ? 'CANCELLED' : 'ERROR' } : null);
+            showNotification('error', state === 'CANCELED' ? 'Pago cancelado' : 'Error en el pago');
+            setTimeout(() => setActivePOSTransaction(null), 3000);
+          }
+        }
+      } catch (error) {
+        console.error('Error polling payment status:', error);
+      }
+    }, 3000); // Verificar cada 3 segundos
+
+    // Detener polling después de 5 minutos
+    setTimeout(() => {
+      clearInterval(pollInterval);
+    }, 5 * 60 * 1000);
+  };
+
   // Cancelar transacción POS activa
   const handleCancelPOS = async () => {
     if (!activePOSTransaction || !selectedDevice) return;
 
     try {
-      const res = await fetch(
-        `/api/treasury/quantum-pos?deviceId=${selectedDevice}&paymentIntentId=${activePOSTransaction.id}`,
-        { method: 'DELETE' }
-      );
+      const useMercadoPago = isMercadoPagoDevice(selectedDevice);
+      const deleteUrl = useMercadoPago
+        ? `/api/treasury/mercadopago-point?deviceId=${selectedDevice}&paymentIntentId=${activePOSTransaction.id}`
+        : `/api/treasury/quantum-pos?deviceId=${selectedDevice}&paymentIntentId=${activePOSTransaction.id}`;
+      
+      const res = await fetch(deleteUrl, { method: 'DELETE' });
       
       if (res.ok) {
         setActivePOSTransaction(null);
