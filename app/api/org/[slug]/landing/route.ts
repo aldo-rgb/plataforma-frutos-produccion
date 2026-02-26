@@ -192,10 +192,11 @@ export async function GET(
       }
     ];
 
+    currentStep = 'count-tickets';
     // Estadísticas de la organización
     const stats = await prisma.ticket.count({
       where: {
-        vision: {
+        Vision: {
           organizationId: organization.id
         },
         status: 'ACTIVE',
