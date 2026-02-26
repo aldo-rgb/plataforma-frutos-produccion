@@ -33,17 +33,46 @@ export async function GET() {
       whereClause.coordinadorId = usuario.id;
     }
 
-    // Obtener IDs de usuarios relacionados
-    const usuarios = await prisma.usuario.findMany({
+    // Obtener la visión más reciente (activa) de la organización
+    const visionActiva = await prisma.vision.findFirst({
       where: {
-        ...whereClause,
-        rol: {
-          in: ['PARTICIPANTE', 'GAMECHANGER']
-        }
+        organizationId: usuario.organizationId,
+        // Visiones que aún no han terminado o terminaron hace menos de 30 días
+        OR: [
+          { fechaFin: null },
+          { fechaFin: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } }
+        ]
       },
+      orderBy: { fechaInicio: 'desc' },
       select: { id: true }
     });
-    const usuarioIds = usuarios.map(u => u.id);
+
+    // Obtener IDs de usuarios de la visión activa (inscritos)
+    let usuarioIds: number[] = [];
+    
+    if (visionActiva) {
+      // Solo usuarios inscritos en la visión activa
+      const enrollments = await prisma.vision_enrollments.findMany({
+        where: {
+          visionId: visionActiva.id,
+          enrollmentStatus: { in: ['ENROLLED', 'ACTIVE', 'COMPLETED'] }
+        },
+        select: { userId: true }
+      });
+      usuarioIds = enrollments.map(e => e.userId);
+    } else {
+      // Fallback: usuarios de la organización (solo si no hay visión activa)
+      const usuarios = await prisma.usuario.findMany({
+        where: {
+          ...whereClause,
+          rol: {
+            in: ['PARTICIPANTE', 'GAMECHANGER']
+          }
+        },
+        select: { id: true }
+      });
+      usuarioIds = usuarios.map(u => u.id);
+    }
 
     // Contar cartas existentes por estado
     const cartasExistentes = await prisma.cartaFrutos.findMany({
