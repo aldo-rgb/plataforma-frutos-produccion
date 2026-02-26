@@ -744,10 +744,10 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             </Link>
 
             <Link 
-              href="/dashboard/tesoreria"
+              href="/dashboard/coordinador/treasury"
               onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
-                pathname.startsWith('/dashboard/tesoreria')
+                pathname.startsWith('/dashboard/coordinador/treasury') || pathname.startsWith('/dashboard/tesoreria')
                   ? 'bg-gradient-to-r from-yellow-600 to-amber-600 text-white shadow-lg'
                   : 'text-slate-400 hover:text-white hover:bg-yellow-900/20'
               }`}
@@ -790,10 +790,10 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
             </Link>
 
             <Link 
-              href="/dashboard/tesoreria"
+              href="/dashboard/coordinador/treasury"
               onClick={handleLinkClick}
               className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-colors ${
-                pathname.startsWith('/dashboard/tesoreria')
+                pathname.startsWith('/dashboard/coordinador/treasury') || pathname.startsWith('/dashboard/tesoreria')
                   ? 'bg-gradient-to-r from-yellow-600 to-amber-600 text-white shadow-lg'
                   : 'text-slate-400 hover:text-white hover:bg-yellow-900/20'
               }`}
