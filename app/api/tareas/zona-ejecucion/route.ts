@@ -193,7 +193,7 @@ export async function GET(req: Request) {
         status: {
           in: ['PENDING', 'SUBMITTED', 'REJECTED']
         },
-        Mission: {
+        TrainerMission: {
           status: 'ACTIVE',
           releaseAt: {
             lte: new Date() // Solo misiones ya liberadas
@@ -201,14 +201,14 @@ export async function GET(req: Request) {
         }
       },
       include: {
-        Mission: {
+        TrainerMission: {
           include: {
-            Template: {
+            TrainerTaskTemplate: {
               include: {
-                Questions: true
+                TrainerTaskQuestion: true
               }
             },
-            Trainer: {
+            Usuario: {
               select: {
                 id: true,
                 nombre: true,
@@ -457,9 +457,9 @@ export async function GET(req: Request) {
 
     // ========== FORMATEAR MISIONES DEL TRAINER ==========
     const formatTrainerMission = (submission: any) => {
-      const mission = submission.Mission;
-      const template = mission.Template;
-      const trainer = mission.Trainer;
+      const mission = submission.TrainerMission;
+      const template = mission.TrainerTaskTemplate;
+      const trainer = mission.Usuario;
       
       return {
         id: `trainer-${submission.id}`,
@@ -490,9 +490,9 @@ export async function GET(req: Request) {
           id: template.id,
           title: template.title,
           type: template.type,
-          instructions: template.instructions,
-          hasQuestions: template.Questions?.length > 0,
-          questionsCount: template.Questions?.length || 0,
+          instructions: template.description,
+          hasQuestions: template.TrainerTaskQuestion?.length > 0,
+          questionsCount: template.TrainerTaskQuestion?.length || 0,
           tags: template.tags || []
         }
       };
@@ -501,9 +501,9 @@ export async function GET(req: Request) {
     // Filtrar misiones del trainer que son de HOY o tienen deadline pronto
     const misionesTrainerHoy = misionesTrainer.filter(m => {
       // Si no tiene deadline, siempre mostrar
-      if (!m.Mission.deadlineAt) return true;
+      if (!m.TrainerMission.deadlineAt) return true;
       
-      const deadline = new Date(m.Mission.deadlineAt);
+      const deadline = new Date(m.TrainerMission.deadlineAt);
       const horasHastaDeadline = (deadline.getTime() - ahora.getTime()) / (1000 * 60 * 60);
       
       // Mostrar si el deadline es en las próximas 72 horas
