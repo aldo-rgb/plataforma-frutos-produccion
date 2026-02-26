@@ -819,7 +819,7 @@ export function Sidebar({ usuario, isMobile = false, onClose }: SidebarProps) {
               }`}
             >
               <Archive size={18} className="text-amber-400" />
-              <span>Quantum Time Capsule</span>
+              <span>Cartas de Aprecio</span>
             </Link>
 
             <Link 

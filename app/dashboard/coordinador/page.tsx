@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   Users, Target, Ticket, BarChart3, Zap,
   AlertTriangle, Building2, GraduationCap, Star, Activity,
-  FileText, CheckCircle, Shield, Clock, Heart, ChevronRight
+  FileText, Shield, Heart, ChevronRight
 } from 'lucide-react';
 import Link from 'next/link';
 import VisionesWidget from '@/components/dashboard/VisionesWidget';
@@ -41,9 +41,6 @@ interface DashboardData {
 }
 
 interface ActionStats {
-  cartasPendientes: number;
-  cartasAutorizadas: number;
-  alertasActivas: number;
   participantesRiesgo: number;
 }
 
@@ -52,9 +49,6 @@ export default function CoordinadorDashboard() {
   const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
   const [stats, setStats] = useState<ActionStats>({
-    cartasPendientes: 0,
-    cartasAutorizadas: 0,
-    alertasActivas: 0,
     participantesRiesgo: 0
   });
   const [loading, setLoading] = useState(true);
@@ -355,53 +349,8 @@ export default function CoordinadorDashboard() {
 
         {/* Widgets de Acción - 2x3 Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          
-          {/* Widget 1: Cartas Pendientes */}
-          <Link href="/dashboard/coordinador/cartas-pendientes">
-            <div className="bg-gradient-to-br from-yellow-900/40 to-slate-900 border-2 border-yellow-500/30 rounded-3xl p-8 hover:border-yellow-500/50 transition-all cursor-pointer group">
-              <div className="flex items-center justify-between mb-6">
-                <div className="p-3 bg-yellow-500/20 group-hover:bg-yellow-500/30 rounded-xl transition-colors">
-                  <FileText size={32} className="text-yellow-400" />
-                </div>
-                <Clock size={20} className="text-yellow-400/60" />
-              </div>
-              <p className="text-6xl font-black text-white mb-2">{stats.cartasPendientes}</p>
-              <p className="text-lg font-bold text-white mb-1">Cartas Pendientes</p>
-              <p className="text-xs text-slate-400">Esperando autorización</p>
-            </div>
-          </Link>
 
-          {/* Widget 2: Cartas Autorizadas */}
-          <Link href="/dashboard/coordinador/cartas-pendientes?filter=APROBADA">
-            <div className="bg-gradient-to-br from-green-900/40 to-slate-900 border-2 border-green-500/30 rounded-3xl p-8 hover:border-green-500/50 transition-all cursor-pointer group">
-              <div className="flex items-center justify-between mb-6">
-                <div className="p-3 bg-green-500/20 group-hover:bg-green-500/30 rounded-xl transition-colors">
-                  <CheckCircle size={32} className="text-green-400" />
-                </div>
-                <Shield size={20} className="text-green-400/60" />
-              </div>
-              <p className="text-6xl font-black text-white mb-2">{stats.cartasAutorizadas}</p>
-              <p className="text-lg font-bold text-white mb-1">Cartas Autorizadas</p>
-              <p className="text-xs text-slate-400">Total aprobadas</p>
-            </div>
-          </Link>
-
-          {/* Widget 3: Alertas Activas */}
-          <Link href="/dashboard/coordinador/alertas-activas">
-            <div className="bg-gradient-to-br from-red-900/40 to-slate-900 border-2 border-red-500/30 rounded-3xl p-8 hover:border-red-500/50 transition-all cursor-pointer group">
-              <div className="flex items-center justify-between mb-6">
-                <div className="p-3 bg-red-500/20 group-hover:bg-red-500/30 rounded-xl transition-colors">
-                  <AlertTriangle size={32} className="text-red-400" />
-                </div>
-                <Zap size={20} className="text-red-400/60" />
-              </div>
-              <p className="text-6xl font-black text-white mb-2">{stats.alertasActivas}</p>
-              <p className="text-lg font-bold text-white mb-1">Alertas Activas</p>
-              <p className="text-xs text-slate-400">Requieren atención</p>
-            </div>
-          </Link>
-
-          {/* Widget 4: En Riesgo + Gestión de Strikes (FUSIONADO) */}
+          {/* Widget 1: En Riesgo + Gestión de Strikes (FUSIONADO) */}
           <div className="bg-gradient-to-br from-orange-900/40 via-purple-900/30 to-slate-900 border-2 border-orange-500/30 rounded-3xl p-8 hover:border-orange-500/50 transition-all group">
             <div className="flex items-center justify-between mb-6">
               <div className="p-3 bg-gradient-to-br from-orange-500/20 to-purple-500/20 group-hover:from-orange-500/30 group-hover:to-purple-500/30 rounded-xl transition-colors">

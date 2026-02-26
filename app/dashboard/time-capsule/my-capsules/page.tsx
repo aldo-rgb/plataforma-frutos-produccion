@@ -169,7 +169,7 @@ export default function MyCapsules() {
       {/* Header */}
       <header className="max-w-4xl mx-auto mb-8">
         <h1 className="text-3xl font-bold text-white mb-2">
-          🎁 Tu Quantum Time Capsule
+          🎁 Tus Cartas de Aprecio
         </h1>
         <div className="flex items-center gap-4 text-purple-300">
           <span className="flex items-center gap-1">
