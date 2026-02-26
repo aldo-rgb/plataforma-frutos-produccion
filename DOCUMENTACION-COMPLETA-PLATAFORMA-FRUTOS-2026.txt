@@ -897,6 +897,121 @@ NOTAS FINALES
   autogenerados por Prisma
 
 ================================================================================
+17. ACTUALIZACIONES - 26 DE FEBRERO 2026
+================================================================================
+
+RESUMEN DE CAMBIOS REALIZADOS:
+
+1. FORMULARIO DE REGISTRO - Referidos
+--------------------------------------------------------------------------------
+Archivos modificados:
+- /messages/es.json
+- /app/auth/signup/components/RegistrationForm.tsx
+
+Cambios:
+- Título de sección: "Código de Invitación" → "Referido"
+- Label del campo: "Código de referido" → "Nombre de quien te invitó"
+- Placeholder: "Quien te invitó?..." → "Quien te invitó?... (opcional)"
+
+2. RESPONSIVE DEL TOPBAR Y ROLESWITCHER
+--------------------------------------------------------------------------------
+Archivos modificados:
+- /components/dashboard/Topbar.tsx
+- /components/dashboard/RoleSwitcher.tsx
+
+Cambios:
+- RoleSwitcher: En móvil solo muestra icono (sin texto del rol)
+- Puntos Cuánticos: Más compacto en móvil, oculta "Puntos"
+- Info de usuario: Solo avatar en móvil (sin nombre al lado)
+- Zona horaria: Oculta en tablets (solo pantallas grandes)
+- Avatar: Más pequeño en móvil (32px vs 40px)
+
+3. SIDEBAR - COORDINADOR BÁSICO/AVANZADO
+--------------------------------------------------------------------------------
+Archivo modificado:
+- /components/dashboard/Sidebar.tsx
+
+Cambios:
+- Oculta navegación general (HOY, Agenda, Vault, Objetivos, etc.) cuando 
+  activeRole es COORDINATOR_BASIC o COORDINATOR_ADVANCED
+- Oculta sección LIDERATO para estos roles
+- Agrega panel específico para Coordinador Básico:
+  * Dashboard
+  * Asistencia
+  * Llamadas
+  * Tesorería
+- Agrega panel específico para Coordinador Avanzado:
+  * Dashboard
+  * Llamadas
+  * Tesorería
+
+4. VISIONES EN SCHOOL-ADMIN
+--------------------------------------------------------------------------------
+Archivo modificado:
+- /app/dashboard/school-admin/visiones/page.tsx
+
+Cambios:
+- Simplificó botones de tarjeta de visión a solo "Manage"
+- Eliminó botón "Ver Detalles Liderato"
+- Link va a: /dashboard/school-admin/vision/{id}/manage
+
+5. SIDEBAR - Eliminado "Mis Visiones"
+--------------------------------------------------------------------------------
+Archivo modificado:
+- /components/dashboard/Sidebar.tsx
+
+Cambio:
+- Removido link "Mis Visiones" del sidebar de navegación general
+
+6. API PRODUCTOS ACTIVOS - FILTRO POR VISIÓN
+--------------------------------------------------------------------------------
+Archivo modificado:
+- /app/api/coordinador/productos-activos/route.ts
+
+Cambio crítico:
+- Ahora solo devuelve EL PRÓXIMO ENTRENAMIENTO VIGENTE por cada visión
+- Ya no muestra todos los productos de una visión
+- Lógica: Agrupa por visionId y selecciona el más relevante:
+  * Prioriza productos no completados sobre completados
+  * Entre productos del mismo estado, toma el de fecha más próxima
+  * Verifica que no haya terminado (usando endDate o plWeekend3EndDate para PL)
+
+Resultado esperado para Monterrey:
+- Vision 24 - Liderato (siguiente fin de semana del curso de 3 fines)
+- Vision 25 - Avanzado
+- Vision 26 - Básico
+
+7. FIXES DE PRISMA - Landing y Vision Detail
+--------------------------------------------------------------------------------
+Archivos corregidos:
+- /app/api/org/[slug]/landing/route.ts
+  * Cambio: vision: → Vision: (relación case-sensitive en Prisma)
+
+- /app/api/school-admin/visiones/[id]/route.ts
+  * Cambio: Trainer → Usuario_SchoolProduct_trainerIdToUsuario
+  * Cambio: Coordinator → Usuario_SchoolProduct_coordinatorIdToUsuario
+  * Nota: Prisma genera nombres de relación automáticos en formato 
+    Model_Field_relationToModel cuando hay múltiples relaciones al mismo modelo
+
+================================================================================
+PATRONES IMPORTANTES APRENDIDOS
+================================================================================
+
+1. Relaciones Prisma con múltiples FKs al mismo modelo:
+   - NO usar alias simples como "Trainer" o "Coordinator"
+   - USAR el nombre generado: Usuario_SchoolProduct_trainerIdToUsuario
+   - Formato: Model_Field_relationToModel
+
+2. Responsive en Tailwind:
+   - Usar clases condicionales: hidden sm:block, text-xs sm:text-sm
+   - Gaps y paddings responsivos: gap-1 sm:gap-2, px-2 sm:px-4
+
+3. activeRole vs usuario.rol:
+   - usuario.rol = rol principal del usuario en la BD
+   - activeRole = rol activo seleccionado en RoleSwitcher (localStorage)
+   - Sidebar debe verificar AMBOS para mostrar menús correctos
+
+================================================================================
 FIN DE LA DOCUMENTACIÓN
 ================================================================================
 
