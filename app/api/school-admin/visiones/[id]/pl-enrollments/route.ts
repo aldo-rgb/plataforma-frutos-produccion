@@ -31,39 +31,22 @@ export async function GET(
       },
       include: {
         Usuario_vision_enrollments_userIdToUsuario: {
-          include: {
+          select: {
+            id: true,
+            nombre: true,
+            apodo: true,
+            email: true,
+            telefono: true,
+            profileImage: true,
+            referralCode: true,
+            organizationId: true,
+            createdAt: true,
             Organization_Usuario_organizationIdToOrganization: {
               select: {
                 id: true,
                 name: true,
                 slug: true
               }
-            },
-            // Incluir membresías de SmallGroup para obtener el GameChanger
-            SmallGroupMemberships: {
-              where: {
-                isActive: true,
-                group: {
-                  visionId: visionId,
-                  level: 'PL',
-                  isActive: true
-                }
-              },
-              include: {
-                group: {
-                  include: {
-                    leader: {
-                      select: {
-                        id: true,
-                        nombre: true,
-                        email: true,
-                        telefono: true
-                      }
-                    }
-                  }
-                }
-              },
-              take: 1
             }
           }
         }
@@ -73,12 +56,43 @@ export async function GET(
       }
     });
 
+    // Obtener asignaciones de SmallGroup para estos enrollments
+    const enrollmentIds = enrollments.map(e => e.id);
+    const smallGroupMembers = await prisma.smallGroupMember.findMany({
+      where: {
+        enrollmentId: { in: enrollmentIds },
+        isActive: true
+      },
+      include: {
+        SmallGroup: {
+          include: {
+            Usuario: {
+              select: {
+                id: true,
+                nombre: true,
+                email: true,
+                telefono: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Crear mapa de enrollmentId -> gameChanger
+    const gcMap = new Map<number, { gameChanger: any, squadName: string | null }>();
+    smallGroupMembers.forEach(member => {
+      if (member.enrollmentId) {
+        gcMap.set(member.enrollmentId, {
+          gameChanger: member.SmallGroup?.Usuario || null,
+          squadName: member.SmallGroup?.name || null
+        });
+      }
+    });
+
     // Formatear los datos para el frontend
     const formattedEnrollments = enrollments.map(enrollment => {
-      const membership = enrollment.Usuario_vision_enrollments_userIdToUsuario.SmallGroupMemberships?.[0];
-      const gameChanger = membership?.group?.leader || null;
-      const squadName = membership?.group?.name || null;
-
+      const gcData = gcMap.get(enrollment.id);
       return {
         id: enrollment.id,
         userId: enrollment.userId,
@@ -99,8 +113,8 @@ export async function GET(
           createdAt: enrollment.Usuario_vision_enrollments_userIdToUsuario.createdAt,
           Organization: enrollment.Usuario_vision_enrollments_userIdToUsuario.Organization_Usuario_organizationIdToOrganization
         },
-        gameChanger: gameChanger,
-        squadName: squadName
+        gameChanger: gcData?.gameChanger || null,
+        squadName: gcData?.squadName || null
       };
     });
 

@@ -856,6 +856,16 @@ export default function SchoolAdminDashboard() {
                         <p className="text-xs font-medium text-white">{vision.Usuario.nombre}</p>
                       </div>
                     )}
+
+                    {/* Botón Manage */}
+                    <Link
+                      href={`/dashboard/school-admin/vision/${vision.id}/manage`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-4 flex items-center justify-center gap-2 w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg font-semibold text-sm transition-all shadow-lg shadow-purple-500/20"
+                    >
+                      <Users size={16} />
+                      Gestionar Visión
+                    </Link>
                   </div>
                   </Link>
                 );
