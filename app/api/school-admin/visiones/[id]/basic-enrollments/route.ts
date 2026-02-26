@@ -140,7 +140,7 @@ export async function GET(
             referralCode: true,
           }
         },
-        Usuario_SchoolProduct_coordinatorIdToUsuario: {Product_coordinatorIdToUsuario: {
+        Usuario_SchoolProduct_coordinatorIdToUsuario: {
           select: {
             id: true,
             nombre: true,
