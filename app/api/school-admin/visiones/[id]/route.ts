@@ -410,7 +410,7 @@ export async function GET(
           isActive: true
         },
         include: {
-          Trainer: {
+          Usuario_SchoolProduct_trainerIdToUsuario: {
             select: {
               id: true,
               nombre: true,
@@ -418,7 +418,7 @@ export async function GET(
               imagen: true
             }
           },
-          Coordinator: {
+          Usuario_SchoolProduct_coordinatorIdToUsuario: {
             select: {
               id: true,
               nombre: true,
@@ -559,9 +559,9 @@ export async function GET(
       cicloInfo,
       productos: productos.map(p => ({
         ...p,
-        // Incluir explícitamente Trainer y Coordinator
-        Trainer: p.Trainer,
-        Coordinator: p.Coordinator,
+        // Incluir explícitamente Trainer y Coordinator (mapeando nombres de relación Prisma)
+        Trainer: p.Usuario_SchoolProduct_trainerIdToUsuario,
+        Coordinator: p.Usuario_SchoolProduct_coordinatorIdToUsuario,
         // Si es producto PL, agregar los 3 trainers
         plTrainers: p.levelType === 'PL' ? plTrainersData.map(pt => pt.Usuario_VisionStaff_userIdToUsuario) : undefined,
         startDate: p.startDate ? p.startDate.toISOString() : null,
