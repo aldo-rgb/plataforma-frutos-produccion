@@ -112,7 +112,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+      logger.debug('🔵 [payment-gateway] Body parseado OK');
+    } catch (parseError: any) {
+      logger.error('🔴 [payment-gateway] Error parseando body:', parseError?.message);
+      return NextResponse.json({ error: 'Error en formato de datos' }, { status: 400 });
+    }
+    
     const { provider, publicKey, secretKey, webhookSecret, isActive } = body;
 
     // Log detallado para debug
@@ -222,19 +230,32 @@ export async function POST(request: NextRequest) {
       logger.debug('🟢 [payment-gateway] Config actualizada, id:', config.id);
     } else {
       // Crear nueva configuración para este proveedor
-      config = await prisma.paymentGatewayConfig.create({
-        data: {
-          organizationId,
-          provider,
-          publicKey,
-          secretKey,
-          webhookSecret,
-          isActive: isActive !== undefined ? isActive : true,
-          updatedAt: new Date(),
-        },
-      });
+      logger.debug('🔵 [payment-gateway] Creando nueva config con datos:', JSON.stringify({
+        organizationId,
+        provider,
+        publicKeyLen: publicKey?.length || 0,
+        secretKeyLen: secretKey?.length || 0,
+        isActive: isActive !== undefined ? isActive : true,
+      }));
       
-      logger.debug('🟢 [payment-gateway] Nueva config creada para proveedor:', provider);
+      try {
+        config = await prisma.paymentGatewayConfig.create({
+          data: {
+            organizationId,
+            provider,
+            publicKey: publicKey || null,
+            secretKey: secretKey || null,
+            webhookSecret: webhookSecret || null,
+            isActive: isActive !== undefined ? isActive : true,
+          },
+        });
+        
+        logger.debug('🟢 [payment-gateway] Nueva config creada para proveedor:', provider, 'id:', config.id);
+      } catch (createError: any) {
+        logger.error('🔴 [payment-gateway] Error creando config:', createError?.message);
+        logger.error('🔴 [payment-gateway] Code:', createError?.code);
+        throw createError;
+      }
     }
 
     return NextResponse.json({
@@ -251,10 +272,20 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     logger.error('🔴 [payment-gateway] Error saving config:', error?.message || error);
+    logger.error('🔴 [payment-gateway] Error name:', error?.name);
+    logger.error('🔴 [payment-gateway] Error code:', error?.code);
     logger.error('🔴 [payment-gateway] Stack:', error?.stack);
+    
+    // Errores específicos de Prisma
+    if (error?.code === 'P2002') {
+      return NextResponse.json({ 
+        error: 'Ya existe una configuración para este proveedor',
+      }, { status: 409 });
+    }
+    
     return NextResponse.json({ 
       error: 'Error interno del servidor',
-      details: process.env.NODE_ENV === 'development' ? error?.message : undefined
+      details: error?.message || 'Unknown error'
     }, { status: 500 });
   }
 }
