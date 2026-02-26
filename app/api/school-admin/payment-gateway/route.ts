@@ -154,15 +154,21 @@ export async function POST(request: NextRequest) {
 
     const organizationId = usuario.organizationId;
 
+    logger.debug('🔵 [payment-gateway] organizationId:', organizationId, 'provider:', provider);
+
     // Verificar si ya existe una configuración para este proveedor específico
-    const existingConfig = await prisma.paymentGatewayConfig.findUnique({
-      where: { 
-        organizationId_provider: {
+    let existingConfig = null;
+    try {
+      existingConfig = await prisma.paymentGatewayConfig.findFirst({
+        where: { 
           organizationId,
           provider,
-        }
-      },
-    });
+        },
+      });
+      logger.debug('🔵 [payment-gateway] existingConfig:', existingConfig?.id || 'null');
+    } catch (findError: any) {
+      logger.error('🔴 [payment-gateway] Error buscando config existente:', findError?.message);
+    }
 
     let config;
 
