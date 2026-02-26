@@ -1669,7 +1669,7 @@ export default function SquadManagerWidget() {
                   )}
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Legacy Capture</h3>
+                  <h3 className="text-lg font-semibold text-white">Álbum de Recuerdos</h3>
                   <p className="text-sm text-pink-300">{legacyForm.participantName}</p>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${
                     legacyForm.trainingLevel === 'BASIC' ? 'bg-blue-500/20 text-blue-300' :

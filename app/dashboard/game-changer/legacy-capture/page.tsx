@@ -299,7 +299,7 @@ export default function LegacyCapturePage() {
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-6 text-white">
         <div className="flex items-center gap-3 mb-2">
           <Camera className="w-8 h-8" />
-          <h1 className="text-2xl font-bold">Legacy Capture</h1>
+          <h1 className="text-2xl font-bold">Álbum de Recuerdos</h1>
         </div>
         <p className="text-purple-200">
           Captura los momentos especiales del último día de entrenamiento

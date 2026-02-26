@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Eye, Calendar, Users, Building2, ChevronRight, ArrowLeft,
   Trophy, Star, Clock, CheckCircle2, MapPin, Loader2,
-  GraduationCap, Mic, Award, TrendingUp, ClipboardList, Scroll
+  GraduationCap, Mic, Award, TrendingUp, ClipboardList, Camera
 } from 'lucide-react';
 import Link from 'next/link';
 import { TrainerSurveyModal } from '@/components/training-closure';
@@ -563,17 +563,15 @@ export default function VisionHistoryPage() {
                           </div>
                         )}
                         
-                        {/* Botón para acceder al Legacy Builder */}
-                        {vision.levels?.includes('PL') && (
-                          <Link
-                            href={`/dashboard/liderato/legacy-builder?visionId=${vision.id}`}
-                            className="mt-4 flex items-center justify-center gap-2 w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-xl text-white font-semibold transition-all"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Scroll className="w-5 h-5" />
-                            Completar Legacy de Tribu
-                          </Link>
-                        )}
+                        {/* Botón para acceder al Álbum de Recuerdos - Para Game Changers */}
+                        <Link
+                          href={`/dashboard/game-changer/legacy-capture?visionId=${vision.id}`}
+                          className="mt-4 flex items-center justify-center gap-2 w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-xl text-white font-semibold transition-all"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Camera className="w-5 h-5" />
+                          Completar Álbum de Recuerdos
+                        </Link>
                       </div>
                     </motion.div>
                   )}

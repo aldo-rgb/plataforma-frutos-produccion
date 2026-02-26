@@ -118,7 +118,7 @@ export default function LegacyCaptureBlockingModal() {
             <Camera className="w-10 h-10 text-white" />
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">
-            📸 ¡Es hora de tu Legacy Capture!
+            📸 ¡Es hora de tu Álbum de Recuerdos!
           </h2>
           <p className="text-purple-300">
             Tu Game Changer está capturando tus momentos especiales del entrenamiento.

@@ -59,7 +59,7 @@ export async function GET(
                 name: true,
               },
             },
-            Ticket_TicketOwner: {
+            Ticket_Ticket_ownerIdToUsuario: {
               select: {
                 id: true,
                 paymentStatus: true,
@@ -176,7 +176,7 @@ export async function GET(
     
     if (excludeUnpaid) {
       filteredEnrollments = enrollments.filter((enrollment: any) => {
-        const tickets = enrollment.Usuario_vision_enrollments_userIdToUsuario.Ticket_TicketOwner || [];
+        const tickets = enrollment.Usuario_vision_enrollments_userIdToUsuario.Ticket_Ticket_ownerIdToUsuario || [];
         const status = getPaymentStatus(tickets, enrollment.paymentStatus);
         logger.debug('📞 [call-tracking] Filtering:', { 
           enrollmentId: enrollment.id, 
@@ -194,7 +194,7 @@ export async function GET(
     // Formatear la respuesta con toda la información necesaria
     // @ts-ignore - Prisma relations work at runtime despite TypeScript errors
     const formattedData = filteredEnrollments.map((enrollment: any) => {
-      const tickets = enrollment.Usuario_vision_enrollments_userIdToUsuario.Ticket_TicketOwner || [];
+      const tickets = enrollment.Usuario_vision_enrollments_userIdToUsuario.Ticket_Ticket_ownerIdToUsuario || [];
       const paymentStatus = getPaymentStatus(tickets, enrollment.paymentStatus);
       
       return {
