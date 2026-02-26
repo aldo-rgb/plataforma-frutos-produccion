@@ -93,8 +93,8 @@
       "placeholder": "Describe qué esperas aprender o lograr con este programa..."
     },
     "referral": {
-      "title": "Código de Invitación",
-      "code": "Código de referido",
+      "title": "Referido",
+      "code": "Nombre de quien te invitó",
       "codePlaceholder": "JUAN123",
       "locked": "Invitación recibida por QR"
     },
